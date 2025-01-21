@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,6 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 import operator
 import collections
 import itertools
-from unittest.mock import Mock
 from functools import lru_cache
 import numpy
 import scipy.stats
@@ -43,7 +42,7 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.contexts import ContextMaker, Oq, FarAwayRupture
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates, to_probs)
 
@@ -273,8 +272,8 @@ def _build_disagg_matrix(bdata, bins):
     :returns:
         a 7D-matrix of shape (#distbins, #lonbins, #latbins, #epsbins, M, P, Z)
     """
-    dist_bins, lon_bins, lat_bins, eps_bins = bins
-    dim1, dim2, dim3, dim4 = shape = [len(b) - 1 for b in bins]
+    dist_bins, lon_bins, lat_bins, _eps_bins = bins
+    dim1, dim2, dim3, _dim4 = shape = [len(b) - 1 for b in bins]
 
     # find bin indexes of rupture attributes; bins are assumed closed
     # on the lower bound, and open on the upper bound, that is [ )
@@ -293,7 +292,7 @@ def _build_disagg_matrix(bdata, bins):
     dists_idx[dists_idx == dim1] = dim1 - 1
     lons_idx[lons_idx == dim2] = dim2 - 1
     lats_idx[lats_idx == dim3] = dim3 - 1
-    U, E, M, P = bdata.pnes.shape
+    _U, _E, M, P = bdata.pnes.shape
     mat6D = numpy.ones(shape + [M, P])
     for i_dist, i_lon, i_lat, pne in zip(
             dists_idx, lons_idx, lats_idx, bdata.pnes):
@@ -498,7 +497,9 @@ class Disaggregator(object):
                 mw = sum(self.weights)
             else:
                 mw = 1.
-            res = {'trti': self.cmaker.trti, 'magi': self.magi, 'sid': self.sid}
+            res = {'trti': self.cmaker.trti,
+                   'magi': self.magi,
+                   'sid': self.sid}
             for rlz in rlzs:
                 try:
                     g = self.g_by_rlz[rlz]
@@ -632,19 +633,19 @@ def disaggregation(
     mags_by_trt = AccumDict(accum=set())
     dists = []
     tom = sources[0].temporal_occurrence_model
-    oq = Mock(imtls={str(imt): [iml]},
-              poes=[None],
-              rlz_index=[0],
-              epsstar=epsstar,
-              truncation_level=truncation_level,
-              investigation_time=tom.time_span,
-              maximum_distance=source_filter.integration_distance,
-              mags_by_trt=mags_by_trt,
-              num_epsilon_bins=n_epsilons,
-              mag_bin_width=mag_bin_width,
-              distance_bin_width=dist_bin_width,
-              coordinate_bin_width=coord_bin_width,
-              disagg_bin_edges=bin_edges)
+    oq = Oq(imtls={str(imt): [iml]},
+            poes=[None],
+            rlz_index=[0],
+            epsilon_star=epsstar,
+            truncation_level=truncation_level,
+            investigation_time=tom.time_span,
+            maximum_distance=source_filter.integration_distance,
+            mags_by_trt=mags_by_trt,
+            num_epsilon_bins=n_epsilons,
+            mag_bin_width=mag_bin_width,
+            distance_bin_width=dist_bin_width,
+            coordinate_bin_width=coord_bin_width,
+            disagg_bin_edges=bin_edges)
     for trt, srcs in by_trt.items():
         cmaker[trt] = cm = ContextMaker(trt, rlzs_by_gsim, oq)
         ctxs[trt].extend(cm.from_srcs(srcs, sitecol))
@@ -671,6 +672,7 @@ def disaggregation(
             mat4 = dis._disagg6D({imt: [iml]}, 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
+
 
 # ###################### disagg by source ################################ #
 
@@ -744,8 +746,6 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
     source_id = corename(groups[0].sources[0].source_id)
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
-    trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
-                for rlzs in cm.gsims.values()]
     ws = reduced_lt.rlzs['weight']
     disaggs = []
     if any(grp.src_interdep == 'mutex' for grp in groups):
@@ -761,7 +761,7 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
         drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
         disaggs.append(dis)
     std4D = collect_std(disaggs)
-    gws = reduced_lt.g_weights(trt_rlzs)
+    gws = reduced_lt.g_weights([cm.trt_smrs for cm in cmakers])
     rates3D = calc_mean_rates(rmap, gws, reduced_lt.gsim_lt.wget,
                               oq.imtls, list(imldic))  # (N, M, L1)
     return site.id, source_id, std4D, drates4D, rates3D[0]

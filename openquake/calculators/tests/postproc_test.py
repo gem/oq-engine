@@ -30,13 +30,14 @@ from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
-from openquake.qa_tests_data.postproc import case_mrd, case_rtgm
+from openquake.qa_tests_data.postproc import (
+    case_mrd, case_rtgm, case_median_spectrum)
 
 PLOT = False
 
 aae = np.testing.assert_almost_equal
 
-        
+
 def _test_indirect(ctx, cmaker, imts, crosscorr, mrd, c1, c2, afo1, afo2):
     # Bin edges
     lefts = [-3, -2, 1, 2]
@@ -68,8 +69,8 @@ def _test_indirect(ctx, cmaker, imts, crosscorr, mrd, c1, c2, afo1, afo2):
     np.testing.assert_almost_equal(marg2[c2_mask], afo2[c2_mask], decimal=3)
 
     if PLOT:
-        min_afo = np.min(afo1[afo1>1e-10])
-        min_afo = np.min([np.min(afo2[afo2>1e-10]), min_afo])
+        min_afo = np.min(afo1[afo1 > 1e-10])
+        min_afo = np.min([np.min(afo2[afo2 > 1e-10]), min_afo])
         max_afo = np.max(afo1)
         max_afo = np.max([np.max(afo2), max_afo])
 
@@ -88,7 +89,7 @@ def _test_indirect(ctx, cmaker, imts, crosscorr, mrd, c1, c2, afo1, afo2):
         plt.yscale('log')
         plt.show()
 
-    ## test_compare
+    # test_compare
     be_mea = get_uneven_bins_edges([-3, -2, 1, 2], [80, 80, 10])
     be_sig = np.arange(0.50, 0.70, 0.01)
     if PLOT:
@@ -114,9 +115,10 @@ class PostProcTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
         hc_id = str(self.calc.datastore.calc_id)
-        self.run_calc(case_mrd.__file__, 'job.ini', hazard_calculation_id=hc_id)
+        self.run_calc(case_mrd.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id)
         mrd = self.calc.datastore['mrd'][:]
-        #assert abs(mrd.mean() - 2.334333e-07) < 1e-12, mrd.mean()
+        # assert abs(mrd.mean() - 2.334333e-07) < 1e-12, mrd.mean()
 
         # Settings
         imts = ['SA(0.2)', 'SA(1.0)']  # subset of the parent IMTs
@@ -169,8 +171,8 @@ class PostProcTestCase(CalculatorTestCase):
         np.testing.assert_almost_equal(marg2, afo2, decimal=4)
 
         if PLOT:
-            min_afo = np.min(afo1[afo1>1e-10])
-            min_afo = np.min([np.min(afo2[afo2>1e-10]), min_afo])
+            min_afo = np.min(afo1[afo1 > 1e-10])
+            min_afo = np.min([np.min(afo2[afo2 > 1e-10]), min_afo])
             max_afo = np.max(afo1)
             max_afo = np.max([np.max(afo2), max_afo])
             plt.title('Direct method test')
@@ -192,7 +194,7 @@ class PostProcTestCase(CalculatorTestCase):
                        mrd, c1, c2, afo1, afo2)
 
     def test_rtgm(self):
-        self.run_calc(case_rtgm.__file__, 'job.ini')
+        self.run_calc(case_rtgm.__file__, 'job_vs30.ini')
         if rtgmpy is None:
             return
         asce07 = self.calc.datastore['asce07'][0].decode('ascii')
@@ -203,21 +205,33 @@ class PostProcTestCase(CalculatorTestCase):
         lk.remove('Ss_seismicity')
         lk.remove('S1_seismicity')
         dic07_float = [dic07[k] for k in lk]
-        dic07_float_ref = [1.02584, 1.56541, 1.02584, 1.02584, 2.50789,
-                           3.92357, 0.94539, 2.50789, 2.50789, 0.6, 0.99471,
-                           0.93496, 0.58673, 0.6]
+        dic07_float_ref = [0.5, 0.5191, 0.383, 0.5, 1.5, 1.5109, 0.973,
+                           1.2636, 1.5, 0.4297, 0.4297, 0.9326, 0.2555, 0.6]
 
         aae(dic07_float, dic07_float_ref, decimal=4)
 
         # check string results
         dic07_str = [dic07[k] for k in ['Ss_seismicity', 'S1_seismicity']]
-        assert dic07_str == ['Very High', 'Very High']
+        assert dic07_str == ['Very High', 'High']
 
         asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
-        assert dic41 == {'BSE2N_Ss': 2.50789, 'BSE2E_Ss': 2.50789,
-                         'Ss_5_50': 3.14625, 'BSE1N_Ss': 1.67193,
-                         'BSE1E_Ss': 1.67193, 'Ss_20_50': 1.77483,
-                         'BSE2N_S1': 0.6, 'BSE2E_S1': 0.6,
-                         'S1_5_50': 0.79681, 'BSE1N_S1': 0.4,
-                         'BSE1E_S1': 0.4, 'S1_20_50': 0.43427}
+        assert dic41 == {'BSE2N_Ss': 1.5, 'BSE2E_Ss': 1.22049,
+                         'Ss_5_50': 1.22049, 'BSE1N_Ss': 1.0,
+                         'BSE1E_Ss': 0.72663, 'Ss_20_50': 0.72663,
+                         'BSE2N_S1': 0.42968, 'BSE2E_S1': 0.34593,
+                         'S1_5_50': 0.34593, 'BSE1N_S1': 0.28645,
+                         'BSE1E_S1': 0.18822, 'S1_20_50': 0.18822}
+
+    def test_median_spectrum1(self):
+        # test with a single site and many rupture
+        self.run_calc(case_median_spectrum.__file__, 'job1.ini')
+        [fname] = export(('median_spectra', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/median_spectrum1.csv', fname)
+
+    def test_median_spectrum2(self):
+        # test with two sites and two ruptures
+        self.run_calc(case_median_spectrum.__file__, 'job2.ini')
+        fnames = export(('median_spectra', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)

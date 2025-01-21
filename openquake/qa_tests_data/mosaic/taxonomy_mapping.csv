@@ -215,3 +215,5 @@ FSM,,taxonomy_mapping_Oceania.csv
 NCL,,taxonomy_mapping_Oceania.csv
 MNP,,taxonomy_mapping_Northern_Mariana_Islands.csv
 PLW,,taxonomy_mapping_Oceania.csv
+CAN,CAN,taxonomy_mapping_Canada.csv
+USA,USA,taxonomy_mapping_United_States.csv

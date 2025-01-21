@@ -9,7 +9,8 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
-            <h2>Outputs from calculation {{ calc_id }}: {{ description }}</h2>
+            <h2>Outputs from calculation {{ calc_id }}: {{ description }}{% if local_timestamp %} (event time: {{ local_timestamp }}){% endif %}</h2>
+            {% if time_job_after_event %}<h3>Results computed {{ time_job_after_event }} after the event</h3><br/>{% endif %}
             {% if warnings %}
             <div id="warning-box" class="alert alert-warning" style=>
                 WARNING: {{ warnings }}
@@ -54,6 +55,7 @@
   {% block templates %}
   <script type="text/template" id="output-table-template">
     <div class="aristotle-losses-container">
+      {% if losses_header is not None %}
       <table id="aristotle-losses">
         <thead>
           <tr>
@@ -66,15 +68,15 @@
         {% for row in losses %}
           <tr {% if forloop.last %}style="border-top: 2px solid black;"{% endif%}>
             {% for item in row %}
-              <td {% if forloop.counter == 2 %}style="border-right: 2px solid black; text-align: left;"{% else %}style="text-align: right;"{% endif %}>
+              <td style="border: 1px solid #ddd; {% if forloop.counter == 2 %}border-right: 2px solid black; %}{% endif %}{% if forloop.counter < 3 %}text-align: left;{% else %}text-align: right;{% endif %}">
                 {% if item|stringformat:"s"|floatformat %}
                   {% if forloop.counter == 2 %}
                   {{ item|floatformat:"6" }}
                   {% else %}
-                  {{ item|floatformat:"2g" }}
+                  {{ item|humanize_number }}
                   {% endif %}
                 {% else %}
-                  {{ item|stringformat:"s" }}
+                  {{ item|stringformat:"s"|linebreaksbr }}
                 {% endif %}
               </td>
             {% endfor %}
@@ -82,10 +84,15 @@
         {% endfor %}
         </tbody>
       </table>
+      {% else %}
+      <p>{{ losses }}</p>
+      {% endif %}
     </div>
+    {% if losses_header is not None %}
     <div id="aristotle-losses-download">
       <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_aggrisk" class="btn btn-sm output-action-btn">Download csv</a>
     </div>
+    {% endif %}
     <hr/>
     <table id="output_table" class="table table-hover">
       <thead>

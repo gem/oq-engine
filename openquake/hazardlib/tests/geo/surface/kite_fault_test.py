@@ -227,7 +227,7 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         # test calculation of trace (i.e. surface projection of tor)
         # notice that .tor also does a .keep_corners
         coo = self.ksfc.tor.coo
-        aae(coo[:, 0], [0.2 , 0.05, 0.])
+        aae(coo[:, 0], [0.2, 0.05, 0.])
         aae(coo[:, 1], [0.0, 0.0, 0.05])
 
     def test_geom(self):
@@ -829,7 +829,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         alg = True
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
-        lons, lats = srfc.surface_projection
+        _lons, _lats = srfc.surface_projection
         # TODO
 
     def test_get_width(self):
@@ -1008,7 +1008,6 @@ class TestProfilesFromSimpleFault(unittest.TestCase):
 
         pro = get_profiles_from_simple_fault_data(trace, usd, lsd, dip,
                                                   rup_mesh_spacing)
-
 
         # This is the initial width
         width = (lsd - usd) / np.sin(np.radians(dip))

@@ -21,7 +21,7 @@ import itertools
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict, BASE183
+from openquake.baselib.general import CallableDict, BASE183, BASE33489
 from openquake.hazardlib import geo
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -742,7 +742,7 @@ class BranchSet(object):
 
 
 # NB: this function cannot be used with monster logic trees like the one for
-# South Africa (ZAF), since it is too slow; the engine use a trick instead
+# South Africa (ZAF), since it is too slow; the engine uses a trick instead
 def count_paths(branches):
     """
     :param branches: a list of branches (endpoints or nodes)
@@ -770,6 +770,8 @@ class Realization(object):
     Generic Realization object with attributes value, weight, ordinal, lt_path,
     samples.
     """
+    __slots__ = ['value', 'weight', 'ordinal', 'lt_path', 'samples']
+
     def __init__(self, value, weight, ordinal, lt_path, samples=1):
         self.value = value
         self.weight = weight
@@ -789,8 +791,9 @@ class Realization(object):
 
 
 def add_path(bset, bsno, brno, num_prev, tot, paths):
+    base = BASE33489 if bset.uncertainty_type == 'sourceModel' else BASE183
     for br in bset.branches:
-        br.short_id = BASE183[brno]
+        br.short_id = base[brno]
         path = ['*'] * tot
         path[bsno] = br.id
         paths.append(''.join(path))

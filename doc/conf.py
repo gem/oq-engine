@@ -17,7 +17,7 @@ from openquake import engine
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "OpenQuake Engine"
-copyright = "2023-2024, GEM Foundation"
+copyright = "2023-2025, GEM Foundation"
 author = "GEM Foundation"
 release = "v1.0.0"
 
@@ -67,11 +67,7 @@ rst_epilog = """
 extensions = []
 
 templates_path = ["_templates"]
-# NOTE: whats-new.md is a placeholder that will be renamed to whats-new-X.Y.md,
-# so it is not in any toc of the documentation and we need to exclude it in
-# order to avoid a sphinx warning while building the documentation
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store",
-                    "release-notes/whats-new.md"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
@@ -130,7 +126,7 @@ html_theme_options = {
         {
             "name": "X/Twitter",
             "url": "https://x.com/GEMwrld",
-            "icon": "fa-brands fa-square-twitter",
+            "icon": "fa-brands fa-square-x-twitter",
             "type": "fontawesome",
         },
         {

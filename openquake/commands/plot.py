@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,31 +15,48 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+import time
 import gzip
 import json
 import logging
+from urllib.parse import parse_qs
 import shapely
 import numpy
 import pandas
-from shapely.geometry import MultiPolygon
 from scipy.stats import linregress
-from openquake.commonlib import datastore
-from openquake.commonlib.readinput import read_countries_df
-from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
+from shapely.geometry import Polygon, LineString
+from openquake.commonlib import readinput
+from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
-from openquake.calculators.extract import Extractor, WebExtractor, clusterize
+from openquake.calculators.getters import get_ebrupture
+from openquake.calculators.extract import (
+    Extractor, WebExtractor, clusterize)
+from openquake.calculators.postproc.plots import (
+    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
-from openquake.hmtk.plotting.patch import PolygonPatch
 
 
-def import_plt():
-    if os.environ.get('TEXT'):
-        import plotext as plt
-    else:
-        import matplotlib.pyplot as plt
+ZOOM_MARGIN = 8
+
+
+def make_figure_magdist(extractors, what):
+    plt = import_plt()
+    _fig, ax = plt.subplots()
+    [ex] = extractors
+    grp = ex.dstore['source_mags']
+    ax.set_xlabel('magnitude')
+    ax.set_ylabel('distance')
+    ax.set_xlim(4, 10)
+    ax.set_ylim(0, 600)
+    for trt in grp:
+        magdist = ex.oqparam.maximum_distance(trt)
+        mags = numpy.float64(grp[trt][:])
+        dsts = magdist(mags)
+        ax.plot(mags, dsts, '-', label=trt)
+        ax.grid(True)
+        ax.legend()
     return plt
 
 
@@ -68,6 +85,8 @@ def make_figure_hcurves(extractors, what):
             if (arr == 0).all():
                 logging.warning('There is a zero curve %s_%s', *ck)
             ax.loglog(imls, arr.flat, '-', label='%s_%s' % ck)
+        for poe in oq.poes:
+            ax.plot(imls, [poe]*len(imls), label=f'{poe=}')
         ax.grid(True)
         ax.legend()
     return plt
@@ -81,7 +100,7 @@ def make_figure_uhs_cluster(extractors, what):
     import matplotlib.cm as cm
     kstr = what.split('?')[1]
     k = int(kstr.split('=')[1])
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     [ex] = extractors
     trts = ex.get('full_lt').trts
     hmaps = ex.get('hmaps?kind=rlzs')
@@ -114,88 +133,13 @@ def make_figure_uhs_cluster(extractors, what):
     return plt
 
 
-def add_borders(ax):
-    plt = import_plt()
-    polys = read_countries_df(buffer=0)['geom']
-    cm = plt.get_cmap('RdBu')
-    num_colours = len(polys)
-    for idx, poly in enumerate(polys):
-        colour = cm(1. * idx / num_colours)
-        if isinstance(poly, MultiPolygon):
-            for onepoly in poly.geoms:
-                ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=0.1))
-        else:
-            ax.add_patch(PolygonPatch(poly, fc=colour, alpha=0.1))
-    return ax
-
-
-def get_assetcol(calc_id):
-    assetcol = None
-    dstore = datastore.read(calc_id)
-    if 'assetcol' in dstore:
-        try:
-            assetcol = dstore['assetcol'][()]
-        except AttributeError:
-            assetcol = dstore['assetcol'].array
-    return assetcol
-
-
-def get_country_iso_codes(calc_id, assetcol):
-    dstore = datastore.read(calc_id)
-    try:
-        ALL_ID_0 = dstore['assetcol/tagcol/ID_0'][:]
-        ID_0 = ALL_ID_0[numpy.unique(assetcol['ID_0'])]
-    except KeyError:  # ID_0 might be missing
-        id_0_str = None
-    else:
-        id_0_str = ', '.join(id_0.decode('utf8') for id_0 in ID_0)
-    return id_0_str
-
-
-def plot_avg_gmf(calc_id, imt):
-    [ex] = [Extractor(calc_id)]
-    plt = import_plt()
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    ax.grid(True)
-    ax.set_xlabel('Lon')
-    ax.set_ylabel('Lat')
-
-    title = 'Avg GMF for %s' % imt
-    assetcol = get_assetcol(calc_id)
-    if assetcol is not None:
-        country_iso_codes = get_country_iso_codes(calc_id, assetcol)
-        if country_iso_codes is not None:
-            title += ' (Countries: %s)' % country_iso_codes
-    ax.set_title(title)
-
-    avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
-    gmf = avg_gmf[imt]
-    markersize = 5
-    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet',
-                      s=markersize)
-    plt.colorbar(coll)
-
-    ax = add_borders(ax)
-
-    minx = avg_gmf['lons'].min()
-    maxx = avg_gmf['lons'].max()
-    miny = avg_gmf['lats'].min()
-    maxy = avg_gmf['lats'].max()
-    w, h = maxx - minx, maxy - miny
-    ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
-    ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
-    return plt
-
-
 def make_figure_avg_gmf(extractors, what):
     """
     $ oq plot "avg_gmf?imt=PGA"
     """
     [ex] = extractors
     imt = what.split('=')[1]
-    calc_id = ex.calc_id
-    plt = plot_avg_gmf(calc_id, imt)
+    plt = plot_avg_gmf(ex, imt)
     return plt
 
 
@@ -304,11 +248,16 @@ def make_figure_uhs(extractors, what):
     plt = import_plt()
     fig = plt.figure()
     got = {}  # (calc_id, kind) -> curves
+    spec = {}  # calc_id -> spectra
     for i, ex in enumerate(extractors):
+        oq = ex.oqparam
         uhs = ex.get(what)
         for kind in uhs.kind:
             got[ex.calc_id, kind] = uhs[kind][0]  # 1 site
-    oq = ex.oqparam
+        if 'median_spectra' in ex.dstore:
+            for j, poe in enumerate(oq.poes):
+                arr = ex.get(f'median_spectra?site_id=0&poe_id={j}').array
+                spec[ex.calc_id, j] = numpy.exp(arr[:, 0].sum(axis=0))
     n_poes = len(oq.poes)
     periods = [imt.period for imt in oq.imt_periods()]
     imts = [imt.string for imt in oq.imt_periods()]
@@ -320,8 +269,10 @@ def make_figure_uhs(extractors, what):
         ax.set_ylabel('g')
         for ck, arr in got.items():
             curve = list(arr['%.6f' % poe][imts])
-            ax.plot(periods, curve, '-', label='%s_%s' % ck)
+            ax.plot(periods, curve, '-', label='%s_%s_spectrum' % ck)
             ax.plot(periods, curve, '.')
+        for (calc_id, poe_id), spectrum in spec.items():
+            ax.plot(periods, spectrum, '-', label=f'{calc_id}_median_spectrum')
         ax.grid(True)
         ax.legend()
     return plt
@@ -440,7 +391,7 @@ def make_figure_task_info(extractors, what):
     [ex] = extractors
     dic = ex.get(what).to_dict()
     del dic['extra']
-    [(task_name, task_info)] = dic.items()
+    [(_task_name, task_info)] = dic.items()
     x = task_info['duration']
     if plt.__name__ == 'plotext':
         mean, std, med = x.mean(), x.std(ddof=1), numpy.median(x)
@@ -470,7 +421,7 @@ def make_figure_source_data(extractors, what):
     $ oq plot "source_data?taskno=XX"
     """
     plt = import_plt()
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     [ex] = extractors
     aw = ex.get(what)
     x, y = aw.ctimes, aw.weight
@@ -492,7 +443,7 @@ def make_figure_memory(extractors, what):
     [ex] = extractors
     task_info = ex.get('task_info').to_dict()
     del task_info['extra']
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     ax.set_xlabel('tasks')
     ax.set_ylabel('GB')
@@ -505,52 +456,6 @@ def make_figure_memory(extractors, what):
     return plt
 
 
-def make_figure_sources(extractors, what):
-    """
-    $ oq plot "sources?limit=100"
-    $ oq plot "sources?source_id=1&source_id=2"
-    $ oq plot "sources?code=A&code=N"
-    """
-    # NB: matplotlib is imported inside since it is a costly import
-    plt = import_plt()
-    [ex] = extractors
-    info = ex.get(what)
-    wkts = gzip.decompress(info.wkt_gz).decode('utf8').split(';')
-    srcs = gzip.decompress(info.src_gz).decode('utf8').split(';')
-    fig, ax = plt.subplots()
-    ax.grid(True)
-    sitecol = ex.get('sitecol')
-    pp = PolygonPlotter(ax)
-    n = 0
-    tot = 0
-    psources = []
-    for rec, srcid, wkt in zip(info, srcs, wkts):
-        if not wkt:
-            logging.warning('No geometries for source id %s', srcid)
-            continue
-        color = 'green'
-        alpha = .3
-        n += 1
-        if wkt.startswith('POINT'):
-            psources.append(shapely.wkt.loads(wkt))
-        else:
-            pp.add(shapely.wkt.loads(wkt), alpha=alpha, color=color)
-        tot += 1
-    lons = [p.x for p in psources]
-    lats = [p.y for p in psources]
-    ss_lons = lons + list(sitecol['lon'])  # sites + sources longitudes
-    ss_lats = lats + list(sitecol['lat'])  # sites + sources latitudes
-    if len(ss_lons) > 1 and cross_idl(*ss_lons):
-        ss_lons = [lon % 360 for lon in ss_lons]
-        lons = [lon % 360 for lon in lons]
-        sitecol['lon'] = sitecol['lon'] % 360
-    ax.plot(sitecol['lon'], sitecol['lat'], '.')
-    ax.plot(lons, lats, 'o')
-    pp.set_lim(ss_lons, ss_lats)
-    ax.set_title('calc#%d, %d/%d sources' % (ex.calc_id, n, tot))
-    return plt
-
-
 def make_figure_gridded_sources(extractors, what):
     """
     $ oq plot "gridded_sources?task_no=0"
@@ -559,7 +464,7 @@ def make_figure_gridded_sources(extractors, what):
     plt = import_plt()
     [ex] = extractors
     dic = json.loads(ex.get(what).json)  # id -> lonlats
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     sitecol = ex.get('sitecol')
     tot = 0
@@ -586,7 +491,7 @@ def make_figure_rupture_info(extractors, what):
     plt = import_plt()
     [ex] = extractors
     info = ex.get(what)
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     ax.grid(True)
     n = 0
     tot = 0
@@ -605,6 +510,22 @@ def make_figure_rupture_info(extractors, what):
     if tot == 1:
         # print the full geometry
         print(ex.get('rupture/%d' % rec['rupid']).toml())
+    return plt
+
+
+def make_figure_ebruptures(extractors, what):
+    """
+    $ oq plot "ebruptures?min_mag=6"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    hypo = ex.get(what)['hypo']
+    _fig, ax = plt.subplots()
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    ax.grid(True)
+    ax.scatter(hypo[:, 0], hypo[:, 1])
+    ax.set_title('%d ruptures' % len(hypo))
     return plt
 
 
@@ -679,7 +600,7 @@ def make_figure_dist_by_mag(extractors, what):
     [ex] = extractors
     effect = ex.get('effect')
     mags = ['%.2f' % mag for mag in effect.mags]
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     trti = 0
     for trt, dists in effect.dist_bins.items():
         dic = dict(zip(mags, effect[:, :, trti]))
@@ -721,7 +642,7 @@ def make_figure_effect_by_mag(extractors, what):
         ebm = get_effect_by_mag(
             mags, onesite, gsims_by_trt, maximum_distance, imtls)
         effect = numpy.array(list(ebm.values()))
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     trti = 0
     for trt in gsims_by_trt:
         ax.plot(mags, effect[:, -1, trti], label=trt)
@@ -771,7 +692,7 @@ def make_figure_csq_curves(extractors, what):
     got = {}  # (calc_id, limit_state) -> curve
     for i, ex in enumerate(extractors):
         aw = ex.get(what)
-        P, C = aw.shape
+        P, _C = aw.shape
         if P < 2:
             raise RuntimeError('Not enough return periods: %d' % P)
         for c, csq in enumerate(aw.consequences):
@@ -866,6 +787,293 @@ def make_figure_gmf_scenario(extractors, what):
     return plt
 
 
+def plot_geom(geom, ax, color, label):
+    if geom.geom_type == 'Polygon':
+        x, y = geom.exterior.xy
+        ax.plot(x, y, color=color, label=label)
+    elif geom.geom_type == 'MultiPolygon':
+        for polygon in geom:
+            x, y = polygon.exterior.xy
+            ax.plot(x, y, color=color, label=label)
+    elif geom.geom_type == 'LineString':
+        x, y = geom.xy
+        ax.plot(x, y, color=color, label=label)
+    else:
+        raise NotImplementedError(
+            f'Unable to plot geometry type {geom.geom_type}')
+
+
+def get_boundary_2d(smsh):
+    """ Returns a polygon """
+    coo = []
+    lons = smsh.mesh.lons
+    lats = smsh.mesh.lats
+    # Upper boundary + trace
+    idx = numpy.where(numpy.isfinite(lons[0, :]))[0]
+    tmp = [(lons[0, i], lats[0, i]) for i in idx]
+    trace = LineString(tmp)
+    coo.extend(tmp)
+    # Right boundary
+    idx = numpy.where(numpy.isfinite(lons[:, -1]))[0]
+    tmp = [(lons[i, -1], lats[i, -1]) for i in idx]
+    coo.extend(tmp)
+    # Lower boundary
+    idx = numpy.where(numpy.isfinite(lons[-1, :]))[0]
+    tmp = [(lons[-1, i], lats[-1, i]) for i in numpy.flip(idx)]
+    coo.extend(tmp)
+    # Left boundary
+    idx = idx = numpy.where(numpy.isfinite(lons[:, 0]))[0]
+    tmp = [(lons[i, 0], lats[i, 0]) for i in numpy.flip(idx)]
+    coo.extend(tmp)
+    return trace, Polygon(coo)
+
+
+def filter_sources(csm, src_ids, codes, excluded_codes):
+    if src_ids:
+        if codes:
+            srcs = [src for src in csm.get_sources()
+                    if src.source_id in src_ids and src.code in codes
+                    and src.code not in excluded_codes]
+        else:
+            srcs = [src for src in csm.get_sources()
+                    if src.source_id in src_ids
+                    and src.code not in excluded_codes]
+    else:
+        if codes:
+            srcs = [src for src in csm.get_sources()
+                    if src.code in codes and src.code not in excluded_codes]
+        else:
+            srcs = [src for src in csm.get_sources()
+                    if src.code not in excluded_codes]
+    if not src_ids:
+        print('The following sources will be plotted:')
+        print([(src.source_id, src.code) for src in srcs])
+    return srcs
+
+
+def plot_multi_fault_sources(mfs, src_ids, ax, min_x, max_x, min_y, max_y):
+    print('Plotting multi-fault sources...')
+    t0 = time.time()
+    src = mfs[0]
+    sections = src.get_sections()
+    if src_ids:
+        secs = set()
+        for src in mfs:
+            if src.source_id in src_ids:
+                for rup in src.iter_ruptures():
+                    secs.update(
+                        sections[surf.idx] for surf in rup.surface.surfaces)
+    else:
+        secs = sections
+        print([mf.source_id for mf in mfs])
+    print(f'Found {len(secs)} sections')
+    for sec in secs:
+        trace, poly = get_boundary_2d(sec)
+        min_x_, min_y_, max_x_, max_y_ = poly.bounds
+        min_x = min(min_x, min_x_)
+        max_x = max(max_x, max_x_)
+        min_y = min(min_y, min_y_)
+        max_y = max(max_y, max_y_)
+        plot_geom(poly, ax, 'blue', 'Multi-fault sections')
+        plot_geom(trace, ax, 'red', 'Multi-fault traces')
+    print(f'...took {time.time() - t0} seconds')
+    return min_x, max_x, min_y, max_y
+
+
+def plot_polygon_sources(srcs, ax, min_x, max_x, min_y, max_y, kind):
+    print(f'Plotting {kind} sources...')
+    if kind == 'Non-parametric':
+        color = 'orange'
+    elif kind == 'Multi-point':
+        color = 'purple'
+    elif kind == 'Characteristic fault':
+        color = 'olive'
+    elif kind == 'Simple fault':
+        color = 'magenta'
+    elif kind == 'Complex fault':
+        color = 'pink'
+    elif kind == 'Area':
+        color = 'yellow'
+    elif kind == 'Kite fault':
+        color = 'navy'
+    else:
+        color = 'teal'
+    t0 = time.time()
+    for src in srcs:
+        poly = src.polygon
+        min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
+        ax.fill(poly.lons, poly.lats, alpha=0.3, color=color, label=kind)
+        min_x = min(min_x, min_x_)
+        max_x = max(max_x, max_x_)
+        min_y = min(min_y, min_y_)
+        max_y = max(max_y, max_y_)
+    print(f'...took {time.time() - t0} seconds')
+    return min_x, max_x, min_y, max_y
+
+
+def plot_point_sources(srcs, ax, min_x, max_x, min_y, max_y):
+    print('Plotting point sources...')
+    t0 = time.time()
+    for point in srcs:
+        min_x_, min_y_, max_x_, max_y_ = point.get_bounding_box(0)
+        if point.code == b'p':  # CollapsedPointSource
+            color = 'brown'
+            label = 'Collapsed point'
+            lon = point.lon
+            lat = point.lat
+        elif point.code == b'P':  # PointSource
+            color = 'cyan'
+            label = 'Point'
+            lon = point.location.longitude
+            lat = point.location.latitude
+        else:
+            raise NotImplementedError(f'Unexpected code {point.code}')
+        ax.plot(lon, lat, 'o', alpha=0.7, color=color,
+                markersize=2, label=label)
+        min_x = min(min_x, min_x_)
+        max_x = max(max_x, max_x_)
+        min_y = min(min_y, min_y_)
+        max_y = max(max_y, max_y_)
+    print(f'...took {time.time() - t0} seconds')
+    return min_x, max_x, min_y, max_y
+
+
+def plot_sources(srcs, ax, min_x, max_x, min_y, max_y):
+    PLOTTABLE_CODES = (
+        b'N', b'M', b'X', b'S', b'C', b'P', b'p', b'P', b'F', b'A', b'K')
+    ax.set_aspect('equal')
+    ax.grid(True)
+    print(f'Plotting {len(srcs)} sources...')
+    any_sources_were_plotted = False
+    # NonParametricSource
+    np_sources = [src for src in srcs if src.code == b'N']
+    if np_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            np_sources, ax, min_x, max_x, min_y, max_y, 'Non-parametric')
+        any_sources_were_plotted = True
+    # MultiPointSource
+    mp_sources = [src for src in srcs if src.code == b'M']
+    if mp_sources:
+        # NOTE: perhaps plotting the polygon gives not enough detail?
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            mp_sources, ax, min_x, max_x, min_y, max_y, 'Multi-point')
+        any_sources_were_plotted = True
+    # CharacteristicFaultSource
+    ch_sources = [src for src in srcs if src.code == b'X']
+    if ch_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            ch_sources, ax, min_x, max_x, min_y, max_y, 'Characteristic fault')
+        any_sources_were_plotted = True
+    # SimpleFaultSource
+    s_sources = [src for src in srcs if src.code == b'S']
+    if s_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            s_sources, ax, min_x, max_x, min_y, max_y, 'Simple fault')
+        any_sources_were_plotted = True
+    # ComplexFaultSource
+    comp_sources = [src for src in srcs if src.code == b'C']
+    if comp_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            comp_sources, ax, min_x, max_x, min_y, max_y, 'Complex fault')
+        any_sources_were_plotted = True
+    # AreaSource
+    a_sources = [src for src in srcs if src.code == b'A']
+    if a_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            a_sources, ax, min_x, max_x, min_y, max_y, 'Area')
+        any_sources_were_plotted = True
+    # KiteFaultSource
+    k_sources = [src for src in srcs if src.code == b'K']
+    if k_sources:
+        min_x, max_x, min_y, max_y = plot_polygon_sources(
+            k_sources, ax, min_x, max_x, min_y, max_y, 'Kite fault')
+        any_sources_were_plotted = True
+    # PointSource or CollapsedPointSource
+    p_sources = [src for src in srcs if src.code in (b'p', b'P')]
+    if p_sources:
+        min_x, max_x, min_y, max_y = plot_point_sources(
+            p_sources, ax, min_x, max_x, min_y, max_y)
+        any_sources_were_plotted = True
+    # MultiFaultSource
+    mf_sources = [src for src in srcs if src.code == b'F']
+    if mf_sources:
+        src_ids = [src.source_id for src in srcs]
+        min_x, max_x, min_y, max_y = plot_multi_fault_sources(
+            mf_sources, src_ids, ax, min_x, max_x, min_y, max_y)
+        any_sources_were_plotted = True
+    unplottable = [(src.source_id, src.code)
+                   for src in srcs if src.code not in PLOTTABLE_CODES]
+    if unplottable:
+        print(f'Plotting the following sources is not'
+              f'implemented yet: {unplottable}')
+    assert any_sources_were_plotted, 'No sources were plotted'
+    return min_x, max_x, min_y, max_y
+
+
+def make_figure_sources(extractors, what):
+    """
+    $ oq plot "sources?source_id=xxx"
+    $ oq plot "sources?code=N&code=F"
+    $ oq plot "sources?exclude=A"
+    """
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    [ex] = extractors
+    dstore = ex.dstore
+    kwargs = what.split('?')[1]
+    if kwargs and 'exclude' in kwargs:
+        excluded_codes = [code.encode('utf8')
+                          for code in parse_qs(kwargs)['exclude']]
+    else:
+        excluded_codes = []
+    if kwargs and 'source_id' in kwargs:
+        src_ids = list(parse_qs(kwargs)['source_id'])
+    else:
+        src_ids = []
+    if kwargs and 'code' in kwargs:
+        codes = [code.encode('utf8') for code in parse_qs(kwargs)['code']
+                 if code.encode('utf8') not in excluded_codes]
+    else:
+        codes = []
+    print('Reading sources...')
+    csm = dstore['_csm']
+    srcs = filter_sources(csm, src_ids, codes, excluded_codes)
+    assert srcs, ('All sources were filtered out')
+    _fig, ax = plt.subplots()
+    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
+    min_x, max_x, min_y, max_y = plot_sources(
+        srcs, ax, min_x, max_x, min_y, max_y)
+    print('Plotting mosaic borders...')
+    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
+    ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
+    ax.set_title('Sources')
+    handles, labels = ax.get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    ax.legend(by_label.values(), by_label.keys())
+    return plt
+
+
+def make_figure_rupture(extractors, what):
+    """
+    $ oq plot "rupture?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    ebr = get_ebrupture(dstore, rup_id=0)
+    return plot_rupture(ebr.rupture)
+
+
+def make_figure_rupture_3d(extractors, what):
+    """
+    $ oq plot "rupture_3d?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    ebr = get_ebrupture(dstore, rup_id=0)
+    return plot_rupture_3d(ebr.rupture)
+
+
 def plot_wkt(wkt_string):
     """
     Plot a WKT string describing a polygon
@@ -873,8 +1081,13 @@ def plot_wkt(wkt_string):
     from shapely import wkt
     plt = import_plt()
     poly = wkt.loads(wkt_string)
-    coo = numpy.array(poly.exterior.coords)
-    plt.plot(coo[:, 0], coo[:, 1], '-')
+    if hasattr(poly, 'exterior'):
+        coo = numpy.array(poly.exterior.coords)
+    else:  # POINT or LINESTRING
+        coo = numpy.array(poly.coords)
+    _fig, ax = plt.subplots()
+    ax.plot(coo[:, 0], coo[:, 1], 'o')
+    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     return plt
 
 
@@ -917,7 +1130,7 @@ def main(what,
     if what.endswith('.csv'):
         plot_csv(what)
         return
-    if what.startswith('POLYGON'):
+    if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
         plt.show()
         return

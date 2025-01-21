@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -123,7 +123,7 @@ class CalculatorTestCase(unittest.TestCase):
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
-        os.environ['OQ_DATABASE'] = 'local'
+        os.environ['OQ_DATABASE'] = '127.0.0.1'
         parallel.Starmap.maxtasksperchild = None
 
     def get_calc(self, testfile, job_ini, **kw):

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <complexFaultRupture>
+        <magnitude>7.8</magnitude>
+        <rake>-1</rake>
+        <hypocenter lat="37.2199" lon="37.0189" depth="10"/>
+        <complexFaultGeometry>
+            <faultTopEdge>
+                <gml:LineString>
+                    <gml:posList>
+                        36.273 36.369 1.0
+                        36.389 36.547 1.0
+                        36.394 36.612 1.0
+                        36.422 36.671 1.0
+                        36.453 36.679 1.0
+                        36.561 36.874 1.0
+                        36.646 37.086 1.0
+                        36.912 37.4 1.0
+                        37.108 37.501 1.0
+                        37.242 37.537 1.0
+                        37.438 37.63 1.0
+                        37.59 37.738 1.0
+                        37.761 37.87 1.0
+                        38.076 37.95 1.0
+                        38.273 38.036 1.0
+                        38.435 38.056 1.0
+                    </gml:posList>
+                </gml:LineString>
+            </faultTopEdge>
+            <faultBottomEdge>
+                <gml:LineString>
+                    <gml:posList>
+                        36.273 36.369 16.0
+                        36.389 36.547 16.0
+                        36.394 36.612 16.0
+                        36.422 36.671 16.0
+                        36.453 36.679 16.0
+                        36.561 36.874 16.0
+                        36.646 37.086 16.0
+                        36.912 37.4 16.0
+                        37.108 37.501 16.0
+                        37.242 37.537 16.0
+                        37.438 37.63 16.0
+                        37.59 37.738 16.0
+                        37.761 37.87 16.0
+                        38.076 37.95 16.0
+                        38.273 38.036 16.0
+                        38.435 38.056 16.0
+                    </gml:posList>
+                </gml:LineString>
+            </faultBottomEdge>
+        </complexFaultGeometry>
+    </complexFaultRupture>
+</nrml>

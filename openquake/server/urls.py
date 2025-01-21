@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,10 +38,18 @@ if settings.WEBUI:
         re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
                 name="ini_defaults"),
     ]
+    if settings.APPLICATION_MODE != 'PUBLIC':
+        urlpatterns += [
+            path("cookies/", include("cookie_consent.urls")),
+        ]
     if settings.APPLICATION_MODE == 'AELO':
-        urlpatterns.append(
+        urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_aelo$',
-                    views.web_engine_get_outputs_aelo, name="outputs_aelo"))
+                    views.web_engine_get_outputs_aelo, name="outputs_aelo"),
+            re_path(r'^engine/aelo_changelog$',
+                    views.aelo_changelog,
+                    name="aelo_changelog"),
+        ]
     elif settings.APPLICATION_MODE == 'ARISTOTLE':
         urlpatterns.append(
             re_path(r'^engine/(\d+)/outputs_aristotle$',
@@ -59,7 +67,6 @@ if settings.APPLICATION_MODE == 'TOOLS_ONLY':
             re_path(r'^$', RedirectView.as_view(
                 url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
                 permanent=True)),
-            path("cookies/", include("cookie_consent.urls")),
         ]
 else:
     urlpatterns += [

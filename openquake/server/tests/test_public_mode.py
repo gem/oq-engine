@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,6 +38,8 @@ from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
 from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
+
+django.setup()
 
 
 class EngineServerPublicModeTestCase(EngineServerTestCase):
@@ -154,7 +156,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
         # there is some logic in `core.export_from_db` that it is only
         # exercised when the export fails
-        datadir, dskeys = actions.get_results(db, job_id)
+        datadir, _dskeys = actions.get_results(db, job_id)
         # try to export a non-existing output
         with self.assertRaises(core.DataStoreExportError) as ctx:
             core.export_from_db(('XXX', 'csv'), job_id, datadir, '/tmp')
@@ -181,7 +183,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         # check extract_sources
         extract_url = '/v1/calc/%s/extract/sources?' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertEqual(list(got), ['wkt_gz', 'src_gz', 'extra', 'array'])
+        self.assertEqual(list(got), ['src_gz', 'extra', 'array'])
         self.assertGreater(len(got['array']), 0)
 
         # check risk_stats

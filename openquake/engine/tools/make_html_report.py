@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -112,7 +112,7 @@ def make_report(isodate='today'):
         tag_ids.append(job_id)
         tag_status.append(status)
         [stats] = logs.dbcmd('fetch', JOB_STATS, job_id)
-        (job_id, user, start_time, stop_time, status, duration) = stats
+        (job_id, _user, _start_time, _stop_time, status, _duration) = stats
         try:
             ds = datastore.read(job_id, datadir=os.path.dirname(ds_calc))
             txt = view_fullreport('fullreport', ds)

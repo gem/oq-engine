@@ -21,7 +21,9 @@ Test of flake8 violations
 """
 import io
 import os
+import sys
 import ast
+import inspect
 import importlib
 import unittest
 from contextlib import redirect_stdout
@@ -44,8 +46,8 @@ def _long_funcs(module, maxlen):
         if isinstance(node, ast.FunctionDef):
             dotname = '%s.%s' % (module.__name__, node.name)
             args = node.args.args
-            if len(args) > 16:
-                raise SyntaxError('%s has more than 16 arguments: %s'
+            if len(args) > 15:
+                raise SyntaxError('%s has more than 15 arguments: %s'
                                   % (dotname, [a.arg for a in args]))
             doc = ast.get_docstring(node)
             doclines = 0 if doc is None else doc.count('\n') + 1
@@ -141,10 +143,11 @@ def fix_encoding(fname, encoding):
     with open(fname, newline='', encoding=encoding) as f:
         lines = f.read().splitlines()
     fix_newlines(fname, lines)
+    print('fixed', fname, file=sys.stderr)
 
 
 # check encoding and newlines
-def test_csv(OVERWRITE=False):
+def test_csv():
     for cwd, dirs, files in os.walk(REPO):
         for f in files:
             if f.endswith('.csv'):
@@ -154,17 +157,19 @@ def test_csv(OVERWRITE=False):
                     try:
                         lines = f.read().splitlines()
                     except UnicodeDecodeError as exc:
-                        if OVERWRITE:
+                        if os.environ.get('OQ_OVERWRITE'):
                             fix_encoding(fname, 'latin1')
                         else:
                             raise UnicodeDecodeError('%s: %s' % (fname, exc))
                 # read in binary, check newlines
                 error = check_newlines(open(fname, 'rb').read())
-                if error and OVERWRITE:
+                if error and os.environ.get('OQ_OVERWRITE'):
                     try:
                         fix_newlines(fname, lines)
                     except Exception as exc:
                         raise ValueError('%s: %s' % (fname, exc))
+                elif error:
+                    print('Wrong line ending in', fname, file=sys.stderr)
                 elif error == 1:
                     raise ValueError('Found \\n line ending in %s' % fname)
                 elif error == 2:
@@ -186,3 +191,17 @@ def test_forbid_long_funcs():
                                  ], 90)
     if long_funcs:
         raise RuntimeError(long_funcs)
+
+
+def test_get_basin_term():
+    # make sure the basin terms have the right signature
+    from openquake.hazardlib.gsim import registry
+    modules = set(cls.__module__ for cls in registry.values())
+    for name in modules:
+        mod = importlib.import_module(name)
+        if hasattr(mod, '_get_basin_term'):
+            args = inspect.getfullargspec(mod._get_basin_term).args[:3]
+            if args != ['C', 'ctx', 'region']:
+                msg = f'{mod.__name__}._get_basin_term has a wrong signature '
+                raise RuntimeError(msg + str(args))
+                    

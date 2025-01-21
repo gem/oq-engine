@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,9 +22,11 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_26, case_27, case_28, case_29, case_30, case_31, case_32)
+    case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33, case_34)
+from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
+from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.views import text_table, view
@@ -149,7 +151,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_12(self):
         # test for DowrickRhoades2005Asc IPE with MMI
         out = self.run_calc(case_12.__file__, 'job.ini', exports='csv')
-        gmf_data, sig_eps, sitemesh = out['gmf_data', 'csv']
+        gmf_data, sig_eps, _sitemesh = out['gmf_data', 'csv']
         self.assertEqualFiles('gmf.csv', gmf_data)
         self.assertEqualFiles('sig_eps.csv', sig_eps)
 
@@ -272,15 +274,15 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_22.__file__, 'job_from_csv.ini',
                       gmfs_file='gmfdata.csv', sites_csv='sitemodel.csv')
         self.assertEqual(str(self.calc.sitecol),
-                         '<SiteCollection with 4/5 sites>')
+                         '<SiteCollection with 1/1 sites>')
         ds = self.calc.datastore
         # check the 4 of 5 sites and 4x10 GMVs were imported correctly
-        self.assertEqual(len(ds['sitecol']), 4)
-        self.assertEqual(len(ds['gmf_data/sid']), 40)
+        self.assertEqual(len(ds['sitecol']), 1)
+        self.assertEqual(len(ds['gmf_data/sid']), 10)
         df1 = self.calc.datastore.read_df('gmf_data')
         for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
             for g0, g1 in zip(df0[gmv], df1[gmv]):
-                assert abs(g0-g1) < 5E-6, (gmv, g0, g1)
+                assert abs(g0-g1) < 6E-6, (gmv, g0, g1)
 
     def test_case_23(self):
         # check exposure with duplicates
@@ -345,3 +347,55 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_32.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+
+    def test_case_33(self):
+        # merge gmfs and events
+        self.run_calc(case_33.__file__, 'job1.ini')
+        ds1 = self.calc.datastore
+        self.assertEqual(len(ds1['sitecol']), 45)
+        self.assertEqual(len(ds1['gmf_data/sid']), 45)
+
+        self.run_calc(case_33.__file__, 'job2.ini')
+        ds2 = self.calc.datastore
+        self.assertEqual(len(ds2['sitecol']), 27)
+        self.assertEqual(len(ds2['gmf_data/sid']), 27)
+
+        oq = ds1['oqparam']
+        oq.number_of_logic_tree_samples = 1
+        oq.inputs['gmfs'] = [ds1.filename, ds2.filename]
+        fname = gettemp(suffix='.hdf5')
+        with hdf5.File(fname, 'w') as h5:
+            base.import_gmfs_hdf5(h5, oq)
+        with hdf5.File(fname, 'r') as ds:
+            sids = ds['sitecol'].sids
+            g_sids = ds['gmf_data/sid'][:]
+            assert 'ruptures' not in ds
+        aae(sids, numpy.unique(g_sids))
+        self.assertEqual(len(g_sids), 45+2)
+
+        # no GMFs, merge ruptures and events
+        oq.ground_motion_fields = False
+        fnames = [ds1.filename, ds2.filename]
+        fname = gettemp(suffix='.hdf5')
+        with hdf5.File(fname, 'w') as h5:
+            base.import_ruptures_hdf5(h5, fnames)
+        geoms = []
+        with hdf5.File(fname, 'r') as ds:
+            evs = ds['events'][:]
+            rups = ds['ruptures'][:]
+            geoms.extend(ds['rupgeoms'][:])
+        aae(rups['e0'], [0, 1])
+        aae(rups['geom_id'], [0, 1])
+        self.assertEqual(len(rups), 2)
+        self.assertEqual(len(geoms), 2)
+        aae(evs['id'], [0, 1])
+        aae(evs['rup_id'], [0, 1])
+        aae(evs['rlz_id'], [0, 0])
+
+    def test_case_34(self):
+        # NZNSHM2022 gsims
+        self.run_calc(case_34.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+
+        

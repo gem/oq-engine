@@ -95,7 +95,7 @@ def get_mean_acceleration_ba(
     C, trt, region, ctx, pga1000, apply_adjustment, imt
 ):
     return get_mean_acceleration(
-        C, trt, region, ctx, pga1000, apply_adjustment
+        C, trt, region, ctx, pga1000, apply_adjustment, usgs_baf=1.0
     ) + get_backarc_term(trt, imt, ctx)
 
 

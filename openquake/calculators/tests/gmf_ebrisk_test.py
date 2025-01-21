@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2023 GEM Foundation
+# Copyright (C) 2017-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -131,6 +131,10 @@ class EventRiskTestCase(CalculatorTestCase):
         [tot, byid] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk-pla.csv', tot, delta=1e-5)
         self.assertEqualFiles('expected/aggrisk-id-pla.csv', byid, delta=1e-5)
+
+        # check risk_by_event
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/risk_by_event.csv', fname, delta=1e-5)
 
     def test_case_6_bis(self):
         self.run_calc(case_6.__file__, 'job2.ini')

@@ -55,9 +55,9 @@ installation the engine works as any other development installation in Python: y
 create and activate a virtualenv and then perform a *pip install -e* . from the engine main directory, as normal. You can
 find the details here:
 
-`gem/oq-engine <https://github.com/gem/oq-engine/blob/master/doc/getting-started/installation-instructions/development.rst>`_
+:ref:`development page <development>`
 
-It is also possible to develop on Windows (`gem/oq-engine <https://github.com/gem/oq-engine/blob/master/doc/getting-started/installation-instructions/development.rst>`_) but very few people in GEM are doing that, so you are on your
+It is also possible to develop on Windows (:ref:`development page <development>`) but very few people in GEM are doing that, so you are on your
 own, should you encounter difficulties. We recommend Linux, but Mac also works.
 
 Since you are going to develop with the engine, you should also install the development dependencies that by default are
@@ -83,7 +83,7 @@ If you want to understand what happened during the calculation you should genera
 be seen with the command ``$ oq show fullreport``. There you will find a lot of interesting information that it is worth
 studying and we will discuss in detail in the rest of this manual. The most important section of the report is probably
 the last one, titled “Slowest operations”. For that one can understand the bottlenecks of a calculation and, with
-experience, he can understand which part of the engine he needs to optimize. Also, it is very useful to play with the
+experience, the user can understand which part of the engine needs to optimize. Also, it is very useful to play with the
 parameters of the calculation (like the maximum distance, the area discretization, the magnitude binning, etc.) and see
 how the performance changes. There is also a command to plot hazard curves and a command to compare hazard curves between
 different calculations: it is common to be able to get big speedups simply by changing the input parameters in the
@@ -95,18 +95,96 @@ There a lot of *oq commands*: if you are doing development you should study all 
 Running calculations programmatically
 -------------------------------------
 
-Starting from engine v3.12 the recommended way to run a job programmaticaly is the following::
+Starting from engine v3.21 the recommended way to run a calculation
+programmatically is via the pair ``create_jobs/run_jobs``::
 
-	>> from openquake.commonlib import logs
-	>> from openquake.calculators.base import calculators
-	>> with logs.init('job', 'job_ini') as log: # initialize logs
-	...   calc = calculators(log.get_oqparam(), log.calc_id)
-	...   calc.run()  # run the calculator
+	>> from openquake.engine import engine
+        >> jobs = engine.create_jobs(['job_ini'])  # one-element list
+        >> engine.run_jobs(jobs)
 
 Then the results can be read from the datastore by using the extract API::
 
+	>> from openquake.commonlib import datastore
 	>> from openquake.calculators.extract import extract
-	>> extract(calc.datastore, 'something')
+	>> extract(datastore.read(jobs[0].calc_id), 'something')
+
+The advantage of ``create_jobs`` is that it also accepts dictionaries
+of parameters. So, instead of generating multiple `job.ini`
+files, you can generate dictionaries, which is a lot more convenient.
+
+There is an example in the directory
+demos/risk/ScenarioRisk, called ``sensitivity.py``, which is performing
+scenario risk calculations starting for the same planar rupture, but with
+different values of the strike angle (0, 90 and 180 degrees).
+The relevant code is something like this:
+
+.. python:
+
+  """Sensitivity of the risk from the strike parameter"""
+  import os
+  from openquake.engine import engine
+
+  # template for the ini parameters
+  base_ini = dict(
+      description="scenario_risk with strike ",
+      calculation_mode="scenario_risk",
+      region="78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5",
+      inputs={'exposure': ["exposure_model.xml"],
+              'structural_vulnerability': 'structural_vulnerability_model.xml'},
+      reference_vs30_value="760.0",
+      reference_depth_to_1pt0km_per_sec='100.0',
+      intensity_measure_types="PGA",
+      truncation_level="0",  # ignore stochastic uncertainty
+      maximum_distance="500",
+      gsim="ChiouYoungs2008",
+      number_of_ground_motion_fields="1")
+
+  def run_risk(strikes):
+      # build ini dictionaries with different strikes
+      inis = []
+      for strike in strikes:
+          ini = base_ini.copy()
+          ini['description'] += str(strike)
+          ini['rupture_dict'] = str({
+              'lon': 80, 'lat': 30, 'dep': 10, 'mag': 6, 'rake': 0,
+              'strike': strike, 'dip': 90})
+          inis.append(ini)
+      # run sequentially the calculations
+      engine.run_jobs(engine.create_jobs(inis))
+  
+  if __name__ == '__main__':
+      run_risk(strikes=[0, 90, 180])
+
+Notice that this documentation can get out of sync with the code. The version
+which is tested and guaranteed to run is the one at https://github.com/gem/oq-engine/blob/master/demos/risk/ScenarioRisk/sensitivity.py, which also sets the environment
+variable OQ_DISTRIBUTE to ``zmq``. This is the easiest way to parallelize the jobs,
+which makes sense since in this case the jobs are small.
+
+After running the script you will have 3 calculations and you can see the effect
+on the risk by looking at the portfolio_loss::
+
+   $ oq show portfolio_loss -3  # strike=0
+   +------+------------+
+   | loss | structural |
+   +------+------------+
+   | avg  | 77_607_416 |
+   +------+------------+
+
+   $ oq show portfolio_loss -2  # strike=90
+   +------+------------+
+   | loss | structural |
+   +------+------------+
+   | avg  | 78_381_808 |
+   +------+------------+
+
+   $ oq show portfolio_loss -1  # strike=180
+   +------+------------+
+   | loss | structural |
+   +------+------------+
+   | avg  | 77_601_176 |
+   +------+------------+
+
+The exact numbers may change depending on the version of the engine.
 
 Case study: computing the impact of a source on a site
 ------------------------------------------------------
@@ -184,7 +262,8 @@ Then the hazard curve can be computed as follows::
 	>>> sitecol = readinput.get_site_collection(oq)
 	>>> gsims = readinput.get_gsim_lt(oq).values['*']
 	>>> calc_hazard_curve(sitecol, src, gsims, oq)
-	[[0.00507997]]>
+	array([[0.00508004]], dtype=float32)
+
 
 Working with GMPEs directly: the ContextMaker
 ---------------------------------------------
@@ -267,6 +346,68 @@ the result provided by ``calc_hazard_curve(sitecol, src, gsims, oq)`` in the sec
 If you want to know exactly how ``get_pmap`` works you are invited to look at the source code in
 ``openquake.hazardlib.contexts``.
 
+Generating ground motion fields from a rupture
+----------------------------------------------
+
+The easiest way to create a finite size rupture (a.k.a. planar rupture)
+is to use the factory function `get_planar`:
+
+>>> from openquake.hazardlib.source.rupture import get_planar
+
+The function requires in input a site and a magnitude scaling relationship,
+so first you have to build such objects:
+
+>>> [site] = sitecol  # since there is a single site
+>>> from openquake.hazardlib.scalerel import WC1994
+>>> msr = WC1994()  # magnitude scaling relationship
+>>> mag = 6.
+>>> rup = get_planar(site, msr, mag, aratio=1., strike=11., dip=38.,
+...                  rake=55., trt=cmaker.trt)
+
+If you want to generate the GMF produced by a rupture (i.e. to emulate
+a scenario calculation) you need to supplement the number of
+occurrences of the rupture and a random seed, i.e. you need to convert the
+hazardlib rupture into an EBRupture:
+
+>>> from openquake.hazardlib.source.rupture import EBRupture
+>>> ebr = EBRupture(rup, n_occ=2, seed=42)
+
+Then you can use the GmfComputer class to perform the calculation:
+
+>>> from openquake.hazardlib.calc.gmf import GmfComputer
+>>> gc = GmfComputer(ebr, sitecol, cmaker)
+>>> gc.compute_all()  # returns a DataFrame
+      gmv_0  eid  sid  rlz
+0  0.660239    0    0    0
+1  0.301583    1    0    0
+
+`gmv_0` is the value of the ground motion field for the first IMT (i.e PGA in this
+case), `eid` the event ID, `sid` the site ID (there is a single site in this case)
+and `rlz` the realization index.
+In scenario calculations there is a realization for each GSIM and in this case
+there is a single GSIM, so rlz=0. The total number of events is the number
+of realizations times the number of occurrences and therefore in this case
+the event ID (`eid`) can only have the values 0 or 1.
+
+It is also possible to perform calculations with point-like ruptures
+(i.e. ignoring the finite-size effects):
+
+>>> from openquake.hazardlib.source.rupture import PointRupture
+>>> occ_rate = None  # not used in the GmfComputer
+>>> rup =  PointRupture(mag, cmaker.trt, site.location, occ_rate, cmaker.tom)
+>>> ebr = EBRupture(rup, n_occ=2, seed=42)
+>>> GmfComputer(ebr, sitecol, cmaker).compute_all()
+      gmv_0  eid  sid  rlz
+0  0.541180    0    0    0
+1  0.247199    1    0    0
+
+The event based calculator is able to generate a set of ruptures
+from the source models and to store then on the datastore.
+Then it is possible to read the ruptures, filter them and perform
+calculations; the function to use is
+`openquake.calculators.getters.get_ebruptures` which takes in input
+a DataStore object and returns a list of `EBRupture` instances.
+
 Working with verification tables
 --------------------------------
 
@@ -321,10 +462,8 @@ Running the engine tests
 ------------------------
 
 If you are a hazard scientist contributing a bug fix to a GMPE (or any other kind of bug fix) you may need to run the
-engine tests and possibly change the expected files if there is a change in the numbers. The way to do it is to start
-the dbserver and then run the tests from the repository root::
+engine tests and possibly change the expected files if there is a change in the numbers. The way to do it is to give the following command from the repository root::
 
-	$ oq dbserver start
 	$ pytest -vx openquake/calculators
 
 If you get an error like the following::

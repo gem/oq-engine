@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,28 +25,34 @@ import logging
 import operator
 import collections
 
-import fiona
-from shapely.geometry import shape
 import numpy
+import pandas
+from shapely.geometry import shape
 from decorator import FunctionMaker
 
-from openquake.baselib import config
+from openquake.baselib import config, hdf5
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import gsim, nrml, imt, logictree, site
+from openquake.hazardlib import nrml, imt, logictree, site, geo
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.base import registry
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
-from openquake.hazardlib.valid import pmf_map
+from openquake.hazardlib.valid import pmf_map, lon_lat
+from openquake.hazardlib.shakemap.parsers import get_rup_dic
+from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
-from openquake.risklib import scientific
+from openquake.risklib import asset, scientific
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import DISPLAY_NAME
+
+F32 = numpy.float32
+U8 = numpy.uint8
 
 
 def print_features(fiona_file):
@@ -119,6 +125,47 @@ def print_gsim(what):
                 break
         else:
             print('Unknown GSIM %s' % split[1])
+
+
+def print_peril(what):
+    """
+    Print the docstring of the given SecondaryPeril, or print all available
+    subclasses
+    """
+    split = what.split(':')
+    if len(split) == 1:
+        # no peril specified, print all
+        for cls in SecondaryPeril.__subclasses__():
+            print(cls.__name__)
+    else:
+        # print the docstring of the specified class, if known
+        for cls in SecondaryPeril.__subclasses__():
+            if cls.__name__ == split[1]:
+                print(cls.__doc__)
+                break
+        else:
+            print('Unknown SecondaryPeril %s' % split[1])
+
+
+def print_geohash(what):
+    lon, lat = lon_lat(what.split(':')[1])
+    arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
+    gh = b''.join([row.tobytes() for row in arr])
+    print(gh.decode('ascii'))
+
+
+# tested in run-demos.sh
+def print_usgs_rupture(what):
+    """
+    Show the parameters of a rupture downloaded from the USGS site.
+    $ oq info usgs_rupture:us70006sj8
+    {'lon': 74.628, 'lat': 35.5909, 'dep': 13.8, 'mag': 5.6, 'rake': 0.0}
+    """
+    try:
+        usgs_id = what.split(':', 1)[1]
+    except IndexError:
+        return 'Example: oq show usgs_rupture:us70006sj8'
+    print(get_rup_dic(usgs_id)[1])
 
 
 def source_model_info(sm_nodes):
@@ -196,10 +243,14 @@ def main(what, report=False):
         print(fields.replace(',', '\t'))
         for row in rows:
             print('\t'.join(map(str, row)))
+    elif what.startswith('peril'):
+        print_peril(what)
     elif what.startswith('gsim'):
         print_gsim(what)
     elif what.startswith('imt'):
         print_imt(what)
+    elif what.startswith('usgs_rupture'):
+        print_usgs_rupture(what)
     elif what == 'views':
         for name in sorted(view):
             print(name)
@@ -233,10 +284,17 @@ def main(what, report=False):
         for param in params:
             print(param)
             print(docs[param])
+    elif what == 'loss_types':
+        ltypes = [lt for lt in scientific.LOSSTYPE
+                  if '+' not in lt and '_ins' not in lt]
+        for lt in sorted(ltypes):
+            print(lt)
     elif what.startswith('mfd'):
         print_subclass(what, BaseMFD)
     elif what.startswith('msr'):
         print_subclass(what, BaseMSR)
+    elif what.startswith('geohash'):
+        print_geohash(what)
     elif what == 'venv':
         print(sys.prefix)
     elif what == 'cfg':
@@ -272,11 +330,24 @@ def main(what, report=False):
             with mock.patch.object(logging.root, 'info'):  # reduce logging
                 do_build_reports(what)
         print(mon)
+    elif what.endswith('.csv'):
+        [rec] = hdf5.sniff([what])
+        df = pandas.read_csv(what, skiprows=rec.skip)
+        if len(df) > 25:
+            dots = pandas.DataFrame({col: ['...'] for col in df.columns})
+            df = pandas.concat([df[:10], dots, df[-10:]])
+        print(text_table(df, ext='org'))
     elif what.endswith('.xml'):
         node = nrml.read(what)
-        if node[0].tag.endswith('sourceModel'):
+        tag = node[0].tag
+        if tag.endswith('sourceModel'):
             print(source_model_info([node]))
-        elif node[0].tag.endswith('logicTree'):
+        elif tag.endswith('exposureModel'):
+            _exp, df = asset.read_exp_df(what)
+            print(node.to_str())
+            print(df.set_index('id')[[
+                'lon', 'lat', 'taxonomy', 'value-structural']])
+        elif tag.endswith('logicTree'):
             bset = node[0][0]
             if bset.tag.endswith("logicTreeBranchingLevel"):
                 bset = bset[0]

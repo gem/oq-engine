@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import io
 import os
 import ast
 import copy
@@ -24,7 +23,8 @@ import json
 import logging
 import operator
 import itertools
-from collections import namedtuple, defaultdict
+from dataclasses import dataclass
+from collections import defaultdict
 import toml
 import numpy
 
@@ -35,10 +35,19 @@ from openquake.baselib.general import (
     duplicated, BASE183, group_array, cached_property)
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
-from openquake.hazardlib.gsim.base import CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import from_string
 
-BranchTuple = namedtuple('BranchTuple', 'trt id gsim weight effective')
+U32 = numpy.uint32
+TWO24 = 2**24
+
+@dataclass
+class GsimBranch:
+    trt: str
+    id: str
+    gsim: GMPE
+    weight: dict
+    effective: bool
 
 
 class InvalidLogicTree(Exception):
@@ -114,14 +123,14 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def keyno(branch_id, bsno, brno):
+def keyno(branch_id, bsno, brno, base=BASE183):
     """
     :param branch_id: a branch ID string
     :param bsno: number of the branchset (starting from 0)
     :param brno: number of the branch in the branchset (starting from 0)
     :returns: a short unique alias for the branch_id
     """
-    return BASE183[brno] + str(bsno)
+    return base[brno] + str(bsno)
 
 
 # currently not used
@@ -195,6 +204,18 @@ class GsimLogicTree(object):
                         nodes=ltbranches)])
         return cls('fake', [trt], ltnode=lt)
 
+    @classmethod
+    def read_dict(cls, fname, tectonic_region_types=['*']):
+        """
+        Read a file containing multiple logic trees and returns a dictionary
+        ID -> <GsimLogicTree> where the ID is usually a mosaic model
+        """
+        dic = {}
+        for ltnode in nrml.read(fname).nodes:
+            dic[ltnode['logicTreeID']] = cls(
+                fname, tectonic_region_types, ltnode)
+        return dic
+
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         # tectonic_region_types usually comes from the source models
         self.filename = fname
@@ -209,6 +230,14 @@ class GsimLogicTree(object):
         self.shortener = {}
         self.branches = self._build_branches(trts)  # sorted by trt
         if trts != ['*']:
+            # reduce _ltnode to the listed TRTs
+            oknodes = []
+            for blnode in self._ltnode:
+                [bset] = bsnodes(self.filename, blnode)
+                if bset['applyToTectonicRegionType'] in trts:
+                    oknodes.append(bset)
+            self._ltnode.nodes = oknodes
+
             # reduce self.values to the listed TRTs
             values = {}
             for trt in trts:
@@ -276,6 +305,34 @@ class GsimLogicTree(object):
                                     '%s is out of the period range defined '
                                     'for %s' % (imt, gsim))
 
+    def to_node(self):
+        """
+        Converts the GsimLogicTree instance into a node object which
+        can be written in XML format.
+        NB: IMT-weight information is lost, but is not a problem if
+        the logic tree is meant to be used for scenarios/event based.
+        """
+        root = N('logicTree', {'logicTreeID': 'lt'})
+        bsno = 0
+        for trt, branches in itertools.groupby(
+                self.branches, operator.attrgetter('trt')):
+            bsnode = N('logicTreeBranchSet',
+                       {'applyToTectonicRegionType': trt,
+                        'branchSetID': "bs%d" % bsno,
+                        'uncertaintyType': 'gmpeModel'})
+            bsno += 1
+            brno = 0
+            for br in branches:
+                brnode = N('logicTreeBranch', {'branchID': 'br%d' % brno})
+                brnode.nodes.append(
+                    N('uncertaintyModel', text=br.gsim._toml))
+                brnode.nodes.append(
+                    N('uncertaintyWeight', text=br.weight['default']))
+                bsnode.nodes.append(brnode)
+                brno += 1
+            root.nodes.append(bsnode)    
+        return root
+
     def __toh5__(self):
         weights = set()
         for branch in self.branches:
@@ -315,19 +372,12 @@ class GsimLogicTree(object):
                 branch = fix_bytes(branch)
                 br_id = branch['branch']
                 gsim = valid.gsim(branch['uncertainty'], dirname)
-                for k, v in gsim.kwargs.items():
-                    if k.endswith(('_file', '_table')):
-                        if v is None:  # if volc_arc_file is None
-                            pass
-                        else:
-                            arr = numpy.asarray(dic[os.path.basename(v)][()])
-                            gsim.kwargs[k] = io.BytesIO(bytes(arr))
                 self.values[branch['trt']].append(gsim)
                 weight = object.__new__(ImtWeight)
                 # branch dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
                 weight.dic = {w: branch[w] for w in array.dtype.names[3:]}
                 gsim.weight = weight
-                bt = BranchTuple(branch['trt'], br_id, gsim, weight, True)
+                bt = GsimBranch(branch['trt'], br_id, gsim, weight, True)
                 self.branches.append(bt)
                 self.shortener[br_id] = keyno(br_id, bsno, brno)
 
@@ -344,7 +394,7 @@ class GsimLogicTree(object):
             new.branches = []
             for br in self.branches:
                 if br.trt in trts:
-                    branch = BranchTuple(br.trt, br.id, br.gsim, br.weight, 1)
+                    branch = GsimBranch(br.trt, br.id, br.gsim, br.weight, 1)
                     new.branches.append(branch)
         return new
 
@@ -380,7 +430,7 @@ class GsimLogicTree(object):
                 new.values[trt] = [gsim]
                 br_id = 'gA' + str(trti)
                 new.shortener[br_id] = keyno(br_id, trti, 0)
-                branch = BranchTuple(trt, br_id, gsim, sum(weights), True)
+                branch = GsimBranch(trt, br_id, gsim, sum(weights), True)
                 new.branches.append(branch)
             else:
                 new.branches.append(br)
@@ -457,7 +507,7 @@ class GsimLogicTree(object):
 
                 gsim.weight = weight
                 self.values[trt].append(gsim)
-                bt = BranchTuple(
+                bt = GsimBranch(
                     branchset['applyToTectonicRegionType'],
                     branch_id, gsim, weight, effective)
                 if effective:
@@ -486,15 +536,13 @@ class GsimLogicTree(object):
         branches.sort(key=lambda b: b.trt)
         return branches
 
-    def get_weights(self, trt, imt='weight'):
+    def get_weight(self, trt, gsim, imt='weight'):
         """
-        Branch weights for the given TRT
+        Branch weights for the given TRT and gsim
         """
-        weights = []
         for br in self.branches:
-            if br.trt == trt:
-                weights.append(br.weight[imt])
-        return numpy.array(weights)
+            if br.trt == trt and br.gsim._toml == gsim._toml:
+                return br.weight[imt]
 
     def sample(self, n, seed, sampling_method='early_weights'):
         """
@@ -524,7 +572,7 @@ class GsimLogicTree(object):
             rlzs.append(rlz)
         return rlzs
 
-    def get_rlzs_by_gsim_trt(self, samples=0, seed=42,
+    def get_rlzs_by_gsim_dic(self, samples=0, seed=42,
                              sampling_method='early_weights'):
         """
         :param samples:
@@ -534,7 +582,7 @@ class GsimLogicTree(object):
         :param sampling_method:
             sampling method, by default 'early_weights'
         :returns:
-            dictionary trt -> gsim -> all_rlz_ordinals for each gsim in the trt
+            dictionary trt_smr -> gsim -> rlz_ordinals
         """
         if samples:
             rlzs = self.sample(samples, seed, sampling_method)
@@ -542,9 +590,9 @@ class GsimLogicTree(object):
             rlzs = list(self)
         ddic = {}
         for i, trt in enumerate(self.values):
-            ddic[trt] = {gsim: [rlz.ordinal for rlz in rlzs
-                                if rlz.value[i] == gsim]
-                         for gsim in self.values[trt]}
+            ddic[i*TWO24] = {gsim: U32([rlz.ordinal for rlz in rlzs
+                                        if rlz.value[i] == gsim])
+                             for gsim in self.values[trt]}
         return ddic
 
     def __iter__(self):

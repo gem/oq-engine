@@ -36,9 +36,7 @@ This syntax is exactly the same as for an `AvgGMPE`; the difference is
 in the semantic, since the `AvgGMPE` performs averages on the log(intensities)
 while `AvgPoeGMPE` performs averages on the PoEs.
 """
-import copy
 import numpy as np
-from openquake.baselib import performance
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
 
@@ -104,17 +102,3 @@ class AvgPoeGMPE(GMPE):
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """Do nothing: the work is done in get_poes"""
         sig[:] = 1E-10  # to stop the error for zero sigma
-
-    def set_poes(self, mean_std, cmaker, ctx, arr):
-        """
-        :returns: an array of shape (N, L)
-        """
-        cm = copy.copy(cmaker)
-        cm.poe_mon = performance.Monitor()  # avoid double counts
-        cm.pne_mon = performance.Monitor()  # avoid double counts
-        cm.gsims = self.gsims
-        avgs = []
-        for poes, ctxt, invs in cm.gen_poes(ctx):
-            # poes has shape N, L, G
-            avgs.append(poes @ self.weights)
-        arr[:] = np.concatenate(avgs)

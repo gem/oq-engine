@@ -158,8 +158,9 @@ def _apply_weights(dstore, acc, N, R, M, P, trt_rlzs):
     # build conditional spectra for each realization
     outdic = outdict(M, N, P, 0, R)
     for g, trs in enumerate(trt_rlzs):
-        for r in trs % TWO24:
-            outdic[r] += acc[g]
+        if g in acc:  # missing in case_3, with a non-contributing TRT
+            for r in trs % TWO24:
+                outdic[r] += acc[g]
 
     # build final conditional mean and std
     weights = dstore['weights'][:]

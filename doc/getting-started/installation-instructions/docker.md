@@ -1,6 +1,6 @@
 (docker)=
 
-# Deploying the OpenQuake Engine Docker container
+# Deploying Docker container
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" width="150px">
 

@@ -1,3 +1,5 @@
+.. _common-mistakes:
+
 Bad configuration parameters
 ============================
 
@@ -170,3 +172,89 @@ calculators and in the event based hazard calculator.
 Notice that if the number of ``concurrent_tasks`` is too big the performance will get worse and the data transfer will 
 increase: at a certain point the calculation will run out of memory. I have seen this to happen when generating tens of 
 thousands of tasks. Again, it is best not to touch this parameter unless you know what you are doing.
+
+
+Rupture sampling: how to get it wrong
+-------------------------------------
+
+Rupture samplings is *much more complex than one could expect* and in many respects *surprising*. In the many years of 
+existence of the engine, multiple approached were tried and you can expect the details of the rupture sampling 
+mechanism to be different nearly at every version of the engine.
+
+Here we will discuss some tricky points that may help you understand why different versions of the engine may give 
+different results and also why the comparison between the engine and other software performing rupture sampling is 
+nontrivial.
+
+We will start with the first subtlety, the *interaction between sampling and filtering*. The short version is that you 
+should *first sample and then filter*.
+
+Here is the long version. Consider the following code emulating rupture sampling for poissonian ruptures::
+
+	import numpy
+	
+	class FakeRupture:
+	    def __init__(self, mag, rate):
+	        self.mag = mag
+	        self.rate = rate
+	
+	def calc_n_occ(ruptures, eff_time, seed):
+	    rates = numpy.array([rup.rate for rup in ruptures])
+	    return numpy.random.default_rng(seed).poisson(rates * eff_time)
+	
+	mag_rates = [(5.0, 1e-5), (5.1, 2e-5), (5.2, 1e-5), (5.3, 2e-5),
+	             (5.4, 1e-5), (5.5, 2e-5), (5.6, 1e-5), (5.7, 2e-5)]
+	fake_ruptures = [FakeRupture(mag, rate) for mag, rate in mag_rates]
+	eff_time = 50 * 10_000
+	seed = 42
+
+Running this code will give you the following numbers of occurrence for the 8 ruptures considered::
+
+	>> calc_n_occ(fake_ruptures, eff_time, seed)
+	[ 8  9  6 13  7  6  6 10]
+
+Here we did not consider the fact that engine has a ``minimum_magnitude`` feature and it is able to discard ruptures 
+below the minimum magnitude. But how should it work? The natural approach to follow, for performance-oriented 
+applications, would be to first discard the low magnitudes and then perform the sampling. However, that would 
+have effects that would be surprising for most users. Consider the following two alternative::
+
+	def calc_n_occ_after_filtering(ruptures, eff_time, seed, min_mag):
+	    mags = numpy.array([rup.mag for rup in ruptures])
+	    rates = numpy.array([rup.rate for rup in ruptures])
+	    return numpy.random.default_rng(seed).poisson(
+	        rates[mags >= min_mag] * eff_time)
+	
+	def calc_n_occ_before_filtering(ruptures, eff_time, seed, min_mag):
+	    mags = numpy.array([rup.mag for rup in ruptures])
+	    rates = numpy.array([rup.rate for rup in ruptures])
+	    n_occ = numpy.random.default_rng(seed).poisson(rates * eff_time)
+	    return n_occ[mags >= min_mag]
+
+Most users would expect that removing a little number of ruptures has a little effect; for instance, if we set 
+``min_mag = 5.1`` such that only the first rupture is removed from the total 8 ruptures, we would expect a minor change. 
+However, if we follow the filter-early approach the user would get completely different occupation numbers::
+
+	>> calc_n_occ_after_filtering(fake_ruptures, eff_time, seed, min_mag)
+	[13  6  9  6 13  7  6]
+
+It is only by using the filter-late approach that the occupation numbers are consistent with the no-filtering case::
+
+	>> calc_n_occ_before_filtering(fake_ruptures, eff_time, seed, min_mag)
+	[ 9  6 13  7  6  6 10]
+
+The problem with the filtering is absolutely general and not restricted only to the magnitude filtering: it is exactly 
+the same also for distance filtering. Suppose you have a ``maximum_distance`` of 300 km and than you decide that you 
+want to increase it to 301 km. One would expect this change to have a minor impact; instead, you may end up sampling a 
+very different set of ruptures.
+
+It is true that average quantities like the hazard curves obtained from the ground motion fields will converge for long 
+enough effective time, however in practice you are always in situations were
+
+1. you cannot perform the calculation for a long enough effective time since it would be computationally prohibitive
+2. you are interested on quantities which are strongly sensitive to aany change, like the Maximum Probable Loss at some return period
+
+In such situations changing the site collection (or changing the maximum distance which is akin to changing the site 
+collection) can change the sampling of the ruptures significantly, at least for engine versions lower than 3.17.
+
+Users wanting to compare the GMFs or the risk on different site collections should be aware of this effect; the solution 
+is to first sample the ruptures without setting any site collection (i.e. disabling the filtering) and then perform the 
+calculation with the site collection starting from the sampled ruptures.

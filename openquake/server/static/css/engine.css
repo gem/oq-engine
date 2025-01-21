@@ -199,19 +199,26 @@ nav.main-nav ul li.tools {
 
 footer.footer {
     background: #bebebe;
-    font-size: 12px;
+    font-size: 14px;
     position: fixed;
     bottom: 0;
-    padding-left: 10%;
-    padding-right: 10%;
     float: left;
     width: 80%;
     height: auto;
-    padding-top: 0;
+    color: rgb(0, 0, 0, 0.8);
+    padding: 0.2rem 10%;
 }
 
 footer.footer form label {
     color: #fff;
+}
+
+footer.footer a {
+    color: rgb(0, 0, 0, 0.8);
+}
+
+footer.footer .pull-left span {
+    font-weight: bold;
 }
 
 #new-release-box {
@@ -405,4 +412,53 @@ table#aristotle-losses th td {
 
 #aristotle-losses-download {
   margin-top: 10px;
+}
+
+.changelog {
+    width: 80%;
+    margin: 50px auto;
+    border-collapse: collapse;
+}
+.changelog th, .changelog td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: left;
+}
+.changelog th {
+    background-color: #f2f2f2;
+}
+
+.changelog td:nth-child(1), .changelog th:nth-child(1) {
+    width: 15%;
+}
+.changelog td:nth-child(2), .changelog th:nth-child(2) {
+    width: 15%;
+}
+.changelog td:nth-child(3), .changelog th:nth-child(3) {
+    width: 70%;
+}
+
+.shakemap-image-container {
+    float: left;
+    /* If we want to adjust the size of images instead of making them of the suitable size
+    /* width: 50%; */
+}
+
+/* If we want to adjust the size of images instead of making them of the suitable size
+/* .shakemap-image-container img{ */
+/*     width: 600px; */
+/* } */
+
+.shakemap-clear-float {
+    clear: both;
+    margin-bottom: 30px;
+}
+
+/* Hide all form elements except the submit button */
+.hidden_except_submit input:not([type="submit"]),
+.hidden_except_submit select,
+.hidden_except_submit textarea,
+.hidden_except_submit button:not([type="submit"]),
+.hidden_except_submit label {
+  display: none;
 }

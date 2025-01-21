@@ -1,5 +1,5 @@
-Outputs from Classical PSHA
-===========================
+Classical PSHA
+==============
 
 By default, the classical PSHA calculator computes and stores hazard curves for each logic tree sample considered.
 

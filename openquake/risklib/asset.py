@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -103,16 +103,10 @@ class CostCalculator(object):
 
     The same "formula" applies to retrofitting cost.
     """
-    def __init__(self, cost_types, area_types, units, tagi={'taxonomy': 0}):
-        if set(cost_types) != set(area_types):
-            raise ValueError('cost_types has keys %s, area_types has keys %s'
-                             % (sorted(cost_types), sorted(area_types)))
+    def __init__(self, cost_types, units, tagi={'taxonomy': 0}):
         for ct in cost_types.values():
             assert ct in ('aggregated', 'per_asset', 'per_area'), ct
-        for at in area_types.values():
-            assert at in ('aggregated', 'per_asset'), at
         self.cost_types = cost_types
-        self.area_types = area_types
         self.units = units
         self.tagi = tagi
 
@@ -142,7 +136,7 @@ class CostCalculator(object):
         if cost_type == "per_asset":
             return cost * number
         if cost_type == "per_area":
-            area_type = self.area_types[loss_type]
+            area_type = self.cost_types['area']
             if area_type == "aggregated":
                 return cost * area
             elif area_type == "per_asset":
@@ -587,14 +581,7 @@ def get_other_fields(fields):
 
 
 def _get_exposure(fname, stop=None):
-    """
-    :param fname:
-        path of the XML file containing the exposure
-    :param stop:
-        node at which to stop parsing (or None)
-    :returns:
-        a pair (Exposure instance, list of asset nodes)
-    """
+    # returns (Exposure instance, asset nodes)
     [xml] = nrml.read(fname, stop=stop)
     if not xml.tag.endswith('exposureModel'):
         raise InvalidFile('%s: expected exposureModel, got %s' %
@@ -617,14 +604,6 @@ def _get_exposure(fname, stop=None):
                 pairs.append((node['input'], noq))
     except AttributeError:
         pass  # no fieldmap
-    try:
-        area = conversions.area
-    except AttributeError:
-        # NB: the area type cannot be an empty string because when sending
-        # around the CostCalculator object we would run into this numpy bug
-        # about pickling dictionaries with empty strings:
-        # https://github.com/numpy/numpy/pull/5475
-        area = Node('area', dict(type='?'))
     try:
         occupancy_periods = xml.occupancyPeriods.text.split()
     except AttributeError:
@@ -666,14 +645,12 @@ def _get_exposure(fname, stop=None):
     cost_types.sort(key=operator.itemgetter(0))
     cost_types = numpy.array(cost_types, cost_type_dt)
     cc = CostCalculator(
-        {}, {}, {}, {name: i for i, name in enumerate(tagnames)})
+        {}, {}, {name: i for i, name in enumerate(tagnames)})
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
-        cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    exp = Exposure(occupancy_periods, area.attrib, [], cc,
-                   TagCollection(tagnames), pairs)
+    exp = Exposure(occupancy_periods, [], cc, TagCollection(tagnames), pairs)
     assets_text = xml.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -860,7 +837,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
 
 
 # used in aristotle calculations
-def aristotle_read_assets(h5, countries, start, stop):
+def aristotle_read_assets(h5, start, stop):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
@@ -877,8 +854,6 @@ def aristotle_read_assets(h5, countries, start, stop):
                 # go back from indices to strings
                 dic[field] = TAGS[field][arr]
     df = pandas.DataFrame(dic)
-    if countries:
-        df = df[numpy.isin(df.ID_0, countries)]
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
                            df.OCCUPANTS_PER_ASSET_NIGHT +
                            df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
@@ -889,21 +864,23 @@ class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['occupancy_periods', 'area', 'assets',
+    fields = ['occupancy_periods', 'assets',
               'cost_calculator', 'tagcol', 'pairs']
+
+    @property
+    def loss_types(self):
+        return sorted(self.cost_calculator.cost_types)
 
     def __toh5__(self):
         cc = self.cost_calculator
         loss_types = sorted(cc.cost_types)
-        dt = numpy.dtype([('cost_type', hdf5.vstr),
-                          ('area_type', hdf5.vstr),
+        dt = numpy.dtype([('loss_type', hdf5.vstr), ('cost_type', hdf5.vstr),
                           ('unit', hdf5.vstr)])
         array = numpy.zeros(len(loss_types), dt)
+        array['loss_type'] = loss_types
         array['cost_type'] = [cc.cost_types[lt] for lt in loss_types]
-        array['area_type'] = [cc.area_types[lt] for lt in loss_types]
         array['unit'] = [cc.units[lt] for lt in loss_types]
         attrs = dict(
-            loss_types=hdf5.array_of_vstr(loss_types),
             occupancy_periods=hdf5.array_of_vstr(self.occupancy_periods),
             pairs=self.pairs)
         return array, attrs
@@ -911,8 +888,12 @@ class Exposure(object):
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
         cc = self.cost_calculator = object.__new__(CostCalculator)
-        cc.cost_types = dict(zip(self.loss_types, decode(array['cost_type'])))
-        cc.area_types = dict(zip(self.loss_types, decode(array['area_type'])))
+        # in exposure.hdf5 `loss_types` is an attribute
+        loss_types = attrs.get('loss_types')
+        if loss_types is None:
+            # for engine version >= 3.22
+            loss_types = decode(array['loss_type'])
+        cc.cost_types = dict(zip(loss_types, decode(array['cost_type'])))
         cc.units = dict(zip(self.loss_types, decode(array['unit'])))
 
     @staticmethod
@@ -926,7 +907,7 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, gh3s, countries=()):
+    def read_around(exposure_hdf5, gh3s):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
@@ -939,7 +920,7 @@ class Exposure(object):
                 raise SiteAssociationError(
                     'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
-                aristotle_read_assets(f, countries, start, stop)
+                aristotle_read_assets(f, start, stop)
                 for gh3, start, stop in slices)
             tagcol = f['tagcol']
             # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
@@ -985,7 +966,6 @@ class Exposure(object):
                 cc = exposure.cost_calculator
                 ae(cc.cost_types, exp.cost_calculator.cost_types)
                 ae(exposure.occupancy_periods, exp.occupancy_periods)
-                ae(exposure.area, exp.area)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
         assets_df = pandas.concat(dfs)
@@ -1060,7 +1040,7 @@ class Exposure(object):
         self.cost_calculator.update(array)
         self.mesh = mesh
         self.assets = array
-        self.loss_types = vfields
+        #self.loss_types = vfields
         self.occupancy_periods = ofields
 
     def _csv_header(self, value='value-', occupants='occupants_'):
@@ -1116,8 +1096,8 @@ class Exposure(object):
                 missing = expected_header - header - {'exposure'}
                 if len(header) < len(fields):
                     raise InvalidFile(
-                        '%s: The header %s contains a duplicated field' %
-                        (fname, header))
+                        '%s: expected %d fields in %s, got %d' %
+                        (fname, len(fields), header, len(header)))
                 elif missing:
                     raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
@@ -1139,6 +1119,11 @@ class Exposure(object):
         for fname in self.datafiles:
             t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
+            asset = os.environ.get('OQ_DEBUG_ASSET')
+            if asset:
+                df = df[df.index == asset]
+                if len(df) == 0:
+                    continue
             add_dupl_fields(df, oqfields)
             df['lon'] = numpy.round(df.lon, 5)
             df['lat'] = numpy.round(df.lat, 5)
@@ -1160,5 +1145,8 @@ class Exposure(object):
             haz_sitecol).assoc2(self, haz_distance, region, 'filter')
 
     def __repr__(self):
-        return '<%s with %s assets>' % (self.__class__.__name__,
-                                        len(self.assets))
+        try:
+            num_assets = len(self.assets)
+        except AttributeError:
+            num_assets = '?'
+        return '<%s with %s assets>' % (self.__class__.__name__, num_assets)

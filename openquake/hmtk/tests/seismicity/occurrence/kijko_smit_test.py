@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -106,7 +106,7 @@ class KijkoSmitTest(unittest.TestCase):
         Tests that the computed b value corresponds to the same value
         used to generate the test data set
         """
-        bval, sigma_b, aval, sigma_a = self.ks_ml.calculate(
+        bval, sigma_b, _aval, _sigma_a = self.ks_ml.calculate(
             self.catalogue, self.config, self.compl
         )
         print(bval, sigma_b)

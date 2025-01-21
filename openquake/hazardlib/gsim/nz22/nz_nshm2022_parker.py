@@ -49,7 +49,7 @@ from openquake.hazardlib.gsim.parker_2020 import (
     _linear_amplification,
     _magnitude_scaling,
     _path_term,
-    _basin_term,
+    _get_basin_term,
     CONSTANTS,
 )
 
@@ -297,9 +297,9 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
         and code duplication.
         """
         super().__init__(
-            region=region,  saturation_region=saturation_region, basin=basin)
+            region=region, saturation_region=saturation_region, basin=basin,
+            sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
-        self.sigma_mu_epsilon = sigma_mu_epsilon
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -339,7 +339,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             )  # backarc term applied to path function for reference rock PGA
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
-            fb = _basin_term(self.region, self.basin, C, ctx)
+            fb = _get_basin_term(self.region, self.basin, C, ctx)
             flin = _linear_amplification(self.region, C, ctx.vs30)
             fnl = _non_linear_term(
                 C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga, fd_pga

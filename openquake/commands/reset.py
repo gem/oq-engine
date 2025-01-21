@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2023 GEM Foundation
+# Copyright (C) 2017-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,7 @@ def main(yes=False):
             purge_one(calc_id, user, force=True)
         if os.access(dbpath, os.W_OK):   # single user mode
             purge_all(user)  # calculations in oqdata not in the db
-            if config.dbserver.host != 'local':
+            if config.dbserver.host != '127.0.0.1':
                 # stop the dbserver first
                 pid = logs.dbcmd('getpid')
                 os.kill(pid, signal.SIGTERM)

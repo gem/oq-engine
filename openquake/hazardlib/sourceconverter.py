@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -219,6 +219,16 @@ class SourceGroup(collections.abc.Sequence):
         """
         return sum(src.weight for src in self)
 
+    @property
+    def codes(self):
+        """
+        The codes of the underlying sources as a byte string
+        """
+        codes = set()
+        for src in self.sources:
+            codes.add(src.code)
+        return b''.join(sorted(codes))
+
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
         if src_interdep not in ('indep', 'mutex'):
@@ -318,6 +328,13 @@ class SourceGroup(collections.abc.Sequence):
             return '[PoissonTOM]\ntime_span=%s' % time_span
         dic = {tom.__class__.__name__: vars(tom)}
         return toml.dumps(dic)
+
+    def is_poissonian(self):
+        """
+        :returns: True if all the sources in the group are poissonian
+        """
+        tom = getattr(self.sources[0], 'temporal_occurrence_model', None)
+        return tom.__class__.__name__ == 'PoissonTOM'
 
     def __repr__(self):
         return '<%s %s, %d source(s), weight=%d>' % (
@@ -986,21 +1003,13 @@ class SourceConverter(RuptureConverter):
             except AttributeError:
                 slip_list = ()
             simple = source.SimpleFaultSource(
-                source_id=node['id'],
-                name=node['name'],
-                tectonic_region_type=node.attrib.get('tectonicRegion'),
-                mfd=mfd,
-                rupture_mesh_spacing=self.rupture_mesh_spacing,
-                magnitude_scaling_relationship=msr,
-                rupture_aspect_ratio=~node.ruptAspectRatio,
-                upper_seismogenic_depth=~geom.upperSeismoDepth,
-                lower_seismogenic_depth=~geom.lowerSeismoDepth,
-                fault_trace=fault_trace,
-                dip=~geom.dip,
-                rake=~node.rake,
-                temporal_occurrence_model=self.get_tom(node),
-                hypo_list=hypo_list,
-                slip_list=slip_list)
+                node['id'], node['name'],
+                node.attrib.get('tectonicRegion'),
+                mfd, self.rupture_mesh_spacing,
+                msr, ~node.ruptAspectRatio, self.get_tom(node),
+                ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+                fault_trace, ~geom.dip, ~node.rake,
+                [hypo_list, slip_list])
         return simple
 
     def convert_kiteFaultSource(self, node):
@@ -1045,22 +1054,16 @@ class SourceConverter(RuptureConverter):
                     profiles_sampling=None
                     )
             else:
+                param = source.base.SourceParam(
+                    node['id'], node['name'],
+                    node.attrib.get('tectonicRegion'),
+                    mfd, self.rupture_mesh_spacing,
+                    msr, ~node.ruptAspectRatio, self.get_tom(node))
                 outsrc = source.KiteFaultSource.as_simple_fault(
-                    source_id=node['id'],
-                    name=node['name'],
-                    tectonic_region_type=node.attrib.get('tectonicRegion'),
-                    mfd=mfd,
-                    rupture_mesh_spacing=self.rupture_mesh_spacing,
-                    magnitude_scaling_relationship=msr,
-                    rupture_aspect_ratio=~node.ruptAspectRatio,
-                    upper_seismogenic_depth=~geom.upperSeismoDepth,
-                    lower_seismogenic_depth=~geom.lowerSeismoDepth,
-                    fault_trace=fault_trace,
-                    dip=~geom.dip,
-                    rake=~node.rake,
-                    temporal_occurrence_model=self.get_tom(node),
-                    floating_x_step=xstep,
-                    floating_y_step=ystep)
+                    param,
+                    ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+                    fault_trace, ~geom.dip, ~node.rake,
+                    xstep, ystep)
         return outsrc
 
     def convert_complexFaultSource(self, node):

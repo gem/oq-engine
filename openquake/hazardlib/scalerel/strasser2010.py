@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -103,7 +103,7 @@ class StrasserIntraslab(BaseMSRSigma, BaseASRSigma):
         """
         return 4.054 + 0.981 * log10(area)
 
-    def get_std_dev_mag(self, rake):
+    def get_std_dev_mag(self, area, rake):
         """
         Standard deviation on the magnitude for the Strasser et al. (2010)
         area relation.

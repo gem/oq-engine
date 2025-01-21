@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,7 @@ import os
 import numpy as np
 import copy
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
-    ChiouYoungs2014, ChiouYoungs2014PEER, ChiouYoungs2014NearFaultEffect,
-    ChiouYoungs2014Japan, ChiouYoungs2014Italy, ChiouYoungs2014Wenchuan)
+    ChiouYoungs2014, ChiouYoungs2014PEER, ChiouYoungs2014NearFaultEffect)
 
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     _get_delta_cm, get_magnitude_scaling, _get_delta_g)
@@ -90,34 +89,18 @@ class ChiouYoungs2014TestCase(BaseGSIMTestCase):
 # Note that in the regionalisation cases the discrepancy percentage is raised
 # to 1 % to allow for a different interpretation of the deltaZ1.0 when Z1.0 = 0
 # when compared to the verification code
-class ChiouYoungs2014JapanTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ChiouYoungs2014Japan
+# Data generated from implementation from Yue Hua
+# https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
+class ChiouYoungs2014RegionTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ChiouYoungs2014
 
-    def test_mean_japan(self):
-        # Data generated from implementation from Yue Hua
-        # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
+    def test_mean(self):
         self.check('NGA/CY14/CY14_Japan_MEAN.csv',
-                   max_discrep_percentage=1.0)
-
-
-class ChiouYoungs2014ItalyTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ChiouYoungs2014Italy
-
-    def test_mean_italy(self):
-        # Data generated from implementation from Yue Hua
-        # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
+                   max_discrep_percentage=1.0, region='JPN')
         self.check('NGA/CY14/CY14_Italy_MEAN.csv',
-                   max_discrep_percentage=1.0)
-
-
-class ChiouYoungs2014WenchuanTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ChiouYoungs2014Wenchuan
-
-    def test_mean_wenchuan(self):
-        # Data generated from implementation from Yue Hua
-        # https://web.stanford.edu/~bakerjw/GMPEs/CY_2014_nga.m
+                   max_discrep_percentage=1.0, region='ITA')
         self.check('NGA/CY14/CY14_Wenchuan_MEAN.csv',
-                   max_discrep_percentage=1.0)
+                   max_discrep_percentage=1.0, region='WEN')
 
 
 class ChiouYoungs2014PEERTestCase(BaseGSIMTestCase):
@@ -222,7 +205,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         gmm_adj_all = ChiouYoungs2014(stress_par_host=100,
                                       stress_par_target=120,
                                       delta_gamma_tab=path_adj_table)
-        
+
         # Settings
         imt_str = 'SA(0.1)'
         imt = from_string('SA(0.1)')
@@ -238,30 +221,30 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         ctxm_ori = ContextMaker('fake', [gmm_ori], oqp)
         ctxs_ori = list(ctxm_ori.get_ctx_iter(rups, SiteCollection([site1])))
         ctxs_ori = ctxs_ori[0]
-        
+
         # ContextMaker for the SOURCE ADJUSTED version of CY14
         ctxm_adj_src = ContextMaker('fake', [gmm_adj_src], oqp)
         ctxs_adj_src = list(ctxm_adj_src.get_ctx_iter(rups,
                                                       SiteCollection([site1])))
         ctxs_adj_src = ctxs_adj_src[0]
-    
+
         # ContextMaker for the SOURCE AND PATH ADJUSTED version of CY14
         ctxm_adj_all = ContextMaker('fake', [gmm_adj_all], oqp)
         ctxs_adj_all = list(ctxm_adj_all.get_ctx_iter(rups,
                                                       SiteCollection([site1])))
         ctxs_adj_all = ctxs_adj_all[0]
-    
+
         # Compute mean values of ground motion
-        [mea_ori, _, _, _] = ctxm_ori.get_mean_stds([ctxs_ori])
+        [_, _, _, _] = ctxm_ori.get_mean_stds([ctxs_ori])
         [mea_adj_src, _, _, _] = ctxm_adj_src.get_mean_stds([ctxs_adj_src])
         [mea_adj_all, _, _, _] = ctxm_adj_all.get_mean_stds([ctxs_adj_all])
-    
+
         # Check mean adjusted values are as expected
-        expected_adj_src = -2.5796011    
+        expected_adj_src = -2.5796011
         expected_adj_all = -2.935969
         self.assertAlmostEqual(mea_adj_src[0][0][0], expected_adj_src)
         self.assertAlmostEqual(mea_adj_all[0][0][0], expected_adj_all)
-        
+
         # Test delta_cm term
         delta_cm = _get_delta_cm(gmm_adj_all.conf, imt)
         expected_delta_cm = 0.149652555  # From hand-made calc
@@ -281,13 +264,9 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         # Test delta_g term
         path_adj = _get_delta_g(gmm_adj_all.conf['delta_gamma_tab'],
                                 ctxs_adj_all, imt)
-        expected_path_adj = np.array([-0.0065052, -0.0065052]) # Value is
-                                                               # obtained from
-                                                               # central branch
-                                                               # (branch 3) of
-                                                               # table 2 for
-                                                               # SA(0.1) when
-                                                               # using eq 13
+        # Value is obtained from central branch (branch 3) of table 2 for
+        # SA(0.1) when using eq 13
+        expected_path_adj = np.array([-0.0065052, -0.0065052])
         msg = f"The value of the path adjustment {path_adj} is different \n"
         msg += f"than the expected one {expected_path_adj}"
         np.testing.assert_almost_equal(

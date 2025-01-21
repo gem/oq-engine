@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -215,7 +215,6 @@ class TruncatedGRMFD(BaseMFD):
         :param value:
             A float value to add to ``max_mag``.
         """
-        tmr = self._get_total_moment_rate()
         self.max_mag += value
 
 

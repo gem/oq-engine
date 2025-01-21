@@ -1,6 +1,6 @@
 (tools)=
 
-# Add OpenQuake Tools to the OpenQuake Engine server
+# Add OpenQuake tools to server
 
 ## Prerequisites
 

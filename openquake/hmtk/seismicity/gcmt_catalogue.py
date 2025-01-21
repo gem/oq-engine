@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -526,7 +526,7 @@ class GCMTCatalogue(Catalogue):
             "magnitude",
             "sigmaMagnitude",
         ]
-        with open(filename, "wt", newline="") as fid:
+        with open(filename, "wt") as fid:
             writer = csv.DictWriter(fid, fieldnames=header_list)
             headers = dict((header, header) for header in header_list)
             writer.writerow(headers)

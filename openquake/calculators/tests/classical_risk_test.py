@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -97,8 +97,12 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
 
+        # checking custom_site_id in UHS curves
+        [mean, _q15] = export(('uhs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs-mean.csv', mean, delta=1E-5)
+
         # checking the avg_losses
-        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        [_, fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname),
                               fname, delta=1E-5)
 

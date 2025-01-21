@@ -266,7 +266,7 @@ class SgobbaEtAl2020(GMPE):
                 self.be = 0.0
             # Site correction
             points = np.array([ctx.lon, ctx.lat]).T  # shape (N, 2)
-            dsts, idxs = self.kdt.query(points)
+            _dsts, idxs = self.kdt.query(points)
             dat = Data(self.Smodel, self.cluster, self.PERIODS,
                        self.betaS2S, idxs)
             sc = 0

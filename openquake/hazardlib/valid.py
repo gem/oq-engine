@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -105,15 +105,14 @@ class FromFile(object):
     Fake GSIM to be used when the GMFs are imported from an
     external file and not computed with a GSIM.
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     DEFINED_FOR_REFERENCE_VELOCITY = None
+    _toml = '[FromFile]'
     kwargs = {}
-
-    def init(self):
-        pass
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         pass
@@ -186,6 +185,18 @@ def gsim(value, basedir=''):
     gs = gsim_class(**kwargs)
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
+
+
+def modified_gsim(gmpe, **kwargs):
+    """
+    Builds a ModifiableGMPE from a gmpe. Used for instance in the GEESE project
+    as follows:
+
+    mgs = modified_gsim(gsim, add_between_within_stds={'with_betw_ratio':1.5})
+    """
+    text = gmpe._toml.replace('[', '[ModifiableGMPE.gmpe.') + '\n'
+    text += toml.dumps({'ModifiableGMPE': kwargs})
+    return gsim(text)
 
 
 def occurrence_model(value):
@@ -314,6 +325,11 @@ class Regex(object):
 name = Regex(r'^[a-zA-Z_]\w*$')
 
 name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
+
+# e.g. 2023-02-06 04:17:34+03:00
+# +03:00 indicates the time zone offset from Coordinated Universal Time (UTC)
+local_timestamp = Regex(
+    r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2})$")
 
 
 class SimpleId(object):
@@ -563,8 +579,10 @@ def lon_lat(value):
 
     >>> lon_lat('12 14')
     (12.0, 14.0)
+    >>> lon_lat('12,14')
+    (12.0, 14.0)
     """
-    lon, lat = value.split()
+    lon, lat = value.replace(',', ' ').split()
     return longitude(lon), latitude(lat)
 
 
@@ -737,10 +755,11 @@ def probabilities(value, rows=0, cols=0):
     [1.0]
     >>> probabilities('0.1 0.2')
     [0.1, 0.2]
-    >>> probabilities('0.1, 0.2')  # commas are ignored
+    >>> probabilities('[0.1, 0.2]')  # commas and brackets are ignored
     [0.1, 0.2]
     """
-    probs = list(map(probability, value.replace(',', ' ').split()))
+    val = value.replace('[', '').replace(']', '').replace(',', ' ')
+    probs = list(map(probability, val.split()))
     if rows and cols:
         probs = numpy.array(probs).reshape((len(rows), len(cols)))
     return probs
@@ -840,6 +859,8 @@ def check_levels(imls, imt, min_iml=1E-10):
        ...
     ValueError: Found duplicated levels for PGA: [0.2, 0.2]
     """
+    if imls == [0]:  # corresponds to intensity_measure_levels
+        return
     if len(imls) < 1:
         raise ValueError('No imls for %s: %s' % (imt, imls))
     elif imls != sorted(imls):
@@ -907,6 +928,23 @@ def logscale(x_min, x_max, n):
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
 
 
+def linscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min <= 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    return numpy.linspace(x_min, x_max, num=n)
+
+
 def dictionary(value):
     """
     :param value:
@@ -929,18 +967,23 @@ def dictionary(value):
     """
     if not value:
         return {}
-    value = value.replace('logscale(', '("logscale", ')  # dirty but quick
+
+    if 'logscale' in value:
+        value = value.replace('logscale(', '("logscale", ')  # dirty but quick
+    if 'linscale' in value:
+        value = value.replace('linscale(', '("linscale", ')  # dirty but quick
+
     try:
         dic = dict(ast.literal_eval(value))
     except Exception:
         raise ValueError('%r is not a valid Python dictionary' % value)
+
     for key, val in dic.items():
-        try:
-            has_logscale = (val[0] == 'logscale')
-        except Exception:  # no val[0]
-            continue
-        if has_logscale:
-            dic[key] = list(logscale(*val[1:]))
+        if isinstance(val, tuple):
+            if val[0] == 'logscale':
+                dic[key] = list(logscale(*val[1:]))
+            elif val[0] == 'linscale':
+                dic[key] = list(linscale(*val[1:]))
     return dic
 
 
@@ -1126,6 +1169,23 @@ def positiveints(value):
     return ints
 
 
+def tile_spec(value):
+    """
+    Specify a tile with a string of format "no:nt"
+    where `no` is an integer in the range `1..nt` and `nt`
+    is the total number of tiles.
+
+    >>> tile_spec('[1,2]')
+    [1, 2]
+    >>> tile_spec('[2,2]')
+    [2, 2]
+    """
+    no, ntiles = ast.literal_eval(value)
+    assert ntiles > 0, ntiles
+    assert no > 0 and no <= ntiles, no
+    return [no, ntiles]
+
+
 def simple_slice(value):
     """
     >>> simple_slice('2:5')
@@ -1170,9 +1230,6 @@ def host_port(value=None):
 
 
 # used for the exposure validation
-cost_type = Choice('structural', 'nonstructural', 'contents',
-                   'business_interruption')
-
 cost_type_type = Choice('aggregated', 'per_area', 'per_asset')
 
 
@@ -1420,6 +1477,11 @@ def corename(src):
     :returns: the core name of a source
     """
     src = src if isinstance(src, str) else src.source_id
+    # @ section of multifault source
+    # ! source model logic tree branch
+    # : component of mutex source
+    # ; alternate logictree version of a source
+    # . component of split source
     return re.split('[!:;.]', src)[0]
 
 

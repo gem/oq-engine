@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -108,10 +108,7 @@ class KiteFaultSource(ParametricSeismicSource):
         self.floating_y_step = floating_y_step
 
     @classmethod
-    def as_simple_fault(cls, source_id, name, tectonic_region_type,
-                        mfd, rupture_mesh_spacing,
-                        magnitude_scaling_relationship, rupture_aspect_ratio,
-                        temporal_occurrence_model,
+    def as_simple_fault(cls, param,
                         # simple fault specific parameters
                         upper_seismogenic_depth, lower_seismogenic_depth,
                         fault_trace, dip, rake, floating_x_step,
@@ -120,12 +117,13 @@ class KiteFaultSource(ParametricSeismicSource):
         # Get profiles
         profiles = get_profiles_from_simple_fault_data(
             fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-            dip, rupture_mesh_spacing)
+            dip, param.rupture_mesh_spacing)
 
         # Creating Kite Source
-        self = cls(source_id, name, tectonic_region_type, mfd,
-                   rupture_mesh_spacing, magnitude_scaling_relationship,
-                   rupture_aspect_ratio, temporal_occurrence_model,
+        self = cls(param.source_id, param.name, param.tectonic_region_type,
+                   param.mfd, param.rupture_mesh_spacing,
+                   param.magnitude_scaling_relationship,
+                   param.rupture_aspect_ratio, param.temporal_occurrence_model,
                    profiles, rake, floating_x_step,
                    floating_y_step)
         return self

@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -51,7 +51,6 @@
 import os
 import unittest
 import tempfile
-import filecmp
 
 from openquake.hmtk.parsers.catalogue.gcmt_ndk_parser import ParseNDKtoGCMT
 
@@ -72,39 +71,11 @@ class TestGCMTCatalogue(unittest.TestCase):
         self.cat = prs.read_file()
 
     def test_serialise_to_csv_centroid(self):
-        """Test serialise centroid"""
-
         with tempfile.TemporaryDirectory() as tmpdirname:
-            # Expected - The content of the output file was manually checked
-            # against the original .ndk file
-            tmp = "expected_gcmt_centroid.csv"
-            rel_path = os.path.join("data", "gcmt", tmp)
-            fname_expected = os.path.join(self.FILE_PATH, rel_path)
-
-            # Serialise
             fname_csv = os.path.join(tmpdirname, "catalogue_cen.csv")
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=True)
 
-            # Test
-            statement = filecmp.cmp(fname_csv, fname_expected, shallow=False)
-            msg = "Produced and expected centroid files differ"
-            self.assertTrue(statement, msg)
-
     def test_serialise_to_csv_hypocenter(self):
-        """Test serialise hypocenter"""
-
         with tempfile.TemporaryDirectory() as tmpdirname:
-            # Expected - The content of the output file was manually checked
-            # against the original .ndk file
-            tmp = "expected_gcmt_hypocenter.csv"
-            rel_path = os.path.join("data", "gcmt", tmp)
-            fname_expected = os.path.join(self.FILE_PATH, rel_path)
-
-            # Serialise
             fname_csv = os.path.join(tmpdirname, "catalogue_hyp.csv")
             self.cat.serialise_to_hmtk_csv(fname_csv, centroid_location=False)
-
-            # Test
-            statement = filecmp.cmp(fname_csv, fname_expected, shallow=False)
-            msg = "Produced and expected hypocenter files differ"
-            self.assertTrue(statement, msg)

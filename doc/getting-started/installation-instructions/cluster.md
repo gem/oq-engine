@@ -1,6 +1,6 @@
 (cluster)=
 
-# Running the OpenQuake Engine on multiple nodes (cluster/zmq)
+# Running on multiple nodes (cluster/zmq)
 
 If you have a HPC cluster using the SLURM scheduler you are on the wrong
 page and you should [go here](slurm.md) instead. This page documents how to
@@ -121,9 +121,7 @@ oq_distribute = zmq
 
 [dbserver]
 file = /var/lib/openquake/oqdata/db.sqlite3
-# daemon bind address; must be a valid IP address
-listen = < IP address of master>
-# address of the dbserver; can be an hostname too
+# address of the dbserver
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
 host = < IP address of master>

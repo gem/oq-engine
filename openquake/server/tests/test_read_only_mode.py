@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,9 +23,12 @@
 
 import os
 
+import django
 from django.test import Client
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
+
+django.setup()
 
 
 class EngineServerReadOnlyModeTestCase(EngineServerTestCase):

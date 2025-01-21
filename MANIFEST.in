@@ -5,7 +5,7 @@ include openquake/engine/openquake.cfg
 
 # OpenQuake server config examples
 include openquake/server/local_settings.py.pam
-include openquake/server/local_settings.py.standalone
+include openquake/server/local_settings.py.server
 # OpenQuake server data
 recursive-include openquake/server/db *.sql
 recursive-include openquake/server *.html *.css *.png *.js *.map *.ttf

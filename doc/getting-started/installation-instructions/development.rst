@@ -1,7 +1,7 @@
 .. _development:
 
-Installing the OpenQuake Engine for development
-===============================================
+Installing for development
+==========================
 
 To develop with the OpenQuake Engine and Hazardlib an installation from
 sources must be performed. The easiest way it to use the `universal

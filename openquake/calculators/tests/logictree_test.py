@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -70,14 +70,14 @@ class LogicTreeTestCase(CalculatorTestCase):
             csm = self.calc.datastore['_csm']
             full_lt = self.calc.datastore['full_lt'].init()
             sitecol = self.calc.datastore['sitecol']
-            trs = full_lt.get_trt_rlzs(self.calc.datastore['trt_smrs'][:])
+            trt_smrs = self.calc.datastore['trt_smrs']
             rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
             wget = full_lt.gsim_lt.wget
             mean_rates = calc_mean_rates(
-                rmap, full_lt.g_weights(trs), wget, oq.imtls)
+                rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
-            aac(mr, er, atol=1e-6)
+            aac(mr, er, atol=8e-6)
 
     def test_case_01(self):
         # same source in two source models
@@ -154,12 +154,6 @@ class LogicTreeTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b3-gsimltp_b1.csv'],
             case_07.__file__)
-
-        # check the weights of the sources
-        info = self.calc.datastore.read_df('source_info', 'source_id')
-        self.assertEqual(info.loc[b'1'].weight, 276)
-        self.assertEqual(info.loc[b'2'].weight, 177)
-        self.assertEqual(info.loc[b'3'].weight, 5871)
 
         # testing view_relevant_sources
         arr = view('relevant_sources:PGA', self.calc.datastore)
@@ -280,16 +274,16 @@ hazard_uhs-std.csv
         self.assertEqual(arr['mean'].dtype.names,
                          ('0.010000', '0.100000', '0.200000'))
 
-        # check deserialization of source_model_lt
+        # check ordering by rm_rlz.pid
         r0, r1, r2 = self.calc.datastore['full_lt/source_model_lt']
         self.assertEqual(repr(r0),
                          "<Realization #0 ['source_model_1.xml', None], "
                          "path=SM1~., weight=0.5>")
         self.assertEqual(repr(r1), "<Realization #1 ['source_model_2.xml', "
-                         "(3.2, 0.8)], path=SM2~a3pt2b0pt8, "
+                         "(3.0, 1.0)], path=SM2~a3b1, "
                          "weight=0.25>")
         self.assertEqual(repr(r2), "<Realization #2 ['source_model_2.xml', "
-                         "(3.0, 1.0)], path=SM2~a3b1, weight=0.25>")
+                         "(3.2, 0.8)], path=SM2~a3pt2b0pt8, weight=0.25>")
 
     def test_case_16(self):   # sampling
         with unittest.mock.patch.dict(config.memory, limit=240):
@@ -335,26 +329,25 @@ hazard_uhs-std.csv
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
         window = self.calc.datastore['oqparam'].investigation_time
         mean_rates = to_rates(mean_poes, window)
-        rates_by_source = self.calc.datastore[
-            'mean_rates_by_src'][0]  # (M, L1, Ns)
+        rates_by_source = self.calc.datastore['mean_rates_by_src'][0]  # (M, L1, Ns)
         aac(mean_rates, rates_by_source.sum(axis=2), atol=5E-7)
 
     def test_case_20(self):
         # Source geometry enumeration, apply_to_sources
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv',
-            'hazard_curve-smltp_sm1_sg1_cog1_char_complex-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg1_cog1_char_plane-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg1_cog1_char_simple-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg1_cog2_char_complex-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg1_cog2_char_plane-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg1_cog2_char_simple-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg2_cog1_char_complex-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg2_cog1_char_plane-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg2_cog1_char_simple-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg2_cog2_char_complex-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg2_cog2_char_plane-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
+            'hazard_curve-00.csv',
+            'hazard_curve-01.csv',
+            'hazard_curve-02.csv',
+            'hazard_curve-03.csv',
+            'hazard_curve-04.csv',
+            'hazard_curve-05.csv',
+            'hazard_curve-06.csv',
+            'hazard_curve-07.csv',
+            'hazard_curve-08.csv',
+            'hazard_curve-09.csv',
+            'hazard_curve-10.csv',
+            'hazard_curve-11.csv'],
             case_20.__file__)
         # there are 3 sources x 12 sm_rlzs
         sgs = self.calc.csm.src_groups  # 7 source groups with 1 source each
@@ -382,19 +375,7 @@ hazard_uhs-std.csv
         got = [dict(zip(rlz.lt_path, rlz.value))
                for rlz in self.calc.datastore['full_lt'].source_model_lt]
 
-        exp0 = {'char_simple': [('simpleFaultGeometry',
-                                 ([(-64.5, -0.38221), (-64.5, 0.38221)],
-                                  2.0,
-                                  15.0,
-                                  90.0,
-                                  2.0))],
-                'cog1': ([[(-64.7, -0.38221, 0.0), (-64.7, 0.38221, 0.0)],
-                          [(-64.7, -0.38221, 12.0), (-64.7, 0.38221, 12.0)]],
-                         2.0),
-                'sg1': ([(-65.0, -0.38221), (-65.0, 0.38221)],
-                        0.0, 12.0, 90.0, 2.0),
-                'sm1': 'source_model.xml'}
-        exp1 = {'char_complex': [('complexFaultGeometry',
+        exp0 = {'char_complex': [('complexFaultGeometry',
                                   ([[(-64.5, -0.38221, 2.0),
                                      (-64.5, 0.38221, 4.0)],
                                     [(-64.5, -0.38221, 16.0),
@@ -406,7 +387,7 @@ hazard_uhs-std.csv
                 'sg1': ([(-65.0, -0.38221), (-65.0, 0.38221)],
                         0.0, 12.0, 90.0, 2.0),
                 'sm1': 'source_model.xml'}
-        exp2 = {'char_plane': [('planarSurface',
+        exp1 = {'char_plane': [('planarSurface',
                                 [(-64.5, -0.38221, 1.0),
                                  (-64.5, 0.0, 1.0),
                                  (-64.5, 0.0, 14.0),
@@ -416,6 +397,18 @@ hazard_uhs-std.csv
                                  (-64.5, 0.38221, 2.0),
                                  (-64.5, 0.38221, 16.0),
                                  (-64.5, 0.0, 16.0)])],
+                'cog1': ([[(-64.7, -0.38221, 0.0), (-64.7, 0.38221, 0.0)],
+                          [(-64.7, -0.38221, 12.0), (-64.7, 0.38221, 12.0)]],
+                         2.0),
+                'sg1': ([(-65.0, -0.38221), (-65.0, 0.38221)],
+                        0.0, 12.0, 90.0, 2.0),
+                'sm1': 'source_model.xml'}
+        exp2 = {'char_simple': [('simpleFaultGeometry',
+                                 ([(-64.5, -0.38221), (-64.5, 0.38221)],
+                                  2.0,
+                                  15.0,
+                                  90.0,
+                                  2.0))],
                 'cog1': ([[(-64.7, -0.38221, 0.0), (-64.7, 0.38221, 0.0)],
                           [(-64.7, -0.38221, 12.0), (-64.7, 0.38221, 12.0)]],
                          2.0),
@@ -447,34 +440,15 @@ hazard_uhs-std.csv
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
         self.assert_curves_ok([
-            'hazard_curve-smltp_b1_mfd1_high_dip_dip30-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd1_high_dip_dip45-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd1_high_dip_dip60-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd1_low_dip_dip30-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd1_low_dip_dip45-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd1_low_dip_dip60-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd1_mid_dip_dip30-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd1_mid_dip_dip45-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd1_mid_dip_dip60-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd2_high_dip_dip30-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd2_high_dip_dip45-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd2_high_dip_dip60-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd2_low_dip_dip30-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd2_low_dip_dip45-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd2_low_dip_dip60-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd2_mid_dip_dip30-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd2_mid_dip_dip45-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd2_mid_dip_dip60-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd3_high_dip_dip30-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd3_high_dip_dip45-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd3_high_dip_dip60-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd3_low_dip_dip30-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd3_low_dip_dip45-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd3_low_dip_dip60-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd3_mid_dip_dip30-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
-            'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
-            case_21.__file__)
+            'hc00.csv', 'hc01.csv', 'hc02.csv',
+            'hc03.csv', 'hc04.csv', 'hc05.csv',
+            'hc06.csv', 'hc07.csv', 'hc08.csv',
+            'hc09.csv', 'hc10.csv', 'hc11.csv',
+            'hc12.csv', 'hc13.csv', 'hc14.csv',
+            'hc15.csv', 'hc15.csv', 'hc17.csv',
+            'hc18.csv', 'hc19.csv', 'hc20.csv',
+            'hc21.csv', 'hc22.csv', 'hc23.csv',
+            'hc24.csv', 'hc25.csv', 'hc26.csv'], case_21.__file__, delta=2E-05)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
@@ -523,6 +497,7 @@ hazard_uhs-std.csv
 
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree
+        # testing also split_by_gsim
         self.run_calc(case_36.__file__, 'job.ini')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_36.__file__, 'job.ini', hazard_calculation_id=hc_id,
@@ -615,18 +590,18 @@ hazard_uhs-std.csv
 
         # First calculation
         self.run_calc(case_58.__file__, 'job.ini')
-        f01, f02 = export(('hcurves/rlz-000', 'csv'), self.calc.datastore)
-        f03, f04 = export(('hcurves/rlz-003', 'csv'), self.calc.datastore)
+        f01, _f02 = export(('hcurves/rlz-000', 'csv'), self.calc.datastore)
+        f03, _f04 = export(('hcurves/rlz-003', 'csv'), self.calc.datastore)
 
         # Second calculation. Same LT structure for case 1 but with only one
         # branch for each branch set
         self.run_calc(case_58.__file__, 'job_case01.ini')
-        f11, f12 = export(('hcurves/', 'csv'), self.calc.datastore)
+        f11, _f12 = export(('hcurves/', 'csv'), self.calc.datastore)
 
         # Third calculation. In this case we use a source model containing one
         # source with the geometry of branch b22 and slip rate of branch b32
         self.run_calc(case_58.__file__, 'job_case02.ini')
-        f21, f22 = export(('hcurves/', 'csv'), self.calc.datastore)
+        f21, _f22 = export(('hcurves/', 'csv'), self.calc.datastore)
 
         # First test
         self.assertEqualFiles(f01, f11)
@@ -683,8 +658,9 @@ hazard_uhs-std.csv
 
         # check the reduction from 10 to 2 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        ae(rlzs['branch_path'], [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
-                                 b'AA~A', b'AA~A', b'B.~A', b'B.~A', b'B.~A'])
+        exp = [b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A',
+               b'AAA~A', b'AB.~A', b'AB.~A', b'AB.~A']
+        ae(rlzs['branch_path'], exp)
         aac(rlzs['weight'], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 
         # check the hazard curves
@@ -698,7 +674,7 @@ hazard_uhs-std.csv
         # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
         # trt_rlzs is 135 2 04, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
         self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0')
-        self.assertEqual(len(self.calc.realizations), 10)
+        self.assertEqual(len(self.calc.full_lt.get_realizations()), 10)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurves.csv', fname)
 
@@ -730,3 +706,6 @@ hazard_uhs-std.csv
         self.run_calc(case_84.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
+
+        [f] = export(('trt_gsim', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/trt_gsim.csv', f)

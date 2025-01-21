@@ -24,16 +24,17 @@ import numpy
 import pandas
 
 from openquake.baselib import general, parallel, python3compat
-from openquake.commonlib import readinput, datastore, logs
+from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
-from openquake.engine import engine
 from openquake.calculators import base, views
+from openquake.calculators.base import expose_outputs
 
 U8 = numpy.uint8
 F32 = numpy.float32
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
+
 
 class FakeBuilder:
     eff_time = 0.
@@ -179,8 +180,11 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     max_events = num_events.max()
     periods = return_periods or oq.return_periods or scientific.return_periods(
         haz_time, max_events)  # in case_master [1, 2, 5, 10]
-    max_period = periods[-1]
-    pla_factor = readinput.get_pla_factor(oq, max_period / max_events)
+    if 'post_loss_amplification' in oq.inputs:
+        pla_factor = scientific.pla_factor(
+            dstore.read_df('post_loss_amplification'))
+    else:
+        pla_factor = None
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
         loss_dt or oq.loss_dt(), weights,
@@ -238,7 +242,7 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
-def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types):
+def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types, monitor):
     """
     :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
     :param builder: a :class:`LossCurvesMapsBuilder` instance
@@ -291,6 +295,7 @@ def store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols,
             if len(year):
                 data['year'] = year[df.event_id.to_numpy()]
             items.append([(agg_id, rlz_id, loss_id), data])
+    dstore.swmr_on()
     dic = parallel.Starmap.apply(
         build_aggcurves, (items, builder, num_events, aggtypes),
         concurrent_tasks=oq.concurrent_tasks,
@@ -302,7 +307,7 @@ def store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols,
                      limit_states=' '.join(oq.limit_states),
                      units=units, ep_fields=ep_fields)
 
-    
+
 # aggcurves are built in parallel, aggrisk sequentially
 def build_store_agg(dstore, oq, rbe_df, num_events):
     """
@@ -332,6 +337,7 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
 
     agg_ids = rbe_df.agg_id.unique()
     K = agg_ids.max()
+    L = len(oq.loss_types)
     T = scientific.LOSSID[oq.total_losses or 'structural']
     logging.info("Performing %d aggregations", len(agg_ids))
 
@@ -368,20 +374,27 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
             if dmgs:
                 # infer the number of buildings in nodamage state
                 ndamaged = sum(df[col].sum() for col in dmgs)
-                acc['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
+                dmg0 = aggnumber[agg_id] - ndamaged / (ne * L)
+                assert dmg0 >= 0, dmg0
+                acc['dmg_0'].append(dmg0)
             for col in columns:
-                sorted_losses = df[col].sort_values().to_numpy()
-                fixed_losses, _ = scientific.fix_losses(
-                    sorted_losses, ne, builder.eff_time, builder.pla_factor)
-                agg = fixed_losses.sum()
+                losses = df[col].sort_values().to_numpy()
+                sorted_losses, _, eperiods = scientific.fix_losses(
+                    losses, ne, builder.eff_time)
+                agg = sorted_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)
+                if builder.pla_factor:
+                    agg = sorted_losses @ builder.pla_factor(eperiods)
+                    acc['pla_' + col].append(
+                        agg * tr if oq.investigation_time else agg/ne)
     fix_dtypes(acc)
     aggrisk = pandas.DataFrame(acc)
-    dstore.create_df('aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
+    dstore.create_df('aggrisk', aggrisk,
+                     limit_states=' '.join(oq.limit_states))
     if oq.investigation_time and loss_cols:
-        store_aggcurves(
-            oq, agg_ids, rbe_df, builder, loss_cols, events, num_events, dstore)
+        store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols, events,
+                        num_events, dstore)
     return aggrisk
 
 
@@ -576,6 +589,12 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity checks and save agg_curves-stats
         """
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+            try:
+                self._plot_assets()
+            except Exception:
+                logging.error('', exc_info=True)
+
         if not ok:  # the hazard is to small
             return
         oq = self.oqparam
@@ -650,4 +669,4 @@ def post_aggregate(calc_id: int, aggregate_by):
         parallel.Starmap.init()
         prc = PostRiskCalculator(oqp, log.calc_id)
         prc.run(aggregate_by=[aggby])
-        engine.expose_outputs(prc.datastore)
+        expose_outputs(prc.datastore)

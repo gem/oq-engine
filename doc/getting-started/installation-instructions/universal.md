@@ -1,7 +1,6 @@
 (universal)=
 
-
-# Universal installation script
+# Universal installer
 
 Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed
 (currently Python 3.9, 3.10 and 3.11 are supported by the engine). If not, you should install a suitable version of Python according to your platform preferred mechanism.
@@ -218,12 +217,16 @@ It is possible to install the engine on a Linux cluster, but it requires additio
 
 A set of [Docker containers](docker.md) is available for installing the engine in the cloud.
 
-## Downgrading an installation
+## Downgrading an installation or installing a different version
 
 By default, in `user` and `server` mode the script will install the latest stable release of the engine.
-If for some reason you want to use an older version you can specify the version number with the ``--version`` option:
+If for some reason you want to use an older (or different) version you can specify the version number or the branch name with the ``--version`` option, e.g.:
 ```
-$ python3 install.py user --version=3.10
+$ python3 install.py user --version=3.16
+```
+or
+```
+$ python3 install.py user --version=branch_name
 ```
 
 ## Uninstalling the engine

@@ -1,0 +1,67 @@
+{% load static %}
+{% load cookie_consent_tags %}
+{% load servertags %}
+    <script type="text/javascript" src={% static "cookie_consent/cookiebar.js" %}></script>
+    <script>
+    {% if request|cookie_consent_enabled %}
+        {% not_accepted_or_declined_cookie_groups request as cookie_groups %}
+        {% no_optional_cookie_groups_except_hide_cookie_bar_exist request as no_optional_groups %}
+        {% hide_cookie_bar_accepted request as hide_cookie_bar %}
+        {# if cookie_groups #}  {# NOTE: this would not display the cookie bar if only required cookie groups are present #}
+        {% if not request|all_cookies_accepted and not hide_cookie_bar %}
+            {% url "cookie_consent_cookie_group_list" as url_cookies %}
+            {% cookie_consent_accept_url cookie_groups as url_accept %}
+            {% cookie_consent_decline_url cookie_groups as url_decline %}
+            var cookie_groups = [];
+            {% for cookie_group in cookie_groups %}
+                cookie_groups.push("{{ cookie_group.varname }}");
+            {% endfor %}
+            $(document).ready(function() {
+                showCookieBar({
+                    {% if no_optional_groups %}
+                    content: "{% filter escapejs %}{% with cookie_groups=cookie_groups|join:", " %}<div class="cookie-bar">This site needs essential cookies to function properly. <a href="{{ url_accept }}" class="cc-cookie-accept">Accept and continue</a> <a href="{{ url_decline }}" class="cc-cookie-decline" style="display: none;">Decline</a> <a href="{{ url_cookies }}">Cookies info</a></div>{% endwith %}{% endfilter %}",
+                    {% else %} {# at least one group of optional cookies exists #}
+                    content: "{% filter escapejs %}{% with cookie_groups=cookie_groups|join:", " %}<div class="cookie-bar">This site uses {# cookie_groups #} cookies for better performance and user experience. <a href="{{ url_accept }}" class="cc-cookie-accept">Accept all and continue</a> <a href="{{ url_decline }}" class="cc-cookie-decline">Decline all</a> <a href="{{ url_cookies }}">Customize cookies</a></div>{% endwith %}{% endfilter %}",
+                    {% endif %}
+                    cookie_groups: cookie_groups,
+                    cookie_decline: "{% get_decline_cookie_groups_cookie_string request cookie_groups %}",
+                    beforeDeclined: function() {
+                        document.cookie = "{% get_decline_cookie_groups_cookie_string request cookie_groups %}";
+                        function getCookie(name) {
+                            let cookieValue = null;
+                            if (document.cookie && document.cookie !== '') {
+                                const cookies = document.cookie.split(';');
+                                for (let i = 0; i < cookies.length; i++) {
+                                    const cookie = cookies[i].trim();
+                                    // Does this cookie string begin with the name we want?
+                                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                        break;
+                                    }
+                                }
+                            }
+                            return cookieValue;
+                        };
+                        /* We may want to logout the user when pressing 'Decline all'
+                        const csrftoken = getCookie('csrftoken');
+                        fetch("{#{% url 'logout' %}#}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken
+                            },
+                        }).then(response => {
+                            if (response.ok) {
+                                window.location.href = '/'; // Redirect to the homepage
+                            } else {
+                                console.error('Logout failed');
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                        */
+                    }
+                });
+            });
+        {% endif %}
+    {% endif %}
+    </script>

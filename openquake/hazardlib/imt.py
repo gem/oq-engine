@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ types.
 import re
 import collections
 import numpy
+from openquake.baselib.general import DictArray
 
 FREQUENCY_PATTERN = '^(EAS|FAS|DRVT|AvgSA)\\((\\d+\\.*\\d*)\\)'
 
@@ -115,8 +116,18 @@ def sort_by_imt(imtls):
     return {imt: imtls[imt] for imt in imts}
 
 
+def dictarray(imtls):
+    """
+    :returns: a DictArray sorted by IMT
+    """
+    return DictArray(sort_by_imt(imtls))
+
+
 def repr(self):
     if self.period and self.damping != 5.0:
+        if self.string.startswith('SDi'):
+            return 'SDi(%s, %s, %s)' % (self.period, self.strength_ratio,
+                                        self.damping)
         return 'SA(%s, %s)' % (self.period, self.damping)
     return self.string
 
@@ -209,15 +220,16 @@ def Sa_avg3(period, damping=5.0):
     return IMT('Sa_avg3(%s)' % period, period, damping)
 
 
-def SDi(period=1.0, strength_ratio=2, damping=5.0):
+def SDi(period, strength_ratio, damping=5.0):
     """
     Inelastic spectral displacement, defined as the maximum displacement
-    of a damped, single-degree-of-freedom inelastic oscillator. Units 
+    of a damped, single-degree-of-freedom inelastic oscillator. Units
     are ``cm``.
     """
     period = float(period)
     strength_ratio = float(strength_ratio)
-    return IMT('SDi(%s,%s)' % (period, strength_ratio), period, damping, strength_ratio)
+    return IMT('SDi(%s,%s)' % (period, strength_ratio), period, damping,
+               strength_ratio)
 
 
 def AvgSA(period=None, damping=5.0):
@@ -304,7 +316,8 @@ def ASH():
     return IMT('ASH')
 
 
-# secondary perils
+# secondary IMTs
+sec_imts = 'Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb'.split()
 
 def Disp():
     """
@@ -326,15 +339,17 @@ def LiqProb():
     """
     return IMT('LiqProb')
 
+
 def LiqOccur():
     """
     Liquefaction occurrence class
     """
     return IMT('LiqOccur')
 
+
 def LSE():
     """
-    Liquefaction spatial extent as percentage of a pixel area.
+    Liquefaction or Landslide spatial extent.
     """
     return IMT('LSE')
 
@@ -345,12 +360,13 @@ def PGDMax(vert_settlement, lat_spread):
     """
     return numpy.maximum(vert_settlement, lat_spread)
 
-    
+
 def LSD():
     """
-    Liquefaction-induced lateral spread displacements measured in units of ``m``.
+    Liquefaction-induced lateral spread displacements measured in units of
+    ``m``.
     """
-    return IMT('LSD')   
+    return IMT('LSD')
 
 
 def PGDGeomMean(vert_settlement, lat_spread):
@@ -358,3 +374,10 @@ def PGDGeomMean(vert_settlement, lat_spread):
     Geometric mean between vert_settlement and lat_spread
     """
     return numpy.sqrt(vert_settlement * lat_spread)
+
+
+def LsProb():
+    """
+    Probability of landsliding.
+    """
+    return IMT('LsProb')

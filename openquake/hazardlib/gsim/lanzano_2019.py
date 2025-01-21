@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -91,7 +91,7 @@ def _get_mechanism(ctx, C):
     Compute the part of the second term of the equation 1 (FM(SoF)):
     Get fault type dummy variables
     """
-    SS, NF, TF = utils.get_fault_type_dummy_variables(ctx)
+    SS, _NF, TF = utils.get_fault_type_dummy_variables(ctx)
     return C['f1'] * SS + C['f2'] * TF
 
 

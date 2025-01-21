@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ import tempfile
 import warnings
 import importlib
 import itertools
+from dataclasses import dataclass
 from urllib.parse import quote_plus, unquote_plus
 import collections
 import json
@@ -41,8 +42,6 @@ vuint16 = h5py.special_dtype(vlen=numpy.uint16)
 vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
-
-CSVFile = collections.namedtuple('CSVFile', 'fname header fields size')
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
@@ -50,6 +49,19 @@ MAX_ROWS = 10_000_000
 if sys.platform == 'win32':
     # go back to the behavior before hdf5==1.12 i.e. h5py==3.4
     os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
+
+
+@dataclass
+class CSVFile:
+    fname: str
+    header: list[str]
+    fields: list[str]
+    size: int
+    skip: int
+
+    def read_df(self):
+        return pandas.read_csv(
+            self.fname, skiprows=self.skip, usecols=self.fields)
 
 
 def sanitize(value):
@@ -99,6 +111,14 @@ def preshape(obj):
     return ()
 
 
+class FakeDataset:
+    """
+    Used for null saving
+    """
+    def flush(self):
+        pass
+
+
 def extend(dset, array, **attrs):
     """
     Extend an extensible dataset with an array of a compatible dtype.
@@ -107,6 +127,8 @@ def extend(dset, array, **attrs):
     :param array: an array of length L
     :returns: the total length of the dataset (i.e. initial length + L)
     """
+    if isinstance(dset, FakeDataset):  # save nothing
+        return 0
     length = len(dset)
     if len(array) == 0:
         return length
@@ -337,13 +359,16 @@ class File(h5py.File):
         :param key:
             name of the dataset
         :param nametypes:
-            list of pairs (name, dtype) or (name, array) or DataFrame
+            pairs (name, dtype) or (name, array) or structured array or DataFrame
         :param compression:
             the kind of HDF5 compression to use
         :param kw:
             extra attributes to store
         """
-        if isinstance(nametypes, pandas.DataFrame):
+        if hasattr(nametypes, 'dtype') and nametypes.dtype.names:
+            nametypes = [(name, nametypes[name])
+                         for name in nametypes.dtype.names]
+        elif isinstance(nametypes, pandas.DataFrame):
             nametypes = [(name, nametypes[name].to_numpy())
                          for name in nametypes.columns]
         names = []
@@ -922,9 +947,11 @@ def sniff(fnames, sep=',', ignore=set()):
     files = []
     for fname in fnames:
         with open(fname, encoding='utf-8-sig', errors='ignore') as f:
+            skip = 0
             while True:
                 first = next(f)
                 if first.startswith('#'):
+                    skip += 1
                     continue
                 break
             header = first.strip().split(sep)
@@ -932,7 +959,8 @@ def sniff(fnames, sep=',', ignore=set()):
                 common = set(header)
             else:
                 common &= set(header)
-            files.append(CSVFile(fname, header, common, os.path.getsize(fname)))
+            files.append(
+                CSVFile(fname, header, common, os.path.getsize(fname), skip))
     common -= ignore
     assert common, 'There is no common header subset among %s' % fnames
     return files

@@ -48,13 +48,16 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
             rates = mean_disagg_by_src[s, :, :, :, m]
+            dic['src'].append(src)
+            dic['imt'].append(imt)
             if (rates == 0).all():
+                dic['mag'].append(numpy.nan)
+                dic['dst'].append(numpy.nan)
+                dic['eps'].append(numpy.nan)
                 continue  # no contribution from this imt
             rates_mag = rates.sum((1, 2))
             rates_dst = rates.sum((0, 2))
             rates_eps = rates.sum((0, 1))
-            dic['src'].append(src)
-            dic['imt'].append(imt)
             # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array
             if not src_mutex[grp[src.split('!')[0]]]:  # compute the mean
                 mmag = numpy.average(mag, weights=rates_mag)
@@ -137,7 +140,7 @@ def collect_results(smap, src2idx, weights, edges, shp,
     :returns: sid -> (mean_disagg_by_src, sigma_by_src)
     """
     out = {}
-    mags, dists, lons, lats, eps, trts = edges
+    mags, dists, _lons, _lats, eps, _trts = edges
     for sid in sorted(rel_ids_by_imt):
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
         Ns, M1 = len(rel_ids), len(imts)

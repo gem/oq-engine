@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -45,5 +45,7 @@ class ImtOrderingTestCase(unittest.TestCase):
         self.assertEqual(avgsa, ("AvgSA", 0.0, 5.0, None))
         avgsa_t = imt_module.from_string('AvgSA(0.5)')
         self.assertEqual(avgsa_t, ("AvgSA(0.5)", 0.5, 5.0, None))
+        sdi = imt_module.from_string('SDi(0.1,3.5)')
+        self.assertEqual(sdi, ("SDi(0.1,3.5)", 0.1, 5.0, 3.5))
         with self.assertRaises(KeyError):
             imt_module.from_string('XXX')

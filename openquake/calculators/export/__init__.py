@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,10 +22,12 @@ from openquake.baselib.writers import write_csv
 
 
 DISPLAY_NAME = {
-    'asce07': 'ASCE 7-16 Parameters',
-    'asce41': 'ASCE 41-17 Parameters',
+    'asce07': 'ASCE 7 Parameters',
+    'asce41': 'ASCE 41 Parameters',
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
+    'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
+    'assetcol': 'Exposure CSV',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
@@ -40,6 +42,7 @@ DISPLAY_NAME = {
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
+    'agg_keys': 'Aggregated Exposure Values',
     'aggrisk': 'Aggregate Risk',
     'aggrisk-stats': 'Aggregate Risk Statistics',
     'agg_risk': 'Total Risk',
@@ -49,6 +52,8 @@ DISPLAY_NAME = {
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
+    'median_spectra': 'Median Spectra per Site and PoE',
+    'median_spectrum_disagg': 'Median Spectrum Disaggregation',
     'reinsurance-avg_policy': 'Average Reinsurance By Policy',
     'reinsurance-avg_portfolio': 'Average Reinsurance',
     'reinsurance-risk_by_event': 'Reinsurance By Event',

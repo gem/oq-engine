@@ -3,7 +3,7 @@
 <logicTree logicTreeID="">
 		<logicTreeBranchSet branchSetID="bs_00" uncertaintyType="gmpeModel" applyToTectonicRegionType="Tectonic_Type_A">
 			<logicTreeBranch branchID="b_00_00">
-				<uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+				<uncertaintyModel>NGAEastUSGSSeedFrankel</uncertaintyModel>
 				<uncertaintyWeight>1.000</uncertaintyWeight>
 			</logicTreeBranch>
 		</logicTreeBranchSet>

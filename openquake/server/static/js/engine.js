@@ -15,6 +15,10 @@
  along with this program.  If not, see <https://www.gnu.org/licenses/agpl.html>.
  */
 
+function capitalizeFirstLetter(val) {
+    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+}
+
 (function ($, Backbone, _) {
     var calculation_table;
 
@@ -31,7 +35,7 @@
         record[3] = record[3].replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         return record
     };
- 
+
     var dialog = (function ()
                   {
                       var pleaseWaitDiv = $('<div class="modal hide" id="pleaseWaitDialog" data-backdrop="static" data-keyboard="false"><div class="modal-header"><h1>Processing...</h1></div><div class="modal-body"><div class="progress progress-striped active"><div class="bar" style="width: 0%;"></div></div></div></div>');
@@ -136,10 +140,10 @@
             },
 
             events: {
-                "click .btn-show-remove": "remove_calculation",
-                "click .btn-show-abort": "abort_calculation",
-                "click .btn-danger": "show_modal_confirm",
-                "click .btn-hide-no": "hide_modal_confirm",
+                "click .btn-abort": "confirm_abort_calculation",
+                "click .btn-share": "confirm_share_calculation",
+                "click .btn-unshare": "confirm_unshare_calculation",
+                "click .btn-remove": "confirm_remove_calculation",
                 "click .btn-traceback": "show_traceback",
                 "click .btn-log": "show_log",
                 "click .btn-file": "on_run_risk_clicked",
@@ -156,42 +160,52 @@
                 this.can_be_rendered = true;
             },
 
-            show_modal_confirm: function (e) {
-                e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');
-                
-                var show_or_back = (function (e) {
-                    this.conf_show = $('#confirmDialog' + calc_id).show();
-                    this.back_conf_show = $('.back_confirmDialog' + calc_id).show();
-                    closeTimer();
-                })();
+            confirm_share_calculation: function(e) {
+                this.confirm_modify_calculation(e, 'share');
             },
 
-            hide_modal_confirm: function (e) {
-                e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');
-                
-                var hide_or_back = (function (e) {
-                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
-                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
-                    setTimer();
-                })();
+            confirm_unshare_calculation: function(e) {
+                this.confirm_modify_calculation(e, 'unshare');
             },
 
-            remove_calculation: function (e) {
+            confirm_remove_calculation: function(e) {
+                this.confirm_modify_calculation(e, 'remove');
+            },
+
+            confirm_abort_calculation: function(e) {
+                this.confirm_modify_calculation(e, 'abort');
+            },
+
+            confirm_modify_calculation: function(e, action) {
+              e.preventDefault();
+              const calc_id = $(e.target).attr('data-calc-id');
+              const calc_desc = $(e.target).attr('data-calc-desc');
+              showModal({
+                calc_id,
+                title: capitalizeFirstLetter(action) + ' calculation',
+                body: `Are you sure you want to ${action} calculation ${calc_id}?<br><em>"${calc_desc}"</em>`,
+                confirmText: `Yes, ${action}`,
+                cancelText: 'No',
+                confirmAction: () => this.modify_calculation(e, action),
+              });
+            },
+
+            modify_calculation: function(e, action) {  // e.g. remove, share or abort
+                const action_ing = action.endsWith("e") ? action.slice(0, -1) + "ing" : action + "ing";
+                const action_ed = action.endsWith("e") ? action + "d" : action + "ed";
                 e.preventDefault();
                 var calc_id = $(e.target).attr('data-calc-id');
                 var calc_desc = $(e.target).attr('data-calc-desc');
                 var view = this;
-                diaerror.show(false, "Removing calculation " + calc_id, "...");
+                diaerror.show(false, capitalizeFirstLetter(action_ing) + " calculation " + calc_id, "...");
 
                 var hide_or_back = (function (e) {
                     this.conf_hide = $('#confirmDialog' + calc_id).hide();
                     this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
                     setTimer();
                 })();
-                
-                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/remove",
+
+                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/" + action,
                                     type: "POST",
                                     error: function (jqXHR, textStatus, errorThrown) {
                                         if (jqXHR.status == 403) {
@@ -202,38 +216,11 @@
                                         if(data.error) {
                                             diaerror.show(false, "Error", data.error);
                                         } else {
-                                            diaerror.show(false, "Calculation removed", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been removed." );
-                                            view.calculations.remove([view.calculations.get(calc_id)]);
-                                        }
-                                    }});
-            },
-
-            abort_calculation: function (e) {
-                e.preventDefault();
-                var calc_id = $(e.target).attr('data-calc-id');
-                var calc_desc = $(e.target).attr('data-calc-desc');
-                var view = this;
-                diaerror.show(false, "Aborting calculation " + calc_id, "...");
-
-                var hide_or_back = (function (e) {
-                    this.conf_hide = $('#confirmDialog' + calc_id).hide();
-                    this.back_conf_hide = $('.back_confirmDialog' + calc_id).hide();
-                    setTimer();
-                })();
-
-                var myXhr = $.ajax({url: gem_oq_server_url + "/v1/calc/" + calc_id + "/abort",
-                                    type: "POST",
-                                    error: function (jqXHR, textStatus, errorThrown) {
-                                        if (jqXHR.status == 403) {
-                                            diaerror.show(false, "Error", JSON.parse(jqXHR.responseText).error);
-                                        }
-                                    },
-                                    success: function (data, textStatus, jqXHR) {
-                                        if(data.error) {
-                                            diaerror.show(false, "Error", data.error );
-                                        } else {
-                                            diaerror.show(false, "Calculation aborted", "Calculation <b>(" + calc_id + ") " + calc_desc + "</b> has been aborted." );
-                                            calculations.fetch({reset: true})
+                                            diaerror.show(false, "Calculation " + action_ed, 'Calculation ' + calc_id + ' "' + calc_desc + '"</b> has been ' + action_ed);
+                                            if (action == 'abort') {
+                                                view.calculations.remove([view.calculations.get(calc_id)]);
+                                            }
+                                            calculations.fetch({reset: true});
                                         }
                                     }});
             },
@@ -424,6 +411,18 @@
 
     var refresh_calcs;
 
+    function populateTrtSelector(selected_trt) {
+        $('#trt').empty();
+        var trts = $('#mosaic_model').find(':selected').data('value').split(',');
+        $.each(trts, function(index, trt) {
+            var selected = '';
+            if (selected_trt && trt == selected_trt) {
+                selected = ' selected';
+            }
+            $('#trt').append('<option value="' + trt + '"' + selected + '>' + trt + '</option>');
+        });
+    }
+
     function setTimer() {
         refresh_calcs = setInterval(function () { calculations.fetch({reset: true}) }, 3000);
     }
@@ -529,14 +528,39 @@
                 $(this).css("background-color", "white");
             });
 
+
+            function toggleRunCalcBtnState() {
+                var lonValue = $('#lon').val();
+                if (typeof lonValue !== 'undefined') {
+                    lonValue = lonValue.trim();
+                }
+                $('#submit_aristotle_calc').prop('disabled', lonValue === '');
+            }
+            toggleRunCalcBtnState();
+
+            $(document).on('change', '#use_shakemap', function () {
+                if ($(this).is(':checked')) {
+                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                } else {
+                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                }
+            });
+
             // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
             $("#aristotle_get_rupture_form").submit(function (event) {
                 $('#submit_aristotle_get_rupture').prop('disabled', true);
-                $('#submit_aristotle_get_rupture').text('Retrieving rupture data...');
-                $('#mosaic_model').text('');
+                if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
+                    // if the checkbox use_shakemap does not exist or is checked
+                    $('#submit_aristotle_get_rupture').text(
+                        'Retrieving ShakeMap data (it may take more than 10 seconds)');
+                } else {
+                    $('#submit_aristotle_get_rupture').text(
+                        'Retrieving rupture data (it may take more than 10 seconds)');
+                }
                 var formData = new FormData();
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('use_shakemap', $("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked'));
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
@@ -547,15 +571,104 @@
                 }).done(function (data) {
                     // console.log(data);
                     $('#lon').val(data.lon);
+                    toggleRunCalcBtnState();
                     $('#lat').val(data.lat);
                     $('#dep').val(data.dep);
                     $('#mag').val(data.mag);
                     $('#rake').val(data.rake);
-                    $('#mosaic_model').text('(' + data.lon + ', ' + data.lat + ')' + ' is covered by model ' + data.mosaic_model);
-                    $('#trt').empty();
-                    $.each(data.trts, function(index, trt) {
-                        $('#trt').append('<option value="' + trt + '">' + trt + '</option>');
+                    $('#dip').val('dip' in data ? data.dip : '90');
+                    $('#strike').val('strike' in data ? data.strike : '0');
+                    $('#local_timestamp').val(data.local_timestamp);
+                    $('#time_event').val(data.time_event);
+                    $('#require_dip_strike').val(data.require_dip_strike);
+                    // NOTE: due to security restrictions in web browsers, it is not possible to programmatically
+                    //       set a specific file in an HTML file input element using JavaScript or jQuery,
+                    //       therefore we can not pre-populate the rupture_file_input with the rupture_file
+                    //       obtained converting the USGS rupture.json, and we use a separate field referencing it
+                    $('#rupture_from_usgs').val(data.rupture_from_usgs);
+                    $('#rupture_from_usgs_loaded').val(data.rupture_from_usgs ? 'Loaded' : 'N.A.');
+                    var conversion_issues = '';
+                    if ('error' in data) {  // data.error comes from the rupture dictionary and refers to rupture importing/converting
+                        conversion_issues += '<p>' + data.error + '</p>';
+                        $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
+                    }
+                    $('#station_data_file').val(data.station_data_file);
+                    if (data.station_data_issue) {
+                        $('#station_data_file_loaded').val('N.A. (conversion issue)');
+                        conversion_issues += '<p>' + data.station_data_issue + '</p>';
+                    } else {
+                        $('#station_data_file_loaded').val(data.station_data_file ? 'Loaded' : 'N.A.');
+                    }
+                    if (conversion_issues != '') {
+                        diaerror.show(false, "Note", conversion_issues);
+                    }
+                    if ($('#rupture_file_input')[0].files.length == 1) {
+                        $('#dip').prop('disabled', true);
+                        $('#strike').prop('disabled', true);
+                    }
+                    else if (data.require_dip_strike) {
+                        $('#dip').prop('disabled', false);
+                        $('#strike').prop('disabled', false);
+                        $('#dip').val('90');
+                        $('#strike').val('0');
+                    } else {
+                        $('#dip').prop('disabled', true);
+                        $('#strike').prop('disabled', true);
+                        $('#dip').val('');
+                        $('#strike').val('');
+                    }
+                    $('#mosaic_model').empty();
+                    $.each(data.mosaic_models, function(index, mosaic_model) {
+                        var selected = '';
+                        if ('mosaic_model' in data && mosaic_model == data.mosaic_model) {
+                            selected = ' selected';
+                        }
+                        var mosaic_model_trts = data.trts[mosaic_model];
+                        $('#mosaic_model').append('<option value="' + mosaic_model + '" data-value=\'' + mosaic_model_trts + '\'' + selected + '>' + mosaic_model + '</option>');
                     });
+                    populateTrtSelector(data.trt);
+                    if (data.mmi_map_png) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.mmi_map_png}" alt="Intensity Map">`;
+                        $('#intensity-map').html(imgElement);
+                        $('shakemap-image-row').show();
+                        $('#intensity-map').show();
+                    }
+                    else {
+                        if (data.rupture_png) {
+                            $('#intensity-map').hide();
+                        }
+                        else {
+                            $('#intensity-map').html('<p>No intensity map available</p>');
+                        }
+                    }
+                    if (data.pga_map_png) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.pga_map_png}" alt="PGA Map">`;
+                        $('#pga-map').html(imgElement);
+                        $('#shakemap-image-row').show();
+                        $('#pga-map').show();
+                    }
+                    else {
+                        if (data.rupture_png) {
+                            $('#pga-map').hide();
+                        }
+                        else {
+                            $('#pga-map').html('<p>No PGA map available</p>');
+                        }
+                    }
+                    if (data.rupture_png) {
+                        const imgElement = `<img src="data:image/jpeg;base64,${data.rupture_png}" alt="Rupture">`;
+                        $('#rupture-map').html(imgElement);
+                        $('#rupture-image-row').show();
+                        $('#rupture-map').show();
+                    }
+                    else {
+                        if (data.pga_map_png || data.mmi_map_png) {
+                            $('#rupture-map').hide();
+                        }
+                        else {
+                            $('#rupture-map').html('<p>No rupture image available</p>');
+                        }
+                    }
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -566,14 +679,39 @@
                     }
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
-                }).always(function () {
+                    $('#intensity-map').hide();
+                    $('#pga-map').hide();
+                    // $('#rupture_png').hide();
+                    $('#shakemap-image-row').hide();
+                }).always(function (data) {
                     $('#submit_aristotle_get_rupture').prop('disabled', false);
-                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                    if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
+                        // if the checkbox use_shakemap does not exist or is checked
+                        $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                    } else {
+                        $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                    }
                 });
                 event.preventDefault();
             });
-            $('#clearFile').click(function() {
+            $('#mosaic_model').change(function() {
+                populateTrtSelector();
+            });
+            $('#clearRuptureFile').click(function() {
                 $('#rupture_file_input').val('');
+                $('#dip').prop('disabled', false);
+                $('#strike').prop('disabled', false);
+                $('#dip').val('90');
+                $('#strike').val('0');
+            });
+            $('#rupture_file_input').on('change', function() {
+                $('#dip').prop('disabled', $(this).val() != '');
+                $('#strike').prop('disabled', $(this).val() != '');
+            });
+            $('#clearStationDataFile').click(function() {
+                $('#station_data_file_input').val('');
+                $('#maximum_distance_stations').val('');
+                $('#maximum_distance_stations').prop('disabled', true);
             });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
@@ -582,8 +720,10 @@
                 $('#submit_aristotle_calc').prop('disabled', true);
                 $('#submit_aristotle_calc').text('Processing...');
                 var formData = new FormData();
+                formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('use_shakemap', $("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked'));
                 formData.append('lon', $("#lon").val());
                 formData.append('lat', $("#lat").val());
                 formData.append('dep', $("#dep").val());
@@ -591,13 +731,20 @@
                 formData.append('rake', $("#rake").val());
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
+                formData.append('require_dip_strike', $("#require_dip_strike").val());
+                formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
+                formData.append('mosaic_model', $('#mosaic_model').val());
                 formData.append('trt', $('#trt').val());
                 formData.append('truncation_level', $('#truncation_level').val());
                 formData.append('number_of_ground_motion_fields',
                                 $('#number_of_ground_motion_fields').val());
                 formData.append('asset_hazard_distance', $('#asset_hazard_distance').val());
                 formData.append('ses_seed', $('#ses_seed').val());
+                formData.append('station_data_file_from_usgs', $('#station_data_file_from_usgs').val());
+                formData.append('local_timestamp', $("#local_timestamp").val());
+                formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
+                formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_run",
@@ -619,12 +766,47 @@
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
                     $('#submit_aristotle_calc').prop('disabled', false);
-                    $('#submit_aristotle_calc').text('Submit');
+                    $('#submit_aristotle_calc').text('Launch impact calculation');
                 });
                 event.preventDefault();
             });
             $("#aristotle_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
+            $('#station_data_file_input').on('change', function() {
+                if ($(this).get(0).files.length > 0) {
+                    $('#maximum_distance_stations').prop('disabled', false);
+                } else {
+                    $('#maximum_distance_stations').prop('disabled', true);
+                }
+            });
         });
 })($, Backbone, _, gem_oq_server_url);
+
+
+function showModal({ id, title, body, confirmText = 'Yes', cancelText = 'No', confirmAction }) {
+  const modal = document.querySelector('#confirmModal');
+  modal.querySelector('.modal-title').innerHTML = title;
+  modal.querySelector('.modal-body-pre').innerHTML = body;
+  modal.querySelector('.btn-confirm').textContent = confirmText;
+  modal.querySelector('.btn-cancel').textContent = cancelText;
+
+  // Attach confirmation action
+  const confirmButton = modal.querySelector('.btn-confirm');
+  confirmButton.onclick = () => {
+    if (typeof confirmAction === 'function') {
+      confirmAction();
+    }
+    closeModal();
+  };
+
+  // Show the modal
+  modal.classList.remove('hide');
+  modal.classList.add('in');
+}
+
+function closeModal() {
+  const modal = document.querySelector('#confirmModal');
+  modal.classList.remove('in');
+  modal.classList.add('hide');
+}

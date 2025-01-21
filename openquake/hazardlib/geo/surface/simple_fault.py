@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -292,12 +292,12 @@ class SimpleFaultSurface(BaseSurface):
         indexlist = []
         dist_list = []
         for i, index in enumerate(range(1, totaln_patch)):
-            p0, p1, p2, p3 = cls.get_fault_patch_vertices(
+            p0, p1, p2, _p3 = cls.get_fault_patch_vertices(
                 rupture_top_edge, upper_seismogenic_depth,
                 lower_seismogenic_depth, dip, index_patch=index)
 
-            [normal, dist_to_plane] = get_plane_equation(p0, p1, p2,
-                                                         hypocentre)
+            [_normal, dist_to_plane] = get_plane_equation(p0, p1, p2,
+                                                          hypocentre)
             indexlist.append(index)
             dist_list.append(dist_to_plane)
             if numpy.allclose(dist_to_plane, 0., atol=25., rtol=0.):
