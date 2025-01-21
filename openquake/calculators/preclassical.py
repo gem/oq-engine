@@ -117,7 +117,8 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
     for src in srcs:
         if src.code == b'F':
-            if N <= cmaker.max_sites_disagg:
+            #if N <= cmaker.max_sites_disagg:
+            if False:  # turned off for to make run. Not sure what is best
                 mask = sf.get_close(secparams) > 0  # shape S
             else:
                 mask = None
@@ -164,7 +165,10 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     Store a `tiles` array if the calculation is large enough.
     :returns: a triple (max_weight, trt_rlzs, gids)
     """
-    N = len(sitecol)
+    if sitecol is None:
+        N = 1
+    else:
+        N = len(sitecol)
     oq = cmakers[0].oq
     fac = oq.imtls.size * N * 4 / 1024**3
     max_weight = csm.get_max_weight(oq)
@@ -249,10 +253,11 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         Gt = len(gweights)
         extra = f'<{Gfull}' if Gt < Gfull else ''
-        nbytes = 4 * len(self.sitecol) * L * Gt
-        # Gt is known before starting the preclassical
-        logging.warning(f'The global pmap would require %s ({Gt=}%s)',
-                        general.humansize(nbytes), extra)
+        if sites is not None:
+            nbytes = 4 * len(self.sitecol) * L * Gt
+            # Gt is known before starting the preclassical
+            logging.warning(f'The global pmap would require %s ({Gt=}%s)',
+                            general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
@@ -410,8 +415,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
         # save 'source_groups'
-        self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-            store_tiles(self.datastore, self.csm, self.sitecol, self.cmakers))
+        if self.sitecol is not None:
+            self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
+                store_tiles(self.datastore, self.csm, self.sitecol, self.cmakers))
 
         # save gsims
         toml = []
