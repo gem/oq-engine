@@ -59,6 +59,7 @@ DISPLAY_NAME = {
     'reinsurance-risk_by_event': 'Reinsurance By Event',
     'reinsurance-aggcurves': 'Aggregated Reinsurance Curves',
     'ruptures': 'Earthquake Ruptures',
+    'site_model': 'Site Model',
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
