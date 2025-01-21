@@ -396,8 +396,6 @@ individual_rlzs:
 
 individual_curves:
   Legacy name for `individual_rlzs`, it should not be used.
-  Example: *individual_curves = true*.
-  Default: False
 
 infer_occur_rates:
    If set infer the occurrence rates from the first probs_occur in
