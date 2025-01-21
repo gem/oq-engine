@@ -56,8 +56,26 @@ def imt2tup(string):
             raise ValueError('Missing period in SA')
         # no parenthesis, PGA is considered the same as PGA()
         return (s,)
-    period = float(rest[0][:-1])
-    return ('SA(%s)' % period, period)
+
+    if len(rest[0][:-1].split(',')) == 1:
+        period = float(rest[0][:-1])
+    elif len(rest[0][:-1].split(',')) == 2:
+        period = float(rest[0][:-1].split(',')[0])
+        strength_ratio = float(rest[0][:-1].split(',')[1])
+    else:
+        raise NameError('IMT attributes not recognizable: %s' % rest[0][:-1])
+    if name.startswith("Sa_avg2") or name.startswith("SA_avg2"):
+        return ('Sa_avg2(%s)' % period, period)
+    elif name.startswith("Sa_avg3") or name.startswith("SA_avg3"):
+        return ('Sa_avg3(%s)' % period, period)
+    elif name.startswith("SA") or name.startswith("Sa"):
+        return ('SA(%s)' % period, period)
+    elif name.startswith("FIV3"):
+        return ('FIV3(%s)' % period, period)
+    elif name.startswith("SDi"):
+        return ('SDi(%s,%s)' % (period, strength_ratio), period, strength_ratio)
+    else:
+        raise NameError('IMT class name not recognizable: %s' % name)
 
 
 def from_string(imt, _damping=5.0):
@@ -178,6 +196,28 @@ def SA(period, damping=5.0):
     """
     period = float(period)
     return IMT('SA(%s)' % period, period, damping)
+
+
+def FIV3(period, damping=5.0):
+    """
+    Filtered incremental velocity, as defined in: Dávalos, H. and Miranda, 
+    E. (2019) ‘Filtered incremental velocity: A novel approach in 
+    intensity measures for seismic collapse estimation’, Earthquake 
+    Engineering and Structural Dynamics, 48(12), pp. 1384–1405. Available 
+    at: https://doi.org/10.1002/eqe.3205. Units are ``cm/s``.
+    """
+    period = float(period)
+    return IMT('FIV3(%s)' % period, period, damping)
+
+
+def Sa_avg2(period, damping=5.0):
+    period = float(period)
+    return IMT('Sa_avg2(%s)' % period, period, damping)
+
+
+def Sa_avg3(period, damping=5.0):
+    period = float(period)
+    return IMT('Sa_avg3(%s)' % period, period, damping)
 
 
 def SDi(period, strength_ratio, damping=5.0):
