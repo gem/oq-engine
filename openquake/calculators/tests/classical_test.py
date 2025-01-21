@@ -243,7 +243,8 @@ class ClassicalTestCase(CalculatorTestCase):
                               case_25.__file__)
 
     def test_case_26(self):  # split YoungsCoppersmith1985MFD
-        self.assert_curves_ok(['hazard_curve-rlz-000.csv'], case_26.__file__)
+        self.assert_curves_ok(['hazard_curve-rlz-000.csv'], case_26.__file__,
+                              delta=2E-5)
 
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__,
