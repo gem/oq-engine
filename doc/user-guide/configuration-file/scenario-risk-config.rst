@@ -351,16 +351,16 @@ is shown in the listing below.::
 Note that the "consequence_model.csv" file will have a structure like the
 following::
 
-taxonomy,consequence,loss_type,ds1,ds2,ds3,ds4
-tax1,losses,contents,1.000000E-01,3.000000E-01,6.000000E-01,9.000000E-01
-tax2,losses,contents,1.000000E-01,3.000000E-01,6.000000E-01,9.000000E-01
-tax3,losses,contents,1.000000E-01,3.000000E-01,6.000000E-01,9.000000E-01
-tax1,losses,nonstructural,5.000000E-02,2.500000E-01,5.000000E-01,7.500000E-01
-tax2,losses,nonstructural,5.000000E-02,2.500000E-01,5.000000E-01,7.500000E-01
-tax3,losses,nonstructural,5.000000E-02,2.500000E-01,5.000000E-01,7.500000E-01
-tax1,losses,structural,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
-tax2,losses,structural,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
-tax3,losses,structural,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
+  taxonomy,consequence,loss_type,ds1,ds2,ds3,ds4
+  tax1,losses,contents,1.000000E-01,3.000000E-01,6.000000E-01,9.000000E-01
+  tax2,losses,contents,1.000000E-01,3.000000E-01,6.000000E-01,9.000000E-01
+  tax3,losses,contents,1.000000E-01,3.000000E-01,6.000000E-01,9.000000E-01
+  tax1,losses,nonstructural,5.000000E-02,2.500000E-01,5.000000E-01,7.500000E-01
+  tax2,losses,nonstructural,5.000000E-02,2.500000E-01,5.000000E-01,7.500000E-01
+  tax3,losses,nonstructural,5.000000E-02,2.500000E-01,5.000000E-01,7.500000E-01
+  tax1,losses,structural,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
+  tax2,losses,structural,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
+  tax3,losses,structural,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
 
 The above calculation can be run using the command line::
 
