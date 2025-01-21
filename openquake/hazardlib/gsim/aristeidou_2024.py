@@ -139,11 +139,14 @@ def _get_means_stddevs(DATA, imt, means, stddevs, component_definition):
         im_name = "Ds575"
     elif imt.string == "RSD595":
         im_name = "Ds595"
+    elif imt.string.startswith("Sa_avg2"):
+        im_name = "Sa_avg2"
+    elif imt.string.startswith("Sa_avg3"):
+        im_name = "Sa_avg3"
     elif imt.string.startswith("SA") or imt.string.startswith("Sa"):
-        im_name = re.sub(r'\(', f'_{component_definition}(', imt.string,
-                         count=1)
+        im_name = "SA"
     elif imt.string.startswith("FIV3"):
-        im_name = re.sub(r'\(\d+(\.\d+)?\)$', '', imt.string)
+        im_name = "FIV3"
     elif imt.string.startswith("PGA"):
         im_name = "PGA"
     elif imt.string.startswith("PGV"):
@@ -155,36 +158,43 @@ def _get_means_stddevs(DATA, imt, means, stddevs, component_definition):
         raise NameError(
             f"IM name {im_name} is not supported by this GMM")
 
-    
+    # if im_name.startswith("SA") or im_name.startswith("Sa"):
+    #     im_name = "SA" + f'_{component_definition}'
+
     if im_name.startswith("SA") or im_name.startswith("Sa"):
-        im_name = im_name + f'_{component_definition}' + f'({str(imt.period)})'
+        # Find the position of the first parenthesis
+        pos = imt.string.index("(")
+        # Insert using slicing
+        im_name = imt.string[:pos] + f'_{component_definition}' + imt.string[pos:]
+    elif im_name.startswith("FIV3"):
+        im_name = imt.string
+
     if len(means.shape) == 1:
         means = means.reshape(1, means.shape[0])
 
-    if imt.string in supported_ims:
-        idx = np.where(supported_ims == im_name.string)[0][0]
-        return means[:, idx], stddevs[idx]
+    if im_name in supported_ims:
+        idx = np.where(supported_ims == im_name)[0][0]
+        return means[:, idx], stddevs[idx, :]
 
     # im_type, period = get_period_im(im_name)
 
-
     # Period not supported, perform linear interpolation
-    idxs = np.where(np.char.find(supported_ims, imt.string) != -1)
-
+    idxs = np.where(np.char.find(supported_ims, im_name[:im_name.index("(")]) != -1)
     ims = supported_ims[idxs]
     means = means[:, idxs]
-    stddevs = stddevs[idxs]
+    stddevs = stddevs[idxs, :]
 
     periods = []
     for im in ims:
         _, _t = get_period_im(im)
         periods.append(_t)
 
+    # TODO: interpolate in the log space
     # Create interpolators
-    interp_stddevs = interp1d(periods, stddevs)
-    interp_means = interp1d(periods, means)
+    interp_stddevs = interp1d(np.log(periods), stddevs, axis=1)
+    interp_means = interp1d(np.log(periods), means)
 
-    mean, stddev = np.squeeze(interp_means(im_name.period)), interp_stddevs(im_name.period)
+    mean, stddev = np.squeeze(interp_means(np.log(imt.period))), np.squeeze(interp_stddevs(np.log(imt.period)))
 
     return mean, stddev
 
@@ -355,6 +365,7 @@ class AristeidouEtAl2024(GMPE):
 
             # Get the means and stddevs at index corresponding to the IM
             mean[m], stddevs = _get_means_stddevs(self.DATA, imt, means, stddevs, self.component_definition)
+
 
             sig[m] = stddevs[0]
             tau[m] = stddevs[1]
