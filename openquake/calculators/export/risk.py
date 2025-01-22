@@ -594,8 +594,8 @@ def _fix(col):
     return col
 
 
-@export.add(('agg_tags', 'csv'))
-def export_agg_tags_csv(ekey, dstore):
+@export.add(('aggexp_tags', 'csv'))
+def export_aggexp_tags_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
