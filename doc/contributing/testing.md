@@ -6,7 +6,7 @@ The OpenQuake code is automatically tested by Continuous integration systems (Gi
 
 ## Manual testing
 
-The tests for the OpenQuake Engine can be run using `pytest` from [**source code**](../getting-started/installation-instructions/development.rst).
+The tests for the OpenQuake Engine can be run by using `pytest`, assuming you have an [**installation from sources**](../getting-started/installation-instructions/development.rst).
 First of all you need to create the engine database:
 
 ```bash
@@ -20,7 +20,6 @@ Then you can run the tests as follows:
 $ pytest -vs openquake/hazardlib
 
 # Calculators
-$ oq dbserver start
 $ pytest -vs openquake/calculators
 ```
 
