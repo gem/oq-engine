@@ -251,28 +251,6 @@ def view_high_hazard(token, dstore):
     return max_hazard[high]
 
 
-@view.add('worst_sources')
-def view_worst_sources(token, dstore):
-    """
-    Returns the sources with worst weights
-    """
-    if ':' in token:
-        step = int(token.split(':')[1])
-    else:
-        step = 1
-    data = dstore.read_df('source_data', 'src_id')
-    del data['impact']
-    ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
-    [[taskno, maxtime]] = ser.to_dict().items()
-    data = data[data.taskno == taskno]
-    print('Sources in the slowest task (%d seconds, weight=%d, taskno=%d)'
-          % (maxtime, data['weight'].sum(), taskno))
-    data['slow_rate'] = data.ctimes / data.weight
-    del data['taskno']
-    df = data.sort_values('ctimes', ascending=False)
-    return df[slice(None, None, step)]
-
-
 @view.add('slow_sources')
 def view_slow_sources(token, dstore, maxrows=20):
     """
