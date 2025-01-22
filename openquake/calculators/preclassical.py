@@ -108,7 +108,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
     else:
-        N = 1
+        N = 0
         multiplier = 1
         sf = None
     splits = []
@@ -117,8 +117,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
     for src in srcs:
         if src.code == b'F':
-            #if N <= cmaker.max_sites_disagg:
-            if False:  # turned off for to make run. Not sure what is best
+            if N and N <= cmaker.max_sites_disagg:
                 mask = sf.get_close(secparams) > 0  # shape S
             else:
                 mask = None
@@ -166,7 +165,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     :returns: a triple (max_weight, trt_rlzs, gids)
     """
     if sitecol is None:
-        N = 1
+        N = 0
     else:
         N = len(sitecol)
     oq = cmakers[0].oq

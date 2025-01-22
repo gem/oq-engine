@@ -688,6 +688,10 @@ class ClassicalTestCase(CalculatorTestCase):
         fname = general.gettemp(text_table(ctx, ext='org'))
         self.assertEqualFiles('expected/context.org', fname)
 
+    def test_case_75_pre(self):
+        # test preclassical without sites, as requested by Richard Styron
+        self.run_calc(case_75.__file__, 'pre.ini')
+
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
