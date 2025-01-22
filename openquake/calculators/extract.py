@@ -843,10 +843,10 @@ def extract_agg_keys(dstore, what):
     return _agg_keys(dstore)[0]
 
 
-@extract.add('aggrisk_keys')
-def extract_aggrisk_keys(dstore, what):
+@extract.add('aggrisk_tags')
+def extract_aggrisk_tags(dstore, what):
     """
-    Aggregates risk by tag. Use it as /extract/aggrisk_keys?
+    Aggregates risk by tag. Use it as /extract/aggrisk_tags?
     """
     df, ok = _agg_keys(dstore)
     K = len(ok)
