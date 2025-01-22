@@ -1,5 +1,9 @@
+  [Richard Styron, Michele Simionato]
+  * Extended the preclassical calculator to work in absence of a site collection
+
   [Michele Simionato]
-  * Added a new output "Aggregated Exposure Values"
+  * Added a new output "Aggregated Exposure Values" (`aggexp_tags`) and a new extractor
+    `aggrisk_tags`;
 
 python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
 

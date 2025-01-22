@@ -676,8 +676,10 @@ def get_site_collection(oqparam, h5=None):
         return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
-        raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
-                          % oqparam.inputs['job_ini'])
+        if oqparam.calculation_mode != 'preclassical':
+            raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
+                              % oqparam.inputs['job_ini'])
+        return None
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
         return None
