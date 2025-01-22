@@ -1896,7 +1896,7 @@ class OqParam(valid.ParamSet):
         exposures = self.inputs.get('exposure', [])
         yes = exposures and exposures[0].endswith('.hdf5')
         if yes:
-            self.avg_losses = False
+            # self.avg_losses = False
             self.aggregate_by = [['ID_1', 'OCCUPANCY']]
         return yes
 
