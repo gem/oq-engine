@@ -735,7 +735,7 @@ def convert_df_to_vulnerability(loss_type, df):
         root.append(vfunc)
     return root
 
-    
+
 def export_vulnerability_xml(dstore, edir):
     fnames = []
     for loss_type, df in dstore.read_df('crm').groupby('loss_type'):
