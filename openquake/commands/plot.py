@@ -29,7 +29,7 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
-from openquake.calculators.getters import get_ebrupture
+from openquake.calculators.getters import get_ebrupture, get_rupture_from_dstore
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (

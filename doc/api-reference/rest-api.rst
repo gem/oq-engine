@@ -115,7 +115,7 @@ Response:
 A list of error lines extracted from the log. If the calculation was successfull, the list is empty.
 
 **********************************
-GET /v1/calc/:calc_id/aggrisk_keys
+GET /v1/calc/:calc_id/aggrisk_tags
 **********************************
 
 Get risk results aggregated by tag, together with the corresponding exposure values.

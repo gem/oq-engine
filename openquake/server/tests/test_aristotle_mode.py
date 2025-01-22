@@ -241,7 +241,7 @@ class EngineServerTestCase(django.test.TestCase):
                         self.assertIn(f'engine/{job_id}/outputs_aristotle',
                                       email_content)
         for job_id in js:
-            ret = self.get('%s/aggrisk_keys' % job_id)
+            ret = self.get('%s/aggrisk_tags' % job_id)
             # NOTE: the get utility decodes the json and returns a dict
             self.assertIn('ID_1', ret)
             ret = self.post('%s/remove' % job_id)

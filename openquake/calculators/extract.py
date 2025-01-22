@@ -815,7 +815,7 @@ def extract_agg_curves(dstore, what):
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
 
 
-def _agg_keys(dstore):
+def _aggexp_tags(dstore):
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
@@ -834,21 +834,21 @@ def _agg_keys(dstore):
     return df, ok
 
 
-@extract.add('agg_keys')
-def extract_agg_keys(dstore, what):
+@extract.add('aggexp_tags')
+def extract_aggexp_tags(dstore, what):
     """
     Aggregate the exposure values (one for each loss type) by tag. Use it as
-    /extract/agg_keys?
+    /extract/aggexp_tags?
     """
-    return _agg_keys(dstore)[0]
+    return _aggexp_tags(dstore)[0]
 
 
-@extract.add('aggrisk_keys')
-def extract_aggrisk_keys(dstore, what):
+@extract.add('aggrisk_tags')
+def extract_aggrisk_tags(dstore, what):
     """
-    Aggregates risk by tag. Use it as /extract/aggrisk_keys?
+    Aggregates risk by tag. Use it as /extract/aggrisk_tags?
     """
-    df, ok = _agg_keys(dstore)
+    df, ok = _aggexp_tags(dstore)
     K = len(ok)
     ws = dstore['weights'][:]
     adf = dstore.read_df('aggrisk')
