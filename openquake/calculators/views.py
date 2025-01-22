@@ -37,6 +37,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
+from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
@@ -248,28 +249,6 @@ def view_high_hazard(token, dstore):
     max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
     high = (max_hazard > max_poe).all(axis=1)
     return max_hazard[high]
-
-
-@view.add('worst_sources')
-def view_worst_sources(token, dstore):
-    """
-    Returns the sources with worst weights
-    """
-    if ':' in token:
-        step = int(token.split(':')[1])
-    else:
-        step = 1
-    data = dstore.read_df('source_data', 'src_id')
-    del data['impact']
-    ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
-    [[taskno, maxtime]] = ser.to_dict().items()
-    data = data[data.taskno == taskno]
-    print('Sources in the slowest task (%d seconds, weight=%d, taskno=%d)'
-          % (maxtime, data['weight'].sum(), taskno))
-    data['slow_rate'] = data.ctimes / data.weight
-    del data['taskno']
-    df = data.sort_values('ctimes', ascending=False)
-    return df[slice(None, None, step)]
 
 
 @view.add('slow_sources')
@@ -804,13 +783,20 @@ def view_task_hazard(token, dstore):
     rec = data[int(index)]
     taskno = rec['task_no']
     if len(dstore['source_data/src_id']):
-        sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
-        num_ruptures = sdata.nrupts.sum()
-        eff_sites = sdata.nsites.sum()
-        msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-               'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
-                     taskno, len(sdata), num_ruptures, eff_sites,
-                     rec['weight'], rec['duration'])
+        sdata = dstore.read_df('source_data')
+        sd = sdata[sdata.taskno == taskno]
+        acc = AccumDict(accum=numpy.zeros(5))
+        for src_id, nsites, esites, nrupts, weight, ctimes in zip(
+                sd.src_id, sd.nsites, sd.esites, sd.nrupts, sd.weight, sd.ctimes):
+            acc[basename(src_id, ';:.')] += numpy.array(
+                [nsites, esites, nrupts, weight, ctimes])
+        df = pandas.DataFrame(dict(src_id=list(acc)))
+        for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
+            df[name] = [arr[i] for arr in acc.values()]
+        time = df.ctimes.sum()
+        weight = df.weight.sum()
+        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df.set_index('src_id')
+        return msg
     else:
         msg = ''
     return msg

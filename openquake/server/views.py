@@ -1164,9 +1164,9 @@ def calc_result(request, result_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def aggrisk_keys(request, calc_id):
+def aggrisk_tags(request, calc_id):
     """
-    Return aggrisk_keys, by ``calc_id``, as JSON.
+    Return aggrisk_tags, by ``calc_id``, as JSON.
 
     :param request:
         `django.http.HttpRequest` object.
@@ -1194,12 +1194,12 @@ def aggrisk_keys(request, calc_id):
         return HttpResponseForbidden()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            df = _extract(ds, 'aggrisk_keys')
+            df = _extract(ds, 'aggrisk_tags')
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
             content='%s: %s in %s\n%s' %
-            (exc.__class__.__name__, exc, 'aggrisk_keys', tb),
+            (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
 
     return HttpResponse(content=df.to_json(),

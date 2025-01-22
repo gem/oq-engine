@@ -582,7 +582,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 model_geom = geometry.shape(f[0].geometry)
         elif oq.mosaic_model:  # 3-letter mosaic model
             mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
-            model_geom = mosaic_df.loc[oq.mosaic_model].geom
+            mmodel = 'CAN' if oq.mosaic_model == 'CND' else oq.mosaic_model
+            model_geom = mosaic_df.loc[mmodel].geom
         logging.info('Building ruptures')
         g_index = 0
         for sg_id, sg in enumerate(self.csm.src_groups):

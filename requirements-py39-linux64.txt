@@ -71,3 +71,4 @@ https://wheelhouse.openquake.org/v3/py/urllib3-2.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/zipp-3.17.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pluggy-1.5.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pytest-8.3.3-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl

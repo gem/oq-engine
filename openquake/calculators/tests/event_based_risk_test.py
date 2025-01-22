@@ -100,12 +100,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         # this is a case with insured losses and tags
         self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
 
-        # testing agg_keys and aggrisk_keys
-        [fname] = export(('agg_keys', 'csv'), self.calc.datastore)
+        # testing aggexp_tags and aggrisk_tags
+        [fname] = export(('aggexp_tags', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        df = extract(self.calc.datastore, 'aggrisk_keys')
-        fname = self.calc.datastore.export_path('aggrisk_keys.csv')
+        df = extract(self.calc.datastore, 'aggrisk_tags')
+        fname = self.calc.datastore.export_path('aggrisk_tags.csv')
         CsvWriter(fmt=FIVEDIGITS).save(df, fname)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
