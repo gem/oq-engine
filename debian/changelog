@@ -1,3 +1,7 @@
+  [Paolo Tormene, Michele Simionato]
+  * Storing the reduced asset collection and fixing a bug when exporting
+    the average losses
+
   [Richard Styron, Michele Simionato]
   * Extended the preclassical calculator to work in absence of a site collection
 
