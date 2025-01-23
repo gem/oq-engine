@@ -65,7 +65,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = 1E-3
+EPS = 1E-2
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1301,9 +1301,8 @@ class ContextMaker(object):
         src.nsites = len(sites)
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=8))  # reduced
-        if ctxs:
-            src.dt = time.time() - t0
-        else:
+        src.dt = time.time() - t0
+        if not ctxs:
             return EPS, 0
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
