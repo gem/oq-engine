@@ -1309,7 +1309,7 @@ class ContextMaker(object):
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code == b'F':  # avoid over-weight in the USA model
             weight /= 3.
-        return weight or eps, int(esites)
+        return weight or EPS, int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
         """
