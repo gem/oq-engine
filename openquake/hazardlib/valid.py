@@ -1507,4 +1507,3 @@ def fragmentno(src):
         return -1
     fragment = fragments[1].split('!')[0]  # strip !b16
     return int(fragment)
-

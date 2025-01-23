@@ -258,6 +258,8 @@ def utc_to_local_time(utc_timestamp, lon, lat):
     utc_time = utc_zone.localize(utc_time)
     local_zone = pytz.timezone(timezone_str)
     local_timestamp = utc_time.astimezone(local_zone)
+    # NOTE: we may keep microseconds and change the regex validating the format
+    local_timestamp = local_timestamp.replace(microsecond=0)
     return local_timestamp
 
 
@@ -477,11 +479,13 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
     preferred one.
     """
     logging.info('Getting finite-fault properties')
-    try:
-        ffs = products['finite-fault']
-    except KeyError:
+    if 'finite-fault' not in products:
+        # e.g. us6000phrk
         # FIXME: not tested
-        raise MissingLink('There is no finite-fault info for %s' % usgs_id)
+        err_msg = f'There is no finite-fault info for {usgs_id}'
+        err = {"status": "failed", "error_msg": err_msg}
+        return None, err
+    ffs = products['finite-fault']
     ff = _get_preferred_item(ffs)
     p = ff['properties']
     lon = float(p['longitude'])
@@ -495,7 +499,40 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
               'require_dip_strike': True,
               'pga_map_png': None, 'mmi_map_png': None,
               'usgs_id': usgs_id, 'rupture_file': None}
-    return rupdic
+    return rupdic, None
+
+
+def load_rupdic_from_origin(usgs_id, products):
+    """
+    Extract the origin properties from products.
+    NB: if the origin list contains multiple elements we take the
+    preferred one.
+    """
+    # TODO: we may try to unify this with the very similar load_rupdic_from_finite_fault
+    logging.info('Getting origin properties')
+    if 'origin' not in products:
+        # FIXME: not tested
+        err_msg = f'There is no origin info for {usgs_id}'
+        err = {"status": "failed", "error_msg": err_msg}
+        return None, err
+    origins = products['origin']
+    origin = _get_preferred_item(origins)
+    p = origin['properties']
+    mag = float(p['magnitude'])
+    lon = float(p['longitude'])
+    lat = float(p['latitude'])
+    dep = float(p['depth'])
+    rake = 0.
+    utc_time = p['eventtime']
+    local_time = utc_to_local_time(utc_time, lon, lat)
+    time_event = local_time_to_time_event(local_time)
+    rupdic = {'lon': lon, 'lat': lat, 'dep': dep,
+              'mag': mag, 'rake': rake,
+              'local_timestamp': str(local_time), 'time_event': time_event,
+              'require_dip_strike': True,
+              'pga_map_png': None, 'mmi_map_png': None,
+              'usgs_id': usgs_id, 'rupture_file': None}
+    return rupdic, None
 
 
 # NB: not used right now
@@ -736,11 +773,17 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     if err:
         return None, None, err
 
-    if ('download/rupture.json' not in contents
-            or approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']):
+    if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
+        rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
+        if err:
+            return None, None, err
+    elif ('download/rupture.json' not in contents
+          or approach == 'use_finite_rup_from_usgs'):
         # happens for us6000f65h in parsers_test
-        rupdic = load_rupdic_from_finite_fault(
+        rupdic, err = load_rupdic_from_finite_fault(
             usgs_id, properties['mag'], properties['products'])
+        if err:
+            return None, None, err
 
     if approach == 'build_rup_from_usgs':
         rupdic['nodal_planes'], err = _get_nodal_planes(properties)
