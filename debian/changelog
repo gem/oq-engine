@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added parameter `minimum_engine_version`
+
   [Paolo Tormene, Michele Simionato]
   * Storing the reduced asset collection and fixing a bug when exporting
     the average losses
