@@ -301,8 +301,8 @@ class PointSource(ParametricSeismicSource):
             npd_ = list(enumerate(npd))
             hdd_ = list(enumerate(hdd))
             for m, (mrate, mag) in magd_[::-step]:
-                for n, (nrate, np) in npd_:
-                    for d, (drate, cdep) in hdd_:
+                for n, (nrate, np) in npd_[::2]:
+                    for d, (drate, cdep) in hdd_[::2]:
                         rate = mrate * nrate * drate
                         yield PointRupture(
                             mag, self.tectonic_region_type,

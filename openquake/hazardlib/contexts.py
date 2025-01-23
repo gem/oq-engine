@@ -1302,6 +1302,8 @@ class ContextMaker(object):
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=8))  # reduced
         src.dt = time.time() - t0
+        if src.dt > .01:
+            print(f'{src.source_id=}, {src.dt=}')
         if not ctxs:
             return EPS, 0
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
