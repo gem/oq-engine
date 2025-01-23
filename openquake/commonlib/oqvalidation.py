@@ -32,7 +32,8 @@ import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import DictArray, AccumDict, cached_property
+from openquake.baselib.general import (
+    DictArray, AccumDict, cached_property, engine_version)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
@@ -532,6 +533,11 @@ minimum_distance:
    If set, distances below the minimum are rounded up.
    Example: *minimum_distance = 5*
    Default: 0
+
+minimum_engine_version:
+   If set, raise an error if the engine version is below the minimum
+   Example: *minimum_engine_version = 3.22*
+   Default: None
 
 minimum_intensity:
   If set, ground motion values below the *minimum_intensity* are
@@ -1086,6 +1092,7 @@ class OqParam(valid.ParamSet):
     mosaic_model = valid.Param(valid.three_letters, '')
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
+    minimum_engine_version = valid.Param(valid.version, None)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
@@ -2198,6 +2205,15 @@ class OqParam(valid.ParamSet):
             raise ValueError('collect_rlzs=true is inconsistent with '
                              'full enumeration')
         return self.sampling_method == 'early_weights'
+
+    def is_valid_version(self):
+        """
+        The engine version must be >= {minimum_engine_version}
+        """
+        if not self.minimum_engine_version:
+            return True
+        return self.minimum_engine_version <= valid.version(engine_version())
+
 
     def check_aggregate_by(self):
         tagset = asset.tagset(self.aggregate_by)

@@ -1250,6 +1250,20 @@ def site_param(dic):
     return new
 
 
+def version(value: str):
+    """
+    >>> version('3.22')
+    (3, 22, 0)
+    >>> version('3.22.0-gitXXX')
+    (3, 22, 0)
+    """
+    vers = [0, 0, 0]
+    for i, number in enumerate(value.split('.')):
+        if 'git' not in number:
+            vers[i] = int(number)
+    return tuple(vers)
+
+
 ###########################################################################
 
 class Param(object):
