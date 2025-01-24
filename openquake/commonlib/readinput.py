@@ -669,11 +669,13 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.ruptures_hdf5:
+    if h5 and 'sitecol' in h5:
+        return h5['sitecol']
+    if oqparam.ruptures_hdf5 and 'site_model' not in oqparam.inputs:
         with hdf5.File(oqparam.ruptures_hdf5) as r:
             rup_sitecol = r['sitecol']
-    elif h5 and 'sitecol' in h5:
-        return h5['sitecol']
+    else:
+        rup_sitecol = None
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         if oqparam.calculation_mode != 'preclassical':
@@ -689,7 +691,7 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if oqparam.ruptures_hdf5:
+        if rup_sitecol:
             assoc_dist = (oqparam.region_grid_spacing * 1.414
                           if oqparam.region_grid_spacing else 10)
             # 10 km is around the grid spacing used in the mosaic
