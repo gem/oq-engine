@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reading the site model in calculations with ruptures.hdf5
   * Added parameter `minimum_engine_version`
 
   [Paolo Tormene, Michele Simionato]
