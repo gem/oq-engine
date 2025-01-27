@@ -52,14 +52,8 @@ def get_period_im(name: str):
     """
     Returns the period of IM and IM type, given the IM name string
     """
-    if '(' in name:
-        im_type = name.split('(', 1)[0].strip()
-        period = float(name.split('(')[-1].split(')')[0])
-    else:
-        im_type = name
-        period = None
-
-    return im_type, period
+    period = float(name.split('(')[-1].split(')')[0])
+    return period
 
 
 def linear(x):
@@ -204,7 +198,7 @@ def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
 
         periods = []
         for im in ims:
-            _, _t = get_period_im(im)
+            _t = get_period_im(im)
             periods.append(_t)
 
         # Create interpolators
