@@ -171,9 +171,10 @@ def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
     if len(means.shape) == 1:
         means = means.reshape(1, means.shape[0])
 
+    # Get means and standard deviations of the IMs that do not need
+    # interpolation
     idx = [np.where(supported_ims == im_name)[0] for im_name in im_names]
     idx = np.concatenate(idx)
-
     if idx.size == 0:
         means_no_interp = np.array([])
         stddevs_no_interp = np.array([])
@@ -290,6 +291,7 @@ class AristeidouEtAl2024(GMPE):
     #: Required distance measures
     REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
 
+    # Suggested usage range of the GMM
     SUGGESTED_LIMITS = {
         "magnitude": [4.5, 7.9],
         "Rjb": [0., 299.44],
