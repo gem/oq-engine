@@ -1417,6 +1417,9 @@ class OqParam(valid.ParamSet):
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
+            if self.ruptures_hdf5 and not self.minimum_intensity:
+                self.raise_invalid('missing minimum_intensity')
+
             if self.ps_grid_spacing:
                 logging.warning('ps_grid_spacing is ignored in event_based '
                                 'calculations')

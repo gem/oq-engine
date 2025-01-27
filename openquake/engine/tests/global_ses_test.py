@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import numpy
 from openquake.baselib import hdf5
 from openquake.qa_tests_data import mosaic_for_ses
 from openquake.commonlib.datastore import read
@@ -25,6 +26,7 @@ from openquake.engine import global_ses
 
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
 RUP_HDF5 = os.path.join(MOSAIC_DIR, 'rups.hdf5')
+aac = numpy.testing.assert_allclose
 def path(job_ini):
     return os.path.join(MOSAIC_DIR, job_ini)
 
@@ -48,14 +50,18 @@ def setup_module():
     check(dstore, fnames)
 
 
-def test_sites():
+def test_sites():  # 6 sites
     dstore = base.run_calc(path('job_sites.ini')).datastore
-    assert dstore['avg_gmf'].shape == (2, 6, 1)  # 6 sites
+    gmvs = dstore['avg_gmf'][0, :, 0]
+    aac(gmvs, [0.0201735, 0.0202367, 0.0203708,
+               0.0202335, 0.0202477, 0.0202308], atol=1E-6)
 
 
-def test_site_model():
+def test_site_model():  # 5 sites
     dstore = base.run_calc(path('job_sm.ini')).datastore
-    assert dstore['avg_gmf'].shape == (2, 5, 1)  # 5 sites
+    gmvs = dstore['avg_gmf'][0, :, 0]
+    aac(gmvs, [0.020281, 0.020274, 0.020219,
+               0.020302, 0.020263], atol=1E-6)
 
 
 def teardown_module():
