@@ -210,8 +210,8 @@ def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
             np.log(imts[np.where([~idx_no_interp])[1][m]].period))
         stddev_interp = interp_stddevs(
             np.log(imts[np.where([~idx_no_interp])[1][m]].period))
-        means_interp.append(np.squeeze(mean_interp))
-        stddevs_interp[:, m, :] = np.squeeze(stddev_interp)
+        means_interp.append(np.squeeze(mean_interp, axis=1))
+        stddevs_interp[:, m, :] = np.squeeze(stddev_interp, axis=1)
     means_interp = np.array(means_interp)
     stddevs_interp = np.array(stddevs_interp)
 
