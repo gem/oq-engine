@@ -327,7 +327,7 @@ def split_source(src):
     return splits
 
 
-def close_ruptures(ruptures, sites, dist=600.):
+def close_ruptures(ruptures, sites, dist=800.):
     """
     :returns: array of ruptures close to the sites
     """    
