@@ -119,8 +119,7 @@ setup(
                                     "openquake.engine.bin.*"]),
     py_modules=PY_MODULES,
     include_package_data=True,
-    package_data={"openquake": ["conftest.py"],
-                  "openquake.engine": [
+    package_data={"openquake.engine": [
         "openquake.cfg", "README.md",
         "LICENSE", "CONTRIBUTORS.txt"]},
     namespace_packages=['openquake'],
