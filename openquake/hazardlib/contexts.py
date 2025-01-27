@@ -1300,7 +1300,7 @@ class ContextMaker(object):
             return EPS, 0
         src.nsites = len(sites)
         t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=8))  # reduced
+        ctxs = list(self.get_ctx_iter(src, sites, step=4))  # reduced
         src.dt = time.time() - t0
         # if src.dt > .01:
         #     print(f'{src.source_id=}, {src.dt=}')
