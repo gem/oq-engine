@@ -19,6 +19,8 @@
 import os
 import sys
 import configparser
+from django.core import mail
+from unittest.mock import patch
 # disable OpenBLAS threads before the first numpy import
 # see https://github.com/numpy/numpy/issues/11826
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -67,6 +69,21 @@ cfgfile = os.environ.get('OQ_CONFIG_FILE')
 if cfgfile:
     config.paths.append(cfgfile)
 # NB: the last file wins, since the parameters are overridden in order
+
+
+# Override the `_dj_autoclear_mailbox` test fixture in `pytest_django`
+# to clear the outbox only if it exists.
+def _dj_autoclear_mailbox_patched():
+    """
+    Override the `_dj_autoclear_mailbox` test fixture in `pytest_django`
+    to clear the outbox only if it exists.
+    """
+    if hasattr(mail, 'outbox'):
+        del mail.outbox[:]
+
+
+patch('pytest_django.plugin._dj_autoclear_mailbox',
+      _dj_autoclear_mailbox_patched).start()
 
 
 def read(*paths, **validators):
