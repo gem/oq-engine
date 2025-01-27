@@ -19,6 +19,8 @@
 import os
 from django.apps import AppConfig
 from django.conf import settings
+from django.core import mail
+from unittest.mock import patch
 from sqlite3 import OperationalError
 from openquake.baselib import config
 from openquake.server import dbserver, db
@@ -34,6 +36,19 @@ class ServerConfig(AppConfig):
         #     registry is fully populated.
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
+
+        # Override the `_dj_autoclear_mailbox` test fixture in `pytest_django`
+        # to clear the outbox only if it exists.
+        def _dj_autoclear_mailbox_patched():
+            """
+            Override the `_dj_autoclear_mailbox` test fixture in `pytest_django`
+            to clear the outbox only if it exists.
+            """
+            if hasattr(mail, 'outbox'):
+                del mail.outbox[:]
+        patch('pytest_django.plugin._dj_autoclear_mailbox',
+              _dj_autoclear_mailbox_patched).start()
+
         import openquake.server.signals  # NOQA
         if settings.LOCKDOWN:
             import openquake.server.user_profile.signals  # NOQA
