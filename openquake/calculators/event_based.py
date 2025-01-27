@@ -315,6 +315,7 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
         r.copy('events', dstore.hdf5) # saving the events
         logging.info('Selecting the ruptures close to the sites')
         rups = close_ruptures(r['ruptures'][:], sitecol)
+        dstore['ruptures'] = rups
         R = full_lt.num_samples
         dstore['weights'] = numpy.ones(R) / R
     rups_dic = group_array(rups, 'model', 'trt_smr')
