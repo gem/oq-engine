@@ -1,10 +1,8 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
-name: hazardlib + engine + server tests
+name: Weekly Engine tests
 
 on:
-  pull_request:
+  schedule:
+    - cron: "0 1 * * 0"
 
 jobs:
   engine:
@@ -13,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}

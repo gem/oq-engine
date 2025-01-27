@@ -65,7 +65,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = 1E-3
+EPS = 1E-2
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1300,13 +1300,21 @@ class ContextMaker(object):
             return EPS, 0
         src.nsites = len(sites)
         t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=8))  # reduced
+        ctxs = list(self.get_ctx_iter(src, sites, step=4))  # reduced
         src.dt = time.time() - t0
+        # if src.dt > .01:
+        #     print(f'{src.source_id=}, {src.dt=}')
         if not ctxs:
             return EPS, 0
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
+        if src.code == b'F':  # avoid over-weight in the USA model
+            weight /= 5.
+        elif src.code == b'S':  # increase weight in SAM
+            weight *= 2.
+        elif src.code == b'N':  # increase weight in SAM
+            weight *= 5.
         return weight or EPS, int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):

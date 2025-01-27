@@ -594,8 +594,8 @@ def _fix(col):
     return col
 
 
-@export.add(('agg_keys', 'csv'))
-def export_agg_keys_csv(ekey, dstore):
+@export.add(('aggexp_tags', 'csv'))
+def export_aggexp_tags_csv(ekey, dstore):
     """
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
@@ -735,7 +735,7 @@ def convert_df_to_vulnerability(loss_type, df):
         root.append(vfunc)
     return root
 
-    
+
 def export_vulnerability_xml(dstore, edir):
     fnames = []
     for loss_type, df in dstore.read_df('crm').groupby('loss_type'):

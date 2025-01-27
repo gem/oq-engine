@@ -25,14 +25,15 @@ import numpy
 import pandas
 from shapely import geometry
 from openquake.baselib import config, hdf5, parallel, python3compat
-from openquake.baselib.general import AccumDict, humansize, block_splitter
+from openquake.baselib.general import (
+    AccumDict, humansize, block_splitter, group_array)
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import (
-    magstr, nofilter, getdefault, get_distances, SourceFilter)
+    close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import logictree, InvalidFile
@@ -296,28 +297,6 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def get_nsites(rups, trt_smr, trt, srcfilter):
-    model = rups[0]['model'].decode('ascii')
-    return {(model, trt_smr, trt): srcfilter.get_nsites(rups, trt)}
-
-
-def get_rups_dic(ruptures_hdf5, sitecol, maximum_distance, trts):
-    dic = {}
-    smap = parallel.Starmap(get_nsites)
-    with hdf5.File(ruptures_hdf5) as f:
-        for trt_smr, start, stop in f['trt_smr_start_stop']:
-            slc = slice(start, stop)
-            rups = f['ruptures'][slc]
-            model = rups[0]['model'].decode('ascii')
-            trt = trts[model][trt_smr // TWO24]
-            srcfilter = SourceFilter(sitecol, maximum_distance(trt))
-            dic[model, trt_smr, trt] = rups
-            smap.submit((rups, trt_smr, trt, srcfilter))
-    for key, nsites in smap.reduce().items():
-        dic[key]['nsites'] = nsites
-    return dic
-
-
 def starmap_from_rups_hdf5(oq, sitecol, dstore):
     """
     :returns: a Starmap instance sending event_based tasks
@@ -334,15 +313,21 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
                 rlzs_by_gsim[model, trt_smr] = rbg
         dstore['full_lt'] = full_lt  # saving the last lt (hackish)
         r.copy('events', dstore.hdf5) # saving the events
+        logging.info('Selecting the ruptures close to the sites')
+        rups = close_ruptures(r['ruptures'][:], sitecol)
+        dstore['ruptures'] = rups
         R = full_lt.num_samples
         dstore['weights'] = numpy.ones(R) / R
-    rups_dic = get_rups_dic(ruptures_hdf5, sitecol, oq.maximum_distance, trts)
+    rups_dic = group_array(rups, 'model', 'trt_smr')
     totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
     extra = sitecol.array.dtype.names
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    for (model, trt_smr, trt), rups in rups_dic.items():
+    logging.info('Computing the GMFs')
+    for (model, trt_smr), rups in rups_dic.items():
+        model = model.decode('ascii')
+        trt = trts[model][trt_smr // TWO24]
         proxies = get_proxies(ruptures_hdf5, rups)
         mags = numpy.unique(numpy.round(rups['mag'], 2))
         oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
@@ -582,7 +567,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 model_geom = geometry.shape(f[0].geometry)
         elif oq.mosaic_model:  # 3-letter mosaic model
             mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
-            model_geom = mosaic_df.loc[oq.mosaic_model].geom
+            mmodel = 'CAN' if oq.mosaic_model == 'CND' else oq.mosaic_model
+            model_geom = mosaic_df.loc[mmodel].geom
         logging.info('Building ruptures')
         g_index = 0
         for sg_id, sg in enumerate(self.csm.src_groups):

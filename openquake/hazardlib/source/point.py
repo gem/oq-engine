@@ -300,7 +300,7 @@ class PointSource(ParametricSeismicSource):
             magd_ = list(enumerate(magd))
             npd_ = list(enumerate(npd))
             hdd_ = list(enumerate(hdd))
-            for m, (mrate, mag) in magd_[::step]:
+            for m, (mrate, mag) in magd_[-1:]:
                 for n, (nrate, np) in npd_:
                     for d, (drate, cdep) in hdd_:
                         rate = mrate * nrate * drate
@@ -478,7 +478,7 @@ class CollapsedPointSource(PointSource):
         :returns: an iterator over the underlying ruptures
         """
         step = kwargs.get('step', 1)
-        for src in self.pointsources[::step]:
+        for src in self.pointsources[::-step]:
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource

@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.22.0-gita7d73b72de', start_date='2024-10-21T14:14:53', checksum=3418894507, site_id=1, lon=0.0, lat=0.1, poe=0.000404"
+#,,,,"generated_by='OpenQuake engine 3.23.0-git9dd2e721c7', start_date='2025-01-23T16:22:11', checksum=3418894507, site_id=1, lon=0.0, lat=0.1, poe=0.000404"
 period,spec,mea,sig,wei
 0.00000E+00,2.54800E-01,-1.36728E+00,6.22577E-01,1.00371E+00
 1.00000E-01,5.10773E-01,-6.71830E-01,6.75259E-01,1.00359E+00

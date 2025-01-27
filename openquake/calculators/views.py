@@ -251,28 +251,6 @@ def view_high_hazard(token, dstore):
     return max_hazard[high]
 
 
-@view.add('worst_sources')
-def view_worst_sources(token, dstore):
-    """
-    Returns the sources with worst weights
-    """
-    if ':' in token:
-        step = int(token.split(':')[1])
-    else:
-        step = 1
-    data = dstore.read_df('source_data', 'src_id')
-    del data['impact']
-    ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
-    [[taskno, maxtime]] = ser.to_dict().items()
-    data = data[data.taskno == taskno]
-    print('Sources in the slowest task (%d seconds, weight=%d, taskno=%d)'
-          % (maxtime, data['weight'].sum(), taskno))
-    data['slow_rate'] = data.ctimes / data.weight
-    del data['taskno']
-    df = data.sort_values('ctimes', ascending=False)
-    return df[slice(None, None, step)]
-
-
 @view.add('slow_sources')
 def view_slow_sources(token, dstore, maxrows=20):
     """
@@ -815,9 +793,10 @@ def view_task_hazard(token, dstore):
         df = pandas.DataFrame(dict(src_id=list(acc)))
         for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
             df[name] = [arr[i] for arr in acc.values()]
+        df = df.sort_values('ctimes').set_index('src_id')
         time = df.ctimes.sum()
         weight = df.weight.sum()
-        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df.set_index('src_id')
+        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df
         return msg
     else:
         msg = ''

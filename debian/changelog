@@ -3,7 +3,20 @@
   * Added new IMs, that is the FIV3, Sa_avg2, and Sa_avg3
 
   [Michele Simionato]
-  * Added a new output "Aggregated Exposure Values"
+  * Reading the site model in calculations with ruptures.hdf5 and making
+    `minimum_intensity` mandatory
+  * Added parameter `minimum_engine_version`
+
+  [Paolo Tormene, Michele Simionato]
+  * Storing the reduced asset collection and fixing a bug when exporting
+    the average losses
+
+  [Richard Styron, Michele Simionato]
+  * Extended the preclassical calculator to work in absence of a site collection
+
+  [Michele Simionato]
+  * Added a new output "Aggregated Exposure Values" (`aggexp_tags`) and a new extractor
+    `aggrisk_tags`;
 
 python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
 
