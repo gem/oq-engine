@@ -344,6 +344,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
+
     re = os.environ.get('OQ_REDUCE')  # debugging facility
     if is_fraction(re):
         # reduce the imtls to the first imt
@@ -661,6 +662,13 @@ def debug_site(oqparam, haz_sitecol):
         oqparam.concurrent_tasks = 0
 
 
+def _vs30(dic):
+    # dic is a dictionary key -> pathnames
+    if 'site_model' in dic:
+        files = hdf5.sniff(dic['site_model'])
+        return any('vs30' in csv.fields for csv in files)
+
+
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -669,11 +677,11 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    if h5 and 'sitecol' in h5:
+        return h5['sitecol']
     if oqparam.ruptures_hdf5:
         with hdf5.File(oqparam.ruptures_hdf5) as r:
             rup_sitecol = r['sitecol']
-    elif h5 and 'sitecol' in h5:
-        return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         if oqparam.calculation_mode != 'preclassical':
@@ -689,7 +697,7 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if oqparam.ruptures_hdf5:
+        if oqparam.ruptures_hdf5 and not _vs30(oqparam.inputs):
             assoc_dist = (oqparam.region_grid_spacing * 1.414
                           if oqparam.region_grid_spacing else 10)
             # 10 km is around the grid spacing used in the mosaic

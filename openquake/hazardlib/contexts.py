@@ -1300,7 +1300,10 @@ class ContextMaker(object):
             return EPS, 0
         src.nsites = len(sites)
         t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=8))  # reduced
+        if src.code == b'p':
+            ctxs = list(self.get_ctx_iter(src, sites, step=4))  # reduced
+        else:
+            ctxs = list(self.get_ctx_iter(src, sites, step=8))  # reduced
         src.dt = time.time() - t0
         # if src.dt > .01:
         #     print(f'{src.source_id=}, {src.dt=}')
@@ -1310,7 +1313,11 @@ class ContextMaker(object):
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code == b'F':  # avoid over-weight in the USA model
-            weight /= 3.
+            weight /= 5.
+        elif src.code == b'S':  # increase weight in SAM
+            weight *= 2.
+        elif src.code == b'N':  # increase weight in SAM
+            weight *= 5.
         return weight or EPS, int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
