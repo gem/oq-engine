@@ -43,8 +43,8 @@ def read_json(filename: Path):
     return filename
 
 
-# Load background information about the model from a json file (i.e., weight,
-# biases, standard devation values, etc.)
+# Load background information about the model from a json file
+# (i.e., weight, biases, standard devation values, etc.)
 DATA = read_json(ASSET_DIR / "gmm_ann.json")
 
 
@@ -133,86 +133,113 @@ def _get_style_of_faulting_term(rake):
     return sof
 
 
-def extract_base(im):
+def extract_im_names(imts, component_definition):
     """
-    Remove the text after the last underscore and any trailing
-    parentheses with numbers
+    Convert the im strings of openquake to the im naming convention
+    used in the GMM
     """
-    # Keep the im text before the last occurance of '_'
-    base = im.rsplit('_', 1)[0]
-    # Keep the im text before the occurance of '('
-    base = base.split('(')[0]
-    return base
+    imts_base = []
+    im_names = []
+    for imt in imts:
+        # Keep the im text before the occurance of '('
+        base = imt.string.split('(')[0]
+        # Keep the im text before the last occurance of '_'
+        base = base.split('_')[:2]
+        base = "_".join(base[:2])
+
+        im_name_mapping = {
+            "RSD575": "Ds575",
+            "RSD595": "Ds595",
+            "Sa_avg2": "Sa_avg2" + f"_{component_definition}({imt.period})",
+            "Sa_avg3": "Sa_avg3" + f"_{component_definition}({imt.period})",
+            "SA": "SA" + f"_{component_definition}({imt.period})",
+            "Sa": "SA" + f"_{component_definition}({imt.period})",
+            "FIV3": "FIV3" + f"({imt.period})",
+            "PGA": "PGA",
+            "PGV": "PGV",
+            "PGD": "PGD",
+        }
+        im_name = im_name_mapping[base]
+        imts_base.append(base)
+        im_names.append(im_name)
+    im_names = np.array(im_names)
+    return im_names
 
 
-def _get_means_stddevs(DATA, imt, means, stddevs, component_definition):
+def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
     """
     Extract the means and standard deviations of the requested IMs and
     horizontal compoent definitions
     """
     supported_ims = np.asarray(DATA["output-ims"])
-    supported_im_types = np.unique(np.array(
-        [extract_base(supported_im) for supported_im in supported_ims]))
-
-    im_name_mapping = {
-        "RSD575": "Ds575",
-        "RSD595": "Ds595",
-        "Sa_avg2": "Sa_avg2",
-        "Sa_avg3": "Sa_avg3",
-        "SA": "SA",
-        "Sa": "SA",
-        "FIV3": "FIV3",
-        "PGA": "PGA",
-        "PGV": "PGV",
-        "PGD": "PGD",
-    }
-
-    im_name = im_name_mapping[extract_base(imt.string)]
-
-    if im_name not in supported_im_types:
-        raise NameError(
-            f"IM name {im_name} is not supported by this GMM")
-
-    # if im_name.startswith("SA") or im_name.startswith("Sa"):
-    #     im_name = "SA" + f'_{component_definition}'
-
-    if im_name.startswith("SA") or im_name.startswith("Sa"):
-        # Find the position of the first parenthesis
-        pos = imt.string.index("(")
-        # Insert using slicing
-        im_name = (imt.string[:pos] + f'_{component_definition}'
-                   + imt.string[pos:])
-    elif im_name.startswith("FIV3"):
-        im_name = imt.string
+    im_names = extract_im_names(imts, component_definition)
 
     if len(means.shape) == 1:
         means = means.reshape(1, means.shape[0])
 
-    if im_name in supported_ims:
-        idx = np.where(supported_ims == im_name)[0][0]
-        return means[:, idx], stddevs[idx, :]
+    idx = [np.where(supported_ims == im_name)[0] for im_name in im_names]
+    idx = np.concatenate(idx)
 
-    # Period not supported, perform linear interpolation
-    idxs = np.where(np.char.find(
-        supported_ims, im_name[:im_name.index("(")]) != -1)
+    if idx.size == 0:
+        means_no_interp = np.array([])
+        stddevs_no_interp = np.array([])
+    else:
+        means_no_interp = means[:, idx].T
+        stddevs_no_interp = stddevs[:, idx, :]
 
-    ims = supported_ims[idxs]
-    means = means[:, idxs]
-    stddevs = stddevs[idxs, :]
+    idx_no_interp = np.isin(im_names, supported_ims)
 
-    periods = []
-    for im in ims:
-        _, _t = get_period_im(im)
-        periods.append(_t)
+    means_interp = []
+    stddevs_interp = np.full(
+        (stddevs.shape[0], len(im_names[~idx_no_interp]),
+         stddevs.shape[2]), np.nan)
+    # Perform linear interpolation in the logarithmic space for periods
+    # not included in the set of periods of the GMM
+    for m, im_name in enumerate(im_names[~idx_no_interp]):
+        idxs = np.where(np.char.startswith(
+            supported_ims, im_name.split("(")[0]))
+        ims = supported_ims[idxs]
+        means_for_interp = means[:, idxs]
+        stddevs_for_interp = stddevs[:, idxs, :]
 
-    # TODO: interpolate in the log space
-    # Create interpolators
-    interp_stddevs = interp1d(np.log(periods), stddevs, axis=1)
-    interp_means = interp1d(np.log(periods), means)
+        periods = []
+        for im in ims:
+            _, _t = get_period_im(im)
+            periods.append(_t)
 
-    mean, stddev = (np.squeeze(interp_means(np.log(imt.period))),
-                    np.squeeze(interp_stddevs(np.log(imt.period))))
-    return mean, stddev
+        # Create interpolators
+        interp_stddevs = interp1d(np.log(periods), stddevs_for_interp,
+                                  axis=2)
+        interp_means = interp1d(np.log(periods), means_for_interp)
+        mean_interp = interp_means(
+            np.log(imts[np.where([~idx_no_interp])[1][m]].period))
+        stddev_interp = interp_stddevs(
+            np.log(imts[np.where([~idx_no_interp])[1][m]].period))
+        means_interp.append(np.squeeze(mean_interp))
+        stddevs_interp[:, m, :] = np.squeeze(stddev_interp)
+    means_interp = np.array(means_interp)
+    stddevs_interp = np.array(stddevs_interp)
+
+    # Combine interpolated and not interpolated values in the
+    # final mean and standard deviation estimations
+    mean = np.full((len(im_names), means.shape[0]), np.nan)
+    stddev = np.full((
+        stddevs.shape[0], len(im_names), stddevs.shape[2]), np.nan)
+    if means_interp.size != 0 and means_no_interp.size != 0:
+        mean[idx_no_interp, :] = means_no_interp
+        mean[~idx_no_interp, :] = means_interp
+
+        stddev[:, idx_no_interp, :] = stddevs_no_interp
+        stddev[:, ~idx_no_interp, :] = stddevs_interp
+        return mean, stddev
+    elif means_interp.size == 0:
+        mean = means_no_interp
+        stddev = stddevs_no_interp
+        return mean, stddev
+    else:
+        mean = means_interp
+        stddev = stddevs_interp
+        return mean, stddev
 
 
 def _generate_function(x, biases, weights):
@@ -289,71 +316,73 @@ class AristeidouEtAl2024(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        breakpoint()
-        for m, imt in enumerate(imts):
+        # Reshaping and stacking context parameters to be in an
+        # appropriate format as an input to the ANN model
+        mag = np.array(ctx.mag).reshape(-1, 1)
+        rjb = np.array(ctx.rjb).reshape(-1, 1)
+        rrup = np.array(ctx.rrup).reshape(-1, 1)
+        d_hyp = np.array(ctx.hypo_depth).reshape(-1, 1)
+        vs30 = np.array(ctx.vs30).reshape(-1, 1)
+        rake = np.array(ctx.rake).reshape(-1, 1)
+        mechanism = _get_style_of_faulting_term(rake)
+        # Transform z2pt5 to [m]
+        z2pt5 = np.array(ctx.z2pt5).reshape(-1, 1) * 1000
+        rx = np.array(ctx.rx).reshape(-1, 1)
+        ztor = np.array(ctx.ztor).reshape(-1, 1)
 
-            mag = np.array(ctx.mag).reshape(-1, 1)
-            rjb = np.array(ctx.rjb).reshape(-1, 1)
-            rrup = np.array(ctx.rrup).reshape(-1, 1)
-            d_hyp = np.array(ctx.hypo_depth).reshape(-1, 1)
-            vs30 = np.array(ctx.vs30).reshape(-1, 1)
-            rake = np.array(ctx.rake).reshape(-1, 1)
-            mechanism = _get_style_of_faulting_term(rake)
-            # Transform z2pt5 to [m]
-            z2pt5 = np.array(ctx.z2pt5).reshape(-1, 1) * 1000
-            rx = np.array(ctx.rx).reshape(-1, 1)
-            ztor = np.array(ctx.ztor).reshape(-1, 1)
+        ctx_params = np.column_stack([
+            rjb, rrup, d_hyp, mag, vs30, mechanism, z2pt5, rx, ztor
+        ])
 
-            ctx_params = np.column_stack([
-                rjb, rrup, d_hyp, mag, vs30, mechanism, z2pt5, rx, ztor
-            ])
+        # Get biases and weights of the ANN model
+        biases = DATA["biases"]
+        weights = DATA["weights"]
 
-            # Get biases and weights of the ANN model
-            biases = DATA["biases"]
-            weights = DATA["weights"]
+        # Input layer
+        # Transform the input
+        x_transformed = _minmax_scaling(
+            DATA, ctx_params, self.SUGGESTED_LIMITS)
 
-            # Input layer
-            # Transform the input
-            x_transformed = _minmax_scaling(
-                DATA, ctx_params, self.SUGGESTED_LIMITS)
+        _data = _generate_function(
+            x_transformed, biases[0], weights[0])
+        a1 = softmax(_data)
 
-            _data = _generate_function(
-                x_transformed, biases[0], weights[0])
-            a1 = softmax(_data)
+        # Hidden layer
+        _data = _generate_function(
+            a1, biases[1], weights[1]
+        )
+        a2 = tanh(_data)
 
-            # Hidden layer
-            _data = _generate_function(
-                a1, biases[1], weights[1]
-            )
-            a2 = tanh(_data)
+        # Output layer
+        _data = _generate_function(
+            a2, biases[2], weights[2]
+        )
+        output_log10 = linear(_data)
 
-            # Output layer
-            _data = _generate_function(
-                a2, biases[2], weights[2]
-            )
-            output_log10 = linear(_data)
+        # Reverse log10
+        output = 10 ** output_log10
 
-            # Reverse log10
-            output = 10 ** output_log10
+        # The shape of the obtained means is:
+        # (scenarios, total number of offered IMs)
+        means = np.squeeze(np.log(output))
 
-            # Means (shape=(cases, n_im)) and standard deviations (n_im, )
-            means = np.squeeze(np.log(output))
+        # get the standard deviations
+        stddevs = np.asarray((DATA["total-stdev"],
+                              DATA["inter-stdev"],
+                              DATA["intra-stdev"]))
+        stddevs = np.expand_dims(stddevs, axis=2).repeat(
+            ctx_params.shape[0], axis=2)
 
-            stddevs = np.asarray((DATA["total-stdev"],
-                                 DATA["inter-stdev"],
-                                 DATA["intra-stdev"])).T
+        # Transform the standard deviations from log10 to natural logarithm
+        stddevs = np.log(10**stddevs)
 
-            # Transform the standard deviations from log10 to natural
-            # logarithm
-            stddevs = np.log(10**stddevs)
+        # Get the means and stddevs at index corresponding to the IM
+        mean[:], stddevs = _get_means_stddevs(
+            DATA, imts, means, stddevs, self.component_definition)
 
-            # Get the means and stddevs at index corresponding to the IM
-            mean[m], stddevs = _get_means_stddevs(
-                DATA, imt, means, stddevs, self.component_definition)
-
-            sig[m] = stddevs[0]
-            tau[m] = stddevs[1]
-            phi[m] = stddevs[2]
+        sig[:] = stddevs[0, :, :]
+        tau[:] = stddevs[1, :, :]
+        phi[:] = stddevs[2, :, :]
 
 
 class AristeidouEtAl2024Geomean(AristeidouEtAl2024):
