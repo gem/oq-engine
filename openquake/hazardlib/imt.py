@@ -200,10 +200,10 @@ def SA(period, damping=5.0):
 
 def FIV3(period, damping=5.0):
     """
-    Filtered incremental velocity, as defined in: Dávalos, H. and Miranda, 
-    E. (2019) ‘Filtered incremental velocity: A novel approach in 
-    intensity measures for seismic collapse estimation’, Earthquake 
-    Engineering and Structural Dynamics, 48(12), pp. 1384–1405. Available 
+    Filtered incremental velocity, as defined in: Dávalos, H. and Miranda,
+    E. (2019) ‘Filtered incremental velocity: A novel approach in
+    intensity measures for seismic collapse estimation’, Earthquake
+    Engineering and Structural Dynamics, 48(12), pp. 1384–1405. Available
     at: https://doi.org/10.1002/eqe.3205. Units are ``cm/s``.
     """
     period = float(period)
@@ -318,6 +318,7 @@ def ASH():
 
 # secondary IMTs
 sec_imts = 'Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb'.split()
+
 
 def Disp():
     """
