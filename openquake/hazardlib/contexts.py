@@ -1310,10 +1310,10 @@ class ContextMaker(object):
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code == b'F':  # avoid over-weight in the USA model
-            weight /= 5.
+            weight /= 3.
         elif src.code == b'S':  # increase weight in SAM
             weight *= 2.
-        elif src.code == b'N':  # increase weight in SAM
+        elif src.code == b'N':  # increase weight in MEX
             weight *= 5.
         return weight or EPS, int(esites)
 
