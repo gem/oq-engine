@@ -122,7 +122,8 @@ jobs:
           sleep 10
           cd D:\a\oq-engine\oq-engine
           $Env:OQ_APPLICATION_MODE='PUBLIC'
-          pytest -v openquake\server\tests\test_public_mode.py
+           # -v 2 also logs the test names
+          python .\openquake\server\manage.py test -v 2 tests.test_public_mode
 
       - name: Run tests for the engine server in read-only mode to test installation
         if: always() && env.to_run == 0
@@ -133,7 +134,8 @@ jobs:
           sleep 10
           cd D:\a\oq-engine\oq-engine
           $Env:OQ_APPLICATION_MODE='READ_ONLY'
-          pytest -v openquake\server\tests\test_read_only_mode.py
+          # -v 2 also logs the test names
+          python .\openquake\server\manage.py test -v 2 tests.test_read_only_mode
 
       - name: Run all demos
         if: env.to_run == 0
