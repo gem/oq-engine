@@ -651,8 +651,10 @@ function capitalizeFirstLetter(val) {
                 }
                 if (selected_approach == 'build_rup_from_usgs') {
                     $('div#nodal_plane').removeClass('hidden');
+                    $('div#msr').removeClass('hidden');
                 } else {
                     $('div#nodal_plane').addClass('hidden');
+                    $('div#msr').addClass('hidden');
                 }
             });
 
@@ -744,7 +746,7 @@ function capitalizeFirstLetter(val) {
                         $('#strike').val('');
                     }
                     if ('nodal_planes' in data) {
-                        nodal_planes = data.nodal_planes;
+                        const nodal_planes = data.nodal_planes;
                         const $select = $('select#nodal_plane');
                         $select.empty();
                         $.each(nodal_planes, function(key, values) {
@@ -762,6 +764,15 @@ function capitalizeFirstLetter(val) {
                         $('#rake').val(nodal_plane.rake);
                         $('#dip').val(nodal_plane.dip);
                         $('#strike').val(nodal_plane.strike);
+                    }
+                    if ('msrs' in data) {
+                        const msrs = data.msrs;
+                        const $select = $('select#msr');
+                        $select.empty();
+                        msrs.forEach(msr => {
+                            $select.append($("<option>").text(msr).val(msr));
+                        });
+                        $select.val('WC1994'); // TODO: make it possible to change it
                     }
                     $('#mosaic_model').empty();
                     $.each(data.mosaic_models, function(index, mosaic_model) {
@@ -889,6 +900,9 @@ function capitalizeFirstLetter(val) {
                 formData.append('local_timestamp', $("#local_timestamp").val());
                 formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
                 formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
+                if ('msr' in data) {
+                    formData.append('msr', $("select#msr").find(':selected').val());
+                }
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/aristotle_run",

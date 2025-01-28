@@ -43,6 +43,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter
 from openquake.hazardlib.source.rupture import get_multiplanar, is_matrix
+from openquake.hazardlib.scalerel import get_available_scalerel
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -786,6 +787,7 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
 
     if approach == 'build_rup_from_usgs':
         rupdic['nodal_planes'], err = _get_nodal_planes(properties)
+        rupdic['msrs'] = list(get_available_scalerel())
         if err:
             return None, rupdic, err
 
