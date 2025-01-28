@@ -772,7 +772,6 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         usgs_id, user, use_shakemap, monitor)
     if err:
         return None, None, err
-
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
         rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
         if err:
@@ -796,7 +795,6 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
                 rup_data, rupture_file = download_rupture_data(
                     usgs_id, contents, user)
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
-
     if user.level == 2 and not station_data_file:
         with monitor('Downloading stations'):
             rupdic['station_data_file'], rupdic['station_data_issue'] = (
