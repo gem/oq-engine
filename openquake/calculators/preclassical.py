@@ -134,8 +134,8 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             splits.extend(split_source(src))
         else:
             splits.append(src)
+    splits = _filter(splits, cmaker.oq.minimum_magnitude)
     if splits:
-        splits = _filter(splits, cmaker.oq.minimum_magnitude)
         mon = monitor('weighting sources', measuremem=False)
         if sites is None or spacing == 0:
             if sites is None:
@@ -147,7 +147,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             dic['before'] = len(srcs)
             dic['after'] = len(splits)
             yield dic
-        elif splits:
+        else:
             dic = grid_point_sources(splits, spacing, monitor)
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
