@@ -300,6 +300,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                     smap.submit(([src], sites, cmaker, secparams))
                 else:
                     others.append(src)
+            for block in block_splitter(others, 40):
+                smap.submit((block, sites, cmaker, secparams))
             check_maxmag(pointlike)
             if pointsources or pointlike:
                 spacing = self.oqparam.ps_grid_spacing
@@ -312,8 +314,6 @@ class PreClassicalCalculator(base.HazardCalculator):
                     for block in block_splitter(pointsources, 2000):
                         smap.submit((block, sites, cmaker, secparams))
                     others.extend(pointlike)
-            for block in block_splitter(others, 40):
-                smap.submit((block, sites, cmaker, secparams))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)
