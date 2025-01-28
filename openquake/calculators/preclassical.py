@@ -308,8 +308,9 @@ class PreClassicalCalculator(base.HazardCalculator):
                 if spacing:
                     for plike in pointlike:
                         pointsources.extend(split_source(plike))
-                    cps = grid_point_sources(pointsources, spacing)
-                    smap.submit((cps, sites, cmaker, secparams))
+                    cpsources = grid_point_sources(pointsources, spacing)
+                    for block in block_splitter(cpsources, 200):
+                        smap.submit((block, sites, cmaker, secparams))
                 else:
                     for block in block_splitter(pointsources, 2000):
                         smap.submit((block, sites, cmaker, secparams))
