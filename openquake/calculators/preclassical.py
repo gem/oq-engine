@@ -101,7 +101,6 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
-    spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if sites:
         N = len(sites)
@@ -110,7 +109,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     else:
         N = 0
         multiplier = 1
-        sf = None
+        sf = SourceFilter(None)
     splits = []
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
@@ -134,29 +133,15 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             splits.extend(split_source(src))
         else:
             splits.append(src)
+    splits = _filter(splits, cmaker.oq.minimum_magnitude)
     if splits:
-        splits = _filter(splits, cmaker.oq.minimum_magnitude)
         mon = monitor('weighting sources', measuremem=False)
-        if sites is None or spacing == 0:
-            if sites is None:
-                for src in splits:
-                    src.weight = .01
-            else:
-                cmaker.set_weight(splits, sf, multiplier, mon)
-            dic = {grp_id: splits}
-            dic['before'] = len(srcs)
-            dic['after'] = len(splits)
-            yield dic
-        elif splits:
-            dic = grid_point_sources(splits, spacing, monitor)
-            for src in dic[grp_id]:
-                src.num_ruptures = src.count_ruptures()
-            # this is also prefiltering the split sources
-            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
-            # print(f'{mon.task_no=}, {mon.duration=}')
-            dic['before'] = len(splits)
-            dic['after'] = len(dic[grp_id])
-            yield dic
+        with mon:
+            cmaker.set_weight(splits, sf, multiplier)
+        dic = {grp_id: splits}
+        dic['before'] = len(srcs)
+        dic['after'] = len(splits)
+        yield dic
 
 
 def store_tiles(dstore, csm, sitecol, cmakers):
@@ -276,7 +261,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
-                self.cmakers[grp_id].set_weight(sg, sites)
+                self.cmakers[grp_id].set_weight(
+                    sg, SourceFilter(sites, oq.maximum_distance))
                 atomic_sources.extend(sg)
             else:
                 normal_sources.extend(sg)
@@ -316,10 +302,13 @@ class PreClassicalCalculator(base.HazardCalculator):
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
-                if self.oqparam.ps_grid_spacing:
-                    # do not split the pointsources
-                    smap.submit((pointsources + pointlike,
-                                 sites, cmaker, secparams))
+                spacing = self.oqparam.ps_grid_spacing
+                if spacing:
+                    for plike in pointlike:
+                        pointsources.extend(split_source(plike))
+                    cpsources = grid_point_sources(pointsources, spacing)
+                    for block in block_splitter(cpsources, 200):
+                        smap.submit((block, sites, cmaker, secparams))
                 else:
                     for block in block_splitter(pointsources, 2000):
                         smap.submit((block, sites, cmaker, secparams))
