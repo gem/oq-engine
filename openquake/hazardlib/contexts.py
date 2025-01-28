@@ -1317,17 +1317,14 @@ class ContextMaker(object):
             weight *= 5.
         return weight or EPS, int(esites)
 
-    def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
+    def set_weight(self, sources, srcfilter, multiplier=1):
         """
         Set the weight attribute on each prefiltered source
         """
-        if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
-            srcfilter = SourceFilter(srcfilter, self.maximum_distance)
-        else:
+        if srcfilter.sitecol is None:
             for src in sources:
                 src.weight = EPS
-            return
-        with mon:
+        else:
             for src in sources:
                 src.weight, src.esites = self.estimate_weight(
                     src, srcfilter, multiplier)
