@@ -168,8 +168,11 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
             yield result
         return
 
-    for tileget in tilegetters:
+    for tileno, tileget in enumerate(tilegetters):
         result = hazclassical(sources, tileget(sitecol), cmaker)
+        if tileno:
+            # avoid bogus weights in `oq show task:classical`
+            del result['source_data']
         if cmaker.disagg_by_src:
             # do not remove zeros, otherwise AELO for JPN will break
             # since there are 4 sites out of 18 with zeros
@@ -179,8 +182,6 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         # print(f"{monitor.task_no=} {rmap=}")
 
         if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
-            if len(tilegetters) > 1:
-                del result['source_data']
             if config.directory.custom_tmp:
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, cmaker.num_chunks, None, monitor)
