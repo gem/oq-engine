@@ -110,7 +110,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     else:
         N = 0
         multiplier = 1
-        sf = None
+        sf = SourceFilter(None)
     splits = []
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
@@ -134,25 +134,23 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             splits.extend(split_source(src))
         else:
             splits.append(src)
+    splits = _filter(splits, cmaker.oq.minimum_magnitude)
     if splits:
-        splits = _filter(splits, cmaker.oq.minimum_magnitude)
         mon = monitor('weighting sources', measuremem=False)
         if sites is None or spacing == 0:
-            if sites is None:
-                for src in splits:
-                    src.weight = .01
-            else:
-                cmaker.set_weight(splits, sf, multiplier, mon)
+            with mon:
+                cmaker.set_weight(splits, sf, multiplier)
             dic = {grp_id: splits}
             dic['before'] = len(srcs)
             dic['after'] = len(splits)
             yield dic
-        elif splits:
+        else:
             dic = grid_point_sources(splits, spacing, monitor)
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
-            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
+            with mon:
+                cmaker.set_weight(dic[grp_id], sf, multiplier)
             # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(splits)
             dic['after'] = len(dic[grp_id])
@@ -276,7 +274,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
-                self.cmakers[grp_id].set_weight(sg, sites)
+                self.cmakers[grp_id].set_weight(
+                    sg, SourceFilter(sites, oq.maximum_distance))
                 atomic_sources.extend(sg)
             else:
                 normal_sources.extend(sg)
