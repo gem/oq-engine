@@ -171,8 +171,12 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
     for tileno, tileget in enumerate(tilegetters):
         result = hazclassical(sources, tileget(sitecol), cmaker)
         if tileno:
-            # avoid bogus weights in `oq show task:classical`
-            del result['source_data']
+            # source_data has keys src_id, grp_id, nsites, esites, nrupts,
+            # weight, ctimes, taskno
+            for key, lst in result['source_data'].items():
+                if key in ('weight', 'nrupts'):
+                    # avoid bogus weights in `oq show task:classical`
+                    lst[:] = [0. for _ in range(len(lst))]
         if cmaker.disagg_by_src:
             # do not remove zeros, otherwise AELO for JPN will break
             # since there are 4 sites out of 18 with zeros
