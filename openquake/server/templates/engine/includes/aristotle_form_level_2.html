@@ -8,12 +8,12 @@
             <form id="aristotle_get_rupture_form" method="post" enctype="multipart/form-data">
               {% csrf_token %}
               <div id="aristotle_approach">
-                  <label><input type="radio" name="aristotle_approach" value="use_shakemap_from_usgs" checked> Use ShakeMap from the USGS</label><br>
-                  <label><input type="radio" name="aristotle_approach" value="use_pnt_rup_from_usgs"> Use point rupture from the USGS</label><br>
-                  <label><input type="radio" name="aristotle_approach" value="build_rup_from_usgs"> Build rupture from the USGS</label><br>
-                  <label><input type="radio" name="aristotle_approach" value="use_finite_rup_from_usgs"> Use finite rupture from the USGS</label><br>
-                  <label><input type="radio" name="aristotle_approach" value="provide_rup"> Provide earthquake rupture</label><br>
-                  <label><input type="radio" name="aristotle_approach" value="provide_rup_params"> Provide earthquake rupture parameters</label>
+                  <label><input type="radio" name="aristotle_approach" value="use_shakemap_from_usgs" checked>Use ShakeMap from the USGS</label>
+                  <label><input type="radio" name="aristotle_approach" value="use_pnt_rup_from_usgs">Use point rupture from the USGS</label>
+                  <label><input type="radio" name="aristotle_approach" value="build_rup_from_usgs">Build rupture from the USGS</label>
+                  <label><input type="radio" name="aristotle_approach" value="use_finite_rup_from_usgs">Use finite rupture from the USGS</label>
+                  <label><input type="radio" name="aristotle_approach" value="provide_rup">Provide earthquake rupture</label>
+                  <label><input type="radio" name="aristotle_approach" value="provide_rup_params">Provide earthquake rupture parameters</label>
               </div>
               <div id="usgs_id_grp" class="aristotle_form_row">
                 <label for"usgs_id">{{ aristotle_form_labels.usgs_id }}</label>

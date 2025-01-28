@@ -466,3 +466,12 @@ table#aristotle-losses th td {
 .hidden {
     display: none;
 }
+
+#aristotle_approach {
+  display: block;  /* each label in its own row */
+  margin-bottom: 20px; /* Space between radio options */
+}
+
+input[type="radio"] {
+  margin-right: 5px; /* Space between radio button and label text */
+}
