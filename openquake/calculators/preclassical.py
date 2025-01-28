@@ -101,7 +101,6 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
-    spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if sites:
         N = len(sites)
@@ -137,24 +136,12 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     splits = _filter(splits, cmaker.oq.minimum_magnitude)
     if splits:
         mon = monitor('weighting sources', measuremem=False)
-        if sites is None or spacing == 0:
-            with mon:
-                cmaker.set_weight(splits, sf, multiplier)
-            dic = {grp_id: splits}
-            dic['before'] = len(srcs)
-            dic['after'] = len(splits)
-            yield dic
-        else:
-            dic = grid_point_sources(splits, spacing, monitor)
-            for src in dic[grp_id]:
-                src.num_ruptures = src.count_ruptures()
-            # this is also prefiltering the split sources
-            with mon:
-                cmaker.set_weight(dic[grp_id], sf, multiplier)
-            # print(f'{mon.task_no=}, {mon.duration=}')
-            dic['before'] = len(splits)
-            dic['after'] = len(dic[grp_id])
-            yield dic
+        with mon:
+            cmaker.set_weight(splits, sf, multiplier)
+        dic = {grp_id: splits}
+        dic['before'] = len(srcs)
+        dic['after'] = len(splits)
+        yield dic
 
 
 def store_tiles(dstore, csm, sitecol, cmakers):
@@ -315,10 +302,12 @@ class PreClassicalCalculator(base.HazardCalculator):
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
-                if self.oqparam.ps_grid_spacing:
-                    # do not split the pointsources
-                    smap.submit((pointsources + pointlike,
-                                 sites, cmaker, secparams))
+                spacing = self.oqparam.ps_grid_spacing
+                if spacing:
+                    for plike in pointlike:
+                        pointsources.extend(split_source(plike))
+                    cps = grid_point_sources(pointsources, spacing)
+                    smap.submit((cps, sites, cmaker, secparams))
                 else:
                     for block in block_splitter(pointsources, 2000):
                         smap.submit((block, sites, cmaker, secparams))
