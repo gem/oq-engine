@@ -900,8 +900,9 @@ function capitalizeFirstLetter(val) {
                 formData.append('local_timestamp', $("#local_timestamp").val());
                 formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
                 formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
-                if ('msr' in data) {
-                    formData.append('msr', $("select#msr").find(':selected').val());
+                const $msr_selector = $("select#msr");
+                if ($msr_selector.length) {
+                    formData.append('msr', $msr_selector.find(':selected').val());
                 }
                 $.ajax({
                     type: "POST",
