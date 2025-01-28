@@ -1300,10 +1300,7 @@ class ContextMaker(object):
             return EPS, 0
         src.nsites = len(sites)
         t0 = time.time()
-        if src.code == b'p':
-            ctxs = list(self.get_ctx_iter(src, sites, step=4))  # reduced
-        else:
-            ctxs = list(self.get_ctx_iter(src, sites, step=8))  # reduced
+        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         src.dt = time.time() - t0
         # if src.dt > .01:
         #     print(f'{src.source_id=}, {src.dt=}')
@@ -1313,20 +1310,21 @@ class ContextMaker(object):
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code == b'F':  # avoid over-weight in the USA model
-            weight /= 5.
+            weight /= 3.
         elif src.code == b'S':  # increase weight in SAM
             weight *= 2.
-        elif src.code == b'N':  # increase weight in SAM
+        elif src.code == b'N':  # increase weight in MEX
             weight *= 5.
         return weight or EPS, int(esites)
 
-    def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
+    def set_weight(self, sources, srcfilter, multiplier=1):
         """
         Set the weight attribute on each prefiltered source
         """
-        if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
-            srcfilter = SourceFilter(srcfilter, self.maximum_distance)
-        with mon:
+        if srcfilter.sitecol is None:
+            for src in sources:
+                src.weight = EPS
+        else:
             for src in sources:
                 src.weight, src.esites = self.estimate_weight(
                     src, srcfilter, multiplier)
