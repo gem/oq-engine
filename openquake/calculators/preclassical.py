@@ -138,11 +138,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     if splits:
         mon = monitor('weighting sources', measuremem=False)
         if sites is None or spacing == 0:
-            if sites is None:
-                for src in splits:
-                    src.weight = .01
-            else:
-                cmaker.set_weight(splits, sf, multiplier, mon)
+            cmaker.set_weight(splits, sf, multiplier, mon)
             dic = {grp_id: splits}
             dic['before'] = len(srcs)
             dic['after'] = len(splits)

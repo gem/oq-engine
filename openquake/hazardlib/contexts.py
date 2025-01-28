@@ -1323,6 +1323,10 @@ class ContextMaker(object):
         """
         if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
             srcfilter = SourceFilter(srcfilter, self.maximum_distance)
+        else:
+            for src in sources:
+                src.weight = EPS
+            return
         with mon:
             for src in sources:
                 src.weight, src.esites = self.estimate_weight(
