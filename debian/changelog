@@ -1,6 +1,6 @@
   [Michele Simionato]
   * Optimized slow tasks in classical and preclassical calculations,
-    tripling the speed of the MEX, SAM and USA models
+    in some cases tripling the speed of the MEX, SAM and USA models
   * Reading the site model in calculations with ruptures.hdf5 and making
     `minimum_intensity` mandatory
   * Added parameter `minimum_engine_version`
