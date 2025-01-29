@@ -738,7 +738,9 @@ class ContextMaker(object):
         for gsim in self.gsims:
             self.conv[gsim] = {}
             imc = gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-            if imc.name == 'GEOMETRIC_MEAN':
+            if not imc:  # for GMPETables
+                continue
+            elif imc.name == 'GEOMETRIC_MEAN':
                 pass  # nothing to do
             elif imc.name in OK_COMPONENTS:
                 dic = {imt: imc.apply_conversion(imt) for imt in self.imts}

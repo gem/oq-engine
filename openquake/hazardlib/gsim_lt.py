@@ -164,7 +164,7 @@ class GsimLogicTree(object):
         GSIM logic tree XML file, to avoid reparsing it
     """
     @classmethod
-    def from_(cls, gsim):
+    def from_(cls, gsim, job_ini='<in-memory>'):
         """
         Generate a trivial GsimLogicTree from a single GSIM instance.
         """
@@ -177,7 +177,7 @@ class GsimLogicTree(object):
                          'branchSetID': 'bs1',
                          'uncertaintyType': 'gmpeModel'},
                         nodes=[ltbranch])])
-        return cls('fake/' + gsim.__class__.__name__, ['*'], ltnode=lt)
+        return cls(job_ini, ['*'], ltnode=lt)
 
     @classmethod
     def from_hdf5(cls, fname, mosaic_model, trt):
