@@ -408,6 +408,9 @@ class ScenarioTestCase(CalculatorTestCase):
         fname = os.path.join(os.path.dirname(case_35.__file__),
                              'Wcrust_med_rhypo.hdf5')
         try:
+            # check that even by removing the .hdf5 table
+            # the GMPETable can be instantiated, since
+            # GsimLogicTree.__from__hdf5__ reads from the attributes
             os.rename(fname, fname + '.bak')
             gsim_lt = self.calc.datastore['full_lt'].gsim_lt
             print(gsim_lt)
