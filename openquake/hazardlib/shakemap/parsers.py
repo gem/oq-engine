@@ -259,7 +259,7 @@ def utc_to_local_time(utc_timestamp, lon, lat):
     utc_time = utc_zone.localize(utc_time)
     local_zone = pytz.timezone(timezone_str)
     local_timestamp = utc_time.astimezone(local_zone)
-    # NOTE: we may keep microseconds and change the regex validating the format
+    # NOTE: the validated timestamp format has no microseconds
     local_timestamp = local_timestamp.replace(microsecond=0)
     return local_timestamp
 
@@ -697,9 +697,10 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
 
 
 def _get_nodal_planes(properties):
+    # in parsers_test
     err = None
     if 'moment-tensor' not in properties['products']:
-        err = 'Unable to retrieve information about the nodal solution'
+        err = 'Unable to retrieve information about the nodal options'
         return None, err
     moment_tensor = _get_preferred_item(properties['products']['moment-tensor'])
     props = moment_tensor['properties']
