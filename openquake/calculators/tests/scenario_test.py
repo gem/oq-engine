@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import numpy
 from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
@@ -404,5 +405,11 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_35.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
-
-        
+        fname = os.path.join(os.path.dirname(case_35.__file__),
+                             'Wcrust_med_rhypo.hdf5')
+        try:
+            os.rename(fname, fname + '.bak')
+            gsim_lt = self.calc.datastore['full_lt'].gsim_lt
+            print(gsim_lt)
+        finally:
+            os.rename(fname + '.bak', fname)

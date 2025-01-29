@@ -20,8 +20,10 @@ import os
 import ast
 import copy
 import json
+import shutil
 import logging
 import operator
+import tempfile
 import itertools
 from dataclasses import dataclass
 from collections import defaultdict
@@ -355,18 +357,33 @@ class GsimLogicTree(object):
                             if v is None:  # if volc_arc_file is None
                                 pass
                             else:
+                                # store in the attribute dictionary the data files
                                 fname = os.path.join(dirname, v)
                                 with open(fname, 'rb') as f:
-                                    dic[os.path.basename(v)] = f.read()
+                                    dic[f'{k}:{os.path.basename(v)}'] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):
+        # Here is a smart trick to retrieve the data files from the
+        # dictionary of attributes and store them in a temporary directory,
+        # so that file-dependent GMPEs can be instantiated even if the datastore
+        # is moved to a different machine.
+        # NB: the approach may break on macOS for large files since there is
+        # a limit on the attribute size (unknown at the moment)
+        data = {tuple(k.split(':')): v for k, v in dic.items() if ':' in k}
+        if data:
+            # i.e. {'gmpe_table:Wcrust.hdf5': bytes} in scenario/case_35
+            dirname = tempfile.mkdtemp()
+            for key, name in data:
+                with open(os.path.join(dirname, name), 'wb') as f:
+                    f.write(data[key, name])
+        else:
+            dirname = os.path.dirname(dic['filename'])
         self.bsetdict = json.loads(dic['bsetdict'])
         self.filename = dic['filename']
         self.branches = []
         self.shortener = {}
         self.values = defaultdict(list)
-        dirname = os.path.dirname(dic['filename'])
         for bsno, branches in enumerate(group_array(array, 'trt').values()):
             for brno, branch in enumerate(branches):
                 branch = fix_bytes(branch)
@@ -380,6 +397,8 @@ class GsimLogicTree(object):
                 bt = GsimBranch(branch['trt'], br_id, gsim, weight, True)
                 self.branches.append(bt)
                 self.shortener[br_id] = keyno(br_id, bsno, brno)
+        if data:
+            shutil.rmtree(dirname)
 
     def reduce(self, trts):
         """
