@@ -489,6 +489,22 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
     ffs = products['finite-fault']
     ff = _get_preferred_item(ffs)
     p = ff['properties']
+    # TODO: we probably need to get the rupture coordinates from shakemap_polygon.txt
+    # if 'shakemap_polygon.txt' in ff['contents']:
+    #     # with open(f'/tmp/{usgs_id}-shakemap_polygon.txt', 'wb') as f:
+    #     #       f.write(urlopen(url).read())
+    #     if user.testdir:  # in parsers_test
+    #         fname = os.path.join(user.testdir, f'{usgs_id}-shakemap_polygon.txt')
+    #         text = open(fname).read()
+    #     else:
+    #         url = ff['contents']['shakemap_polygon.txt']['url']
+    #         logging.info('Downloading shakemap_polygon.txt')
+    #         text = urlopen(url).read()
+    #         lines = text.decode('utf8').split("\n")
+    #         numerical_data = [line for line in lines
+    #                           if line and not line.startswith("#")]
+    #         coords = [tuple(map(float, line.split()))
+    #                   for line in numerical_data if line]
     lon = float(p['longitude'])
     lat = float(p['latitude'])
     utc_time = p['eventtime']
