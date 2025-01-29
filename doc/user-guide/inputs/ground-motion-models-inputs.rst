@@ -134,15 +134,7 @@ a text file with argument name *text_file* you should write the following code::
 
 	class GMPEWithTextFile(GMPE):
 	    def __init__(self, text_file):
-	        with self.open(text_file) as myfile:  # good
-	            self.text = myfile.read().decode('utf-8')
-
-You should NOT write the following, because it will break the engine, for instance by making it impossible to export 
-the results of a calculation::
-
-	class GMPEWithTextFile(GMPE):
-	    def __init__(self, text_file):
-	        with open(text_file) as myfile:  # bad
+	        with open(text_file) as myfile:
 	            self.text = myfile.read()
 
 *********
