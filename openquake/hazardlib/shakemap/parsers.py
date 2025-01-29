@@ -808,7 +808,7 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         if err:
             return None, rupdic, err
 
-    if not rupdic or approach == 'use_finite_rup_from_usgs':
+    if not rupdic:
         if not rup_data:
             with monitor('Downloading rupture json'):
                 rup_data, rupture_file = download_rupture_data(
