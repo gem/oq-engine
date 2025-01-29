@@ -349,7 +349,6 @@ class GsimLogicTree(object):
         if hasattr(self, 'filename'):
             # missing in EventBasedRiskTestCase case_1f
             dic['filename'] = self.filename
-            dirname = os.path.dirname(self.filename)
             for gsims in self.values.values():
                 for gsim in gsims:
                     kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
@@ -360,8 +359,7 @@ class GsimLogicTree(object):
                                 pass
                             else:
                                 # store in the attribute dictionary the data files
-                                fname = os.path.join(dirname, v)
-                                with open(fname, 'rb') as f:
+                                with open(gsim.kwargs[k], 'rb') as f:
                                     dic[f'{k}:{v}'] = f.read()
         return numpy.array(branches, dt), dic
 
