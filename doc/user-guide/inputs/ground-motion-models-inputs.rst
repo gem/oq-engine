@@ -133,31 +133,17 @@ machine). In order to do that, there is some magic based on the naming conventio
 a text file with argument name *text_file* you should write the following code::
 
 	class GMPEWithTextFile(GMPE):
-	    def __init__(self, **kwargs):
-	        super().__init__(**kwargs)
-	        with self.open(kwargs['text_file']) as myfile:  # good
+	    def __init__(self, text_file):
+	        with self.open(text_file) as myfile:  # good
 	            self.text = myfile.read().decode('utf-8')
 
 You should NOT write the following, because it will break the engine, for instance by making it impossible to export 
 the results of a calculation::
 
 	class GMPEWithTextFile(GMPE):
-	    def __init__(self, **kwargs):
-	        super().__init__(**kwargs)
-	        with open(kwargs['text_file']) as myfile:  # bad
-	            self.text = myfile.read()
-
-NB: writing::
-
-	class GMPEWithTextFile(GMPE):
 	    def __init__(self, text_file):
-	        super().__init__(text_file=text_file)
-	        with self.open(text_file) as myfile:  # good
-	            self.text = myfile.read().decode('utf-8')
-
-would work but it is discouraged. It is best to keep the ``**kwargs`` signature so that the call to 
-``super().__init__(**kwargs)`` will work out-of-the-box even if in the future subclasses of *GMPEWithTextFile* with 
-different parameters will appear: this is defensive programming.
+	        with open(text_file) as myfile:  # bad
+	            self.text = myfile.read()
 
 *********
 MultiGMPE
