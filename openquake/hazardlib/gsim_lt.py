@@ -352,6 +352,8 @@ class GsimLogicTree(object):
             dirname = os.path.dirname(self.filename)
             for gsims in self.values.values():
                 for gsim in gsims:
+                    kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
+                    # i.e. kw = {'gmpe_table': './Wcrust_low_rhypo.hdf5'}
                     for k, v in gsim.kwargs.items():
                         if k.endswith(('_file', '_table')):
                             if v is None:  # if volc_arc_file is None
@@ -360,7 +362,7 @@ class GsimLogicTree(object):
                                 # store in the attribute dictionary the data files
                                 fname = os.path.join(dirname, v)
                                 with open(fname, 'rb') as f:
-                                    dic[f'{k}:{os.path.basename(v)}'] = f.read()
+                                    dic[f'{k}:{kw[k]}'] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):
@@ -375,7 +377,11 @@ class GsimLogicTree(object):
             # i.e. {'gmpe_table:Wcrust.hdf5': bytes} in scenario/case_35
             dirname = tempfile.mkdtemp()
             for key, name in data:
-                with open(os.path.join(dirname, name), 'wb') as f:
+                fname = os.path.abspath(os.path.join(dirname, name))
+                dname = os.path.dirname(fname)
+                if not os.path.exists(dname):
+                    os.makedirs(dname)
+                with open(fname, 'wb') as f:
                     f.write(data[key, name])
         else:
             dirname = os.path.dirname(dic['filename'])
