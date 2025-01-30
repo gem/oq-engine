@@ -32,20 +32,24 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import (
     RSD575, RSD595, Sa_avg2, Sa_avg3, SA, PGA, PGV, PGD, FIV3)
 from openquake.hazardlib.gsim.base import GMPE
-import json
+import h5py
 
 ASSET_DIR = Path(__file__).resolve().parent / "aristeidou_2024_assets"
 
 
-def read_json(filename: Path):
-    with open(filename) as f:
-        filename = json.load(f)
-    return filename
-
-
-# Load background information about the model from a json file
-# (i.e., weight, biases, standard devation values, etc.)
-DATA = read_json(ASSET_DIR / "gmm_ann.json")
+def load_hdf5_to_list(group):
+    """
+    Recursively load an HDF5 group or dataset into a nested list or value.
+    """
+    # If it's a dataset, return its data as a list
+    if isinstance(group, h5py.Dataset):
+        return group[:].tolist()
+    # If it's a group, recurse into its members
+    elif isinstance(group, h5py.Group):
+        keys = list(group.keys())  # Convert KeysViewHDF5 to list of strings
+        # Sort keys numerically
+        sorted_keys = sorted(keys, key=lambda k: int(k.split("_")[-1]))
+        return [load_hdf5_to_list(group[key]) for key in sorted_keys]
 
 
 def get_period_im(name: str):
@@ -140,7 +144,6 @@ def extract_im_names(imts, component_definition):
         # Keep the im text before the last occurance of '_'
         base = base.split('_')[:2]
         base = "_".join(base[:2])
-
         im_name_mapping = {
             "RSD575": "Ds575",
             "RSD595": "Ds595",
@@ -165,7 +168,7 @@ def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
     Extract the means and standard deviations of the requested IMs and
     horizontal compoent definitions
     """
-    supported_ims = np.asarray(DATA["output-ims"])
+    supported_ims = np.char.decode(DATA["output_ims"], 'UTF-8')
     im_names = extract_im_names(imts, component_definition)
 
     if len(means.shape) == 1:
@@ -206,10 +209,13 @@ def _get_means_stddevs(DATA, imts, means, stddevs, component_definition):
         interp_stddevs = interp1d(np.log(periods), stddevs_for_interp,
                                   axis=2)
         interp_means = interp1d(np.log(periods), means_for_interp)
-        mean_interp = interp_means(
-            np.log(imts[np.where([~idx_no_interp])[1][m]].period))
-        stddev_interp = interp_stddevs(
-            np.log(imts[np.where([~idx_no_interp])[1][m]].period))
+        try:
+            mean_interp = interp_means(
+                np.log(imts[np.where([~idx_no_interp])[1][m]].period))
+            stddev_interp = interp_stddevs(
+                np.log(imts[np.where([~idx_no_interp])[1][m]].period))
+        except ValueError:
+            raise KeyError(imts[np.where([~idx_no_interp])[1][m]])
         means_interp.append(np.squeeze(mean_interp, axis=1))
         stddevs_interp[:, m, :] = np.squeeze(stddev_interp, axis=1)
     means_interp = np.array(means_interp)
@@ -250,7 +256,7 @@ def _minmax_scaling(DATA, x, SUGGESTED_LIMITS, feature_range=(-3, 3)):
     """
     Returns the min-max transformation scaling of input features
     """
-    pars = DATA["parameters"]
+    pars = np.char.decode(DATA['parameters'], 'UTF-8')
     min_max = np.asarray([
         SUGGESTED_LIMITS[par] for par in pars])
 
@@ -264,7 +270,8 @@ class AristeidouEtAl2024(GMPE):
     """
     Aristeidou, S., Shahnazaryan, D. and O’Reilly, G.J. (2024) ‘Artificial
     neural network-based ground motion model for next-generation seismic
-    intensity measures’, Under Review.
+    intensity measures’, Soil Dynamics and Earthquake Engineering, 184,
+    108851. Available at: https://doi.org/10.1016/j.soildyn.2024.108851.
     """
     #: Supported tectonic region type is subduction interface
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -306,6 +313,14 @@ class AristeidouEtAl2024(GMPE):
 
     component_definition = "RotD50"
 
+    def __init__(self):
+        # Load background information about the model from a hdf5 file
+        # (i.e., weight, biases, standard devation values, etc.)
+        hdf5_file = h5py.File(ASSET_DIR / "gmm_ann.hdf5", 'r')
+        self.DATA = {}
+        for key in hdf5_file.keys():
+            self.DATA[key] = load_hdf5_to_list(hdf5_file[key])
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -331,13 +346,13 @@ class AristeidouEtAl2024(GMPE):
         ])
 
         # Get biases and weights of the ANN model
-        biases = DATA["biases"]
-        weights = DATA["weights"]
+        biases = self.DATA["biases"]
+        weights = self.DATA["weights"]
 
         # Input layer
         # Transform the input
         x_transformed = _minmax_scaling(
-            DATA, ctx_params, self.SUGGESTED_LIMITS)
+            self.DATA, ctx_params, self.SUGGESTED_LIMITS)
 
         _data = _generate_function(
             x_transformed, biases[0], weights[0])
@@ -363,9 +378,9 @@ class AristeidouEtAl2024(GMPE):
         means = np.squeeze(np.log(output))
 
         # get the standard deviations
-        stddevs = np.asarray((DATA["total-stdev"],
-                              DATA["inter-stdev"],
-                              DATA["intra-stdev"]))
+        stddevs = np.asarray((self.DATA["total_stdev"],
+                              self.DATA["inter_stdev"],
+                              self.DATA["intra_stdev"]))
         stddevs = np.expand_dims(stddevs, axis=2).repeat(
             ctx_params.shape[0], axis=2)
 
@@ -374,7 +389,7 @@ class AristeidouEtAl2024(GMPE):
 
         # Get the means and stddevs at index corresponding to the IM
         mean[:], stddevs = _get_means_stddevs(
-            DATA, imts, means, stddevs, self.component_definition)
+            self.DATA, imts, means, stddevs, self.component_definition)
 
         sig[:] = stddevs[0, :, :]
         tau[:] = stddevs[1, :, :]
