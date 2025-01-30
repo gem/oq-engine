@@ -732,6 +732,23 @@ def _get_nodal_planes(properties):
     return nodal_planes, err
 
 
+def _get_rup_dic_from_xml(usgs_id, user, rupture_file, station_data_file):
+    [rup_node] = nrml.read(os.path.join(user.testdir, rupture_file)
+                           if user.testdir else rupture_file)
+    rup = sourceconverter.RuptureConverter(
+        rupture_mesh_spacing=5.).convert_node(rup_node)
+    rup.tectonic_region_type = '*'
+    hp = rup.hypocenter
+    rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
+                  mag=rup.mag, rake=rup.rake,
+                  strike=rup.surface.get_strike(),
+                  dip=rup.surface.get_dip(),
+                  usgs_id=usgs_id,
+                  rupture_file=rupture_file,
+                  station_data_file=station_data_file)
+    return rupdic
+
+
 def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
                 use_shakemap=False, rupture_file=None,
                 station_data_file=None, monitor=performance.Monitor()):
@@ -761,19 +778,7 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         return rup, rupdic, err
 
     if rupture_file and rupture_file.endswith('.xml'):
-        [rup_node] = nrml.read(os.path.join(user.testdir, rupture_file)
-                               if user.testdir else rupture_file)
-        rup = sourceconverter.RuptureConverter(
-            rupture_mesh_spacing=5.).convert_node(rup_node)
-        rup.tectonic_region_type = '*'
-        hp = rup.hypocenter
-        rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
-                      mag=rup.mag, rake=rup.rake,
-                      strike=rup.surface.get_strike(),
-                      dip=rup.surface.get_dip(),
-                      usgs_id=usgs_id,
-                      rupture_file=rupture_file,
-                      station_data_file=station_data_file)
+        rupdic = _get_rup_dic_from_xml(usgs_id, user, rupture_file, station_data_file)
         if usgs_id == 'FromFile':
             return rup, rupdic, err
     elif rupture_file and rupture_file.endswith('.json'):
