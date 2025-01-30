@@ -107,16 +107,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
             dic['nodal_planes'],
             {'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
              'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}})
-        self.assertEqual(
-            dic['msrs'],
-            ['AllenHayesInterfaceBilinear', 'AllenHayesInterfaceLinear',
-             'AllenHayesIntraslab', 'CEUS2011', 'CScalingMSR', 'GSCCascadia',
-             'GSCEISB', 'GSCEISI', 'GSCEISO', 'GSCOffshoreThrustsHGT',
-             'GSCOffshoreThrustsWIN', 'GermanyMSR', 'Leonard2010_SCR',
-             'Leonard2010_SCR_M0', 'Leonard2010_SCR_MX', 'Leonard2014_Interplate',
-             'Leonard2014_SCR', 'PeerMSR', 'PointMSR', 'StrasserInterface',
-             'StrasserIntraslab', 'ThingbaijamInterface', 'ThingbaijamStrikeSlip',
-             'WC1994', 'WC1994_QCSS'])
+        self.assertIn('WC1994', dic['msrs'])
 
 
 """

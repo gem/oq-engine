@@ -286,6 +286,8 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
+    if 'msr' in POST:
+        rupdic['msr'] = POST['msr']
     if len(params) > 1:  # called by aristotle_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']

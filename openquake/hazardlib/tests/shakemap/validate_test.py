@@ -34,6 +34,7 @@ from openquake.hazardlib.shakemap.validate import aristotle_validate
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
+
 class AristotleValidateTestCase(unittest.TestCase):
     @classmethod
     def setUp(cls):
@@ -137,3 +138,9 @@ class AristotleValidateTestCase(unittest.TestCase):
             rupdic['station_data_issue'], 'stationlist.json was downloaded,'
             ' but it contains no features')
         self.assertEqual(err, {})
+
+    def test_5(self):
+        POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs',
+                'msr': 'WC1994'}
+        _rup, rupdic, _oqparams, _err = aristotle_validate(POST, user)
+        self.assertIn('msr', rupdic)

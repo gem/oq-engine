@@ -772,7 +772,8 @@ function capitalizeFirstLetter(val) {
                         msrs.forEach(msr => {
                             $select.append($("<option>").text(msr).val(msr));
                         });
-                        $select.val('WC1994'); // TODO: make it possible to change it
+                        $select.append($("<option>").text('').val(''));
+                        $select.val('');
                     }
                     $('#mosaic_model').empty();
                     $.each(data.mosaic_models, function(index, mosaic_model) {

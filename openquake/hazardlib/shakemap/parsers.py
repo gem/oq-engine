@@ -804,7 +804,8 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
 
     if approach == 'build_rup_from_usgs':
         rupdic['nodal_planes'], err = _get_nodal_planes(properties)
-        rupdic['msrs'] = list(get_available_magnitude_scalerel())
+        rupdic['msrs'] = [msr.__class__.__name__
+                          for msr in get_available_magnitude_scalerel()]
         if err:
             return None, rupdic, err
 
