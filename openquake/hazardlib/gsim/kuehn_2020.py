@@ -746,7 +746,7 @@ class KuehnEtAl2020SInter(GMPE):
             self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
             # Add backarc if NZL
             if self.region in ("NZL"):
-                self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
+                self.REQUIRES_SITES_PARAMETERS |= {"backarc"}
 
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
