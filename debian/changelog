@@ -1,7 +1,6 @@
   [Michele Simionato]
   * Fixed the instantiation of file-dependent GMPEs from the datastore
-  * Optimized slow tasks in classical and preclassical calculations,
-    in some situations tripling the speed of the USA model
+  * Optimized slow tasks in the preclassical phase
   * Reading the site model in calculations with ruptures.hdf5 and making
     `minimum_intensity` mandatory
   * Added parameter `minimum_engine_version`
