@@ -89,7 +89,7 @@
                 {% endif %}
 
                 <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% elif  application_mode == 'ARISTOTLE' %}outputs_aristotle{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
-                  {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' and user_level > 0 %}
+                  {% if application_mode != 'AELO' and application_mode != 'ARISTOTLE' and application_mode != 'READ_ONLY' and user_level > 0 %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"
                     method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
