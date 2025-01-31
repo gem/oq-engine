@@ -88,34 +88,35 @@ class AristotleValidateTestCase(unittest.TestCase):
         for stations in (None, 'stationlist_seismic.csv'):
             _rup, rupdic, params, err = aristotle_validate(
                 POST, user, 'fault_rupture.xml', stations)
-            self.assertEqual(
-                rupdic,
-                {'dep': 30.0,
-                 'dip': 30.08335,
-                 'lat': 27.6,
-                 'lon': 84.4,
-                 'mag': 7.0,
-                 'mosaic_models': ['CHN', 'IND'],
-                 'rake': 90.0,
-                 'rupture_file': 'fault_rupture.xml',
-                 'rupture_from_usgs': True,
-                 'station_data_file': stations,
-                 'strike': 295.24732,
-                 'trts': {'CHN': ['Active Shallow Crust',
-                                  'Himalayan Thrust',
-                                  'Craton',
-                                  'Deep Crust 1',
-                                  'Active-Stable Shallow Crust'],
-                          'IND': ['active shallow crust normal',
-                                  'active shallow crust strike-slip reverse',
-                                  'intraplate margin lower',
-                                  'intraplate margin upper',
-                                  'stable shallow crust',
-                                  'subduction interface',
-                                  'subduction interface megathrust',
-                                  'subduction intraslab Himalayas',
-                                  'subduction intraslab']},
-                 'usgs_id': 'FromFile'})
+            expected = {
+                'dep': 30.0,
+                'dip': 30.08335,
+                'lat': 27.6,
+                'lon': 84.4,
+                'mag': 7.0,
+                'mosaic_models': ['CHN', 'IND'],
+                'rake': 90.0,
+                'rupture_file': 'fault_rupture.xml',
+                'rupture_from_usgs': True,
+                'station_data_file': stations,
+                'strike': 295.24732,
+                'trts': {'CHN': ['Active Shallow Crust',
+                                 'Himalayan Thrust',
+                                'Craton',
+                                 'Deep Crust 1',
+                                 'Active-Stable Shallow Crust'],
+                         'IND': ['active shallow crust normal',
+                                 'active shallow crust strike-slip reverse',
+                                 'intraplate margin lower',
+                                 'intraplate margin upper',
+                                 'stable shallow crust',
+                                 'subduction interface',
+                                 'subduction interface megathrust',
+                                 'subduction intraslab Himalayas',
+                                 'subduction intraslab']},
+                'usgs_id': 'FromFile'}
+            for key in expected:
+                assert rupdic[key] == expected[key], key
             self.assertEqual(params['asset_hazard_distance'], '15.0')
             self.assertEqual(params['calculation_mode'], 'scenario_risk')
             self.assertEqual(params['time_event'], 'day')

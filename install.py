@@ -64,7 +64,7 @@ except ImportError:
         )
     else:
         if os.path.exists("python\\python._pth.old"):
-            print("This is method of the installation from the installer " "windows")
+            print("Installing on Windows")
         else:
             sys.exit(
                 "venv is missing! Please see the documentation of your "
@@ -75,8 +75,7 @@ PYVER = sys.version_info
 if PYVER < (3, 10, 0):
     sys.exit(
         "Error: you need at least Python 3.10, but you have %s"
-        % ".".join(map(str, sys.version_info))
-    )
+        % ".".join(map(str, sys.version_info)))
 CDIR = os.path.dirname(os.path.abspath(__file__))
 REMOVE_VENV = """Found pre-existing venv %s
 If you proceeed you will have to reinstall manually any software other

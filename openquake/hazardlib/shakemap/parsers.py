@@ -525,7 +525,8 @@ def load_rupdic_from_origin(usgs_id, products):
     NB: if the origin list contains multiple elements we take the
     preferred one.
     """
-    # TODO: we may try to unify this with the very similar load_rupdic_from_finite_fault
+    # TODO: we may try to unify this with the very similar
+    # load_rupdic_from_finite_fault
     logging.info('Getting origin properties')
     if 'origin' not in products:
         # FIXME: not tested
@@ -746,7 +747,7 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file, station_data_file):
                   usgs_id=usgs_id,
                   rupture_file=rupture_file,
                   station_data_file=station_data_file)
-    return rupdic
+    return rup, rupdic
 
 
 def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
@@ -769,16 +770,17 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     rup_data = {}
     err = {}
     usgs_id = dic['usgs_id']
+    rup = None
     if approach == 'provide_rup_params':
         rupdic = dic.copy()
         rupdic.update(rupture_file=rupture_file,
                       station_data_file=station_data_file,
                       require_dip_strike=True)
-        rup = None
         return rup, rupdic, err
 
     if rupture_file and rupture_file.endswith('.xml'):
-        rupdic = _get_rup_dic_from_xml(usgs_id, user, rupture_file, station_data_file)
+        rup, rupdic = _get_rup_dic_from_xml(
+            usgs_id, user, rupture_file, station_data_file)
         if usgs_id == 'FromFile':
             return rup, rupdic, err
     elif rupture_file and rupture_file.endswith('.json'):

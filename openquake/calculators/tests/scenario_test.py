@@ -16,17 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import numpy
 from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33, case_34)
+    case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
+    case_34, case_35)
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.calculators import base
+from openquake.calculators import base, getters
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.views import text_table, view
@@ -321,10 +323,23 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
 
     def test_case_28(self):
-        # rupture_dict
+        # rupture_dict without msr
         self.run_calc(case_28.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+        rup = getters.get_ebruptures(self.calc.datastore)[0].rupture
+        mesh = rup.surface.mesh
+        aae(mesh.lons, [0., 0., 0., 0.])
+        aae(mesh.lats, [-0.1296836,  0.1296836, -0.1296836,  0.1296836])
+
+        # rupture_dict with msr
+        self.run_calc(case_28.__file__, 'job2.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf2.csv', f, delta=1E-5)
+        rup = getters.get_ebruptures(self.calc.datastore)[0].rupture
+        mesh = rup.surface.mesh
+        aae(mesh.lons, [0., 0., 0., 0.])
+        aae(mesh.lats, [-0.07377,  0.07377, -0.07377,  0.07377])
 
     def test_case_29(self):
         # conditioned GMFs all stations filtered
@@ -398,4 +413,19 @@ class ScenarioTestCase(CalculatorTestCase):
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
 
-        
+    def test_case_35(self):
+        # GMPETable with local file
+        self.run_calc(case_35.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+        fname = os.path.join(os.path.dirname(case_35.__file__),
+                             'Wcrust_med_rhypo.hdf5')
+        try:
+            # check that even by removing the .hdf5 table
+            # the GMPETable can be instantiated, since
+            # GsimLogicTree.__from__hdf5__ reads from the attributes
+            os.rename(fname, fname + '.bak')
+            gsim_lt = self.calc.datastore['full_lt'].gsim_lt
+            print(gsim_lt)
+        finally:
+            os.rename(fname + '.bak', fname)

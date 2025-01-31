@@ -268,7 +268,8 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
     approach = POST['approach']
 
     rup, rupdic, err = get_rup_dic(
-        dic, user, approach, use_shakemap, rupture_file, station_data_file, monitor)
+        dic, user, approach, use_shakemap, rupture_file, station_data_file,
+        monitor)
     if err:
         return None, None, None, err
     # round floats

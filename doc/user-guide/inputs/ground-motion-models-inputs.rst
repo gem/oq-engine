@@ -112,10 +112,9 @@ File-dependent GMPEs
 It is possible to define other GMPEs taking one or more filenames as parameters. Everything will work provided you 
 respect the following rules:
 
-1. there is a naming convention on the file parameters, that must end with the suffix ``_file`` or ``_table``
-2. the files must be read at GMPE initialization time (i.e. in the ``__init__`` method)
-3. they must be read with the ``GMPE.open`` method, NOT with the ``open`` builtin;
-4. in the gsim logic tree file you must use **relative** path names
+1. there is a naming convention on the file parameters, that must end with the suffix ``_file`` or ``_table``;
+2. the files must be read at GMPE initialization time (i.e. in the ``__init__`` method);
+3. in the gsim logic tree file you must use **relative** path names.
 
 The constraint on the argument names makes it possible for the engine to collect all the files required by the GMPEs; 
 moreover, since the path names are relative, the ``oq zip`` command can work making it easy to ship runnable calculations. 
@@ -127,37 +126,13 @@ The constraint about reading at initialization time makes it possible for the en
 that GMPEs are instantiated in the controller and used in the worker nodes, which *do not have access to the same 
 filesystem*. If the files are read after instantiation, you will get a file not found error when running on a cluster.
 
-The reason why you cannot use the standard ``open`` builtin to read the files is that the engine must be able to read 
-the GMPE inputs from the datastore copies (think of the case when the ``calc_XXX.hdf5`` has been copied to a different 
-machine). In order to do that, there is some magic based on the naming convention. For instance, if your GMPE must read 
+For instance, if your GMPE must read 
 a text file with argument name *text_file* you should write the following code::
 
 	class GMPEWithTextFile(GMPE):
-	    def __init__(self, **kwargs):
-	        super().__init__(**kwargs)
-	        with self.open(kwargs['text_file']) as myfile:  # good
-	            self.text = myfile.read().decode('utf-8')
-
-You should NOT write the following, because it will break the engine, for instance by making it impossible to export 
-the results of a calculation::
-
-	class GMPEWithTextFile(GMPE):
-	    def __init__(self, **kwargs):
-	        super().__init__(**kwargs)
-	        with open(kwargs['text_file']) as myfile:  # bad
-	            self.text = myfile.read()
-
-NB: writing::
-
-	class GMPEWithTextFile(GMPE):
 	    def __init__(self, text_file):
-	        super().__init__(text_file=text_file)
-	        with self.open(text_file) as myfile:  # good
-	            self.text = myfile.read().decode('utf-8')
-
-would work but it is discouraged. It is best to keep the ``**kwargs`` signature so that the call to 
-``super().__init__(**kwargs)`` will work out-of-the-box even if in the future subclasses of *GMPEWithTextFile* with 
-different parameters will appear: this is defensive programming.
+	        with open(text_file) as myfile:
+	            self.text = myfile.read()
 
 *********
 MultiGMPE

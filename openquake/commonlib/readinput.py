@@ -798,7 +798,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
         tectonic region types.
     """
     if 'gsim_logic_tree' not in oqparam.inputs:
-        return logictree.GsimLogicTree.from_(oqparam.gsim)
+        return logictree.GsimLogicTree.from_(
+            oqparam.gsim, oqparam.inputs['job_ini'])
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
@@ -860,7 +861,7 @@ def get_rupture(oqparam):
                 hypo, r['mag'], r.get('rake'),
                 strike, dip, trt)
         else:
-            aratio = 1  # temporarily hardcoded
+            aratio = r.get('aspect_ratio', 2.)
             msr = MSR[r['msr']]()
             rup = source.rupture.get_planar(
                 site.Site(Point(r['lon'], r['lat'], r['dep'])), msr, r['mag'], aratio,
