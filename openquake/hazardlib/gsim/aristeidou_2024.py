@@ -316,10 +316,10 @@ class AristeidouEtAl2024(GMPE):
     def __init__(self):
         # Load background information about the model from a hdf5 file
         # (i.e., weight, biases, standard devation values, etc.)
-        hdf5_file = h5py.File(ASSET_DIR / "gmm_ann.hdf5", 'r')
-        self.DATA = {}
-        for key in hdf5_file.keys():
-            self.DATA[key] = load_hdf5_to_list(hdf5_file[key])
+        with h5py.File(ASSET_DIR / "gmm_ann.hdf5", 'r') as h5:
+            self.DATA = {}
+            for key in h5:
+                self.DATA[key] = load_hdf5_to_list(h5[key])
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

@@ -1913,7 +1913,8 @@ class OqParam(valid.ParamSet):
         yes = exposures and exposures[0].endswith('.hdf5')
         if yes:
             # self.avg_losses = False
-            self.aggregate_by = [['ID_1', 'OCCUPANCY']]
+            if not self.aggregate_by:
+                self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
         return yes
 
     @property

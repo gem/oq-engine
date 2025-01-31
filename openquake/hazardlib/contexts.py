@@ -65,7 +65,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = 1E-2
+EPS = 0.2
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -738,7 +738,9 @@ class ContextMaker(object):
         for gsim in self.gsims:
             self.conv[gsim] = {}
             imc = gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-            if imc.name == 'GEOMETRIC_MEAN':
+            if not imc:  # for GMPETables
+                continue
+            elif imc.name == 'GEOMETRIC_MEAN':
                 pass  # nothing to do
             elif imc.name in OK_COMPONENTS:
                 dic = {imt: imc.apply_conversion(imt) for imt in self.imts}
@@ -1300,7 +1302,7 @@ class ContextMaker(object):
             return EPS, 0
         src.nsites = len(sites)
         t0 = time.time()
-        ctxs = list(self.get_ctx_iter(src, sites, step=4))  # reduced
+        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         src.dt = time.time() - t0
         # if src.dt > .01:
         #     print(f'{src.source_id=}, {src.dt=}')
@@ -1310,20 +1312,21 @@ class ContextMaker(object):
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code == b'F':  # avoid over-weight in the USA model
-            weight /= 5.
+            weight /= 2.5
         elif src.code == b'S':  # increase weight in SAM
             weight *= 2.
-        elif src.code == b'N':  # increase weight in SAM
+        elif src.code == b'N':  # increase weight in MEX
             weight *= 5.
         return weight or EPS, int(esites)
 
-    def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
+    def set_weight(self, sources, srcfilter, multiplier=1):
         """
         Set the weight attribute on each prefiltered source
         """
-        if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
-            srcfilter = SourceFilter(srcfilter, self.maximum_distance)
-        with mon:
+        if srcfilter.sitecol is None:
+            for src in sources:
+                src.weight = EPS
+        else:
             for src in sources:
                 src.weight, src.esites = self.estimate_weight(
                     src, srcfilter, multiplier)
