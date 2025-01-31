@@ -1526,6 +1526,12 @@ class OqParam(valid.ParamSet):
             im = from_string(imt)
             if imt.startswith("SA"):
                 imts.add("SA")
+            elif imt.startswith("Sa_avg2"):
+                imts.add("Sa_avg2")
+            elif imt.startswith("Sa_avg3"):
+                imts.add("Sa_avg3")
+            elif imt.startswith("FIV3"):
+                imts.add("FIV3")
             elif imt.startswith("SDi"):
                 imts.add("SDi")
             elif imt.startswith("EAS"):
@@ -1907,7 +1913,8 @@ class OqParam(valid.ParamSet):
         yes = exposures and exposures[0].endswith('.hdf5')
         if yes:
             # self.avg_losses = False
-            self.aggregate_by = [['ID_1', 'OCCUPANCY']]
+            if not self.aggregate_by:
+                self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
         return yes
 
     @property

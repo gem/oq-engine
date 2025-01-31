@@ -1,4 +1,11 @@
+  [Savvinos Aristeidou]
+  * Added new ANN-based GMM in the gsim library, named `aristeidou_2024`
+  * Added new IMs, that is the FIV3, Sa_avg2, and Sa_avg3
+
   [Michele Simionato]
+  * Extended rupture_dict to the `msr` and `aspect_ratio` parameters
+  * Fixed the instantiation of file-dependent GMPEs from the datastore
+  * Optimized slow tasks in the preclassical phase
   * Reading the site model in calculations with ruptures.hdf5 and making
     `minimum_intensity` mandatory
   * Added parameter `minimum_engine_version`

@@ -47,8 +47,9 @@ def check_export_job(dstore):
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_aristotle(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
-    if not os.path.exists(cd.parent.parent.parent / 'exposure.hdf5'):
-        raise unittest.SkipTest('Please download exposure.hdf5')
+    expo = cd.parent.parent.parent / 'exposure.hdf5'
+    if not os.path.exists(expo):
+        raise unittest.SkipTest(f'Missing {expo}')
     calc = check(cd / f'aristotle{n}/job.ini', what='aggrisk')
     if n == 1:
         check_export_job(calc.datastore)
