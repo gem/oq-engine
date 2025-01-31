@@ -28,7 +28,7 @@ from openquake.qa_tests_data.scenario import (
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
-from openquake.calculators import base
+from openquake.calculators import base, getters
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.views import text_table, view
@@ -323,10 +323,23 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
 
     def test_case_28(self):
-        # rupture_dict
+        # rupture_dict without msr
         self.run_calc(case_28.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+        rup = getters.get_ebruptures(self.calc.datastore)[0].rupture
+        mesh = rup.surface.mesh
+        aae(mesh.lons, [0., 0., 0., 0.])
+        aae(mesh.lats, [-0.1296836,  0.1296836, -0.1296836,  0.1296836])
+
+        # rupture_dict with msr
+        self.run_calc(case_28.__file__, 'job2.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf2.csv', f, delta=1E-5)
+        rup = getters.get_ebruptures(self.calc.datastore)[0].rupture
+        mesh = rup.surface.mesh
+        aae(mesh.lons, [0., 0., 0., 0.])
+        aae(mesh.lats, [-0.07377,  0.07377, -0.07377,  0.07377])
 
     def test_case_29(self):
         # conditioned GMFs all stations filtered
