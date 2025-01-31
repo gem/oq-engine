@@ -756,7 +756,7 @@ def get_uploaded_file_path(request, filename):
         # NOTE: we could not find a reliable way to avoid the deletion of the
         # uploaded file right after the request is consumed, therefore we need
         # to store a copy of it
-        return gettemp(open(file.temporary_file_path()).read())
+        return gettemp(open(file.temporary_file_path()).read(), suffix='.xml')
 
 
 @csrf_exempt
