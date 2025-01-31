@@ -425,6 +425,9 @@ class NZNSHM2022_ParkerEtAl2020SSlab(NZNSHM2022_ParkerEtAl2020SInter):
     # slab also requires hypo_depth
     REQUIRES_RUPTURE_PARAMETERS = {"mag", "hypo_depth"}
 
+    # slab also requires backarc
+    REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
+
     # constant table suffix
     SUFFIX = "slab"
 
