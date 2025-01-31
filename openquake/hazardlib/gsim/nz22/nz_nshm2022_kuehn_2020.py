@@ -211,6 +211,9 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         super().__init__(region=region, m_b=m_b, sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
+        # Add backarc to req sites 
+        self.REQUIRES_SITES_PARAMETERS |= {"backarc"}
+
         # reset override of REQUIRES_SITES_PARAMETERS done by super
         if self.region in ("NZL"):
             self.REQUIRES_SITES_PARAMETERS = \
