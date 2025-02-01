@@ -212,9 +212,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         self.modified_sigma = modified_sigma
 
         # reset override of REQUIRES_SITES_PARAMETERS done by super
-        if self.region in ("NZL"):
-            self.REQUIRES_SITES_PARAMETERS = \
-                self.__class__.REQUIRES_SITES_PARAMETERS
+        self.REQUIRES_SITES_PARAMETERS = self.__class__.REQUIRES_SITES_PARAMETERS
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -291,6 +289,6 @@ class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    # Add backarc to req sites 
+    # Need vs30 + for inslab backarc
     REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
 
