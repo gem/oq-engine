@@ -212,7 +212,9 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         self.modified_sigma = modified_sigma
 
         # reset override of REQUIRES_SITES_PARAMETERS done by super
-        self.REQUIRES_SITES_PARAMETERS = self.__class__.REQUIRES_SITES_PARAMETERS
+        if self.region in ("NZL"):
+            self.REQUIRES_SITES_PARAMETERS = \
+                self.__class__.REQUIRES_SITES_PARAMETERS
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
