@@ -291,6 +291,5 @@ class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    # Need vs30 + for inslab backarc
+    # Need vs30 + backarc also for inslab
     REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
-
