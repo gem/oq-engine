@@ -1,6 +1,11 @@
 name: Weekly Engine tests
-
 on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
   schedule:
     - cron: "0 1 * * 0"
 
