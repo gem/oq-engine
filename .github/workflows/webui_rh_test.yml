@@ -9,7 +9,6 @@ on:
         required: true
   schedule:
     - cron: "05 15 * * *"
-
 jobs:
   test_ui:
     name: Test on RH based (fedora container)
