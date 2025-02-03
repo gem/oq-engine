@@ -596,9 +596,9 @@ class CompositeRiskModel(collections.abc.Mapping):
                         if (per == '*' or per == peril) and risk_id != '?':
                             try:
                                 coeffs[risk_id][peril]
-                            except KeyError as err:
+                            except KeyError:
                                 raise InvalidFile(
-                                    'Missing %s in\n%s' % (err, cfs))
+                                    f'Missing {risk_id=}, {peril=} in\n{cfs}')
 
     def check_risk_ids(self, inputs):
         """
