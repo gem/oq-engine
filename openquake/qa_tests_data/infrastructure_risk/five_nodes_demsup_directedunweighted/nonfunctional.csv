@@ -1,5 +1,5 @@
 ﻿taxonomy,consequence,peril,minor,major
-bridge,non_operational,earthquake,0,1
-road,non_operational,earthquake,0,1
-connection,non_operational,earthquake,0,1
-POI,non_operational,earthquake,0,1
+bridge,non_operational,groundshaking,0,1
+road,non_operational,groundshaking,0,1
+connection,non_operational,groundshaking,0,1
+POI,non_operational,groundshaking,0,1

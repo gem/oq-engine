@@ -976,8 +976,8 @@ class OqParam(valid.ParamSet):
         'residents_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
-        'earthquake_fragility',
-        'earthquake_vulnerability',
+        'groundshaking_fragility',
+        'groundshaking_vulnerability',
         'liquefaction_fragility',
         'liquefaction_vulnerability',
         'landslide_fragility',
@@ -1482,7 +1482,7 @@ class OqParam(valid.ParamSet):
         else:
             self._parent = None
         # set all_cost_types
-        # rt has the form 'earthquake/vulnerability/structural', ...
+        # rt has the form 'groundshaking/vulnerability/structural', ...
         costtypes = set(rt.split('/')[2] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             try:

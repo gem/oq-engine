@@ -1115,7 +1115,8 @@ def build_damage_dt(dstore):
     dt_list = []
     for peril in perils:
         for ds in ['no_damage'] + limit_states + csqs:
-            dt_list.append((ds if peril == 'earthquake' else f'{peril}_{ds}', F32))
+            dt_list.append((ds if peril == 'groundshaking'
+                            else f'{peril}_{ds}', F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])

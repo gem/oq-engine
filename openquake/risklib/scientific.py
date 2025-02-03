@@ -45,7 +45,7 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
-PERILTYPE = numpy.array(['earthquake', 'liquefaction', 'landslide'])
+PERILTYPE = numpy.array(['groundshaking', 'liquefaction', 'landslide'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -1683,10 +1683,10 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # peril, lt -> outs
         weights = collections.defaultdict(list)  # peril, lt -> weights
-        perils = {'earthquake'}
+        perils = {'groundshaking'}
         for riskid, rm in self.items():
             for (peril, lt), res in rm(asset_df, haz, rndgen).items():
-                # res is an array of fractions of shape (A, E, D) 
+                # res is an array of fractions of shape (A, E, D)
                 weights[peril, lt].append(self.wdic[riskid, peril])
                 dic[peril, lt].append(res)
                 perils.add(peril)
