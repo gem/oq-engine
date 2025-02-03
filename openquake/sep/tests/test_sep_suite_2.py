@@ -17,9 +17,7 @@ from openquake.sep.landslide.rockfalls import (
     critical_accel_rock_slope,
     newmark_displ_from_pga,
 )
-from openquake.sep.landslide.nowicki_jessee import(
-    nowicki_jessee_2018
-)
+from openquake.sep.landslide.nowicki_jessee import nowicki_jessee_2018
 
 from openquake.sep.classes import (
     PicklableInferenceSession,
@@ -108,7 +106,9 @@ class test_landslides_cali_small(unittest.TestCase):
             ]
         )
 
-        np.testing.assert_array_almost_equal(self.sites["Fs"], factor_of_safety)
+        np.testing.assert_array_almost_equal(
+            self.sites["Fs"], factor_of_safety
+        )
 
     def test_rock_slope_static_factor_of_safety(self):
         factor_of_safety = np.array(
@@ -126,7 +126,9 @@ class test_landslides_cali_small(unittest.TestCase):
             ]
         )
 
-        np.testing.assert_array_almost_equal(self.sites["Fs_rs"], factor_of_safety)
+        np.testing.assert_array_almost_equal(
+            self.sites["Fs_rs"], factor_of_safety
+        )
 
     def test_critical_accel(self):
         ca = np.array(
@@ -169,7 +171,9 @@ class test_landslides_cali_small(unittest.TestCase):
             pga=self.pga, critical_accel=self.sites["crit_accel"], M=7.5
         )
 
-        nd = np.array([0.0, 0.0, 0.0, 2.19233517, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        nd = np.array(
+            [0.0, 0.0, 0.0, 2.19233517, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        )
 
         np.testing.assert_array_almost_equal(self.sites["newmark_disp"], nd)
 
@@ -191,9 +195,13 @@ class test_landslides_cali_small(unittest.TestCase):
             pga=self.pga, critical_accel=self.sites["crit_accel_rs"]
         )
 
-        nd = np.array([0.0, 0.0, 0.0, 1.080767, 1.080767, 0.0, 0.0, 1.080767, 0.0, 0.0])
+        nd = np.array(
+            [0.0, 0.0, 0.0, 1.080767, 1.080767, 0.0, 0.0, 1.080767, 0.0, 0.0]
+        )
 
-        np.testing.assert_array_almost_equal(self.sites["rock_slope_displacement"], nd)
+        np.testing.assert_array_almost_equal(
+            self.sites["rock_slope_displacement"], nd
+        )
 
     def test_nowicki_jessee_18(self):
         prob_ls, coverage = nowicki_jessee_2018(
@@ -207,31 +215,33 @@ class test_landslides_cali_small(unittest.TestCase):
 
         zlp = np.array(
             [
-                0.070513, 
-                0.260801, 
-                0.281926, 
-                0.980824, 
-                0.603409, 
+                0.070513,
+                0.260801,
+                0.281926,
+                0.980824,
+                0.603409,
                 0.602239,
-                0.856018, 
-                0.897942, 
-                0.62758 , 
-                0.581753
+                0.856018,
+                0.897942,
+                0.62758,
+                0.581753,
             ]
         )
 
         cls = np.array(
             [
-                0., 
-                0.172675, 
-                0., 
-                20.709538, 
-                0.953252, 
+                0.0,
+                0.172675,
+                0.0,
+                20.709538,
+                0.953252,
                 0.946616,
-                6.037904, 
-                8.884508, 
-                1.104123, 
-                0.839227])
+                6.037904,
+                8.884508,
+                1.104123,
+                0.839227,
+            ]
+        )
 
         np.testing.assert_array_almost_equal(prob_ls, zlp)
         np.testing.assert_array_almost_equal(coverage, cls)
@@ -323,7 +333,9 @@ class test_liquefaction_cali_small(unittest.TestCase):
             vs30=self.sites["vs30"],
         )
 
-        zlp = np.array([1, 1, 0.999999, 1, 1, 0.999999, 0.999989, 0.999922, 1, 1])
+        zlp = np.array(
+            [1, 1, 0.999999, 1, 1, 0.999999, 0.999989, 0.999922, 1, 1]
+        )
         clq = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
         np.testing.assert_array_almost_equal(prob_liq, zlp)

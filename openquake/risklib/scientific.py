@@ -95,7 +95,7 @@ def pairwise(iterable):
     """
     :param iterable: a sequence of N values (s0, s1, ...)
     :returns: N-1 pairs (s0, s1), (s1, s2), (s2, s3), ...
- 
+
     >>> list(pairwise('ABC'))
     [('A', 'B'), ('B', 'C')]
     """
@@ -1316,8 +1316,8 @@ def dds_to_poes(dmg_dists):
     """
     arr = numpy.fliplr(numpy.fliplr(dmg_dists).cumsum(axis=1))
     return arr
-    
-    
+
+
 def compose_dds(dmg_dists):
     """
     Compose an array of N damage distributions:
