@@ -64,30 +64,18 @@ jobs:
           sudo useradd -m -s /bin/bash openquake
           sudo -H python install.py server --version=master
           # Standalone apps
-          source /opt/openquake/venv/bin activate
+          source /opt/openquake/venv/bin/activate
           echo "Downloading standalone apps"
+          cd ..
           pwd
+          TOOLS_BRANCH=master
           for app in oq-platform-standalone oq-platform-ipt oq-platform-taxtweb oq-platform-taxonomy; do
-           # do not fail on exit code 2 if the branch
-           # does not exist in the app repository
-           set +e
-           git ls-remote --exit-code --heads https://github.com/gem/${app}.git $BRANCH >/dev/null 2>&1
-           EXIT_CODE=$?
-           # set again to fail on exit code not 0
-           set -e
-           if [[ $EXIT_CODE == '0' ]]; then
-              echo "Git branch '$BRANCH' exists in the remote repository"
-              TOOLS_BRANCH=$BRANCH
-           elif [[ $EXIT_CODE == '2' ]]; then
-              echo "Git branch '$BRANCH' does not exist in the remote repository"
-              TOOLS_BRANCH=master
-           fi
            echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
            git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
-           pip install -e ./${app}'
+           pip install -e ./${app}
            if [ "$app" = "oq-platform-taxtweb" ]; then
                export PYBUILD_NAME="oq-taxonomy"
-               pip install -e ./${app}'
+               pip install -e ./${app}
                unset PYBUILD_NAME
            fi
           done
@@ -97,10 +85,9 @@ jobs:
           BRANCH=master
           set -x
           source /opt/openquake/venv/bin/activate
-          pip freeze
-          mkdir /var/log/oq-engine/
-          chown -R openquake /var/log/oq-engine/
-          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --upgrade-db &'
+          sudo mkdir /var/log/oq-engine/
+          sudo chown -R openquake /var/log/oq-engine/
+          sudo -H -u openquake bash -c "/opt/openquake/venv/bin/oq engine --upgrade-db "
           # Wait the DbServer to come up
           #echo "Waiting DBServer up on port 1907...."
           #while ! nc -z localhost 1907; do
@@ -110,7 +97,7 @@ jobs:
           oq --version
           #
           echo "Add settings for login and logging on webui before to start"
-          cd /__w/oq-engine/oq-engine/
+          cd /home/runner/work/oq-engine/oq-engine
           cd openquake/server
           cat > local_settings.py << EOF
           LOCKDOWN = True
@@ -120,7 +107,7 @@ jobs:
           echo "DISPLAY content of local_settings"
           cat local_settings.py
           # START WEBUI
-          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+          sudo -H -u openquake bash -c "/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s & "
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z localhost 8800; do
             sleep 5 # wait for 1/10 of the second before check again
@@ -129,7 +116,9 @@ jobs:
           sleep 1
           # Perform migration after setup local_settings
           cd /__w/oq-engine/oq-engine/openquake/engine/
-          runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py migrate'
+          cd /home/runner/work/oq-engine/oq-engine/openquake/server
+          sudo -H bash -c "cd /home/runner/work/oq-engine/oq-engine/openquake/server; \
+          /opt/openquake/venv/bin/python3 manage.py migrate "
           sleep 1
           curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
           echo -n "Test Standalone Tools pages"
