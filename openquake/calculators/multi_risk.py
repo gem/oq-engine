@@ -55,7 +55,7 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
             [sec_imt] = rm.imt_by_lt.values()
             for li, loss_type in enumerate(crm.loss_types):
                 dd5[:, :, :, li] = rm.scenario_damage(
-                    'earthquake', loss_type, assets,
+                    'groundshaking', loss_type, assets,
                     pandas.DataFrame({sec_imt: [gmv]}))
             csq = crm.compute_csq(assets, dd5, df, crm.oqparam)  # ->PAE
             for li in range(L):

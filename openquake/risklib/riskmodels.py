@@ -63,7 +63,7 @@ def get_risk_files(inputs):
         if key == 'fragility':
             # backward compatibily for .ini files with key fragility_file
             # instead of structural_fragility_file
-            rfs['earthquake/fragility/structural'] = inputs[
+            rfs['groundshaking/fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
             del inputs['fragility']
         elif key.endswith(('_fragility', '_vulnerability', '_vulnerability_retrofitted')):
@@ -77,7 +77,7 @@ def get_risk_files(inputs):
                         rfs[f'{peril}/{kind}/{cost_type}'] = fname
                 else:
                     cost_type = match.group(1)
-                    rfs[f'earthquake/{kind}/{cost_type}'] = value
+                    rfs[f'groundshaking/{kind}/{cost_type}'] = value
             else:
                 raise ValueError('Invalid key in %s: %s_file' % (job_ini, key))
     return rfs
@@ -153,7 +153,7 @@ def get_risk_functions(oqparam):
     job_ini = oqparam.inputs['job_ini']
     rmodels = AccumDict()  # (peril, loss_type, kind) -> rmodel
     for key, fname in get_risk_files(oqparam.inputs).items():
-        peril, kind, loss_type = key.split('/')  # ex. earthquake/vulnerability/structural
+        peril, kind, loss_type = key.split('/')  # ex. groundshaking/vulnerability/structural
         rmodel = nrml.to_python(fname)
         if len(rmodel) == 0:
             raise InvalidFile(f'{job_ini}: {fname} is empty!')
@@ -220,19 +220,19 @@ def rescale(curves, values):
 
 class PerilDict(dict):
     """
-    >>> pd = PerilDict({('earthquake', 'structural'): .23})
+    >>> pd = PerilDict({('groundshaking', 'structural'): .23})
     >>> pd['structural']
     0.23
     >>> pd['structurl']
     Traceback (most recent call last):
     ...
-    KeyError: ('earthquake', 'structurl')
+    KeyError: ('groundshaking', 'structurl')
     """
     def __getitem__(self, lt):
         if isinstance(lt, tuple):
             return dict.__getitem__(self, lt)
         else:  # assume lt is a loss_type string
-            return dict.__getitem__(self, ('earthquake', lt))
+            return dict.__getitem__(self, ('groundshaking', lt))
 
 
 class RiskModel(object):
@@ -255,11 +255,11 @@ class RiskModel(object):
         if calcmode in ('classical', 'classical_risk'):
             self.loss_ratios = {
                 lt: tuple(vf.mean_loss_ratios_with_steps(steps))
-                for lt, vf in risk_functions['earthquake'].items()}
+                for lt, vf in risk_functions['groundshaking'].items()}
         if calcmode == 'classical_bcr':
             self.loss_ratios_orig = {}
             self.loss_ratios_retro = {}
-            for lt, vf in risk_functions['earthquake'].items():
+            for lt, vf in risk_functions['groundshaking'].items():
                 self.loss_ratios_orig[lt] = tuple(
                     vf.mean_loss_ratios_with_steps(steps))
                 self.loss_ratios_retro[lt] = tuple(
@@ -267,7 +267,7 @@ class RiskModel(object):
 
         # set imt_by_lt
         self.imt_by_lt = {}  # dictionary loss_type -> imt
-        for lt, rf in risk_functions['earthquake'].items():
+        for lt, rf in risk_functions['groundshaking'].items():
             if rf.kind in ('vulnerability', 'fragility'):
                 self.imt_by_lt[lt] = rf.imt
 
@@ -277,7 +277,7 @@ class RiskModel(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.risk_functions['earthquake'])
+        return sorted(self.risk_functions['groundshaking'])
 
     def __call__(self, assets, gmf_df, rndgen=None):
         meth = getattr(self, self.calcmode)
@@ -291,7 +291,7 @@ class RiskModel(object):
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        assert 'earthquake' in dic, list(dic)
+        assert 'groundshaking' in dic, list(dic)
         self.risk_functions = dic
 
     def __repr__(self):
@@ -547,7 +547,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             try:
                 rf.peril = df.loc[i].peril
             except AttributeError:  # in engine < 3.22 the peril was not stored
-                rf.peril = 'earthquake'
+                rf.peril = 'groundshaking'
             lt = rf.loss_type
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
                 risklist.append(rf)
@@ -735,7 +735,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
         for riskid, rm in self._riskmodels.items():
-            for lt, rf in rm.risk_functions['earthquake'].items():
+            for lt, rf in rm.risk_functions['groundshaking'].items():
                 iml[rf.imt].append(rf.imls[0])
 
         if oq.aristotle:
@@ -832,7 +832,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 allratios = []
                 for taxo in sorted(self):
                     rm = self[taxo]
-                    rf = rm.risk_functions['earthquake'][loss_type]
+                    rf = rm.risk_functions['groundshaking'][loss_type]
                     if loss_type in rm.loss_ratios:
                         ratios = rm.loss_ratios[loss_type]
                         allratios.append(ratios)
