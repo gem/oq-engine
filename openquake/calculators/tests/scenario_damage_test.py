@@ -242,7 +242,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # inconsistent IDs between fragility and consequence in set_tmap
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_16.__file__, 'job.ini')
-        self.assertIn("Missing 'UNM/C_LR/GOV2' in", str(ctx.exception))
+        self.assertIn("Missing risk_id='UNM/C_LR/GOV2', "
+                      "peril='groundshaking' in", str(ctx.exception))
 
     def test_case_17_no_time_event(self):
         out = self.run_calc(
