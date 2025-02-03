@@ -797,10 +797,15 @@ def write_source_model(dest, sources_or_groups, name=None,
                                          compression_opts=9)
                         h[key][:] = v
                     elif k == 'rupture_idxs' and prefix:
+                        # never here in the engine code
                         h[key] = [' '.join(prefix + r for r in ridxs.split())
                                   for ridxs in v]
                     else:
-                        h[key] = v
+                        # in classical/case_65 for k == 'rupture_idxs'
+                        h.create_dataset(key, len(v), hdf5.vstr,
+                                         compression='gzip',
+                                         compression_opts=9)
+                        h[key][:] = v
         out.append(dest5)
 
     # produce a geometryModel if there are MultiFaultSources
