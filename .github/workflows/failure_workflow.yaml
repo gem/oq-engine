@@ -13,6 +13,7 @@ on:
       - "Upgrade procedure for engine from 3.16 to Latest Release"
       - "Windows amd64 full tests of OpenQuake Engine"
       - "Test WebUI on RH based OS"
+      - "Weekly Engine tests"
     types:
       - completed
 
