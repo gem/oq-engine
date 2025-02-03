@@ -1076,7 +1076,7 @@ def get_crmodel(oqparam):
             if 'loss_type' not in df.columns:
                 df['loss_type'] = 'structural'
             if 'peril' not in df.columns:
-                df['peril'] = 'earthquake'
+                df['peril'] = 'groundshaking'
             for consequence, group in df.groupby('consequence'):
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
                     raise InvalidFile('Unknown consequence %s in %s' %
@@ -1308,7 +1308,7 @@ def aristotle_tmap(oqparam, taxidx):
             for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
                 if taxo in taxidx:
                     acc['country'].append(key)
-                    acc['peril'].append('earthquake')
+                    acc['peril'].append('groundshaking')
                     acc['taxi'].append(taxidx[taxo])
                     acc['risk_id'].append(risk_id)
                     acc['weight'].append(weight)
