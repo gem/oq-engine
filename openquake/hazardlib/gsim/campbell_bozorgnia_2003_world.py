@@ -25,6 +25,9 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.gsim.campbell_bozorgnia_2003 import (
+    _compute_magnitude_scaling, _compute_faulting_mechanism 
+)
 
 
 def _get_mean(C, mag, rake, dip, rrup, rjb, vs30):
@@ -39,13 +42,6 @@ def _get_mean(C, mag, rake, dip, rrup, rjb, vs30):
     return C['c1'] + f1 + C['c4'] * np.log(np.sqrt(f2)) + f3 + f4 + f5
 
 
-def _compute_magnitude_scaling(C, mag):
-    """
-    Compute and return magnitude scaling term (eq.2, page 319)
-    """
-    return C['c2'] * mag + C['c3'] * (8.5 - mag) ** 2
-
-
 def _compute_distance_scaling(C, mag, rrup, vs30):
     """
     Compute distance scaling term (eq.3, page 319).
@@ -58,7 +54,6 @@ def _compute_distance_scaling(C, mag, rrup, vs30):
         C['c8'] * mag + C['c9'] * (8.5 - mag) ** 2) * g) ** 2
 
 def _get_site_type_dummy_variables(vs30):
-        
         """
         Get site type dummy variables, four site types are considered
         based on the shear wave velocity intervals in the uppermost 30 m, Vs30:
@@ -82,21 +77,6 @@ def _get_site_type_dummy_variables(vs30):
         sfr[idx] = 1.0
         return svfs, ssr ,sfr
 
-def _compute_faulting_mechanism(C, rake, dip):
-    """
-    Compute faulting mechanism term (see eq. 5, page 319).
-
-    Reverse faulting is defined as occurring on steep faults (dip > 45)
-    and rake in (22.5, 157.5).
-
-    Thrust faulting is defined as occurring on shallow dipping faults
-    (dip <=45) and rake in (22.5, 157.5)
-    """
-    # flag for reverse faulting
-    frv = (dip > 45) & (22.5 <= rake) & (rake <= 157.5)
-    # flag for thrust faulting
-    fth = (dip <= 45) & (22.5 <= rake) & (rake <= 157.5)
-    return C['c10'] * frv + C['c11'] * fth
 
 def _compute_far_source_soil_effect(C, vs30):
     """
@@ -211,7 +191,6 @@ class CampbellBozorgnia2003(GMPE):
 
 
 class CampbellBozorgnia2003Vertical(CampbellBozorgnia2003):
-    
     #: Supported intensity measure component is vertical
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.VERTICAL
 
