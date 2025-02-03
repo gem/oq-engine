@@ -12,9 +12,6 @@ jobs:
       matrix:
         os: [ubuntu-24.04]
         python-version: ["3.10", "3.11", "3.12"]
-    env:
-      GITHUB_HEAD_REF: ${{ github.head_ref }}
-      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python  ${{ matrix.python-version }}
@@ -23,11 +20,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-          else
-            python install.py devel --version=$GITHUB_HEAD_REF
-          fi
+            python install.py devel --version=master
       - name: Calculators hazard tests
         run: |
           set -e
@@ -41,10 +34,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.12"]
-    env:
-      GITHUB_HEAD_REF: ${{ github.head_ref }}
-      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+        python-version: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python  ${{ matrix.python-version }}
@@ -53,11 +43,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-          else
-            python install.py devel --version=$GITHUB_HEAD_REF
-          fi
+          python install.py devel --version=master
       - name: Hazardlib tests
         run: |
           set -e
@@ -76,7 +62,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.11"]
+        python-version: ["3.10", "3.11", "3.12"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
@@ -89,11 +75,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-          else
-            python install.py devel --version=$GITHUB_HEAD_REF
-          fi
+          python install.py devel --version=master
       - name: Server 'PUBLIC' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -115,10 +97,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.11"]
+        python-version: ["3.10", "3.11", "3.12"]
     env:
-      GITHUB_HEAD_REF: ${{ github.head_ref }}
-      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
       OQ_APPLICATION_MODE: READ_ONLY
     steps:
       - uses: actions/checkout@v4
@@ -128,11 +108,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-          else
-            python install.py devel --version=$GITHUB_HEAD_REF
-          fi
+          python install.py devel --version=master
       - name: Server 'READ_ONLY' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -144,10 +120,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.11"]
+        python-version: ["3.10", "3.11", "3.12"]
     env:
-      GITHUB_HEAD_REF: ${{ github.head_ref }}
-      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
       OQ_APPLICATION_MODE: AELO
       OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
@@ -158,11 +132,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-          else
-            python install.py devel --version=$GITHUB_HEAD_REF
-          fi
+          python install.py devel --version=master
       - name: Server 'AELO' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -177,7 +147,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-24.04]
-        python-version: ["3.11"]
+        python-version: ["3.10", "3.11", "3.12"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
@@ -191,11 +161,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          if [[ $FROM_FORK == "true" ]]; then
-            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-          else
-            python install.py devel --version=$GITHUB_HEAD_REF
-          fi
+          python install.py devel --version=master
       - name: Server 'ARISTOTLE' mode tests
         run: |
           set -x
