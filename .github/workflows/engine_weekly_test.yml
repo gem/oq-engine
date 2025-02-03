@@ -52,7 +52,7 @@ jobs:
           set -x
           BRANCH=master
           # Add openquake user
-          useradd -m -u 1000 -s /bin/bash openquake
+          sudo useradd -m -s /bin/bash openquake
           python install.py server --version=master
           # Standalone apps
           source /opt/openquake/venv/bin activate
