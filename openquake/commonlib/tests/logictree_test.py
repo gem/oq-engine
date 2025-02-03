@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1859,6 +1859,42 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('gA0',): 421, ('gB0',): 579})
 
+    def test_multiple(self):
+        xml = _make_nrml("""\
+        <logicTree logicTreeID="EUR">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.4</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>
+                            ToroEtAl2002
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+        </logicTree>
+        <logicTree logicTreeID="MIE">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="ASC">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+        </logicTree>
+        """)
+        lts = logictree.GsimLogicTree.read_dict(gettemp(xml))
+        self.assertEqual(list(lts), ['EUR', 'MIE'])
+
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
     def setUp(self):
@@ -2159,7 +2195,7 @@ taxo4,taxo1,.5
         exp = pandas.DataFrame(
             dict(risk_id='taxo1 taxo2 taxo2 taxo3 taxo1'.split(),
                  weight=[1., 1., .5, 1., .5],
-                 loss_type=['*'] * 5,
+                 peril=['*'] * 5,
                  country=['?'] * 5,
                  taxi=[1, 2, 4, 3, 4]))
         pandas.testing.assert_frame_equal(got, exp)

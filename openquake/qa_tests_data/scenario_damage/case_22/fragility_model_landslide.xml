@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
-	<fragilityModel id="1" assetCategory="RDN" lossCategory="landslide">
+	<fragilityModel id="1" assetCategory="RDN" lossCategory="structural">
 		<description>Road Network</description>
 		<limitStates>slight moderate extreme complete</limitStates>
 		<fragilityFunction id="Wood" format="discrete">

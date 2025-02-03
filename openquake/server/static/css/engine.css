@@ -437,3 +437,28 @@ table#aristotle-losses th td {
 .changelog td:nth-child(3), .changelog th:nth-child(3) {
     width: 70%;
 }
+
+.shakemap-image-container {
+    float: left;
+    /* If we want to adjust the size of images instead of making them of the suitable size
+    /* width: 50%; */
+}
+
+/* If we want to adjust the size of images instead of making them of the suitable size
+/* .shakemap-image-container img{ */
+/*     width: 600px; */
+/* } */
+
+.shakemap-clear-float {
+    clear: both;
+    margin-bottom: 30px;
+}
+
+/* Hide all form elements except the submit button */
+.hidden_except_submit input:not([type="submit"]),
+.hidden_except_submit select,
+.hidden_except_submit textarea,
+.hidden_except_submit button:not([type="submit"]),
+.hidden_except_submit label {
+  display: none;
+}

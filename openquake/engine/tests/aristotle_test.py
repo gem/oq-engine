@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,8 +23,8 @@ import pytest
 from openquake.calculators.checkers import check
 from openquake.calculators.export import export
 
-
 cd = pathlib.Path(__file__).parent
+
 
 def check_export_job(dstore):
     fnames = export(('job', 'zip'), dstore)
@@ -46,8 +46,10 @@ def check_export_job(dstore):
 
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_aristotle(n):
-    if not os.path.exists(cd.parent.parent.parent / 'exposure.hdf5'):
-        raise unittest.SkipTest('Please download exposure.hdf5')
+    # NB: expecting exposure in oq-engine and not in mosaic_dir!
+    expo = cd.parent.parent.parent / 'exposure.hdf5'
+    if not os.path.exists(expo):
+        raise unittest.SkipTest(f'Missing {expo}')
     calc = check(cd / f'aristotle{n}/job.ini', what='aggrisk')
     if n == 1:
         check_export_job(calc.datastore)

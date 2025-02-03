@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID="lt1">
+    <logicTreeBranchSet  branchSetID="szint" uncertaintyType="sourceModel">
+      <logicTreeBranch branchID="int1">
+	<uncertaintyModel>
+          HeA_IF2222222_M40.xml GiA_IF2222222_M40.xml
+          CaA_IF2222222_M40.xml CyA_IF2222222_M40.xml
+        </uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+      </logicTreeBranchSet>
+  </logicTree>
+</nrml>

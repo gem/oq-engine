@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import io
 import os
 import ast
 import copy
 import json
+import shutil
 import logging
 import operator
+import tempfile
 import itertools
 from dataclasses import dataclass
 from collections import defaultdict
@@ -39,6 +40,8 @@ from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import from_string
 
+U32 = numpy.uint32
+TWO24 = 2**24
 
 @dataclass
 class GsimBranch:
@@ -163,7 +166,7 @@ class GsimLogicTree(object):
         GSIM logic tree XML file, to avoid reparsing it
     """
     @classmethod
-    def from_(cls, gsim):
+    def from_(cls, gsim, job_ini='<in-memory>'):
         """
         Generate a trivial GsimLogicTree from a single GSIM instance.
         """
@@ -176,7 +179,7 @@ class GsimLogicTree(object):
                          'branchSetID': 'bs1',
                          'uncertaintyType': 'gmpeModel'},
                         nodes=[ltbranch])])
-        return cls('fake/' + gsim.__class__.__name__, ['*'], ltnode=lt)
+        return cls(job_ini, ['*'], ltnode=lt)
 
     @classmethod
     def from_hdf5(cls, fname, mosaic_model, trt):
@@ -202,6 +205,18 @@ class GsimLogicTree(object):
                          'uncertaintyType': 'gmpeModel'},
                         nodes=ltbranches)])
         return cls('fake', [trt], ltnode=lt)
+
+    @classmethod
+    def read_dict(cls, fname, tectonic_region_types=['*']):
+        """
+        Read a file containing multiple logic trees and returns a dictionary
+        ID -> <GsimLogicTree> where the ID is usually a mosaic model
+        """
+        dic = {}
+        for ltnode in nrml.read(fname).nodes:
+            dic[ltnode['logicTreeID']] = cls(
+                fname, tectonic_region_types, ltnode)
+        return dic
 
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         # tectonic_region_types usually comes from the source models
@@ -334,38 +349,50 @@ class GsimLogicTree(object):
         if hasattr(self, 'filename'):
             # missing in EventBasedRiskTestCase case_1f
             dic['filename'] = self.filename
-            dirname = os.path.dirname(self.filename)
             for gsims in self.values.values():
                 for gsim in gsims:
-                    for k, v in gsim.kwargs.items():
+                    kw = toml.loads(gsim._toml)[gsim.__class__.__name__]
+                    # i.e. kw = {'gmpe_table': './Wcrust_low_rhypo.hdf5'}
+                    for k, v in kw.items():
                         if k.endswith(('_file', '_table')):
                             if v is None:  # if volc_arc_file is None
                                 pass
                             else:
-                                fname = os.path.join(dirname, v)
-                                with open(fname, 'rb') as f:
-                                    dic[os.path.basename(v)] = f.read()
+                                # store in the attribute dictionary the data files
+                                with open(gsim.kwargs[k], 'rb') as f:
+                                    dic[f'{k}:{v}'] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):
+        # Here is a smart trick to retrieve the data files from the
+        # dictionary of attributes and store them in a temporary directory,
+        # so that file-dependent GMPEs can be instantiated even if the datastore
+        # is moved to a different machine.
+        # NB: the approach may break on macOS for large files since there is
+        # a limit on the attribute size (unknown at the moment)
+        data = {tuple(k.split(':')): v for k, v in dic.items() if ':' in k}
+        if data:
+            # i.e. {'gmpe_table:Wcrust.hdf5': bytes} in scenario/case_35
+            dirname = tempfile.mkdtemp()
+            for key, name in data:
+                fname = os.path.abspath(os.path.join(dirname, name))
+                dname = os.path.dirname(fname)
+                if not os.path.exists(dname):
+                    os.makedirs(dname)
+                with open(fname, 'wb') as f:
+                    f.write(data[key, name])
+        else:
+            dirname = os.path.dirname(dic['filename'])
         self.bsetdict = json.loads(dic['bsetdict'])
         self.filename = dic['filename']
         self.branches = []
         self.shortener = {}
         self.values = defaultdict(list)
-        dirname = os.path.dirname(dic['filename'])
         for bsno, branches in enumerate(group_array(array, 'trt').values()):
             for brno, branch in enumerate(branches):
                 branch = fix_bytes(branch)
                 br_id = branch['branch']
                 gsim = valid.gsim(branch['uncertainty'], dirname)
-                for k, v in gsim.kwargs.items():
-                    if k.endswith(('_file', '_table')):
-                        if v is None:  # if volc_arc_file is None
-                            pass
-                        else:
-                            arr = numpy.asarray(dic[os.path.basename(v)][()])
-                            gsim.kwargs[k] = io.BytesIO(bytes(arr))
                 self.values[branch['trt']].append(gsim)
                 weight = object.__new__(ImtWeight)
                 # branch dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
@@ -374,6 +401,8 @@ class GsimLogicTree(object):
                 bt = GsimBranch(branch['trt'], br_id, gsim, weight, True)
                 self.branches.append(bt)
                 self.shortener[br_id] = keyno(br_id, bsno, brno)
+        if data:
+            shutil.rmtree(dirname)
 
     def reduce(self, trts):
         """
@@ -566,7 +595,7 @@ class GsimLogicTree(object):
             rlzs.append(rlz)
         return rlzs
 
-    def get_rlzs_by_gsim_trt(self, samples=0, seed=42,
+    def get_rlzs_by_gsim_dic(self, samples=0, seed=42,
                              sampling_method='early_weights'):
         """
         :param samples:
@@ -576,7 +605,7 @@ class GsimLogicTree(object):
         :param sampling_method:
             sampling method, by default 'early_weights'
         :returns:
-            dictionary trt -> gsim -> all_rlz_ordinals for each gsim in the trt
+            dictionary trt_smr -> gsim -> rlz_ordinals
         """
         if samples:
             rlzs = self.sample(samples, seed, sampling_method)
@@ -584,9 +613,9 @@ class GsimLogicTree(object):
             rlzs = list(self)
         ddic = {}
         for i, trt in enumerate(self.values):
-            ddic[trt] = {gsim: [rlz.ordinal for rlz in rlzs
-                                if rlz.value[i] == gsim]
-                         for gsim in self.values[trt]}
+            ddic[i*TWO24] = {gsim: U32([rlz.ordinal for rlz in rlzs
+                                        if rlz.value[i] == gsim])
+                             for gsim in self.values[trt]}
         return ddic
 
     def __iter__(self):

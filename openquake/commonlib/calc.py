@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,7 +26,7 @@ from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import map_array, geo
 from openquake.hazardlib.source.rupture import get_events
-from openquake.commonlib import util, readinput
+from openquake.commonlib import util, readinput, datastore
 
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
@@ -122,7 +122,7 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
     return arr
 
 
-# ################## utilities for classical calculators ################ #
+# ################## utilities for event_based calculators ################ #
 
 # TODO: see if it can be simplified
 def make_hmaps(pmaps, imtls, poes):
@@ -167,6 +167,31 @@ def make_uhs(hmap, info):
     return uhs
 
 
+def get_proxies(filename, rup_array, min_mag=0):
+    """
+    :returns: a list of RuptureProxies
+    """
+    proxies = []
+    try:
+        h5 = datastore.read(filename)
+    except ValueError: # cannot extract calc_id
+        h5 = hdf5.File(filename)
+    with h5:
+        rupgeoms = h5['rupgeoms']
+        if hasattr(rup_array, 'start'):  # is a slice
+            recs = h5['ruptures'][rup_array]
+        else:
+            recs = rup_array
+        for rec in recs:
+            proxy = rupture.RuptureProxy(rec)
+            if proxy['mag'] < min_mag:
+                # discard small magnitudes
+                continue
+            proxy.geom = rupgeoms[proxy['geom_id']]
+            proxies.append(proxy)
+    return proxies
+
+
 class RuptureImporter(object):
     """
     Import an array of ruptures correctly, i.e. by populating the datasets
@@ -175,20 +200,21 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
+        self.full_lt = dstore['full_lt']
         self.scenario = 'scenario' in self.oqparam.calculation_mode
         try:
             self.N = len(dstore['sitecol'])
         except KeyError:  # missing sitecol
             self.N = 0
 
-    def get_eid_rlz(self, proxies, rlzs_by_gsim, ordinal):
+    def get_eid_rlz(self, proxies, slc, rlzs_by_gsim, ordinal):
         """
         :returns: a composite array with the associations eid->rlz
         """
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         return {ordinal: get_events(proxies, rlzs, self.scenario)}
 
-    def import_rups_events(self, rup_array, get_rupture_getters):
+    def import_rups_events(self, rup_array):
         """
         Import an array of ruptures and store the associated events.
         :returns: (number of imported ruptures, number of imported events)
@@ -197,19 +223,21 @@ class RuptureImporter(object):
         logging.info('Reordering the ruptures and storing the events')
         geom_id = numpy.argsort(rup_array[['trt_smr', 'id']])
         rup_array = rup_array[geom_id]
+        self.datastore['rup_start_stop'] = performance.idx_start_stop(
+            rup_array['trt_smr'])
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
-        n_occ = rup_array['n_occ']
+        n_occ = rup_array['n_occ']        
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
+        idx_start_stop = performance.idx_start_stop(rup_array['trt_smr'])
+        self.datastore.create_dset('trt_smr_start_stop', idx_start_stop)
+        self._save_events(rup_array, idx_start_stop)
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)
-        rgetters = get_rupture_getters(  # fast
-            self.datastore, self.oqparam.concurrent_tasks)
-        self._save_events(rup_array, rgetters)
         nr, ne = len(rup_array), rup_array['n_occ'].sum()
         if oq.investigation_time:
             eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
@@ -219,7 +247,7 @@ class RuptureImporter(object):
                          'years (mean mag={:.2f})'.format(
                              ne, nr, int(eff_time), mag))
 
-    def _save_events(self, rup_array, rgetters):
+    def _save_events(self, rup_array, idx_start_stop):
         oq = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
@@ -232,19 +260,23 @@ class RuptureImporter(object):
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
         iterargs = []
-        for i, rg in enumerate(rgetters):
-            iterargs.append((rg.proxies, rg.rlzs_by_gsim, i))
+        rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
+        filename = self.datastore.filename
+        for i, (trt_smr, start, stop) in enumerate(idx_start_stop):
+            slc = slice(start, stop)
+            proxies = get_proxies(filename, rup_array[slc])
+            iterargs.append((proxies, slc, rlzs_by_gsim[trt_smr], i))
+        acc = general.AccumDict()  # ordinal -> eid_rlz
         if len(events) < 1E5:
-            acc = general.AccumDict()  # ordinal -> eid_rlz
             for args in iterargs:
                 acc += self.get_eid_rlz(*args)
         else:
             self.datastore.swmr_on()  # before the Starmap
-            acc = parallel.Starmap(
-                self.get_eid_rlz, iterargs,
-                h5=self.datastore,
-                progress=logging.debug
-            ).reduce()
+            for res in parallel.Starmap(
+                    self.get_eid_rlz, iterargs,
+                    h5=self.datastore,
+                    progress=logging.debug):
+                acc += res
         i = 0
         for ordinal, eid_rlz in sorted(acc.items()):
             for er in eid_rlz:
@@ -465,7 +497,6 @@ def get_close_mosaic_models(lon, lat, buffer_radius):
             f'({lon}, {lat}) is farther than {buffer_radius} deg'
             f' from any mosaic model!')
     elif len(close_mosaic_models) > 1:
-        logging.info(
-            '(%s, %s) is closer than %s deg with respect to the following'
-            ' mosaic models: %s' % (lon, lat, buffer_radius, close_mosaic_models))
+        logging.info('(%s, %s) is close to the following mosaic models: %s',
+                     lon, lat, close_mosaic_models)
     return close_mosaic_models

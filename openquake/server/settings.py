@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2024 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ import os
 import socket
 import getpass
 import tempfile
+import logging
 
 from openquake.baselib import config
 from openquake.commonlib import datastore
@@ -31,7 +32,10 @@ except ImportError:
     STANDALONE = False
     STANDALONE_APPS = ()
 
-TEST = 'test' in sys.argv
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+WEBUI_USER = 'openquake'
+
+TEST = 'test' in sys.argv or any('pytest' in arg for arg in sys.argv)
 
 INSTALLED_APPS = ('openquake.server.db',)
 
@@ -123,6 +127,8 @@ SECRET_KEY = 'f_6=^^_0%ygcpgmemxcp0p^xq%47yqe%u9pu!ad*2ym^zt+xq$'
 MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    # NOTE: the following can be useful for debugging
+    # 'openquake.server.middleware.PrintHeadersMiddleware',
 )
 
 # Authentication is not enabled by default
@@ -184,6 +190,8 @@ LOGGING = {
     },
 }
 
+SUPPRESS_PERMISSION_DENIED_WARNINGS = False
+
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 
@@ -200,11 +208,7 @@ APPLICATION_MODE = 'PUBLIC'
 ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
 # ARISTOTLE_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
 
-
-try:
-    EXTERNAL_TOOLS = True if os.environ['EXTERNAL_TOOLS'] == 'True' else False
-except KeyError:
-    EXTERNAL_TOOLS = False
+EXTERNAL_TOOLS = os.environ.get('EXTERNAL_TOOLS', False) == 'True'
 
 # If False, a warning is displayed in case a newer version of the engine has
 # been released
@@ -259,6 +263,21 @@ except ImportError:
         # settings in this file only will be used
         pass
 
+if SUPPRESS_PERMISSION_DENIED_WARNINGS:
+    class SuppressPermissionDeniedWarnings(logging.Filter):
+        def filter(self, record):
+            if 'Forbidden' in record.getMessage():
+                # Avoid warnings like "WARNING Forbidden: /v1/calc/list"
+                return False
+            return True
+
+    LOGGING['filters'] = {
+        'suppress_403_warnings': {
+            '()': SuppressPermissionDeniedWarnings,
+        },
+    }
+    LOGGING['handlers']['console']['filters'] = ['suppress_403_warnings']
+
 # NOTE: the OQ_APPLICATION_MODE environment variable, if defined, overrides
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
@@ -266,7 +285,7 @@ APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 if APPLICATION_MODE not in ('PUBLIC',):
     # add installed_apps for cookie-consent
     for app in ('django.contrib.auth', 'django.contrib.contenttypes',
-                'cookie_consent',):
+                'openquake.server.user_profile', 'cookie_consent',):
         if app not in INSTALLED_APPS:
             INSTALLED_APPS += (app,)
 
@@ -278,12 +297,17 @@ if APPLICATION_MODE not in ('PUBLIC',):
     COOKIE_CONSENT_LOG_ENABLED = False
 
 if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
-    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+    if APPLICATION_MODE == 'ARISTOTLE':
+        from openquake.server.tests.settings.local_settings_aristotle import *  # noqa
+    elif APPLICATION_MODE == 'AELO':
+        from openquake.server.tests.settings.local_settings_aelo import *  # noqa
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
     #        We should redefine it to a different directory for each test,
     #        in order to avoid concurrency issues in case tests run in
     #        parallel
-    EMAIL_FILE_PATH = os.path.join(tempfile.gettempdir(), 'app-messages')
+    EMAIL_FILE_PATH = os.path.join(
+        config.directory.custom_tmp or tempfile.gettempdir(),
+        'app-messages')
 
 if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True
@@ -291,8 +315,14 @@ if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
 
 if LOCKDOWN:
+
+    # NOTE: the following variables are needed to send pasword reset emails
+    #       using the createnormaluser Django command.
+    USE_HTTPS = True
+    SERVER_PORT = 443
+
     # do not log to file unless running through the webui
-    if getpass.getuser() == 'openquake':  # the user that runs the webui
+    if getpass.getuser() == WEBUI_USER:
         try:
             log_filename = os.path.join(WEBUI_ACCESS_LOG_DIR,  # NOQA
                                         'webui-access.log')
@@ -332,6 +362,7 @@ if LOCKDOWN:
 
     for app in ('django.contrib.auth',
                 'django.contrib.contenttypes',
+                'openquake.server.user_profile',
                 'django.contrib.messages',
                 'django.contrib.sessions',
                 'django.contrib.admin',

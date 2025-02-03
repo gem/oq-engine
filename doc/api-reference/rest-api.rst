@@ -6,7 +6,7 @@ OpenQuake Engine Server REST API
 Introduction
 ------------
 
-oq engine server provides a series of REST API methods for running calculations, checking calculation status, and 
+oq engine server provides a series of REST API methods for running calculations, checking calculation status, and
 browsing and downloading results.
 
 All responses are JSON, unless otherwise noted.
@@ -15,7 +15,7 @@ All responses are JSON, unless otherwise noted.
 GET /v1/calc/list
 *****************
 
-List the available calculations. The url in each item of the response can be followed to retrieve complete calculation 
+List the available calculations. The url in each item of the response can be followed to retrieve complete calculation
 details.
 
 Parameters: None
@@ -114,12 +114,40 @@ Response:
 
 A list of error lines extracted from the log. If the calculation was successfull, the list is empty.
 
+**********************************
+GET /v1/calc/:calc_id/aggrisk_tags
+**********************************
+
+Get risk results aggregated by tag, together with the corresponding exposure values.
+
+NB: this URL is valid only for risk calculations with an aggregate_by parameter.
+Otherwise it returns a BadRequest error with HTTP code 400.
+
+Parameters: None
+
+Response:
+
+A JSON object. For instance, something like::
+
+    {
+      ID_1: {0: "RUS-ADM1", 1: "RUS-ADM1", 2: "RUS-ADM1"},
+      OCCUPANCY: {0: "Com", 1: "Ind", 2: "Res"},
+      number: {0: 3409, 1: 1515, 2: 9987},
+      structural: {0: 1100932352, 1: 233680832, 2: 6464446976},
+      residents: {0: 0, 1: 0, 2: 304202.40625},
+      occupants_avg: {0: 53872.5703125, 1: 20316.19921875, 2: 158342.40625},
+      structural_risk: {0: 23865734.5, 1: 1670122.25, 2: 68231988.5},
+      occupants_risk: {0: 1.888562547, 1: 0.0612079581, 2: 4.717694154},
+      number_risk: {0: 14.8953637928, 1: 1.9196949974, 2: 36.6349875927},
+      residents_risk: {0: 0, 1: 0, 2: 1412.8637619019}
+    }
+
 ***********************************
 GET /v1/calc/:calc_id/extract/:spec
 ***********************************
 
-Get an .npz file for the given object specification. If ``spec`` ends with the extension ``.attrs`` the attributes of the 
-underlying object (usually coming from an HDF5 dataset) are used to build the .npz file, while the object itself is not 
+Get an .npz file for the given object specification. If ``spec`` ends with the extension ``.attrs`` the attributes of the
+underlying object (usually coming from an HDF5 dataset) are used to build the .npz file, while the object itself is not
 retrieved.
 
 Response:
@@ -130,7 +158,7 @@ A single .npz file of Content-Type: application/octet-stream
 GET /v1/calc/:calc_id/results
 *****************************
 
-List a summary of results for the given ``calc_id``. The url in each response item can be followed to retrieve the full 
+List a summary of results for the given ``calc_id``. The url in each response item can be followed to retrieve the full
 result artifact.
 
 Parameters: None
@@ -193,8 +221,8 @@ The requested result as a blob of text. If the desired ``export_type`` is not su
 GET /v1/calc/:calc_id/log/[:start]:[:stop]
 ******************************************
 
-Get a slice of the calculation log for the given ``calc_id``, from ``start`` to ``stop``. If start is the empty string, 
-consider it ``0`` and starts from the beginning. If ``stop`` is the empty string, gives all the available lines. For 
+Get a slice of the calculation log for the given ``calc_id``, from ``start`` to ``stop``. If start is the empty string,
+consider it ``0`` and starts from the beginning. If ``stop`` is the empty string, gives all the available lines. For
 instance ``http://host/v1/calc/123/log/:`` gives the complete log for calculation 123.
 
 Parameters: None
@@ -266,19 +294,19 @@ Response::
 	model that covers the given site, returning a `400 Bad Request` response in
 	case the site does not belong to any of the Mosaic models. Otherwise, a new
 	job is created and a `200 OK` response is returned, like:
-	
+
 	{"status": "created",
 	 "job_id": 1,
 	 "outputs_uri": "http://localhost:8800/v1/calc/1/results",
 	 "log_uri": "http://localhost:8800/v1/calc/1/log/0:",
 	 "traceback_uri": "http://localhost:8800/v1/calc/1/traceback"}
-	
+
 	`outputs_uri` can be used later to retrieve calculation results, after the job is complete.
 	`log_uri` can be called to get the log of the calculation, either while it is still running or after its completion.
 	`traceback_uri` can be called in case of job failure (and only after it occurs), to retrieve a full traceback of the error.
 
-As soon as the job is complete, a notification is automatically sent via email to the user who launched it. In case of 
-success, the message will contain a link to the web page showing the outputs of the calculation; otherwise, it will 
+As soon as the job is complete, a notification is automatically sent via email to the user who launched it. In case of
+success, the message will contain a link to the web page showing the outputs of the calculation; otherwise, it will
 describe the error that occurred.
 
 **************************
@@ -377,8 +405,8 @@ Logout
 GET /reset_password/
 ********************
 
-The user is asked to submit a web form with the email address associated to his/her Django account. Then a "Reset 
-Password" email is sent to the user. By clicking on the link received via email, the user is redirected to a web form to 
+The user is asked to submit a web form with the email address associated to his/her Django account. Then a "Reset
+Password" email is sent to the user. By clicking on the link received via email, the user is redirected to a web form to
 specify a new password.
 
 **********************
@@ -402,26 +430,26 @@ Return a list of strings with the available GSIMs
 Extracting data from calculations
 ---------------------------------
 
-The engine has a relatively large set of predefined outputs, that you can get in various formats, like CSV, XML or HDF5. 
-They are all documented in the manual and they are the recommended way of interacting with the engine, if you are not 
+The engine has a relatively large set of predefined outputs, that you can get in various formats, like CSV, XML or HDF5.
+They are all documented in the manual and they are the recommended way of interacting with the engine, if you are not
 tech-savvy.
 
-However, sometimes you must be tech-savvy: for instance if you want to post-process hundreds of GB of ground motion 
-fields produced by an event based calculation, you should not use the CSV output, at least if you care about efficiency. 
-To manage this case (huge amounts of data) there is a specific solution, which is also able to manage the case of data 
+However, sometimes you must be tech-savvy: for instance if you want to post-process hundreds of GB of ground motion
+fields produced by an event based calculation, you should not use the CSV output, at least if you care about efficiency.
+To manage this case (huge amounts of data) there is a specific solution, which is also able to manage the case of data
 lacking a predefined exporter: the ``Extractor`` API.
 
-There are actually two different kind of extractors: the simple ``Extractor``, which is meant to manage large data sets 
-(say > 100 MB) and the ``WebExtractor``, which is able to interact with the WebAPI and to extract data from a remote machine. 
-The WebExtractor is nice, but cannot be used for large amount of data for various reasons; in particular, unless your 
-Internet connection is ultra-fast, downloading GBs of data will probably send the web request in timeout, causing it to 
-fail. Even if there is no timeout, the WebAPI will block, everything will be slow, the memory occupation and disk space 
+There are actually two different kind of extractors: the simple ``Extractor``, which is meant to manage large data sets
+(say > 100 MB) and the ``WebExtractor``, which is able to interact with the WebAPI and to extract data from a remote machine.
+The WebExtractor is nice, but cannot be used for large amount of data for various reasons; in particular, unless your
+Internet connection is ultra-fast, downloading GBs of data will probably send the web request in timeout, causing it to
+fail. Even if there is no timeout, the WebAPI will block, everything will be slow, the memory occupation and disk space
 will go up, and at certain moment something will fail.
 
-The ``WebExtractor`` is meant for small to medium outputs, things like the mean hazard maps - an hazard map containing 
-100,000 points and 3 PoEs requires only 1.1 MB of data at 4 bytes per point. Mean hazard curves or mean average losses 
-in risk calculation are still small enough for the ``WebExtractor``. But if you want to extract all of the realizations you 
-must go with the simple ``Extractor``: in that case your postprocessing script must run in the remote machine, since it 
+The ``WebExtractor`` is meant for small to medium outputs, things like the mean hazard maps - an hazard map containing
+100,000 points and 3 PoEs requires only 1.1 MB of data at 4 bytes per point. Mean hazard curves or mean average losses
+in risk calculation are still small enough for the ``WebExtractor``. But if you want to extract all of the realizations you
+must go with the simple ``Extractor``: in that case your postprocessing script must run in the remote machine, since it
 requires direct access to the datastore.
 
 Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves::
@@ -434,7 +462,7 @@ Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves:
 	(10000, 1, 20)
 	>> extractor.close()
 
-If in the calculation you specified the flag ``individual_rlzs=true``, then it is also possible to retrieve a specific 
+If in the calculation you specified the flag ``individual_rlzs=true``, then it is also possible to retrieve a specific
 realization
 
 	>> dic = vars(extractor.get(‘hcurves?kind=rlz-0’)) >> dic[‘rlz-000’] # array of shape (num_sites, num_imts, num_levels)
@@ -443,8 +471,8 @@ or even all realizations:
 
 	>> dic = vars(extractor.get(‘hcurves?kind=rlzs’))
 
-Here is an example of using the *WebExtractor* to retrieve hazard maps. Here we assume that in a remote machine there is 
-a WebAPI server running, a.k.a. the Engine Server. The first thing to is to set up the credentials to access the WebAPI. 
+Here is an example of using the *WebExtractor* to retrieve hazard maps. Here we assume that in a remote machine there is
+a WebAPI server running, a.k.a. the Engine Server. The first thing to is to set up the credentials to access the WebAPI.
 There are two cases:
 
 1. you have a production installation of the engine in ``/opt``
@@ -457,9 +485,9 @@ In both case you need to create a file called ``openquake.cfg`` with the followi
 	username = my-username
 	password = my-password
 
-``username`` and ``password`` can be left empty if the authentication is not enabled in the server, which is the 
-recommended way, if the server is in your own secure LAN. Otherwise you must set the right credentials. The difference 
-between case 1 and case 2 is in where to put the ``openquake.cfg`` file: if you have a production installation, put it in 
+``username`` and ``password`` can be left empty if the authentication is not enabled in the server, which is the
+recommended way, if the server is in your own secure LAN. Otherwise you must set the right credentials. The difference
+between case 1 and case 2 is in where to put the ``openquake.cfg`` file: if you have a production installation, put it in
 your $HOME, if you have a development installation, put it in your virtualenv directory.
 
 The usage then is the same as the regular extractor::
@@ -471,7 +499,7 @@ The usage then is the same as the regular extractor::
 	(10000, 1, 4)
 	>> extractor.close()
 
-If you do not want to put your credentials in the ``openquake.cfg`` file, you can do so, but then you need to pass them 
+If you do not want to put your credentials in the ``openquake.cfg`` file, you can do so, but then you need to pass them
 explicitly to the WebExtractor::
 
 	>> extractor = WebExtractor(calc_id, server, username, password)
@@ -480,14 +508,14 @@ explicitly to the WebExtractor::
 Plotting
 ********
 
-The (Web)Extractor is used in the oq plot command: by configuring ``openquake.cfg`` it is possible to plot things like 
+The (Web)Extractor is used in the oq plot command: by configuring ``openquake.cfg`` it is possible to plot things like
 hazard curves, hazard maps and uniform hazard spectra for remote (or local) calculations. Here are three examples of use::
 
 	$ oq plot 'hcurves?kind=mean&imt=PGA&site_id=0' <calc_id>
 	$ oq plot 'hmaps?kind=mean&imt=PGA' <calc_id>
 	$ oq plot 'uhs?kind=mean&site_id=0' <calc_id>
 
-The ``site_id`` is optional; if missing, only the first site (``site_id=0``) will be plotted. If you want to plot all 
+The ``site_id`` is optional; if missing, only the first site (``site_id=0``) will be plotted. If you want to plot all
 the realizations you can do::
 
 	$ oq plot 'hcurves?kind=rlzs&imt=PGA' <calc_id>
@@ -496,7 +524,7 @@ If you want to plot all statistics you can do::
 
 	$ oq plot 'hcurves?kind=stats&imt=PGA' <calc_id>
 
-It is also possible to combine plots. For instance if you want to plot all realizations and also the mean the command to 
+It is also possible to combine plots. For instance if you want to plot all realizations and also the mean the command to
 give is::
 
 	$ oq plot 'hcurves?kind=rlzs&kind=mean&imt=PGA' <calc_id>
@@ -505,27 +533,27 @@ If you want to plot the median and the mean the command is::
 
 	$ oq plot 'hcurves?kind=quantile-0.5&kind=mean&imt=PGA' <calc_id>
 
-assuming the median (i.e. *quantile-0.5*) is available in the calculation. If you want to compare say rlz-0 with rlz-2 
+assuming the median (i.e. *quantile-0.5*) is available in the calculation. If you want to compare say rlz-0 with rlz-2
 and rlz-5 you can just just say so::
 
 	$ oq plot 'hcurves?kind=rlz-0&kind=rlz-2&kind=rlz-5&imt=PGA' <calc_id>
 
-You can combine as many kinds of curves as you want. Clearly if your are specifying a kind that is not available you 
+You can combine as many kinds of curves as you want. Clearly if your are specifying a kind that is not available you
 will get an error.
 
 *********************************
 Extracting disaggregation outputs
 *********************************
 
-Disaggregation outputs are particularly complex and they are stored in the datastore in different ways depending on the 
-engine version. Here we will give a few examples for the Disaggregation Demo, which has the flag individual_rlzs set. 
+Disaggregation outputs are particularly complex and they are stored in the datastore in different ways depending on the
+engine version. Here we will give a few examples for the Disaggregation Demo, which has the flag individual_rlzs set.
 If you run the demos with a recent enough version of the engine (>=3.17) you will see two disaggregation outputs:
 
 1. Disaggregation Outputs Per Realization
 2. Statistical Disaggregation Outputs
 
-Such outputs can be exported as usual in CSV format and will generate several files. Users can be interested in 
-extracting a subset of the outputs programmatically, thus avoiding the overhead of exporting more data than needed and 
+Such outputs can be exported as usual in CSV format and will generate several files. Users can be interested in
+extracting a subset of the outputs programmatically, thus avoiding the overhead of exporting more data than needed and
 having to read the CSV. The way to go is to define an extractor::
 
 	>> extractor = Extractor(calc_id)

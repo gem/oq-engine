@@ -302,9 +302,9 @@ The postprocessing framework also integrates very well with interactive developm
 following lines are all you need to create a child datastore where the postprocessing function can store its results 
 after reading the data from the calculation datastore::
 
-	>> from openquake.commonlib.datastore import read, build_dstore_log
+	>> from openquake.commonlib.datastore import read, create_job_dstore
 	>> from openquake.calculators.postproc import mypostproc
-	>> dstore, log = build_dstore_log(parent=read(calc_id))
+	>> log, dstore = create_job_dstore(parent=read(calc_id))
 	>> with log:
 	..     mypostproc.main(dstore)
 
@@ -756,7 +756,7 @@ to set
  aggregate_by = ID_0, OCCUPANCY
  reaggregate_by = ID_0
 
-``reaggregate_by` is a new feature of engine 3.13 which allows to go
+``reaggregate_by`` is a new feature of engine 3.13 which allows to go
 from a finer aggregation (i.e. one with more tags, in this example 2)
 to a coarser aggregation (i.e. one with fewer tags, in this example 1).
 Actually the command ``oq reaggregate`` has been there for more than one

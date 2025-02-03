@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2023 GEM Foundation
+# Copyright (C) 2017-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,9 +22,9 @@ import shapely
 import logging
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl, get_bbox
+from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
-    add_borders, get_assetcol, get_country_iso_codes)
-from openquake.calculators.postproc.plots import add_rupture
+    add_borders, get_assetcol, get_country_iso_codes, add_rupture, adjust_limits)
 
 
 def main(calc_id: int = -1, site_model=False,
@@ -75,16 +75,21 @@ def main(calc_id: int = -1, site_model=False,
             disc = numpy.unique(dstore['discarded']['lon', 'lat'])
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded', s=markersize_discarded)
+    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     if oq.rupture_xml or oq.rupture_dict:
-        rec = dstore['ruptures'][0]
-        lon, lat, _dep = rec['hypo']
+        use_shakemap = dstore['oqparam'].shakemap_uri
+        if use_shakemap:
+            lon, lat = oq.rupture_dict['lon'], oq.rupture_dict['lat']
+        else:
+            rec = dstore['ruptures'][0]
+            lon, lat, _dep = rec['hypo']
+            dist = sitecol.get_cdist(rec)
+            print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         xlon, xlat = [lon], [lat]
-        dist = sitecol.get_cdist(rec)
-        print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
-        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE' and not use_shakemap:
             # assuming there is only 1 rupture, so rup_id=0
-            ax, _min_x, _min_y, _max_x, _max_y = add_rupture(
-                ax, dstore, rup_id=0)
+            rup = get_ebrupture(dstore, rup_id=0).rupture
+            ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
         else:
             p.scatter(xlon, xlat, marker='*', color='orange',
                       label='hypocenter', alpha=.5)
@@ -98,9 +103,13 @@ def main(calc_id: int = -1, site_model=False,
     else:
         minx, miny, maxx, maxy = get_bbox(
             assetcol['lon'], assetcol['lat'], xlon, xlat)
-    BUF_ANGLE = 1
-    ax.set_xlim(minx - BUF_ANGLE, maxx + BUF_ANGLE)
-    ax.set_ylim(miny - BUF_ANGLE, maxy + BUF_ANGLE)
+    minx = min(minx, min_x)
+    maxx = max(maxx, max_x)
+    miny = min(miny, min_y)
+    maxy = max(maxy, max_y)
+    xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
     if country_iso_codes is not None:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -317,7 +317,7 @@ class OqParamTestCase(unittest.TestCase):
 
     def test_gmfs_but_no_sites(self):
         inputs = fakeinputs.copy()
-        inputs['gmfs'] = 'fake.csv'
+        inputs['gmfs'] = ['fake.csv']
         with self.assertRaises(InvalidFile) as ctx:
             OqParam(
                 calculation_mode='scenario_damage',

@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import sap, general, performance, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
-from openquake.commonlib.datastore import build_dstore_log
+from openquake.commonlib.datastore import build_log_dstore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import expo_to_hdf5
 from openquake.qa_tests_data import mosaic
@@ -32,8 +32,7 @@ from openquake.qa_tests_data import mosaic
 U16 = numpy.uint16
 MOSAIC_DIR = os.path.dirname(mosaic.__file__)
 F32 = numpy.float32
-dt = [('model', (numpy.bytes_, 3)), ('trt', numpy.bytes_, 61),
-      ('gsim', hdf5.vstr), ('weight', float)]
+dt = [('model', '<S3'), ('trt', '<61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
 def collect_exposures(grm_dir):
@@ -167,7 +166,7 @@ def main(mosaic_dir, grm_dir):
     Storing global exposure
     """
     mon = performance.Monitor(measuremem=True)
-    dstore, log = build_dstore_log()
+    log, dstore = build_log_dstore()
     with dstore, log:
         with mon:
             n = build_site_model_gsims(mosaic_dir, grm_dir, dstore)

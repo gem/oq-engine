@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -65,6 +65,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
+EPS = 0.2
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -196,10 +197,15 @@ class Oq(object):
     """
     A mock for OqParam
     """
+    af = None
+    aristotle = False
+    cross_correl = None
     mea_tau_phi = False
     split_sources = True
     use_rates = False
-    af = None
+    with_betw_ratio = None
+    infer_occur_rates = False
+    inputs = ()
 
     def __init__(self, **hparams):
         vars(self).update(hparams)
@@ -512,6 +518,20 @@ def _set_poes(mean_std, loglevels, phi_b, out):
 
 # ############################ ContextMaker ############################### #
 
+
+def _fix(gsimdict, betw):
+    if betw:
+        out = {}
+        for gsim, uints in gsimdict.items():
+            if len(gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES) == 1:
+                out[valid.modified_gsim(gsim, add_between_within_stds=betw)] \
+                    = uints
+            else:
+                out[gsim] = uints
+        return out
+    return gsimdict
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -536,13 +556,8 @@ class ContextMaker(object):
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
-        if isinstance(gsims, dict):
-            self.gsims = gsims
-        else:
-            self.gsims = {gsim: U32([i]) for i, gsim in enumerate(gsims)}
-        # NB: the gid array can be overridden later on
-        self.gid = numpy.arange(len(gsims), dtype=numpy.uint16)
         if isinstance(oq, dict):
+            # this happens when instantiating RuptureData in extract.py
             param = oq
             oq = Oq(**param)
             self.mags = param.get('mags', ())  # list of strings %.2f
@@ -560,6 +575,19 @@ class ContextMaker(object):
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
 
+        if oq.with_betw_ratio:
+            betw_ratio = {'with_betw_ratio': oq.with_betw_ratio}
+        elif oq.aristotle:
+            betw_ratio = {'with_betw_ratio': 1.7}  # same as in GEESE
+        else:
+            betw_ratio = {}
+        if isinstance(gsims, dict):
+            self.gsims = _fix(gsims, betw_ratio)
+        else:
+            self.gsims = _fix({gsim: U32([i]) for i, gsim in enumerate(gsims)},
+                              betw_ratio)
+        # NB: the gid array can be overridden later on
+        self.gid = numpy.arange(len(gsims), dtype=numpy.uint16)
         self.oq = oq
         self.monitor = monitor
         self._init1(param)
@@ -576,8 +604,7 @@ class ContextMaker(object):
                     raise TypeError('Expected string, got %s' % type(imt))
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
-            self.imtls = DictArray(
-                imt_module.sort_by_imt(param['hazard_imtls']))
+            self.imtls = imt_module.dictarray(param['hazard_imtls'])
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         self.cache_distances = param.get('cache_distances', False)
@@ -671,6 +698,17 @@ class ContextMaker(object):
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
 
+    def copy(self, **kw):
+        """
+        :returns: a copy of the ContextMaker with modified attributes
+        """
+        new = copy.copy(self)
+        for k, v in kw.items():
+            setattr(new, k, v)
+        if 'imtls' in kw:
+            new.set_imts_conv()
+        return new
+
     def restrict(self, imts):
         """
         :param imts: a list of IMT strings subset of the full list
@@ -684,7 +722,7 @@ class ContextMaker(object):
     def set_imts_conv(self):
         """
         Set the .imts list and .conv dictionary for the horizontal component
-        conversion (if any).
+        conversion (if any). Also set the .loglevels.
         """
         self.loglevels = DictArray(self.imtls) if self.imtls else {}
         with warnings.catch_warnings():
@@ -700,7 +738,9 @@ class ContextMaker(object):
         for gsim in self.gsims:
             self.conv[gsim] = {}
             imc = gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT
-            if imc.name == 'GEOMETRIC_MEAN':
+            if not imc:  # for GMPETables
+                continue
+            elif imc.name == 'GEOMETRIC_MEAN':
                 pass  # nothing to do
             elif imc.name in OK_COMPONENTS:
                 dic = {imt: imc.apply_conversion(imt) for imt in self.imts}
@@ -943,8 +983,13 @@ class ContextMaker(object):
             '''
             rparams = self.get_rparams(rup)
             dd = self.defaultdict.copy()
-            np = len(rparams.get('probs_occur', []))
-            dd['probs_occur'] = numpy.zeros(np)
+            try:
+                po = rparams['probs_occur']
+            except KeyError:
+                dd['probs_occur'] = numpy.zeros(0)
+            else:
+                L = len(po) if len(po.shape) == 1 else po.shape[1]
+                dd['probs_occur'] = numpy.zeros(L)
             ctx = RecordBuilder(**dd).zeros(len(r_sites))
             for par, val in rparams.items():
                 ctx[par] = val
@@ -1024,9 +1069,9 @@ class ContextMaker(object):
                 allrups = sorted([rup for rup in allrups
                                   if minmag < rup.mag < maxmag],
                                  key=bymag)
+                self.num_rups = len(allrups) or 1
                 if not allrups:
                     return iter([])
-                self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
                 rups_sites = [(rups, sitecol) for rups in split_array(
@@ -1242,26 +1287,6 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, tau),
                 interp1d(ctx.rrup, phi))
 
-    def estimate_sites(self, src, sites):
-        """
-        :param src: a (Collapsed)PointSource
-        :param sites: a filtered SiteCollection
-        :returns: how many sites are impacted overall
-        """
-        magdist = {mag: self.maximum_distance(mag)
-                   for mag, rate in src.get_annual_occurrence_rates()}
-        nphc = src.count_nphc()
-        dists = sites.get_cdist(src.location)
-        planardict = src.get_planar(iruptures=True)
-        esites = 0
-        for m, (mag, [planar]) in enumerate(planardict.items()):
-            rrup = dists[dists < magdist[mag]]
-            nclose = (rrup < src.get_psdist(m, mag, self.pointsource_distance,
-                                            magdist)).sum()
-            nfar = len(rrup) - nclose
-            esites += nclose * nphc + nfar
-        return esites
-
     # tested in test_collapse_small
     def estimate_weight(self, src, srcfilter, multiplier=1):
         """
@@ -1269,52 +1294,42 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
+        if src.nsites == 0:  # was discarded by the prefiltering
+            return EPS, 0
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return 0, 0
+            return EPS, 0
         src.nsites = len(sites)
-        N = len(srcfilter.sitecol.complete)  # total sites
-        if (hasattr(src, 'location') and src.count_nphc() > 1 and
-                self.pointsource_distance < 1000):
-            # cps or pointsource with nontrivial nphc
-            esites = self.estimate_sites(src, sites) * multiplier
-        else:
-            step = 100 if src.code == b'F' else 10
-            ctxs = list(self.get_ctx_iter(src, sites, step=step))  # reduced
-            if not ctxs:
-                return src.num_ruptures if N == 1 else 0, 0
-            esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
-                      self.num_rups * multiplier)  # num_rups from get_ctx_iter
-        weight = esites / N  # the weight is the effective number of ruptures
-        return weight, int(esites)
+        t0 = time.time()
+        ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
+        src.dt = time.time() - t0
+        # if src.dt > .01:
+        #     print(f'{src.source_id=}, {src.dt=}')
+        if not ctxs:
+            return EPS, 0
+        esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
+                  self.num_rups * multiplier)  # num_rups from get_ctx_iter
+        weight = src.dt * src.num_ruptures / self.num_rups
+        if src.code == b'F':  # avoid over-weight in the USA model
+            weight /= 2.5
+        elif src.code == b'S':  # increase weight in SAM
+            weight *= 2.
+        elif src.code == b'N':  # increase weight in MEX
+            weight *= 5.
+        return weight or EPS, int(esites)
 
-    def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
+    def set_weight(self, sources, srcfilter, multiplier=1):
         """
         Set the weight attribute on each prefiltered source
         """
-        if hasattr(srcfilter, 'array'):  # a SiteCollection was passed
-            srcfilter = SourceFilter(srcfilter, self.maximum_distance)
-        G = len(self.gsims)
-        for src in sources:
-            if src.nsites == 0:  # was discarded by the prefiltering
-                src.esites = 0
-                src.weight = .01
-            else:
-                with mon:
-                    src.weight, src.esites = self.estimate_weight(
-                        src, srcfilter, multiplier)
-                    if src.weight == 0:
-                        src.weight = 0.001
-                    src.weight *= G
-                    if src.code == b'P':
-                        src.weight += .1
-                    elif src.code == b'C':
-                        src.weight += 10.
-                    elif src.code == b'F':
-                        src.weight += .25  * src.num_ruptures
-                    else:
-                        src.weight += 1.
+        if srcfilter.sitecol is None:
+            for src in sources:
+                src.weight = EPS
+        else:
+            for src in sources:
+                src.weight, src.esites = self.estimate_weight(
+                    src, srcfilter, multiplier)
 
 
 def by_dists(gsim):
@@ -1649,7 +1664,7 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock of a site collection used in the tests and in the SMTK
+# mock of a site collection used in the tests and in the SMT
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
@@ -1662,7 +1677,7 @@ class SitesContext(BaseContext):
     Only those required parameters are made available in a result context
     object.
     """
-    # _slots_ is used in hazardlib check_gsim and in the SMTK
+    # _slots_ is used in hazardlib check_gsim and in the SMT
     def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
                  sitecol=None):
         self._slots_ = slots
@@ -1671,7 +1686,7 @@ class SitesContext(BaseContext):
             for slot in slots:
                 setattr(self, slot, getattr(sitecol, slot))
 
-    # used in the SMTK
+    # used in the SMT
     def __len__(self):
         return len(self.sids)
 
@@ -1708,7 +1723,7 @@ def get_dists(ctx):
 
 
 # used to produce a RuptureContext suitable for legacy code, i.e. for calls
-# to .get_mean_and_stddevs, like for instance in the SMTK
+# to .get_mean_and_stddevs, like for instance in the SMT
 def full_context(sites, rup, dctx=None):
     """
     :returns: a full RuptureContext with all the relevant attributes
@@ -1748,7 +1763,7 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     return out[:, 0] if single else out
 
 
-# mock of a rupture used in the tests and in the SMTK
+# mock of a rupture used in the tests and in the SMT
 class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.

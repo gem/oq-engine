@@ -242,7 +242,7 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
-def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types):
+def build_aggcurves(items, builder, num_events, aggregate_loss_curves_types, monitor):
     """
     :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
     :param builder: a :class:`LossCurvesMapsBuilder` instance
@@ -295,6 +295,7 @@ def store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols,
             if len(year):
                 data['year'] = year[df.event_id.to_numpy()]
             items.append([(agg_id, rlz_id, loss_id), data])
+    dstore.swmr_on()
     dic = parallel.Starmap.apply(
         build_aggcurves, (items, builder, num_events, aggtypes),
         concurrent_tasks=oq.concurrent_tasks,
@@ -588,6 +589,12 @@ class PostRiskCalculator(base.RiskCalculator):
         """
         Sanity checks and save agg_curves-stats
         """
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
+            try:
+                self._plot_assets()
+            except Exception:
+                logging.error('', exc_info=True)
+
         if not ok:  # the hazard is to small
             return
         oq = self.oqparam

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -63,7 +63,7 @@ def get_risk_files(inputs):
         if key == 'fragility':
             # backward compatibily for .ini files with key fragility_file
             # instead of structural_fragility_file
-            rfs['earthquake/fragility/structural'] = inputs[
+            rfs['groundshaking/fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
             del inputs['fragility']
         elif key.endswith(('_fragility', '_vulnerability', '_vulnerability_retrofitted')):
@@ -74,10 +74,10 @@ def get_risk_files(inputs):
                 if isinstance(value, dict):  # cost_type -> fname
                     peril = match.group(1)
                     for cost_type, fname in value.items():
-                        rfs[f'{peril}/{kind}/{cost_type}'] = fname                        
+                        rfs[f'{peril}/{kind}/{cost_type}'] = fname
                 else:
                     cost_type = match.group(1)
-                    rfs[f'earthquake/{kind}/{cost_type}'] = value
+                    rfs[f'groundshaking/{kind}/{cost_type}'] = value
             else:
                 raise ValueError('Invalid key in %s: %s_file' % (job_ini, key))
     return rfs
@@ -153,7 +153,7 @@ def get_risk_functions(oqparam):
     job_ini = oqparam.inputs['job_ini']
     rmodels = AccumDict()  # (peril, loss_type, kind) -> rmodel
     for key, fname in get_risk_files(oqparam.inputs).items():
-        peril, kind, loss_type = key.split('/')  # ex. earthquake/vulnerability/structural
+        peril, kind, loss_type = key.split('/')  # ex. groundshaking/vulnerability/structural
         rmodel = nrml.to_python(fname)
         if len(rmodel) == 0:
             raise InvalidFile(f'{job_ini}: {fname} is empty!')
@@ -220,19 +220,19 @@ def rescale(curves, values):
 
 class PerilDict(dict):
     """
-    >>> pd = PerilDict({('earthquake', 'structural'): .23})
+    >>> pd = PerilDict({('groundshaking', 'structural'): .23})
     >>> pd['structural']
     0.23
     >>> pd['structurl']
     Traceback (most recent call last):
     ...
-    KeyError: ('earthquake', 'structurl')
+    KeyError: ('groundshaking', 'structurl')
     """
     def __getitem__(self, lt):
         if isinstance(lt, tuple):
             return dict.__getitem__(self, lt)
         else:  # assume lt is a loss_type string
-            return dict.__getitem__(self, ('earthquake', lt))
+            return dict.__getitem__(self, ('groundshaking', lt))
 
 
 class RiskModel(object):
@@ -255,11 +255,11 @@ class RiskModel(object):
         if calcmode in ('classical', 'classical_risk'):
             self.loss_ratios = {
                 lt: tuple(vf.mean_loss_ratios_with_steps(steps))
-                for lt, vf in risk_functions['earthquake'].items()}
+                for lt, vf in risk_functions['groundshaking'].items()}
         if calcmode == 'classical_bcr':
             self.loss_ratios_orig = {}
             self.loss_ratios_retro = {}
-            for lt, vf in risk_functions['earthquake'].items():
+            for lt, vf in risk_functions['groundshaking'].items():
                 self.loss_ratios_orig[lt] = tuple(
                     vf.mean_loss_ratios_with_steps(steps))
                 self.loss_ratios_retro[lt] = tuple(
@@ -267,7 +267,7 @@ class RiskModel(object):
 
         # set imt_by_lt
         self.imt_by_lt = {}  # dictionary loss_type -> imt
-        for lt, rf in risk_functions['earthquake'].items():
+        for lt, rf in risk_functions['groundshaking'].items():
             if rf.kind in ('vulnerability', 'fragility'):
                 self.imt_by_lt[lt] = rf.imt
 
@@ -277,13 +277,13 @@ class RiskModel(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.risk_functions['earthquake'])
+        return sorted(self.risk_functions['groundshaking'])
 
     def __call__(self, assets, gmf_df, rndgen=None):
         meth = getattr(self, self.calcmode)
         res = {(peril, lt): meth(peril, lt, assets, gmf_df, rndgen)
                for peril in self.risk_functions for lt in self.loss_types}
-        # for event_based_risk this is a map loss_type -> DataFrame(eid, aid, loss)
+        # for event_based_risk `res` is a map loss_type -> DataFrame(eid, aid, loss)
         return PerilDict(res)
 
     def __toh5__(self):
@@ -291,7 +291,7 @@ class RiskModel(object):
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        assert 'earthquake' in dic, list(dic)
+        assert 'groundshaking' in dic, list(dic)
         self.risk_functions = dic
 
     def __repr__(self):
@@ -460,36 +460,50 @@ def get_riskmodel(taxonomy, oqparam, risk_functions):
 
 
 # used only in riskmodels_test
-def get_riskcomputer(dic, alias):
+def get_riskcomputer(dic, alias, limit_states=()):
     # builds a RiskComputer instance from a suitable dictionary
     rc = scientific.RiskComputer.__new__(scientific.RiskComputer)
-    rc.asset_df = pandas.DataFrame(dic['asset_df'])
+    rc.D = len(limit_states) + 1
     rc.wdic = {}
     rfs = AccumDict(accum=[])
     steps = dic.get('lrem_steps_per_interval', 1)
-    mal = dic.get('minimum_asset_loss', {lt: 0. for lt in dic['loss_types']})
+    lts = set()
+    riskid_perils = set()
+    perils = set()
     for rlk, func in dic['risk_functions'].items():
-        riskid, lt = rlk.split('#')
+        peril, lt, riskid = rlk.split('#')
+        perils.add(peril)
+        riskid_perils.add((riskid, peril))
+        lts.add(lt)
         rf = hdf5.json_to_obj(json.dumps(func))
         if hasattr(rf, 'init'):
             rf.init()
             rf.loss_type = lt
-            rf.peril = 'earthquake'
+            rf.peril = peril
         if getattr(rf, 'retro', False):
             rf.retro = hdf5.json_to_obj(json.dumps(rf.retro))
             rf.retro.init()
             rf.retro.loss_type = lt
+        if hasattr(rf, 'array'):  # fragility
+            rf = rf.build(limit_states)
         rfs[riskid].append(rf)
+    lts = sorted(lts)
+    mal = dic.setdefault('minimum_asset_loss', {lt: 0. for lt in lts})
+    for riskid in rfs:
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
                        group_by_peril(rfs[riskid]),
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rm.alias = alias
         rc[riskid] = rm
-    for rlt, weight in dic['wdic'].items():
-        riskid, lt = rlt.split('#')
-        rc.wdic[riskid, lt] = weight
-    rc.loss_types = dic['loss_types']
+    if 'wdic' in dic:
+        for rlt, weight in dic['wdic'].items():
+            riskid, peril = rlt.split('#')
+            rc.wdic[riskid, peril] = weight
+    else:
+        rc.wdic = {(riskid, peril): 1. for riskid, peril in sorted(riskid_perils)}
+    rc.P = len(perils)
+    rc.loss_types = lts
     rc.minimum_asset_loss = mal
     rc.calculation_mode = dic['calculation_mode']
     return rc
@@ -499,19 +513,6 @@ def get_riskcomputer(dic, alias):
 
 class ValidationError(Exception):
     pass
-
-
-def get_cdict(fractions, coeffs, df, loss_types):
-    """
-    :returns: a dict loss_type -> array of shape (A, E)
-    """
-    cdict = {}
-    for li, loss_type in enumerate(loss_types):
-        for lt, risk_id, weight in zip(df.loss_type, df.risk_id, df.weight):
-            cs = coeffs[risk_id]
-            if lt == loss_type or lt == '*':
-                cdict[loss_type] = fractions[li] @ cs[loss_type] * weight
-    return cdict
 
 
 class CompositeRiskModel(collections.abc.Mapping):
@@ -546,7 +547,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             try:
                 rf.peril = df.loc[i].peril
             except AttributeError:  # in engine < 3.22 the peril was not stored
-                rf.peril = 'earthquake'
+                rf.peril = 'groundshaking'
             lt = rf.loss_type
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
                 risklist.append(rf)
@@ -587,15 +588,14 @@ class CompositeRiskModel(collections.abc.Mapping):
                 csq_files.append(fnames)
         cfs = '\n'.join(csq_files)
         df = self.tmap_df
-        for loss_type in self.oqparam.loss_types:
+        for peril in self.perils:
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
                 if len(coeffs):
-                    for lt, risk_id, weight in zip(
-                            df.loss_type, df.risk_id, df.weight):
-                        if (lt == '*' or lt == loss_type) and risk_id != '?':
+                    for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
+                        if (per == '*' or per == peril) and risk_id != '?':
                             try:
-                                coeffs[risk_id][loss_type]
+                                coeffs[risk_id][peril]
                             except KeyError as err:
                                 raise InvalidFile(
                                     'Missing %s in\n%s' % (err, cfs))
@@ -608,8 +608,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         for riskfunc in self.risklist:
             ids_by_kind[riskfunc.kind].add(riskfunc.id)
         kinds = tuple(ids_by_kind)  # vulnerability, fragility, ...
-        fnames = [fname for kind, fname in inputs.items()
-                  if kind.endswith(kinds)]
+        fnames = [fname for kind, fname in inputs.items() if kind.endswith(kinds)]
         if len(ids_by_kind) > 1:
             k = next(iter(ids_by_kind))
             base_ids = set(ids_by_kind.pop(k))
@@ -619,57 +618,69 @@ class CompositeRiskModel(collections.abc.Mapping):
                         'Check in the files %s the IDs %s' %
                         (fnames, sorted(base_ids.symmetric_difference(ids))))
 
-        # check imt_by_lt has consistent loss types for all taxonomies
         if self._riskmodels:
-            missing = AccumDict(accum=[])
-            for lt in self.loss_types:
+            for peril in self.perils:
+                # check imt_by_lt has consistent loss types for all taxonomies
+                missing = AccumDict(accum=[])
                 rms = []
                 if len(self.tmap_df):
-                    if len(self.tmap_df.loss_type.unique()) == 1:
+                    if len(self.tmap_df.peril.unique()) == 1:
                         risk_ids = self.tmap_df.risk_id
                     else:
-                        risk_ids = self.tmap_df[self.tmap_df.loss_type==lt].risk_id
+                        risk_ids = self.tmap_df[self.tmap_df.peril==peril].risk_id
                     for risk_id in risk_ids.unique():
                         rms.append(self._riskmodels[risk_id])
                 else:
                     rms.extend(self._riskmodels.values())
                 for rm in rms:
-                    try:
-                        rm.imt_by_lt[lt]
-                    except KeyError:
-                        key = '%s/%s' % (kinds[0], lt)
-                        fname = self.oqparam._risk_files[key]
-                        missing[fname].append(rm.taxonomy)
-            if missing:
-                for fname, ids in missing.items():
-                    raise InvalidFile(
-                        '%s: missing %s' % (fname, ' '.join(ids)))
+                    # NB: in event_based_risk/case_8 the loss types are
+                    # area, number, occupants, residents
+                    for lt in self.loss_types:
+                        try:
+                            rm.imt_by_lt[lt]
+                        except KeyError:
+                            key = '%s/%s/%s' % (peril, kinds[0], lt)
+                            fname = self.oqparam._risk_files[key]
+                            missing[fname].append(rm.taxonomy)
+                if missing:
+                    for fname, ids in missing.items():
+                        raise InvalidFile(
+                            '%s: missing %s %s' % (fname, peril, ' '.join(ids)))
 
-    def compute_csq(self, assets, fractions, tmap_df, oq):
+    def compute_csq(self, assets, dd5, tmap_df, oq):
         """
         :param assets: asset array
-        :param fractions: array of probabilies of shape (L, A, E, D)
+        :param dd5: distribution functions of shape (P, A, E, L, D)
         :param tmap_df: DataFrame corresponding to the given taxonomy
         :param oq: OqParam instance with .loss_types and .time_event
-        :returns: a dict consequence_name -> array of shape (A, E)
+        :returns: a dict consequence_name, loss_type -> array[P, A, E]
         """
-        _L, A, E, _D = fractions.shape
-        csq = AccumDict(accum=numpy.zeros((A, E)))
+        P, A, E, _L, _D = dd5.shape
+        csq = AccumDict(accum=numpy.zeros((P, A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
                 # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
-                    cdict = get_cdict(fractions[:, :, :, 1:], coeffs, df, oq.loss_types)
-                    csq[consequence] += scientific.consequence(
-                        consequence, assets, cdict, oq.total_loss_types, oq.time_event)
+                    for li, lt in enumerate(oq.loss_types):
+                        # dict loss_type -> coeffs for the given loss type
+                        for pi, peril in enumerate(self.perils):
+                            if len(df) == 1:
+                                [w] = df.weight
+                            else:  # assume one weigth per peril
+                                [w] = df[df.peril == peril].weight
+                            coeff = (dd5[pi, :, :, li, 1:] @
+                                     coeffs[risk_id][peril][lt] * w)
+                            cAE = scientific.consequence(
+                                consequence, assets, coeff, lt, oq.time_event)
+                            csq[consequence, li][pi] += cAE
         return csq
 
     def init(self):
         oq = self.oqparam
         if self.risklist:
-            oq.set_risk_imts(self.risklist)
+            self.perils = oq.set_risk_imts(self.risklist)
         self.damage_states = []
         self._riskmodels = {}  # riskid -> crmodel
         if oq.calculation_mode.endswith('_bcr'):
@@ -724,7 +735,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
         for riskid, rm in self._riskmodels.items():
-            for lt, rf in rm.risk_functions['earthquake'].items():
+            for lt, rf in rm.risk_functions['groundshaking'].items():
                 iml[rf.imt].append(rf.imls[0])
 
         if oq.aristotle:
@@ -776,6 +787,39 @@ class CompositeRiskModel(collections.abc.Mapping):
         dmgs = ['dmg_%d' % d for d in range(1, D)]
         return dmgs + self.get_consequences()
 
+    def multi_damage_dt(self):
+        """
+        :returns: composite datatype with fields peril-loss_type-damage_state
+        """
+        dcs = self.damage_states + self.get_consequences()
+        if len(self.perils) == 1:
+            lst = [(f'{ltype}-{dc}', F32)
+                   for ltype in self.oqparam.loss_types for dc in dcs]
+            return numpy.dtype(lst)
+        lst = []
+        for peril in self.perils:
+            for ltype in self.oqparam.loss_types:
+                for dc in dcs:
+                    lst.append((f'{peril}-{ltype}-{dc}', F32))
+        return numpy.dtype(lst)
+
+    def to_multi_damage(self, array5d):
+        """
+        :param array5d: array of shape (P, A, R, L, Dc)
+        :returns: array of shape (A, R) of dtype multi_damage_dt
+        """
+        P, A, R, L, Dc = array5d.shape
+        arr = numpy.zeros((A, R), self.multi_damage_dt())
+        for a in range(A):
+            for r in range(R):
+                lst = []
+                for pi in range(P):
+                    for li in range(L):
+                        for di in range(Dc):
+                            lst.append(array5d[pi, a, r, li, di])
+                arr[a, r] = tuple(lst)
+        return arr
+        
     def make_curve_params(self):
         # the CurveParams are used only in classical_risk, classical_bcr
         # NB: populate the inner lists .loss_types too
@@ -788,7 +832,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 allratios = []
                 for taxo in sorted(self):
                     rm = self[taxo]
-                    rf = rm.risk_functions['earthquake'][loss_type]
+                    rf = rm.risk_functions['groundshaking'][loss_type]
                     if loss_type in rm.loss_ratios:
                         ratios = rm.loss_ratios[loss_type]
                         allratios.append(ratios)
@@ -828,21 +872,23 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_output(self, asset_df, haz, sec_losses=(), rndgen=None):
+    def get_outputs(self, asset_df, haz, sec_losses=(), rndgen=None, country='?'):
         """
         :param asset_df: a DataFrame of assets with the same taxonomy and country
         :param haz: a DataFrame of GMVs on the sites of the assets
         :param sec_losses: a list of functions
         :param rndgen: a MultiEventRNG instance
-        :returns: a dictionary keyed by extended loss type
+        :returns: a list of dictionaries loss_type-> output
         """
         # rc.pprint()
         # dic = rc.todict()
         # rc2 = get_riskcomputer(dic)
         # dic2 = rc2.todict()
         # _assert_equal(dic, dic2)
-        return scientific.RiskComputer(self, asset_df).output(
-            haz, sec_losses, rndgen)
+        [taxidx] = asset_df.taxonomy.unique()
+        rc = scientific.RiskComputer(self, taxidx, country)
+        out = rc.output(asset_df, haz, sec_losses, rndgen)
+        return list(out)
 
     def __iter__(self):
         return iter(sorted(self._riskmodels))

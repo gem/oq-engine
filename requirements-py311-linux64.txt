@@ -2,6 +2,9 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/linux/py311/cffi-1.17.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py311/h3-3.7.7-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py311/timezonefinder-6.5.2-cp311-cp311-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/charset_normalizer-3.3.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/pyzmq-26.0.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/pandas-2.0.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -22,6 +25,7 @@ https://wheelhouse.openquake.org/v3/linux/py311/pyproj-3.6.1-cp311-cp311-manylin
 https://wheelhouse.openquake.org/v3/linux/py311/GDAL-3.7.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/fiona-1.9.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #pp
+https://wheelhouse.openquake.org/v3/py/pycparser-2.22-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.7.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/attrs-23.1.0-py3-none-any.whl

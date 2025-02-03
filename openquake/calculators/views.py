@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,12 +32,12 @@ import pandas
 
 from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
-    get_array, group_array, fast_agg)
-from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr, vstr
+    get_array, group_array, fast_agg, sum_records)
+from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
-from openquake.hazardlib.shakemap.parsers import download_rupture_dict
+from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
@@ -249,28 +249,6 @@ def view_high_hazard(token, dstore):
     max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
     high = (max_hazard > max_poe).all(axis=1)
     return max_hazard[high]
-
-
-@view.add('worst_sources')
-def view_worst_sources(token, dstore):
-    """
-    Returns the sources with worst weights
-    """
-    if ':' in token:
-        step = int(token.split(':')[1])
-    else:
-        step = 1
-    data = dstore.read_df('source_data', 'src_id')
-    del data['impact']
-    ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
-    [[taskno, maxtime]] = ser.to_dict().items()
-    data = data[data.taskno == taskno]
-    print('Sources in the slowest task (%d seconds, weight=%d, taskno=%d)'
-          % (maxtime, data['weight'].sum(), taskno))
-    data['slow_rate'] = data.ctimes / data.weight
-    del data['taskno']
-    df = data.sort_values('ctimes', ascending=False)
-    return df[slice(None, None, step)]
 
 
 @view.add('slow_sources')
@@ -554,19 +532,18 @@ def view_portfolio_loss(token, dstore):
 
 # used in the oq-risk-tests
 @view.add('portfolio_dmgdist')
-def portfolio_dmgdist(token, dstore):
+def view_portfolio_dmgdist(token, dstore):
     """
     The portfolio damages extracted from the first realization of damages-rlzs
     """
-    oq = dstore['oqparam']
-    dstates = ['no_damage'] + oq.limit_states
-    D = len(dstates)
-    arr = dstore['damages-rlzs'][:, 0, :D].sum(axis=0)  # shape D
-    tbl = numpy.zeros(1, dt(['total'] + dstates))
-    tbl['total'] = arr.sum()
-    for dsi, ds in enumerate(dstates):
-        tbl[ds] = arr[dsi]
-    return tbl
+    sums = sum_records(dstore['damages-rlzs'][:, 0])
+    acc = AccumDict(accum=[])
+    for name in sums.dtype.names:
+        ltype, dstate = name.split('-')
+        acc[dstate].append(sums[name][0])
+        if dstate == 'no_damage':
+            acc['loss_type'].append(ltype)
+    return pandas.DataFrame(acc)
 
 
 @view.add('portfolio_damage')
@@ -586,12 +563,10 @@ def view_portfolio_damage(token, dstore):
         return df.set_index('loss_type')
     # dimensions assets, stat, dmg_state
     if 'damages-stats' in dstore:
-        attrs = get_shape_descr(dstore['damages-stats'].attrs['json'])
-        arr = dstore.sel('damages-stats', stat='mean').sum(axis=(0, 1))
+        arr = dstore.sel('damages-stats', stat='mean')[:, 0]
     else:
-        attrs = get_shape_descr(dstore['damages-rlzs'].attrs['json'])
-        arr = dstore.sel('damages-rlzs', rlz=0).sum(axis=(0, 1))  # shape D
-    return numpy.array(arr, dt(list(attrs['dmg_state'])))
+        arr = dstore.sel('damages-rlzs', rlz=0)[:, 0]
+    return sum_records(arr)
 
 
 def sum_table(records):
@@ -808,13 +783,21 @@ def view_task_hazard(token, dstore):
     rec = data[int(index)]
     taskno = rec['task_no']
     if len(dstore['source_data/src_id']):
-        sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
-        num_ruptures = sdata.nrupts.sum()
-        eff_sites = sdata.nsites.sum()
-        msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-               'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
-                     taskno, len(sdata), num_ruptures, eff_sites,
-                     rec['weight'], rec['duration'])
+        sdata = dstore.read_df('source_data')
+        sd = sdata[sdata.taskno == taskno]
+        acc = AccumDict(accum=numpy.zeros(5))
+        for src_id, nsites, esites, nrupts, weight, ctimes in zip(
+                sd.src_id, sd.nsites, sd.esites, sd.nrupts, sd.weight, sd.ctimes):
+            acc[basename(src_id, ';:.')] += numpy.array(
+                [nsites, esites, nrupts, weight, ctimes])
+        df = pandas.DataFrame(dict(src_id=list(acc)))
+        for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
+            df[name] = [arr[i] for arr in acc.values()]
+        df = df.sort_values('ctimes').set_index('src_id')
+        time = df.ctimes.sum()
+        weight = df.weight.sum()
+        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df
+        return msg
     else:
         msg = ''
     return msg
@@ -1528,7 +1511,7 @@ def view_agg_id(token, dstore):
     Show the available aggregations
     """
     [aggby] = dstore['oqparam'].aggregate_by
-    keys = [key.decode('utf8').split(',') for key in dstore['agg_keys'][:]]
+    keys = [key.decode('utf8').split('\t') for key in dstore['agg_keys'][:]]
     keys = numpy.array(keys)  # shape (N, A)
     dic = {aggkey: keys[:, a] for a, aggkey in enumerate(aggby)}
     df = pandas.DataFrame(dic)
@@ -1592,20 +1575,6 @@ def view_rup(token, dstore):
     df = dstore.read_df('rup', sel=dict(src_id=src_id))
     df = df.sort_values(['rup_id', 'sids']).set_index('rup_id')
     return df
-
-
-@view.add('usgs_rupture')
-def view_usgs_rupture(token, dstore):
-    """
-    Show the parameters of a rupture downloaded from the USGS site.
-    $ oq show usgs_rupture:us70006sj8
-    {'lon': 74.628, 'lat': 35.5909, 'dep': 13.8, 'mag': 5.6, 'rake': 0.0}
-    """
-    try:
-        usgs_id = token.split(':', 1)[1]
-    except IndexError:
-        return 'Example: oq show usgs_rupture:us70006sj8'
-    return download_rupture_dict(usgs_id)
 
 
 # tested in oq-risk-tests etna
@@ -1789,6 +1758,8 @@ def view_aggrisk(token, dstore):
         arr[AVG][lt] += loss * rlz.weight[-1]
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
+    if len(arr) == 2:  # only one gsim, equal to the average
+        arr = numpy.delete(arr, 1, axis=0)
     return arr
 
 

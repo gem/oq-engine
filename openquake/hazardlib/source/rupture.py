@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -87,7 +87,8 @@ rupture_dt = numpy.dtype([
     ('hypo', (F32, 3)),
     ('geom_id', U32),
     ('nsites', U32),
-    ('e0', U32)])
+    ('e0', U32),
+    ('model', '<S3')])
 
 code2cls = {}
 
@@ -753,6 +754,10 @@ class EBRupture(object):
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
+    @property
+    def mag(self):
+        return self.rupture.mag
+
     def get_eids(self):
         """
         :returns: an array of event IDs
@@ -871,7 +876,7 @@ def get_ruptures(fname_csv):
         trt_smr = aw.trts.index(row['trt']) * TWO24
         tup = (u, row['seed'], 0, trt_smr,
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
-               minlon, minlat, maxlon, maxlat, hypo, u, 1, 0)
+               minlon, minlat, maxlon, maxlat, hypo, u, 1, 0, '???')
         rups.append(tup)
         geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:
@@ -893,6 +898,14 @@ def fix_vertices_order(array43):
     bottom_left = array43[3]
     bottom_right = array43[2]
     return numpy.array([top_left, top_right, bottom_left, bottom_right])
+
+
+def is_matrix(rows):
+    """
+    :returns: False if the rows have different lenghts
+    """
+    lens = [len(row) for row in rows]
+    return len(set(lens)) == 1
 
 
 def get_multiplanar(multipolygon_coords, mag, rake, trt):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,7 +33,6 @@ import re
 import psutil
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus
-from urllib.error import HTTPError
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -43,26 +42,24 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
 import numpy
-from json.decoder import JSONDecodeError
 
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib.shakemap.validate import (
+    aristotle_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
-from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
+from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, aristotle
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
-from openquake.hazardlib.shakemap.parsers import download_station_data_file
-from openquake.engine.aristotle import (
-    get_trts_around, get_aristotle_params, get_rupture_dict)
 from openquake.server import utils
 
 from django.conf import settings
@@ -73,6 +70,7 @@ from wsgiref.util import FileWrapper
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
+UTC = timezone.utc
 CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
 NOT_IMPLEMENTED = 501
@@ -113,56 +111,6 @@ AELO_FORM_PLACEHOLDERS = {
     'vs30': 'fixed at 760 m/s',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE version',
-}
-
-ARISTOTLE_FORM_LABELS = {
-    'usgs_id': 'Rupture identifier',
-    'rupture_file_from_usgs': 'Rupture from USGS',
-    'rupture_file': 'Rupture model XML',
-    'lon': 'Longitude (degrees)',
-    'lat': 'Latitude (degrees)',
-    'dep': 'Depth (km)',
-    'mag': 'Magnitude (Mw)',
-    'rake': 'Rake (degrees)',
-    'local_timestamp': 'Local timestamp of the event',
-    'time_event': 'Time of the event',
-    'dip': 'Dip (degrees)',
-    'strike': 'Strike (degrees)',
-    'maximum_distance': 'Maximum source-to-site distance (km)',
-    'mosaic_model': 'Mosaic model',
-    'trt': 'Tectonic region type',
-    'truncation_level': 'Level of truncation',
-    'number_of_ground_motion_fields': 'Number of ground motion fields',
-    'asset_hazard_distance': 'Asset hazard distance (km)',
-    'ses_seed': 'Random seed (ses_seed)',
-    'station_data_file_from_usgs': 'Station data from USGS',
-    'station_data_file': 'Station data CSV',
-    'maximum_distance_stations': 'Maximum distance of stations (km)',
-}
-
-ARISTOTLE_FORM_PLACEHOLDERS = {
-    'usgs_id': 'USGS ID or custom',
-    'rupture_file_from_usgs': '',
-    'rupture_file': 'Rupture model XML',
-    'lon': '-180 ≤ float ≤ 180',
-    'lat': '-90 ≤ float ≤ 90',
-    'dep': 'float ≥ 0',
-    'mag': 'float ≥ 0',
-    'rake': '-180 ≤ float ≤ 180',
-    'local_timestamp': '',
-    'time_event': 'day|night|transit',
-    'dip': '0 ≤ float ≤ 90',
-    'strike': '0 ≤ float ≤ 360',
-    'maximum_distance': 'float ≥ 0',
-    'mosaic_model': 'Mosaic model',
-    'trt': 'Tectonic region type',
-    'truncation_level': 'float ≥ 0',
-    'number_of_ground_motion_fields': 'float ≥ 1',
-    'asset_hazard_distance': 'float ≥ 0',
-    'ses_seed': 'int ≥ 0',
-    'station_data_file_from_usgs': '',
-    'station_data_file': 'Station data CSV',
-    'maximum_distance_stations': 'float ≥ 0',
 }
 
 HIDDEN_OUTPUTS = ['assetcol', 'job']
@@ -419,7 +367,7 @@ def download_png(request, calc_id, what):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     try:
         from PIL import Image
@@ -445,7 +393,7 @@ def calc(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name']):
+        if not utils.user_has_permission(request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -495,6 +443,7 @@ def calc_list(request, id=None):
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
+        response_data = [job for job in response_data if str(job['id']) == id]
         if not response_data:
             return HttpResponseNotFound()
         [response_data] = response_data
@@ -568,6 +517,60 @@ def calc_remove(request, calc_id):
         logging.error(message)
         return HttpResponse(content=message,
                             content_type='text/plain', status=500)
+
+
+def share_job(user_level, calc_id, share):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        message = logs.dbcmd('share_job', calc_id, share)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+
+    if 'success' in message:
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=200)
+    elif 'error' in message:
+        logging.error(message['error'])
+        return HttpResponse(content=json.dumps(message),
+                            content_type=JSON, status=403)
+    else:
+        raise AssertionError(
+            f"share_job must return 'success' or 'error'!? Returned: {message}")
+
+
+def get_user_level(request):
+    if settings.LOCKDOWN:
+        try:
+            return request.user.level
+        except AttributeError:  # e.g. AnonymousUser (not authenticated)
+            return 0
+    else:
+        # NOTE: when authentication is not required, the user interface
+        # can assume the user to have the maximum level
+        return 2
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_unshare(request, calc_id):
+    """
+    Unshare the calculation of the given id
+    """
+    user_level = get_user_level(request)
+    return share_job(user_level, calc_id, share=False)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_share(request, calc_id):
+    """
+    Share the calculation of the given id
+    """
+    user_level = get_user_level(request)
+    return share_job(user_level, calc_id, share=True)
 
 
 def log_to_json(log):
@@ -646,9 +649,9 @@ def aelo_callback(
         job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
     if not job_owner_email:
         return
-    from_email = 'aelonoreply@openquake.org'
+    from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
-    reply_to = 'aelosupport@openquake.org'
+    reply_to = settings.EMAIL_SUPPORT
     lon, lat = inputs['sites'].split()
     body = (f"Input values: lon = {lon}, lat = {lat},"
             f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']},"
@@ -694,9 +697,9 @@ def aristotle_callback(
             else:
                 params_to_print += f'{key}: {val}\n'
 
-    from_email = 'aristotlenoreply@openquake.org'
+    from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
-    reply_to = 'aristotlesupport@openquake.org'
+    reply_to = settings.EMAIL_SUPPORT
     body = (f"Input parameters:\n{params_to_print}\n\n")
     if warnings is not None:
         for warning in warnings:
@@ -721,51 +724,33 @@ def aristotle_get_rupture_data(request):
     :param request:
         a `django.http.HttpRequest` object containing usgs_id
     """
-    res = aristotle_validate(request)
-    if isinstance(res, HttpResponse):  # error
-        return res
-    rupdic, station_data_file = res
-    trts = {}
-    if station_data_file is None:
-        station_data_file = None
-    elif not os.path.isfile(station_data_file):
-        rupdic['station_data_error'] = (
-            'Unable to collect station data for rupture'
-            ' identifier "%s": %s' % (rupdic['usgs_id'], station_data_file))
-        station_data_file = None
-    try:
-        mosaic_models = get_close_mosaic_models(rupdic['lon'], rupdic['lat'], 5)
-        for mosaic_model in mosaic_models:
-            trts[mosaic_model] = get_trts_around(
-                mosaic_model,
-                os.path.join(config.directory.mosaic_dir,
-                             'exposure.hdf5'))
-    except Exception as exc:
-        usgs_id = rupdic['usgs_id']
-        if '404: Not Found' in str(exc):
-            error_msg = f'USGS ID "{usgs_id}" was not found'
-        elif 'There is not rupture.json' in str(exc):
-            error_msg = (f'USGS ID "{usgs_id}" was found, but it'
-                         f' has no associated rupture data')
-        else:
-            error_msg = str(exc)
-        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
-                         'error_msg': error_msg}
-        logging.error('', exc_info=True)
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=400)
-    rupdic['trts'] = trts
-    rupdic['mosaic_models'] = mosaic_models
-    rupdic['rupture_file_from_usgs'] = rupdic['rupture_file']
-    rupdic['station_data_file_from_usgs'] = station_data_file
-    response_data = rupdic
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    user = request.user
+    user.testdir = None
+    rup, rupdic, _oqparams, err = aristotle_validate(
+        request.POST, user, rupture_path, station_data_file)
+    if err:
+        return HttpResponse(content=json.dumps(err), content_type=JSON,
+                            status=400 if 'invalid_inputs' in err else 500)
+    if rupdic['shakemap_array'] is not None:
+        shakemap_array = rupdic['shakemap_array']
+        figsize = (6.3, 6.3)  # fitting in a single row in the template without resizing
+        rupdic['pga_map_png'] = plot_shakemap(
+            shakemap_array, 'PGA', backend='Agg', figsize=figsize,
+            with_cities=False, return_base64=True, rupture=rup)
+        rupdic['mmi_map_png'] = plot_shakemap(
+            shakemap_array, 'MMI', backend='Agg', figsize=figsize,
+            with_cities=False, return_base64=True, rupture=rup)
+        del rupdic['shakemap_array']
+    elif rup is not None:
+        img_base64 = plot_rupture(rup, figsize=(8, 8), return_base64=True)
+        rupdic['rupture_png'] = img_base64
+    return HttpResponse(content=json.dumps(rupdic), content_type=JSON,
                         status=200)
 
 
 def copy_to_temp_dir_with_unique_name(source_file_path):
-    # NOTE: for some reason, in some cases the environment variable TMPDIR is
-    # ignored, so we need to use config.directory.custom_tmp if defined
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
     temp_file_path = temp_file.name
@@ -777,128 +762,11 @@ def copy_to_temp_dir_with_unique_name(source_file_path):
 
 def get_uploaded_file_path(request, filename):
     file = request.FILES.get(filename)
-    if not file:
-        return None
-    # NOTE: we could not find a reliable way to avoid the deletion of the
-    # uploaded file right after the request is consumed, therefore we need to
-    # store a copy of it
-    file_path = copy_to_temp_dir_with_unique_name(
-        file.temporary_file_path())
-    return file_path
-
-
-def aristotle_validate(request):
-    # this is called by aristotle_get_rupture_data and aristotle_run.
-    # In the first case the form contains only usgs_id and rupture_file and
-    # returns rupdic only.
-    # In the second case the form contains all fields and it returns rupdic
-    # plus the calculation parameters (like maximum_ditance, etc.)
-    rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_path = get_uploaded_file_path(request, 'station_data_file')
-    validation_errs = {}
-    invalid_inputs = []
-    field_validation = {
-        'usgs_id': valid.simple_id,
-        'lon': valid.longitude,
-        'lat': valid.latitude,
-        'dep': valid.positivefloat,
-        'mag': valid.positivefloat,
-        'rake': valid.rake_range,
-        'dip': valid.dip_range,
-        'strike': valid.strike_range,
-        'local_timestamp': valid.local_timestamp,
-        # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
-        'time_event': valid.Choice('day', 'night', 'transit'),
-        'maximum_distance': valid.positivefloat,
-        'mosaic_model': valid.utf8,
-        'trt': valid.utf8,
-        'truncation_level': valid.positivefloat,
-        'number_of_ground_motion_fields': valid.positiveint,
-        'asset_hazard_distance': valid.positivefloat,
-        'ses_seed': valid.positiveint,
-        'maximum_distance_stations': valid.positivefloat,
-    }
-    params = {}
-    if rupture_path is None and request.POST.get('rupture_file_from_usgs'):
-        # giving precedence to the user-uploaded rupture file
-        rupture_path = request.POST.get('rupture_file_from_usgs')
-    dic = dict(usgs_id=None, rupture_file=rupture_path, lon=None, lat=None,
-               dep=None, mag=None, rake=None, dip=None, strike=None)
-    for fieldname, validation_func in field_validation.items():
-        if fieldname not in request.POST:
-            continue
-        try:
-            value = validation_func(request.POST.get(fieldname))
-        except Exception as exc:
-            blankable_fields = ['maximum_distance_stations', 'dip', 'strike',
-                                'local_timestamp']
-            # NOTE: valid.positivefloat, valid_dip_range and
-            #       valid_strike_range raise errors if their
-            #       value is blank or None
-            if (fieldname in blankable_fields and
-                    request.POST.get(fieldname) == ''):
-                if fieldname in dic:
-                    dic[fieldname] = None
-                else:
-                    params[fieldname] = None
-                continue
-            validation_errs[ARISTOTLE_FORM_LABELS[fieldname]] = str(exc)
-            invalid_inputs.append(fieldname)
-            continue
-        if fieldname in dic:
-            dic[fieldname] = value
-        else:
-            params[fieldname] = value
-
-    if 'is_point_rup' in request.POST:
-        dic['is_point_rup'] = request.POST['is_point_rup'] == 'true'
-
-    if validation_errs:
-        err_msg = 'Invalid input value'
-        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
-        err_msg += '\n'.join(
-            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
-             for field in validation_errs])
-        logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg,
-                         "invalid_inputs": invalid_inputs}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=400)
-    ignore_shakemap = request.POST.get('ignore_shakemap', False)
-    if ignore_shakemap == 'True':
-        ignore_shakemap = True
-    try:
-        rupdic = get_rupture_dict(dic, ignore_shakemap)
-    except Exception as exc:
-        msg = f'Unable to retrieve rupture data: {str(exc)}'
-        # signs '<>' would not be properly rendered in the popup notification
-        msg = msg.replace('<', '"').replace('>', '"')
-        response_data = {"status": "failed", "error_msg": msg,
-                         "error_cls": type(exc).__name__}
-        logging.error('', exc_info=True)
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=500)
-    if station_data_path is not None:
-        # giving precedence to the user-uploaded station data file
-        params['station_data_file'] = station_data_path
-    elif request.POST.get('station_data_file_from_usgs'):
-        params['station_data_file'] = request.POST.get(
-            'station_data_file_from_usgs')
-    else:
-        try:
-            station_data_file = download_station_data_file(dic['usgs_id'])
-        except HTTPError as exc:
-            logging.info(f'Station data is not available: {exc}')
-            params['station_data_file'] = None
-        except (KeyError, LookupError, UnicodeDecodeError,
-                JSONDecodeError) as exc:
-            logging.info(str(exc))
-            # NOTE: saving the error instead of the file path, then we need to
-            # check if that is a file or not
-            params['station_data_file'] = str(exc)
-        else:
-            params['station_data_file'] = station_data_file
-    return rupdic, *params.values()
+    if file:
+        # NOTE: we could not find a reliable way to avoid the deletion of the
+        # uploaded file right after the request is consumed, therefore we need
+        # to store a copy of it
+        return copy_to_temp_dir_with_unique_name(file.temporary_file_path())
 
 
 @csrf_exempt
@@ -918,39 +786,24 @@ def aristotle_run(request):
         asset_hazard_distance, ses_seed,
         maximum_distance_stations, station_data_file
     """
-    res = aristotle_validate(request)
-    if isinstance(res, HttpResponse):  # error
-        return res
-    (rupdic, local_timestamp, time_event, maximum_distance, mosaic_model, trt,
-     truncation_level, number_of_ground_motion_fields,
-     asset_hazard_distance, ses_seed, maximum_distance_stations,
-     station_data_file) = res
+    # NOTE: this is called via AJAX so the context processor isn't automatically
+    # applied, since AJAX calls often do not render templates
+    if request.user.level == 0:
+        return HttpResponseForbidden()
+    rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    user = request.user
+    user.testdir = None
+    _rup, rupdic, params, err = aristotle_validate(
+        request.POST, user, rupture_path, station_data_file)
+    if err:
+        return HttpResponse(content=json.dumps(err), content_type=JSON,
+                            status=400 if 'invalid_inputs' in err else 500)
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    if station_data_file is None or not os.path.isfile(station_data_file):
-        station_data_file = None
-    try:
-        arist = aristotle.AristotleParam(
-            rupdic,
-            time_event,
-            maximum_distance, mosaic_model, trt, truncation_level,
-            number_of_ground_motion_fields,
-            asset_hazard_distance, ses_seed,
-            local_timestamp,
-            station_data_file=station_data_file,
-            maximum_distance_stations=maximum_distance_stations)
-        params = get_aristotle_params(arist)
-    except Exception as exc:
-
-        response_data = {"status": "failed", "error_msg": str(exc),
-                         "error_cls": type(exc).__name__}
-        logging.error('', exc_info=True)
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=500)
-    user = utils.get_user(request)
     [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, None, user, None)
+        [params], config.distribution.log_level, user_name=utils.get_user(request))
 
     job_owner_email = request.user.email
     response_data = dict()
@@ -1126,7 +979,7 @@ def submit_job(request_files, ini, username, hc_id):
         jobs = [job]
     except Exception as exc:
         tb = traceback.format_exc()
-        logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
+        logs.dbcmd('log', job.calc_id, datetime.now(UTC), 'CRITICAL',
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
         exc.job_id = job.calc_id
@@ -1147,7 +1000,13 @@ def submit_job(request_files, ini, username, hc_id):
                     CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
-        mp.Process(target=engine.run_jobs, args=(jobs,)).start()
+        proc = mp.Process(target=engine.run_jobs, args=([job],))
+        proc.start()
+        if config.webapi.calc_timeout:
+            mp.Process(
+                target=engine.watchdog,
+                args=(job.calc_id, proc.pid, int(config.webapi.calc_timeout))
+            ).start()
     return job.calc_id
 
 
@@ -1181,7 +1040,7 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name']):
+        if not utils.user_has_permission(request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1254,11 +1113,11 @@ def calc_result(request, result_id):
     # the job which it is related too is not complete,
     # throw back a 404.
     try:
-        job_id, _job_status, job_user, datadir, ds_key = logs.dbcmd(
+        job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
         if ds_key in HIDDEN_OUTPUTS:
             return HttpResponseForbidden()
-        if not utils.user_has_permission(request, job_user):
+        if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1305,6 +1164,50 @@ def calc_result(request, result_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
+def aggrisk_tags(request, calc_id):
+    """
+    Return aggrisk_tags, by ``calc_id``, as JSON.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param calc_id:
+        The id of the requested calculation.
+    :returns:
+        a JSON object similar to:
+        {
+          ID_1: {0: "RUS-ADM1", 1: "RUS-ADM1", 2: "RUS-ADM1"},
+          OCCUPANCY: {0: "Com", 1: "Ind", 2: "Res"},
+          number: {0: 3409, 1: 1515, 2: 9987},
+          structural: {0: 1100932352, 1: 233680832, 2: 6464446976},
+          residents: {0: 0, 1: 0, 2: 304202.40625},
+          occupants_avg: {0: 53872.5703125, 1: 20316.19921875, 2: 158342.40625},
+          structural_risk: {0: 23865734.5, 1: 1670122.25, 2: 68231988.5},
+          occupants_risk: {0: 1.888562547, 1: 0.0612079581, 2: 4.717694154},
+          number_risk: {0: 14.8953637928, 1: 1.9196949974, 2: 36.6349875927},
+          residents_risk: {0: 0, 1: 0, 2: 1412.8637619019}
+        }
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            df = _extract(ds, 'aggrisk_tags')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
+            content_type='text/plain', status=400)
+
+    return HttpResponse(content=df.to_json(),
+                        content_type=JSON, status=200)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
 def extract(request, calc_id, what):
     """
     Wrapper over the `oq extract` command. If `setting.LOCKDOWN` is true
@@ -1313,7 +1216,7 @@ def extract(request, calc_id, what):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
@@ -1364,7 +1267,7 @@ def calc_datastore(request, job_id):
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
 
     fname = job.ds_calc_dir + '.hdf5'
@@ -1553,9 +1456,16 @@ def web_engine_get_outputs_aristotle(request, calc_id):
     time_job_after_event_str = None
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        losses = views.view('aggrisk', ds)
-        losses_header = [header.capitalize().replace('_', ' ')
-                         for header in losses.dtype.names]
+        try:
+            losses = views.view('aggrisk', ds)
+        except KeyError:
+            max_avg_gmf = ds['avg_gmf'][0].max()
+            losses = (f'The risk can not be computed since the hazard is too low:'
+                      f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+            losses_header = None
+        else:
+            losses_header = [header.capitalize().replace('_', ' ')
+                             for header in losses.dtype.names]
         if 'png' in ds:
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
             assets = 'assets.png' in ds['png']
@@ -1597,7 +1507,7 @@ def download_aggrisk(request, calc_id):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
+    if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         losses = views.view('aggrisk', ds)

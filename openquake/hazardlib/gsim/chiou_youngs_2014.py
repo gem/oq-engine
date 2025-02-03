@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,9 +30,26 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z1pt0_usgs_basin_scaling
+
 
 CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
+
+
+# CyberShake basin adjustments for CY14 (only applied above 
+# 1.9 seconds so don't provide dummy values listed below 2 s)
+# Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/CY14.csv?ref_type=heads
+COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
+IMT   phi5cy   phi6cy   
+2     0.244    1000
+3     0.262    608
+4     0.819    1000
+5     1.085    1000
+7.5   1.365    1000
+10    1.234    1000
+""")
 
 
 def _get_centered_z1pt0(region, ctx):
@@ -140,15 +157,37 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
     return ln_y
 
 
-def get_basin_depth_term(region, C, centered_z1pt0):
+def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
     Returns the basin depth scaling
     """
+    # Get USGS basin scaling factor if required
+    if usgs_bs:
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
+    else:
+        usgs_baf = np.ones(len(ctx.vs30))
+
+    # Get basin depth
+    dz1pt0 = _get_centered_z1pt0(region, ctx)
+
+    # for Z1.0 = 0.0 no deep soil correction is applied
+    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
     if region == "JPN":
-        return C["phi5jp"] * (1.0 - np.exp(-centered_z1pt0 /
-                                           CONSTANTS["phi6jp"]))
-    return C["phi5"] * (1.0 - np.exp(-centered_z1pt0 /
-                                     CONSTANTS["phi6"]))
+        return C["phi5jp"] * (1.0 - np.exp(-dz1pt0 / CONSTANTS["phi6jp"]))
+
+    # Apply cybershake adjustment if specified and SA(T > 1.9)
+    if cy and imt.period > 1.9:
+        phi5 = COEFFS_CY[imt]["phi5cy"]
+        phi6 = COEFFS_CY[imt]["phi6cy"]
+        adj = 0.1 # CY_CSIM variable in java code
+    else:
+        phi5 = C["phi5"]
+        phi6 = CONSTANTS["phi6"]
+        adj = 0.
+    
+    fb = (phi5 * (1.0 - np.exp(-dz1pt0 / phi6))) + adj
+
+    return fb * usgs_baf
 
 
 def get_directivity(C, ctx):
@@ -520,7 +559,7 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(region, C, ctx, imt, conf):
+def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs=False, cy=False):
     """
     Return mean and standard deviation values
     """
@@ -528,12 +567,8 @@ def get_mean_stddevs(region, C, ctx, imt, conf):
     ln_y_ref = get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
 
-    # Get basin depth
-    dz1pt0 = _get_centered_z1pt0(region, ctx)
-
-    # for Z1.0 = 0.0 no deep soil correction is applied
-    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
-    f_z1pt0 = get_basin_depth_term(region, C, dz1pt0)
+    # Get basin term
+    f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
 
     # Get linear amplification term
     f_lin = get_linear_site_term(region, C, ctx)
@@ -614,7 +649,8 @@ class ChiouYoungs2014(GMPE):
         
     def __init__(self, region='CAL', sigma_mu_epsilon=0.0, use_hw=True,
                  add_delta_c1=False, alpha_nm=1.0, stress_par_host=None,
-                 stress_par_target=None, delta_gamma_tab=None):
+                 stress_par_target=None, delta_gamma_tab=None,
+                 usgs_basin_scaling=False, cybershake_basin_adj=False):
 
         # set region
         self.region = region
@@ -663,6 +699,12 @@ class ChiouYoungs2014(GMPE):
                 tmp = f.read()
             self.conf['delta_gamma_tab'] = CoeffsTable(sa_damping=5, table=tmp)
 
+        # USGS basin scaling
+        self.usgs_basin_scaling = usgs_basin_scaling
+
+        # CyberShake basin adj
+        self.cybershake_basin_adj = cybershake_basin_adj
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -672,7 +714,8 @@ class ChiouYoungs2014(GMPE):
         # Reference to page 1144, PSA might need PGA value
         self.conf['imt'] = PGA()
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
-            self.region, self.COEFFS[PGA()], ctx, PGA(), self.conf)
+            self.region, self.COEFFS[PGA()], ctx, PGA(), self.conf,
+            self.usgs_basin_scaling, self.cybershake_basin_adj)
         # compute
         for m, imt in enumerate(imts):
             self.conf['imt'] = imt
@@ -682,7 +725,8 @@ class ChiouYoungs2014(GMPE):
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
-                    self.region, self.COEFFS[imt], ctx, imt, self.conf)
+                    self.region, self.COEFFS[imt], ctx, imt, self.conf,
+                    self.usgs_basin_scaling, self.cybershake_basin_adj)
                 # Reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
@@ -695,7 +739,7 @@ class ChiouYoungs2014(GMPE):
 
     #: Coefficient tables are constructed from values in tables 1 - 5
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-IMT     c1      c1a     c1b     c1c     c1d     cn      cm    c2      c3    c4     c4a  crb   c5      chm     c6      c7      c7b     c8     c8a    c8b       c9     c9a    c9b     c11      c11b        cg1        cg2       cg3     phi1       phi2      phi3     phi4     phi5   phi6  gjpit  gwn      phi1jp  phi5jp   phi6jp     tau1    tau2    sig1    sig2    sig3    sig2jp
+IMT     c1      c1a     c1b     c1c     c1d     cn      cm    c2      c3    c4     c4a  crb   c5      chm     c6      c7      c7b     c8     c8a    c8b       c9     c9a    c9b     c11      c11b        cg1        cg2       cg3     phi1       phi2      phi3     phi4     phi5   phi6  gjpit  gwn      phi1jp  phi5jp   phi6jp     tau1     tau2    sig1    sig2    sig3    sig2jp
 pga   -1.5065  0.165  -0.255  -0.165  0.255  16.0875  4.9993  1.06  1.9636  -2.1  -0.5  50  6.4551  3.0956  0.4908  0.0352   0.0462  0.     0.2695  0.4833  0.9228  0.1202  6.8607  0.      -0.4536    -0.007146  -0.006758  4.2542  -0.521   -0.1417   -0.00701   0.102151  0.     300  1.5817  0.7594  -0.6846  0.459    800.        0.4     0.26    0.4912  0.3762  0.8     0.4528
 pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1  -0.5  50  5.8096  3.0514  0.4407  0.0324   0.0097  0.2154 0.2695  5.      0.3079  0.1     6.5     0       -0.3834    -0.001852  -0.007403  4.3439  -0.7936  -0.0699   -0.008444  5.41      0.0202 300. 2.2306  0.335   -0.7966  0.9488   800.        0.3894  0.2578  0.4785  0.3629  0.7504  0.3918
 0.01  -1.5065  0.165  -0.255  -0.165  0.255  16.0875  4.9993  1.06  1.9636  -2.1  -0.5  50  6.4551  3.0956  0.4908  0.0352   0.0462  0.     0.2695  0.4833  0.9228  0.1202  6.8607  0.      -0.4536    -0.007146  -0.006758  4.2542  -0.521   -0.1417   -0.00701   0.102151  0.     300  1.5817  0.7594  -0.6846  0.459    800.        0.4     0.26    0.4912  0.3762  0.8     0.4528

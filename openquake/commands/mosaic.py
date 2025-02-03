@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2023 GEM Foundation
+# Copyright (C) 2023-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,7 @@ from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.aristotle import main_cmd
-from openquake.engine.aelo import get_params_from
+from openquake.engine.aelo import get_params_from, get_mosaic_df
 from openquake.hazardlib.geo.utils import geolocate
 
 FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
@@ -85,7 +85,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
-    mosaic_df = readinput.read_mosaic_df(buffer=.1)
+    mosaic_df = get_mosaic_df(buffer=.1)
     sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
@@ -264,27 +264,24 @@ aristotle_res = dict(count_errors=0, res_list=[])
 
 
 def callback(job_id, params, exc=None):
-    if job_id is not None:
-        job = logs.dbcmd('get_job', job_id)
-        description = job.description
-    else:
-        description = params['usgs_id']
-    error = ''
     if exc:
         logging.error(str(exc), exc_info=True)
         aristotle_res['count_errors'] += 1
         error = str(exc)
+    else:
+        error = ''
+    description = params['description']
     aristotle_res['res_list'].append((job_id, description, error))
 
 
-def aristotle(exposure_hdf5=None, *,
-              rupfname: str=FAMOUS,
-              stations: str=None,
-              mosaic_model: str=None,
-              maximum_distance: float=300.,
-              maximum_distance_stations: float=None,
-              asset_hazard_distance: float=15.,
-              number_of_ground_motion_fields: int=10):
+def aristotle(exposure_hdf5='', *,
+              rupfname=FAMOUS,
+              stations='',
+              mosaic_model='',
+              maximum_distance='300',
+              maximum_distance_stations='',
+              asset_hazard_distance='15',
+              number_of_ground_motion_fields='10'):
     """
     Run Aristotle calculations starting from a rupture file that can be
     an XML or a CSV (by default "famous_ruptures.csv"). You must pass
@@ -293,24 +290,19 @@ def aristotle(exposure_hdf5=None, *,
     """
     if not exposure_hdf5 and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
-    trt = None
-    truncation_level = 3
-    ses_seed = 42
+    trt = ''
+    truncation_level = '3'
+    ses_seed = '42'
     t0 = time.time()
     if rupfname.endswith('.csv'):
         rupture_file = None
         df = pandas.read_csv(rupfname)
         for i, row in df.iterrows():
-            rupdic = row.to_dict()
-            rupdic['rake'] = 0.
-            rupdic['dip'] = 90.
-            rupdic['strike'] = 0.
-            rupdic['rupture_file'] = None
-            usgs_id = rupdic['usgs_id']
+            usgs_id = row['usgs_id']
             print('###################### %s [%d/%d] #######################' %
                   (usgs_id, i + 1, len(df)))
             main_cmd(
-                usgs_id, rupture_file, rupdic, callback,
+                usgs_id, rupture_file, callback,
                 maximum_distance=maximum_distance,
                 mosaic_model=mosaic_model,
                 trt=trt, truncation_level=truncation_level,
@@ -320,7 +312,7 @@ def aristotle(exposure_hdf5=None, *,
                 station_data_file=stations,
                 maximum_distance_stations=maximum_distance_stations)
     else:  # assume .xml
-        main_cmd('WithRuptureFile', rupfname, None, callback,
+        main_cmd('WithRuptureFile', rupfname, callback,
                  maximum_distance=maximum_distance,
                  mosaic_model=mosaic_model,
                  trt=trt, truncation_level=truncation_level,

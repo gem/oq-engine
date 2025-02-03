@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -235,15 +235,15 @@ def gen_outputs(df, crmodel, rng, monitor):
             assets['ID_0'] = 0
         for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
             # multiple countries are tested in aristotle/case_02
-            adf.country = crmodel.countries[id0]
+            country = crmodel.countries[id0]
             with fil_mon:
                 # *crucial* for the performance of the next step
                 gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
             if len(gmf_df) == 0:  # common enough
                 continue
             with mon_risk:
-                out = crmodel.get_output(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+                [out] = crmodel.get_outputs(
+                    adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
             yield out
 
 
@@ -299,7 +299,7 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def ebrisk(proxies, cmaker, stations, dstore, monitor):
+def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
@@ -310,7 +310,8 @@ def ebrisk(proxies, cmaker, stations, dstore, monitor):
     cmaker.oq.ground_motion_fields = True
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
-        for dic in event_based.event_based(block, cmaker, stations, dstore, monitor):
+        for dic in event_based.event_based(
+                block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):
                 gmf_df = pandas.DataFrame(dic['gmfdata'])
                 yield event_based_risk(gmf_df, cmaker.oq, monitor)
@@ -417,6 +418,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
+        S = len(oq.hazard_stats())
         fix_investigation_time(oq, self.datastore)
         if oq.collect_rlzs:
             if oq.investigation_time:  # event_based
@@ -433,8 +435,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.avg_losses[lt] = numpy.zeros((self.A, R), F32)
             self.datastore.create_dset(
                 'avg_losses-rlzs/' + lt, F32, (self.A, R))
-            self.datastore.set_shape_descr(
-                'avg_losses-rlzs/' + lt, asset_id=self.assetcol['id'], rlz=R)
+            if S and R > 1:
+                self.datastore.create_dset(
+                    'avg_losses-stats/' + lt, F32, (self.A, S))
 
     def execute(self):
         """
@@ -526,16 +529,21 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     'risk_by_event contains %d duplicates for event %s' %
                     (len(arr) - len(uni), dupl[0, 2]))
 
+        s = oq.hazard_stats()
+        if s:
+            _statnames, statfuncs = zip(*s.items())
+            weights = self.datastore['weights'][:]
         if oq.avg_losses:
             for lt in self.xtypes:
-                al = self.avg_losses[lt]
+                al = self.avg_losses[lt]  # shape (A, R)
                 for r in range(self.R):
                     al[:, r] *= self.avg_ratio[r]
                 name = 'avg_losses-rlzs/' + lt
                 logging.info(f'Storing {name}')
                 self.datastore[name][:] = al
-                stats.set_rlzs_stats(self.datastore, name,
-                                     asset_id=self.assetcol['id'])
+                if s and self.R > 1:
+                    self.datastore[name.replace('-rlzs', '-stats')][:] = \
+                        stats.compute_stats2(al, statfuncs, weights)
 
         self.build_aggcurves()
         if oq.reaggregate_by:
@@ -547,4 +555,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         prc.assetcol = self.assetcol
         if hasattr(self, 'exported'):
             prc.exported = self.exported
-        prc.run(exports='')
+        prc.pre_execute()
+        res = prc.execute()
+        prc.post_execute(res)

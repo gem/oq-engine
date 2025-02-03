@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,9 +30,7 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
-from openquake.calculators.extract import (
-    extract, build_damage_dt, build_csq_dt, build_damage_array, sanitize,
-    avglosses)
+from openquake.calculators.extract import extract, sanitize, avglosses
 from openquake.calculators import post_risk
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
@@ -378,12 +376,22 @@ def export_loss_maps_npz(ekey, dstore):
     return [fname]
 
 
-def modal_damage_array(data, damage_dt):
+def modal_damage_array(data, dstates):
     # determine the damage state with the highest probability
-    A, _D = data.shape
-    dmgstate = damage_dt.names
-    arr = numpy.zeros(A, [('modal-ds', hdf5.vstr)])
-    arr['modal-ds'] = [dmgstate[data[a].argmax()] for a in range(A)]
+    acc = general.AccumDict(accum=[])
+    for name in data.dtype.names:  # peril-ltype-dstate
+        try:
+            peril, ltype, _dstate = name.split('-')
+            modal = f'modal-ds-{peril}~{ltype}'
+        except ValueError:
+            ltype, _dstate = name.split('-')
+            modal = 'modal-ds-' + ltype
+        if ltype != 'no_damage':
+            acc[modal].append(data[name])
+    acc = {k: numpy.array(acc[k]).argmax(axis=0) for k in acc}
+    arr = numpy.zeros(len(data), [(key, object) for key in acc])
+    for key in acc:
+        arr[key] = dstates[acc[key]]
     return arr
 
 
@@ -391,10 +399,11 @@ def modal_damage_array(data, damage_dt):
 @export.add(('damages-rlzs', 'csv'), ('damages-stats', 'csv'))
 def export_damages_csv(ekey, dstore):
     oq = dstore['oqparam']
+    dmgstates = numpy.concatenate(
+        [['no_damage'], dstore.getitem('crm').attrs['limit_states']])
     ebd = oq.calculation_mode == 'event_based_damage'
-    dmg_dt = build_damage_dt(dstore)
     rlzs = dstore['full_lt'].get_realizations()
-    orig = dstore[ekey[0]][:]  # shape (A, R, D)
+    orig = dstore[ekey[0]][:]  # shape (A, R, L, D, P)
     writer = writers.CsvWriter(fmt='%.6E')
     assets = get_assets(dstore)
     md = dstore.metadata
@@ -402,7 +411,6 @@ def export_damages_csv(ekey, dstore):
         rit = oq.risk_investigation_time or oq.investigation_time
         md.update(dict(investigation_time=oq.investigation_time,
                        risk_investigation_time=rit))
-    D = len(oq.limit_states) + 1
     R = 1 if oq.collect_rlzs else len(rlzs)
     if ekey[0].endswith('stats'):
         rlzs_or_stats = oq.hazard_stats()
@@ -411,26 +419,26 @@ def export_damages_csv(ekey, dstore):
     name = ekey[0].split('-')[0]
     if oq.calculation_mode != 'classical_damage':
         name = 'avg_' + name
+    csqs = tuple(dstore.getitem('crm').attrs['consequences'])
     for i, ros in enumerate(rlzs_or_stats):
         if ebd:  # export only the consequences from damages-rlzs, i == 0
-            rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
-            data = orig[:, i] * rate
-            A, Dc = data.shape
-            if Dc == D:  # no consequences, export nothing
+            if len(csqs) == 0:  # no consequences, export nothing
                 return []
-            csq_dt = build_csq_dt(dstore)
-            damages = numpy.zeros(A, csq_dt)
-            for a in range(A):
-                damages[a] = tuple(data[a, D:Dc])
+            rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
+            data = orig[:, i]
+            dtlist = [(col, F32) for col in data.dtype.names if col.endswith(csqs)]
+            damages = numpy.zeros(len(data), dtlist)
+            for csq, _ in dtlist:
+                damages[csq] = data[csq] * rate
             fname = dstore.build_fname('avg_risk', ros, ekey[1])
         else:  # scenario_damage, classical_damage
             if oq.modal_damage_state:
-                damages = modal_damage_array(orig[:, i], dmg_dt)
+                damages = modal_damage_array(orig[:, i], dmgstates)
             else:
-                damages = build_damage_array(orig[:, i], dmg_dt)
+                damages = orig[:, i]
             fname = dstore.build_fname(name, ros, ekey[1])
-        writer.save(compose_arrays(assets, damages), fname,
-                    comment=md, renamedict=dict(id='asset_id'))
+        arr = compose_arrays(assets, damages)
+        writer.save(arr, fname, comment=md, renamedict=dict(id='asset_id'))
     return writer.getsaved()
 
 
@@ -586,6 +594,19 @@ def _fix(col):
     return col
 
 
+@export.add(('aggexp_tags', 'csv'))
+def export_aggexp_tags_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    df = extract(dstore, ekey[0] + '?')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('%s.%s' % ekey)
+    writer.save(df, fname, comment=dstore.metadata)
+    return [fname]
+
+
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
     """
@@ -714,7 +735,7 @@ def convert_df_to_vulnerability(loss_type, df):
         root.append(vfunc)
     return root
 
-    
+
 def export_vulnerability_xml(dstore, edir):
     fnames = []
     for loss_type, df in dstore.read_df('crm').groupby('loss_type'):
@@ -733,15 +754,14 @@ def export_assetcol_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     df = pandas.DataFrame(assetcol)
     tagcol = dstore['assetcol'].tagcol
-    tagnames = tagcol.tagnames
-    sorted_cols = sorted([col for col in tagnames if col in df.columns])
-    unsorted_cols = [col for col in df.columns if col not in tagnames]
-    df = df[unsorted_cols + sorted_cols]
-    for asset_idx in range(len(assetcol)):
-        for tagname in tagnames:
-            tag_id = df[tagname][asset_idx]
-            tag_str = tagcol.get_tag(tagname, tag_id).split('=')[1]
-            df.loc[asset_idx, tagname] = tag_str
+    tagnames = sorted(tagcol.tagnames)
+    df = df[[col for col in df.columns if col not in tagnames]]
+    for tagname in tagnames:
+        tags = []
+        for asset_idx in range(len(assetcol)):
+            tag_id = assetcol[tagname][asset_idx]
+            tags.append(tagcol.get_tag(tagname, tag_id).split('=')[1])
+        df[tagname] = tags
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
     df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
     dest_csv = dstore.export_path('%s.%s' % ekey)

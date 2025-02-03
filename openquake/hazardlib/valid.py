@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -105,15 +105,14 @@ class FromFile(object):
     Fake GSIM to be used when the GMFs are imported from an
     external file and not computed with a GSIM.
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     DEFINED_FOR_REFERENCE_VELOCITY = None
+    _toml = '[FromFile]'
     kwargs = {}
-
-    def init(self):
-        pass
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         pass
@@ -1249,6 +1248,20 @@ def site_param(dic):
         else:
             new[name] = val
     return new
+
+
+def version(value: str):
+    """
+    >>> version('3.22')
+    (3, 22, 0)
+    >>> version('3.22.0-gitXXX')
+    (3, 22, 0)
+    """
+    vers = [0, 0, 0]
+    for i, number in enumerate(value.split('.')):
+        if 'git' not in number:
+            vers[i] = int(number)
+    return tuple(vers)
 
 
 ###########################################################################

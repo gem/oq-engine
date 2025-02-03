@@ -122,8 +122,8 @@ jobs:
           sleep 10
           cd D:\a\oq-engine\oq-engine
           $Env:OQ_APPLICATION_MODE='PUBLIC'
-          # -v 2 also logs the test names
-          python .\openquake\server\manage.py test -v 2 tests.test_public_mode
+          python -m pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake\server\tests\test_public_mode.py
 
       - name: Run tests for the engine server in read-only mode to test installation
         if: always() && env.to_run == 0
@@ -134,8 +134,8 @@ jobs:
           sleep 10
           cd D:\a\oq-engine\oq-engine
           $Env:OQ_APPLICATION_MODE='READ_ONLY'
-          # -v 2 also logs the test names
-          python .\openquake\server\manage.py test -v 2 tests.test_read_only_mode
+          python -m pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake\server\tests\test_read_only_mode.py
 
       - name: Run all demos
         if: env.to_run == 0

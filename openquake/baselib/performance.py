@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ import time
 import pstats
 import pickle
 import signal
+import logging
 import getpass
 import tempfile
 import operator
@@ -258,13 +259,7 @@ class Monitor(object):
         """
         return datetime.fromtimestamp(self._start_time)
 
-    def get_data(self):
-        """
-        :returns:
-            an array of dtype perf_dt, with the information
-            of the monitor (operation, time_sec, memory_mb, counts);
-            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
-        """
+    def _get_data(self):
         data = []
         if self.counts:
             time_sec = self.duration
@@ -272,6 +267,31 @@ class Monitor(object):
             data.append((self.operation, time_sec, memory_mb, self.counts,
                          self.task_no))
         return numpy.array(data, perf_dt)
+
+    def get_data(self):
+        """
+        :returns:
+            an array of dtype perf_dt, with the information
+            of the monitor (operation, time_sec, memory_mb, counts);
+            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
+        """
+        if not self.children:
+            data = self._get_data()
+        else:
+            lst = [self._get_data()]
+            for child in self.children:
+                lst.append(child.get_data())
+                child.reset()
+            data = numpy.concatenate(lst, dtype=perf_dt)
+        return data
+
+    def log_data(self):
+        data = self.get_data()[['operation', 'time_sec']]
+        data.sort(order='time_sec')
+        if len(data):
+            for row in data:
+                op = row['operation'].decode('utf8')
+                logging.info(f"{op} = {round(row['time_sec'], 3)} seconds")
 
     def __enter__(self):
         self.exc = None  # exception
@@ -318,19 +338,11 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
-        if not self.children:
-            data = self.get_data()
-        else:
-            lst = [self.get_data()]
-            for child in self.children:
-                lst.append(child.get_data())
-                child.reset()
-            data = numpy.concatenate(lst, dtype=perf_dt)
-        if len(data) == 0:  # no information
-            return
-        hdf5.extend(h5['performance_data'], data)
-        h5['performance_data'].flush()  # notify the reader
-        self.reset()
+        data = self.get_data()
+        if len(data):
+            hdf5.extend(h5['performance_data'], data)
+            h5['performance_data'].flush()  # notify the reader
+            self.reset()
 
     # TODO: rename this as spawn; see what will break
     def __call__(self, operation='no operation', **kw):

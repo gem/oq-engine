@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,8 @@ import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.parallel import Starmap
-from openquake.baselib.general import DictArray, AccumDict, cached_property
+from openquake.baselib.general import (
+    DictArray, AccumDict, cached_property, engine_version)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
@@ -396,8 +397,6 @@ individual_rlzs:
 
 individual_curves:
   Legacy name for `individual_rlzs`, it should not be used.
-  Example: *individual_curves = true*.
-  Default: False
 
 infer_occur_rates:
    If set infer the occurrence rates from the first probs_occur in
@@ -534,6 +533,11 @@ minimum_distance:
    If set, distances below the minimum are rounded up.
    Example: *minimum_distance = 5*
    Default: 0
+
+minimum_engine_version:
+   If set, raise an error if the engine version is below the minimum
+   Example: *minimum_engine_version = 3.22*
+   Default: None
 
 minimum_intensity:
   If set, ground motion values below the *minimum_intensity* are
@@ -720,10 +724,9 @@ sec_peril_params:
   INTERNAL
 
 secondary_perils:
-  INTERNAL
-
-secondary_simulations:
-  INTERNAL
+  List of supported secondary perils.
+  Example: *secondary_perils = HazusLiquefaction, HazusDeformation*
+  Default: empty list
 
 ses_per_logic_tree_path:
   Set the number of stochastic event sets per logic tree realization in
@@ -869,6 +872,12 @@ width_of_mfd_bin:
   Used to specify the width of the Magnitude Frequency Distribution.
   Example: *width_of_mfd_bin = 0.2*.
   Default: None
+
+with_betw_ratio:
+  Specify the between ratio for GSIMs with only the Total StdDev.
+  This is necessary in conditioned GMFs calculations.
+  Example: *with_betw_ratio = 1.7*
+  Default: None
 """ % __version__
 
 PSDIST = float(config.performance.pointsource_distance)
@@ -967,6 +976,8 @@ class OqParam(valid.ParamSet):
         'residents_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
+        'groundshaking_fragility',
+        'groundshaking_vulnerability',
         'liquefaction_fragility',
         'liquefaction_vulnerability',
         'landslide_fragility',
@@ -1081,6 +1092,7 @@ class OqParam(valid.ParamSet):
     mosaic_model = valid.Param(valid.three_letters, '')
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
+    minimum_engine_version = valid.Param(valid.version, None)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
@@ -1125,7 +1137,6 @@ class OqParam(valid.ParamSet):
     mea_tau_phi = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.namelist, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
-    secondary_simulations = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -1156,6 +1167,7 @@ class OqParam(valid.ParamSet):
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(int, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
+    with_betw_ratio = valid.Param(valid.positivefloat, None)
 
     @property
     def no_pointsource_distance(self):
@@ -1386,11 +1398,6 @@ class OqParam(valid.ParamSet):
             if not self.investigation_time and self.hazard_calculation_id is None:
                 self.raise_invalid('missing investigation_time')
 
-        # check total_losses
-        if ('damage' in self.calculation_mode and len(self.loss_types) > 1
-                and not self.total_losses):
-            self.raise_invalid('you forgot to specify total_losses =')
-
     def check_ebrisk(self):
         # check specific to ebrisk
         if self.calculation_mode == 'ebrisk':
@@ -1399,17 +1406,20 @@ class OqParam(valid.ParamSet):
                 self.ground_motion_fields = False
             if self.hazard_curves_from_gmfs:
                 self.raise_invalid('hazard_curves_from_gmfs=true is invalid in ebrisk')
-            
+
     def check_hazard(self):
         # check for GMFs from file
-        if (self.inputs.get('gmfs', '').endswith('.csv')
+        if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
             self.raise_invalid('You forgot to specify a site_model')
-        elif self.inputs.get('gmfs', '').endswith('.xml'):
+        elif self.inputs.get('gmfs', [''])[0].endswith('.xml'):
             self.raise_invalid('GMFs in XML are not supported anymore')
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
+            if self.ruptures_hdf5 and not self.minimum_intensity:
+                self.raise_invalid('missing minimum_intensity')
+
             if self.ps_grid_spacing:
                 logging.warning('ps_grid_spacing is ignored in event_based '
                                 'calculations')
@@ -1452,7 +1462,7 @@ class OqParam(valid.ParamSet):
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 self.raise_invalid('you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time')
-        
+
         # check compute_rtgm will run
         if 'rtgm' in self.postproc_func:
             if 'PGA' and "SA(0.2)" and 'SA(1.0)' not in self.imtls:
@@ -1472,7 +1482,7 @@ class OqParam(valid.ParamSet):
         else:
             self._parent = None
         # set all_cost_types
-        # rt has the form 'earthquake/vulnerability/structural', ...
+        # rt has the form 'groundshaking/vulnerability/structural', ...
         costtypes = set(rt.split('/')[2] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             try:
@@ -1480,7 +1490,8 @@ class OqParam(valid.ParamSet):
                 costtypes = set(rt.split('/')[2] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
-        self.all_cost_types = sorted(costtypes)  # including occupants
+        # all_cost_types includes occupants and exclude perils
+        self.all_cost_types = sorted(costtypes - set(scientific.PERILTYPE))
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
             ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
@@ -1515,6 +1526,12 @@ class OqParam(valid.ParamSet):
             im = from_string(imt)
             if imt.startswith("SA"):
                 imts.add("SA")
+            elif imt.startswith("Sa_avg2"):
+                imts.add("Sa_avg2")
+            elif imt.startswith("Sa_avg3"):
+                imts.add("Sa_avg3")
+            elif imt.startswith("FIV3"):
+                imts.add("FIV3")
             elif imt.startswith("SDi"):
                 imts.add("SDi")
             elif imt.startswith("EAS"):
@@ -1638,12 +1655,15 @@ class OqParam(valid.ParamSet):
         """
         return self.imtls.size // len(self.imtls)
 
+    # called in CompositeRiskModel.init
     def set_risk_imts(self, risklist):
         """
         :param risklist:
-            a list of risk functions with attributes .id, .loss_type, .kind
+            a list of risk functions with attributes .id, .peril, .loss_type, .kind
+        :returns:
+            a list of ordered unique perils
 
-        Set the attribute risk_imtls.
+        Set the attribute .risk_imtls as a side effect
         """
         risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
@@ -1664,6 +1684,7 @@ class OqParam(valid.ParamSet):
                              (imt, min(imls), max(imls)))
         suggested[-1] += '}'
         self.risk_imtls = {imt: [min(ls)] for imt, ls in risk_imtls.items()}
+
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
         if not self.hazard_imtls:
@@ -1683,13 +1704,15 @@ class OqParam(valid.ParamSet):
             if imt in sec_imts:
                 self.raise_invalid('you forgot to set secondary_perils =')
 
+        risk_perils = sorted(set(rf.peril for rf in risklist))
+        return risk_perils
+
     def get_primary_imtls(self):
         """
         :returns: IMTs and levels which are not secondary
         """
-        sec_imts = set(self.sec_imts) or self.inputs.get('multi_peril', ())
         return {imt: imls for imt, imls in self.imtls.items()
-                if imt not in sec_imts}
+                if imt not in self.sec_imts}
 
     def hmap_dt(self):  # used for CSV export
         """
@@ -1729,6 +1752,13 @@ class OqParam(valid.ParamSet):
         Dictionary extended_loss_type -> extended_loss_type index
         """
         return {lt: i for i, lt in enumerate(self.ext_loss_types)}
+
+    @property
+    def L(self):
+        """
+        :returns: the number of loss types
+        """
+        return len(self.loss_types)
 
     @property
     def loss_types(self):
@@ -1823,6 +1853,9 @@ class OqParam(valid.ParamSet):
         """
         :returns: a list of secondary outputs
         """
+        mp = self.inputs.get('multi_peril', ())
+        if mp:
+            return list(mp)  # ASH, PYRO, etc
         outs = []
         for sp in self.get_sec_perils():
             outs.extend(sp.outputs)
@@ -1865,13 +1898,32 @@ class OqParam(valid.ParamSet):
                 self.inputs['rupture_model'].endswith('.xml'))
 
     @property
+    def ruptures_hdf5(self):
+        if ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.hdf5')):
+            return self.inputs['rupture_model']
+
+    @property
     def aristotle(self):
         """
         Return True if we are in Aristotle mode, i.e. there is an HDF5
         exposure with a known structure
         """
         exposures = self.inputs.get('exposure', [])
-        return exposures and exposures[0].endswith('.hdf5')
+        yes = exposures and exposures[0].endswith('.hdf5')
+        if yes:
+            # self.avg_losses = False
+            if not self.aggregate_by:
+                self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
+        return yes
+
+    @property
+    def aelo(self):
+        """
+        Return True if we are in AELO mode, i.e. if
+        postproc_func == 'compute_rtgm.main'
+        """
+        return self.postproc_func == 'compute_rtgm.main'
 
     @property
     def fastmean(self):
@@ -1970,8 +2022,8 @@ class OqParam(valid.ParamSet):
                     'Error in shakemap_uri: Expected parameters %s, '
                     'valid parameters %s, got %s' %
                     (params, all_params, list(self.shakemap_uri)))
-        return self.hazard_calculation_id if (
-            self.shakemap_id or self.shakemap_uri) else True
+            return True
+        return self.hazard_calculation_id if self.shakemap_id else True
 
     def is_valid_truncation_level(self):
         """
@@ -2164,6 +2216,15 @@ class OqParam(valid.ParamSet):
                              'full enumeration')
         return self.sampling_method == 'early_weights'
 
+    def is_valid_version(self):
+        """
+        The engine version must be >= {minimum_engine_version}
+        """
+        if not self.minimum_engine_version:
+            return True
+        return self.minimum_engine_version <= valid.version(engine_version())
+
+
     def check_aggregate_by(self):
         tagset = asset.tagset(self.aggregate_by)
         if 'id' in tagset and len(tagset) > 1:
@@ -2261,7 +2322,7 @@ class OqParam(valid.ParamSet):
         del dic['req_site_params']
         for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.split():
             dic.pop(k, None)
-        
+
         if 'secondary_perils' in dic:
             dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
         if 'aggregate_by' in dic:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2023 GEM Foundation
+# Copyright (C) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -189,6 +189,7 @@ NotFound
 import os
 import re
 import sqlite3
+# import datetime
 import threading
 import collections
 from openquake.baselib import config
@@ -427,6 +428,10 @@ class Row(collections.abc.Sequence):
         return '<Row(%s)>' % ', '.join(items)
 
 
+# sqlite3.register_adapter(
+#     datetime.datetime, lambda val: val.isoformat())
+# sqlite3.register_converter(
+#     "datetime", lambda val: datetime.datetime.fromisoformat(val.decode()))
 db = Db(sqlite3.connect, os.path.expanduser(config.dbserver.file),
         isolation_level=None, detect_types=sqlite3.PARSE_DECLTYPES,
         timeout=20)

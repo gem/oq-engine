@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -142,7 +142,7 @@ def _get_site_amplification_term(C, ctx):
     return f_s
 
 
-def _get_basin_response_term(C, ctx):
+def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term defined in equation (9), p. 1611
     """
@@ -258,7 +258,7 @@ class AristeidouEtAl2023(GMPE):
             f_s = _get_site_amplification_term(C, ctx)
 
             # Basin-effects correction function:
-            f_basin = _get_basin_response_term(C, ctx)
+            f_basin = _get_basin_term(C, ctx)
 
             # log of the functional form considered
             mean[m] = np.squeeze(C["a"] + f_m + f_d + f_sof + f_s + f_basin)

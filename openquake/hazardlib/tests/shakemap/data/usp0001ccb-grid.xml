@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="usp0001ccb" shakemap_id="usp0001ccb" shakemap_version="1" code_version="4.0.2+335.gcbad862" process_timestamp="2020-06-03T11:35:38" shakemap_originator="atlas" map_status="automatic" shakemap_event_type="ACTUAL">
+<event event_id="usp0001ccb" magnitude="6.7" depth="33.0" lat="38.2220" lon="22.9340" event_timestamp="1981-02-24T20:53:38" event_network="us" event_description="Greece" intensity_observations="550" seismic_stations="2" point_source="False" />
+<grid_specification lon_min="20.0333" lat_min="35.6667" lon_max="26.2000" lat_max="40.4500" nominal_lon_spacing="0.0083" nominal_lat_spacing="0.0083" nlon="741" nlat="575"/><grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="MMI" units="intensity" />
+<grid_field index="4" name="PGA" units="%g" />
+<grid_field index="5" name="PGV" units="cm/s" />
+<grid_field index="6" name="PSA03" units="%g" />
+<grid_field index="7" name="PSA10" units="%g" />
+<grid_field index="8" name="PSA30" units="%g" />
+<grid_field index="9" name="SVEL" units="m/s" />
+<grid_data>
+20.0333 40.4500 4.1 0.6399 1.023 1.586 1.38 0.34 591.5
+20.0417 40.4500 4.2 0.6871 1.164 1.808 1.64 0.3924 440.4
+20.0500 40.4500 4.1 0.6577 1.069 1.66 1.461 0.3567 539.8
+20.0583 40.4500 4.2 0.6726 1.11 1.727 1.537 0.3721 496.6
+20.0667 40.4500 4.2 0.7001 1.192 1.857 1.689 0.4023 422.9
+20.0750 40.4500 4.2 0.6816 1.13 1.761 1.571 0.379 481.7
+20.0833 40.4500 4.1 0.6616 1.065 1.66 1.45 0.3545 555.3
+20.0917 40.4500 4.2 0.6921 1.154 1.802 1.614 0.3876 463
+20.1000 40.4500 4.1 0.59 0.8879 1.313 1.161 0.298 727.6
+20.1083 40.4500 4 0.544 0.8011 1.175 1.018 0.2669 885.3
+</grid_data>
+</shakemap_grid>

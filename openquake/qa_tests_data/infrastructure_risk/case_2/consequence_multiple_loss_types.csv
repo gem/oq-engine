@@ -1,0 +1,7 @@
+taxonomy,consequence,peril,slight,moderate,extensive,complete
+bridge1,non_operational,groundshaking,0,0,1,1
+connection,non_operational,groundshaking,0,0,1,1
+bridge1,non_operational,liquefaction,0,0,0,1
+connection,non_operational,liquefaction,0,0,0,1
+bridge1,non_operational,landslide,0,0,0,1
+connection,non_operational,landslide,0,0,0,1

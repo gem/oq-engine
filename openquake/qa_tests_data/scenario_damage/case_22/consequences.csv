@@ -1,6 +1,6 @@
-taxonomy,consequence,loss_type,slight,moderate,extreme,complete
-Concrete,losses,structural,0.04,0.31,0.6,1
-Wood,losses,structural,0.04,0.31,0.6,1
+taxonomy,consequence,peril,slight,moderate,extreme,complete
+Concrete,losses,groundshaking,0.04,0.31,0.6,1
+Wood,losses,groundshaking,0.04,0.31,0.6,1
 Concrete,losses,liquefaction,0,0,0,1
 Wood,losses,liquefaction,0,0,0,1
 Concrete,losses,landslide,0,0,0,1

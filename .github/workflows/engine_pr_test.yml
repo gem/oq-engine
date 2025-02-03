@@ -64,6 +64,7 @@ jobs:
         run: |
           set -e
           source ~/openquake/bin/activate
+          curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
           pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
           oq engine --upgrade-db
           cd openquake
@@ -97,13 +98,20 @@ jobs:
           fi
       - name: Server 'PUBLIC' mode tests
         run: |
-          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           source ~/openquake/bin/activate
+          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
           oq engine --upgrade-db
+          # Starting the webui here is not needed by test_public_mode,
+          # but here we also want to check that the webui starts without errors
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+           sleep 5 # wait for 5 seconds before check again
+          done
           pytest -xs --doctest-modules --disable-warnings --color=yes openquake/commands openquake/engine
-          # -v 2 also logs the test names
-          ./openquake/server/manage.py test -v 2 tests.test_public_mode
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_public_mode.py
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
@@ -132,8 +140,8 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          # -v 2 also logs the test names
-          ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_read_only_mode.py
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}
@@ -166,8 +174,8 @@ jobs:
           ./openquake/server/manage.py migrate
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
           ./openquake/server/manage.py collectstatic --noinput
-          # -v 2 also logs the test names
-          ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_aelo_mode.py
 
   server_aristotle_mode:
     runs-on: ${{ matrix.os }}
@@ -207,5 +215,5 @@ jobs:
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
-          # -v 2 also logs the test names
-          OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aristotle_mode
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_aristotle_mode.py

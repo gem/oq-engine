@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,6 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 import operator
 import collections
 import itertools
-from unittest.mock import Mock
 from functools import lru_cache
 import numpy
 import scipy.stats
@@ -43,7 +42,7 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
+from openquake.hazardlib.contexts import ContextMaker, Oq, FarAwayRupture
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates, to_probs)
 
@@ -634,19 +633,19 @@ def disaggregation(
     mags_by_trt = AccumDict(accum=set())
     dists = []
     tom = sources[0].temporal_occurrence_model
-    oq = Mock(imtls={str(imt): [iml]},
-              poes=[None],
-              rlz_index=[0],
-              epsstar=epsstar,
-              truncation_level=truncation_level,
-              investigation_time=tom.time_span,
-              maximum_distance=source_filter.integration_distance,
-              mags_by_trt=mags_by_trt,
-              num_epsilon_bins=n_epsilons,
-              mag_bin_width=mag_bin_width,
-              distance_bin_width=dist_bin_width,
-              coordinate_bin_width=coord_bin_width,
-              disagg_bin_edges=bin_edges)
+    oq = Oq(imtls={str(imt): [iml]},
+            poes=[None],
+            rlz_index=[0],
+            epsilon_star=epsstar,
+            truncation_level=truncation_level,
+            investigation_time=tom.time_span,
+            maximum_distance=source_filter.integration_distance,
+            mags_by_trt=mags_by_trt,
+            num_epsilon_bins=n_epsilons,
+            mag_bin_width=mag_bin_width,
+            distance_bin_width=dist_bin_width,
+            coordinate_bin_width=coord_bin_width,
+            disagg_bin_edges=bin_edges)
     for trt, srcs in by_trt.items():
         cmaker[trt] = cm = ContextMaker(trt, rlzs_by_gsim, oq)
         ctxs[trt].extend(cm.from_srcs(srcs, sitecol))

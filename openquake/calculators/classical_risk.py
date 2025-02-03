@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -51,7 +51,7 @@ def classical_risk(riskinputs, oqparam, monitor):
         for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
                 hcurve = haz[:, rlz]
-                out = crmodel.get_output(asset_df, hcurve)
+                [out] = crmodel.get_outputs(asset_df, hcurve)
                 for li, loss_type in enumerate(crmodel.loss_types):
                     # loss_curves has shape (A, C)
                     for i, asset in enumerate(asset_df.to_records()):

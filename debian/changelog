@@ -1,4 +1,101 @@
+  [Christopher Brooks]
+  * Small bug fix for NZ 2022 inslab variants of the Kuehn et al. (2020)
+    and Parker et al. (2020) GMMs - backarc param was not always in the
+    req. site params but is needed given included in NZ 2022 site model
+
+  [Savvinos Aristeidou]
+  * Added new ANN-based GMM in the gsim library, named `aristeidou_2024`
+  * Added new IMs, that is the FIV3, Sa_avg2, and Sa_avg3
+
   [Michele Simionato]
+  * Extended rupture_dict to the `msr` and `aspect_ratio` parameters
+  * Fixed the instantiation of file-dependent GMPEs from the datastore
+  * Optimized slow tasks both in the preclassical and the classical phase
+  * Reading the site model in calculations with ruptures.hdf5 and making
+    `minimum_intensity` mandatory
+  * Added parameter `minimum_engine_version`
+
+  [Paolo Tormene, Michele Simionato]
+  * Storing the reduced asset collection and fixing a bug when exporting
+    the average losses
+
+  [Richard Styron, Michele Simionato]
+  * Extended the preclassical calculator to work in absence of a site collection
+
+  [Michele Simionato]
+  * Added a new output "Aggregated Exposure Values" (`aggexp_tags`) and a new extractor
+    `aggrisk_tags`;
+
+python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed HDF5 bug when storing the avg_losses, visible on MacOS with a large
+    number of assets (say over a million). Fixed the same bug for damages too.
+
+  [Christopher Brooks]
+  * Added ability to specify period-dependent bias adjustment for USGS
+    classes of NGAEast GMMs (US 2023 NSHMP). Unit tests also added.
+  * Added ability to specify Chapman and Guo (2021) Coastal Plains site
+    amplification adjustment for USGS classes of NGAEast GMMs (US 2023
+    NSHMP). Unit tests also added.
+  * Added sediment depth site param (z_sed) to sites module as required
+    for Chapman and Guo (2021) Coastal Plains site amp. adjustment. QA
+    is provided through unit tests and qa_tests_data/classical/case_87.
+
+  [Michele Simionato]
+  * Removed the deprecated function `openquake.commonlib.datastore.hdf5new`
+    and changed `build_dstore_log` into `create_job_dstore`;
+  * Extended the ShakeMap parser to read the intensities associated to SA(0.6)
+  * Fixed a bug while exporting realizations.csv for scenario calculations
+  * Added `webapi.calc_timeout` configuration parameter
+  * Reduced `conditioned_gmfs_gb` to 8 GB by default
+  * Parallelized `get_mean_covs` when conditioning the GMFs
+
+  [Christopher Brooks]
+  * Added Seattle Basin classes of Kuehn et al. (2020) NGASUB GMM (uses
+    Cascadia coeffs except for basin term).
+  * Added USGS basin scaling and CyberShake adjustments to the NGAWest2
+    GMMs + ability to pass base gsim arguments within the NSHMP2014 gsim class.
+
+  [Michele Simionato]
+  * Saving the rupture geometries as 32 bit floats to save memory
+  * Internal: added a command `oq filter_around lon lat csvfile`
+  * Added a command `oq plot ebruptures?min_mag=XXX`
+  * Added a script `utils/build_global_ses`
+  * Removed the ability to read GMFs generated with engine <= 3.11
+  * Fixed the filtering of the site collection in event_based with --hc
+  * Internal: writeability check for datadir and scratch_dir (if any)
+
+  [Christopher Brooks]
+  * Added instantiation-level arguments for contextually applying
+    the M9 basin term, the CB14 basin term and the USGS basin scaling
+    model to the AbrahamsonGulerce2020, KuehnEtAl2020, ParkerEtAl2020,
+    ZhaoEtAl2006 and AtkinsonMacias2009 GMMs as required for the 2023
+    US NSHM model's subduction interface GMC. Unit tests are also
+    provided for these GMM adjustments
+
+  [Michele Simionato]
+  * Internal: forcing the signature (C, ctx, region, ...) for _get_basin_term
+    in hazardlib
+  * Extended `gmfs_file` to multiple .hdf5 files, assuming they correspond to
+    disjoint sites and events
+
+  [Paolo Tormene]
+  * Added a `duplicates_strategy` argument to `read_df` and changed the
+    approach used while reading station data, to calculate the average values
+    of stations having the same coordinates instead of raising an error
+
+  [Christopher Brooks]
+  * Added epistemic uncertainty scaling capabilities to
+    the Parker et al. (2020) NGASUB GMM.
+  * Added M9 basin term and associated tests to ModifiableGMPE
+  * Added CB14 basin term and associated tests to ModifiableGMPE
+
+  [Michele Simionato]
+  * Added parameter `with_betw_ratio`
+  * Added command `oq info peril`
+  * Extended consequences to perils
+  * Replaced taxonomy mapping by loss type with taxonomy mapping by peril
   * Internal: changed the ordering in the composite risk model from
     (loss_type, riskid) -> (riskid, loss_type)
   * Added an exporter for trt_gsim
@@ -11,8 +108,6 @@
   * Raised an error in case of non-invertible hazard curves, affecting
     disaggregation and site-specific hazard spectrum calculations
   * Changed the ruptures.csv exporter to also export the source IDs
-  * Specifying total_losses is now mandatory in damage calculations with
-    multiple loss types
   * Added support for consequence=losses for liquefaction and landslides
   * Added a check for missing secondary perils
   * Added loss types liquefaction and landslide
@@ -40,6 +135,8 @@
 
   [Michele Simionato]
   * Fixed the `assert(losses)` error in the view delta_loss in the case of few events
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 16 Jan 2025 15:15:22 +0000
 
 python3-oq-engine (3.21.0-1~xenial01) xenial; urgency=low
 

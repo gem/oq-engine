@@ -17,7 +17,7 @@ from openquake import engine
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "OpenQuake Engine"
-copyright = "2023-2024, GEM Foundation"
+copyright = "2023-2025, GEM Foundation"
 author = "GEM Foundation"
 release = "v1.0.0"
 

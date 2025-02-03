@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -431,6 +431,13 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
 REGION_SET = ["USNZ", "JP", "TW", "CH", "WA", "TRGR", "WMT", "NWE"]
 
 
+def _get_basin_term(C, ctx, region=None):
+    """
+    Get basin amplification term
+    """
+    return C["b2"] * np.log(ctx.z1pt0)
+
+
 def get_site_amplification(C, psarock, ctx, ck):
     """
     Returns the site amplification model define in equation (9)
@@ -438,7 +445,7 @@ def get_site_amplification(C, psarock, ctx, ck):
     vs30_s = np.copy(ctx.vs30)
     vs30_s[vs30_s > 1000.] = 1000.
     fn_lin = (C["b1"] + ck) * np.log(vs30_s / 760.)
-    fn_z = C["b2"] * np.log(ctx.z1pt0)
+    fn_z = _get_basin_term(C, ctx)
     fn_nl = C["b3"] * np.log((psarock + 0.1 * g) / (0.1 * g)) *\
         np.exp(-np.exp(2.0 * np.log(ctx.vs30) - 11.))
     return fn_lin + fn_z + fn_nl

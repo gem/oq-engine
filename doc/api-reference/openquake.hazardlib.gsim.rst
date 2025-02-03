@@ -150,6 +150,14 @@ aristeidou_2023
     :undoc-members:
     :show-inheritance:
 
+aristeidou_2024
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.aristeidou_2024
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 armenia_2016
 ---------------------------------------------------
 
@@ -1227,10 +1235,26 @@ utils
     :undoc-members:
     :show-inheritance:
 
+utils_usgs_chapman_guo_2021
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.utils_chapman_guo_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 utils_swiss_gmpe
 ------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.utils_swiss_gmpe
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+utils_usgs_basin_scaling
+------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.utils_usgs_basin_scaling
     :members:
     :undoc-members:
     :show-inheritance:

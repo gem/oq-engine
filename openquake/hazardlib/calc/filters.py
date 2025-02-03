@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ import sys
 import operator
 from contextlib import contextmanager
 import numpy
-from scipy.spatial import cKDTree, distance
+from scipy.spatial import KDTree, distance
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
@@ -327,6 +327,22 @@ def split_source(src):
     return splits
 
 
+def close_ruptures(ruptures, sites, dist=800.):
+    """
+    :returns: array of ruptures close to the sites
+    """    
+    hypos = ruptures['hypo']
+    kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
+    ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
+    all_sids = kr.query_ball_tree(ks, dist, eps=.1)
+    out = []
+    for r, sids in enumerate(all_sids):
+        if sids:
+            ruptures[r]['nsites'] = len(sids)
+            out.append(ruptures[r])
+    return numpy.array(out)
+
+
 default = IntegrationDistance({'default': [(MINMAG, 1000), (MAXMAG, 1000)]})
 
 
@@ -412,7 +428,9 @@ class SourceFilter(object):
         if not self.integration_distance:  # do not filter
             return self.sitecol.sids
         if trt:  # rupture proxy
-            assert hasattr(self.integration_distance, 'x')
+            if not hasattr(self.integration_distance, 'x'):
+                raise ValueError('The SourceFilter was instantiated with '
+                                 'maximum_distance and not maximum_distance(trt)')
             dlon = get_longitudinal_extent(
                 src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
             dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.
@@ -436,7 +454,7 @@ class SourceFilter(object):
 
     def _close_sids(self, lon, lat, dep, dist):
         if not hasattr(self, 'kdt'):
-            self.kdt = cKDTree(self.sitecol.xyz)
+            self.kdt = KDTree(self.sitecol.xyz)
         xyz = spherical_to_cartesian(lon, lat, dep)
         sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
         sids.sort()  # for cross-platform consistency

@@ -93,22 +93,13 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           cd ~/work/oq-engine/oq-engine
-          # -v 2 also logs the test names
-          OQ_APPLICATION_MODE=PUBLIC ./openquake/server/manage.py test -v 2 tests.test_public_mode
+          pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          OQ_APPLICATION_MODE=PUBLIC pytest -v openquake/server/tests/test_public_mode.py
 
       - name: Run tests for the engine server in read-only mode to test installation
         if: always()
         run: |
           source ~/openquake/bin/activate
           cd ~/work/oq-engine/oq-engine
-          # -v 2 also logs the test names
-          OQ_APPLICATION_MODE=READ_ONLY ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
-
-      # NOTE: we shouldn't need to install the engine in AELO mode on mac
-      # - name: Run tests for the engine server in aelo mode to test installation
-      #   if: always()
-      #   run: |
-      #     source ~/openquake/bin/activate
-      #     cd ~/work/oq-engine/oq-engine
-      #     -v 2 also logs the test names
-      #     OQ_APPLICATION_MODE=AELO OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
+          pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          OQ_APPLICATION_MODE=READ_ONLY pytest -v openquake/server/tests/test_read_only_mode.py

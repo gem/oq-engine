@@ -24,7 +24,7 @@ import getpass
 import tempfile
 import functools
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 import psutil
 from openquake.baselib import (
     DotDict, zeromq as z, general, performance, parallel, config, sap)
@@ -33,6 +33,8 @@ try:
 except ImportError:
     def setproctitle(title):
         "Do nothing"
+
+UTC = timezone.utc
 
 
 def init_workers():
@@ -117,7 +119,10 @@ class WorkerMaster(object):
                 continue
             ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
             with z.Socket(ctrl_url, z.zmq.REQ, 'connect') as sock:
-                print(sock.send('stop'))
+                try:
+                    print(sock.send('stop'))
+                except z.TimeoutError:
+                    pass  # workerpool dead for some reason
                 stopped.append(host)
         for popen in self.popens:
             popen.terminate()
@@ -178,7 +183,7 @@ class WorkerMaster(object):
                     total for host, running, total in status):
                 break
         else:
-            raise TimeoutError(status)
+            raise z.TimeoutError(status)
         return status
 
     def restart(self):
@@ -253,7 +258,7 @@ def call(func, args, taskno, mon, executing):
 def errback(job_id, task_no, exc):
     # NB: job_id can be None if the Starmap was invoked without h5
     from openquake.commonlib.logs import dbcmd
-    dbcmd('log', job_id, datetime.utcnow(), 'ERROR',
+    dbcmd('log', job_id, datetime.utcnow(UTC), 'ERROR',
           '%s/%s' % (job_id, task_no), str(exc))
     e = exc.__class__('in job %d, task %d' % (job_id, task_no))
     raise e.with_traceback(exc.__traceback__)
