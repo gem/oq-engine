@@ -7,6 +7,7 @@ on:
 jobs:
   engine:
     runs-on: ${{ matrix.os }}
+    needs: webUI
     strategy:
       fail-fast: false
       matrix:
@@ -31,7 +32,6 @@ jobs:
 
   webUI:
     runs-on: ${{ matrix.os }}
-    needs: engine
     strategy:
       matrix:
         os: [ubuntu-24.04]
