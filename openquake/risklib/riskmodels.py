@@ -143,6 +143,9 @@ class RiskFuncList(list):
             dic[rf.id, rf.peril].append(rf)
         for (riskid, peril), rfs in dic.items():
             ddic[riskid][peril] = group_by_lt(rfs)
+        num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
+        if len(set(num_perils.values())) > 1:
+            raise ValueError(f'{num_perils=}')
         return ddic
 
 
