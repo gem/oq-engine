@@ -529,6 +529,7 @@ def check_consequences(fname, taxonomies, perils):
     if 'taxonomy' in df.columns:
         missing = set(df['taxonomy']) - taxonomies
         if missing:
+            # tested in event_based_damage/case_15
             logging.warning(f'In {fname} there are taxonomies missing in '
                             f'the exposure: {missing}')
     if 'peril' in df.columns:
