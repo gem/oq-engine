@@ -714,10 +714,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         for rm in self.values():
             ltypes.update(rm.loss_types)
         self.loss_types = sorted(ltypes)
-        self.taxonomies = set()
+        self.riskids = set()
         self.distributions = set()
         for riskid, rm in self._riskmodels.items():
-            self.taxonomies.add(riskid)
+            self.riskids.add(riskid)
             rm.compositemodel = self
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'distribution_name'):

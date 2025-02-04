@@ -928,8 +928,8 @@ class HazardCalculator(BaseCalculator):
         self.datastore[fig_path] = Image.open(bio)
 
     def _read_risk1(self):
-        # read the risk model (if any), the exposure (if any) and then the
-        # site collection, possibly extracted from the exposure.
+        # read the risk model (if any) and then the site collection,
+        # possibly extracted from the exposure
         oq = self.oqparam
         self.load_crmodel()  # must be called first
         if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
@@ -1026,13 +1026,14 @@ class HazardCalculator(BaseCalculator):
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxidx = {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
                       if taxi in numpy.unique(self.assetcol['taxonomy'])}
+            # i.e. {'Concrete1': 1, 'Wood1': 2}
             tmap_df = readinput.taxonomy_mapping(oq, taxidx)
             self.crmodel.set_tmap(tmap_df)
             risk_ids = set(tmap_df.risk_id)
 
             # check that we are covering all the taxonomies in the exposure
             # (exercised in EventBasedRiskTestCase::test_missing_taxonomy)
-            missing = risk_ids - set(self.crmodel.taxonomies)
+            missing = risk_ids - set(self.crmodel.riskids)
             if self.crmodel and missing:
                 # in scenario_damage/case_14 the fragility model contains
                 # 'CR+PC/LDUAL/HBET:8.19/m ' with a trailing space while
@@ -1041,10 +1042,10 @@ class HazardCalculator(BaseCalculator):
                     'The tmap.risk_id %s are not in the CompositeRiskModel' % missing)
             self.crmodel.check_risk_ids(oq.inputs)
 
-            if len(self.crmodel.taxonomies) > len(risk_ids):
+            if len(self.crmodel.riskids) > len(risk_ids):
                 logging.info(
-                    'Reducing risk model from %d to %d taxonomy strings',
-                    len(self.crmodel.taxonomies), len(risk_ids))
+                    'Reducing risk model from %d to %d risk functions',
+                    len(self.crmodel.riskids), len(risk_ids))
                 self.crmodel = self.crmodel.reduce(risk_ids)
                 self.crmodel.tmap_df = tmap_df
 
