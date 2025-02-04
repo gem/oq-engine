@@ -18,6 +18,7 @@
 import re
 import json
 import copy
+import logging
 import functools
 import collections
 import numpy
@@ -515,6 +516,25 @@ class ValidationError(Exception):
     pass
 
 
+def check_consequences(fname, taxonomies, perils):
+    """
+    Check that the taxonomy field (if any) and the peril field (if any)
+    in the consequence file are consistent with the expected taxonomies
+    and perils
+    """
+    missing = set()
+    df = pandas.read_csv(fname)
+    if 'taxonomy' in df.columns:
+        missing = set(df['taxonomy']) - taxonomies
+        if missing:
+            logging.warning(f'In {fname} there are taxonomies missing in '
+                            f'the exposure: {missing}')
+    if 'peril' in df.columns:
+        for line, peril in enumerate(df['peril'], 1):
+            if peril not in perils:
+                raise InvalidFile(f'{fname}: unknown {peril=} at {line=}')
+
+
 class CompositeRiskModel(collections.abc.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -572,7 +592,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
 
-    def set_tmap(self, tmap_df):
+    def set_tmap(self, tmap_df, taxonomies):
         """
         Set the attribute .tmap_df if the risk IDs in the
         taxonomy mapping are consistent with the fragility functions.
@@ -586,19 +606,21 @@ class CompositeRiskModel(collections.abc.Mapping):
                 csq_files.extend(fnames)
             else:
                 csq_files.append(fnames)
+        for fname in csq_files:
+            check_consequences(fname, taxonomies, self.perils)
         cfs = '\n'.join(csq_files)
         df = self.tmap_df
         for peril in self.perils:
             for byname, coeffs in self.consdict.items():
                 # ex. byname = "losses_by_taxonomy"
-                if len(coeffs):
-                    for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
-                        if (per == '*' or per == peril) and risk_id != '?':
-                            try:
-                                coeffs[risk_id][peril]
-                            except KeyError:
-                                raise InvalidFile(
-                                    f'Missing {risk_id=}, {peril=} in\n{cfs}')
+                # in the future we could have "losses_by_occupancy", etc
+                for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
+                    if (per == '*' or per == peril) and risk_id != '?':
+                        try:
+                            coeffs[risk_id][peril]
+                        except KeyError:
+                            raise InvalidFile(
+                                f'Missing {risk_id=}, {peril=} in\n{cfs}')
 
     def check_risk_ids(self, inputs):
         """
