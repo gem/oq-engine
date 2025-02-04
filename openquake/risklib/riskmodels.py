@@ -104,30 +104,29 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def group_by_peril(funclist):
+def group_by_lt(funclist):
     """
     Converts a list of objects with attribute .loss_type into a dictionary
     peril -> loss_type -> risk_function
     """
-    ddic = AccumDict(accum=AccumDict(accum=[]))  # peril -> lt -> rf
+    dic = AccumDict(accum = []) # peril -> lt -> rf
     for rf in funclist:
-        ddic[rf.peril][rf.loss_type].append(rf)
-    for peril, dic in ddic.items():
-        for lt, lst in dic.items():
-            if len(lst) == 1:
-                dic[lt] = lst[0]
-            elif lst[1].kind == 'fragility':
-                # EventBasedDamageTestCase.test_case_11
-                cf, ffl = lst
-                ffl.cf = cf
-                dic[lt] = ffl
-            elif lst[1].kind == 'vulnerability_retrofitted':
-                vf, retro = lst
-                vf.retro = retro
-                dic[lt] = vf
-            else:
-                raise RuntimeError(lst)
-    return ddic
+        dic[rf.loss_type].append(rf)
+    for lt, lst in dic.items():
+        if len(lst) == 1:
+            dic[lt] = lst[0]
+        elif lst[1].kind == 'fragility':
+            # EventBasedDamageTestCase.test_case_11
+            cf, ffl = lst
+            ffl.cf = cf
+            dic[lt] = ffl
+        elif lst[1].kind == 'vulnerability_retrofitted':
+            vf, retro = lst
+            vf.retro = retro
+            dic[lt] = vf
+        else:
+            raise RuntimeError(lst)
+    return dic
 
 
 class RiskFuncList(list):
@@ -136,12 +135,15 @@ class RiskFuncList(list):
     """
     def groupby_id(self):
         """
-        :returns: dictionary id -> loss_type -> risk_function
+        :returns: dictionary id -> peril -> loss_type -> risk_function
         """
-        ddic = AccumDict(accum=[])
+        ddic = AccumDict(accum=AccumDict(accum=[]))
+        dic = AccumDict(accum=[])
         for rf in self:
-            ddic[rf.id].append(rf)
-        return {riskid: group_by_peril(rfs) for riskid, rfs in ddic.items()}
+            dic[rf.id, rf.peril].append(rf)
+        for (riskid, peril), rfs in dic.items():
+            ddic[riskid][peril] = group_by_lt(rfs)
+        return ddic
 
 
 def get_risk_functions(oqparam):
