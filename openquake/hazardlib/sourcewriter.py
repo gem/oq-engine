@@ -727,8 +727,11 @@ def build_source_model(csm):
 
 # ##################### generic source model writer ####################### #
 
-def extract_ddict(src_groups):
+def extract_gridded_attrs(src_groups):
     """
+    Extract the attributes of nonparametric/multifault sources. The
+    attributes are arrays or a list of strings for rupture_idxs.
+
     :returns: a dictionary source_id -> attr -> value
     """
     ddict = {}
@@ -777,30 +780,27 @@ def write_source_model(dest, sources_or_groups, name=None,
     if attrs['investigation_time'] is None:
         del attrs['investigation_time']
     nodes = list(map(obj_to_node, groups))
-    ddict = extract_ddict(groups)
+    gridded_attrs = extract_gridded_attrs(groups)
     out = [dest]
-    if ddict:
+    if gridded_attrs:
+        # for nonparametric and multifault sources save attrs on HDF5 file
+        dest5 = os.path.splitext(dest)[0] + '.hdf5'
+        with hdf5.File(dest5, 'w') as h:
+            for src_id, attrs in gridded_attrs.items():
+                for k, v in attrs.items():
+                    key = '%s/%s' % (src_id, k)
+                    dset = h.create_dataset(key, v.shape, v.dtype,
+                                            compression='gzip',
+                                            compression_opts=9)
+                    if key == 'rupture_idxs' and prefix:
+                        dset[:] = [prefix + x for x in v]
+                    else:
+                        dset[:] = v
         # remove duplicate content from nodes
         for grp_node in nodes:
             for src_node in grp_node:
-                if src_node["id"] in ddict:
+                if src_node["id"] in gridded_attrs:
                     src_node.nodes = []
-        # save HDF5 file
-        dest5 = os.path.splitext(dest)[0] + '.hdf5'
-        with hdf5.File(dest5, 'w') as h:
-            for src_id, dic in ddict.items():
-                for k, v in dic.items():
-                    key = '%s/%s' % (src_id, k)
-                    if isinstance(v, numpy.ndarray):
-                        h.create_dataset(key, v.shape, v.dtype,
-                                         compression='gzip',
-                                         compression_opts=9)
-                        h[key][:] = v
-                    elif k == 'rupture_idxs' and prefix:
-                        h[key] = [' '.join(prefix + r for r in ridxs.split())
-                                  for ridxs in v]
-                    else:
-                        h[key] = v
         out.append(dest5)
 
     # produce a geometryModel if there are MultiFaultSources
