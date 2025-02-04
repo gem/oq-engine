@@ -1,3 +1,9 @@
+  [Michele Simionato]
+  * Added checks on the consequence functions across taxonomies and perils
+  * Fixed the taxonomy field in consequences.csv to be the exposure
+    taxonomy and not a fragility function ID
+  * Internal: renamed aristotle -> impact
+
   [Christopher Brooks]
   * Small bug fix for NZ 2022 inslab variants of the Kuehn et al. (2020)
     and Parker et al. (2020) GMMs - backarc param was not always in the
