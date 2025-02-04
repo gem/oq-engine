@@ -1063,7 +1063,7 @@ class HazardCalculator(BaseCalculator):
             oq.observed_imts = self.observed_imts
 
         if hasattr(self, 'sitecol') and self.sitecol and not oq.ruptures_hdf5:
-            if 'site_model' in oq.inputs or oq.aristotle:
+            if 'site_model' in oq.inputs or oq.impact:
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
@@ -1646,7 +1646,7 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
                 % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
-        if oq.aristotle:
+        if oq.impact:
             gmf_dict = {'kind': 'basic'}  # possibly add correlation
         elif oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
             # cross correlation and/or spatial correlation after S&H

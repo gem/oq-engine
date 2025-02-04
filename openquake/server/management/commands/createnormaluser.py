@@ -59,9 +59,9 @@ class Command(BaseCommand):
                 'registration/normal_user_creation_email_aelo.txt')
         elif settings.APPLICATION_MODE == 'ARISTOTLE':
             password_reset_subject = (
-                'registration/normal_user_creation_email_subject_aristotle.txt')  # NOQA
+                'registration/normal_user_creation_email_subject_impact.txt')  # NOQA
             email_template_name = (
-                'registration/normal_user_creation_email_aristotle.txt')
+                'registration/normal_user_creation_email_impact.txt')
         else:
             password_reset_subject = (
                 'registration/normal_user_creation_email_subject.txt')

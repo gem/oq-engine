@@ -836,8 +836,8 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     return exposure, assets_df
 
 
-# used in aristotle calculations
-def aristotle_read_assets(h5, start, stop):
+# used in impact calculations
+def impact_read_assets(h5, start, stop):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
@@ -920,7 +920,7 @@ class Exposure(object):
                 raise SiteAssociationError(
                     'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
-                aristotle_read_assets(f, start, stop)
+                impact_read_assets(f, start, stop)
                 for gh3, start, stop in slices)
             tagcol = f['tagcol']
             # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']

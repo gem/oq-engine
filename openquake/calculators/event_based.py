@@ -468,8 +468,8 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
 
 
 def read_gsim_lt(oq):
-    # in aristotle mode the gsim_lt is read from the exposure.hdf5 file
-    if oq.aristotle and not oq.shakemap_uri:
+    # in impact mode the gsim_lt is read from the exposure.hdf5 file
+    if oq.impact and not oq.shakemap_uri:
         if not oq.mosaic_model:
             if oq.rupture_dict:
                 lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
@@ -730,7 +730,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
-        if oq.aristotle and oq.shakemap_uri:
+        if oq.impact and oq.shakemap_uri:
             # this is creating gmf_data
             base.store_gmfs_from_shakemap(self, self.sitecol, self.assetcol)
             return {}

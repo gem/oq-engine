@@ -544,27 +544,27 @@ function capitalizeFirstLetter(val) {
                 if (typeof lonValue !== 'undefined') {
                     lonValue = lonValue.trim();
                 }
-                $('#submit_aristotle_calc').prop('disabled', lonValue === '');
+                $('#submit_impact_calc').prop('disabled', lonValue === '');
             }
             toggleRunCalcBtnState();
 
             $(document).on('change', '#use_shakemap', function () {
                 if ($(this).is(':checked')) {
-                    $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                    $('#submit_impact_get_rupture').text('Retrieve ShakeMap data');
                 } else {
-                    $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                    $('#submit_impact_get_rupture').text('Retrieve rupture data');
                 }
             });
 
-            // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
-            $("#aristotle_get_rupture_form").submit(function (event) {
-                $('#submit_aristotle_get_rupture').prop('disabled', true);
+            // NOTE: if not in impact mode, impact_run_form does not exist, so this can never be triggered
+            $("#impact_get_rupture_form").submit(function (event) {
+                $('#submit_impact_get_rupture').prop('disabled', true);
                 if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
                     // if the checkbox use_shakemap does not exist or is checked
-                    $('#submit_aristotle_get_rupture').text(
+                    $('#submit_impact_get_rupture').text(
                         'Retrieving ShakeMap data (it may take more than 10 seconds)');
                 } else {
-                    $('#submit_aristotle_get_rupture').text(
+                    $('#submit_impact_get_rupture').text(
                         'Retrieving rupture data (it may take more than 10 seconds)');
                 }
                 var formData = new FormData();
@@ -573,7 +573,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('use_shakemap', $("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked'));
                 $.ajax({
                     type: "POST",
-                    url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
+                    url: gem_oq_server_url + "/v1/calc/impact_get_rupture_data",
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -684,7 +684,7 @@ function capitalizeFirstLetter(val) {
                     if ("invalid_inputs" in resp) {
                         for (var i = 0; i < resp.invalid_inputs.length; i++) {
                             var input_id = resp.invalid_inputs[i];
-                            $("#aristotle_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
+                            $("#impact_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
                         }
                     }
                     var err_msg = resp.error_msg;
@@ -694,12 +694,12 @@ function capitalizeFirstLetter(val) {
                     // $('#rupture_png').hide();
                     $('#shakemap-image-row').hide();
                 }).always(function (data) {
-                    $('#submit_aristotle_get_rupture').prop('disabled', false);
+                    $('#submit_impact_get_rupture').prop('disabled', false);
                     if ($("#use_shakemap").length === 0 || $("#use_shakemap").is(':checked')) {
                         // if the checkbox use_shakemap does not exist or is checked
-                        $('#submit_aristotle_get_rupture').text('Retrieve ShakeMap data');
+                        $('#submit_impact_get_rupture').text('Retrieve ShakeMap data');
                     } else {
-                        $('#submit_aristotle_get_rupture').text('Retrieve rupture data');
+                        $('#submit_impact_get_rupture').text('Retrieve rupture data');
                     }
                 });
                 event.preventDefault();
@@ -723,12 +723,12 @@ function capitalizeFirstLetter(val) {
                 $('#maximum_distance_stations').val('');
                 $('#maximum_distance_stations').prop('disabled', true);
             });
-            $("#aristotle_run_form > input").click(function() {
+            $("#impact_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
-            $("#aristotle_run_form").submit(function (event) {
-                $('#submit_aristotle_calc').prop('disabled', true);
-                $('#submit_aristotle_calc').text('Processing...');
+            $("#impact_run_form").submit(function (event) {
+                $('#submit_impact_calc').prop('disabled', true);
+                $('#submit_impact_calc').text('Processing...');
                 var formData = new FormData();
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
@@ -757,7 +757,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
                 $.ajax({
                     type: "POST",
-                    url: gem_oq_server_url + "/v1/calc/aristotle_run",
+                    url: gem_oq_server_url + "/v1/calc/impact_run",
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -769,18 +769,18 @@ function capitalizeFirstLetter(val) {
                     if ("invalid_inputs" in resp) {
                         for (var i = 0; i < resp.invalid_inputs.length; i++) {
                             var input_id = resp.invalid_inputs[i];
-                            $("#aristotle_run_form > input#" + input_id).css("background-color", "#F2DEDE");
+                            $("#impact_run_form > input#" + input_id).css("background-color", "#F2DEDE");
                         }
                     }
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
-                    $('#submit_aristotle_calc').prop('disabled', false);
-                    $('#submit_aristotle_calc').text('Launch impact calculation');
+                    $('#submit_impact_calc').prop('disabled', false);
+                    $('#submit_impact_calc').text('Launch impact calculation');
                 });
                 event.preventDefault();
             });
-            $("#aristotle_run_form > input").click(function() {
+            $("#impact_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
             $('#station_data_file_input').on('change', function() {

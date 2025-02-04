@@ -738,7 +738,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             for lt, rf in rm.risk_functions['groundshaking'].items():
                 iml[rf.imt].append(rf.imls[0])
 
-        if oq.aristotle:
+        if oq.impact:
             pass  # don't set minimum_intensity
         elif sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}

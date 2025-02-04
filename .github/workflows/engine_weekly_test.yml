@@ -262,7 +262,7 @@ jobs:
           ./openquake/server/manage.py collectstatic --noinput
           pytest -v openquake/server/tests/test_aelo_mode.py
 
-  server_aristotle_mode:
+  server_impact_mode:
     runs-on: ${{ matrix.os }}
     needs: engine
     strategy:
@@ -297,4 +297,4 @@ jobs:
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
-          pytest -v openquake/server/tests/test_aristotle_mode.py
+          pytest -v openquake/server/tests/test_impact_mode.py

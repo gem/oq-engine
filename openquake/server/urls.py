@@ -52,9 +52,9 @@ if settings.WEBUI:
         ]
     elif settings.APPLICATION_MODE == 'ARISTOTLE':
         urlpatterns.append(
-            re_path(r'^engine/(\d+)/outputs_aristotle$',
-                    views.web_engine_get_outputs_aristotle,
-                    name="outputs_aristotle"))
+            re_path(r'^engine/(\d+)/outputs_impact$',
+                    views.web_engine_get_outputs_impact,
+                    name="outputs_impact"))
 
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
@@ -115,9 +115,9 @@ else:
                 'registration/password_reset_subject_aelo.txt')
         if application_mode == 'ARISTOTLE':
             email_template_name = (
-                'registration/password_reset_email_aristotle.txt')
+                'registration/password_reset_email_impact.txt')
             subject_template_name = (
-                'registration/password_reset_subject_aristotle.txt')
+                'registration/password_reset_subject_impact.txt')
         else:
             email_template_name = (
                 'registration/password_reset_email.txt')
