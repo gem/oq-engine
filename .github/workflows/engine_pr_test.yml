@@ -177,7 +177,7 @@ jobs:
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_aelo_mode.py
 
-  server_aristotle_mode:
+  server_impact_mode:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -216,4 +216,4 @@ jobs:
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
-          pytest -v openquake/server/tests/test_aristotle_mode.py
+          pytest -v openquake/server/tests/test_impact_mode.py

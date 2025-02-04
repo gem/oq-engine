@@ -244,7 +244,7 @@ def get_tmap_keys(exposure_hdf5, countries):
 
 
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,
-                       monitor=performance.Monitor()):
+                    monitor=performance.Monitor()):
     """
     This is called by `impact_get_rupture_data` and `impact_run`.
     In the first case the form contains only usgs_id and rupture_file and

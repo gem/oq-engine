@@ -275,15 +275,15 @@ def callback(job_id, params, exc=None):
 
 
 def impact(exposure_hdf5='', *,
-              rupfname=FAMOUS,
-              stations='',
-              mosaic_model='',
-              maximum_distance='300',
-              maximum_distance_stations='',
-              asset_hazard_distance='15',
-              number_of_ground_motion_fields='10'):
+           rupfname=FAMOUS,
+           stations='',
+           mosaic_model='',
+           maximum_distance='300',
+           maximum_distance_stations='',
+           asset_hazard_distance='15',
+           number_of_ground_motion_fields='10'):
     """
-    Run Aristotle calculations starting from a rupture file that can be
+    Run OQImpact calculations starting from a rupture file that can be
     an XML or a CSV (by default "famous_ruptures.csv"). You must pass
     a directory containing two files site_model.hdf5 and exposure.hdf5
     with a well defined structure.
