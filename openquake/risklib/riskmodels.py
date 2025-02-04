@@ -516,6 +516,8 @@ class ValidationError(Exception):
     pass
 
 
+# TODO: if the consequence tag is different from "taxonomy", pass
+# the values of the exposure for that tag
 def check_consequences(fname, taxonomies, perils):
     """
     Check that the taxonomy field (if any) and the peril field (if any)
@@ -592,7 +594,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
 
-    def set_tmap(self, tmap_df, taxonomies):
+    def set_tmap(self, tmap_df, taxidx):
         """
         Set the attribute .tmap_df if the risk IDs in the
         taxonomy mapping are consistent with the fragility functions.
@@ -607,20 +609,12 @@ class CompositeRiskModel(collections.abc.Mapping):
             else:
                 csq_files.append(fnames)
         for fname in csq_files:
-            check_consequences(fname, taxonomies, self.perils)
-        cfs = '\n'.join(csq_files)
-        df = self.tmap_df
-        for peril in self.perils:
-            for byname, coeffs in self.consdict.items():
-                # ex. byname = "losses_by_taxonomy"
-                # in the future we could have "losses_by_occupancy", etc
-                for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
-                    if (per == '*' or per == peril) and risk_id != '?':
-                        try:
-                            coeffs[risk_id][peril]
-                        except KeyError:
-                            raise InvalidFile(
-                                f'Missing {risk_id=}, {peril=} in\n{cfs}')
+            check_consequences(fname, set(taxidx), self.perils)
+        for byname, coeffs in self.consdict.items():
+            # reduce the consdict to the taxonomies in the exposure
+            self.consdict[byname] = {taxidx[taxo]: arr
+                                     for taxo, arr in coeffs.items()
+                                     if taxo in taxidx}
 
     def check_risk_ids(self, inputs):
         """
@@ -677,13 +671,14 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param oq: OqParam instance with .loss_types and .time_event
         :returns: a dict consequence_name, loss_type -> array[P, A, E]
         """
+        # by construction all assets have the same taxonomy
+        taxi = assets[0]['taxonomy']
         P, A, E, _L, _D = dd5.shape
         csq = AccumDict(accum=numpy.zeros((P, A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
-                # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
                     for li, lt in enumerate(oq.loss_types):
                         # dict loss_type -> coeffs for the given loss type
@@ -693,7 +688,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                             else:  # assume one weigth per peril
                                 [w] = df[df.peril == peril].weight
                             coeff = (dd5[pi, :, :, li, 1:] @
-                                     coeffs[risk_id][peril][lt] * w)
+                                     coeffs[taxi][peril][lt] * w)
                             cAE = scientific.consequence(
                                 consequence, assets, coeff, lt, oq.time_event)
                             csq[consequence, li][pi] += cAE

@@ -1028,7 +1028,7 @@ class HazardCalculator(BaseCalculator):
                       if taxi in numpy.unique(self.assetcol['taxonomy'])}
             # i.e. {'Concrete1': 1, 'Wood1': 2}
             tmap_df = readinput.taxonomy_mapping(oq, taxidx)
-            self.crmodel.set_tmap(tmap_df, set(taxidx))
+            self.crmodel.set_tmap(tmap_df, taxidx)
             risk_ids = set(tmap_df.risk_id)
 
             # check that we are covering all the taxonomies in the exposure

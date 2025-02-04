@@ -36,6 +36,10 @@ The keys are checked and you can get errors like
 
 ValueError: Unknown key groundshaking_fraglity_file in job_r.ini
 
+The consequences are checked and for an unknown peril you will get an error
+
+InvalidFile: consequences.csv: unknown peril='groundsaking' at line=1
+
 """
 
 from openquake.baselib import __version__  # noqa

@@ -1,5 +1,5 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.21.0-git33982f5723', start_date='2024-06-13T05:51:31', checksum=2304262598, investigation_time=None, risk_investigation_time=None"
-loss_type,rlz_id,no_damage,slight,moderate,extensive,complete,losses_value,losses_ratio
-structural,0,9.90413E+01,4.09205E-01,4.18473E-01,1.28977E-01,2.04754E-03,7.79808E-01,7.79808E-01
-structural,1,9.94248E+01,2.45523E-01,2.51084E-01,7.73860E-02,1.22852E-03,4.67885E-01,4.67885E-01
-structural,2,9.71239E+01,1.22762E+00,1.25542E+00,3.86930E-01,6.14262E-03,2.33943E+00,2.33943E+00
+#,,,,,,"generated_by='OpenQuake engine 3.23.0-git653d9a7b63', start_date='2025-02-04T10:24:41', checksum=881869044, investigation_time=None, risk_investigation_time=None"
+loss_type,rlz_id,no_damage,slight,moderate,extensive,complete
+structural,0,9.90413E+01,4.09205E-01,4.18473E-01,1.28977E-01,2.04754E-03
+structural,1,9.94248E+01,2.45523E-01,2.51084E-01,7.73860E-02,1.22852E-03
+structural,2,9.71239E+01,1.22762E+00,1.25542E+00,3.86930E-01,6.14262E-03
