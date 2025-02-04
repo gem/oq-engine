@@ -47,7 +47,7 @@ from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.shakemap.validate import (
-    aristotle_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS)
+    impact_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -56,7 +56,7 @@ from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine, aelo, aristotle
+from openquake.engine import engine, aelo, impact
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
@@ -668,7 +668,7 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
-def aristotle_callback(
+def impact_callback(
         job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
     if not job_owner_email:
         return
@@ -717,7 +717,7 @@ def aristotle_callback(
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def aristotle_get_rupture_data(request):
+def impact_get_rupture_data(request):
     """
     Retrieve rupture parameters corresponding to a given usgs id
 
@@ -728,7 +728,7 @@ def aristotle_get_rupture_data(request):
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
     user = request.user
     user.testdir = None
-    rup, rupdic, _oqparams, err = aristotle_validate(
+    rup, rupdic, _oqparams, err = impact_validate(
         request.POST, user, rupture_path, station_data_file)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
@@ -772,7 +772,7 @@ def get_uploaded_file_path(request, filename):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def aristotle_run(request):
+def impact_run(request):
     """
     Run an ARISTOTLE calculation.
 
@@ -794,7 +794,7 @@ def aristotle_run(request):
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
     user = request.user
     user.testdir = None
-    _rup, rupdic, params, err = aristotle_validate(
+    _rup, rupdic, params, err = impact_validate(
         request.POST, user, rupture_path, station_data_file)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
@@ -810,7 +810,7 @@ def aristotle_run(request):
 
     job_id = jobctx.calc_id
     outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs_aristotle', args=[job_id]))
+        reverse('outputs_impact', args=[job_id]))
     outputs_uri_api = request.build_absolute_uri(
         reverse('results', args=[job_id]))
     log_uri = request.build_absolute_uri(
@@ -831,9 +831,9 @@ def aristotle_run(request):
 
     # spawn the Aristotle main process
     proc = mp.Process(
-        target=aristotle.main_web,
+        target=impact.main_web,
         args=([params], [jobctx], job_owner_email, outputs_uri_web,
-              aristotle_callback))
+              impact_callback))
     proc.start()
 
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
@@ -1291,9 +1291,9 @@ def web_engine(request, **kwargs):
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
-        params['aristotle_form_labels'] = ARISTOTLE_FORM_LABELS
-        params['aristotle_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
-        params['aristotle_default_usgs_id'] = \
+        params['impact_form_labels'] = ARISTOTLE_FORM_LABELS
+        params['impact_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
+        params['impact_default_usgs_id'] = \
             settings.ARISTOTLE_DEFAULT_USGS_ID
     return render(
         request, "engine/index.html", params)
@@ -1444,7 +1444,7 @@ def format_time_delta(td):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def web_engine_get_outputs_aristotle(request, calc_id):
+def web_engine_get_outputs_impact(request, calc_id):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
@@ -1490,7 +1490,7 @@ def web_engine_get_outputs_aristotle(request, calc_id):
         time_job_after_event = (
             job_start_time.replace(tzinfo=timezone.utc) - local_timestamp)
         time_job_after_event_str = format_time_delta(time_job_after_event)
-    return render(request, "engine/get_outputs_aristotle.html",
+    return render(request, "engine/get_outputs_impact.html",
                   dict(calc_id=calc_id, description=description,
                        local_timestamp=local_timestamp_str,
                        job_start_time=job_start_time_str,

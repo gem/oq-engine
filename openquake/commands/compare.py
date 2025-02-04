@@ -408,9 +408,9 @@ def compare_assetcol(calc_ids: int):
     array1 = ds1['assetcol'].array
     oq0 = ds0['oqparam']
     oq1 = ds1['oqparam']
-    if oq0.aristotle:
+    if oq0.impact:
         array0['id'] = [id[3:] for id in array0['id']]
-    if oq1.aristotle:
+    if oq1.impact:
         array1['id'] = [id[3:] for id in array1['id']]
     check_column_names(array0, array1, 'assetcol', *calc_ids)
     fields = set(array0.dtype.names) & set(array1.dtype.names) - {

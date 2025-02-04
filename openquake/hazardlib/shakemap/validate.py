@@ -243,10 +243,10 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
-def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
+def impact_validate(POST, user, rupture_file=None, station_data_file=None,
                        monitor=performance.Monitor()):
     """
-    This is called by `aristotle_get_rupture_data` and `aristotle_run`.
+    This is called by `impact_get_rupture_data` and `impact_run`.
     In the first case the form contains only usgs_id and rupture_file and
     returns (rup, rupdic, [station_file], error).
     In the second case the form contains all fields and returns
@@ -281,7 +281,7 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    if len(params) > 1:  # called by aristotle_run
+    if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
         with monitor('get_oqparams'):
@@ -289,5 +289,5 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
             oqparams = ap.get_oqparams(
                 dic['usgs_id'], mosaic_models, trts, use_shakemap)
         return rup, rupdic, oqparams, err
-    else:  # called by aristotle_get_rupture_data
+    else:  # called by impact_get_rupture_data
         return rup, rupdic, params, err

@@ -394,7 +394,7 @@ def get_mesh_exp(oqparam, h5=None):
         a pair (mesh, exposure) both of which can be None
     """
     exposure = get_exposure(oqparam, h5)
-    if oqparam.aristotle:
+    if oqparam.impact:
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
         return mesh, exposure
@@ -573,7 +573,7 @@ def get_site_model(oqparam, h5=None):
     if h5 and 'site_model' in h5:
         return h5['site_model'][:]
 
-    if oqparam.aristotle:
+    if oqparam.impact:
         # read the site model close to the rupture
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
@@ -711,7 +711,7 @@ def get_site_collection(oqparam, h5=None):
             return _get_sitecol(sitecol, exp, oqparam, h5)
         elif h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
-        elif oqparam.aristotle and (
+        elif oqparam.impact and (
                     not oqparam.infrastructure_connectivity_analysis):
             # filter the far away sites
             rup = get_rupture(oqparam)
@@ -1045,7 +1045,7 @@ def get_crmodel(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.aristotle:
+    if oqparam.impact:
         with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
             try:
                 crm = riskmodels.CompositeRiskModel.read(exp, oqparam)
@@ -1106,7 +1106,7 @@ def get_exposure(oqparam, h5=None):
         return
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
-        if oqparam.aristotle:
+        if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = asset.Exposure.read_around(fnames[0], gh3)
@@ -1296,7 +1296,7 @@ def levels_from(header):
     return levels
 
 
-def aristotle_tmap(oqparam, taxidx):
+def impact_tmap(oqparam, taxidx):
     """
     :returns: a taxonomy mapping dframe
     """
@@ -1322,8 +1322,8 @@ def taxonomy_mapping(oqparam, taxidx):
     :param taxidx: dictionary taxo:str -> taxi:int
     :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
-    if oqparam.aristotle:
-        return aristotle_tmap(oqparam, taxidx)
+    if oqparam.impact:
+        return impact_tmap(oqparam, taxidx)
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         nt = len(taxidx)  # number of taxonomies
         df = pandas.DataFrame(dict(weight=numpy.ones(nt),

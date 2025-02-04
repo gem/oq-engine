@@ -1341,7 +1341,7 @@ class OqParam(valid.ParamSet):
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if (self.job_type == 'risk' and not
-                self.shakemap_uri and not self.aristotle):
+                self.shakemap_uri and not self.impact):
             # check the risk_files
             hc = self.hazard_calculation_id
             if 'damage' in self.calculation_mode and not hc:
@@ -1904,7 +1904,7 @@ class OqParam(valid.ParamSet):
             return self.inputs['rupture_model']
 
     @property
-    def aristotle(self):
+    def impact(self):
         """
         Return True if we are in Aristotle mode, i.e. there is an HDF5
         exposure with a known structure
