@@ -104,30 +104,29 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def group_by_peril(funclist):
+def group_by_lt(funclist):
     """
     Converts a list of objects with attribute .loss_type into a dictionary
     peril -> loss_type -> risk_function
     """
-    ddic = AccumDict(accum=AccumDict(accum=[]))  # peril -> lt -> rf
+    dic = AccumDict(accum = []) # peril -> lt -> rf
     for rf in funclist:
-        ddic[rf.peril][rf.loss_type].append(rf)
-    for peril, dic in ddic.items():
-        for lt, lst in dic.items():
-            if len(lst) == 1:
-                dic[lt] = lst[0]
-            elif lst[1].kind == 'fragility':
-                # EventBasedDamageTestCase.test_case_11
-                cf, ffl = lst
-                ffl.cf = cf
-                dic[lt] = ffl
-            elif lst[1].kind == 'vulnerability_retrofitted':
-                vf, retro = lst
-                vf.retro = retro
-                dic[lt] = vf
-            else:
-                raise RuntimeError(lst)
-    return ddic
+        dic[rf.loss_type].append(rf)
+    for lt, lst in dic.items():
+        if len(lst) == 1:
+            dic[lt] = lst[0]
+        elif lst[1].kind == 'fragility':
+            # EventBasedDamageTestCase.test_case_11
+            cf, ffl = lst
+            ffl.cf = cf
+            dic[lt] = ffl
+        elif lst[1].kind == 'vulnerability_retrofitted':
+            vf, retro = lst
+            vf.retro = retro
+            dic[lt] = vf
+        else:
+            raise RuntimeError(lst)
+    return dic
 
 
 class RiskFuncList(list):
@@ -136,12 +135,18 @@ class RiskFuncList(list):
     """
     def groupby_id(self):
         """
-        :returns: dictionary id -> loss_type -> risk_function
+        :returns: dictionary id -> peril -> loss_type -> risk_function
         """
-        ddic = AccumDict(accum=[])
+        ddic = AccumDict(accum=AccumDict(accum=[]))
+        dic = AccumDict(accum=[])
         for rf in self:
-            ddic[rf.id].append(rf)
-        return {riskid: group_by_peril(rfs) for riskid, rfs in ddic.items()}
+            dic[rf.id, rf.peril].append(rf)
+        for (riskid, peril), rfs in dic.items():
+            ddic[riskid][peril] = group_by_lt(rfs)
+        num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
+        if len(set(num_perils.values())) > 1:
+            raise ValueError(f'{num_perils=}')
+        return ddic
 
 
 def get_risk_functions(oqparam):
@@ -284,7 +289,7 @@ class RiskModel(object):
         meth = getattr(self, self.calcmode)
         res = {(peril, lt): meth(peril, lt, assets, gmf_df, rndgen)
                for peril in self.risk_functions for lt in self.loss_types}
-        # for event_based_risk `res` is a map loss_type -> DataFrame(eid, aid, loss)
+        # for event_based_risk `res` is loss_type -> DataFrame(eid, aid, loss)
         return PerilDict(res)
 
     def __toh5__(self):
@@ -491,8 +496,11 @@ def get_riskcomputer(dic, alias, limit_states=()):
     lts = sorted(lts)
     mal = dic.setdefault('minimum_asset_loss', {lt: 0. for lt in lts})
     for riskid in rfs:
+        by_peril = AccumDict(accum=[])
+        for rf in rfs[riskid]:
+            by_peril[rf.peril].append(rf)
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
-                       group_by_peril(rfs[riskid]),
+                       {peril: group_by_lt(by_peril[peril]) for peril in by_peril},
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rm.alias = alias
@@ -502,7 +510,8 @@ def get_riskcomputer(dic, alias, limit_states=()):
             riskid, peril = rlt.split('#')
             rc.wdic[riskid, peril] = weight
     else:
-        rc.wdic = {(riskid, peril): 1. for riskid, peril in sorted(riskid_perils)}
+        rc.wdic = {(riskid, peril): 1.
+                   for riskid, peril in sorted(riskid_perils)}
     rc.P = len(perils)
     rc.loss_types = lts
     rc.minimum_asset_loss = mal

@@ -3,6 +3,8 @@
   * Fixed the taxonomy field in consequences.csv to be the exposure
     taxonomy and not a fragility function ID
   * Internal: renamed aristotle -> impact
+  * Changed the sourcewriter to save the rupture_idxs as compressed datasets,
+    thus reducing the size of some models a lot (i.e. from 400M to 17M)
 
   [Christopher Brooks]
   * Small bug fix for NZ 2022 inslab variants of the Kuehn et al. (2020)
