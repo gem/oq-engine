@@ -784,10 +784,11 @@ def write_source_model(dest, sources_or_groups, name=None,
     out = [dest]
     if gridded_attrs:
         # for nonparametric and multifault sources save attrs on HDF5 file
+        # NB: this is tested in the oq-mbtk, in rupture_smooth_test
         dest5 = os.path.splitext(dest)[0] + '.hdf5'
         with hdf5.File(dest5, 'w') as h:
-            for src_id, attrs in gridded_attrs.items():
-                for k, v in attrs.items():
+            for src_id, dic in gridded_attrs.items():
+                for k, v in dic.items():
                     key = '%s/%s' % (src_id, k)
                     dset = h.create_dataset(key, v.shape, v.dtype,
                                             compression='gzip',
