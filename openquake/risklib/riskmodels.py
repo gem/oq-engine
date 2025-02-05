@@ -497,7 +497,7 @@ def get_riskcomputer(dic, alias, limit_states=()):
     mal = dic.setdefault('minimum_asset_loss', {lt: 0. for lt in lts})
     for riskid in rfs:
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
-                       group_by_peril(rfs[riskid]),
+                       group_by_lt(rfs[riskid]),
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rm.alias = alias
