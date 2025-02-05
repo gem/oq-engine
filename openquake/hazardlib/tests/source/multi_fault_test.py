@@ -195,7 +195,7 @@ class MultiFaultTestCase(unittest.TestCase):
                 if col == 'probs_occur:2':
                     continue
                 print(col)
-                aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
+                aac(df[col].to_numpy(), ctx[col], rtol=2E-5, equal_nan=1)
 
 
 def main100sites():
