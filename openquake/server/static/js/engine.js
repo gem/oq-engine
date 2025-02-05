@@ -902,7 +902,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('station_data_file', $('#station_data_file_input')[0].files[0]);
                 formData.append('maximum_distance_stations', $("#maximum_distance_stations").val());
                 const $msr_selector = $("select#msr");
-                if ($msr_selector.length) {
+                if ($msr_selector.length && $msr_selector.is(":has(option)")) {
                     formData.append('msr', $msr_selector.find(':selected').val());
                 }
                 $.ajax({
