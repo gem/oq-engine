@@ -289,7 +289,7 @@ class RiskModel(object):
         meth = getattr(self, self.calcmode)
         res = {(peril, lt): meth(peril, lt, assets, gmf_df, rndgen)
                for peril in self.risk_functions for lt in self.loss_types}
-        # for event_based_risk `res` is a map loss_type -> DataFrame(eid, aid, loss)
+        # for event_based_risk `res` is loss_type -> DataFrame(eid, aid, loss)
         return PerilDict(res)
 
     def __toh5__(self):
@@ -496,8 +496,11 @@ def get_riskcomputer(dic, alias, limit_states=()):
     lts = sorted(lts)
     mal = dic.setdefault('minimum_asset_loss', {lt: 0. for lt in lts})
     for riskid in rfs:
+        by_peril = AccumDict(accum=[])
+        for rf in rfs[riskid]:
+            by_peril[rf.peril].append(rf)
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
-                       group_by_lt(rfs[riskid]),
+                       {peril: group_by_lt(by_peril[peril]) for peril in by_peril},
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rm.alias = alias
@@ -507,7 +510,8 @@ def get_riskcomputer(dic, alias, limit_states=()):
             riskid, peril = rlt.split('#')
             rc.wdic[riskid, peril] = weight
     else:
-        rc.wdic = {(riskid, peril): 1. for riskid, peril in sorted(riskid_perils)}
+        rc.wdic = {(riskid, peril): 1.
+                   for riskid, peril in sorted(riskid_perils)}
     rc.P = len(perils)
     rc.loss_types = lts
     rc.minimum_asset_loss = mal
