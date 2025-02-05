@@ -291,9 +291,6 @@ jobs:
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
-          export PY_VER="$(python -c 'import sys; version=sys.version_info[:2]; print("{0}.{1}".format(*version))')"
-          export PYVER="$(echo ${PY_VER} | tr -d .)"
-          pip install https://wheelhouse.openquake.org/v3/linux/py${PYVER}/timezonefinder-6.5.2-cp${PYVER}-cp${PYVER}-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
