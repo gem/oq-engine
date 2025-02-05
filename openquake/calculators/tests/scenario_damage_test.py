@@ -242,7 +242,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # inconsistent IDs between fragility and consequence in set_tmap
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_16.__file__, 'job.ini')
-        self.assertIn("Missing 'UNM/C_LR/GOV2' in", str(ctx.exception))
+        self.assertIn("{'MUR-CLBRS-LWAL-HBET-1;2/GOV2'} are in the exposure "
+                      "but not in the taxonomy mapping ", str(ctx.exception))
 
     def test_case_17_no_time_event(self):
         out = self.run_calc(

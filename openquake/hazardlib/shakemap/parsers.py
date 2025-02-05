@@ -257,6 +257,8 @@ def utc_to_local_time(utc_timestamp, lon, lat):
     utc_time = utc_zone.localize(utc_time)
     local_zone = pytz.timezone(timezone_str)
     local_timestamp = utc_time.astimezone(local_zone)
+    # NOTE: the validated timestamp format has no microseconds
+    local_timestamp = local_timestamp.replace(microsecond=0)
     return local_timestamp
 
 

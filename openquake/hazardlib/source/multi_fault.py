@@ -148,7 +148,8 @@ class MultiFaultSource(BaseSeismicSource):
             ridxs.append(' '.join(map(str, rupture_idxs)))
         # each pmf has the form [(prob0, 0), (prob1, 1), ...]
         return dict(mag=self.mags, rake=self.rakes,
-                    probs_occur=self.probs_occur, rupture_idxs=ridxs)
+                    probs_occur=self.probs_occur,
+                    rupture_idxs=np.array(ridxs, dtype=hdf5.vstr))
 
     def get_unique_idxs(self):
         """

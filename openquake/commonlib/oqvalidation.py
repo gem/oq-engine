@@ -976,8 +976,8 @@ class OqParam(valid.ParamSet):
         'residents_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
-        'earthquake_fragility',
-        'earthquake_vulnerability',
+        'groundshaking_fragility',
+        'groundshaking_vulnerability',
         'liquefaction_fragility',
         'liquefaction_vulnerability',
         'landslide_fragility',
@@ -1341,7 +1341,7 @@ class OqParam(valid.ParamSet):
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if (self.job_type == 'risk' and not
-                self.shakemap_uri and not self.aristotle):
+                self.shakemap_uri and not self.impact):
             # check the risk_files
             hc = self.hazard_calculation_id
             if 'damage' in self.calculation_mode and not hc:
@@ -1482,7 +1482,7 @@ class OqParam(valid.ParamSet):
         else:
             self._parent = None
         # set all_cost_types
-        # rt has the form 'earthquake/vulnerability/structural', ...
+        # rt has the form 'groundshaking/vulnerability/structural', ...
         costtypes = set(rt.split('/')[2] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             try:
@@ -1904,7 +1904,7 @@ class OqParam(valid.ParamSet):
             return self.inputs['rupture_model']
 
     @property
-    def aristotle(self):
+    def impact(self):
         """
         Return True if we are in Aristotle mode, i.e. there is an HDF5
         exposure with a known structure
