@@ -633,7 +633,10 @@ def download_rupture_data(usgs_id, shakemap_contents, user):
               'time': '1981-02-24T20:53:38.000000Z'},
  'type': 'FeatureCollection'}
     """
-    url = shakemap_contents.get('download/rupture.json')['url']
+    rup_json = shakemap_contents.get('download/rupture.json')
+    if rup_json is None:
+        return None, None
+    url = rup_json['url']
     # with open(f'/tmp/{usgs_id}-rup.json', 'wb') as f:
     #       f.write(urlopen(url).read())
     if user.testdir:  # in parsers_test
@@ -816,13 +819,14 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         if err:
             return None, rupdic, err
 
+    if not rup_data and approach != 'use_pnt_rup_from_usgs':
+        with monitor('Downloading rupture json'):
+            rup_data, rupture_file = download_rupture_data(
+                usgs_id, contents, user)
     if not rupdic:
-        if not rup_data:
-            with monitor('Downloading rupture json'):
-                rup_data, rupture_file = download_rupture_data(
-                    usgs_id, contents, user)
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
-    if user.level == 2 and not station_data_file:
+    if (user.level == 2 and not station_data_file
+            and approach != 'use_shakemap_from_usgs'):
         with monitor('Downloading stations'):
             rupdic['station_data_file'], rupdic['station_data_issue'] = (
                 download_station_data_file(usgs_id, contents, user))
@@ -831,7 +835,7 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         rupdic['station_data_file'], rupdic['station_data_issue'] = (
             station_data_file, None)
         rupdic['station_data_file_from_usgs'] = False
-    if not rup_data or rupdic['require_dip_strike']:
+    if not rup_data:
         # in parsers_test
         return None, rupdic, err
 

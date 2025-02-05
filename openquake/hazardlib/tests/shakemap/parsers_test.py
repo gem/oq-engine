@@ -53,14 +53,14 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_3(self):
         _rup, dic, _err = get_rup_dic(
-            {'usgs_id': 'us6000f65h'}, user=user, approach='use_shakemap_from_usgs',
+            {'usgs_id': 'us6000f65h'}, user=user, approach='use_pnt_rup_from_usgs',
             use_shakemap=True)
-        self.assertEqual(dic['lon'], -73.475)
-        self.assertEqual(dic['lat'], 18.408)
+        self.assertEqual(dic['lon'], -73.4822)
+        self.assertEqual(dic['lat'], 18.4335)
         self.assertEqual(dic['dep'], 10.0)
         self.assertEqual(dic['mag'], 7.2)
         self.assertEqual(dic['rake'], 0.0)
-        self.assertEqual(dic['local_timestamp'], '2021-08-13 20:00:00-04:00')
+        self.assertEqual(dic['local_timestamp'], '2021-08-14 08:29:08-04:00')
         self.assertEqual(dic['time_event'], 'transit')
         self.assertEqual(dic['require_dip_strike'], True)
         self.assertEqual(dic['pga_map_png'], None)
@@ -91,11 +91,11 @@ class ShakemapParsersTestCase(unittest.TestCase):
                          'Unable to convert the rupture from the USGS format')
 
     def test_6(self):
-        rup, dic, _err = get_rup_dic(
-            {'usgs_id': 'usp0001ccb'}, user=user, approach='use_shakemap_from_usgs',
+        _rup, dic, _err = get_rup_dic(
+            {'usgs_id': 'usp0001ccb'}, user=user, approach='use_pnt_rup_from_usgs',
             use_shakemap=True)
-        self.assertEqual(rup.mag, 6.7)
-        self.assertEqual(dic['require_dip_strike'], False)
+        self.assertEqual(dic['mag'], 6.7)
+        self.assertEqual(dic['require_dip_strike'], True)
         self.assertEqual(dic['station_data_issue'],
                          '3 stations were found, but none of them are seismic')
 
