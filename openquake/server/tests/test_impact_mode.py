@@ -157,11 +157,11 @@ class EngineServerTestCase(django.test.TestCase):
             cls.user1.delete()
         super().tearDownClass()
 
-    def aristotle_run_then_remove(
+    def impact_run_then_remove(
             self, data, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
             with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
-                resp = self.post('aristotle_run', data)
+                resp = self.post('impact_run', data)
                 if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
                     content = json.loads(resp.content)
@@ -238,7 +238,7 @@ class EngineServerTestCase(django.test.TestCase):
                     else:
                         self.assertIn('Please find the results here:',
                                       email_content)
-                        self.assertIn(f'engine/{job_id}/outputs_aristotle',
+                        self.assertIn(f'engine/{job_id}/outputs_impact',
                                       email_content)
         for job_id in js:
             ret = self.get('%s/aggrisk_tags' % job_id)
@@ -262,7 +262,7 @@ class EngineServerTestCase(django.test.TestCase):
                     asset_hazard_distance=15, ses_seed=42,
                     local_timestamp='2023-02-06 04:17:34+03:00',
                     maximum_distance_stations='')
-        self.aristotle_run_then_remove(data)
+        self.impact_run_then_remove(data)
 
     # check that the URL 'run' cannot be accessed in ARISTOTLE mode
     def test_can_not_run_normal_calc(self):

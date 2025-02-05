@@ -649,10 +649,10 @@ class RiskComputerTestCase(unittest.TestCase):
     def test1(self):
         dic = {'calculation_mode': 'event_based_risk',
                'risk_functions': {
-                   'earthquake#structural#RC':
+                   'groundshaking#structural#RC':
                    {"openquake.risklib.scientific.VulnerabilityFunction":
                     {"id": "RC",
-                     "peril": 'earthquake',
+                     "peril": 'groundshaking',
                      "loss_type": "structural",
                      "imt": "PGA",
                      "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
@@ -686,7 +686,7 @@ class RiskComputerTestCase(unittest.TestCase):
                  'SA(1.0)': 'gmv_4'}
         dic = {'calculation_mode': 'event_based_risk',
                'risk_functions': {
-                   'earthquake#nonstructural#RM': {
+                   'groundshaking#nonstructural#RM': {
                        'openquake.risklib.scientific.VulnerabilityFunction': {
                            'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
                            'distribution_name': 'LN',
@@ -694,7 +694,7 @@ class RiskComputerTestCase(unittest.TestCase):
                            'imls': [0.1, 0.2, 0.4, 0.7, 1.0],
                            'imt': 'SA(1.0)',
                            'mean_loss_ratios': [0.1, 0.2, 0.35, 0.6, 0.9]}},
-                   'earthquake#structural#RM': {
+                   'groundshaking#structural#RM': {
                        'openquake.risklib.scientific.VulnerabilityFunction': {
                            'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
                            'distribution_name': 'LN',
@@ -702,7 +702,7 @@ class RiskComputerTestCase(unittest.TestCase):
                            'imls': [0.02, 0.3, 0.5, 0.9, 1.2],
                            'imt': 'PGA',
                            'mean_loss_ratios': [0.05, 0.1, 0.2, 0.4, 0.8]}}},
-               'wdic': {'RM#earthquake': 1}}
+               'wdic': {'RM#groundshaking': 1}}
 
         gmfs = {'eid': [0, 2],
                 'sid': [0, 0],
@@ -745,7 +745,7 @@ class RiskComputerTestCase(unittest.TestCase):
         # multi-peril damage
         rcdic = {'calculation_mode': 'scenario_damage',
                  'risk_functions':
-                 {'earthquake#structural#Wood':
+                 {'groundshaking#structural#Wood':
                   {'openquake.risklib.scientific.FragilityFunctionList': {
                       'array': [[0.0, 0.5, 0.861, 0.957, 0.985, 0.994, 0.997, 0.999],
                                 [0.0, 0.204, 0.6, 0.813, 0.909, 0.954, 0.976, 0.986],
@@ -758,7 +758,7 @@ class RiskComputerTestCase(unittest.TestCase):
                       'kind': 'fragility',
                       'loss_type': 'structural',
                       'nodamage': 0.05,
-                      'peril': 'earthquake'}},
+                      'peril': 'groundshaking'}},
                   'landslide#structural#Wood':
                   {'openquake.risklib.scientific.FragilityFunctionList': {
                       'array': [[0.0, 0.0, 0.0, 1.0],

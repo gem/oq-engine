@@ -234,7 +234,7 @@ def gen_outputs(df, crmodel, rng, monitor):
         if 'ID_0' not in assets.columns:
             assets['ID_0'] = 0
         for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
-            # multiple countries are tested in aristotle/case_02
+            # multiple countries are tested in impact/case_02
             country = crmodel.countries[id0]
             with fil_mon:
                 # *crucial* for the performance of the next step

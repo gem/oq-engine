@@ -298,7 +298,7 @@ if APPLICATION_MODE not in ('PUBLIC',):
 
 if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     if APPLICATION_MODE == 'ARISTOTLE':
-        from openquake.server.tests.settings.local_settings_aristotle import *  # noqa
+        from openquake.server.tests.settings.local_settings_impact import *  # noqa
     elif APPLICATION_MODE == 'AELO':
         from openquake.server.tests.settings.local_settings_aelo import *  # noqa
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.

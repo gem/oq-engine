@@ -432,9 +432,9 @@ function capitalizeFirstLetter(val) {
     }
 
     function use_shakemap() {
-        approach_selector = $('input[name="aristotle_approach"]');
+        approach_selector = $('input[name="impact_approach"]');
         if (approach_selector.length > 0) {
-            return $('input[name="aristotle_approach"]:checked').val() === 'use_shakemap_from_usgs';
+            return $('input[name="impact_approach"]:checked').val() === 'use_shakemap_from_usgs';
         } else {
             // in interface level 1 the approach selector doesn't exist and we always use the ShakeMap
             return true;
@@ -470,9 +470,9 @@ function capitalizeFirstLetter(val) {
     }
 
     function require_usgs_id() {
-        approach_selector = $('input[name="aristotle_approach"]');
+        approach_selector = $('input[name="impact_approach"]');
         if (approach_selector.length > 0) {
-            const selected_approach = $('input[name="aristotle_approach"]:checked').val();
+            const selected_approach = $('input[name="impact_approach"]:checked').val();
             if (selected_approach == 'provide_rup') {
                 // usgs_id is expected to be 'FromFile'
                 return true;
@@ -485,10 +485,10 @@ function capitalizeFirstLetter(val) {
     }
 
     function get_selected_approach() {
-        approach_selector = $('input[name="aristotle_approach"]');
+        approach_selector = $('input[name="impact_approach"]');
         var selected_approach;
         if (approach_selector.length > 0) {
-            selected_approach = $('input[name="aristotle_approach"]:checked').val();
+            selected_approach = $('input[name="impact_approach"]:checked').val();
         }
         else {
             selected_approach = 'use_shakemap_from_usgs';
@@ -499,7 +499,7 @@ function capitalizeFirstLetter(val) {
     function set_retrieve_data_btn_txt(state) { // state can be 'initial' or 'running'
         const approach = get_selected_approach();
         const btn_txt = retrieve_data_btn_txt_map[approach][state];
-        $('#submit_aristotle_get_rupture').text(btn_txt);
+        $('#submit_impact_get_rupture').text(btn_txt);
     }
 
     /* classic event management */
@@ -615,11 +615,11 @@ function capitalizeFirstLetter(val) {
                 if (typeof lonValue !== 'undefined') {
                     lonValue = lonValue.trim();
                 }
-                $('#submit_aristotle_calc').prop('disabled', lonValue === '');
+                $('#submit_impact_calc').prop('disabled', lonValue === '');
             }
             toggleRunCalcBtnState();
 
-            $('input[name="aristotle_approach"]').change(function () {
+            $('input[name="impact_approach"]').change(function () {
                 const selected_approach = $(this).val();
                 set_retrieve_data_btn_txt('initial');
                 if (approaches_requiring_usgs_id.includes(selected_approach)) {
@@ -665,10 +665,10 @@ function capitalizeFirstLetter(val) {
                 $('#strike').val(nodal_plane.strike);
             });
 
-            // NOTE: if not in aristotle mode, aristotle_run_form does not exist, so this can never be triggered
-            $("#aristotle_get_rupture_form").submit(function (event) {
-                $('#submit_aristotle_get_rupture').prop('disabled', true);
-                $('input[name="aristotle_approach"]').prop('disabled', true);
+            // NOTE: if not in impact mode, impact_run_form does not exist, so this can never be triggered
+            $("#impact_get_rupture_form").submit(function (event) {
+                $('#submit_impact_get_rupture').prop('disabled', true);
+                $('input[name="impact_approach"]').prop('disabled', true);
                 set_retrieve_data_btn_txt('running');
                 var formData = new FormData();
                 const selected_approach = get_selected_approach();
@@ -691,7 +691,7 @@ function capitalizeFirstLetter(val) {
                 }
                 $.ajax({
                     type: "POST",
-                    url: gem_oq_server_url + "/v1/calc/aristotle_get_rupture_data",
+                    url: gem_oq_server_url + "/v1/calc/impact_get_rupture_data",
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -832,7 +832,7 @@ function capitalizeFirstLetter(val) {
                     if ("invalid_inputs" in resp) {
                         for (var i = 0; i < resp.invalid_inputs.length; i++) {
                             var input_id = resp.invalid_inputs[i];
-                            $("#aristotle_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
+                            $("#impact_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
                         }
                     }
                     var err_msg = resp.error_msg;
@@ -842,8 +842,8 @@ function capitalizeFirstLetter(val) {
                     // $('#rupture_png').hide();
                     $('#shakemap-image-row').hide();
                 }).always(function (data) {
-                    $('#submit_aristotle_get_rupture').prop('disabled', false);
-                    $('input[name="aristotle_approach"]').prop('disabled', false);
+                    $('#submit_impact_get_rupture').prop('disabled', false);
+                    $('input[name="impact_approach"]').prop('disabled', false);
                     set_retrieve_data_btn_txt('initial');
                 });
                 event.preventDefault();
@@ -867,12 +867,12 @@ function capitalizeFirstLetter(val) {
                 $('#maximum_distance_stations').val('');
                 $('#maximum_distance_stations').prop('disabled', true);
             });
-            $("#aristotle_run_form > input").click(function() {
+            $("#impact_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
-            $("#aristotle_run_form").submit(function (event) {
-                $('#submit_aristotle_calc').prop('disabled', true);
-                $('#submit_aristotle_calc').text('Processing...');
+            $("#impact_run_form").submit(function (event) {
+                $('#submit_impact_calc').prop('disabled', true);
+                $('#submit_impact_calc').text('Processing...');
                 var formData = new FormData();
                 const selected_approach = get_selected_approach();
                 formData.append('approach', selected_approach);
@@ -907,7 +907,7 @@ function capitalizeFirstLetter(val) {
                 }
                 $.ajax({
                     type: "POST",
-                    url: gem_oq_server_url + "/v1/calc/aristotle_run",
+                    url: gem_oq_server_url + "/v1/calc/impact_run",
                     data: formData,
                     processData: false,
                     contentType: false,
@@ -919,18 +919,18 @@ function capitalizeFirstLetter(val) {
                     if ("invalid_inputs" in resp) {
                         for (var i = 0; i < resp.invalid_inputs.length; i++) {
                             var input_id = resp.invalid_inputs[i];
-                            $("#aristotle_run_form > input#" + input_id).css("background-color", "#F2DEDE");
+                            $("#impact_run_form > input#" + input_id).css("background-color", "#F2DEDE");
                         }
                     }
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
-                    $('#submit_aristotle_calc').prop('disabled', false);
-                    $('#submit_aristotle_calc').text('Launch impact calculation');
+                    $('#submit_impact_calc').prop('disabled', false);
+                    $('#submit_impact_calc').text('Launch impact calculation');
                 });
                 event.preventDefault();
             });
-            $("#aristotle_run_form > input").click(function() {
+            $("#impact_run_form > input").click(function() {
                 $(this).css("background-color", "white");
             });
             $('#station_data_file_input').on('change', function() {

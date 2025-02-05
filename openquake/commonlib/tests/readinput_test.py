@@ -322,7 +322,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
 
         with self.assertRaises(Exception) as ctx:
             readinput.get_exposure(oqparam)
@@ -341,7 +341,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
@@ -359,7 +359,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn(r"Invalid ID 'a 1': the only accepted chars are "
@@ -377,7 +377,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': [self.exposure2],
                           'structural_vulnerability': None}
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Got 'aggregate', expected "
@@ -397,7 +397,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.insurance_losses = False
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("'RM ' contains whitespace chars, line 11",

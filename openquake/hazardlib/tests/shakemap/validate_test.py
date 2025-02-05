@@ -30,7 +30,7 @@ Here are a few codes with interesting errors:
 import os
 import unittest
 from openquake.hazardlib.shakemap.parsers import User
-from openquake.hazardlib.shakemap.validate import aristotle_validate
+from openquake.hazardlib.shakemap.validate import impact_validate
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
@@ -48,14 +48,14 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_1(self):
         # no rupture, yes stations
         POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
-        _rup, rupdic, _params, err = aristotle_validate(POST, user)
+        _rup, rupdic, _params, err = impact_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
     def test_2(self):
         POST = {'usgs_id': 'us7000n05d', 'approach': 'use_shakemap_from_usgs'}
-        _rup, rupdic, _params, err = aristotle_validate(POST, user)
+        _rup, rupdic, _params, err = impact_validate(POST, user)
         self.assertEqual(rupdic['rupture_from_usgs'], False)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mosaic_models'], ['SAM'])
@@ -86,7 +86,7 @@ class AristotleValidateTestCase(unittest.TestCase):
             'approach': 'provide_rup'}
 
         for stations in (None, 'stationlist_seismic.csv'):
-            _rup, rupdic, params, err = aristotle_validate(
+            _rup, rupdic, params, err = impact_validate(
                 POST, user, 'fault_rupture.xml', stations)
             expected = {
                 'dep': 30.0,
@@ -130,7 +130,7 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
         POST = {'usgs_id': 'us7000n7n8', 'approach': 'use_shakemap_from_usgs'}
-        _rup, rupdic, _oqparams, err = aristotle_validate(POST, user)
+        _rup, rupdic, _oqparams, err = impact_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], False)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
@@ -143,5 +143,5 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_5(self):
         POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs',
                 'msr': 'WC1994'}
-        _rup, rupdic, _oqparams, _err = aristotle_validate(POST, user)
+        _rup, rupdic, _oqparams, _err = impact_validate(POST, user)
         self.assertIn('msr', rupdic)

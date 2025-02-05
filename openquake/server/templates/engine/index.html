@@ -27,7 +27,7 @@
           {% if application_mode == 'AELO' %}
           {% include './includes/aelo_form.html' %}
           {% elif application_mode == 'ARISTOTLE' %}
-          {% with './includes/aristotle_form_level_'|addstr:user_level|add:'.html' as template_path %}
+          {% with './includes/impact_form_level_'|addstr:user_level|add:'.html' as template_path %}
           {% include template_path %}
           {% endwith %}
           {% endif %}
@@ -88,7 +88,7 @@
                 <% } %>
                 {% endif %}
 
-                <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% elif  application_mode == 'ARISTOTLE' %}outputs_aristotle{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
+                <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% elif  application_mode == 'ARISTOTLE' %}outputs_impact{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
                   {% if application_mode != 'AELO' and application_mode != 'ARISTOTLE' and application_mode != 'READ_ONLY' and user_level > 0 %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"

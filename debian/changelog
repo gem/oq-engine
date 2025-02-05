@@ -1,3 +1,16 @@
+  [Michele Simionato]
+  * Added checks on the consequence functions across taxonomies and perils
+  * Fixed the taxonomy field in consequences.csv to be the exposure
+    taxonomy and not a fragility function ID
+  * Internal: renamed aristotle -> impact
+  * Changed the sourcewriter to save the rupture_idxs as compressed datasets,
+    thus reducing the size of some models a lot (i.e. from 400M to 17M)
+
+  [Christopher Brooks]
+  * Small bug fix for NZ 2022 inslab variants of the Kuehn et al. (2020)
+    and Parker et al. (2020) GMMs - backarc param was not always in the
+    req. site params but is needed given included in NZ 2022 site model
+
   [Savvinos Aristeidou]
   * Added new ANN-based GMM in the gsim library, named `aristeidou_2024`
   * Added new IMs, that is the FIV3, Sa_avg2, and Sa_avg3
@@ -5,7 +18,7 @@
   [Michele Simionato]
   * Extended rupture_dict to the `msr` and `aspect_ratio` parameters
   * Fixed the instantiation of file-dependent GMPEs from the datastore
-  * Optimized slow tasks in the preclassical phase
+  * Optimized slow tasks both in the preclassical and the classical phase
   * Reading the site model in calculations with ruptures.hdf5 and making
     `minimum_intensity` mandatory
   * Added parameter `minimum_engine_version`

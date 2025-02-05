@@ -25,7 +25,7 @@ import logging
 from openquake.baselib import sap, config, performance
 from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import (
-    AristotleParam, aristotle_validate)
+    AristotleParam, impact_validate)
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -70,7 +70,7 @@ def main_cmd(usgs_id, rupture_file=None,
     """
     This script is meant to be called from the command-line
     """
-    # NB: ugly hack to pass exposure_hdf5 to aristotle_validate
+    # NB: ugly hack to pass exposure_hdf5 to impact_validate
     if exposure_hdf5 is None:
         assert config.directory.mosaic_dir
         exposure_hdf5 = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
@@ -84,7 +84,7 @@ def main_cmd(usgs_id, rupture_file=None,
     post['msr'] = msr
     post['approach'] = approach
     monitor = performance.Monitor()
-    _rup, rupdic, oqparams, err = aristotle_validate(
+    _rup, rupdic, oqparams, err = impact_validate(
         post, User(level=userlevel), rupture_file, station_data_file, monitor)
     if err:
         callback(None, oqparams, exc=err)
@@ -105,7 +105,7 @@ def main_cmd(usgs_id, rupture_file=None,
 
 main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
 main_cmd.rupture_file = 'XML file with the rupture model (optional)'
-main_cmd.rupture_dict = 'Used by the command `oq mosaic aristotle`'
+main_cmd.rupture_dict = 'Used by the command `oq mosaic impact`'
 main_cmd.callback = ''
 main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
 main_cmd.maximum_distance = 'Maximum distance in km'
