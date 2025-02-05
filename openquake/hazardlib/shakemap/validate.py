@@ -256,6 +256,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     In the second case the form contains all fields and returns
     (rup, rupdic, params, error).
     """
+    err = {}
     dic, params, err = _validate(POST)
     if err:
         return None, dic, params, err

@@ -47,14 +47,14 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_1(self):
         # no rupture, yes stations
-        POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
+        POST = {'usgs_id': 'us6000jllz', 'approach': 'build_rup_from_usgs'}
         _rup, rupdic, _params, err = impact_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
     def test_2(self):
-        POST = {'usgs_id': 'us7000n05d', 'approach': 'use_shakemap_from_usgs'}
+        POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs'}
         _rup, rupdic, _params, err = impact_validate(POST, user)
         self.assertEqual(rupdic['rupture_from_usgs'], False)
         self.assertEqual(rupdic['require_dip_strike'], True)
@@ -102,7 +102,7 @@ class AristotleValidateTestCase(unittest.TestCase):
                 'strike': 295.24732,
                 'trts': {'CHN': ['Active Shallow Crust',
                                  'Himalayan Thrust',
-                                'Craton',
+                                 'Craton',
                                  'Deep Crust 1',
                                  'Active-Stable Shallow Crust'],
                          'IND': ['active shallow crust normal',
@@ -129,9 +129,9 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
-        POST = {'usgs_id': 'us7000n7n8', 'approach': 'use_shakemap_from_usgs'}
+        POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs'}
         _rup, rupdic, _oqparams, err = impact_validate(POST, user)
-        self.assertEqual(rupdic['require_dip_strike'], False)
+        self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
         self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')

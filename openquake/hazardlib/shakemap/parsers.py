@@ -479,6 +479,7 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
     NB: if the finite-fault list contains multiple elements we take the
     preferred one.
     """
+    err = {}
     logging.info('Getting finite-fault properties')
     if 'finite-fault' not in products:
         # e.g. us6000phrk
@@ -516,7 +517,7 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
               'require_dip_strike': True,
               'pga_map_png': None, 'mmi_map_png': None,
               'usgs_id': usgs_id, 'rupture_file': None}
-    return rupdic, None
+    return rupdic, err
 
 
 def load_rupdic_from_origin(usgs_id, products):
@@ -527,6 +528,7 @@ def load_rupdic_from_origin(usgs_id, products):
     """
     # TODO: we may try to unify this with the very similar
     # load_rupdic_from_finite_fault
+    err = {}
     logging.info('Getting origin properties')
     if 'origin' not in products:
         # FIXME: not tested
@@ -550,7 +552,7 @@ def load_rupdic_from_origin(usgs_id, products):
               'require_dip_strike': True,
               'pga_map_png': None, 'mmi_map_png': None,
               'usgs_id': usgs_id, 'rupture_file': None}
-    return rupdic, None
+    return rupdic, err
 
 
 # NB: not used right now
@@ -718,7 +720,7 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
 
 def _get_nodal_planes(properties):
     # in parsers_test
-    err = None
+    err = {}
     if 'moment-tensor' not in properties['products']:
         err = 'Unable to retrieve information about the nodal options'
         return None, err
