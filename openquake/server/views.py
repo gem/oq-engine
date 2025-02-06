@@ -733,7 +733,7 @@ def impact_get_rupture_data(request):
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
-    if rupdic['shakemap_array'] is not None:
+    if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.2, 6.2)  # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
@@ -750,23 +750,13 @@ def impact_get_rupture_data(request):
                         status=200)
 
 
-def copy_to_temp_dir_with_unique_name(source_file_path):
-    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
-    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
-    temp_file_path = temp_file.name
-    # Close the NamedTemporaryFile to prevent conflicts on Windows
-    temp_file.close()
-    shutil.copy(source_file_path, temp_file_path)
-    return temp_file_path
-
-
 def get_uploaded_file_path(request, filename):
     file = request.FILES.get(filename)
     if file:
         # NOTE: we could not find a reliable way to avoid the deletion of the
         # uploaded file right after the request is consumed, therefore we need
         # to store a copy of it
-        return copy_to_temp_dir_with_unique_name(file.temporary_file_path())
+        return gettemp(open(file.temporary_file_path()).read(), suffix='.xml')
 
 
 @csrf_exempt

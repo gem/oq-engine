@@ -533,14 +533,19 @@ def check_consequences(fname, taxonomies, perils):
     in the consequence file are consistent with the expected taxonomies
     and perils
     """
-    missing = set()
     df = pandas.read_csv(fname)
     if 'taxonomy' in df.columns:
-        missing = set(df['taxonomy']) - taxonomies
-        if missing:
+        csq_taxonomies = set(df['taxonomy'])
+        extra = csq_taxonomies - taxonomies
+        missing = taxonomies - csq_taxonomies
+        if not csq_taxonomies & taxonomies:
+            raise InvalidFile(f'{fname}: no matching taxonomies')
+        elif missing:
+            raise InvalidFile(f'{fname}: missing taxonomies {missing}')
+        elif extra:
             # tested in event_based_damage/case_15
-            logging.warning(f'In {fname} there are taxonomies missing in '
-                            f'the exposure: {missing}')
+            logging.warning(f'In {fname} there are extra taxonomies missing '
+                            f'in the exposure: {extra}')
     if 'peril' in df.columns:
         for line, peril in enumerate(df['peril'], 1):
             if peril not in perils:

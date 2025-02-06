@@ -208,6 +208,7 @@ jobs:
            sleep 5 # wait for 5 seconds before check again
           done
           pytest -xs --doctest-modules --disable-warnings --color=yes openquake/commands openquake/engine
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_public_mode.py
 
   server_read_only_mode:
@@ -232,6 +233,7 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_read_only_mode.py
 
   server_aelo_mode:
@@ -260,6 +262,7 @@ jobs:
           ./openquake/server/manage.py migrate
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
           ./openquake/server/manage.py collectstatic --noinput
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_aelo_mode.py
 
   server_impact_mode:
@@ -291,10 +294,8 @@ jobs:
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
-          export PY_VER="$(python -c 'import sys; version=sys.version_info[:2]; print("{0}.{1}".format(*version))')"
-          export PYVER="$(echo ${PY_VER} | tr -d .)"
-          pip install https://wheelhouse.openquake.org/v3/linux/py${PYVER}/timezonefinder-6.5.2-cp${PYVER}-cp${PYVER}-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_impact_mode.py

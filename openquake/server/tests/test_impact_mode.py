@@ -251,6 +251,7 @@ class EngineServerTestCase(django.test.TestCase):
 
     def test_run_by_usgs_id_then_remove_calc(self):
         data = dict(usgs_id='us6000jllz',
+                    approach='use_shakemap_from_usgs',
                     lon=37.0143, lat=37.2256, dep=10.0, mag=7.8,
                     rake=0.0, dip=90, strike=0,
                     time_event='night',

@@ -129,6 +129,8 @@ ARISTOTLE_FORM_LABELS = {
     'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
+    'nodal_plane': 'Nodal plane',
+    'msr': 'Magnitude scaling relationship',
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
@@ -154,6 +156,8 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'station_data_file_from_usgs': '',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'float ≥ 0',
+    'nodal_plane': '',
+    'msr': '',
 }
 
 validators = {
@@ -252,18 +256,21 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     In the second case the form contains all fields and returns
     (rup, rupdic, params, error).
     """
+    err = {}
     dic, params, err = _validate(POST)
     if err:
         return None, dic, params, err
 
-    # NOTE: in level 1 interface there is no checkbox and the ShakeMap has to be used.
-    #       in level 2 interface the checkbox is unchecked by default
+    # NOTE: in level 1 interface the ShakeMap has to be used.
+    #       in level 2 interface it depends from the selected approach
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
+    approach = POST['approach']
 
     rup, rupdic, err = get_rup_dic(
-        dic['usgs_id'], user, use_shakemap, rupture_file, station_data_file, monitor)
+        dic, user, approach, use_shakemap, rupture_file, station_data_file,
+        monitor)
     if err:
         return None, None, None, err
     # round floats
@@ -281,6 +288,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
+    if 'msr' in POST:
+        rupdic['msr'] = POST['msr']
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
