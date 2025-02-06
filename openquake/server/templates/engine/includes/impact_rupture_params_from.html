@@ -1,0 +1,39 @@
+              <div id="rup_params" class="hidden">
+                <div class="impact_form_row">
+                  <label for"lon">{{ impact_form_labels.lon }}</label>
+                  <input class="impact-input" type="text" id="lon" name="lon" placeholder="{{ impact_form_placeholders.lon }}" />
+                </div>
+                <div class="impact_form_row">
+                  <label for"lat">{{ impact_form_labels.lat }}</label>
+                  <input class="impact-input" type="text" id="lat" name="lat" placeholder="{{ impact_form_placeholders.lat }}" />
+                </div>
+                <div class="impact_form_row">
+                  <label for"dep">{{ impact_form_labels.dep }}</label>
+                  <input class="impact-input" type="text" id="dep" name="dep" placeholder="{{ impact_form_placeholders.dep }}" />
+                </div>
+                <div class="impact_form_row">
+                  <label for"mag">{{ impact_form_labels.mag }}</label>
+                  <input class="impact-input" type="text" id="mag" name="mag" placeholder="{{ impact_form_placeholders.mag }}" />
+                </div>
+                <div id="nodal_plane" class="impact_form_row hidden">
+                  <label for="nodal_plane">{{ impact_form_labels.nodal_plane }}</label>
+                  <select name="nodal_plane" id="nodal_plane" class="impact-select"></select>
+                </div>
+                <div id="msr" class="impact_form_row hidden">
+                  <label for="msr">{{ impact_form_labels.msr }}</label>
+                  <select name="msr" id="msr" class="impact-select"></select>
+                </div>
+                <div class="impact_form_row">
+                  <label for"rake">{{ impact_form_labels.rake }}</label>
+                  <input class="impact-input" type="text" id="rake" name="rake" placeholder="{{ impact_form_placeholders.rake }}" />
+                </div>
+                <input class="impact-input" type="hidden" id="require_dip_strike" name="require_dip_strike"/> <!-- Coming from parsers.get_rup_dic -->
+                <div class="impact_form_row">
+                  <label for"dip">{{ impact_form_labels.dip }}</label>
+                  <input class="impact-input" type="text" id="dip" name="dip" placeholder="{{ impact_form_placeholders.dip }}" value="90" />
+                </div>
+                <div class="impact_form_row">
+                  <label for"strike">{{ impact_form_labels.strike }}</label>
+                  <input class="impact-input" type="text" id="strike" name="strike" placeholder="{{ impact_form_placeholders.strike }}" value="0" />
+                </div>
+              </div>

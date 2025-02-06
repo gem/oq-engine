@@ -40,7 +40,7 @@ from openquake.hazardlib.calc.filters import (  # noqa
 
 PRECISION = pmf.PRECISION
 
-SCALEREL = scalerel.get_available_magnitude_scalerel()
+SCALEREL = scalerel._get_available_class(scalerel.BaseMSR)
 
 GSIM = gsim.get_available_gsims()
 
@@ -1507,4 +1507,3 @@ def fragmentno(src):
         return -1
     fragment = fragments[1].split('!')[0]  # strip !b16
     return int(fragment)
-

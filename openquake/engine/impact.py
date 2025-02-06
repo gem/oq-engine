@@ -64,6 +64,7 @@ def main_cmd(usgs_id, rupture_file=None,
              ses_seed='42', local_timestamp='',
              exposure_hdf5=None, station_data_file=None,
              maximum_distance_stations='',
+             msr='', approach='use_shakemap_from_usgs',
              loglevel='warn',
              userlevel=2):
     """
@@ -80,6 +81,8 @@ def main_cmd(usgs_id, rupture_file=None,
         'rupture_dict', 'rupture_file', 'station_data_file'}
     post = {f: loc.get(f) for f in fields}
     post['usgs_id'] = usgs_id
+    post['msr'] = msr
+    post['approach'] = approach
     monitor = performance.Monitor()
     _rup, rupdic, oqparams, err = impact_validate(
         post, User(level=userlevel), rupture_file, station_data_file, monitor)
@@ -99,6 +102,7 @@ def main_cmd(usgs_id, rupture_file=None,
     else:
         callback(job.calc_id, oqparams, exc=None)
 
+
 main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
 main_cmd.rupture_file = 'XML file with the rupture model (optional)'
 main_cmd.rupture_dict = 'Used by the command `oq mosaic impact`'
@@ -116,6 +120,8 @@ main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
 main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
+main_cmd.msr = 'Magnitude scaling relationship'
+main_cmd.approach = 'For instance use_shakemap_from_usgs'
 main_cmd.loglevel = 'Log level'
 main_cmd.userlevel = 'User level'
 
