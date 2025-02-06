@@ -1073,6 +1073,7 @@ def get_crmodel(oqparam):
             # i.e. files collapsed.csv, fatalities.csv, ... with headers like
             # taxonomy,consequence,slight,moderate,extensive
             df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
+            # TODO: investigate why df.loss_type is needed
             if 'loss_type' not in df.columns:
                 df['loss_type'] = 'structural'
             if 'peril' not in df.columns:
