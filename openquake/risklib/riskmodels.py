@@ -536,8 +536,11 @@ def check_consequences(fname, taxonomies, perils):
     missing = set()
     df = pandas.read_csv(fname)
     if 'taxonomy' in df.columns:
-        missing = set(df['taxonomy']) - taxonomies
-        if missing:
+        csq_taxonomies = set(df['taxonomy'])
+        missing = csq_taxonomies - taxonomies
+        if not csq_taxonomies & taxonomies:
+            raise InvalidFile(f'{fname}: no matching taxonomies')
+        elif missing:
             # tested in event_based_damage/case_15
             logging.warning(f'In {fname} there are taxonomies missing in '
                             f'the exposure: {missing}')

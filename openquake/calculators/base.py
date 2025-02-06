@@ -1023,9 +1023,7 @@ class HazardCalculator(BaseCalculator):
             if not hasattr(self, 'assetcol'):
                 oq.raise_invalid('missing exposure')
 
-            taxonomies = self.assetcol.tagcol.taxonomy[1:]
-            taxidx = {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
-                      if taxi in numpy.unique(self.assetcol['taxonomy'])}
+            taxidx = self.assetcol.get_taxidx()
             # i.e. {'Concrete1': 1, 'Wood1': 2}
             tmap_df = readinput.taxonomy_mapping(oq, taxidx)
             self.crmodel.set_tmap(tmap_df, taxidx)

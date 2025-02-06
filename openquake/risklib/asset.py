@@ -336,6 +336,14 @@ class AssetCollection(object):
             self.tagcol.add_tagname('site_id')
             self.tagcol.site_id.extend(range(self.tot_sites))
 
+    def get_taxidx(self):
+        """
+        :returns: dictionary taxonomy string -> taxonomy index starting from 1
+        """
+        taxonomies = self.tagcol.taxonomy[1:]
+        return {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
+                if taxi in numpy.unique(self['taxonomy'])}
+
     @property
     def tagnames(self):
         """
