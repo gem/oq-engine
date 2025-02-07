@@ -175,7 +175,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2368.613]], atol=.02)  # from avg_losses-stats
+        # from avg_losses-stats with two quantiles
+        aac(obj.array, [[2368.6128, 2280.863 , 2561.6628]], atol=.02)
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
