@@ -35,7 +35,8 @@
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
                   Show assets</a>
               </div>
-              {% if user.is_superuser %}
+
+              {% if user_level == 2 %}
               <div class="my-pngs">
               <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/show_aggrisk_tags" class="btn btn-sm">
                   Show aggrisk_tags</a>
