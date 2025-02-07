@@ -91,7 +91,7 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
     print('Spent %.1f seconds' % (time.time() - t0))
     if what:
         calc_id = calc.datastore.calc_id
-        fname = outdir / ('%s_%s.txt' % (what.replace(':', ''), calc_id))
+        fname = outdir / ('%s_%s.org' % (what.replace(':', ''), calc_id))
         try:
             tbl = view(what, calc.datastore)
         except KeyError:

@@ -243,7 +243,7 @@ class EngineServerTestCase(django.test.TestCase):
         for job_id in js:
             ret = self.get('%s/aggrisk_tags' % job_id)
             # NOTE: the get utility decodes the json and returns a dict
-            self.assertIn('ID_1', ret)
+            self.assertIn('structural', ret)
             ret = self.post('%s/remove' % job_id)
             if ret.status_code != 200:
                 raise RuntimeError(
