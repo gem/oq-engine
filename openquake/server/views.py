@@ -1516,6 +1516,28 @@ def download_aggrisk(request, calc_id):
     return response
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def extract_html_table(request, calc_id, name):
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            table = _extract(ds, name)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, name, tb),
+            content_type='text/plain', status=400)
+    table_html = table.to_html(classes="table table-striped", index=False)
+    return render(request, 'engine/show_table.html',
+                  {'table_name': name, 'table_html': table_html})
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])

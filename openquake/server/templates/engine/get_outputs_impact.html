@@ -35,6 +35,12 @@
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
                   Show assets</a>
               </div>
+
+              {% if user_level == 2 %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags" class="btn btn-sm">
+                  Show aggrisk_tags</a>
+              </div>
               {% endif %}
             </div>
             <div class="outputs-general-btns-center"></div>
@@ -44,6 +50,7 @@
                    title="Size: {{ size_mb }} MB" class="btn btn-sm">
                   Download hdf5 datastore</a>
               </div>
+            {% endif %}
             </div>
           </div>
         </div>
