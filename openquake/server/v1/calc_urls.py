@@ -52,6 +52,7 @@ elif settings.APPLICATION_MODE == 'ARISTOTLE':
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
         re_path(r'^(\d+)/download_aggrisk$', views.download_aggrisk),
+        re_path(r'^(\d+)/show_aggrisk_tags$', views.show_aggrisk_tags),
     ])
 elif settings.APPLICATION_MODE != 'READ_ONLY':
     urlpatterns.extend([

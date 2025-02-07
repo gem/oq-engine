@@ -1516,6 +1516,27 @@ def download_aggrisk(request, calc_id):
     return response
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def show_aggrisk_tags(request, calc_id):
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            losses = _extract(ds, 'aggrisk_tags')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
+            content_type='text/plain', status=400)
+    losses_html = losses.to_html(classes="table table-striped", index=False)
+    return render(request, 'engine/show_aggrisk_tags.html', {'losses': losses_html})
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
