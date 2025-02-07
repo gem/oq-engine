@@ -24,8 +24,9 @@ import numpy
 import pandas
 
 from openquake.baselib import general, parallel, python3compat
-from openquake.commonlib import datastore, logs
+from openquake.hazardlib.stats import weighted_quantiles
 from openquake.risklib import asset, scientific, reinsurance
+from openquake.commonlib import datastore, logs
 from openquake.calculators import base, views
 from openquake.calculators.base import expose_outputs
 
@@ -311,10 +312,11 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     Compute the aggrisk DataFrame with columns agg_id, rlz_id, loss_id, loss
     """
     L = len(oq.loss_types)
+    weights = dstore['weights'][:]
     if oq.investigation_time:  # event based
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
-            tr /= len(dstore['weights'])
+            tr /= len(weights)
     columns = [col for col in rbe_df.columns if col not in {
         'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
     if oq.investigation_time is None or all(
@@ -326,7 +328,7 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     if dmgs:
         aggnumber = dstore['agg_values']['number']
     acc = general.AccumDict(accum=[])
-    quantiles = general.AccumDict(accum=[])
+    quantiles = general.AccumDict(accum=([], []))
     for agg_id in agg_ids:
         gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
         for (rlz_id, loss_id), df in gb:
@@ -345,7 +347,9 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
                 sorted_losses, _, eperiods = scientific.fix_losses(
                     losses, ne, builder.eff_time)
                 if oq.quantiles and not col.startswith('dmg_'):
-                    quantiles[agg_id, loss_id, col].extend(sorted_losses)
+                    ls, ws = quantiles[agg_id, loss_id, col]
+                    ls.extend(sorted_losses)
+                    ws.extend([weights[rlz_id]]* len(losses))
                 agg = sorted_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)
@@ -357,8 +361,8 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     aggrisk = pandas.DataFrame(acc)
     out = general.AccumDict(accum=[])
     if quantiles:
-        for (agg_id, loss_id, col), losses in quantiles.items():
-            qs = numpy.quantile(losses, oq.quantiles)
+        for (agg_id, loss_id, col), (losses, ws) in quantiles.items():
+            qs = weighted_quantiles(oq.quantiles, losses, ws)
             out['agg_id'].append(agg_id)
             out['loss_id'].append(loss_id)
             for q, qvalue in zip(oq.quantiles, qs):
