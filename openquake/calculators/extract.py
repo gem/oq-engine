@@ -819,7 +819,10 @@ def _aggexp_tags(dstore):
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
-    aggby = oq.aggregate_by[0]
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        aggby = ['|'.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        [aggby] = oq.aggregate_by
     keys = numpy.array([line.decode('utf8').split('\t')
                         for line in dstore['agg_keys'][:]])
     values = dstore['agg_values'][:-1]  # discard the total aggregation
