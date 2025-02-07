@@ -153,9 +153,7 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     :param dstore: datastore for an event based risk calculation
     :returns: a LossCurvesMapsBuilder instance or a Mock object for scenarios
     """
-    if oq.investigation_time is None:
-        return FakeBuilder()
-
+    assert oq.investigation_time
     weights = dstore['weights'][()]
     haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
         len(weights) if oq.collect_rlzs else 1)
@@ -308,63 +306,27 @@ def store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols,
                      units=units, ep_fields=ep_fields)
 
 
-# aggcurves are built in parallel, aggrisk sequentially
-def build_store_agg(dstore, oq, rbe_df, num_events):
+def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     """
-    Build the aggrisk and aggcurves tables from the risk_by_event table
+    Compute the aggrisk DataFrame with columns agg_id, rlz_id, loss_id, loss
     """
-    size = dstore.getsize('risk_by_event')
-    logging.info('Building aggrisk from %s of risk_by_event',
-                 general.humansize(size))
+    L = len(oq.loss_types)
     if oq.investigation_time:  # event based
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
             tr /= len(dstore['weights'])
-    rups = len(dstore['ruptures'])
-    events = dstore['events'][:]
-    rlz_id = events['rlz_id']
-    rup_id = events['rup_id']
-    if len(num_events) > 1:
-        rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
-    else:
-        rbe_df['rlz_id'] = 0
-    acc = general.AccumDict(accum=[])
     columns = [col for col in rbe_df.columns if col not in {
         'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
+    if oq.investigation_time is None or all(
+            col.startswith('dmg_') for col in columns):
+        builder = FakeBuilder()
+    else:
+        builder = get_loss_builder(dstore, oq, num_events=num_events)
     dmgs = [col for col in columns if col.startswith('dmg_')]
     if dmgs:
         aggnumber = dstore['agg_values']['number']
-
-    agg_ids = rbe_df.agg_id.unique()
-    K = agg_ids.max()
-    L = len(oq.loss_types)
-    T = scientific.LOSSID[oq.total_losses or 'structural']
-    logging.info("Performing %d aggregations", len(agg_ids))
-
-    loss_cols = [col for col in columns if not col.startswith('dmg_')]
-    if loss_cols:
-        builder = get_loss_builder(dstore, oq, num_events=num_events)
-    else:
-        builder = FakeBuilder()
-
-    # double loop to avoid running out of memory
+    acc = general.AccumDict(accum=[])
     for agg_id in agg_ids:
-
-        # build loss_by_event and loss_by_rupture
-        if agg_id == K and ('loss' in columns or 'losses' in columns) and rups:
-            df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == T)].copy()
-            if len(df):
-                df['rup_id'] = rup_id[df.event_id.to_numpy()]
-                if 'losses' in columns:  # for consequences
-                    df['loss'] = df['losses']
-                lbe_df = df[['event_id', 'loss']].sort_values(
-                    'loss',  ascending=False)
-                gb = df[['rup_id', 'loss']].groupby('rup_id')
-                rbr_df = gb.sum().sort_values('loss', ascending=False)
-                dstore.create_df('loss_by_rupture', rbr_df.reset_index())
-                dstore.create_df('loss_by_event', lbe_df)
-
-        # build aggrisk
         gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
         for (rlz_id, loss_id), df in gb:
             ne = num_events[rlz_id]
@@ -390,8 +352,50 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
                         agg * tr if oq.investigation_time else agg/ne)
     fix_dtypes(acc)
     aggrisk = pandas.DataFrame(acc)
-    dstore.create_df('aggrisk', aggrisk,
-                     limit_states=' '.join(oq.limit_states))
+    return aggrisk, columns, builder
+
+    
+# aggcurves are built in parallel, aggrisk sequentially
+def build_store_agg(dstore, oq, rbe_df, num_events):
+    """
+    Build the aggrisk and aggcurves tables from the risk_by_event table
+    """
+    size = dstore.getsize('risk_by_event')
+    logging.info('Building aggrisk from %s of risk_by_event',
+                 general.humansize(size))
+    rups = len(dstore['ruptures'])
+    events = dstore['events'][:]
+    rlz_id = events['rlz_id']
+    rup_id = events['rup_id']
+    if len(num_events) > 1:
+        rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
+    else:
+        rbe_df['rlz_id'] = 0
+
+    agg_ids = rbe_df.agg_id.unique()
+    K = agg_ids.max()
+    T = scientific.LOSSID[oq.total_losses or 'structural']
+    logging.info("Performing %d aggregations", len(agg_ids))
+
+    aggrisk, columns, builder = compute_aggrisk(
+        dstore, oq, rbe_df, num_events, agg_ids)
+    dstore.create_df(
+        'aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
+    loss_cols = [col for col in columns if not col.startswith('dmg_')]
+    for agg_id in agg_ids:
+        # build loss_by_event and loss_by_rupture
+        if agg_id == K and ('loss' in columns or 'losses' in columns) and rups:
+            df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == T)].copy()
+            if len(df):
+                df['rup_id'] = rup_id[df.event_id.to_numpy()]
+                if 'losses' in columns:  # for consequences
+                    df['loss'] = df['losses']
+                lbe_df = df[['event_id', 'loss']].sort_values(
+                    'loss',  ascending=False)
+                gb = df[['rup_id', 'loss']].groupby('rup_id')
+                rbr_df = gb.sum().sort_values('loss', ascending=False)
+                dstore.create_df('loss_by_rupture', rbr_df.reset_index())
+                dstore.create_df('loss_by_event', lbe_df)
     if oq.investigation_time and loss_cols:
         store_aggcurves(oq, agg_ids, rbe_df, builder, loss_cols, events,
                         num_events, dstore)
@@ -425,7 +429,8 @@ def build_reinsurance(dstore, oq, num_events):
         rbe_df['rlz_id'] = rlz_id[rbe_df.index.to_numpy()]
     else:
         rbe_df['rlz_id'] = 0
-    builder = get_loss_builder(dstore, oq, num_events=num_events)
+    builder = (get_loss_builder(dstore, oq, num_events=num_events)
+               if oq.investigation_time else FakeBuilder())
     avg = general.AccumDict(accum=[])
     dic = general.AccumDict(accum=[])
     for rlzid, df in rbe_df.groupby('rlz_id'):
