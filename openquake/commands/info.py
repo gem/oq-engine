@@ -165,7 +165,7 @@ def print_usgs_rupture(what):
         usgs_id = what.split(':', 1)[1]
     except IndexError:
         return 'Example: oq show usgs_rupture:us70006sj8'
-    print(get_rup_dic(usgs_id)[1])
+    print(get_rup_dic(dict(usgs_id=usgs_id))[1])
 
 
 def source_model_info(sm_nodes):
