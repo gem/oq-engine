@@ -1518,7 +1518,7 @@ def download_aggrisk(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def show_aggrisk_tags(request, calc_id):
+def extract_html_table(request, calc_id, name):
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
@@ -1526,15 +1526,16 @@ def show_aggrisk_tags(request, calc_id):
         return HttpResponseForbidden()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            losses = _extract(ds, 'aggrisk_tags')
+            table = _extract(ds, name)
     except Exception as exc:
         tb = ''.join(traceback.format_tb(exc.__traceback__))
         return HttpResponse(
             content='%s: %s in %s\n%s' %
-            (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
+            (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
-    losses_html = losses.to_html(classes="table table-striped", index=False)
-    return render(request, 'engine/show_aggrisk_tags.html', {'losses': losses_html})
+    table_html = table.to_html(classes="table table-striped", index=False)
+    return render(request, 'engine/show_table.html',
+                  {'table_name': name, 'table_html': table_html})
 
 
 @csrf_exempt
