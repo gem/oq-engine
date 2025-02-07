@@ -35,6 +35,11 @@
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
                   Show assets</a>
               </div>
+              {% if user.is_superuser %}
+              <div class="my-pngs">
+              <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/show_aggrisk_tags" class="btn btn-sm">
+                  Show aggrisk_tags</a>
+              </div>
               {% endif %}
             </div>
             <div class="outputs-general-btns-center"></div>
@@ -43,11 +48,6 @@
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
                    title="Size: {{ size_mb }} MB" class="btn btn-sm">
                   Download hdf5 datastore</a>
-              </div>
-              {% if user.is_superuser %}
-              <div id="to-aggrisk_tags">
-              <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/show_aggrisk_tags" class="btn btn-sm">
-                  View aggrisk_tags table</a>
               </div>
             {% endif %}
             </div>
