@@ -24,6 +24,7 @@ import sys
 import time
 import pathlib
 import numpy
+import pandas
 from openquake.baselib import hdf5
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base
@@ -101,7 +102,9 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
                 else:
                     df = hdf5.ArrayWrapper.from_(dset).to_dframe()
             except KeyError:
-                df = extract(calc.datastore, what).to_dframe()
+                df = extract(calc.datastore, what)
+                if not isinstance(df, pandas.DataFrame):
+                    df = df.to_dframe()
             tbl = text_table(df, ext='org')
         bname = prefix + re.sub(r'_\d+\.', '.', os.path.basename(fname))
         assert_close(tbl, outdir / bname)
