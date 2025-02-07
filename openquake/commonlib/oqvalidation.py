@@ -1912,7 +1912,8 @@ class OqParam(valid.ParamSet):
         exposures = self.inputs.get('exposure', [])
         yes = exposures and exposures[0].endswith('.hdf5')
         if yes:
-            # self.avg_losses = False
+            if not self.quantiles:
+                self.quantiles = [0.05, 0.95]
             if not self.aggregate_by:
                 self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
         return yes
