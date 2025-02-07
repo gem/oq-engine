@@ -852,7 +852,26 @@ def extract_aggrisk_tags(dstore, what):
     K = len(ok)
     ws = dstore['weights'][:]
     adf = dstore.read_df('aggrisk')
-    acc = {lt: numpy.zeros(K) for lt in LOSSTYPE[adf.loss_id.unique()]}
+    if 'aggrisk_quantiles' in dstore:
+        # normally there are two quantiles 0.05, 0.95
+        qdf = dstore.read_df('aggrisk_quantiles', 'loss_id')
+        qfields = [col for col in qdf.columns if col != 'agg_id']
+    else:
+        qdf = ()
+        qfields = []
+    loss_ids = adf.loss_id.unique()
+    acc = {}
+    for loss_id in loss_ids:
+        lt = LOSSTYPE[loss_id]
+        if len(qdf):
+            qdf_ = qdf.loc[loss_id]
+        acc[lt] = numpy.zeros(K)
+        for qfield in qfields:
+            arr = numpy.zeros(K)
+            for agg_id, qvalue in zip(qdf_.agg_id, qdf_[qfield]):
+                if agg_id < K:
+                    arr[agg_id] = qvalue
+            df[lt + qfield[4:]] = arr[ok]
     for agg_id, rlz_id, loss, loss_id in zip(
             adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
         if agg_id < K:

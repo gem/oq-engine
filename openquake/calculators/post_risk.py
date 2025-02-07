@@ -349,7 +349,7 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
                 if oq.quantiles and not col.startswith('dmg_'):
                     ls, ws = quantiles[agg_id, loss_id, col]
                     ls.extend(sorted_losses)
-                    ws.extend([weights[rlz_id]]* len(losses))
+                    ws.extend([weights[rlz_id]]* len(sorted_losses))
                 agg = sorted_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)
