@@ -326,6 +326,7 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     if dmgs:
         aggnumber = dstore['agg_values']['number']
     acc = general.AccumDict(accum=[])
+    quantiles = general.AccumDict(accum=[])
     for agg_id in agg_ids:
         gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
         for (rlz_id, loss_id), df in gb:
@@ -343,6 +344,8 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
                 losses = df[col].sort_values().to_numpy()
                 sorted_losses, _, eperiods = scientific.fix_losses(
                     losses, ne, builder.eff_time)
+                if oq.quantiles and not col.startswith('dmg_'):
+                    quantiles[agg_id, loss_id, col].extend(sorted_losses)
                 agg = sorted_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)
@@ -352,7 +355,17 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
                         agg * tr if oq.investigation_time else agg/ne)
     fix_dtypes(acc)
     aggrisk = pandas.DataFrame(acc)
-    return aggrisk, columns, builder
+    out = general.AccumDict(accum=[])
+    if quantiles:
+        for (agg_id, loss_id, col), losses in quantiles.items():
+            qs = numpy.quantile(losses, oq.quantiles)
+            out['agg_id'].append(agg_id)
+            out['loss_id'].append(loss_id)
+            for q, qvalue in zip(oq.quantiles, qs):
+                qstring = ('%.2f' % q)[2:]  # ie. '05' or '95'
+                out[f'{col}q{qstring}'].append(qvalue)
+    aggrisk_quantiles = pandas.DataFrame(out)
+    return aggrisk, aggrisk_quantiles, columns, builder
 
     
 # aggcurves are built in parallel, aggrisk sequentially
@@ -377,10 +390,12 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
     T = scientific.LOSSID[oq.total_losses or 'structural']
     logging.info("Performing %d aggregations", len(agg_ids))
 
-    aggrisk, columns, builder = compute_aggrisk(
+    aggrisk, aggrisk_quantiles, columns, builder = compute_aggrisk(
         dstore, oq, rbe_df, num_events, agg_ids)
     dstore.create_df(
         'aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
+    if len(aggrisk_quantiles):
+        dstore.create_df('aggrisk_quantiles', aggrisk_quantiles)
     loss_cols = [col for col in columns if not col.startswith('dmg_')]
     for agg_id in agg_ids:
         # build loss_by_event and loss_by_rupture
