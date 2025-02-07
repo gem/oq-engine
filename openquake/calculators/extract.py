@@ -871,13 +871,13 @@ def extract_aggrisk_tags(dstore, what):
             for agg_id, qvalue in zip(qdf_.agg_id, qdf_[qfield]):
                 if agg_id < K:
                     arr[agg_id] = qvalue
-            df[lt + qfield[4:]] = arr[ok]
+            df[lt + '_' + qfield[4:]] = arr[ok]
     for agg_id, rlz_id, loss, loss_id in zip(
             adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
         if agg_id < K:
             acc[LOSSTYPE[loss_id]][agg_id] += loss * ws[rlz_id]
     for name in acc:
-        df[name + '_risk'] = acc[name][ok]
+        df[name + '_mean'] = acc[name][ok]
     return df
 
 

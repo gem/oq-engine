@@ -50,6 +50,6 @@ def test_impact(n):
     expo = cd.parent.parent.parent / 'exposure.hdf5'
     if not os.path.exists(expo):
         raise unittest.SkipTest(f'Missing {expo}')
-    calc = check(cd / f'impact{n}/job.ini', what='aggrisk')
+    calc = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
         check_export_job(calc.datastore)

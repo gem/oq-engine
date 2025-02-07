@@ -1,5 +1,4 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.22.0-git8859f48b4b', start_date='2025-01-17T07:05:09', checksum=1040388326"
-policy,taxonomy,number,nonstructural,structural,area,nonstructural_risk,structural_risk,structural+nonstructural_ins_risk
+policy,taxonomy,number,nonstructural,structural,area,nonstructural_mean,structural_mean,structural+nonstructural_ins_mean
 A,RC,5.00000E+02,1.00000E+03,2.00000E+03,1.00000E+01,2.73602E+01,6.16284E+01,1.58074E+01
 A,RM,3.00000E+00,1.50000E+03,3.00000E+03,1.00000E+01,2.12580E+01,1.43613E+02,6.94350E+01
 B,RM,1.00000E+01,2.50000E+03,5.00000E+03,1.00000E+00,9.44013E+01,3.55602E+02,2.75387E+02
