@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Implemented quantiles in scenario_risk, visible in aggrisk_tags
   * Added checks on the consequence functions across taxonomies and perils
   * Fixed the taxonomy field in consequences.csv to be the exposure
     taxonomy and not a fragility function ID
