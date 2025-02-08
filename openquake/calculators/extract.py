@@ -819,7 +819,10 @@ def _aggexp_tags(dstore):
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
-    aggby = oq.aggregate_by[0]
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        aggby = [','.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        [aggby] = oq.aggregate_by
     keys = numpy.array([line.decode('utf8').split('\t')
                         for line in dstore['agg_keys'][:]])
     values = dstore['agg_values'][:-1]  # discard the total aggregation
@@ -852,13 +855,32 @@ def extract_aggrisk_tags(dstore, what):
     K = len(ok)
     ws = dstore['weights'][:]
     adf = dstore.read_df('aggrisk')
-    acc = {lt: numpy.zeros(K) for lt in LOSSTYPE[adf.loss_id.unique()]}
+    if 'aggrisk_quantiles' in dstore:
+        # normally there are two quantiles 0.05, 0.95
+        qdf = dstore.read_df('aggrisk_quantiles', 'loss_id')
+        qfields = [col for col in qdf.columns if col != 'agg_id']
+    else:
+        qdf = ()
+        qfields = []
+    loss_ids = adf.loss_id.unique()
+    acc = {}
+    for loss_id in loss_ids:
+        lt = LOSSTYPE[loss_id]
+        if len(qdf):
+            qdf_ = qdf.loc[loss_id]
+        acc[lt] = numpy.zeros(K)
+        for qfield in qfields:
+            arr = numpy.zeros(K)
+            for agg_id, qvalue in zip(qdf_.agg_id, qdf_[qfield]):
+                if agg_id < K:
+                    arr[agg_id] = qvalue
+            df[lt + '_' + qfield[4:]] = arr[ok]
     for agg_id, rlz_id, loss, loss_id in zip(
             adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
         if agg_id < K:
             acc[LOSSTYPE[loss_id]][agg_id] += loss * ws[rlz_id]
     for name in acc:
-        df[name + '_risk'] = acc[name][ok]
+        df[name + '_mean'] = acc[name][ok]
     return df
 
 
