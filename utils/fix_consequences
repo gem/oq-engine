@@ -29,10 +29,14 @@ def main(taxonomy_mapping: str, consequences: str):
     tmap = pandas.read_csv(taxonomy_mapping).set_index('conversion')
     for conseq in consequences:
         cons = pandas.read_csv(conseq).set_index('taxonomy')
-        df = cons.join(tmap, how='inner')[cons.columns]
-        for taxo, grp in df.groupby('taxonomy'):
-            # take the first row
-            grp[0:1].to_csv(conseq + '.new')
+        cols = ['taxonomy'] + list(cons.columns)
+        df = cons.join(tmap, how='inner')[cols]
+        df.index.names = ['risk_id']
+        dfs = []
+        for _, grp in df.groupby(['taxonomy', 'consequence', 'loss_type']):
+            dfs.append(grp[0:1])  # take the first row
+        df = pandas.concat(dfs)
+        df.to_csv(conseq)
 
 main.taxonomy_mapping = 'filename'
 main.consequences = dict(help='files', nargs='+')
