@@ -799,7 +799,6 @@ class HazardCalculator(BaseCalculator):
         """
         :returns: the number of realizations
         """
-        breakpoint()
         if self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk':
             return 1
         elif 'weights' in self.datastore:
