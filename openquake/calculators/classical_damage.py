@@ -73,7 +73,7 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
             a dictionary asset_ordinal -> array(R, D)
         """
         D = len(self.crmodel.damage_states)
-        R = len(self.datastore['weights'])  # don't use self.R
+        R = self.datastore['full_lt'].get_num_paths()  # don't use self.R
         damages = numpy.zeros((1, self.A, R, self.L, D), numpy.float32)
         for a in result:
             damages[0, a] = result[a]
