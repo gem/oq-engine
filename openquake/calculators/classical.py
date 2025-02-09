@@ -582,11 +582,11 @@ class ClassicalCalculator(base.HazardCalculator):
         splits = []
         for cmaker, tilegetters, blocks, nsplits in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
-            splits.append(nsplits)
             for block in blocks:
                 for tgetters in block_splitter(tilegetters, nsplits):
                     allargs.append((block, tgetters, cmaker, ds))
                 n_out.append(len(tilegetters))
+            splits.append(nsplits)
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         sum(n_out), len(allargs), min(n_out), max(n_out))
