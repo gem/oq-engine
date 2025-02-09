@@ -711,7 +711,6 @@ class CompositeSourceModel:
         oq = cmakers[0].oq
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
-        self.splits = []
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
@@ -729,7 +728,6 @@ class CompositeSourceModel:
                     sg, min(hint, oq.max_blocks), lambda s: s.weight))
                 tiles = max(hint / oq.max_blocks * splits, splits)
             tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
-            self.splits.append(numpy.ceil(splits))
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
             cmaker.codes = sg.codes
