@@ -729,7 +729,7 @@ class CompositeSourceModel:
                     sg, min(hint, oq.max_blocks), lambda s: s.weight))
                 tiles = max(hint / oq.max_blocks * splits, splits)
             tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
-            self.splits.append(splits)
+            self.splits.append(numpy.ceil(splits))
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
             cmaker.codes = sg.codes
