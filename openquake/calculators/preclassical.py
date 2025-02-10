@@ -314,15 +314,12 @@ class PreClassicalCalculator(base.HazardCalculator):
                     others.extend(pointlike)
             for block in block_splitter(others, 40):
                 smap.submit((block, sites, cmaker, secparams))
-        normal = smap.reduce()
-        if atomic_sources:  # case_35
-            atomic = AccumDict()
+        res = smap.reduce()
+        atomic = set(src.grp_id for src in atomic_sources)
+        if atomic:  # case_35
             for grp_id, srcs in groupby(
                     atomic_sources, lambda src: src.grp_id).items():
-                atomic[grp_id] = srcs
-        else:
-            atomic = AccumDict()
-        res = normal + atomic
+                res[grp_id] = srcs
         if before_after[0] != before_after[1]:
             logging.info(
                 'Reduced the number of point sources from {:_d} -> {:_d}'.
