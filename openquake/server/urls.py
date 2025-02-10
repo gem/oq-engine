@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 from django.conf import settings
 from django.urls import re_path, include, path
 from django.views.generic.base import RedirectView
@@ -108,21 +109,18 @@ else:
         admin.autodiscover()
         admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
         application_mode = settings.APPLICATION_MODE
-        if application_mode == 'AELO':
-            email_template_name = (
-                'registration/password_reset_email_aelo.txt')
-            subject_template_name = (
-                'registration/password_reset_subject_aelo.txt')
-        if application_mode == 'ARISTOTLE':
-            email_template_name = (
-                'registration/password_reset_email_impact.txt')
-            subject_template_name = (
-                'registration/password_reset_subject_impact.txt')
-        else:
-            email_template_name = (
-                'registration/password_reset_email.txt')
-            subject_template_name = (
-                'registration/password_reset_subject.txt')
+        curr_dir = os.path.dirname(os.path.realpath(__file__))
+        registration_templates_dir = os.path.join(curr_dir, 'templates', 'registration')
+        for registration_template_filename in (
+                'password_reset_email.txt',
+                'password_reset_subject.txt',
+                'normal_user_creation_email.txt',
+                'normal_user_creation_email_subject.txt'):
+            registration_template_path = os.path.join(
+                registration_templates_dir, registration_template_filename)
+            assert os.path.isfile(registration_template_path), (
+                f'File not found: {registration_template_path}. You can create it'
+                ' from one of the available templates.')
         urlpatterns += [
             re_path(r'^admin/', admin.site.urls),
             re_path(r'accounts/login/$',
@@ -139,8 +137,8 @@ else:
                  PasswordResetView.as_view(
                      template_name='registration/reset_password.html',
                      extra_context={'application_mode': application_mode},
-                     subject_template_name=subject_template_name,
-                     email_template_name=email_template_name),
+                     subject_template_name='registration/password_reset_subject.txt',
+                     email_template_name='registration/password_reset_email.txt'),
                  name='reset_password'),
             path('reset_password_sent/',
                  PasswordResetDoneView.as_view(

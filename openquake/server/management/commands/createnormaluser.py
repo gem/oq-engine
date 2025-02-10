@@ -52,26 +52,11 @@ class Command(BaseCommand):
                 request.META['SERVER_PORT'] = '80'
         else:
             request.META['SERVER_PORT'] = settings.SERVER_PORT
-        if settings.APPLICATION_MODE == 'AELO':
-            password_reset_subject = (
-                'registration/normal_user_creation_email_subject_aelo.txt')
-            email_template_name = (
-                'registration/normal_user_creation_email_aelo.txt')
-        elif settings.APPLICATION_MODE == 'ARISTOTLE':
-            password_reset_subject = (
-                'registration/normal_user_creation_email_subject_impact.txt')  # NOQA
-            email_template_name = (
-                'registration/normal_user_creation_email_impact.txt')
-        else:
-            password_reset_subject = (
-                'registration/normal_user_creation_email_subject.txt')
-            email_template_name = (
-                'registration/normal_user_creation_email.txt')
         form.save(
             domain_override=(settings.SERVER_NAME
                              if settings.USE_REVERSE_PROXY else None),
             request=request,
             use_https=settings.USE_HTTPS,
             from_email=settings.EMAIL_HOST_USER,
-            subject_template_name=password_reset_subject,
-            email_template_name=email_template_name)
+            subject_template_name='registration/normal_user_creation_email_subject.txt',
+            email_template_name='registration/normal_user_creation_email.txt')
