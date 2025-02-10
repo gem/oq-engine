@@ -76,14 +76,12 @@ from openquake.engine import engine
 
 
 
-#MODELS = sorted('''
-#ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
-#CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
-#'''.split())  # GLD is missing
-# MODELS = 'EUR MIE'.split()
 MODELS = sorted('''
-PHL
-'''.split()) 
+ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
+CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
+'''.split())  # GLD is missing
+# MODELS = 'EUR MIE'.split()
+
 
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
