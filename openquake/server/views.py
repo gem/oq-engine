@@ -51,7 +51,7 @@ from openquake.hazardlib.shakemap.validate import (
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
-from openquake.calculators.export import export
+from openquake.calculators.export import export, FIELD_DESCRIPTION
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
@@ -1432,6 +1432,18 @@ def format_time_delta(td):
     return formatted_time
 
 
+def determine_precision(weights):
+    """
+    Determine the minimum decimal places needed to represent the weights accurately
+    """
+    max_decimal_places = 0
+    for weight in weights:
+        str_weight = f"{weight:.10f}".rstrip("0")  # Remove trailing zeros
+        decimal_places = str_weight[::-1].find('.')  # Count decimal places
+        max_decimal_places = max(max_decimal_places, decimal_places)
+    return max_decimal_places
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_impact(request, calc_id):
@@ -1454,8 +1466,12 @@ def web_engine_get_outputs_impact(request, calc_id):
                       f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
             losses_header = None
         else:
-            losses_header = [header.capitalize().replace('_', ' ')
-                             for header in losses.dtype.names]
+            losses_header = [
+                f'{field}<br><i>{FIELD_DESCRIPTION[field]}</i>'
+                if field in FIELD_DESCRIPTION
+                else field.capitalize()
+                for field in losses.dtype.names]
+            weights_precision = determine_precision(losses['weight'])
         if 'png' in ds:
             avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
             assets = 'assets.png' in ds['png']
@@ -1487,6 +1503,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                        time_job_after_event=time_job_after_event_str,
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
+                       weights_precision=weights_precision,
                        avg_gmf=avg_gmf, assets=assets,
                        warnings=warnings))
 

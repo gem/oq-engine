@@ -67,7 +67,7 @@
         <thead>
           <tr>
             {% for header in losses_header %}
-              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header }}</th>
+              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header|safe }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -78,7 +78,7 @@
               <td style="border: 1px solid #ddd; {% if forloop.counter == 2 %}border-right: 2px solid black; %}{% endif %}{% if forloop.counter < 3 %}text-align: left;{% else %}text-align: right;{% endif %}">
                 {% if item|stringformat:"s"|floatformat %}
                   {% if forloop.counter == 2 %}
-                  {{ item|floatformat:"6" }}
+                  {{ item|floatformat:weights_precision }}
                   {% else %}
                   {{ item|humanize_number }}
                   {% endif %}
