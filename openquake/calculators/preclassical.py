@@ -138,10 +138,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         mon = monitor('weighting sources', measuremem=False)
         with mon:
             cmaker.set_weight(splits, sf, multiplier)
-        dic = {grp_id: splits}
-        dic['before'] = len(srcs)
-        dic['after'] = len(splits)
-        yield dic
+        yield {grp_id: splits}
 
 
 def store_tiles(dstore, csm, sitecol, cmakers):
@@ -286,6 +283,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sys.platform != 'darwin':
             # avoid a segfault in macOS
             self.datastore.swmr_on()
+        before_after = numpy.zeros(2, dtype=int)
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             cmaker = self.cmakers[grp_id]
@@ -307,6 +305,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     for plike in pointlike:
                         pointsources.extend(split_source(plike))
                     cpsources = grid_point_sources(pointsources, spacing)
+                    before_after += [len(pointsources), len(cpsources)]
                     for block in block_splitter(cpsources, 200):
                         smap.submit((block, sites, cmaker, secparams))
                 else:
@@ -315,21 +314,16 @@ class PreClassicalCalculator(base.HazardCalculator):
                     others.extend(pointlike)
             for block in block_splitter(others, 40):
                 smap.submit((block, sites, cmaker, secparams))
-        normal = smap.reduce()
-        if atomic_sources:  # case_35
-            n = len(atomic_sources)
-            atomic = AccumDict({'before': n, 'after': n})
+        res = smap.reduce()
+        atomic = set(src.grp_id for src in atomic_sources)
+        if atomic:  # case_35
             for grp_id, srcs in groupby(
                     atomic_sources, lambda src: src.grp_id).items():
-                atomic[grp_id] = srcs
-        else:
-            atomic = AccumDict()
-        res = normal + atomic
-        if ('before' in res and 'after' in res and
-                res['before'] != res['after']):
+                res[grp_id] = srcs
+        if before_after[0] != before_after[1]:
             logging.info(
                 'Reduced the number of point sources from {:_d} -> {:_d}'.
-                format(res['before'], res['after']))
+                format(before_after[0], before_after[1]))
         acc = AccumDict(accum=0)
         code2cls = get_code2cls()
         for grp_id, srcs in res.items():

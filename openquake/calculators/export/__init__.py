@@ -81,6 +81,17 @@ DISPLAY_NAME = {
 }
 
 
+FIELD_DESCRIPTION = {
+    'contents': 'Contents loss (USD)',
+    'nonstructural': 'Nonstructural loss (USD)',
+    'structural': 'Structural loss (USD)',
+    'occupants': 'Fatalities',
+    'area': 'Floor area lost (m2)',
+    'number': 'Buildings beyond repair',
+    'residents': 'Rendered homeless',
+}
+
+
 class MissingExporter(Exception):
     """
     Raised when there is not exporter for the given pair (dskey, fmt)

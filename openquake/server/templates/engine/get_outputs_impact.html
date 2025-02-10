@@ -35,6 +35,12 @@
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
                   Show assets</a>
               </div>
+
+              {% if user_level == 2 %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags" class="btn btn-sm">
+                  Show aggrisk_tags</a>
+              </div>
               {% endif %}
             </div>
             <div class="outputs-general-btns-center"></div>
@@ -44,6 +50,7 @@
                    title="Size: {{ size_mb }} MB" class="btn btn-sm">
                   Download hdf5 datastore</a>
               </div>
+            {% endif %}
             </div>
           </div>
         </div>
@@ -60,7 +67,7 @@
         <thead>
           <tr>
             {% for header in losses_header %}
-              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header }}</th>
+              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header|safe }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -71,7 +78,7 @@
               <td style="border: 1px solid #ddd; {% if forloop.counter == 2 %}border-right: 2px solid black; %}{% endif %}{% if forloop.counter < 3 %}text-align: left;{% else %}text-align: right;{% endif %}">
                 {% if item|stringformat:"s"|floatformat %}
                   {% if forloop.counter == 2 %}
-                  {{ item|floatformat:"6" }}
+                  {{ item|floatformat:weights_precision }}
                   {% else %}
                   {{ item|humanize_number }}
                   {% endif %}

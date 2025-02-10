@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed a bug in classical_damage with sampling reported by Evi Riga
+  * Added utils/fix_consequences to fix consequence.csv files
+    containing risk_ids rather than taxonomies, now invalid
   * Implemented quantiles in scenario_risk, visible in aggrisk_tags
   * Added checks on the consequence functions across taxonomies and perils
   * Fixed the taxonomy field in consequences.csv to be the exposure
