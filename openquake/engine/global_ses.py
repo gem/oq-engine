@@ -130,8 +130,8 @@ def read_job_inis(mosaic_dir, models, INPUTS):
     return out, rows
 
 
-def main(mosaic_dir, out, number_of_logic_tree_samples,ses_per_logic_tree_path,
-         minimum_magnitude):
+def main(mosaic_dir, out, number_of_logic_tree_samples=200,
+         ses_per_logic_tree_path=50, minimum_magnitude=5):
     
     INPUTS = dict(
     calculation_mode='event_based',
