@@ -1528,7 +1528,9 @@ def download_aggrisk(request, calc_id):
         },
     )
     writer = csv.writer(response)
-    writer.writerow(losses.dtype.names)
+    headers = [FIELD_DESCRIPTION[field] if field in FIELD_DESCRIPTION else field
+               for field in losses.dtype.names]
+    writer.writerow(headers)
     for row in losses:
         writer.writerow(row)
     return response
