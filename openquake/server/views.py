@@ -1466,8 +1466,6 @@ def web_engine_get_outputs_impact(request, calc_id):
                       f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
             losses_header = None
         else:
-            losses_header = [header.capitalize().replace('_', ' ')
-                             for header in losses.dtype.names]
             losses_header = [
                 FIELD_DESCRIPTION[field] if field in FIELD_DESCRIPTION
                 else field.capitalize()
