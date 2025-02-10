@@ -67,7 +67,7 @@
         <thead>
           <tr>
             {% for header in losses_header %}
-              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header }}</th>
+              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header|safe }}</th>
             {% endfor %}
           </tr>
         </thead>

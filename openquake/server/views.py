@@ -1467,7 +1467,8 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses_header = None
         else:
             losses_header = [
-                FIELD_DESCRIPTION[field] if field in FIELD_DESCRIPTION
+                f'{field}<br><i>{FIELD_DESCRIPTION[field]}</i>'
+                if field in FIELD_DESCRIPTION
                 else field.capitalize()
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
