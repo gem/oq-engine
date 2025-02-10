@@ -24,6 +24,7 @@ to numpy composite arrays.
 from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
+from xml.parsers.expat import ExpatError
 import io
 import os
 import pathlib
@@ -722,7 +723,8 @@ def _get_nodal_planes(properties):
     # in parsers_test
     err = {}
     if 'moment-tensor' not in properties['products']:
-        err = 'Unable to retrieve information about the nodal options'
+        err = {'status': 'failed',
+               'error_msg': 'Unable to retrieve information about the nodal options'}
         return None, err
     moment_tensor = _get_preferred_item(properties['products']['moment-tensor'])
     props = moment_tensor['properties']
@@ -739,8 +741,13 @@ def _get_nodal_planes(properties):
 
 
 def _get_rup_dic_from_xml(usgs_id, user, rupture_file, station_data_file):
-    [rup_node] = nrml.read(os.path.join(user.testdir, rupture_file)
-                           if user.testdir else rupture_file)
+    err = {}
+    try:
+        [rup_node] = nrml.read(os.path.join(user.testdir, rupture_file)
+                               if user.testdir else rupture_file)
+    except ExpatError as exc:
+        err = {"status": "failed", "error_msg": str(exc)}
+        return None, {}, err
     rup = sourceconverter.RuptureConverter(
         rupture_mesh_spacing=5.).convert_node(rup_node)
     rup.tectonic_region_type = '*'
@@ -752,7 +759,7 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file, station_data_file):
                   usgs_id=usgs_id,
                   rupture_file=rupture_file,
                   station_data_file=station_data_file)
-    return rup, rupdic
+    return rup, rupdic, err
 
 
 def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
@@ -784,9 +791,9 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         return rup, rupdic, err
 
     if rupture_file and rupture_file.endswith('.xml'):
-        rup, rupdic = _get_rup_dic_from_xml(
+        rup, rupdic, err = _get_rup_dic_from_xml(
             usgs_id, user, rupture_file, station_data_file)
-        if usgs_id == 'FromFile':
+        if err or usgs_id == 'FromFile':
             return rup, rupdic, err
     elif rupture_file and rupture_file.endswith('.json'):
         with open(rupture_file) as f:
