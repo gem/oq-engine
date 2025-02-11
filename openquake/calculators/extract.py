@@ -851,36 +851,45 @@ def extract_aggrisk_tags(dstore, what):
     """
     Aggregates risk by tag. Use it as /extract/aggrisk_tags?
     """
-    df, ok = _aggexp_tags(dstore)
-    K = len(ok)
+    oq = dstore['oqparam']
     ws = dstore['weights'][:]
     adf = dstore.read_df('aggrisk')
     if 'aggrisk_quantiles' in dstore:
         # normally there are two quantiles 0.05, 0.95
-        qdf = dstore.read_df('aggrisk_quantiles', 'loss_id')
+        qdf = dstore.read_df('aggrisk_quantiles', ['agg_id', 'loss_id'])
         qfields = [col for col in qdf.columns if col != 'agg_id']
     else:
         qdf = ()
         qfields = []
-    loss_ids = adf.loss_id.unique()
-    acc = {}
-    for loss_id in loss_ids:
-        lt = LOSSTYPE[loss_id]
-        if len(qdf):
-            qdf_ = qdf.loc[loss_id]
-        acc[lt] = numpy.zeros(K)
-        for qfield in qfields:
-            arr = numpy.zeros(K)
-            for agg_id, qvalue in zip(qdf_.agg_id, qdf_[qfield]):
-                if agg_id < K:
-                    arr[agg_id] = qvalue
-            df[lt + '_' + qfield[4:]] = arr[ok]
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        # see impact_test.py
+        aggby = [','.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        # see event_based_risk_test/case_1
+        [aggby] = oq.aggregate_by
+    keys = numpy.array([line.decode('utf8').split('\t')
+                        for line in dstore['agg_keys'][:]])
+    values = dstore['agg_values'][:-1]  # discard the total aggregation
+    lossdic = general.AccumDict(accum=0)
+    K = len(keys)
     for agg_id, rlz_id, loss, loss_id in zip(
             adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
         if agg_id < K:
-            acc[LOSSTYPE[loss_id]][agg_id] += loss * ws[rlz_id]
-    for name in acc:
-        df[name + '_mean'] = acc[name][ok]
+            lossdic[agg_id, loss_id] += loss * ws[rlz_id]
+    acc = general.AccumDict(accum=[])
+    for (agg_id, loss_id), loss in sorted(lossdic.items()):
+        lt = LOSSTYPE[loss_id]
+        if lt in values.dtype.names:
+            for agg_key, key in zip(aggby, keys[agg_id]):
+                acc[agg_key].append(key)
+            acc['loss_type'].append(lt)
+            acc['value'].append(values[agg_id][lt])
+            acc['lossmea'].append(loss)
+            if len(qdf):
+                qvalues = qdf.loc[agg_id, loss_id].to_numpy()
+                for qfield, qvalue in zip(qfields, qvalues):
+                    acc[qfield].append(qvalue)
+    df = pandas.DataFrame(acc)
     return df
 
 
