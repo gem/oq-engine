@@ -113,6 +113,8 @@ else:
         registration_templates_dir = os.path.join(curr_dir, 'templates', 'registration')
         password_reset_email_content_fname = 'password_reset_email_content.txt'
         password_reset_email_subject_fname = 'password_reset_email_subject.txt'
+        # NOTE: checking here (when starting the webui with authentication enabled)
+        # also the existance of actualized files of used when creating a new user
         for registration_template_fname in (
                 password_reset_email_content_fname,
                 password_reset_email_subject_fname,
