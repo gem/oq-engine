@@ -59,4 +59,4 @@ class Command(BaseCommand):
             use_https=settings.USE_HTTPS,
             from_email=settings.EMAIL_HOST_USER,
             subject_template_name='registration/normal_user_creation_email_subject.txt',
-            email_template_name='registration/normal_user_creation_email.txt')
+            email_template_name='registration/normal_user_creation_email_content.txt')
