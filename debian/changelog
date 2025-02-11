@@ -1,7 +1,7 @@
   [Christopher Brooks]
   * Another small bug fix for NZ 2022 inslab variants of the Kuehn et
     al. (2020) GMM - the sigma_mu_model and sigma_mu_epsilon params
-    were sometimes missing from the GMM object
+    were sometimes missing from GSIM object + added a sensitivity test
 
   [Marco Pagani, Michele Simionato]
   * Added an `occurrence_rate` column in median_spectrum_disagg and fixed
