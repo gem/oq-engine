@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Added an `occurrence_rate` column in median_spectrum_disagg
+
   [Michele Simionato]
   * Fixed a bug in classical_damage with sampling reported by Evi Riga
   * Added utils/fix_consequences to fix consequence.csv files
