@@ -585,7 +585,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blocks:
                 for tgetters in block_splitter(tilegetters, nsplits):
                     allargs.append((block, tgetters, cmaker, ds))
-                n_out.append(len(tilegetters))
+                n_out.append(len(tgetters))
             splits.append(nsplits)
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
