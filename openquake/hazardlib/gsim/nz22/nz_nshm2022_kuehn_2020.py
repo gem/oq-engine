@@ -215,6 +215,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         if self.region in ("NZL"):
             self.REQUIRES_SITES_PARAMETERS = \
                 self.__class__.REQUIRES_SITES_PARAMETERS
+            
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -293,3 +294,6 @@ class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
 
     # Need vs30 + backarc also for inslab
     REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
+
+    # Other required params
+    REQUIRES_ATTRIBUTES = {'region', 'm_b', 'sigma_mu_model', 'sigma_mu_epsilon'}
