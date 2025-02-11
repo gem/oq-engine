@@ -111,13 +111,17 @@ else:
         application_mode = settings.APPLICATION_MODE
         curr_dir = os.path.dirname(os.path.realpath(__file__))
         registration_templates_dir = os.path.join(curr_dir, 'templates', 'registration')
-        for registration_template_filename in (
-                'password_reset_email.txt',
-                'password_reset_subject.txt',
-                'normal_user_creation_email.txt',
+        password_reset_email_content_fname = 'password_reset_email_content.txt'
+        password_reset_email_subject_fname = 'password_reset_email_subject.txt'
+        # NOTE: checking here (when starting the webui with authentication enabled)
+        # also the existance of actualized files of used when creating a new user
+        for registration_template_fname in (
+                password_reset_email_content_fname,
+                password_reset_email_subject_fname,
+                'normal_user_creation_email_content.txt',
                 'normal_user_creation_email_subject.txt'):
             registration_template_path = os.path.join(
-                registration_templates_dir, registration_template_filename)
+                registration_templates_dir, registration_template_fname)
             assert os.path.isfile(registration_template_path), (
                 f'File not found: {registration_template_path}. You can create it'
                 ' from one of the available templates.')
@@ -137,22 +141,27 @@ else:
                  PasswordResetView.as_view(
                      template_name='registration/reset_password.html',
                      extra_context={'application_mode': application_mode},
-                     subject_template_name='registration/password_reset_subject.txt',
-                     email_template_name='registration/password_reset_email.txt'),
+                     subject_template_name=os.path.join(
+                         'registration', password_reset_email_subject_fname),
+                     email_template_name=os.path.join(
+                         'registration', password_reset_email_content_fname)),
                  name='reset_password'),
             path('reset_password_sent/',
                  PasswordResetDoneView.as_view(
-                     template_name='registration/password_reset_sent.html',
+                     template_name=os.path.join(
+                         'registration', 'password_reset_sent.html'),
                      extra_context={'application_mode': application_mode}),
                  name='password_reset_done'),
             path('reset/<uidb64>/<token>',
                  PasswordResetConfirmView.as_view(
-                     template_name='registration/password_reset_form.html',
+                     template_name=os.path.join('registration',
+                                                'password_reset_form.html'),
                      extra_context={'application_mode': application_mode}),
                  name='password_reset_confirm'),
             path('reset_password_complete/',
                  PasswordResetCompleteView.as_view(
-                     template_name='registration/password_reset_done.html',
+                     template_name=os.path.join('registration',
+                                                'password_reset_done.html'),
                      extra_context={'application_mode': application_mode}),
                  name='password_reset_complete'),
         ]
