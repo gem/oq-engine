@@ -1,5 +1,6 @@
   [Marco Pagani, Michele Simionato]
-  * Added an `occurrence_rate` column in median_spectrum_disagg
+  * Added an `occurrence_rate` column in median_spectrum_disagg and fixed
+    the exporter to order the ruptures by ID
 
   [Michele Simionato]
   * Fixed a bug in classical_damage with sampling reported by Evi Riga
