@@ -174,7 +174,10 @@ def main(dstore, csm):
     if N == 1 and P == 1:
         for cm in cmakers:
             G = len(cm.gsims)
-            dtlist = [('rup_id', I64), ('mag', F32), ('rrup', F32)]
+            dtlist = [('rup_id', I64),
+                      ('mag', F32),
+                      ('rrup', F32),
+                      ('occurrence_rate', F32)]
             dt = (F32, (M,))
             for g in range(G):
                 dtlist.append((f'mea{g}', dt))
