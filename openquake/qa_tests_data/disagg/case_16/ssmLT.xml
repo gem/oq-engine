@@ -1,0 +1,10 @@
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree>
+    <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="slab">
+      <logicTreeBranch branchID="inslab_area_src">
+        <uncertaintyModel>ssm/src.xml </uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>
