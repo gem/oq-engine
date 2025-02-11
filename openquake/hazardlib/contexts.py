@@ -1311,12 +1311,12 @@ class ContextMaker(object):
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
-        if src.code == b'F':  # avoid over-weight in the USA model
+        if src.code == b'F':  # increase weight in the USA model
             weight *= 1.5
         elif src.code == b'S':  # increase weight in SAM
             weight *= 2.
         elif src.code == b'N':  # increase weight in MEX
-            weight *= 5.
+            weight *= 4.
         return max(weight, EPS), int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1):
