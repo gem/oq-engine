@@ -65,7 +65,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = 0.2
+EPS = 0.5
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1312,12 +1312,12 @@ class ContextMaker(object):
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code == b'F':  # avoid over-weight in the USA model
-            weight /= 2
+            weight *= 1.5
         elif src.code == b'S':  # increase weight in SAM
             weight *= 2.
         elif src.code == b'N':  # increase weight in MEX
             weight *= 5.
-        return weight or EPS, int(esites)
+        return max(weight, EPS), int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1):
         """
