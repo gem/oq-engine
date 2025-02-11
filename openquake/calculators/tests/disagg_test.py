@@ -244,6 +244,12 @@ class DisaggregationTestCase(CalculatorTestCase):
         small50 = mrs50.array[mrs50.array < 2.]
         numpy.testing.assert_allclose(small1, small50, rtol=1E-4)
 
+    def test_case_16(self):
+        # Check slab variant of NZ22 Kuehn 2020 GMM has required attributes
+        # which could (pre-fix) be missing (seemingly randomly) from the K20
+        # GSIM object (test just checks execution not correctness of values)
+        self.run_calc(case_15.___file, 'job_dsg.ini')
+
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')
