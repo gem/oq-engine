@@ -373,6 +373,7 @@ def export_median_spectrum_disagg(ekey, dstore):
             comment['lon'] = sitecol.lons[0]
             comment['lat'] = sitecol.lats[0]
             fname = dstore.export_path(f'median_spectrum_disagg-{grp_id}-{imt}.csv')
+            arr.sort(order='rup_id')
             writer.save(arr, fname, comment=comment)
             fnames.append(fname)
 
