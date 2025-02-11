@@ -912,6 +912,8 @@ COST_TYPES = [
 ALL_COST_TYPES = [
     '+'.join(s) for l_idx in range(len(COST_TYPES))
     for s in itertools.combinations(COST_TYPES, l_idx + 1)]
+VULN_TYPES = COST_TYPES + [
+    'number', 'area', 'occupants', 'residents', 'affected', 'injured']
 
 
 def check_same_levels(imtls):
@@ -950,7 +952,6 @@ def check_increasing(dframe, *columns):
 
 class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
-
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
@@ -959,23 +960,15 @@ class OqParam(valid.ParamSet):
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
         'reqv_ignore_sources', 'amplification', 'station_data',
-        'nonstructural_vulnerability',
         'nonstructural_fragility',
         'nonstructural_consequence',
-        'structural_vulnerability',
         'structural_fragility',
         'structural_consequence',
-        'contents_vulnerability',
         'contents_fragility',
         'contents_consequence',
-        'business_interruption_vulnerability',
         'business_interruption_fragility',
         'business_interruption_consequence',
         'structural_vulnerability_retrofitted',
-        'occupants_vulnerability',
-        'residents_vulnerability',
-        'area_vulnerability',
-        'number_vulnerability',
         'groundshaking_fragility',
         'groundshaking_vulnerability',
         'liquefaction_fragility',
@@ -983,7 +976,7 @@ class OqParam(valid.ParamSet):
         'landslide_fragility',
         'landslide_vulnerability',
         'post_loss_amplification',
-    }
+    } | {vtype + '_vulnerability' for vtype in VULN_TYPES}
     # old name => new name
     ALIASES = {'individual_curves': 'individual_rlzs',
                'quantile_hazard_curves': 'quantiles',
