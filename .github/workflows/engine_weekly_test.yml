@@ -257,6 +257,7 @@ jobs:
           python install.py devel --version=master
       - name: Actualize 'aelo' templates for email notifications
         run: |
+          set -x
           for tmpl in ./openquake/server/templates/registration/*.aelo.tmpl; do
               cp -- "$file" "${file%.aelo.tmpl}"
           done
@@ -293,6 +294,7 @@ jobs:
           python install.py devel --version=master
       - name: Actualize 'impact' templates for email notifications
         run: |
+          set -x
           for tmpl in ./openquake/server/templates/registration/*.impact.tmpl; do
               cp -- "$file" "${file%.impact.tmpl}"
           done

@@ -169,6 +169,8 @@ jobs:
           fi
       - name: Actualize 'aelo' templates for email notifications
         run: |
+          set -x
+          ls -l openquake/server/templates/registration
           for tmpl in ./openquake/server/templates/registration/*.aelo.tmpl; do
               cp -- "$file" "${file%.aelo.tmpl}"
           done
@@ -208,6 +210,8 @@ jobs:
           fi
       - name: Actualize 'impact' templates for email notifications
         run: |
+          set -x
+          ls -l openquake/server/templates/registration
           for tmpl in ./openquake/server/templates/registration/*.impact.tmpl; do
               cp -- "$file" "${file%.impact.tmpl}"
           done
