@@ -73,17 +73,14 @@ from openquake.calculators import base
 from openquake.engine import engine
 
 
-
-
-
 MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
 '''.split())  # GLD is missing
-# MODELS = 'EUR MIE'.split()
-
+MODELS = 'KOR'.split()
 
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
+
 
 def imts(dic):
     imtls = valid.dictionary(dic['intensity_measure_types_and_levels'])
@@ -106,17 +103,12 @@ def read_job_inis(mosaic_dir, models, INPUTS):
         dic.update(INPUTS)
         if 'truncation_level' not in dic:  # CAN
             dic['truncation_level'] = '5'
-            dic['intensity_measure_types_and_levels'] = '''\
-            {"PGA": logscale(0.005, 3.00, 25),
-            "SA(0.1)": logscale(0.005, 8.00, 25),
-            "SA(0.2)": logscale(0.005, 9.00, 25),
-            "SA(0.3)": logscale(0.005, 8.00, 25),
-            "SA(0.6)": logscale(0.005, 5.50, 25),
-            "SA(1.0)": logscale(0.005, 3.60, 25),
-            "SA(2.0)": logscale(0.005, 2.10, 25)}'''
+            dic['intensity_measure_types'] = '''\
+            "PGA SA(0.1) SA(0.2) SA(0.3) SA(0.6) SA(1.0) SA(2.0)'''
         if model in ("KOR", "JPN"):
             dic['investigation_time'] = '50'
-            dic['ses_per_logic_tree_path'] = '1'
+            dic['ses_per_logic_tree_path'] = str(
+                int(dic['ses_per_logic_tree_path']) // 50)
         dic['mosaic_model'] = model
         gslt = gsim_lt.GsimLogicTree(dic['inputs']['gsim_logic_tree'])
         for trt, gsims in gslt.values.items():
@@ -128,9 +120,13 @@ def read_job_inis(mosaic_dir, models, INPUTS):
     return out, rows
 
 
-def main(mosaic_dir, out, number_of_logic_tree_samples=2000,
-         ses_per_logic_tree_path=50, minimum_magnitude=5):
-    
+def main(mosaic_dir, out, *, number_of_logic_tree_samples:int=2000,
+         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5.):
+    """
+    Storing global SES
+    """
+    if ses_per_logic_tree_path % 50:
+        raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
     INPUTS = dict(
     calculation_mode='event_based',
     number_of_logic_tree_samples= str(number_of_logic_tree_samples),
@@ -138,10 +134,6 @@ def main(mosaic_dir, out, number_of_logic_tree_samples=2000,
     investigation_time='1',
     ground_motion_fields='false',
     minimum_magnitude=str(minimum_magnitude))
-    
-    """
-    Storing global SES
-    """
     job_inis, rows = read_job_inis(mosaic_dir, MODELS, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
@@ -160,6 +152,9 @@ def main(mosaic_dir, out, number_of_logic_tree_samples=2000,
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
+main.number_of_logic_tree_samples = 'Number of samples'
+main.ses_per_logic_tree_path = 'Number of SES'
+main.minimum_magnitude = 'Minimum magnitude'
 
 if __name__ == '__main__':
     sap.run(main)
