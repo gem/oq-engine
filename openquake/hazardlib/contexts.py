@@ -1316,7 +1316,7 @@ class ContextMaker(object):
         elif src.code == b'S':  # increase weight in SAM
             weight *= 2.
         elif src.code == b'N':  # increase weight in MEX
-            weight *= 6.
+            weight *= 8.
         return max(weight, EPS), int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1):
