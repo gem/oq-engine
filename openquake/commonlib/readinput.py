@@ -55,9 +55,9 @@ from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
-    pmf, logictree, gsim_lt, get_smlt, scalerel)
+    pmf, logictree, gsim_lt, get_smlt)
+from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, geohash3, get_dist)
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_rupture
@@ -73,7 +73,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 U64 = numpy.uint64
 Site = collections.namedtuple('Site', 'sid lon lat')
-MSR = scalerel._get_available_class(scalerel.BaseMSR)
 
 
 class DuplicatedPoint(Exception):
@@ -851,21 +850,7 @@ def get_rupture(oqparam):
             rup_data = json.load(f)
         rup = convert_to_oq_rupture(rup_data)
     if rup is None:  # assume rupture_dict
-        r = oqparam.rupture_dict
-        hypo = Point(r['lon'], r['lat'], r['dep'])
-        trt = r.get('trt', '*')
-        strike = r.get('strike', 0)
-        dip = r.get('dip', 90)
-        if not r.get('msr'):
-            rup = source.rupture.build_planar(
-                hypo, r['mag'], r.get('rake'),
-                strike, dip, trt)
-        else:
-            aratio = r.get('aspect_ratio', 2.)
-            msr = MSR[r['msr']]()
-            rup = source.rupture.get_planar(
-                site.Site(Point(r['lon'], r['lat'], r['dep'])), msr, r['mag'], aratio,
-                strike, dip, r['rake'], trt, ztor=None)
+        rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
 
 
