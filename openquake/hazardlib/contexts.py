@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import abc
 import copy
 import time
@@ -65,7 +66,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = 0.2
+EPS = 0.2 * float(os.environ.get('OQ_SAMPLE_SITES', 1))
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -1304,8 +1305,6 @@ class ContextMaker(object):
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         src.dt = time.time() - t0
-        # if src.dt > .01:
-        #     print(f'{src.source_id=}, {src.dt=}')
         if not ctxs:
             return EPS, 0
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
@@ -1313,8 +1312,6 @@ class ContextMaker(object):
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code == b'F':  # increase weight in the USA model
             weight *= 1.5
-        elif src.code == b'S':  # decrease weight in the EUR model
-            weight *= .3
         elif src.code == b'N':  # increase weight in MEX and SAM
             weight *= 5.
         return max(weight, EPS), int(esites)
