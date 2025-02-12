@@ -1313,9 +1313,7 @@ class ContextMaker(object):
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code == b'F':  # increase weight in the USA model
             weight *= 1.5
-        elif src.code == b'S':  # increase weight in SAM
-            weight *= 2.
-        elif src.code == b'N':  # increase weight in MEX
+        elif src.code == b'N':  # increase weight in MEX and SAM
             weight *= 5.
         return max(weight, EPS), int(esites)
 
