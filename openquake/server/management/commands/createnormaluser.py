@@ -52,11 +52,23 @@ class Command(BaseCommand):
                 request.META['SERVER_PORT'] = '80'
         else:
             request.META['SERVER_PORT'] = settings.SERVER_PORT
+        # NOTE: we don't expect to use email notifications when PAM is enabled, so we
+        # can avoid forcing the user to actualize the templates
+        if 'django_pam.auth.backends.PAMBackend' in settings.AUTHENTICATION_BACKENDS:
+            subject_template_name = \
+                'registration/normal_user_creation_email_subject.txt.default.tmpl'
+            email_template_name = \
+                'registration/normal_user_creation_email_content.txt.default.tmpl'
+        else:
+            subject_template_name = \
+                'registration/normal_user_creation_email_subject.txt'
+            email_template_name = \
+                'registration/normal_user_creation_email_content.txt'
         form.save(
             domain_override=(settings.SERVER_NAME
                              if settings.USE_REVERSE_PROXY else None),
             request=request,
             use_https=settings.USE_HTTPS,
             from_email=settings.EMAIL_HOST_USER,
-            subject_template_name='registration/normal_user_creation_email_subject.txt',
-            email_template_name='registration/normal_user_creation_email_content.txt')
+            subject_template_name=subject_template_name,
+            email_template_name=email_template_name)
