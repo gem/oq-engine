@@ -125,8 +125,9 @@ def main(mosaic_dir, out, *, number_of_logic_tree_samples:int=2000,
     """
     Storing global SES
     """
-    if ses_per_logic_tree_path % 50:
-        raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
+    if 'KOR' in MODELS or 'JPN' in MODELS: 
+        if ses_per_logic_tree_path % 50:
+            raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
     INPUTS = dict(
     calculation_mode='event_based',
     number_of_logic_tree_samples= str(number_of_logic_tree_samples),
