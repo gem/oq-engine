@@ -638,7 +638,6 @@ class CompositeSourceModel:
             baseid = basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] = ctimes
-            row[WEIGHT] = weight
             row[NUM_SITES] = nsites
 
     def count_ruptures(self):
