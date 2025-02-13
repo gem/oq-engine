@@ -102,7 +102,7 @@ jobs:
           curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
           oq engine --upgrade-db
-          # Starting the webui here is not needed by test_public_mode, 
+          # Starting the webui here is not needed by test_public_mode,
           # but here we also want to check that the webui starts without errors
           oq webui start 127.0.0.1:8800 -s &
           echo "Waiting WEBUI up on port 8800...."
@@ -110,8 +110,8 @@ jobs:
            sleep 5 # wait for 5 seconds before check again
           done
           pytest -xs --doctest-modules --disable-warnings --color=yes openquake/commands openquake/engine
-          # -v 2 also logs the test names
-          ./openquake/server/manage.py test -v 2 tests.test_public_mode
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_public_mode.py
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
@@ -140,8 +140,8 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          # -v 2 also logs the test names
-          ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_read_only_mode.py
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}
@@ -167,6 +167,11 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
+      - name: Actualize 'aelo' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.aelo.tmpl; do
+              cp -- "$file" "${file%.aelo.tmpl}"
+          done
       - name: Server 'AELO' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -174,10 +179,10 @@ jobs:
           ./openquake/server/manage.py migrate
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
           ./openquake/server/manage.py collectstatic --noinput
-          # -v 2 also logs the test names
-          ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_aelo_mode.py
 
-  server_aristotle_mode:
+  server_impact_mode:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -186,6 +191,8 @@ jobs:
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: ARISTOTLE
+      OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python  ${{ matrix.python-version }}
@@ -199,6 +206,11 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
+      - name: Actualize 'impact' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.impact.tmpl; do
+              cp -- "$file" "${file%.impact.tmpl}"
+          done
       - name: Server 'ARISTOTLE' mode tests
         run: |
           set -x
@@ -207,11 +219,8 @@ jobs:
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
-          export PY_VER="$(python -c 'import sys; version=sys.version_info[:2]; print("{0}.{1}".format(*version))')"
-          export PYVER="$(echo ${PY_VER} | tr -d .)"
-          pip install https://wheelhouse.openquake.org/v3/linux/py${PYVER}/timezonefinder-6.5.2-cp${PYVER}-cp${PYVER}-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
-          # -v 2 also logs the test names
-          OQ_APPLICATION_MODE=ARISTOTLE OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aristotle_mode
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_impact_mode.py

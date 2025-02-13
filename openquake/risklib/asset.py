@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -335,6 +335,14 @@ class AssetCollection(object):
         if 'site_id' in ts and not hasattr(self.tagcol, 'site_id'):
             self.tagcol.add_tagname('site_id')
             self.tagcol.site_id.extend(range(self.tot_sites))
+
+    def get_taxidx(self):
+        """
+        :returns: dictionary taxonomy string -> taxonomy index starting from 1
+        """
+        taxonomies = self.tagcol.taxonomy[1:]
+        return {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
+                if taxi in numpy.unique(self['taxonomy'])}
 
     @property
     def tagnames(self):
@@ -836,8 +844,8 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     return exposure, assets_df
 
 
-# used in aristotle calculations
-def aristotle_read_assets(h5, start, stop):
+# used in impact calculations
+def impact_read_assets(h5, start, stop):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
@@ -920,7 +928,7 @@ class Exposure(object):
                 raise SiteAssociationError(
                     'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
-                aristotle_read_assets(f, start, stop)
+                impact_read_assets(f, start, stop)
                 for gh3, start, stop in slices)
             tagcol = f['tagcol']
             # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']

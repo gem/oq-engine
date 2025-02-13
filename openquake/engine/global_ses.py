@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,6 +16,52 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+This first version of the global_ses script, available from engine-3.22, is
+able to generate the Global Stochastic Event Set for the entire world
+from the GEM mosaic of hazard models. The workflow is a follows:
+
+1. clone the mosaic repositories and set the right branch/commit on each repo
+2. run this script with the right python, for instance on cole
+
+$ /opt/openquake/venv/bin/python -m openquake.engine.global_ses
+
+3. the script accepts five arguments: 
+the directory where the mosaic is stored (i.e. /home/hazard/mosaic)
+the name of the generated output file (i.e. ruptures.hdf5); 
+the number_of_logic_tree_samples
+the ses_per_logic_tree_path and
+minimum_magnitude
+
+For performance, we strongly suggest to use the zmq distribution mechanism which allows multiple models to
+run in parallel.
+
+OQ_DISTRIBUTE=zmq /opt/openquake/venv/bin/python -m openquake.engine.global_ses $HOME/mosaic ruptures.hdf5
+
+4. by default the script samples 2000 realizations with 50 SES per logic tree path,
+with an investigation time of 1, i.e. 100,000 years with a minimum magnitude of 5.
+Such parameters are currently hard-coded by easily changeable in the script itself.
+
+After the file ruptures.hdf5 has been generated, it can be used in
+event based calculations by simply setting in the job.ini
+
+rupture_model_file = ruptures.hdf5
+
+The GMFs will then be generated starting from the global ruptures on the
+sites specified in the job.ini file. Currently the sites can be specified
+in a CSV with longitude and latitudes, or as a region in the job.ini.
+The site parameters are inferreded from the site parameters in the mosaic
+via an association with the closest site in the site model;
+the GSIMs to use are also inferred from the GSIMs in the mosaic via an
+association table (model, trt_smr) -> rlzs_by_gsim.
+
+Note 1: the GLD model is excluded since it has no vs30 data.
+Note 2: for JPN and KOR instead of using 50 ses x 1 year,
+        we use 1 ses x 50 years, since the models require so.
+Note 3: ruptures.hdf5 will contain a global site model with all the
+        available site parameters merged together, with zeros for missing
+        parameters (i.e. xvf will be zero for most models).
+"""
 
 import os
 import logging
@@ -26,21 +72,15 @@ from openquake.commonlib import readinput, datastore
 from openquake.calculators import base
 from openquake.engine import engine
 
-INPUTS = dict(
-    calculation_mode='event_based',
-    number_of_logic_tree_samples='2000',
-    ses_per_logic_tree_path='50',
-    investigation_time='1',
-    ground_motion_fields='false',
-    minimum_magnitude='5',
-    minimum_intensity='.1')
+
 MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
 '''.split())  # GLD is missing
-# MODELS = 'EUR MIE'.split()
+MODELS = 'KOR'.split()
 
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
+
 
 def imts(dic):
     imtls = valid.dictionary(dic['intensity_measure_types_and_levels'])
@@ -54,7 +94,7 @@ def check_imts(dicts, models):
             raise ValueError(f'{imts1} != {imts0} for {model}')
 
 
-def read_job_inis(mosaic_dir, models):
+def read_job_inis(mosaic_dir, models, INPUTS):
     out = []
     rows = []
     for model in models:
@@ -63,17 +103,12 @@ def read_job_inis(mosaic_dir, models):
         dic.update(INPUTS)
         if 'truncation_level' not in dic:  # CAN
             dic['truncation_level'] = '5'
-            dic['intensity_measure_types_and_levels'] = '''\
-            {"PGA": logscale(0.005, 3.00, 25),
-            "SA(0.1)": logscale(0.005, 8.00, 25),
-            "SA(0.2)": logscale(0.005, 9.00, 25),
-            "SA(0.3)": logscale(0.005, 8.00, 25),
-            "SA(0.6)": logscale(0.005, 5.50, 25),
-            "SA(1.0)": logscale(0.005, 3.60, 25),
-            "SA(2.0)": logscale(0.005, 2.10, 25)}'''
+            dic['intensity_measure_types'] = '''\
+            "PGA SA(0.1) SA(0.2) SA(0.3) SA(0.6) SA(1.0) SA(2.0)'''
         if model in ("KOR", "JPN"):
             dic['investigation_time'] = '50'
-            dic['ses_per_logic_tree_path'] = '1'
+            dic['ses_per_logic_tree_path'] = str(
+                int(dic['ses_per_logic_tree_path']) // 50)
         dic['mosaic_model'] = model
         gslt = gsim_lt.GsimLogicTree(dic['inputs']['gsim_logic_tree'])
         for trt, gsims in gslt.values.items():
@@ -85,11 +120,22 @@ def read_job_inis(mosaic_dir, models):
     return out, rows
 
 
-def main(mosaic_dir, out):
+def main(mosaic_dir, out, *, number_of_logic_tree_samples:int=2000,
+         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5.):
     """
     Storing global SES
     """
-    job_inis, rows = read_job_inis(mosaic_dir, MODELS)
+    if 'KOR' in MODELS or 'JPN' in MODELS: 
+        if ses_per_logic_tree_path % 50:
+            raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
+    INPUTS = dict(
+    calculation_mode='event_based',
+    number_of_logic_tree_samples= str(number_of_logic_tree_samples),
+    ses_per_logic_tree_path = str(ses_per_logic_tree_path),
+    investigation_time='1',
+    ground_motion_fields='false',
+    minimum_magnitude=str(minimum_magnitude))
+    job_inis, rows = read_job_inis(mosaic_dir, MODELS, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
             h5['models'] = MODELS
@@ -107,6 +153,9 @@ def main(mosaic_dir, out):
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
+main.number_of_logic_tree_samples = 'Number of samples'
+main.ses_per_logic_tree_path = 'Number of SES'
+main.minimum_magnitude = 'Minimum magnitude'
 
 if __name__ == '__main__':
     sap.run(main)

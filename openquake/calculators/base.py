@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -326,8 +326,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
-                # FIXME: this part can be called up to 3 times, for instance for
-                # EventBasedCalculator,EventBasedRiskCalculator,PostRiskCalculator
+                # FIXME: this part can be called multiple times, for instance for
+                # EventBasedCalculator,EventBasedRiskCalculator
                 self.post_process()
                 self.export(kw.get('exports', ''))
             except Exception as exc:
@@ -655,7 +655,7 @@ class HazardCalculator(BaseCalculator):
                 logging.warning('No sites were affected by %s' % name)
             data[name] = peril
             names.append(name)
-        self.datastore['events'] = numpy.zeros(1, rupture.events_dt)     
+        self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
         create_gmf_data(self.datastore, [], names, data, N)
 
     def pre_execute(self):
@@ -928,8 +928,8 @@ class HazardCalculator(BaseCalculator):
         self.datastore[fig_path] = Image.open(bio)
 
     def _read_risk1(self):
-        # read the risk model (if any), the exposure (if any) and then the
-        # site collection, possibly extracted from the exposure.
+        # read the risk model (if any) and then the site collection,
+        # possibly extracted from the exposure
         oq = self.oqparam
         self.load_crmodel()  # must be called first
         if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
@@ -968,7 +968,7 @@ class HazardCalculator(BaseCalculator):
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs or oq.shakemap_uri:
-                self.sitecol, self.assetcol = read_shakemap(
+                self.sitecol, self.assetcol = store_gmfs_from_shakemap(
                     self, haz_sitecol, assetcol)
                 self.datastore['sitecol'] = self.sitecol
                 self.datastore['assetcol'] = self.assetcol
@@ -1023,16 +1023,15 @@ class HazardCalculator(BaseCalculator):
             if not hasattr(self, 'assetcol'):
                 oq.raise_invalid('missing exposure')
 
-            taxonomies = self.assetcol.tagcol.taxonomy[1:]
-            taxidx = {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
-                      if taxi in numpy.unique(self.assetcol['taxonomy'])}
+            taxidx = self.assetcol.get_taxidx()
+            # i.e. {'Concrete1': 1, 'Wood1': 2}
             tmap_df = readinput.taxonomy_mapping(oq, taxidx)
-            self.crmodel.set_tmap(tmap_df)
+            self.crmodel.set_tmap(tmap_df, taxidx)
             risk_ids = set(tmap_df.risk_id)
 
             # check that we are covering all the taxonomies in the exposure
             # (exercised in EventBasedRiskTestCase::test_missing_taxonomy)
-            missing = risk_ids - set(self.crmodel.taxonomies)
+            missing = risk_ids - set(self.crmodel.riskids)
             if self.crmodel and missing:
                 # in scenario_damage/case_14 the fragility model contains
                 # 'CR+PC/LDUAL/HBET:8.19/m ' with a trailing space while
@@ -1041,10 +1040,10 @@ class HazardCalculator(BaseCalculator):
                     'The tmap.risk_id %s are not in the CompositeRiskModel' % missing)
             self.crmodel.check_risk_ids(oq.inputs)
 
-            if len(self.crmodel.taxonomies) > len(risk_ids):
+            if len(self.crmodel.riskids) > len(risk_ids):
                 logging.info(
-                    'Reducing risk model from %d to %d taxonomy strings',
-                    len(self.crmodel.taxonomies), len(risk_ids))
+                    'Reducing risk model from %d to %d risk functions',
+                    len(self.crmodel.riskids), len(risk_ids))
                 self.crmodel = self.crmodel.reduce(risk_ids)
                 self.crmodel.tmap_df = tmap_df
 
@@ -1062,7 +1061,7 @@ class HazardCalculator(BaseCalculator):
             oq.observed_imts = self.observed_imts
 
         if hasattr(self, 'sitecol') and self.sitecol and not oq.ruptures_hdf5:
-            if 'site_model' in oq.inputs or oq.aristotle:
+            if 'site_model' in oq.inputs or oq.impact:
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
@@ -1380,7 +1379,7 @@ def import_sites_hdf5(dstore, fnames):
     """
     Import site collections by merging them.
 
-    :returns: a list of dictionaries local_sid->global_sid for each sitecol   
+    :returns: a list of dictionaries local_sid->global_sid for each sitecol
     """
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
@@ -1553,7 +1552,7 @@ def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
     if aggby:
         aggids, aggtags = assetcol.build_aggids(aggby, maxagg)
         logging.info('Storing %d aggregation keys', len(aggids))
-        agg_keys = [','.join(tags) for tags in aggtags]
+        agg_keys = ['\t'.join(tags) for tags in aggtags]
         dstore['agg_keys'] = numpy.array(agg_keys, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
@@ -1561,7 +1560,7 @@ def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
         dstore['agg_values'] = assetcol.get_agg_values(aggby, maxagg)
 
 
-def store_shakemap(calc, sitecol, shakemap, gmf_dict):
+def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
     """
@@ -1589,12 +1588,14 @@ def store_shakemap(calc, sitecol, shakemap, gmf_dict):
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(
-            calc.datastore, imts, data=data, N=len(sitecol.complete))
+            calc.datastore, imts, data=data, N=len(sitecol.complete), R=1)
+        calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
+        calc.datastore['weights'] = numpy.ones(1)
 
 
-def read_shakemap(calc, haz_sitecol, assetcol):
+def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     """
-    Enabled only if there is a shakemap_id parameter in the job.ini.
+    Enabled only if there is a shakemap parameter in the job.ini.
     Download, unzip, parse USGS shakemap files and build a corresponding
     set of GMFs which are then filtered with the hazard site collection
     and stored in the datastore.
@@ -1621,6 +1622,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         if len(discarded):
             calc.datastore['discarded'] = discarded
         assetcol.reduce_also(sitecol)
+        calc.datastore['assetcol'] = assetcol
         logging.info('Extracted %d assets', len(assetcol))
 
     # assemble dictionary to decide on the calculation method for the gmfs
@@ -1642,7 +1644,9 @@ def read_shakemap(calc, haz_sitecol, assetcol):
                 % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
-        if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+        if oq.impact:
+            gmf_dict = {'kind': 'basic'}  # possibly add correlation
+        elif oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
             # cross correlation and/or spatial correlation after S&H
             gmf_dict = {'kind': 'Silva&Horspool',
                         'spatialcorr': oq.spatial_correlation,
@@ -1651,7 +1655,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-    store_shakemap(calc, sitecol, shakemap, gmf_dict)
+    store_gmfs(calc, sitecol, shakemap, gmf_dict)
     return sitecol, assetcol
 
 

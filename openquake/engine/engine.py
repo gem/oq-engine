@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,7 +33,7 @@ import platform
 import functools
 #import multiprocessing.pool
 from os.path import getsize
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 import psutil
 import h5py
 import numpy
@@ -51,6 +51,7 @@ from openquake.calculators import base
 from openquake.calculators.base import expose_outputs
 
 
+UTC = timezone.utc
 USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
 

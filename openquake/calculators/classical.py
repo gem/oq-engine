@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -168,8 +168,15 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
             yield result
         return
 
-    for tileget in tilegetters:
+    for tileno, tileget in enumerate(tilegetters):
         result = hazclassical(sources, tileget(sitecol), cmaker)
+        if tileno:
+            # source_data has keys src_id, grp_id, nsites, esites, nrupts,
+            # weight, ctimes, taskno
+            for key, lst in result['source_data'].items():
+                if key in ('weight', 'nrupts'):
+                    # avoid bogus weights in `oq show task:classical`
+                    lst[:] = [0. for _ in range(len(lst))]
         if cmaker.disagg_by_src:
             # do not remove zeros, otherwise AELO for JPN will break
             # since there are 4 sites out of 18 with zeros
@@ -179,8 +186,6 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         # print(f"{monitor.task_no=} {rmap=}")
 
         if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
-            if len(tilegetters) > 1:
-                del result['source_data']
             if config.directory.custom_tmp:
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, cmaker.num_chunks, None, monitor)
@@ -574,19 +579,21 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_regular(self, sgs, ds):
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks, splits in self.csm.split(
+        splits = []
+        for cmaker, tilegetters, blocks, nsplits in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
-                for tgetters in block_splitter(tilegetters, splits):
+                for tgetters in block_splitter(tilegetters, nsplits):
                     allargs.append((block, tgetters, cmaker, ds))
-                n_out.append(len(tilegetters))
+                    n_out.append(len(tgetters))
+            splits.append(nsplits)
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = self.csm.get_sources()
-        maxsrc = max(srcs, key=lambda s: s.weight / self.csm.splits[s.grp_id])
+        maxsrc = max(srcs, key=lambda s: s.weight / splits[s.grp_id])
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size

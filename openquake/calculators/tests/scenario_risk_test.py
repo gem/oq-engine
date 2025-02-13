@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -175,7 +175,8 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2368.613]], atol=.02)  # from avg_losses-stats
+        # from avg_losses-stats with two quantiles
+        aac(obj.array, [[2368.6128, 2280.863 , 2561.6628]], atol=.02)
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))

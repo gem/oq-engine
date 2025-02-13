@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -352,8 +352,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
 
      >>> items = 'ABCDE'
      >>> list(split_in_blocks(items, 3))
-     [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
-
+     [<WeightedSequence ['A'], weight=1>, <WeightedSequence ['B'], weight=1>, <WeightedSequence ['C'], weight=1>, <WeightedSequence ['D'], weight=1>, <WeightedSequence ['E'], weight=1>]
     """
     if isinstance(sequence, pandas.DataFrame):
         num_elements = len(sequence)
@@ -373,7 +372,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
-    return block_splitter(items, math.ceil(total_weight / hint), weight, key)
+    return block_splitter(items, total_weight / hint, weight, key)
 
 
 def assert_close(a, b, rtol=1e-07, atol=0, context=None):

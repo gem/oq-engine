@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -347,7 +347,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         String representation of a source, displaying the source class name
         and the source id.
         """
-        return '<%s %s, weight=%.1f>' % (
+        return '<%s %s, weight=%.2f>' % (
             self.__class__.__name__, self.source_id, self.weight)
 
 

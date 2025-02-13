@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -322,7 +322,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
 
         with self.assertRaises(Exception) as ctx:
             readinput.get_exposure(oqparam)
@@ -341,7 +341,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
@@ -359,7 +359,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn(r"Invalid ID 'a 1': the only accepted chars are "
@@ -377,7 +377,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': [self.exposure2],
                           'structural_vulnerability': None}
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Got 'aggregate', expected "
@@ -397,7 +397,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.insurance_losses = False
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
-        oqparam.aristotle = False
+        oqparam.impact = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("'RM ' contains whitespace chars, line 11",
@@ -477,7 +477,8 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_extra_large_source(self):
         raise unittest.SkipTest('Removed check on MAX_EXTENT')
         oq = readinput.get_oqparam('job.ini', case_21)
-        with mock.patch('logging.error') as error, datastore.hdf5new() as h5:
+        _, h5 = datastore.create_job_dstore()
+        with h5, mock.patch('logging.error') as error:
             with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):
                 readinput.get_composite_source_model(oq, h5)
                 os.remove(h5.filename)

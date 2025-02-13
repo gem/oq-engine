@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2023 GEM Foundation
+# Copyright (C) 2017-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,7 @@ from scipy.cluster.vq import kmeans2
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree
+from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
@@ -769,7 +769,7 @@ def extract_agg_curves(dstore, what):
     tagvalues = [tagdict[t][0] for t in tagnames]
     if tagnames:
         lst = decode(dstore['agg_keys'][:])
-        agg_id = lst.index(','.join(tagvalues))
+        agg_id = lst.index('\t'.join(tagvalues))
     else:
         agg_id = 0  # total aggregation
     ep_fields = dstore.get_attr('aggcurves', 'ep_fields')
@@ -813,6 +813,84 @@ def extract_agg_curves(dstore, what):
     if tagnames:
         arr = arr.reshape(arr.shape + (1,) * len(tagnames))
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
+
+
+def _aggexp_tags(dstore):
+    oq = dstore['oqparam']
+    if not oq.aggregate_by:
+        raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        aggby = [','.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        [aggby] = oq.aggregate_by
+    keys = numpy.array([line.decode('utf8').split('\t')
+                        for line in dstore['agg_keys'][:]])
+    values = dstore['agg_values'][:-1]  # discard the total aggregation
+    ok = values['structural'] > 0
+    okvalues = values[ok]
+    dic = {}
+    for i, tag in enumerate(aggby):
+        dic[tag] = keys[ok, i]
+    for name in values.dtype.names:
+        dic[name] = okvalues[name]
+    df = pandas.DataFrame(dic)
+    return df, ok
+
+
+@extract.add('aggexp_tags')
+def extract_aggexp_tags(dstore, what):
+    """
+    Aggregate the exposure values (one for each loss type) by tag. Use it as
+    /extract/aggexp_tags?
+    """
+    return _aggexp_tags(dstore)[0]
+
+
+@extract.add('aggrisk_tags')
+def extract_aggrisk_tags(dstore, what):
+    """
+    Aggregates risk by tag. Use it as /extract/aggrisk_tags?
+    """
+    oq = dstore['oqparam']
+    ws = dstore['weights'][:]
+    adf = dstore.read_df('aggrisk')
+    if 'aggrisk_quantiles' in dstore:
+        # normally there are two quantiles 0.05, 0.95
+        qdf = dstore.read_df('aggrisk_quantiles', ['agg_id', 'loss_id'])
+        qfields = [col for col in qdf.columns if col != 'agg_id']
+    else:
+        qdf = ()
+        qfields = []
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        # see impact_test.py
+        aggby = [','.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        # see event_based_risk_test/case_1
+        [aggby] = oq.aggregate_by
+    keys = numpy.array([line.decode('utf8').split('\t')
+                        for line in dstore['agg_keys'][:]])
+    values = dstore['agg_values'][:-1]  # discard the total aggregation
+    lossdic = general.AccumDict(accum=0)
+    K = len(keys)
+    for agg_id, rlz_id, loss, loss_id in zip(
+            adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
+        if agg_id < K:
+            lossdic[agg_id, loss_id] += loss * ws[rlz_id]
+    acc = general.AccumDict(accum=[])
+    for (agg_id, loss_id), loss in sorted(lossdic.items()):
+        lt = LOSSTYPE[loss_id]
+        if lt in values.dtype.names:
+            for agg_key, key in zip(aggby, keys[agg_id]):
+                acc[agg_key].append(key)
+            acc['loss_type'].append(lt)
+            acc['value'].append(values[agg_id][lt])
+            acc['lossmea'].append(loss)
+            if len(qdf):
+                qvalues = qdf.loc[agg_id, loss_id].to_numpy()
+                for qfield, qvalue in zip(qfields, qvalues):
+                    acc[qfield].append(qvalue)
+    df = pandas.DataFrame(acc)
+    return df
 
 
 @extract.add('agg_losses')
@@ -1068,7 +1146,8 @@ def build_damage_dt(dstore):
     dt_list = []
     for peril in perils:
         for ds in ['no_damage'] + limit_states + csqs:
-            dt_list.append((ds if peril == 'earthquake' else f'{peril}_{ds}', F32))
+            dt_list.append((ds if peril == 'groundshaking'
+                            else f'{peril}_{ds}', F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])

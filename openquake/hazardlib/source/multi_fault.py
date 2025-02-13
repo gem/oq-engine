@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -148,7 +148,8 @@ class MultiFaultSource(BaseSeismicSource):
             ridxs.append(' '.join(map(str, rupture_idxs)))
         # each pmf has the form [(prob0, 0), (prob1, 1), ...]
         return dict(mag=self.mags, rake=self.rakes,
-                    probs_occur=self.probs_occur, rupture_idxs=ridxs)
+                    probs_occur=self.probs_occur,
+                    rupture_idxs=np.array(ridxs, dtype=hdf5.vstr))
 
     def get_unique_idxs(self):
         """

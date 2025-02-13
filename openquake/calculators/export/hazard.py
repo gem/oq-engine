@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -373,6 +373,7 @@ def export_median_spectrum_disagg(ekey, dstore):
             comment['lon'] = sitecol.lons[0]
             comment['lat'] = sitecol.lats[0]
             fname = dstore.export_path(f'median_spectrum_disagg-{grp_id}-{imt}.csv')
+            arr.sort(order='rup_id')
             writer.save(arr, fname, comment=comment)
             fnames.append(fname)
 
@@ -784,6 +785,7 @@ def export_trt_gsim(ekey, dstore):
     rows = []
     gsims = dstore['gsims'][:]
     data = dstore['source_groups'][:][['grp_id', 'trt', 'gsims']]
+    data.sort(order='grp_id')
     g = 0
     for grp_id, trt, G in data:
         for gsim in gsims[g:g + G]:

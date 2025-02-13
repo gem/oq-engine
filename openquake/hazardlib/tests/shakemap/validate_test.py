@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,9 +30,10 @@ Here are a few codes with interesting errors:
 import os
 import unittest
 from openquake.hazardlib.shakemap.parsers import User
-from openquake.hazardlib.shakemap.validate import aristotle_validate
+from openquake.hazardlib.shakemap.validate import impact_validate
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
+
 
 class AristotleValidateTestCase(unittest.TestCase):
     @classmethod
@@ -46,15 +47,15 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_1(self):
         # no rupture, yes stations
-        POST = {'usgs_id': 'us6000jllz'}
-        _rup, rupdic, _params, err = aristotle_validate(POST, user)
+        POST = {'usgs_id': 'us6000jllz', 'approach': 'build_rup_from_usgs'}
+        _rup, rupdic, _params, err = impact_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
     def test_2(self):
-        POST = {'usgs_id': 'us7000n05d'}
-        _rup, rupdic, _params, err = aristotle_validate(POST, user)
+        POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs'}
+        _rup, rupdic, _params, err = impact_validate(POST, user)
         self.assertEqual(rupdic['rupture_from_usgs'], False)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mosaic_models'], ['SAM'])
@@ -81,39 +82,41 @@ class AristotleValidateTestCase(unittest.TestCase):
             'time_event': 'day',
             'trt': 'active shallow crust normal',
             'truncation_level': '3',
-            'usgs_id': 'FromFile'}
+            'usgs_id': 'FromFile',
+            'approach': 'provide_rup'}
 
         for stations in (None, 'stationlist_seismic.csv'):
-            _rup, rupdic, params, err = aristotle_validate(
+            _rup, rupdic, params, err = impact_validate(
                 POST, user, 'fault_rupture.xml', stations)
-            self.assertEqual(
-                rupdic,
-                {'dep': 30.0,
-                 'dip': 30.08335,
-                 'lat': 27.6,
-                 'lon': 84.4,
-                 'mag': 7.0,
-                 'mosaic_models': ['CHN', 'IND'],
-                 'rake': 90.0,
-                 'rupture_file': 'fault_rupture.xml',
-                 'rupture_from_usgs': True,
-                 'station_data_file': stations,
-                 'strike': 295.24732,
-                 'trts': {'CHN': ['Active Shallow Crust',
-                                  'Himalayan Thrust',
-                                  'Craton',
-                                  'Deep Crust 1',
-                                  'Active-Stable Shallow Crust'],
-                          'IND': ['active shallow crust normal',
-                                  'active shallow crust strike-slip reverse',
-                                  'intraplate margin lower',
-                                  'intraplate margin upper',
-                                  'stable shallow crust',
-                                  'subduction interface',
-                                  'subduction interface megathrust',
-                                  'subduction intraslab Himalayas',
-                                  'subduction intraslab']},
-                 'usgs_id': 'FromFile'})
+            expected = {
+                'dep': 30.0,
+                'dip': 30.08335,
+                'lat': 27.6,
+                'lon': 84.4,
+                'mag': 7.0,
+                'mosaic_models': ['CHN', 'IND'],
+                'rake': 90.0,
+                'rupture_file': 'fault_rupture.xml',
+                'rupture_from_usgs': True,
+                'station_data_file': stations,
+                'strike': 295.24732,
+                'trts': {'CHN': ['Active Shallow Crust',
+                                 'Himalayan Thrust',
+                                 'Craton',
+                                 'Deep Crust 1',
+                                 'Active-Stable Shallow Crust'],
+                         'IND': ['active shallow crust normal',
+                                 'active shallow crust strike-slip reverse',
+                                 'intraplate margin lower',
+                                 'intraplate margin upper',
+                                 'stable shallow crust',
+                                 'subduction interface',
+                                 'subduction interface megathrust',
+                                 'subduction intraslab Himalayas',
+                                 'subduction intraslab']},
+                'usgs_id': 'FromFile'}
+            for key in expected:
+                assert rupdic[key] == expected[key], key
             self.assertEqual(params['asset_hazard_distance'], '15.0')
             self.assertEqual(params['calculation_mode'], 'scenario_risk')
             self.assertEqual(params['time_event'], 'day')
@@ -126,9 +129,9 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
-        POST = {'usgs_id': 'us7000n7n8'}
-        _rup, rupdic, _oqparams, err = aristotle_validate(POST, user)
-        self.assertEqual(rupdic['require_dip_strike'], False)
+        POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs'}
+        _rup, rupdic, _oqparams, err = impact_validate(POST, user)
+        self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
         self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
@@ -136,3 +139,9 @@ class AristotleValidateTestCase(unittest.TestCase):
             rupdic['station_data_issue'], 'stationlist.json was downloaded,'
             ' but it contains no features')
         self.assertEqual(err, {})
+
+    def test_5(self):
+        POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs',
+                'msr': 'WC1994'}
+        _rup, rupdic, _oqparams, _err = impact_validate(POST, user)
+        self.assertIn('msr', rupdic)
