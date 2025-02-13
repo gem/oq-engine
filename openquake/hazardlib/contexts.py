@@ -333,7 +333,7 @@ def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
     if src.count_nphc() == 1:
         # one rupture per magnitude
         for m, (mag, pla) in enumerate(planardict.items()):
-            if minmag < mag < maxmag:
+            if minmag <= mag <= maxmag:
                 yield m, mag, pla, sitecol
     else:
         for m, rup in enumerate(src.iruptures()):
@@ -1068,7 +1068,7 @@ class ContextMaker(object):
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 allrups = sorted([rup for rup in allrups
-                                  if minmag < rup.mag < maxmag],
+                                  if minmag <= rup.mag <= maxmag],
                                  key=bymag)
                 self.num_rups = len(allrups) or 1
                 if not allrups:
