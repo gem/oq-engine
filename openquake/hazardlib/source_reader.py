@@ -122,12 +122,13 @@ def create_source_info(csm, h5):
     for srcid, srcs in general.groupby(
             csm.get_sources(), basename).items():
         src = srcs[0]
-        num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
         trti = csm.full_lt.trti.get(src.tectonic_region_type, 0)
         lens.append(len(src.trt_smrs))
-        row = [srcid, src.grp_id, src.code, 0, 0, num_ruptures,
-               src.weight, mutex, trti]
+        row = [srcid, src.grp_id, src.code, 0, 0,
+               sum(s.num_ruptures for s in srcs),
+               sum(s.weight for s in srcs),
+               mutex, trti]
         data[srcid] = row
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
@@ -636,9 +637,9 @@ class CompositeSourceModel:
                 source_data['weight'], source_data['ctimes']):
             baseid = basename(src_id)
             row = self.source_info[baseid]
-            row[CALC_TIME] += ctimes
-            row[WEIGHT] += weight
-            row[NUM_SITES] += nsites
+            row[CALC_TIME] = ctimes
+            row[WEIGHT] = weight
+            row[NUM_SITES] = nsites
 
     def count_ruptures(self):
         """
