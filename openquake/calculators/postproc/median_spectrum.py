@@ -124,6 +124,7 @@ def compute_median_spectrum(cmaker, context, uhs, monitor=performance.Monitor())
             ok = wei.sum(axis=(0, 1, 3)) > 0
             arr = general.compose_arrays(
                 rup_id=ctx.rup_id, mag=ctx.mag, rrup=ctx.rrup,
+                occurrence_rate=ctx.occurrence_rate,
                 mea=tr(mea), sig=tr(sig), wei=tr(wei[:, :, :, 0]))
             yield {(cmaker.grp_id, -1): [arr[ok]]}
 
@@ -174,7 +175,10 @@ def main(dstore, csm):
     if N == 1 and P == 1:
         for cm in cmakers:
             G = len(cm.gsims)
-            dtlist = [('rup_id', I64), ('mag', F32), ('rrup', F32)]
+            dtlist = [('rup_id', I64),
+                      ('mag', F32),
+                      ('rrup', F32),
+                      ('occurrence_rate', F32)]
             dt = (F32, (M,))
             for g in range(G):
                 dtlist.append((f'mea{g}', dt))
@@ -202,8 +206,9 @@ def main(dstore, csm):
         maxw = tot_w[:, :, p].max()
         logging.info(f'{poe=} {maxw=}')
         if (np.abs(tot_w[:, :, p] - 1) > .01).any():
-            raise ValueError(f'The weights sum up to {maxw:.3f} != 1: perhaps the '
-                             f'hazard curve is not invertible around {poe=}')
+            raise ValueError(
+                f'The weights sum up to {maxw:.3f} != 1: perhaps the '
+                f'hazard curve is not invertible around {poe=}')
 
     # sanity check on the rup_ids
     if N == 1 and P == 1:

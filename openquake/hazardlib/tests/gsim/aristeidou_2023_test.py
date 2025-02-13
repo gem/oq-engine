@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ Implements the comprehensive test suite for the Aristeidou, Tarbali, and
 O'Reilly GMM (2023)
 Test data generated using an independent code written by the original authors.
 The published article and supplemental material can be found in:
-https://journals.sagepub.com/doi/suppl/10.1193/100614eqs151m
+https://journals.sagepub.com/doi/10.1177/87552930231180228
 """
 
 from openquake.hazardlib.gsim.aristeidou_2023 import (

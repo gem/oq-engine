@@ -1,6 +1,6 @@
 taxonomy,consequence,peril,slight,moderate,extreme,complete
-Concrete,losses,earthquake,0.04,0.31,0.6,1
-Adobe,losses,earthquake,0.04,0.31,0.6,1
-Stone-Masonry,losses,earthquake,0.04,0.31,0.6,1
-Unreinforced-Brick-Masonry,losses,earthquake,0.04,0.31,0.6,1
-Wood,losses,earthquake,0.04,0.31,0.6,1
+Concrete,losses,groundshaking,0.04,0.31,0.6,1
+Adobe,losses,groundshaking,0.04,0.31,0.6,1
+Stone-Masonry,losses,groundshaking,0.04,0.31,0.6,1
+Unreinforced-Brick-Masonry,losses,groundshaking,0.04,0.31,0.6,1
+Wood,losses,groundshaking,0.04,0.31,0.6,1

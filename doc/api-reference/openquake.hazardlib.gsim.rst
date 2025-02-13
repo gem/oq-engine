@@ -150,6 +150,14 @@ aristeidou_2023
     :undoc-members:
     :show-inheritance:
 
+aristeidou_2024
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.aristeidou_2024
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 armenia_2016
 ---------------------------------------------------
 
@@ -427,6 +435,14 @@ campbell_bozorgnia_2003
 -------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2003
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+campbell_bozorgnia_2003_world
+-------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2003_world
     :members:
     :undoc-members:
     :show-inheritance:

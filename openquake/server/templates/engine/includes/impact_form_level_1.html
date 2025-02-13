@@ -1,0 +1,37 @@
+          <div class="span12">
+            <h2>Run an earthquake impact assessment</h2>
+            {% if not user.email %}
+            <h3>
+              WARNING: no email address is speficied for your user account, therefore email notifications will be disabled
+            </h3>
+            {% endif %}
+            <form id="impact_get_rupture_form" method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="impact_form_row">
+                <label for"usgs_id">{{ impact_form_labels.usgs_id }}</label>
+                <input class="impact-input" type="text" id="usgs_id" name="usgs_id" placeholder="{{ impact_form_placeholders.usgs_id }}" value="{{ impact_default_usgs_id }}"/>
+              </div>
+              <div class="impact_form_row hidden_except_submit">
+                <label for"rupture_from_usgs">{{ impact_form_labels.rupture_from_usgs }}</label>
+                <input class="impact-input" type="hidden" id="rupture_from_usgs" name="rupture_data_file_from_usgs" placeholder="{{ impact_form_placeholders.rupture_from_usgs }}" disabled />
+                <input class="impact-input" type="text" id="rupture_from_usgs_loaded" name="rupture_from_usgs_loaded" disabled />
+              </div>
+              <div class="impact_form_row hidden_except_submit">
+                <label for"rupture_file">{{ impact_form_labels.rupture_file }}</label>
+                <input class="impact-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ impact_form_placeholders.rupture_file }}" disabled >
+              </div>
+              <div class="impact_form_row">
+                <button id="submit_impact_get_rupture" type="submit" class="btn">Retrieve ShakeMap data</button>
+                <!-- <input type="submit"> -->
+              </div>
+            </form>
+            <div id="shakemap-image-row" style="display: none;">
+                <div id="intensity-map" style="display: none;" class="shakemap-image-container"></div>
+                <div id="pga-map" style="display: none;" class="shakemap-image-container"></div>
+            </div>
+            <div class="shakemap-clear-float"></div>
+            <form id="impact_run_form" class="hidden_except_submit" method="post" enctype="multipart/form-data">
+            {% include './impact_rupture_params_from.html' %}
+            {% include './impact_run_form.html' %}
+            </form>
+          </div>

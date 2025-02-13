@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,7 +40,7 @@ from openquake.hazardlib.calc.filters import (  # noqa
 
 PRECISION = pmf.PRECISION
 
-SCALEREL = scalerel.get_available_magnitude_scalerel()
+SCALEREL = scalerel._get_available_class(scalerel.BaseMSR)
 
 GSIM = gsim.get_available_gsims()
 
@@ -1250,6 +1250,20 @@ def site_param(dic):
     return new
 
 
+def version(value: str):
+    """
+    >>> version('3.22')
+    (3, 22, 0)
+    >>> version('3.22.0-gitXXX')
+    (3, 22, 0)
+    """
+    vers = [0, 0, 0]
+    for i, number in enumerate(value.split('.')):
+        if 'git' not in number:
+            vers[i] = int(number)
+    return tuple(vers)
+
+
 ###########################################################################
 
 class Param(object):
@@ -1493,4 +1507,3 @@ def fragmentno(src):
         return -1
     fragment = fragments[1].split('!')[0]  # strip !b16
     return int(fragment)
-

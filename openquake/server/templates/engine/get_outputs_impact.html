@@ -1,0 +1,153 @@
+{% extends "engine/base.html" %}
+{% load servertags %}
+  <title>{% block title %}OpenQuake engine: outputs from calculation {{ calc_id }}{% endblock %}</title>
+
+  {% block main %}
+  {{ block.super }}
+  <div class="content-wrap">
+    <div class="container">
+      <div class="row">
+        <div id="oq-body-wrapper">
+          <div class="span12">
+            <h2>Outputs from calculation {{ calc_id }}: {{ description }}{% if local_timestamp %} (event time: {{ local_timestamp }}){% endif %}</h2>
+            {% if time_job_after_event %}<h3>Results computed {{ time_job_after_event }} after the event</h3><br/>{% endif %}
+            {% if warnings %}
+            <div id="warning-box" class="alert alert-warning" style=>
+                WARNING: {{ warnings }}
+            </div>
+            {% endif %}
+            <div id="my-outputs" class="well"></div>
+            {% comment %}
+            <div id="to-full-outputs">
+            <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs" class="btn btn-sm">
+                View advanced outputs page</a>
+            </div>
+            {% endcomment %}
+            <div class="outputs-general-btns-left">
+              {% for img in avg_gmf %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
+                  Show average GMF - {{ img|get_imt }}</a>
+              </div>
+              {% endfor %}
+              {% if assets %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
+                  Show assets</a>
+              </div>
+
+              {% if user_level == 2 %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags" class="btn btn-sm">
+                  Show aggrisk_tags</a>
+              </div>
+              {% endif %}
+            </div>
+            <div class="outputs-general-btns-center"></div>
+            <div class="outputs-general-btns-right">
+              <div id="my-datastore">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
+                   title="Size: {{ size_mb }} MB" class="btn btn-sm">
+                  Download hdf5 datastore</a>
+              </div>
+            {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> <!-- /.container -->
+  </div>
+  {% endblock main %}
+
+  {% block templates %}
+  <script type="text/template" id="output-table-template">
+    <div class="impact-losses-container">
+      {% if losses_header is not None %}
+      <table id="impact-losses">
+        <thead>
+          <tr>
+            {% for header in losses_header %}
+              <th {% if forloop.counter == 2 %}style="border-right: 2px solid black;"{% endif %}>{{ header|safe }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in losses %}
+          <tr {% if forloop.last %}style="border-top: 2px solid black;"{% endif%}>
+            {% for item in row %}
+              <td style="border: 1px solid #ddd; {% if forloop.counter == 2 %}border-right: 2px solid black; %}{% endif %}{% if forloop.counter < 3 %}text-align: left;{% else %}text-align: right;{% endif %}">
+                {% if item|stringformat:"s"|floatformat %}
+                  {% if forloop.counter == 2 %}
+                  {{ item|floatformat:weights_precision }}
+                  {% else %}
+                  {{ item|humanize_number }}
+                  {% endif %}
+                {% else %}
+                  {{ item|stringformat:"s"|linebreaksbr }}
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p>{{ losses }}</p>
+      {% endif %}
+    </div>
+    {% if losses_header is not None %}
+    <div id="impact-losses-download">
+      <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_aggrisk" class="btn btn-sm output-action-btn">Download csv</a>
+    </div>
+    {% endif %}
+    <hr/>
+    <table id="output_table" class="table table-hover">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th style="width: 500px;">Name</th>
+          <th>Type</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% _.each(outputs, function(output) { %>
+        <% if ([].indexOf(output.get('type')) >= 0) { %>  {# listed output types will not be displayed #}
+        <%   return; // works like continue in underscore.js %>
+        <% }%>
+        {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
+        <tr class="">
+          <td><%= output.get('id') || 'New' %></td>
+          <td>
+            <%= output.get('name') %>
+            <p style="clear:both;"></p>
+          </td>
+          <td <% if (output.get('size_mb')) { %>title="Size: <%= Math.max((Math.round(output.get('size_mb') * 100) / 100), 0.01).toFixed(2) %>MB"<% } %>><%= output.get('type') %></td>
+          <td>
+            <table class="table table-disable-hover table-condensed">
+            <% _.each(output.get('outtypes'), function(outtype) { %>
+              <% if ([].indexOf(outtype) >= 0) { %>  {# buttons corresponding to listed formats will not be displayed #}
+              <%   return; // works like continue in underscore.js %>
+              <% }%>
+              <tr>
+                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm output-action-btn">Download <%= outtype %></a></td>
+              </tr>
+            <% }); %>
+            </table>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </script>
+
+  {% endblock templates %}
+
+  {% block extra_script %}
+  {{ block.super }}
+  <script type="text/javascript"><!--
+    var gem_calc_id = '{{ calc_id }}';
+    //-->
+    </script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/engine_get_outputs.js"></script>
+  {% endblock extra_script %}

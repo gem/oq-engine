@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -129,6 +129,8 @@ ARISTOTLE_FORM_LABELS = {
     'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
+    'nodal_plane': 'Nodal plane',
+    'msr': 'Magnitude scaling relationship',
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
@@ -154,6 +156,8 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'station_data_file_from_usgs': '',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'float ≥ 0',
+    'nodal_plane': '',
+    'msr': '',
 }
 
 validators = {
@@ -243,27 +247,32 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
-def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
-                       monitor=performance.Monitor()):
+def impact_validate(POST, user, rupture_file=None, station_data_file=None,
+                    monitor=performance.Monitor()):
     """
-    This is called by `aristotle_get_rupture_data` and `aristotle_run`.
+    This is called by `impact_get_rupture_data` and `impact_run`.
     In the first case the form contains only usgs_id and rupture_file and
     returns (rup, rupdic, [station_file], error).
     In the second case the form contains all fields and returns
     (rup, rupdic, params, error).
     """
+    err = {}
     dic, params, err = _validate(POST)
     if err:
         return None, dic, params, err
 
-    # NOTE: in level 1 interface there is no checkbox and the ShakeMap has to be used.
-    #       in level 2 interface the checkbox is unchecked by default
+    # NOTE: in level 1 interface the ShakeMap has to be used.
+    #       in level 2 interface it depends from the selected approach
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
+    approach = POST['approach']
 
-    rup, rupdic = get_rup_dic(
-        dic['usgs_id'], user, use_shakemap, rupture_file, station_data_file, monitor)
+    rup, rupdic, err = get_rup_dic(
+        dic, user, approach, use_shakemap, rupture_file, station_data_file,
+        monitor)
+    if err:
+        return None, None, None, err
     # round floats
     for k, v in rupdic.items():
         if isinstance(v, float):  # lon, lat, dep, strike, dip
@@ -279,7 +288,9 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    if len(params) > 1:  # called by aristotle_run
+    if 'msr' in POST:
+        rupdic['msr'] = POST['msr']
+    if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
         with monitor('get_oqparams'):
@@ -287,5 +298,5 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
             oqparams = ap.get_oqparams(
                 dic['usgs_id'], mosaic_models, trts, use_shakemap)
         return rup, rupdic, oqparams, err
-    else:  # called by aristotle_get_rupture_data
+    else:  # called by impact_get_rupture_data
         return rup, rupdic, params, err

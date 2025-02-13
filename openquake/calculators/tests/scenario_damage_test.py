@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -80,8 +80,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # check damages-rlzs
         [fname] = export(('damages-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
-        df = self.calc.datastore.read_df('damages-rlzs', 'asset_id')
-        self.assertEqual(list(df.columns), ['rlz', 'value'])
 
         # check risk_by_event
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
@@ -244,7 +242,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # inconsistent IDs between fragility and consequence in set_tmap
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_16.__file__, 'job.ini')
-        self.assertIn("Missing 'UNM/C_LR/GOV2' in", str(ctx.exception))
+        self.assertIn("{'MUR-CLBRS-LWAL-HBET-1;2/GOV2'} are in the exposure "
+                      "but not in the taxonomy mapping ", str(ctx.exception))
 
     def test_case_17_no_time_event(self):
         out = self.run_calc(

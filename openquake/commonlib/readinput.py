@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -56,8 +56,8 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
+from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, geohash3, get_dist)
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_rupture
@@ -344,6 +344,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
+
     re = os.environ.get('OQ_REDUCE')  # debugging facility
     if is_fraction(re):
         # reduce the imtls to the first imt
@@ -392,7 +393,7 @@ def get_mesh_exp(oqparam, h5=None):
         a pair (mesh, exposure) both of which can be None
     """
     exposure = get_exposure(oqparam, h5)
-    if oqparam.aristotle:
+    if oqparam.impact:
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
         return mesh, exposure
@@ -571,7 +572,7 @@ def get_site_model(oqparam, h5=None):
     if h5 and 'site_model' in h5:
         return h5['site_model'][:]
 
-    if oqparam.aristotle:
+    if oqparam.impact:
         # read the site model close to the rupture
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
@@ -661,6 +662,13 @@ def debug_site(oqparam, haz_sitecol):
         oqparam.concurrent_tasks = 0
 
 
+def _vs30(dic):
+    # dic is a dictionary key -> pathnames
+    if 'site_model' in dic:
+        files = hdf5.sniff(dic['site_model'])
+        return any('vs30' in csv.fields for csv in files)
+
+
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -669,15 +677,17 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    if h5 and 'sitecol' in h5:
+        return h5['sitecol']
     if oqparam.ruptures_hdf5:
         with hdf5.File(oqparam.ruptures_hdf5) as r:
             rup_sitecol = r['sitecol']
-    elif h5 and 'sitecol' in h5:
-        return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
-        raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
-                          % oqparam.inputs['job_ini'])
+        if oqparam.calculation_mode != 'preclassical':
+            raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
+                              % oqparam.inputs['job_ini'])
+        return None
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
         return None
@@ -687,7 +697,7 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if oqparam.ruptures_hdf5:
+        if oqparam.ruptures_hdf5 and not _vs30(oqparam.inputs):
             assoc_dist = (oqparam.region_grid_spacing * 1.414
                           if oqparam.region_grid_spacing else 10)
             # 10 km is around the grid spacing used in the mosaic
@@ -700,7 +710,7 @@ def get_site_collection(oqparam, h5=None):
             return _get_sitecol(sitecol, exp, oqparam, h5)
         elif h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
-        elif oqparam.aristotle and (
+        elif oqparam.impact and (
                     not oqparam.infrastructure_connectivity_analysis):
             # filter the far away sites
             rup = get_rupture(oqparam)
@@ -787,7 +797,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
         tectonic region types.
     """
     if 'gsim_logic_tree' not in oqparam.inputs:
-        return logictree.GsimLogicTree.from_(oqparam.gsim)
+        return logictree.GsimLogicTree.from_(
+            oqparam.gsim, oqparam.inputs['job_ini'])
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
@@ -839,11 +850,7 @@ def get_rupture(oqparam):
             rup_data = json.load(f)
         rup = convert_to_oq_rupture(rup_data)
     if rup is None:  # assume rupture_dict
-        r = oqparam.rupture_dict
-        hypo = Point(r['lon'], r['lat'], r['dep'])
-        rup = source.rupture.build_planar(
-            hypo, r['mag'], r.get('rake'),
-            r.get('strike', 0), r.get('dip', 90), r.get('trt', '*'))
+        rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
 
 
@@ -1023,7 +1030,7 @@ def get_crmodel(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.aristotle:
+    if oqparam.impact:
         with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
             try:
                 crm = riskmodels.CompositeRiskModel.read(exp, oqparam)
@@ -1051,10 +1058,11 @@ def get_crmodel(oqparam):
             # i.e. files collapsed.csv, fatalities.csv, ... with headers like
             # taxonomy,consequence,slight,moderate,extensive
             df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
+            # NB: consequence files depend on loss_type, unlike fragility files
             if 'loss_type' not in df.columns:
                 df['loss_type'] = 'structural'
             if 'peril' not in df.columns:
-                df['peril'] = 'earthquake'
+                df['peril'] = 'groundshaking'
             for consequence, group in df.groupby('consequence'):
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
                     raise InvalidFile('Unknown consequence %s in %s' %
@@ -1084,7 +1092,7 @@ def get_exposure(oqparam, h5=None):
         return
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
-        if oqparam.aristotle:
+        if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = asset.Exposure.read_around(fnames[0], gh3)
@@ -1274,7 +1282,7 @@ def levels_from(header):
     return levels
 
 
-def aristotle_tmap(oqparam, taxidx):
+def impact_tmap(oqparam, taxidx):
     """
     :returns: a taxonomy mapping dframe
     """
@@ -1286,7 +1294,7 @@ def aristotle_tmap(oqparam, taxidx):
             for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
                 if taxo in taxidx:
                     acc['country'].append(key)
-                    acc['peril'].append('earthquake')
+                    acc['peril'].append('groundshaking')
                     acc['taxi'].append(taxidx[taxo])
                     acc['risk_id'].append(risk_id)
                     acc['weight'].append(weight)
@@ -1300,8 +1308,8 @@ def taxonomy_mapping(oqparam, taxidx):
     :param taxidx: dictionary taxo:str -> taxi:int
     :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
-    if oqparam.aristotle:
-        return aristotle_tmap(oqparam, taxidx)
+    if oqparam.impact:
+        return impact_tmap(oqparam, taxidx)
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         nt = len(taxidx)  # number of taxonomies
         df = pandas.DataFrame(dict(weight=numpy.ones(nt),

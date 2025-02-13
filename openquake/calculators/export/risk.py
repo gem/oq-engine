@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -594,6 +594,19 @@ def _fix(col):
     return col
 
 
+@export.add(('aggexp_tags', 'csv'))
+def export_aggexp_tags_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    df = extract(dstore, ekey[0] + '?')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('%s.%s' % ekey)
+    writer.save(df, fname, comment=dstore.metadata)
+    return [fname]
+
+
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
     """
@@ -722,7 +735,7 @@ def convert_df_to_vulnerability(loss_type, df):
         root.append(vfunc)
     return root
 
-    
+
 def export_vulnerability_xml(dstore, edir):
     fnames = []
     for loss_type, df in dstore.read_df('crm').groupby('loss_type'):

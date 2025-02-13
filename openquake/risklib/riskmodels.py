@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,6 +18,7 @@
 import re
 import json
 import copy
+import logging
 import functools
 import collections
 import numpy
@@ -63,7 +64,7 @@ def get_risk_files(inputs):
         if key == 'fragility':
             # backward compatibily for .ini files with key fragility_file
             # instead of structural_fragility_file
-            rfs['earthquake/fragility/structural'] = inputs[
+            rfs['groundshaking/fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
             del inputs['fragility']
         elif key.endswith(('_fragility', '_vulnerability', '_vulnerability_retrofitted')):
@@ -77,7 +78,7 @@ def get_risk_files(inputs):
                         rfs[f'{peril}/{kind}/{cost_type}'] = fname
                 else:
                     cost_type = match.group(1)
-                    rfs[f'earthquake/{kind}/{cost_type}'] = value
+                    rfs[f'groundshaking/{kind}/{cost_type}'] = value
             else:
                 raise ValueError('Invalid key in %s: %s_file' % (job_ini, key))
     return rfs
@@ -103,30 +104,29 @@ def build_vf_node(vf):
         {'id': vf.id, 'dist': vf.distribution_name}, nodes=nodes)
 
 
-def group_by_peril(funclist):
+def group_by_lt(funclist):
     """
     Converts a list of objects with attribute .loss_type into a dictionary
     peril -> loss_type -> risk_function
     """
-    ddic = AccumDict(accum=AccumDict(accum=[]))  # peril -> lt -> rf
+    dic = AccumDict(accum = []) # peril -> lt -> rf
     for rf in funclist:
-        ddic[rf.peril][rf.loss_type].append(rf)
-    for peril, dic in ddic.items():
-        for lt, lst in dic.items():
-            if len(lst) == 1:
-                dic[lt] = lst[0]
-            elif lst[1].kind == 'fragility':
-                # EventBasedDamageTestCase.test_case_11
-                cf, ffl = lst
-                ffl.cf = cf
-                dic[lt] = ffl
-            elif lst[1].kind == 'vulnerability_retrofitted':
-                vf, retro = lst
-                vf.retro = retro
-                dic[lt] = vf
-            else:
-                raise RuntimeError(lst)
-    return ddic
+        dic[rf.loss_type].append(rf)
+    for lt, lst in dic.items():
+        if len(lst) == 1:
+            dic[lt] = lst[0]
+        elif lst[1].kind == 'fragility':
+            # EventBasedDamageTestCase.test_case_11
+            cf, ffl = lst
+            ffl.cf = cf
+            dic[lt] = ffl
+        elif lst[1].kind == 'vulnerability_retrofitted':
+            vf, retro = lst
+            vf.retro = retro
+            dic[lt] = vf
+        else:
+            raise RuntimeError(lst)
+    return dic
 
 
 class RiskFuncList(list):
@@ -135,12 +135,18 @@ class RiskFuncList(list):
     """
     def groupby_id(self):
         """
-        :returns: dictionary id -> loss_type -> risk_function
+        :returns: dictionary id -> peril -> loss_type -> risk_function
         """
-        ddic = AccumDict(accum=[])
+        ddic = AccumDict(accum=AccumDict(accum=[]))
+        dic = AccumDict(accum=[])
         for rf in self:
-            ddic[rf.id].append(rf)
-        return {riskid: group_by_peril(rfs) for riskid, rfs in ddic.items()}
+            dic[rf.id, rf.peril].append(rf)
+        for (riskid, peril), rfs in dic.items():
+            ddic[riskid][peril] = group_by_lt(rfs)
+        num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
+        if len(set(num_perils.values())) > 1:
+            raise ValueError(f'{num_perils=}')
+        return ddic
 
 
 def get_risk_functions(oqparam):
@@ -153,7 +159,7 @@ def get_risk_functions(oqparam):
     job_ini = oqparam.inputs['job_ini']
     rmodels = AccumDict()  # (peril, loss_type, kind) -> rmodel
     for key, fname in get_risk_files(oqparam.inputs).items():
-        peril, kind, loss_type = key.split('/')  # ex. earthquake/vulnerability/structural
+        peril, kind, loss_type = key.split('/')  # ex. groundshaking/vulnerability/structural
         rmodel = nrml.to_python(fname)
         if len(rmodel) == 0:
             raise InvalidFile(f'{job_ini}: {fname} is empty!')
@@ -220,19 +226,19 @@ def rescale(curves, values):
 
 class PerilDict(dict):
     """
-    >>> pd = PerilDict({('earthquake', 'structural'): .23})
+    >>> pd = PerilDict({('groundshaking', 'structural'): .23})
     >>> pd['structural']
     0.23
     >>> pd['structurl']
     Traceback (most recent call last):
     ...
-    KeyError: ('earthquake', 'structurl')
+    KeyError: ('groundshaking', 'structurl')
     """
     def __getitem__(self, lt):
         if isinstance(lt, tuple):
             return dict.__getitem__(self, lt)
         else:  # assume lt is a loss_type string
-            return dict.__getitem__(self, ('earthquake', lt))
+            return dict.__getitem__(self, ('groundshaking', lt))
 
 
 class RiskModel(object):
@@ -255,11 +261,11 @@ class RiskModel(object):
         if calcmode in ('classical', 'classical_risk'):
             self.loss_ratios = {
                 lt: tuple(vf.mean_loss_ratios_with_steps(steps))
-                for lt, vf in risk_functions['earthquake'].items()}
+                for lt, vf in risk_functions['groundshaking'].items()}
         if calcmode == 'classical_bcr':
             self.loss_ratios_orig = {}
             self.loss_ratios_retro = {}
-            for lt, vf in risk_functions['earthquake'].items():
+            for lt, vf in risk_functions['groundshaking'].items():
                 self.loss_ratios_orig[lt] = tuple(
                     vf.mean_loss_ratios_with_steps(steps))
                 self.loss_ratios_retro[lt] = tuple(
@@ -267,7 +273,7 @@ class RiskModel(object):
 
         # set imt_by_lt
         self.imt_by_lt = {}  # dictionary loss_type -> imt
-        for lt, rf in risk_functions['earthquake'].items():
+        for lt, rf in risk_functions['groundshaking'].items():
             if rf.kind in ('vulnerability', 'fragility'):
                 self.imt_by_lt[lt] = rf.imt
 
@@ -277,13 +283,13 @@ class RiskModel(object):
         The list of loss types in the underlying vulnerability functions,
         in lexicographic order
         """
-        return sorted(self.risk_functions['earthquake'])
+        return sorted(self.risk_functions['groundshaking'])
 
     def __call__(self, assets, gmf_df, rndgen=None):
         meth = getattr(self, self.calcmode)
         res = {(peril, lt): meth(peril, lt, assets, gmf_df, rndgen)
                for peril in self.risk_functions for lt in self.loss_types}
-        # for event_based_risk `res` is a map loss_type -> DataFrame(eid, aid, loss)
+        # for event_based_risk `res` is loss_type -> DataFrame(eid, aid, loss)
         return PerilDict(res)
 
     def __toh5__(self):
@@ -291,7 +297,7 @@ class RiskModel(object):
 
     def __fromh5__(self, dic, attrs):
         vars(self).update(attrs)
-        assert 'earthquake' in dic, list(dic)
+        assert 'groundshaking' in dic, list(dic)
         self.risk_functions = dic
 
     def __repr__(self):
@@ -490,8 +496,11 @@ def get_riskcomputer(dic, alias, limit_states=()):
     lts = sorted(lts)
     mal = dic.setdefault('minimum_asset_loss', {lt: 0. for lt in lts})
     for riskid in rfs:
+        by_peril = AccumDict(accum=[])
+        for rf in rfs[riskid]:
+            by_peril[rf.peril].append(rf)
         rm = RiskModel(dic['calculation_mode'], 'taxonomy',
-                       group_by_peril(rfs[riskid]),
+                       {peril: group_by_lt(by_peril[peril]) for peril in by_peril},
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
         rm.alias = alias
@@ -501,7 +510,8 @@ def get_riskcomputer(dic, alias, limit_states=()):
             riskid, peril = rlt.split('#')
             rc.wdic[riskid, peril] = weight
     else:
-        rc.wdic = {(riskid, peril): 1. for riskid, peril in sorted(riskid_perils)}
+        rc.wdic = {(riskid, peril): 1.
+                   for riskid, peril in sorted(riskid_perils)}
     rc.P = len(perils)
     rc.loss_types = lts
     rc.minimum_asset_loss = mal
@@ -513,6 +523,33 @@ def get_riskcomputer(dic, alias, limit_states=()):
 
 class ValidationError(Exception):
     pass
+
+
+# TODO: if the consequence tag is different from "taxonomy", pass
+# the values of the exposure for that tag
+def check_consequences(fname, taxonomies, perils):
+    """
+    Check that the taxonomy field (if any) and the peril field (if any)
+    in the consequence file are consistent with the expected taxonomies
+    and perils
+    """
+    df = pandas.read_csv(fname)
+    if 'taxonomy' in df.columns:
+        csq_taxonomies = set(df['taxonomy'])
+        extra = csq_taxonomies - taxonomies
+        missing = taxonomies - csq_taxonomies
+        if not csq_taxonomies & taxonomies:
+            raise InvalidFile(f'{fname}: no matching taxonomies')
+        elif missing:
+            raise InvalidFile(f'{fname}: missing taxonomies {missing}')
+        elif extra:
+            # tested in event_based_damage/case_15
+            logging.warning(f'In {fname} there are extra taxonomies missing '
+                            f'in the exposure: {extra}')
+    if 'peril' in df.columns:
+        for line, peril in enumerate(df['peril'], 1):
+            if peril not in perils:
+                raise InvalidFile(f'{fname}: unknown {peril=} at {line=}')
 
 
 class CompositeRiskModel(collections.abc.Mapping):
@@ -547,7 +584,7 @@ class CompositeRiskModel(collections.abc.Mapping):
             try:
                 rf.peril = df.loc[i].peril
             except AttributeError:  # in engine < 3.22 the peril was not stored
-                rf.peril = 'earthquake'
+                rf.peril = 'groundshaking'
             lt = rf.loss_type
             if rf.kind == 'fragility':  # rf is a FragilityFunctionList
                 risklist.append(rf)
@@ -572,7 +609,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         self.consdict = consdict or {}  # new style consequences, by anything
         self.init()
 
-    def set_tmap(self, tmap_df):
+    def set_tmap(self, tmap_df, taxidx):
         """
         Set the attribute .tmap_df if the risk IDs in the
         taxonomy mapping are consistent with the fragility functions.
@@ -586,19 +623,13 @@ class CompositeRiskModel(collections.abc.Mapping):
                 csq_files.extend(fnames)
             else:
                 csq_files.append(fnames)
-        cfs = '\n'.join(csq_files)
-        df = self.tmap_df
-        for peril in self.perils:
-            for byname, coeffs in self.consdict.items():
-                # ex. byname = "losses_by_taxonomy"
-                if len(coeffs):
-                    for per, risk_id, weight in zip(df.peril, df.risk_id, df.weight):
-                        if (per == '*' or per == peril) and risk_id != '?':
-                            try:
-                                coeffs[risk_id][peril]
-                            except KeyError as err:
-                                raise InvalidFile(
-                                    'Missing %s in\n%s' % (err, cfs))
+        for fname in csq_files:
+            check_consequences(fname, set(taxidx), self.perils)
+        for byname, coeffs in self.consdict.items():
+            # reduce the consdict to the taxonomies in the exposure
+            self.consdict[byname] = {taxidx[taxo]: arr
+                                     for taxo, arr in coeffs.items()
+                                     if taxo in taxidx}
 
     def check_risk_ids(self, inputs):
         """
@@ -655,13 +686,14 @@ class CompositeRiskModel(collections.abc.Mapping):
         :param oq: OqParam instance with .loss_types and .time_event
         :returns: a dict consequence_name, loss_type -> array[P, A, E]
         """
+        # by construction all assets have the same taxonomy
+        taxi = assets[0]['taxonomy']
         P, A, E, _L, _D = dd5.shape
         csq = AccumDict(accum=numpy.zeros((P, A, E)))
         for byname, coeffs in self.consdict.items():
             # ex. byname = "losses_by_taxonomy"
             if len(coeffs):
                 consequence, _tagname = byname.split('_by_')
-                # by construction all assets have the same taxonomy
                 for risk_id, df in tmap_df.groupby('risk_id'):
                     for li, lt in enumerate(oq.loss_types):
                         # dict loss_type -> coeffs for the given loss type
@@ -671,7 +703,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                             else:  # assume one weigth per peril
                                 [w] = df[df.peril == peril].weight
                             coeff = (dd5[pi, :, :, li, 1:] @
-                                     coeffs[risk_id][peril][lt] * w)
+                                     coeffs[taxi][peril][lt] * w)
                             cAE = scientific.consequence(
                                 consequence, assets, coeff, lt, oq.time_event)
                             csq[consequence, li][pi] += cAE
@@ -714,10 +746,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         for rm in self.values():
             ltypes.update(rm.loss_types)
         self.loss_types = sorted(ltypes)
-        self.taxonomies = set()
+        self.riskids = set()
         self.distributions = set()
         for riskid, rm in self._riskmodels.items():
-            self.taxonomies.add(riskid)
+            self.riskids.add(riskid)
             rm.compositemodel = self
             for lt, rf in rm.risk_functions.items():
                 if hasattr(rf, 'distribution_name'):
@@ -735,10 +767,10 @@ class CompositeRiskModel(collections.abc.Mapping):
         iml = collections.defaultdict(list)
         # ._riskmodels is empty if read from the hazard calculation
         for riskid, rm in self._riskmodels.items():
-            for lt, rf in rm.risk_functions['earthquake'].items():
+            for lt, rf in rm.risk_functions['groundshaking'].items():
                 iml[rf.imt].append(rf.imls[0])
 
-        if oq.aristotle:
+        if oq.impact:
             pass  # don't set minimum_intensity
         elif sum(oq.minimum_intensity.values()) == 0 and iml:
             oq.minimum_intensity = {imt: min(ls) for imt, ls in iml.items()}
@@ -832,7 +864,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                 allratios = []
                 for taxo in sorted(self):
                     rm = self[taxo]
-                    rf = rm.risk_functions['earthquake'][loss_type]
+                    rf = rm.risk_functions['groundshaking'][loss_type]
                     if loss_type in rm.loss_ratios:
                         ratios = rm.loss_ratios[loss_type]
                         allratios.append(ratios)

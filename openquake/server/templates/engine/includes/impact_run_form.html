@@ -1,0 +1,61 @@
+              {% csrf_token %}
+              <div class="impact_form_row hidden-for-shakemap hidden">
+                <label for="mosaic_model">{{ impact_form_labels.mosaic_model }}</label>
+                <select name="mosaic_model" id="mosaic_model" class="impact-select" {% if user_level != 2 %}disabled{% endif %}>
+                </select>
+              </div>
+              <div class="impact_form_row hidden-for-shakemap hidden">
+                <label for="trt">{{ impact_form_labels.trt }}</label>
+                <select name="trt" id="trt" class="impact-select" {% if user_level != 2 %}disabled{% endif %}>
+                </select>
+              </div>
+              <div class="impact_form_row">
+                <label for"local_timestamp">{{ impact_form_labels.local_timestamp }}</label>
+                <input class="impact-input" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ impact_form_placeholders.local_timestamp }}" disabled />
+              </div>
+              <div class="impact_form_row">
+                <label for"time_event">{{ impact_form_labels.time_event }}</label>
+                <select id="time_event" name="time_event" class="impact-select" {% if user_level != 2 %}disabled{% endif %}>
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
+                    <option value="transit">Transit</option>
+                </select>
+              </div>
+              <div class="impact_form_row">
+                <label for"maximum_distance">{{ impact_form_labels.maximum_distance }}</label>
+                <input class="impact-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ impact_form_placeholders.maximum_distance }}" value="200" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="impact_form_row hidden-for-shakemap hidden">
+                <label for"truncation_level">{{ impact_form_labels.truncation_level }}</label>
+                <input class="impact-input" type="text" id="truncation_level" name="truncation_level" placeholder="{{ impact_form_placeholders.truncation_level }}" value="3" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="impact_form_row">
+                <label for"number_of_ground_motion_fields">{{ impact_form_labels.number_of_ground_motion_fields }}</label>
+                <input class="impact-input" type="text" id="number_of_ground_motion_fields" name="number_of_ground_motion_fields" placeholder="{{ impact_form_placeholders.number_of_ground_motion_fields }}" value="100" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="impact_form_row">
+                <label for"asset_hazard_distance">{{ impact_form_labels.asset_hazard_distance }}</label>
+                <input class="impact-input" type="text" id="asset_hazard_distance" name="asset_hazard_distance" placeholder="{{ impact_form_placeholders.asset_hazard_distance }}" value="15" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="impact_form_row">
+                <label for"ses_seed">{{ impact_form_labels.ses_seed }}</label>
+                <input class="impact-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ impact_form_placeholders.ses_seed }}" value="42" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="impact_form_row hidden-for-shakemap hidden">
+                <label for"station_data_file_from_usgs">{{ impact_form_labels.station_data_file_from_usgs }}</label>
+                <input class="impact-input" type="hidden" id="station_data_file_from_usgs" name="station_data_file_from_usgs" placeholder="{{ impact_form_placeholders.station_data_file_from_usgs }}" disabled />
+                <input class="impact-input" type="text" id="station_data_file_loaded" name="station_data_file_loaded" disabled />
+              </div>
+              <div class="impact_form_row hidden-for-shakemap hidden">
+                <label for"station_data_file">{{ impact_form_labels.station_data_file }}</label>
+                <input class="impact-input" type="file" id="station_data_file_input" name="station_data_file" placeholder="{{ impact_form_placeholders.station_data_file }}" {% if user_level != 2 %}disabled{% endif %}>
+                {% if user_level == 2 %}<button type="button" id="clearStationDataFile">Clear File</button>{% endif %}
+              </div>
+              <div class="impact_form_row hidden-for-shakemap hidden">
+                <label for"maximum_distance_stations">{{ impact_form_labels.maximum_distance_stations }}</label>
+                <input class="impact-input" type="text" id="maximum_distance_stations" name="maximum_distance_stations" placeholder="{{ impact_form_placeholders.maximum_distance_stations }}" value="" disabled/>
+              </div>
+              <div class="impact_form_row">
+                <button id="submit_impact_calc" type="submit" class="btn" disabled>Launch impact calculation</button>
+                <!-- <input type="submit"> -->
+              </div>

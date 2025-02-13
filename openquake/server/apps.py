@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2023 GEM Foundation
+# Copyright (C) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,6 +35,8 @@ class ServerConfig(AppConfig):
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
         import openquake.server.signals  # NOQA
+        if settings.LOCKDOWN:
+            import openquake.server.user_profile.signals  # NOQA
 
         # reset any computation left in the 'executing' state
         try:

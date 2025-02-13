@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -688,7 +688,7 @@ class SiteCollection(object):
 
         :returns: the site model array reduced to the hazard sites
         """
-        # NB: self != self.complete in the aristotle tests with stations
+        # NB: self != self.complete in the impact tests with stations
         m1, m2 = site_model[['lon', 'lat']], self.complete[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(

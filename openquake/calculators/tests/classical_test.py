@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -81,7 +81,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
             slow = view('task:classical:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
-            self.assertIn('duration', slow)
+            self.assertIn('time', slow)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
@@ -243,7 +243,8 @@ class ClassicalTestCase(CalculatorTestCase):
                               case_25.__file__)
 
     def test_case_26(self):  # split YoungsCoppersmith1985MFD
-        self.assert_curves_ok(['hazard_curve-rlz-000.csv'], case_26.__file__)
+        self.assert_curves_ok(['hazard_curve-rlz-000.csv'], case_26.__file__,
+                              delta=2E-5)
 
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__,
@@ -686,6 +687,10 @@ class ClassicalTestCase(CalculatorTestCase):
         ctx = view('rup:ufc3mean_0@0', self.calc.datastore)
         fname = general.gettemp(text_table(ctx, ext='org'))
         self.assertEqualFiles('expected/context.org', fname)
+
+    def test_case_75_pre(self):
+        # test preclassical without sites, as requested by Richard Styron
+        self.run_calc(case_75.__file__, 'pre.ini')
 
     def test_case_76(self):
         # CanadaSHM6 GMPEs

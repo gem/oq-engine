@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2024, GEM Foundation
-# 
+#
+# Copyright (C) 2024-2025, GEM Foundation
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
@@ -24,6 +24,7 @@ import sys
 import time
 import pathlib
 import numpy
+import pandas
 from openquake.baselib import hdf5
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base
@@ -90,7 +91,7 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
     print('Spent %.1f seconds' % (time.time() - t0))
     if what:
         calc_id = calc.datastore.calc_id
-        fname = outdir / ('%s_%s.txt' % (what.replace(':', ''), calc_id))
+        fname = outdir / ('%s_%s.org' % (what.replace(':', ''), calc_id))
         try:
             tbl = view(what, calc.datastore)
         except KeyError:
@@ -101,7 +102,9 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
                 else:
                     df = hdf5.ArrayWrapper.from_(dset).to_dframe()
             except KeyError:
-                df = extract(calc.datastore, what).to_dframe()
+                df = extract(calc.datastore, what)
+                if not isinstance(df, pandas.DataFrame):
+                    df = df.to_dframe()
             tbl = text_table(df, ext='org')
         bname = prefix + re.sub(r'_\d+\.', '.', os.path.basename(fname))
         assert_close(tbl, outdir / bname)
