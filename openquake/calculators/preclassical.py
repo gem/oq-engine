@@ -306,6 +306,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 if spacing:
                     for plike in pointlike:
                         pointsources.extend(split_source(plike))
+                    logging.info(f'Gridding point sources for {grp_id=}')
                     cpsources = grid_point_sources(pointsources, spacing)
                     before_after += [len(pointsources), len(cpsources)]
                     for block in block_splitter(cpsources, 200):

@@ -1068,7 +1068,7 @@ class ContextMaker(object):
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 allrups = sorted([rup for rup in allrups
-                                  if minmag < rup.mag < maxmag],
+                                  if minmag <= rup.mag <= maxmag],
                                  key=bymag)
                 self.num_rups = len(allrups) or 1
                 if not allrups:
@@ -1295,18 +1295,20 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
+        eps = .1 * EPS if src.code == b'S' else EPS  # needed for EUR
+        src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
-            return EPS, 0
+            return eps, 0
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return EPS, 0
+            return eps, 0
         src.nsites = len(sites)
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         src.dt = time.time() - t0
         if not ctxs:
-            return EPS, 0
+            return eps, 0
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
@@ -1314,7 +1316,7 @@ class ContextMaker(object):
             weight *= 2
         elif src.code == b'N':  # increase weight in MEX and SAM
             weight *= 5.
-        return max(weight, EPS), int(esites)
+        return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1):
         """
@@ -1327,6 +1329,8 @@ class ContextMaker(object):
             for src in sources:
                 src.weight, src.esites = self.estimate_weight(
                     src, srcfilter, multiplier)
+                # if src.code == b'S':
+                #     print(src, src.dt, src.num_ruptures / self.num_rups)
 
 
 def by_dists(gsim):
