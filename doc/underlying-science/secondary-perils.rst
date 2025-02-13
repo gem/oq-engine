@@ -412,81 +412,71 @@ Landslide models
 ----------------
 
 Landslides are considered as one of the most damaging secondary perils associated with earthquakes. Earthquake-induced 
-landslides occurs when the static and inertia forces within the sliding mass reduces the factor of safety below 1. 
-Factors contributing to a slope failure are rather complex. The permanent displacement analysis developed by `Newmark 
+landslides occur when the static and inertia forces within the sliding mass reduces the factor of safety below 1. 
+Factors contributing to slope failures are rather complex. The permanent displacement analysis developed by `Newmark 
 (1965) <https://www.icevirtuallibrary.com/doi/abs/10.1680/geot.1965.15.2.139>`_ is used to model the dynamic performance
 of slopes (`Jibson et al., 2000 <https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_, 
 `Jibson 2007 <https://www.sciencedirect.com/science/article/pii/S0013795207000300?via%3Dihub>`_). It considers a slope
-as a rigid block resting on an inclined plane at an angle :math:`\alpha` (derived from Digital Elevation Model, DEM). 
-When the input motion which is expressed in terms of acceleration exceeds the critical acceleration, :math:`a_{c}`, the
-block starts to move. The crtical acceleration accounts for the shear strength and geometrical characteristics of the
+as a rigid block resting on an inclined plane at an angle :math:`\slope` (derived from Digital Elevation Model, DEM). 
+When the input motion which is expressed in terms of acceleration exceeds the critical acceleration, :math:`crit_accel`, the
+block starts to move. The critical acceleration accounts for the shear strength and geometrical characteristics of the
 sliding surface, and is calculated as:
 
 .. math:: 
 
-   a_{c} =(F_{s}-1)\ - \sin(\alpha)\cdot g \\ (17)
+   crit_accel =(F_{s}-1)\ - \sin(\slope)\cdot g \\ (17)
 
-The lower bound of :math:`a_{c}` is set to 0.05 to avoid unrealistically large displacements. The static factor of 
-safety is calculated as:
+The static factor of safety is calculated according to the infinite slope model(`Jibson et al., 2000 <https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_),
+which is well suited for shallow disrupted slides, one of the most common landslide types during earthquakes 
+(`Keefer, 1984 <https://people.wou.edu/~taylors/g407/Spring_2022/Keefer_1984_Landslides_Coseismic.pdf>`_):
 
 .. math::
 
-    F_s = \frac{c'}{\gamma t \sin(\alpha)} + \frac{\tan(\phi')}{\tan(\alpha)} - \frac{m \gamma_{w} \tan(\phi')}{\gamma \tan(\alpha)} \\(18)
+    F_{s} = \frac{cohesion'}{\soil_dry_density slab_thickness \sin(\slope)} + \frac{\tan(\friction_angle')}{\tan(\slope)} - \frac{saturation_coeff \water_density \tan(\friction_angle')}{\soil_dry_density \tan(\slope)} \\(18)
 
-where: :math:`c \, [\text{Pa}]` is the effective cohession with typical values ranging from :math:`20 \text{kPa}` for
-soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`\alpha^\circ` is the slope angle. :math:`\phi'^\circ` is 
+where: :math:`cohesion' \, [\text{Pa}]` is the effective cohesion with typical values ranging from :math:`20 \text{kPa}` for
+soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`\slope^\circ` is the slope angle. :math:`\friction_angle'^\circ` is 
 the effective friction angle with typical values ranging from :math:`30^\circ` to :math:`40^\circ`. 
-:math:`\gamma \, [\text{kg/m^3}]` is the dry density of the soil or rock. It ranges from :math:`1500 \, \text{kg/m^3}` 
-for soils to :math:`2500 - 3200 \, \text{kg/m^3}`. The slope-normal thickness of a failure slab is set to its default 
-value of :math:`t=2.5 \, \text{m}`. :math:`m` is the proportion of slab thickness that is saturated with default value 
-of 0.1. :math:`\gamma_{w} \, [\text{kg/m^3}]` is the unit weight of water which equals to :math:`1000 \, \text{kg/m^3}`.
+:math:`\soil_dry_density \, [\text{kg/m^3}]` is the dry density of the material. It ranges from :math:`1500 \, \text{kg/m^3}` 
+for soils to :math:`2500 - 3200 \, \text{kg/m^3}`. :math:`slab_thickness` is the slope-normal thickness of a failure slab in meters and :math:`saturation_coeff` 
+is the proportion of slab thickness that is saturated. :math:`\water_density \, [\text{kg/m^3}]` 
+is the unit weight of water which equals to :math:`1000 \, \text{kg/m^3}`.
 
 Note that the units of the input parameters reported in this document corresponds to the format required by the Engine 
 to produce correct results. The first and second term of the the equation corresponds to the cohesive and 
 frictional components of the strength, while the third component accounts for the strength reduction due to pore 
 pressure.
 
-A variety of regression equations can be used to estimate the Newmark displacements, and within the engine, Newmark 
-displacement as a function of critical acceleration ratio and moment magnitude is implemented. The displacement is in 
-units of meters.
+A variety of regression equations can be used to estimate the earthquake-induced displacements of landslides within the engine. Note that
+some of the equations below may return displacements in cm (:math:`Disp_{cm}`); however, OQ  always converts them to m (:math:`Disp`).
+Finally, it is important to emphasize that the computed displacements do not necessarily correspond directly to measurable slope movements in the field, 
+but rather serve as an index of slope performance.
 
-The computed displacements do not necessarily correspond directly to measurable slope movements in the field, but the 
-modeled displacements provide an index to correlate with field performance. `Jibson et al. (2000) 
-<https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_ compared the predicted 
-displacements with observations from 1994 Northridge earthquake and fit the data with Weilbull curve. The following 
-equation can be used to estimate the probability of slope failure as a function of Newmark displacement, :math:`D`.
 
-.. math:: 
+*******************
+Jibson (2007)
+*******************
 
-    P(f) = 0.335\ [1 - e^{-0.048 \cdot D^{1.565}}] \\ (19)
+`Jibson (2007) <https://www.sciencedirect.com/science/article/pii/S0013795207000300?via%3Dihub>`_ has generated regression equations for
+co-seismic displacements of landslides in terms of i) critical acceleration ratio (i.e., the ratio between the landslide critical acceleration and the PGA) and
+ii) crical acceleration ratio - moment magnitude. Displacement data used to derive the regression equations consist of rigorous Newmark displacements computed 
+for 2270 strong-motion records and by assuming critical acceleration values in the range of 0.05-0.40 g:
 
-The rock-slope failures are the other common effect observed in earthquakes. The methodology proposed by `Grant et al., 
-(2016) <https://www.sciencedirect.com/science/article/abs/pii/S0013795216302460?via%3Dihub>`_ captures the brittle 
-behavior associated with rock-slope failures and discontinuities common in rock masses. The static factor of safety 
-is computed as:
+Model a
 
-.. math:: 
+..math::
+	
+	\log(Disp_{cm}) = 0.215 + \log [\left( 1 - \frac{crit_accel}{PGA}} \right)^{2.341} \cdot \left( \frac{crit_accel}{PGA} \right)^{-1.438}] \\ (19)
 
-    F_s = \frac{2 c \sin(\beta)}{\gamma h (\beta-\alpha) \sin(\alpha)} + \frac{\tan(\phi)}{\tan(\alpha)} \\ (20)
+Model b
 
-where: :math:`c \, [\text{Pa}]` is the cohession with typical values ranging from :math:`20 \, {kPa}` for soils up to 
-:math:`20 \, {MPa}` for unfaulted rocks. The cohesion provided by the root systems of vegetated hillslopes, 
-:math:`c_{r}`, is adopted as 0. :math:`\alpha^\circ` is the slope angle. :math:`\gamma \, [\text{kg/m^3}]` is the dry 
-density of the soil or rock. It ranges from :math:`1500 \, \text{kg/m^3}` for soils to 
-:math:`2500 \text{ to } 3200 \, \text{kg/m^3}`. :math:`[m]` is the vertical height of the failure mass and it corresponds to 1/4 
-of the local relief :math:`H` calculated based on the moving window analysis. :math:`\phi^\circ` is the effective 
-friction angle with typical values ranging from :math:`30^\circ` to :math:`40^\circ`. :math:`\beta` is the slope's 
-critical angle calculated as: 
+..math::
 
-.. math:: 
+	\log(Disp_{cm}) = -2.710 + \log [\left( 1 - \frac{crit_accel}{PGA} \right)^{2.335} \cdot \left( \frac{crit_accel}{PGA} \right)^{−1.478}] + 0.424 M \\ (20)
 
-   \beta = \frac{\alpha + \phi}{0.5} \\ (21)
-
-The critical acceleration is computed similarly to equation (17). For rock- slope failures, the :math:`\alpha` term is 
-replaced with :math:`\beta`.
-
-Finally, the coseismic displacements are estimated using the sliding block displacement regression equation proposed by
-`Jibson (2007) <https://www.sciencedirect.com/science/article/pii/S0013795207000300?via%3Dihub>`_.
+where :math:`Disp_{cm}` is the predicted co-seismic displacement in cm, but it is converted to m by OQ; :math:`PGA` is the Peak Ground Acceleration in g;
+:math:`crit_accel` is the landslide critical acceleration in g and :math:`M` is the moment magnitude of the earthquake. Jibson (2007) recommends using model b
+only when magnitude is between 5.3 and 7.6.
 
 
 *******************
@@ -496,30 +486,30 @@ Cho & Rathje (2022)
 `Cho & Rathje (2022) <https://ascelibrary.org/doi/abs/10.1061/%28ASCE%29GT.1943-5606.0002757?af=R>`_ have proposed predictive models
 for the maximum earthquake-induced displacement along the surface of slope failures subjected to shallow crustal earthquakes.
 The dataset used to derive the predictive models consists of displacement values calculated by finite element numerical modelling for 49 slope models
-and 1051 earthquakes. The most efficient model developed by the authors computes earthquake-induced displacements (:math:`D`, in cm) as a function of the 
-landslide critical acceleration (:math:`k_{y}`, in g units), the :math:`PGV`(in cm/s), the natural period of the slope (:math:`T_{slope}`, in s) and the :math:`H ratio`, i.e., the ratio
+and 1051 earthquakes. The most efficient model developed by the authors computes earthquake-induced displacements (:math:`Disp_{cm}`, in cm) as a function of the 
+landslide critical acceleration (:math:`crit_accel`, in g units), the :math:`PGV`(in cm/s), the natural period of the slope (:math:`T_{slope}`, in s) and the :math:`H ratio`, i.e., the ratio
 between the landslide thickness and the slope height:
 
 .. math::
 
-    \ln(D) = a_{0} + a_{1} \cdot \ln(PGV) \\ (22)
+    \ln(Disp_{cm}) = a_{0} + a_{1} \cdot \ln(PGV) \\ (21)
 
 If :math:`H_{ratio} \leq 0.6`:
 
 .. math::
 
-    a_{0} = -1.01 + 1.57 \cdot \ln(T_{slope}) - 0.25 \cdot \ln(k_{y}) \\ (23)
-    a_{1} = 0.81 - 1.05 \cdot \ln(T_{slope}) - 0.60 \cdot (\ln(T_{slope}))^2 \\ (24)
+    a_{0} = -1.01 + 1.57 \cdot \ln(T_{slope}) - 0.25 \cdot \ln(crit_accel) \\ (22)
+    a_{1} = 0.81 - 1.05 \cdot \ln(T_{slope}) - 0.60 \cdot (\ln(T_{slope}))^2 \\ (23)
 
 If :math:`H_{ratio} > 0.6`:
 
 .. math::
 
-    a_{0} = -4.50 - 1.37 \cdot \ln(k_{y}) \\ (25)
-    a_{1} = 1.51 + 0.10 \cdot \ln(k_{y}) \\ (26)
+    a_{0} = -4.50 - 1.37 \cdot \ln(crit_accel) \\ (24)
+    a_{1} = 1.51 + 0.10 \cdot \ln(crit_accel) \\ (25)
 	
 
-Displacements displaied by openquake are expressed in m.
+Displacements returned by openquake are converted to m.
 
 
 *****************************
@@ -527,20 +517,34 @@ Fotopoulou & Pitilakis (2015)
 *****************************
 
 `Fotopoulou & Pitilakis (2015) <https://link.springer.com/article/10.1007/s10518-015-9768-4>`_ have correlated the average horizontal 
-earthquake-induced displacement (:math:`D`, in m) of landslides to several intensity measures. The linear regression analyses performed to derive the predictive models 
+earthquake-induced displacement (:math:`Disp`, in m) of landslides to several intensity measures. The linear regression analyses performed to derive the predictive models 
 were based on seismically induced displacement values computed through finited difference numerical modelling on 12 slope models and 40 seismic inputs.
+
+Model a
 
 .. math::
 
-   \ln(D) = -9.891 + 1.873 \ln{(PGV)} - 5.964 k_{y} + 0.285 M \\ (27)
-
-   \ln(D) = -2.965 + 2.127 \ln{(PGA)} - 6.583 k_{y} + 0.535 M \\ (28)
-
-   \ln(D) = -10.246 - 2.165 \ln{\left(\frac{k_{y}}{PGA}\right)} + 7.844 k_{y} + 0.654 M \\ (29)
-
-   \ln(D) = -8.360 + 1.873 \ln{(PGV)} - 0.347 \ln{\left(\frac{k_{y}}{PGA}\right)} - 5.964 k_{y} \\ (30)
+   \ln(Disp) = -9.891 + 1.873 \ln{(PGV)} - 5.964 crit_accel + 0.285 M \\ (26)
    
-where :math:`PGA` is in g units, :math:`PGV` is in cm/s, :math:`k_{y}` is the landslide critical acceleration in g and :math:`M` is the moment magnitude.
+Model b
+
+.. math::
+
+   \ln(Disp) = -2.965 + 2.127 \ln{(PGA)} - 6.583 crit_accel + 0.535 M \\ (27)
+   
+Model c
+
+.. math::
+
+   \ln(Disp) = -10.246 - 2.165 \ln{\left(\frac{crit_accel}{PGA}\right)} + 7.844 crit_accel + 0.654 M \\ (28)
+   
+Model d
+
+.. math::
+
+   \ln(Disp) = -8.360 + 1.873 \ln{(PGV)} - 0.347 \ln{\left(\frac{crit_accel}{PGA}\right)} - 5.964 crit_accel \\ (29)
+   
+where :math:`PGA` is in g units, :math:`PGV` is in cm/s, :math:`crit_accel` is the landslide critical acceleration in g and :math:`M` is the moment magnitude.
 
 
 ***********************
@@ -548,20 +552,20 @@ Saygili & Rathje (2008)
 ***********************
 
 `Saygili & Rathje (2008) <https://ascelibrary.org/doi/10.1061/%28ASCE%291090-0241%282008%29134%3A6%28790%29>`_ have proposed predictive models for
-earthquake-induced displacements of landslides based on the rigid-block hypothesis by `Newmark (1965) <https://www.icevirtuallibrary.com/doi/pdf/10.1680/geot.1965.15.2.139>`_.
-The models were defined by using displacement values computed assuming critical acceleration values (:math:`k_{y}`, in g units) from 0.05g and 0.3g and
+earthquake-induced displacements of landslides based on the rigid-block hypothesis by `Newmark (1965) <https://www.icevirtuallibrary.com/doi/abs/10.1680/geot.1965.15.2.139>`_.
+The models were defined by using displacement values computed assuming critical acceleration values (:math:`crit_accel`, in g units) from 0.05g and 0.3g and
 2383 ground-motions. The authors reccomend to use the predictive model that computes displacements as a function of :math:`PGA` and :math:`PGV`, as considering simultaneously these 
 ground-motion parameters reduces the standard deviation.
 
 .. math::
 
-   \ln D = -1.56 - 4.58 \cdot \left(\frac{k_{y}}{PGA}\right) 
-   - 20.84 \cdot \left(\frac{k_{y}}{PGA}\right)^2 
-   + 44.75 \cdot \left(\frac{k_{y}}{PGA}\right)^3 
-   - 30.50 \cdot \left(\frac{k_{y}}{PGA}\right)^4 
-   - 0.64 \cdot \ln(PGA) + 1.55 \cdot \ln(PGV) \\ (31)
+   \ln (Disp_{cm}) = -1.56 - 4.58 \cdot \left(\frac{crit_accel}{PGA}\right) 
+   - 20.84 \cdot \left(\frac{crit_accel}{PGA}\right)^2 
+   + 44.75 \cdot \left(\frac{crit_accel}{PGA}\right)^3 
+   - 30.50 \cdot \left(\frac{crit_accel}{PGA}\right)^4 
+   - 0.64 \cdot \ln(PGA) + 1.55 \cdot \ln(PGV) \\ (30)
    
-where :math:`D` is the earthquake-induced displacement in cm (expressed in m in openquake), :math:`PGA` is g units, :math:`k_{y}` is the landslide critical acceleration in g and 
+where :math:`Disp_{cm}` is the earthquake-induced displacement in cm (converted to m OQ), :math:`PGA` is g units, :math:`crit_accel` is the landslide critical acceleration in g and 
 :math:`PGV` is in cm/s.
 
 ***********************
@@ -574,12 +578,34 @@ dependent from the moment magnitude :math:`M` of the earthquake.
 
 .. math::
 
-   \ln D = 4.89 - 4.85 \left(\frac{k_{y}}{PGA}\right) - 19.64 \left(\frac{k_{y}}{PGA}\right)^2 
-   + 42.49 \left(\frac{k_{y}}{PGA}\right)^3 - 29.06 \left(\frac{k_{y}}{PGA}\right)^4 
-   + 0.72 \ln(PGA) + 0.89 (M - 6) \\ (32)
+   \ln (Disp_{cm}) = 4.89 - 4.85 \left(\frac{crit_accel}{PGA}\right) - 19.64 \left(\frac{crit_accel}{PGA}\right)^2 
+   + 42.49 \left(\frac{crit_accel}{PGA}\right)^3 - 29.06 \left(\frac{crit_accel}{PGA}\right)^4 
+   + 0.72 \ln(PGA) + 0.89 (M - 6) \\ (31)
    
-where :math:`D` is the earthquake-induced displacement in cm (expressed in m in openquake), :math:`PGA` is g units, :math:`k_{y}` is the landslide critical acceleration in g and 
-:math:`M` is the moment magnitude of the earthquake
+where :math:`Disp_{cm}` is the earthquake-induced displacement in cm (but converted to m by OQ), :math:`PGA` is g units, :math:`crit_accel` is the landslide critical acceleration in g and 
+:math:`M` is the moment magnitude of the earthquake.
+
+***********************
+Jibson et al. (2000)
+***********************
+
+`Jibson et al. (2000) <https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_  have proposed a regression equation
+predicting co-seismic displacements of landslides as function of the landslide critical acceleration and the Arias Intensity. The authors have modified the equation
+previously proposed by `Jibson (1993) <https://onlinepubs.trb.org/Onlinepubs/trr/1993/1411/1411-002.pdf>`_ to make the critical acceleration term logarithmic:
+
+.. math::
+
+	\log (Disp_{cm}) = 1.521\log (IA) - 1.993 \log (crit_accel) - 1.546   \\ (32)
+
+where :math:`Disp_{cm}` is the co-seismic displacement in cm, then converted to m by OQ, :math:`IA` is the Arias Intensity in m/s and 
+:math:`crit_accel` is the landslide critical acceleration in g units.
+
+`Jibson et al. (2000) <https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_ have also proposed a regression curve for the computation of 
+the probability of slope failure (:math:`P(f)`) as function of Newmark displacements computed according to eq.32 for the Northridge earthquake:
+
+.. math:: 
+
+    P(f) = 0.335\ [1 - e^{-0.048 \cdot Disp_{cm}^{1.565}}] \\ (33)
 
 
 ****************************
@@ -605,7 +631,7 @@ Explanatory variable :math:`X` is calculated as:
 
 .. math:: 
 
-   + \beta \cdot landcover + 0.03 CTI - 0.01 \ln(PGV) \cdot Slope \\ (33)
+   + \beta \cdot landcover + 0.03 CTI - 0.01 \ln(PGV) \cdot Slope \\ (34)
 
 Coefficients \alpha and \beta values are estimated for several rock and landcover classes. The 
 reader is reffered to the original study by `Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_, 
@@ -615,13 +641,13 @@ Probability of landsliding is then evaluated using logistic regression.
 
 .. math::
 
-	P(L) = \frac{1}{1+e^X} \\ (34)
+	P(L) = \frac{1}{1+e^X} \\ (35)
 
 These probabilities are converted to areal percentages to unbias the predictions.
 
 .. math::
 
-	L_{P}(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (35)
+	L_{P}(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (36)
 
 Furthermore, we introduced modifications by the USGS, capping the peak ground velocity at :math:`PGV = 211 \, \text{cm/s}`, 
 and compound topographic index at :math:`CTI = 19`. To exclude high probabilities of landsliding in nearly flat areas due to 
@@ -675,30 +701,29 @@ Soil Dynamics and Earthquake Engineering, 161, 1–12. https://doi.org/10.1016/j
 [12] Newmark, N.M., 1965. Effects of earthquakes on dams and embankments. Geotechnique 15, 139–159.
 
 [13] Jibson, R.W., Harp, E.L., & Michael, J.A. (2000). A method for producing digital probabilistic
-seismic landslide hazard maps. Engineering Geology, 58(3-4), 271-289. https://doi.org/10.1016/S0013-7952(00)00039-9
+seismic landslide hazard maps. Engineering Geology, 58(3-4), 271-289. https://doi.org/10.1016/S0013-7952(00)00039-9.
 
 [14] Jibson, R.W. (2007). Regression models for estimating coseismic landslide displacement.
-Engineering Geology, 91(2-4), 209-218. https://doi.org/10.1016/j.enggeo.2007.01.013
+Engineering Geology, 91(2-4), 209-218. https://doi.org/10.1016/j.enggeo.2007.01.013.
 
-[15] Grant, A., Wartman, J., & Grace, A.J. (2016). Multimodal method for coseismic landslide
-hazard assessment. Engineering Geology, 212, 146-160. https://doi.org/10.1016/j.enggeo.2016.08.005
+[15] Keefer, D. K. (1984). Landslides caused by earthquakes. Geological Society of America Bulletin, 95(4), 406-421.
 
 [16] Cho, Y., & Rathje, E. M. (2022). Generic predictive model of earthquake-induced slope displacements 
 derived from finite-element analysis. Journal of Geotechnical and Geoenvironmental Engineering, 148(4), 04022010.
-https://doi.org/10.1061/(ASCE)GT.1943-5606.0002757
+https://doi.org/10.1061/(ASCE)GT.1943-5606.0002757.
 
 [17] Fotopoulou, S. D., & Pitilakis, K. D. (2015). Predictive relationships for seismically induced slope displacements 
-using numerical analysis results. Bulletin of Earthquake Engineering, 13, 3207-3238. https://doi.org/10.1007/s10518-015-9768-4
+using numerical analysis results. Bulletin of Earthquake Engineering, 13, 3207-3238. https://doi.org/10.1007/s10518-015-9768-4.
 
 [18] Saygili, G., & Rathje, E. M. (2008). Empirical predictive models for earthquake-induced sliding displacements of slopes. 
-Journal of geotechnical and geoenvironmental engineering, 134(6), 790-803. https://doi.org/10.1061/(ASCE)1090-0241(2008)134:6(790)
+Journal of geotechnical and geoenvironmental engineering, 134(6), 790-803. https://doi.org/10.1061/(ASCE)1090-0241(2008)134:6(790).
 
 [19] Rathje, E. M., & Saygili, G. (2009). Probabilistic assessment of earthquake-induced sliding displacements of natural slopes. 
-Bulletin of the New Zealand Society for Earthquake Engineering, 42(1), 18-27. https://doi.org/10.5459/bnzsee.42.1.18-27
+Bulletin of the New Zealand Society for Earthquake Engineering, 42(1), 18-27. https://doi.org/10.5459/bnzsee.42.1.18-27.
 
 [20] Nowicki Jessee, M. A., Hamburger, M. W., Allstadt, K., Wald, D. J., Robeson, S. M., Tanyas, H., et al. (2018).
 A global empirical model for near-real-time assessment of seismically induced landslides. Journal of Geophysical
-Research: Earth Surface, 123, 1835–1859. https://doi.org/10.1029/2017JF004494
+Research: Earth Surface, 123, 1835–1859. https://doi.org/10.1029/2017JF004494.
 
 [21] Danielson, J.J., and Gesch, D.B., 2011, Global multi-resolution terrain elevation data 2010 (GMTED2010): 
 U.S. Geological Survey Open-File Report 2011–1073, 26 p.

@@ -1,5 +1,9 @@
 from typing import Union
 import numpy as np
+from math import e
+
+
+g: float = 9.81
 
 
 landcover_values={
@@ -147,3 +151,31 @@ def nowicki_jessee_2018(
     LSE = np.where((slope < 2) | (pga < 0.02), 0, LSE)
 
     return prob_ls, LSE
+    
+    
+def jibson_etal_2000_probability(
+    Disp: Union[float, np.ndarray],
+    c1: float = 0.335,
+    c2: float = -0.048,
+    c3: float = 1.565,
+) -> Union[float, np.ndarray]:
+    """
+    Computes the probability of ground failure using a Weibull
+    model based on the predicted Newmark displacements, exclusively based on
+    data from the Northridge earthquake, from Jibson et al. (2000), eq.5.
+
+    Reference: Jibson, R.W., Harp, E.L., & Michael, J.A. (2000). A method for 
+    producing digital probabilistic seismic landslide hazard maps. Engineering 
+    Geology, 58(3-4), 271-289.
+    https://doi.org/10.1016/S0013-7952(00)00039-9.
+
+    :param Disp_cm:
+        Earthquake-induced displacements in cm predicted according eq. 3 from Jibson et al. (2000)
+        
+    :returns:
+        Scalar or array of ground failure probability.
+    """
+
+    Disp_cm = Disp * 100.0  #required conversion in cm, outputs from all displacement models are in m
+
+    return c1 * (1 - np.exp(c2 * Disp_cm**c3))

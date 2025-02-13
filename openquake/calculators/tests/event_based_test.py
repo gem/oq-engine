@@ -521,7 +521,7 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         arr = read_csv(fname, {'custom_site_id': str, None: float})[:2]
         self.assertEqual(arr.dtype.names,
-                         ('event_id', 'gmv_PGA',
+                         ('event_id', 'gmv_IA',
                           'sep_Disp', 'sep_DispProb', 'custom_site_id'))
 
     def test_case_26_liq(self):

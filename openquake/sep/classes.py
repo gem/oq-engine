@@ -18,33 +18,31 @@
 import abc
 import inspect
 from openquake.hazardlib import imt
-from openquake.sep.landslide.common import (
-    static_factor_of_safety,
-    rock_slope_static_factor_of_safety,
+from openquake.sep.landslide.static_safety_factor import (
+    infinite_slope_fs,
 )
-from openquake.sep.landslide.newmark import (
-    newmark_critical_accel,
-    newmark_displ_from_pga_M,
-    prob_failure_given_displacement,
-    Cho_Rathje_2022_PGV,
-    Fotopoulou_Pitilakis_2015_PGV_M,
-    Fotopoulou_Pitilakis_2015_PGA_M,
-    Fotopoulou_Pitilakis_2015_PGA_M_b,
-    Fotopoulou_Pitilakis_2015_PGV_PGA,
-    Saygili_Rathje_2008,
-    Rathje_Saygili_2009_PGA_M,
 
-
+from openquake.sep.landslide.displacement import (
+    critical_accel,
+    jibson_2007_model_a,
+    jibson_2007_model_b,
+    cho_rathje_2022,
+    fotopoulou_pitilakis_2015_model_a,
+    fotopoulou_pitilakis_2015_model_b,
+    fotopoulou_pitilakis_2015_model_c,
+    fotopoulou_pitilakis_2015_model_d,
+    saygili_rathje_2008,
+    rathje_saygili_2009,
+    jibson_etal_2000,
 )
-from openquake.sep.landslide.nowicki_jessee import(
+
+from openquake.sep.landslide.probability import(
     nowicki_jessee_2018,
     LANDCOVER_TABLE,
-    LITHOLOGY_TABLE
+    LITHOLOGY_TABLE,
+    jibson_etal_2000_probability,
 )
-from openquake.sep.landslide.rockfalls import (
-    critical_accel_rock_slope,
-    newmark_displ_from_pga,
-)
+
 from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability,
     zhu_etal_2015_general,
@@ -124,164 +122,6 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
 
     def __repr__(self):
         return "<%s>" % self.__class__.__name__
-
-
-class NewmarkDisplacement(SecondaryPeril):
-    outputs = ["Disp", "DispProb"]
-
-    def __init__(
-        self,
-        c1=-2.71,
-        c2=2.335,
-        c3=-1.478,
-        c4=0.424,
-        crit_accel_threshold=0.05,
-    ):
-        self.c1 = c1
-        self.c2 = c2
-        self.c3 = c3
-        self.c4 = c4
-        self.crit_accel_threshold = crit_accel_threshold
-
-    def prepare(self, sites):
-        sites.add_col(
-            "Fs",
-            float,
-            static_factor_of_safety(
-                slope=sites.slope,
-                cohesion=sites.cohesion_mid,
-                friction_angle=sites.friction_mid,
-                saturation_coeff=sites.saturation,
-                soil_dry_density=sites.dry_density,
-                slab_thickness=sites.slab_thickness,
-            ),
-        )
-        sites.add_col(
-            "crit_accel", float, newmark_critical_accel(sites.Fs, sites.slope)
-        )
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        for im, gmf in imt_gmf:
-            if im.string == "PGA":
-                nd = newmark_displ_from_pga_M(
-                    gmf,
-                    sites.crit_accel,
-                    mag,
-                    self.c1,
-                    self.c2,
-                    self.c3,
-                    self.c4,
-                    self.crit_accel_threshold,
-                )
-            out.append(nd)
-            out.append(prob_failure_given_displacement(nd))
-        return out
-
-
-class GrantEtAl2016RockSlopeFailure(SecondaryPeril):
-    outputs = ["Disp"]
-
-    def __init__(self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
-        self.c1 = c1
-        self.c2 = c2
-        self.c3 = c3
-        self.crit_accel_threshold = crit_accel_threshold
-
-    def prepare(self, sites):
-        sites.add_col(
-            "Fs",
-            float,
-            rock_slope_static_factor_of_safety(
-                slope=sites.slope,
-                cohesion=sites.cohesion_mid,
-                friction_angle=sites.friction_mid,
-                saturation_coeff=sites.saturation,
-                soil_dry_density=sites.dry_density,
-            ),
-        )
-        sites.add_col(
-            "crit_accel",
-            float,
-            critical_accel_rock_slope(sites.Fs, sites.slope),
-        )
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        for im, gmf in imt_gmf:
-            if im.string == "PGA":
-                nd = newmark_displ_from_pga(
-                    gmf,
-                    sites.crit_accel,
-                    mag,
-                    self.c1,
-                    self.c2,
-                    self.c3,
-                    self.crit_accel_threshold,
-                )
-            out.append(nd)
-        return out
-
-
-class NowickiJessee2018Landslides(SecondaryPeril):
-    """
-    Computes the landslide probability from PGV and areal coverage.
-    """
-
-    outputs = ["LsProb", "LSE"]
-
-    def __init__(
-        self,
-        intercept: float = -6.30,
-        pgv_coeff: float = 1.65,
-        slope_coeff: float = 0.06,
-        coeff_table_lith = LITHOLOGY_TABLE,
-        coeff_table_cov = LANDCOVER_TABLE,
-        cti_coeff: float = 0.03,
-        interaction_term: float = 0.01,
-    ):
-        self.intercept = intercept
-        self.pgv_coeff = pgv_coeff
-        self.slope_coeff = slope_coeff
-        self.coeff_table_lith = coeff_table_lith
-        self.coeff_table_cov = coeff_table_cov
-        self.cti_coeff = cti_coeff
-        self.interaction_term = interaction_term
-
-    def prepare(self, sites):
-        pass
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        pga = None
-        pgv = None
-        for im, gmf in imt_gmf:
-            if im.string == "PGV":
-                pgv = gmf
-            elif im.string == "PGA":
-                pga = gmf
-            else:
-                continue
-        # Raise error if either PGA or PGV is missing
-        if pga is None or pgv is None:
-            raise ValueError(
-                "Both PGA and PGV are required to compute landslide "
-                "probability using the NowickiJessee2018Landslides model"
-            )
-        
-        prob_ls, lse = nowicki_jessee_2018(
-            pga = pga,
-            pgv = pgv,
-            slope=sites.slope,
-            lithology=sites.lithology,
-            landcover=sites.landcover,
-            cti=sites.cti,
-        )
-        out.append(prob_ls)
-        out.append(lse)
-            
-        return out
-
 
 
 class HazusLiquefaction(SecondaryPeril):
@@ -781,16 +621,117 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
 
 
-class ChoRathje(SecondaryPeril):
+class Jibson2007ALandslides(SecondaryPeril):
     '''
-    Calculation of earthquake-induced displacements of landslides by Eq.4a Cho&Rathje(2022)
-    
-    PGV is the peak ground velocity in cm/s
-    ky is the critical acceleration of the landslide in units of g
-    Tslope is the fundamental period of the slope = 4* Hslope / vs with vs equal to shear wave velocity
-    H_ratio is the ratio between the depth of the landslide and the height of the slope (adimensional)
-    Dn is the displacement in cm but then converted in m
+    Computes earthquake-induced displacements of landslides
+    as function of pga and critical acceleration.
+    '''
 
+    outputs = ["Disp"]
+
+    def __init__(self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
+        self.c1 = c1
+        self.c2 = c2
+        self.c3 = c3
+        self.crit_accel_threshold = crit_accel_threshold
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "PGA":
+                Disp = jibson_2007_model_a(
+                    gmf,
+                    sites.crit_accel,
+                    self.c1,
+                    self.c2,
+                    self.c3,
+                    self.crit_accel_threshold,
+                )
+            out.append(Disp)
+        return out
+
+
+class Jibson2007BLandslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements of landslides
+    as function of magnitude, pga and critical acceleration.
+    It is recommended when magnitude is betweeen 
+    5.3 and 7.6.
+    '''
+
+    outputs = ["Disp"]
+
+    def __init__(
+        self,
+        c1=-2.71,
+        c2=2.335,
+        c3=-1.478,
+        c4=0.424,
+        crit_accel_threshold=0.05,
+    ):
+        self.c1 = c1
+        self.c2 = c2
+        self.c3 = c3
+        self.c4 = c4
+        self.crit_accel_threshold = crit_accel_threshold
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "PGA":
+                    Disp = jibson_2007_model_b(
+                        gmf,
+                        sites.crit_accel,
+                        mag,
+                        self.c1,
+                        self.c2,
+                        self.c3,
+                        self.c4,
+                        self.crit_accel_threshold,
+                    )
+
+            out.append(Disp)
+        return out
+
+
+class ChoRathje2022Landslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements of landslides from
+    pgv and considering the slope fundamental period.
     ''' 
     outputs = ["Disp"]
 
@@ -801,24 +742,24 @@ class ChoRathje(SecondaryPeril):
         sites.add_col(
             "Fs",
             float,
-            static_factor_of_safety(
-                slope=sites.slope.to_numpy(),
-                cohesion=sites.cohesion_mid.to_numpy(),
-                friction_angle=sites.friction_mid.to_numpy(),
-                saturation_coeff=sites.saturation.to_numpy(),
-                soil_dry_density=sites.dry_density.to_numpy(),
-                slab_thickness=sites.slab_thickness.to_numpy(),
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
             ),
         )
         sites.add_col(
-            "crit_accel", float, newmark_critical_accel(sites.Fs, sites.slope)
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
         )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGV":
-                Disp = Cho_Rathje_2022_PGV(
+                Disp = cho_rathje_2022(
                         gmf,
                         sites.tslope,
                         sites.crit_accel,
@@ -829,17 +770,12 @@ class ChoRathje(SecondaryPeril):
         return out
 
 
-class Fotopoulou_Pitilakis_PGV_M(SecondaryPeril):
+class FotopoulouPitilakis2015ALandslides(SecondaryPeril):
     '''
-    Computation of earthquake-induced displacements of landslides by eq. 8-12 from Fotopoulo & Pitikalis (2015)
+    Computes earthquake-induced displacements of landslides from
+    pgv and moment magnitude.
+    '''
 
-    Disp is the displacements in meters
-    PGA is the peak ground acceleration in g
-    PGV is the peak ground velocity in cm/s
-    IA is the arias intensity in m/s
-    M is the moment magnitude
-
-    ''' 
     outputs = ["Disp"]
 
     def __init__(self):
@@ -849,24 +785,24 @@ class Fotopoulou_Pitilakis_PGV_M(SecondaryPeril):
         sites.add_col(
             "Fs",
             float,
-            static_factor_of_safety(
-                slope=sites.slope.to_numpy(),
-                cohesion=sites.cohesion_mid.to_numpy(),
-                friction_angle=sites.friction_mid.to_numpy(),
-                saturation_coeff=sites.saturation.to_numpy(),
-                soil_dry_density=sites.dry_density.to_numpy(),
-                slab_thickness=sites.slab_thickness.to_numpy(),
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
             ),
         )
         sites.add_col(
-            "crit_accel", float, newmark_critical_accel(sites.Fs, sites.slope)
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
         )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGV":
-                Disp = Fotopoulou_Pitilakis_2015_PGV_M(
+                Disp = fotopoulou_pitilakis_2015_model_a(
                           gmf,
                           mag,
                           sites.crit_accel,
@@ -875,17 +811,11 @@ class Fotopoulou_Pitilakis_PGV_M(SecondaryPeril):
         return out      
         
         
-class Fotopoulou_Pitilakis_PGA_M(SecondaryPeril):
+class FotopoulouPitilakis2015BLandslides(SecondaryPeril):
     '''
-    Computation of earthquake-induced displacements of landslides by eq. 8-12 from Fotopoulo & Pitikalis (2015)
-
-    Disp is the displacements in meters
-    PGA is the peak ground acceleration in g
-    PGV is the peak ground velocity in cm/s
-    IA is the arias intensity in m/s
-    M is the moment magnitude
-
-    ''' 
+    Computes earthquake-induced displacements of landslides from
+    pga and moment magnitude.
+    '''
     outputs = ["Disp"]
 
     def __init__(self):
@@ -895,24 +825,24 @@ class Fotopoulou_Pitilakis_PGA_M(SecondaryPeril):
         sites.add_col(
             "Fs",
             float,
-            static_factor_of_safety(
-                slope=sites.slope.to_numpy(),
-                cohesion=sites.cohesion_mid.to_numpy(),
-                friction_angle=sites.friction_mid.to_numpy(),
-                saturation_coeff=sites.saturation.to_numpy(),
-                soil_dry_density=sites.dry_density.to_numpy(),
-                slab_thickness=sites.slab_thickness.to_numpy(),
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
             ),
         )
         sites.add_col(
-            "crit_accel", float, newmark_critical_accel(sites.Fs, sites.slope)
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
         )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGA":
-                Disp = Fotopoulou_Pitilakis_2015_PGA_M(
+                Disp = fotopoulou_pitilakis_2015_model_b(
                           gmf,
                           mag,
                           sites.crit_accel,
@@ -920,17 +850,11 @@ class Fotopoulou_Pitilakis_PGA_M(SecondaryPeril):
             out.append(Disp)
         return out      
         
-class Fotopoulou_Pitilakis_PGA_M_b(SecondaryPeril):
+class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
     '''
-    Computation of earthquake-induced displacements of landslides by eq. 8-12 from Fotopoulo & Pitikalis (2015)
-
-    Disp is the displacements in meters
-    PGA is the peak ground acceleration in g
-    PGV is the peak ground velocity in cm/s
-    IA is the arias intensity in m/s
-    M is the moment magnitude
-
-    ''' 
+    Computes earthquake-induced displacements from pga (in terms of ratio with
+    the landslide critical acceleration) and moment magnitude.
+    '''
     outputs = ["Disp"]
 
     def __init__(self):
@@ -940,24 +864,24 @@ class Fotopoulou_Pitilakis_PGA_M_b(SecondaryPeril):
         sites.add_col(
             "Fs",
             float,
-            static_factor_of_safety(
-                slope=sites.slope.to_numpy(),
-                cohesion=sites.cohesion_mid.to_numpy(),
-                friction_angle=sites.friction_mid.to_numpy(),
-                saturation_coeff=sites.saturation.to_numpy(),
-                soil_dry_density=sites.dry_density.to_numpy(),
-                slab_thickness=sites.slab_thickness.to_numpy(),
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
             ),
         )
         sites.add_col(
-            "crit_accel", float, newmark_critical_accel(sites.Fs, sites.slope)
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
         )
 
     def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGA":
-                Disp = Fotopoulou_Pitilakis_2015_PGA_M_b(
+                Disp = fotopoulou_pitilakis_2015_model_c(
                           gmf,
                           mag,
                           sites.crit_accel,
@@ -967,16 +891,10 @@ class Fotopoulou_Pitilakis_PGA_M_b(SecondaryPeril):
         
 
 
-class Fotopoulou_Pitilakis_PGV_PGA(SecondaryPeril):
-    
+class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
     '''
-    Computation of earthquake-induced displacements of landslides by eq. 8-12 from Fotopoulo & Pitikalis (2015)
-
-    Disp is the displacements in meters
-    PGA is the peak ground acceleration in g
-    PGV is the peak ground velocity in cm/s
-    IA is the arias intensity in m/s
-    M is the moment magnitude
+    Computes earthquake-induced displacements of landslides from pgv and 
+    pga
     '''
     
     outputs = ["Disp"]
@@ -988,17 +906,17 @@ class Fotopoulou_Pitilakis_PGV_PGA(SecondaryPeril):
         sites.add_col(
             "Fs",
             float,
-            static_factor_of_safety(
-                slope=sites.slope.to_numpy(),
-                cohesion=sites.cohesion_mid.to_numpy(),
-                friction_angle=sites.friction_mid.to_numpy(),
-                saturation_coeff=sites.saturation.to_numpy(),
-                soil_dry_density=sites.dry_density.to_numpy(),
-                slab_thickness=sites.slab_thickness.to_numpy(),
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
             ),
         )
         sites.add_col(
-            "crit_accel", float, newmark_critical_accel(sites.Fs, sites.slope)
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
         )
 
     def compute(self, mag, imt_gmf, sites):
@@ -1018,7 +936,7 @@ class Fotopoulou_Pitilakis_PGV_PGA(SecondaryPeril):
                 "Both PGA and PGV are required to compute landslide disp according to Fotopoulou_Pitilakis_2015_PGV_PGA"
             )
 
-        Disp = Fotopoulou_Pitilakis_2015_PGV_PGA(
+        Disp = fotopoulou_pitilakis_2015_model_d(
             pgv,
             pga,
             sites.crit_accel,
@@ -1026,17 +944,10 @@ class Fotopoulou_Pitilakis_PGV_PGA(SecondaryPeril):
         out.append(Disp)
         return out 
   
-class Saygili_Rathje_2008_(SecondaryPeril):
+class SaygiliRathje2008Landslides(SecondaryPeril):
     '''
-
-    Computation of earthquake-induced displacements of landslides by eq. 6 from Sayigili & Rathje (2008)
-
-    Disp is the displacements in cm but then converted in m
-    PGA is the peak ground acceleration in g
-    crit_accel is the critical acceleration of the landslide in g
-    PGV is the peak ground velocity in cm/s
-
-    '''    
+    Computes earthquake-induced displacements from pga and pgv
+    '''   
     outputs = ["Disp"]
 
     def __init__(self):
@@ -1046,17 +957,17 @@ class Saygili_Rathje_2008_(SecondaryPeril):
         sites.add_col(
             "Fs",
             float,
-            static_factor_of_safety(
-                slope=sites.slope.to_numpy(),
-                cohesion=sites.cohesion_mid.to_numpy(),
-                friction_angle=sites.friction_mid.to_numpy(),
-                saturation_coeff=sites.saturation.to_numpy(),
-                soil_dry_density=sites.dry_density.to_numpy(),
-                slab_thickness=sites.slab_thickness.to_numpy(),
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
             ),
         )
         sites.add_col(
-            "crit_accel", float, newmark_critical_accel(sites.Fs, sites.slope)
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
         )
         
     def compute(self, mag, imt_gmf, sites):
@@ -1076,7 +987,7 @@ class Saygili_Rathje_2008_(SecondaryPeril):
                 "Both PGA and PGV are required to compute landslide disp according to Saygili_Rathje_2008"
             )
 
-        Disp = Saygili_Rathje_2008(
+        Disp = saygili_rathje_2008(
             pga,
             pgv,
             sites.crit_accel,
@@ -1086,15 +997,10 @@ class Saygili_Rathje_2008_(SecondaryPeril):
   
   
         
-class Rathje_Saygili_PGA_M(SecondaryPeril):
-    
+class RathjeSaygili2009Landslides(SecondaryPeril):   
     '''
-
-    Computation of earthquake-induced displacements of landlsides by eq.8 from Sayigili & Rathje (2009)
-    ls_disp is in cm but then converted in m
-    crit_accel is the critical acceleration of the landslide in g
-    PGA is the peak ground acceleration in g
-    M is the moment magnitude
+    Computes earthquake-induced displacements from pga and moment 
+    magnitude
 
     ''' 
     outputs = ["Disp"]
@@ -1106,17 +1012,17 @@ class Rathje_Saygili_PGA_M(SecondaryPeril):
         sites.add_col(
             "Fs",
             float,
-            static_factor_of_safety(
-                slope=sites.slope.to_numpy(),
-                cohesion=sites.cohesion_mid.to_numpy(),
-                friction_angle=sites.friction_mid.to_numpy(),
-                saturation_coeff=sites.saturation.to_numpy(),
-                soil_dry_density=sites.dry_density.to_numpy(),
-                slab_thickness=sites.slab_thickness.to_numpy(),
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
             ),
         )
         sites.add_col(
-            "crit_accel", float, newmark_critical_accel(sites.Fs, sites.slope)
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
         )
         
         print(sites)
@@ -1125,12 +1031,111 @@ class Rathje_Saygili_PGA_M(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGA":
-                Disp = Rathje_Saygili_2009_PGA_M(
+                Disp = rathje_saygili_2009(
                           gmf,
                           mag,
                           sites.crit_accel,
                           )
             out.append(Disp)
-        return out      
+        return out  
+
+class JibsonEtAl2000Landslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements and related probability according to
+    Jibson et al. (2000) as function of arias intensity.
+    '''
+
+    outputs = ["Disp", "DispProb"]
+
+    def __init__(self):
+        pass
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "IA":
+                    Disp = jibson_etal_2000(
+                        gmf,
+                        sites.crit_accel,
+                    )
+            out.append(Disp)
+            out.append(jibson_etal_2000_probability(Disp))
+        return out        
         
-     
+class NowickiJessee2018Landslides(SecondaryPeril):
+    """
+    Computes the landslide probability from PGV and areal coverage.
+    """
+
+    outputs = ["LsProb", "LSE"]
+
+    def __init__(
+        self,
+        intercept: float = -6.30,
+        pgv_coeff: float = 1.65,
+        slope_coeff: float = 0.06,
+        coeff_table_lith = LITHOLOGY_TABLE,
+        coeff_table_cov = LANDCOVER_TABLE,
+        cti_coeff: float = 0.03,
+        interaction_term: float = 0.01,
+    ):
+        self.intercept = intercept
+        self.pgv_coeff = pgv_coeff
+        self.slope_coeff = slope_coeff
+        self.coeff_table_lith = coeff_table_lith
+        self.coeff_table_cov = coeff_table_cov
+        self.cti_coeff = cti_coeff
+        self.interaction_term = interaction_term
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        pga = None
+        pgv = None
+        for im, gmf in imt_gmf:
+            if im.string == "PGV":
+                pgv = gmf
+            elif im.string == "PGA":
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError(
+                "Both PGA and PGV are required to compute landslide "
+                "probability using the NowickiJessee2018Landslides model"
+            )
+        
+        prob_ls, lse = nowicki_jessee_2018(
+            pga = pga,
+            pgv = pgv,
+            slope=sites.slope,
+            lithology=sites.lithology,
+            landcover=sites.landcover,
+            cti=sites.cti,
+        )
+        out.append(prob_ls)
+        out.append(lse)
+            
+        return out
+        
+
