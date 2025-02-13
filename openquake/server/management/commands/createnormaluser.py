@@ -21,10 +21,15 @@ class Command(BaseCommand):
         parser.add_argument(
             'email', type=str,
             help='The email that will be assigned to the user')
+        parser.add_argument(
+            '--level', type=int,
+            default=0,
+            help='The interface level that will be assigned to the user (0, 1 or 2')
 
     def handle(self, *args, **kwargs):
         username = kwargs['username']
         email = kwargs['email']
+        level = kwargs['level']
         # secure password, like '4x]>@;4)'
         password = ''.join((
             secrets.choice(
@@ -35,10 +40,13 @@ class Command(BaseCommand):
         if User.objects.filter(username=username).exists():
             logger.error(f'The username "{username}" is already taken!')
             exit(1)
-        logger.info(f'Creating normal user: {username}')
+        logger.info(f'Creating normal user: {username=}, {email=}, {level=}')
         user = User.objects.create_user(
             username, password=password, email=email)
         user.save()
+        profile = user.profile
+        profile.level = level
+        profile.save()
         logger.info(f'Sending reset password email to: {user.email}')
         form = PasswordResetForm({'email': user.email})
         assert form.is_valid()
