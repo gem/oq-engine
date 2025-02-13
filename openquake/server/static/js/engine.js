@@ -656,6 +656,11 @@ function capitalizeFirstLetter(val) {
                     $('div#nodal_plane').addClass('hidden');
                     $('div#msr').addClass('hidden');
                 }
+                if (selected_approach == 'use_shakemap_from_usgs') {
+                    $('div.hidden-for-shakemap').addClass('hidden');
+                } else {
+                    $('div.hidden-for-shakemap').removeClass('hidden');
+                }
             });
 
             $('select#nodal_plane').change(function () {
