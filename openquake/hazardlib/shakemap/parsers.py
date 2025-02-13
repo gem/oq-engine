@@ -43,7 +43,8 @@ from openquake.baselib import performance
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter
-from openquake.hazardlib.source.rupture import get_multiplanar, is_matrix
+from openquake.hazardlib.source.rupture import (
+    get_multiplanar, is_matrix, build_planar_rupture_from_dict)
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
@@ -846,7 +847,8 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         rupdic['station_data_file_from_usgs'] = False
     if not rup_data:
         # in parsers_test
-        return None, rupdic, err
+        rup = build_planar_rupture_from_dict(rupdic)
+        return rup, rupdic, err
 
     rup = convert_to_oq_rupture(rup_data)
     if rup is None:
