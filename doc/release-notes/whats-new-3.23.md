@@ -3,9 +3,9 @@ Release notes v3.23
 
 Version 3.23 is the new Long Term Support (LTS) release after version
 3.16 of two years ago. It features massive benefits in terms of
-performance, expecially for large models (for instance the USA
+performance, especially for large models (for instance the USA
 classical PSHA model is 3-4 times faster than it was in version
-3.16) and many new features.
+3.16), and includes many new features.
 
 The complete set of changes is listed in the changelog:
 
@@ -20,7 +20,8 @@ Hazard
 The new "Event Based from ruptures.hdf5" feature has been extended to
 work with an user-provided site model, rather than using the stored
 site model. Moreover it has been optimized to discard far-away ruptures
-using the `query_ball_tree` spatial feature of scipy with a huge performance improvement.
+using the `query_ball_tree` spatial feature of scipy.spatial.KDTree,
+with a huge performance improvement.
 
 The `rupture_dict` dictionary of scenario calculations has been extended to accept
 to the `msr` and `aspect_ratio` keys, which are used to customize
@@ -40,7 +41,7 @@ different than before. This is normal, since the `ps_grid_spacing`
 approximation is subject to refinements in any new release.
 
 The parameter `pmap_max_mb` has been raised by 4 times resulting
-in up a 10% speedup in classical calculations at the cost of a
+in up to a 10% speedup in classical calculations at the cost of a
 slightly larger memory occupation.
 
 The sourcewriter has been changed to store the `rupture_idxs` dataset
@@ -51,9 +52,11 @@ HDF5 file containing the model shrunk down from 400 MB to 17 MB.
 The GMPEs for the most recent New Zealand model (NZ_2022) had some
 missing attributes, causing errors to be raised in calculations using
 parameters like 'region', 'm_b', 'sigma_mu_model', 'sigma_mu_epsilon'
-or site parameters like 'backarc'. This has been fixed by Chris Brooks.
+or site parameters like 'backarc'. This has been fixed by
+[Chris Brooks](https://github.com/CB-quakemodel).
 
-Savvinos Aristeidou contributed a new ANN-based GMPE in hazardlib,
+[Savvinos Aristeidou](https://github.com/Savvinos-Aristeidou)
+contributed a new ANN-based GMPE in hazardlib,
 named `aristeidou_2024`, and added a few new Intensity Measure Types:
 FIV3, Sa_avg2, and Sa_avg3.
 
@@ -62,15 +65,16 @@ In the AELO web interface the vs30 input field has been enabled for ASCE7-22.
 Risk
 ----
 
-We continued the refactoring of the multi-peril framework initiated
-in the previous release. The documentation about the obsolete format
+We continued the refactoring of the
+[multi-peril risk framework](https://github.com/gem/oq-engine/issues/10162)
+initiated in the previous release. The documentation about the obsolete format
 for the consequence files has been removed and we updated the
 consequence files in all of our tests. We also added a script
 `utils/fix_consequences` which is able to fix old consequence files
 using risk IDs instead of taxonomies (this happens in the presence of a taxonomy mapping).
 
 Many consistency checks were added to the consequence files to make
-sure that they contains taxonomies consistent with the exposure and
+sure that they contains taxonomy strings consistent with the exposure and
 perils consistent with the vulnerability functions.
 
 We added a new output "Aggregated Exposure Values", containing the
@@ -135,7 +139,8 @@ as a string, however there was a bug when using the full TOML syntax
 and not simply the GMPE name. It has been fixed now.
 
 Evi Riga reported a bug in `classical_damage` calculations with sampling,
-causing a numpy broadcast error. It has been fixed now.
+causing a numpy broadcast error. This bug has been
+[fixed](https://github.com/gem/oq-engine/pull/10326).
 
 File-dependent GMPEs store the associated files in the datastore so
 that if the calculation HDF5 file is moved into a different machine,
