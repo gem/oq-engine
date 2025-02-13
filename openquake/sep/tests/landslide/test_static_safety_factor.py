@@ -2,9 +2,8 @@ import unittest
 
 import numpy as np
 
-from openquake.sep.landslide.common import (
-    static_factor_of_safety,
-    rock_slope_static_factor_of_safety,
+from openquake.sep.landslide.static_safety_factor import (
+    infinite_slope_fs,
 )
 
 slope_array = np.linspace(0.0, 60.0)
@@ -12,7 +11,7 @@ slope_array = np.linspace(0.0, 60.0)
 
 class test_factors_of_safety(unittest.TestCase):
     def test_static_factor_of_safety_wet(self):
-        sfs = static_factor_of_safety(
+        sfs = infinite_slope_fs(
             slope_array, cohesion=20e3, friction_angle=30.0
         )
 
@@ -74,7 +73,7 @@ class test_factors_of_safety(unittest.TestCase):
         np.testing.assert_allclose(sfs, sfs_, rtol=1e-4)
 
     def test_static_factor_of_safety_dry(self):
-        sfs = static_factor_of_safety(
+        sfs = infinite_slope_fs(
             slope_array,
             cohesion=20e3,
             friction_angle=30.0,
@@ -138,10 +137,5 @@ class test_factors_of_safety(unittest.TestCase):
 
         np.testing.assert_allclose(sfs, sfs_, rtol=1e-4)
 
-    @unittest.skip
-    def test_rock_slope_static_factor_of_safety(self):
-        rock_slope_static_factor_of_safety(
-            slope_array,
-            cohesion=20e3,
-            friction_angle=30.0,
-        )
+
+
