@@ -40,7 +40,6 @@ OQ_DISTRIBUTE=zmq /opt/openquake/venv/bin/python -m openquake.engine.global_ses 
 
 4. by default the script samples 2000 realizations with 50 SES per logic tree path,
 with an investigation time of 1, i.e. 100,000 years with a minimum magnitude of 5.
-Such parameters are currently hard-coded by easily changeable in the script itself.
 
 After the file ruptures.hdf5 has been generated, it can be used in
 event based calculations by simply setting in the job.ini
@@ -74,10 +73,9 @@ from openquake.engine import engine
 
 
 MODELS = sorted('''
-ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
-CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF
+ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN GLD 
+CAN CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF USA ZAF
 '''.split())  # GLD is missing
-MODELS = 'KOR'.split()
 
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
@@ -93,7 +91,7 @@ def check_imts(dicts, models):
         if imts1 != imts0:
             raise ValueError(f'{imts1} != {imts0} for {model}')
 
-
+s
 def read_job_inis(mosaic_dir, models, INPUTS):
     out = []
     rows = []
