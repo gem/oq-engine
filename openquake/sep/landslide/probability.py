@@ -1,6 +1,6 @@
 from typing import Union
 import numpy as np
-from math import e
+
 
 
 g: float = 9.81
