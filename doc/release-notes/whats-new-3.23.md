@@ -22,9 +22,9 @@ work with an user-provided site model, rather than using the stored
 site model. Moreover it has been optimized to discard far-away ruptures
 using the `query_ball_tree` spatial feature of scipy with a huge performance improvement.
 
-The `rupture_dict` dictionary of scenario calculations has been extended to accept
-to the `msr` and `aspect_ratio` keys, which are used to customize
-the generated planar rupture.
+The `rupture_dict` dictionary of scenario calculations has been
+extended to accept to the `msr` and `aspect_ratio` keys, which are
+used to customize the generated planar rupture.
 
 The preclassical calculator has been extended to work in absence
 of sites: this is useful for source model processing tools such as
@@ -38,6 +38,10 @@ CollapsedPointSources and therefore the hazard curves obtained
 when using the `ps_grid_spacing` approximation can be slightly
 different than before. This is normal, since the `ps_grid_spacing`
 approximation is subject to refinements in any new release.
+
+The algorithm used to determine the source weight has been
+rewritten, reducing in patological cases the slow tasks by an order
+of magnitude, while keeping the slow tasks in regular cases acceptable.
 
 The parameter `pmap_max_mb` has been raised by 4 times resulting
 in up a 10% speedup in classical calculations at the cost of a
@@ -97,21 +101,27 @@ has been subsumed into a new project called OQ-Impact which has all of its
 features and some more.
 
 The kind of features available depends on the user, with users of
-level 2 (currently restricted to GEM personnel) having access to
+level 2 - currently restricted to GEM personnel - having access to
 everything, including the ability to upload custom ruptures and
-perform scenario calculations. Users of level 1 can only run
-scenarios starting from a ShakeMap ID while users of level 0 can only
-see the results of scenarios shared by GEM staff.
+perform scenario calculations. Users of level 1 can only run scenarios
+starting from a ShakeMap ID with a much simplified UI while users of
+level 0 can only see the results of scenarios shared by GEM staff.
 
 We renamed everything which was user-visible, like the project name
 displayed in the WebUI and the project name used in email
 notifications. Moreover we renamed some templates and some of the
 code.
 
-We improved the logic for user registration.
+We changed the authentication logic so that when the PAM authentication backend
+is used we do not need to actualize the email notification templates anymore.
+
+We improved the logic for user registration and the command `createnormaluser`
+has been extended to accept the user level as a parameter.
 
 We improved the visualization of the losses table and we added the ability
 to visualize the `aggrisk_tags` output.
+
+We now visualize the uploaded rupture correctly in all cases.
 
 We fixed a minor bug with the timestamp in ShakeMaps.
 
@@ -125,6 +135,11 @@ uploaded rupture XML is malformed.
 
 Bug fixes and other
 -------------------
+
+There was a long standing bug in the ContextMaker causing ruptures
+with magnitude exactly equal to the minimum magnitude to be incorrectly
+discarded. It has been fixed now. Fortunately the impact on the hazard
+curves is minimal.
 
 There was a bug breaking the `avg_losses-rlzs` exporter due to the
 fact that the full asset collection was stored instead of the reduced
@@ -142,6 +157,13 @@ that if the calculation HDF5 file is moved into a different machine,
 post-processing scripts can run there. However, due to a bug, the
 GMPEs could not be instantiated in the postprocessing machine.  It has
 been fixed now.
+
+The weights stored in the `source_info` table were incorrect in the
+case of multiple sources with the same source ID. While not having
+an impact on the final user, it was annoying and it has been fixed.
+
+There were some inconsequential "division by zero" warnings raised internally
+by Shapely that have been suppressed.
 
 We added an optional parameter `minimum_engine_version` in the job.ini file,
 which can be used to specify the minimum engine version needed to run the calculation.
