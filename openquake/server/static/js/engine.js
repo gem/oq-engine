@@ -652,9 +652,11 @@ function capitalizeFirstLetter(val) {
                 if (selected_approach == 'build_rup_from_usgs') {
                     $('div#nodal_plane').removeClass('hidden');
                     $('div#msr').removeClass('hidden');
+                    $('div#aspect_ratio').removeClass('hidden');
                 } else {
                     $('div#nodal_plane').addClass('hidden');
                     $('div#msr').addClass('hidden');
+                    $('div#aspect_ratio').addClass('hidden');
                 }
                 if (selected_approach == 'use_shakemap_from_usgs') {
                     $('div.hidden-for-shakemap').addClass('hidden');
@@ -693,6 +695,9 @@ function capitalizeFirstLetter(val) {
                     formData.append('rake', $("#rake").val());
                     formData.append('dip', $("#dip").val());
                     formData.append('strike', $("#strike").val());
+                } else if (selected_approach == 'build_rup_from_usgs') {
+                    formData.append('aspect_ratio', $("input#aspect_ratio").val());
+                    formData.append('msr', $("select#msr").find(':selected').val());
                 }
                 $.ajax({
                     type: "POST",
@@ -769,16 +774,6 @@ function capitalizeFirstLetter(val) {
                         $('#rake').val(nodal_plane.rake);
                         $('#dip').val(nodal_plane.dip);
                         $('#strike').val(nodal_plane.strike);
-                    }
-                    if ('msrs' in data) {
-                        const msrs = data.msrs;
-                        const $select = $('select#msr');
-                        $select.empty();
-                        msrs.forEach(msr => {
-                            $select.append($("<option>").text(msr).val(msr));
-                        });
-                        $select.append($("<option>").text('').val(''));
-                        $select.val('');
                     }
                     $('#mosaic_model').empty();
                     $.each(data.mosaic_models, function(index, mosaic_model) {
@@ -889,6 +884,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('lat', $("#lat").val());
                 formData.append('dep', $("#dep").val());
                 formData.append('mag', $("#mag").val());
+                formData.append('aspect_ratio', $("input#aspect_ratio").val());
                 formData.append('rake', $("#rake").val());
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
