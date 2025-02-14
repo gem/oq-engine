@@ -29,7 +29,7 @@ used to customize the generated planar rupture.
 The preclassical calculator has been extended to work in absence
 of sites: this is useful for source model processing tools such as
 HAMLET. Moreover, it has been optimized to
-parallelize better and now it can eun significantly faster (
+parallelize better and now it can run significantly faster (
 for the USA model it runs 7 times faster then version 3.22, at least
 for the parallel phase of the analysis).
 
