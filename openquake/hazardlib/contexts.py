@@ -1316,6 +1316,8 @@ class ContextMaker(object):
             weight *= 2
         elif src.code == b'N':  # increase weight in MEX and SAM
             weight *= 5.
+        elif src.code == b'N':  # increase weight in USA
+            weight *= 2.
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1):
