@@ -240,6 +240,9 @@ def convert_to_oq_rupture(rup_json):
 
 
 def utc_to_local_time(utc_timestamp, lon, lat):
+    """
+    Convert a timestamp '%Y-%m-%dT%H:%M:%S.%fZ' into a datetime object
+    """
     try:
         # NOTE: mandatory dependency for ARISTOTLE
         from timezonefinder import TimezoneFinder
