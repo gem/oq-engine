@@ -114,6 +114,7 @@ ARISTOTLE_FORM_LABELS = {
     'lat': 'Latitude (degrees)',
     'dep': 'Depth (km)',
     'mag': 'Magnitude (Mw)',
+    'aspect_ratio': 'Aspect ratio',
     'rake': 'Rake (degrees)',
     'local_timestamp': 'Local timestamp of the event',
     'time_event': 'Time of the event',
@@ -141,6 +142,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'lat': '-90 ≤ float ≤ 90',
     'dep': 'float ≥ 0',
     'mag': 'float ≥ 0',
+    'aspect_ratio': 'float ≥ 0',
     'rake': '-180 ≤ float ≤ 180',
     'local_timestamp': '',
     'time_event': 'day|night|transit',
@@ -166,6 +168,7 @@ validators = {
     'lat': valid.latitude,
     'dep': valid.positivefloat,
     'mag': valid.positivefloat,
+    'aspect_ratio': valid.positivefloat,
     'rake': valid.rake_range,
     'dip': valid.dip_range,
     'strike': valid.strike_range,
@@ -188,7 +191,7 @@ def _validate(POST):
     invalid_inputs = []
     params = {}
     dic = dict(usgs_id=None, lon=None, lat=None, dep=None,
-               mag=None, rake=None, dip=None, strike=None)
+               mag=None, msr=None, aspect_ratio=None, rake=None, dip=None, strike=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
@@ -267,6 +270,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
     approach = POST['approach']
+    if approach == 'build_rup_from_usgs':
+        dic['msr'] = POST['msr']
 
     rup, rupdic, err = get_rup_dic(
         dic, user, approach, use_shakemap, rupture_file, station_data_file,
@@ -288,8 +293,6 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    if 'msr' in POST:
-        rupdic['msr'] = POST['msr']
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
