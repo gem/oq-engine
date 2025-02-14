@@ -77,7 +77,7 @@ MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 '''.split())
-MODELS = 'CND'.split()
+# MODELS = 'CND'.split()
 
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
