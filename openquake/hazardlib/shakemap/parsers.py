@@ -787,6 +787,7 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         rupdic.update(rupture_file=rupture_file,
                       station_data_file=station_data_file,
                       require_dip_strike=True)
+        rup = build_planar_rupture_from_dict(rupdic)
         return rup, rupdic, err
 
     if rupture_file and rupture_file.endswith('.xml'):
