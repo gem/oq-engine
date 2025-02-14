@@ -98,7 +98,7 @@ def main(
         exports='',
         log_level='info',
         sample_sources=False,
-        nodes:int=1):
+        nodes: int = 1):
     """
     Run a calculation using the traditional command line API
     """
@@ -128,7 +128,7 @@ def main(
 
     fname = os.path.expanduser(config.dbserver.file)
     if (os.environ.get('OQ_DATABASE', config.dbserver.host) == '127.0.0.1'
-        and getpass.getuser() != 'openquake'):  # no DbServer
+            and getpass.getuser() != 'openquake'):  # no DbServer
         if not os.path.exists(fname):
             upgrade_db = True  # automatically creates the db
             yes = True
