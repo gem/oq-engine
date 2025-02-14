@@ -1295,7 +1295,7 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .1 * EPS if src.code == b'S' else EPS  # needed for EUR
+        eps = .02 * EPS if src.code in b'PSX' else EPS  # needed for EUR
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
             return eps, 0
