@@ -1,5 +1,9 @@
 python3-oq-engine (3.23.0-1~xenial01) xenial; urgency=low
 
+  [Christopher Brooks]
+  * Fixed modified_gsim (valid.py) to work with more complex
+    GMMs (e.g. NGAEast GMPE Tables) + added a unit test
+
   [Michele Simionato]
   * Fixed contexts.py: we were incorrectly discarding ruptures with magnitude equal
     to the minimum magnitude
