@@ -1295,7 +1295,7 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .02 * EPS if src.code in b'PSX' else EPS  # needed for EUR
+        eps = .01 * EPS if src.code == 'S' else EPS  # needed for EUR
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
             return eps, 0
@@ -1313,9 +1313,11 @@ class ContextMaker(object):
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code == b'S':  # increase weight in the EUR model
-            weight *= 2
+            weight *= 1.5
         elif src.code == b'N':  # increase weight in MEX and SAM
             weight *= 5.
+        elif src.code == b'N':  # increase weight in USA
+            weight *= 2.
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1):
