@@ -21,7 +21,16 @@
                 </div>
                 <div id="msr" class="impact_form_row hidden">
                   <label for="msr">{{ impact_form_labels.msr }}</label>
-                  <select name="msr" id="msr" class="impact-select"></select>
+                  <select name="msr" id="msr" class="impact-select">
+                    <option value="" selected></option>
+                    {% for msr in msrs %}
+                    <option value="{{ msr }}">{{ msr }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div id="aspect_ratio" class="impact_form_row hidden">
+                  <label for="aspect_ratio">{{ impact_form_labels.aspect_ratio }}</label>
+                  <input class="impact-input" type="text" id="aspect_ratio" name="aspect_ratio" placeholder="{{ impact_form_placeholders.aspect_ratio }}" value="2"/>
                 </div>
                 <div class="impact_form_row">
                   <label for"rake">{{ impact_form_labels.rake }}</label>

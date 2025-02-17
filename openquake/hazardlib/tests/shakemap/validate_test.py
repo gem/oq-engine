@@ -31,6 +31,7 @@ import os
 import unittest
 from openquake.hazardlib.shakemap.parsers import User
 from openquake.hazardlib.shakemap.validate import impact_validate
+from openquake.hazardlib.source.rupture import BaseRupture
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
@@ -46,17 +47,32 @@ class AristotleValidateTestCase(unittest.TestCase):
             del timezonefinder
 
     def test_1(self):
-        # no rupture, yes stations
-        POST = {'usgs_id': 'us6000jllz', 'approach': 'build_rup_from_usgs'}
+        POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
         _rup, rupdic, _params, err = impact_validate(POST, user)
-        self.assertEqual(rupdic['require_dip_strike'], True)
+        self.assertIsNone(rupdic['station_data_file'])
+        self.assertEqual(err, {})
+
+    def test_1b(self):
+        # no rupture, yes stations
+        POST = {'usgs_id': 'us6000jllz', 'approach': 'build_rup_from_usgs',
+                'msr': 'WC1994', 'aspect_ratio': '3'}
+        rup, rupdic, _params, err = impact_validate(POST, user)
+        self.assertIsInstance(rup, BaseRupture)
         self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
+    def test_1c(self):
+        # giving a ValueError with aspect_ratio 2
+        POST = {'usgs_id': 'us6000jllz', 'approach': 'build_rup_from_usgs',
+                'msr': 'WC1994', 'aspect_ratio': '2'}
+        _rup, _rupdic, _params, err = impact_validate(POST, user)
+        self.assertIn('The depth must be greater', err['error_msg'])
+
     def test_2(self):
-        POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs'}
+        POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs',
+                'msr': ''}
         _rup, rupdic, _params, err = impact_validate(POST, user)
-        self.assertEqual(rupdic['rupture_from_usgs'], False)
+        self.assertEqual(rupdic['rupture_from_usgs'], True)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mosaic_models'], ['SAM'])
         self.assertIn('stations', rupdic['station_data_file'])
@@ -129,7 +145,8 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
-        POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs'}
+        POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs',
+                'msr': ''}
         _rup, rupdic, _oqparams, err = impact_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mag'], 7.0)
@@ -142,6 +159,6 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_5(self):
         POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs',
-                'msr': 'WC1994'}
+                'aspect_ratio': 2, 'msr': 'WC1994'}
         _rup, rupdic, _oqparams, _err = impact_validate(POST, user)
         self.assertIn('msr', rupdic)
