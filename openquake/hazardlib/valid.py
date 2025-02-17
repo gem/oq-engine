@@ -194,8 +194,11 @@ def modified_gsim(gmpe, **kwargs):
 
     mgs = modified_gsim(gsim, add_between_within_stds={'with_betw_ratio':1.5})
     """
-    text = gmpe._toml.replace('[', '[ModifiableGMPE.gmpe.') + '\n'
-    text += toml.dumps({'ModifiableGMPE': kwargs})
+    text = gmpe._toml.split('\n')[0].replace('[', '[ModifiableGMPE.gmpe.')
+    args = gmpe._toml.split('\n')[1:]
+    for arg in args:
+        text += '\n' + arg
+    text += '\n' + toml.dumps({'ModifiableGMPE': kwargs})
     return gsim(text)
 
 
