@@ -105,14 +105,20 @@ class ShakemapParsersTestCase(unittest.TestCase):
                          '3 stations were found, but none of them are seismic')
 
     def test_7(self):
+        dic_in = {'usgs_id': 'us6000jllz', 'lon': None, 'lat': None, 'dep': None,
+                  'mag': None, 'msr': '', 'aspect_ratio': 2.0, 'rake': None,
+                  'dip': None, 'strike': None}
         _rup, dic, _err = get_rup_dic(
-            {'usgs_id': 'us6000jllz'}, user=user, approach='build_rup_from_usgs',
+            dic_in,
+            # {'usgs_id': 'us6000jllz', 'aspect_ratio': 2., 'msr': 'WC1994'},
+            user=user, approach='build_rup_from_usgs',
             use_shakemap=True)
         self.assertEqual(
             dic['nodal_planes'],
             {'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
              'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}})
-        self.assertIn('WC1994', dic['msrs'])
+        self.assertEqual(dic['msr'], '')
+        self.assertEqual(dic['aspect_ratio'], 2.0)
 
 
 """

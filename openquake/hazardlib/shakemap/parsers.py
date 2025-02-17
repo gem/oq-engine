@@ -787,7 +787,10 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         rupdic.update(rupture_file=rupture_file,
                       station_data_file=station_data_file,
                       require_dip_strike=True)
-        rup = build_planar_rupture_from_dict(rupdic)
+        try:
+            rup = build_planar_rupture_from_dict(rupdic)
+        except ValueError as exc:
+            err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
 
     if rupture_file and rupture_file.endswith('.xml'):
@@ -847,7 +850,10 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         rupdic['station_data_file_from_usgs'] = False
     if not rup_data:
         # in parsers_test
-        rup = build_planar_rupture_from_dict(rupdic)
+        try:
+            rup = build_planar_rupture_from_dict(rupdic)
+        except ValueError as exc:
+            err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
 
     rup = convert_to_oq_rupture(rup_data)
