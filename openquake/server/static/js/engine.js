@@ -628,13 +628,13 @@ function capitalizeFirstLetter(val) {
                 } else {
                     $('#rupture_from_usgs_grp').addClass('hidden');
                     $('#usgs_id_grp').addClass('hidden');
-                    $('#usgs_id').val('');
                 }
                 if (selected_approach == 'provide_rup') {
                     $('#upload_rupture_grp').removeClass('hidden');
                     $("#usgs_id").val('FromFile');
                 } else {
                     $('#upload_rupture_grp').addClass('hidden');
+                    $('#usgs_id').val('');
                 }
                 if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
                     $('#rup_params').removeClass('hidden');
