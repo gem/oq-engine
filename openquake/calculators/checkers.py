@@ -60,7 +60,7 @@ def _data2rows(data):
     return rows
 
 
-def assert_close(tbl, fname):
+def assert_close(tbl, fname, rtol=1E-4):
     """
     Compare a text table with a filename containing the expected table
     """
@@ -74,10 +74,10 @@ def assert_close(tbl, fname):
         with open(fname) as f:
             expected = f.read()
         for exp, got in zip(_data2rows(expected), _data2rows(txt)):
-            aac(exp, got, atol=1E-5, rtol=1E-3)
+            aac(exp, got, atol=1E-5, rtol=rtol)
 
 
-def check(ini, hc_id=None, exports='', what='', prefix=''):
+def check(ini, hc_id=None, exports='', what='', prefix='', rtol=1E-4):
     """
     Perform a calculation and compare a view ("what") with the content of
     a corrisponding file (.txt or .org).
@@ -107,7 +107,7 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
                     df = df.to_dframe()
             tbl = text_table(df, ext='org')
         bname = prefix + re.sub(r'_\d+\.', '.', os.path.basename(fname))
-        assert_close(tbl, outdir / bname)
+        assert_close(tbl, outdir / bname, rtol)
     return calc
 
 

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import abc
 import copy
 import time
@@ -65,7 +66,7 @@ NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MEA = 0
 STD = 1
-EPS = 0.2
+EPS = float(os.environ.get('OQ_SAMPLE_SITES', 1))
 bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
@@ -332,7 +333,7 @@ def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
     if src.count_nphc() == 1:
         # one rupture per magnitude
         for m, (mag, pla) in enumerate(planardict.items()):
-            if minmag < mag < maxmag:
+            if minmag <= mag <= maxmag:
                 yield m, mag, pla, sitecol
     else:
         for m, rup in enumerate(src.iruptures()):
@@ -1067,7 +1068,7 @@ class ContextMaker(object):
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 allrups = sorted([rup for rup in allrups
-                                  if minmag < rup.mag < maxmag],
+                                  if minmag <= rup.mag <= maxmag],
                                  key=bymag)
                 self.num_rups = len(allrups) or 1
                 if not allrups:
@@ -1294,30 +1295,30 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
+        eps = .01 * EPS if src.code == 'S' else EPS  # needed for EUR
+        src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
-            return EPS, 0
+            return eps, 0
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
-            return EPS, 0
+            return eps, 0
         src.nsites = len(sites)
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
         src.dt = time.time() - t0
-        # if src.dt > .01:
-        #     print(f'{src.source_id=}, {src.dt=}')
         if not ctxs:
-            return EPS, 0
+            return eps, 0
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
-        if src.code == b'F':  # avoid over-weight in the USA model
-            weight /= 2.5
-        elif src.code == b'S':  # increase weight in SAM
-            weight *= 2.
-        elif src.code == b'N':  # increase weight in MEX
+        if src.code == b'S':  # increase weight in the EUR model
+            weight *= 1.5
+        elif src.code == b'N':  # increase weight in MEX and SAM
             weight *= 5.
-        return weight or EPS, int(esites)
+        elif src.code == b'N':  # increase weight in USA
+            weight *= 2.
+        return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1):
         """
@@ -1330,6 +1331,8 @@ class ContextMaker(object):
             for src in sources:
                 src.weight, src.esites = self.estimate_weight(
                     src, srcfilter, multiplier)
+                # if src.code == b'S':
+                #     print(src, src.dt, src.num_ruptures / self.num_rups)
 
 
 def by_dists(gsim):

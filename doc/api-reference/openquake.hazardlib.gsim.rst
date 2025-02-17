@@ -439,6 +439,14 @@ campbell_bozorgnia_2003
     :undoc-members:
     :show-inheritance:
 
+campbell_bozorgnia_2003_world
+-------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2003_world
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 campbell_bozorgnia_2008
 -------------------------------------------------------
 

@@ -31,11 +31,11 @@ import pathlib
 import logging
 import json
 import zipfile
-import pytz
 import base64
 from dataclasses import dataclass
 import pandas as pd
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from shapely.geometry import Polygon
 import numpy
 
@@ -43,7 +43,8 @@ from openquake.baselib import performance
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter
-from openquake.hazardlib.source.rupture import get_multiplanar, is_matrix
+from openquake.hazardlib.source.rupture import (
+    get_multiplanar, is_matrix, build_planar_rupture_from_dict)
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
@@ -239,6 +240,9 @@ def convert_to_oq_rupture(rup_json):
 
 
 def utc_to_local_time(utc_timestamp, lon, lat):
+    """
+    Convert a timestamp '%Y-%m-%dT%H:%M:%S.%fZ' into a datetime object
+    """
     try:
         # NOTE: mandatory dependency for ARISTOTLE
         from timezonefinder import TimezoneFinder
@@ -256,13 +260,9 @@ def utc_to_local_time(utc_timestamp, lon, lat):
             'Could not determine the timezone. Using the UTC time')
         return utc_timestamp
     utc_time = datetime.strptime(utc_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
-    utc_zone = pytz.utc
-    utc_time = utc_zone.localize(utc_time)
-    local_zone = pytz.timezone(timezone_str)
-    local_timestamp = utc_time.astimezone(local_zone)
+    local_timestamp = utc_time.astimezone(ZoneInfo(timezone_str))
     # NOTE: the validated timestamp format has no microseconds
-    local_timestamp = local_timestamp.replace(microsecond=0)
-    return local_timestamp
+    return local_timestamp.replace(microsecond=0)
 
 
 def local_time_to_time_event(local_time):
@@ -846,7 +846,8 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         rupdic['station_data_file_from_usgs'] = False
     if not rup_data:
         # in parsers_test
-        return None, rupdic, err
+        rup = build_planar_rupture_from_dict(rupdic)
+        return rup, rupdic, err
 
     rup = convert_to_oq_rupture(rup_data)
     if rup is None:

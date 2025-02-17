@@ -166,11 +166,13 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # determine light groups and tiling
     light, = numpy.where(data['blocks'] == 1)
-    logging.info('There are %d light groups out of %d', len(light), len(data))
     req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
     mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
     if len(light):
-        logging.info('mem_gb = %.2f', mem_gb)
+        logging.info('mem_gb = %.2f with %d light groups out of %d',
+                     mem_gb, len(light), len(data))
+    else:
+        logging.info('Required mem_gb = %.2f', req_gb)
     max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores/8)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
@@ -304,6 +306,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 if spacing:
                     for plike in pointlike:
                         pointsources.extend(split_source(plike))
+                    logging.info(f'Gridding point sources for {grp_id=}')
                     cpsources = grid_point_sources(pointsources, spacing)
                     before_after += [len(pointsources), len(cpsources)]
                     for block in block_splitter(cpsources, 200):
