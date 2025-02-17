@@ -78,6 +78,11 @@ jobs:
            fi
           done
           deactivate
+      - name: Actualize 'default' templates for email notifications
+        run: |
+          for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
+              cp -- "$file" "${file%.default.tmpl}"
+          done
       - name: Test WebUI and run https calculation
         run: |
           BRANCH=master
