@@ -638,6 +638,8 @@ function capitalizeFirstLetter(val) {
                 }
                 if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
                     $('#rup_params').removeClass('hidden');
+                    $('div#msr').removeClass('hidden');
+                    $('div#aspect_ratio').removeClass('hidden');
                     $('#rake').prop('disabled', false);
                     $('#dip').prop('disabled', false);
                     $('#strike').prop('disabled', false);
@@ -648,15 +650,13 @@ function capitalizeFirstLetter(val) {
                     }
                 } else {
                     $('#rup_params').addClass('hidden');
+                    $('div#msr').addClass('hidden');
+                    $('div#aspect_ratio').addClass('hidden');
                 }
                 if (selected_approach == 'build_rup_from_usgs') {
                     $('div#nodal_plane').removeClass('hidden');
-                    $('div#msr').removeClass('hidden');
-                    $('div#aspect_ratio').removeClass('hidden');
                 } else {
                     $('div#nodal_plane').addClass('hidden');
-                    $('div#msr').addClass('hidden');
-                    $('div#aspect_ratio').addClass('hidden');
                 }
                 if (selected_approach == 'use_shakemap_from_usgs') {
                     $('div.hidden-for-shakemap').addClass('hidden');
@@ -687,16 +687,19 @@ function capitalizeFirstLetter(val) {
                     formData.append('usgs_id', usgs_id);
                 }
                 formData.append('use_shakemap', use_shakemap());
-                if (selected_approach == 'provide_rup_params') {
-                    formData.append('lon', $("#lon").val());
-                    formData.append('lat', $("#lat").val());
-                    formData.append('dep', $("#dep").val());
-                    formData.append('mag', $("#mag").val());
-                    formData.append('rake', $("#rake").val());
-                    formData.append('dip', $("#dip").val());
-                    formData.append('strike', $("#strike").val());
-                } else if (selected_approach == 'build_rup_from_usgs') {
-                    formData.append('aspect_ratio', $("input#aspect_ratio").val());
+                if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
+                    // NOTE: for...of works like array.forEach(str => {
+                    for (const param of ['lon', 'lat', 'dep', 'mag', 'rake', 'dip', 'strike', 'aspect_ratio']) {
+                        var value = $('input#' + param).val();
+                        if (selected_approach == 'provide_rup_params') {
+                            formData.append(param, value);
+                        }
+                        else if (value != '') {
+                            // 'build_rup_from_usgs' permits some params to be left blank by the user
+                            // and to be populated from USGS data
+                            formData.append(param, value);
+                        }
+                    }
                     formData.append('msr', $("select#msr").find(':selected').val());
                 }
                 $.ajax({
