@@ -1177,6 +1177,12 @@ class HazardCalculator(BaseCalculator):
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)
 
+        # sanity check on the total weight
+        totw = sum(src.weight for src in self.csm.get_sources())
+        saved = sum(row[source_reader.WEIGHT]
+                    for row in self.csm.source_info.values())
+        numpy.testing.assert_allclose(totw, saved, atol=1E-3)
+
     def post_process(self):
         """
         Run postprocessing function, if any
