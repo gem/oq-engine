@@ -46,6 +46,7 @@ import numpy
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
@@ -769,7 +770,7 @@ def impact_run(request):
     :param request:
         a `django.http.HttpRequest` object containing
         usgs_id, rupture_file,
-        lon, lat, dep, mag, rake, dip, strike,
+        lon, lat, dep, mag, aspect_ratio, rake, dip, strike,
         local_timestamp, time_event,
         maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
@@ -1273,6 +1274,8 @@ def web_engine(request, **kwargs):
         params['impact_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
         params['impact_default_usgs_id'] = \
             settings.ARISTOTLE_DEFAULT_USGS_ID
+        params['msrs'] = [msr.__class__.__name__
+                          for msr in get_available_magnitude_scalerel()]
     return render(
         request, "engine/index.html", params)
 
