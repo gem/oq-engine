@@ -109,10 +109,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
                   'mag': None, 'msr': '', 'aspect_ratio': 2.0, 'rake': None,
                   'dip': None, 'strike': None}
         _rup, dic, _err = get_rup_dic(
-            dic_in,
-            # {'usgs_id': 'us6000jllz', 'aspect_ratio': 2., 'msr': 'WC1994'},
-            user=user, approach='build_rup_from_usgs',
-            use_shakemap=True)
+            dic_in, user=user, approach='build_rup_from_usgs', use_shakemap=True)
         self.assertEqual(
             dic['nodal_planes'],
             {'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
