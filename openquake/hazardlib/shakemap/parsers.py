@@ -862,7 +862,6 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
-
     rup = convert_to_oq_rupture(rup_data)
     if rup is None:
         # in parsers_test for us6000jllz
