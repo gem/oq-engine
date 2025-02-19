@@ -206,7 +206,7 @@ class JibsonEtAl2000LandslideTestCase(unittest.TestCase):
 
             ]
         )
-        Prob = jibson_etal_2000_probability(Disp_)~
+        Prob = jibson_etal_2000_probability(Disp_)
         Prob_ = np.array(
             [
                 0.335,
