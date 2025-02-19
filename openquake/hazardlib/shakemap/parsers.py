@@ -844,8 +844,8 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
                 usgs_id, contents, user)
     if not rupdic:
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
-    if (user.level == 2 and download_usgs_stations and not station_data_file
-            and approach != 'use_shakemap_from_usgs'):
+    if (approach != 'use_shakemap_from_usgs' and not station_data_file
+            and download_usgs_stations):
         with monitor('Downloading stations'):
             rupdic['station_data_file'], rupdic['station_data_issue'] = (
                 download_station_data_file(usgs_id, contents, user))
