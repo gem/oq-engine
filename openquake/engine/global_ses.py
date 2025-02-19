@@ -67,7 +67,7 @@ import os
 import logging
 import numpy
 from openquake.baselib import performance, sap, hdf5
-from openquake.hazardlib import valid, gsim_lt
+from openquake.hazardlib import gsim_lt
 from openquake.commonlib import readinput, datastore
 from openquake.calculators import base
 from openquake.engine import engine
@@ -77,34 +77,20 @@ MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 '''.split())
-# MODELS = 'CND'.split()
 
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
-def imts(dic):
-    imtls = valid.dictionary(dic['intensity_measure_types_and_levels'])
-    return ' '.join(imt for imt in imtls)
-
-
-def check_imts(dicts, models):
-    imts0 = imts(dicts[0])
-    for model, imts1 in zip(models[1:], map(imts, dicts[1:])):
-        if imts1 != imts0:
-            raise ValueError(f'{imts1} != {imts0} for {model}')
-
-
-def read_job_inis(mosaic_dir, models, INPUTS):
+def read_job_inis(mosaic_dir, INPUTS):
     out = []
     rows = []
-    for model in models:
+    for model in INPUTS.pop('models'):
         fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         dic = readinput.get_params(fname)
+        del dic['intensity_measure_types_and_levels']
         dic.update(INPUTS)
         if 'truncation_level' not in dic:  # CAN
             dic['truncation_level'] = '5'
-            dic['intensity_measure_types'] = '''\
-            "PGA SA(0.1) SA(0.2) SA(0.3) SA(0.6) SA(1.0) SA(2.0)'''
         if model in ("KOR", "JPN"):
             dic['investigation_time'] = '50'
             dic['ses_per_logic_tree_path'] = str(
@@ -116,29 +102,38 @@ def read_job_inis(mosaic_dir, models, INPUTS):
                 q = (model, trt, gsim._toml, gsim.weight['default'])
                 rows.append(q)
         out.append(dic)
-    check_imts(out, models)
     return out, rows
 
 
-def main(mosaic_dir, out, *, number_of_logic_tree_samples:int=2000,
-         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5.):
+def main(mosaic_dir, out, models='ALL', *,
+         number_of_logic_tree_samples:int=2000,
+         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5.,
+         imts='PGA,SA(0.1),SA(0.2),SA(0.3),SA(0.6),SA(1.0),SA(2.0)'):
     """
     Storing global SES
     """
-    if 'KOR' in MODELS or 'JPN' in MODELS: 
+    if models == 'ALL':
+        models = MODELS
+    else:
+        models = models.split(',')
+        for model in models:
+            assert model in MODELS, model
+    if 'KOR' in models or 'JPN' in models:
         if ses_per_logic_tree_path % 50:
             raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
     INPUTS = dict(
-    calculation_mode='event_based',
-    number_of_logic_tree_samples= str(number_of_logic_tree_samples),
-    ses_per_logic_tree_path = str(ses_per_logic_tree_path),
-    investigation_time='1',
-    ground_motion_fields='false',
-    minimum_magnitude=str(minimum_magnitude))
-    job_inis, rows = read_job_inis(mosaic_dir, MODELS, INPUTS)
+        calculation_mode='event_based',
+        number_of_logic_tree_samples= str(number_of_logic_tree_samples),
+        ses_per_logic_tree_path = str(ses_per_logic_tree_path),
+        investigation_time='1',
+        ground_motion_fields='false',
+        minimum_magnitude=str(minimum_magnitude),
+        models=models,
+        intensity_measure_types=imts)
+    job_inis, rows = read_job_inis(mosaic_dir, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
-            h5['models'] = MODELS
+            h5['models'] = models
             h5['model_trt_gsim_weight'] = numpy.array(rows, dt)
         jobs = engine.run_jobs(
             engine.create_jobs(job_inis, log_level=logging.WARN))
@@ -153,9 +148,11 @@ def main(mosaic_dir, out, *, number_of_logic_tree_samples:int=2000,
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
+main.models = 'Models to consider (comma-separated)'
 main.number_of_logic_tree_samples = 'Number of samples'
 main.ses_per_logic_tree_path = 'Number of SES'
 main.minimum_magnitude = 'Minimum magnitude'
+main.imts = 'Intensity Measure Types (comma-separated)'
 
 if __name__ == '__main__':
     sap.run(main)
