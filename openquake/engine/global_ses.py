@@ -67,7 +67,7 @@ import os
 import logging
 import numpy
 from openquake.baselib import performance, sap, hdf5
-from openquake.hazardlib import valid, gsim_lt
+from openquake.hazardlib import gsim_lt
 from openquake.commonlib import readinput, datastore
 from openquake.calculators import base
 from openquake.engine import engine
@@ -81,16 +81,14 @@ CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
-def read_job_inis(mosaic_dir, models, imts, INPUTS):
+def read_job_inis(mosaic_dir, INPUTS):
     out = []
     rows = []
-    for model in models:
+    for model in INPUTS.pop('models'):
         fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         dic = readinput.get_params(fname)
+        del dic['intensity_measure_types_and_levels']
         dic.update(INPUTS)
-        imtls = valid.dictionary(dic.pop('intensity_measure_types_and_levels'))
-        dic['intensity_measure_types'] = ' '.join(
-            imt for imt in imtls if imt in imts)
         if 'truncation_level' not in dic:  # CAN
             dic['truncation_level'] = '5'
         if model in ("KOR", "JPN"):
@@ -131,8 +129,8 @@ def main(mosaic_dir, out, models='ALL', *,
         ground_motion_fields='false',
         minimum_magnitude=str(minimum_magnitude),
         models=models,
-        imts=imts)
-    job_inis, rows = read_job_inis(mosaic_dir, models, imts, INPUTS)
+        intensity_measure_types=imts)
+    job_inis, rows = read_job_inis(mosaic_dir, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
             h5['models'] = models
@@ -150,10 +148,11 @@ def main(mosaic_dir, out, models='ALL', *,
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
-main.models = 'Models to consider'
+main.models = 'Models to consider (comma-separated)'
 main.number_of_logic_tree_samples = 'Number of samples'
 main.ses_per_logic_tree_path = 'Number of SES'
 main.minimum_magnitude = 'Minimum magnitude'
+main.imts = 'Intensity Measure Types (comma-separated)'
 
 if __name__ == '__main__':
     sap.run(main)
