@@ -733,6 +733,7 @@ function capitalizeFirstLetter(val) {
                         conversion_issues += '<p>' + data.error + '</p>';
                         $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
                     }
+                    // NOTE: these are stations downloaded from the USGS and not those uploaded by the user
                     $('#station_data_file_from_usgs').val(data.station_data_file);
                     if (data.station_data_issue) {
                         $('#station_data_file_loaded').val('N.A. (conversion issue)');
