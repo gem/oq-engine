@@ -791,7 +791,8 @@ def impact_run(request):
         station_data_file = station_data_file_from_usgs
     user = request.user
     user.testdir = None
-    # at this stage, do not attempt to re-load station data from the USGS
+    # at this stage, do not attempt to re-load station data from the USGS if they are
+    # missing or if the user explicitly decided to ignore them
     _rup, rupdic, params, err = impact_validate(
         request.POST, user, rupture_path, station_data_file,
         download_usgs_stations=False)

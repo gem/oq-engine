@@ -770,8 +770,8 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     the ShakeMap ID, else build the rupture locally with the given usgs_id.
 
     NOTE: this function is called twice by impact_validate: first when retrieving
-    rupture data, then when running the job. Only in the former case we need to
-    attempt to download station data from the USGS
+    rupture data, then when running the job. Only in the former case, if stations
+    have not been loaded yet, we try to download them from the USGS
 
     :param dic: dictionary with ShakeMap ID and other parameters
     :param user: User instance

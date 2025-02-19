@@ -259,7 +259,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     returns (rup, rupdic, [station_file], error).
     In the second case the form contains all fields and returns
     (rup, rupdic, params, error).
-    Only in the former case we need to attempt to download station data from the USGS
+    Only in the former case, if stations have not been downloaded yet, we try to
+    download station data from the USGS
     """
     err = {}
     dic, params, err = _validate(POST)
