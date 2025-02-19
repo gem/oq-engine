@@ -81,29 +81,18 @@ CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
-def imts(dic):
-    imtls = valid.dictionary(dic['intensity_measure_types_and_levels'])
-    return ' '.join(imt for imt in imtls)
-
-
-def check_imts(dicts, models):
-    imts0 = imts(dicts[0])
-    for model, imts1 in zip(models[1:], map(imts, dicts[1:])):
-        if imts1 != imts0:
-            raise ValueError(f'{imts1} != {imts0} for {model}')
-
-
-def read_job_inis(mosaic_dir, models, INPUTS):
+def read_job_inis(mosaic_dir, models, imts, INPUTS):
     out = []
     rows = []
     for model in models:
         fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         dic = readinput.get_params(fname)
         dic.update(INPUTS)
+        imtls = valid.dictionary(dic.pop('intensity_measure_types_and_levels'))
+        dic['intensity_measure_types'] = ' '.join(
+            imt for imt in imtls if imt in imts)
         if 'truncation_level' not in dic:  # CAN
             dic['truncation_level'] = '5'
-            dic['intensity_measure_types'] = '''\
-            "PGA SA(0.1) SA(0.2) SA(0.3) SA(0.6) SA(1.0) SA(2.0)'''
         if model in ("KOR", "JPN"):
             dic['investigation_time'] = '50'
             dic['ses_per_logic_tree_path'] = str(
@@ -115,13 +104,13 @@ def read_job_inis(mosaic_dir, models, INPUTS):
                 q = (model, trt, gsim._toml, gsim.weight['default'])
                 rows.append(q)
         out.append(dic)
-    check_imts(out, models)
     return out, rows
 
 
 def main(mosaic_dir, out, models='ALL', *,
          number_of_logic_tree_samples:int=2000,
-         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5.):
+         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5.,
+         imts='PGA,SA(0.1),SA(0.2),SA(0.3),SA(0.6),SA(1.0),SA(2.0)'):
     """
     Storing global SES
     """
@@ -135,13 +124,15 @@ def main(mosaic_dir, out, models='ALL', *,
         if ses_per_logic_tree_path % 50:
             raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
     INPUTS = dict(
-    calculation_mode='event_based',
-    number_of_logic_tree_samples= str(number_of_logic_tree_samples),
-    ses_per_logic_tree_path = str(ses_per_logic_tree_path),
-    investigation_time='1',
-    ground_motion_fields='false',
-    minimum_magnitude=str(minimum_magnitude))
-    job_inis, rows = read_job_inis(mosaic_dir, models, INPUTS)
+        calculation_mode='event_based',
+        number_of_logic_tree_samples= str(number_of_logic_tree_samples),
+        ses_per_logic_tree_path = str(ses_per_logic_tree_path),
+        investigation_time='1',
+        ground_motion_fields='false',
+        minimum_magnitude=str(minimum_magnitude),
+        models=models,
+        imts=imts)
+    job_inis, rows = read_job_inis(mosaic_dir, models, imts, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
             h5['models'] = models
