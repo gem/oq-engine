@@ -316,7 +316,11 @@ def fotopoulou_pitilakis_2015_model_a(pgv, mag, crit_accel):
     Disp = np.power(e, log_Disp) #return Disp in m
     
     # Small displacements correction
-    Disp = [0.0 if value < 1e-10 else value for value in Disp]
+    if np.isscalar(Disp):
+        if Disp < 1e-10:
+            Disp = 0.0
+    else:
+        Disp = [0.0 if value < 1e-10 else value for value in Disp]
     
     return Disp
     
@@ -351,7 +355,11 @@ def fotopoulou_pitilakis_2015_model_b(pga, mag, crit_accel):
     Disp = np.power(e, log_Disp)   #return Disp in m
     
     # Small displacements correction
-    Disp = [0.0 if value < 1e-10 else value for value in Disp]
+    if np.isscalar(Disp):
+        if Disp < 1e-10:
+            Disp = 0.0
+    else:
+        Disp = [0.0 if value < 1e-10 else value for value in Disp]
     
     return Disp
     
@@ -403,7 +411,11 @@ def fotopoulou_pitilakis_2015_model_c(pga, mag, crit_accel):
     Disp = np.power(e, log_Disp) #return Disp in m
     
     # Small displacements correction
-    Disp = [0.0 if value < 1e-10 else value for value in Disp]
+    if np.isscalar(Disp):
+        if Disp < 1e-10:
+            Disp = 0.0
+    else:
+        Disp = [0.0 if value < 1e-10 else value for value in Disp]
     
     return Disp
     
@@ -453,7 +465,11 @@ def fotopoulou_pitilakis_2015_model_d(pgv, pga, crit_accel):
     Disp = np.power(e, log_Disp) #return Disp in m
     
     # Small displacements correction
-    Disp = [0.0 if value < 1e-10 else value for value in Disp]
+    if np.isscalar(Disp):
+        if Disp < 1e-10:
+            Disp = 0.0
+    else:
+        Disp = [0.0 if value < 1e-10 else value for value in Disp]
     
     return Disp
     
@@ -502,7 +518,11 @@ def saygili_rathje_2008(pga, pgv, crit_accel):
     Disp =  Disp_cm/100
     
     # Small displacements correction
-    Disp = [0.0 if value < 1e-10 else value for value in Disp]
+    if np.isscalar(Disp):
+        if Disp < 1e-10:
+            Disp = 0.0
+    else:
+        Disp = [0.0 if value < 1e-10 else value for value in Disp]
     
     return Disp
     
@@ -551,7 +571,11 @@ def rathje_saygili_2009(pga, mag, crit_accel):
     Disp = Disp_cm/100     #conversion in m      
     
     # Small displacements correction
-    Disp = [0.0 if value < 1e-10 else value for value in Disp]
+    if np.isscalar(Disp):
+        if Disp < 1e-10:
+            Disp = 0.0
+    else:
+        Disp = [0.0 if value < 1e-10 else value for value in Disp]
         
     return Disp   
     

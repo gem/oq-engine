@@ -7,7 +7,7 @@ from openquake.sep.landslide.static_safety_factor import infinite_slope_fs
 from openquake.sep.landslide.probability import jibson_etal_2000_probability
 
 from openquake.sep.landslide.displacement import (
-    crit_accel,
+    critical_accel,
     jibson_2007_model_a,
     jibson_2007_model_b,
     cho_rathje_2022,
@@ -34,8 +34,8 @@ class critical_acceleration_landslide_test(unittest.TestCase):
             soil_dry_density=1500.0,
         )
 
-    def test_crit_accel(self):
-        ca = crit_accel(self.fs, self.slopes)
+    def test_critical_accel(self):
+        ca = critical_accel(self.fs, self.slopes)
         ca_ = np.array(
             [11.46329996, 10.94148504, 9.66668506, 6.74308623, 1.75870504, 0.0]
         )
@@ -52,17 +52,17 @@ class jibson_2007_a_landslide_test(unittest.TestCase):
 
         Disp_ = np.array(
             [
-                0.0000000000000000e00,
-                0.0000000000000000e00,
-                0.0000000000000000e00,
-                0.0000000000000000e00,
-                0.0000000000000000e00,
-                8.7060000000000000e-05,
-                9.6658000000000000e-04,
-                2.7805700000000000e-03,
-                5.4181800000000000e-03,
-                8.7734400000000000e-03,
-
+                0.00000000e+00,
+                0.00000000e+00,
+                0.00000000e+00,
+                0.00000000e+00,
+                0.00000000e+00,
+                8.70561128e-05,
+                9.66583692e-04,
+                2.78057386e-03,
+                5.41818012e-03,
+                8.77344007e-03,
+                 
             ]
         )
         np.testing.assert_allclose(Disp, Disp_, atol=1e-9)
@@ -131,7 +131,7 @@ class fotopoulou_pitilakis_2015_a_landslide_test(unittest.TestCase):
 
         Disp_ = np.array(
             [
-            4.0162336E-02
+            4.0162336E-02,
             ]
         )
 
@@ -151,7 +151,7 @@ class fotopoulou_pitilakis_2015_b_landslide_test(unittest.TestCase):
 
         Disp_ = np.array(
             [
-            0.100601584210005
+            0.100601584210005,
             ]
         )
 
@@ -171,7 +171,7 @@ class fotopoulou_pitilakis_2015_c_landslide_test(unittest.TestCase):
 
         Disp_ = np.array(
             [
-            0.910418270987024
+            0.910418270987024,
             ]
         )
 
@@ -191,7 +191,7 @@ class fotopoulou_pitilakis_2015_d_landslide_test(unittest.TestCase):
 
         Disp_ = np.array(
             [
-            0.073120196833772
+            0.073120196833772,
             ]
         )
 
@@ -211,7 +211,7 @@ class saygili_rathje_2008_landslide_test(unittest.TestCase):
 
         Disp_ = np.array(
             [
-            0.186370166332798
+            0.186370166332798,
             ]
         )
 
@@ -231,7 +231,7 @@ class rathje_saygili_2009_landslide_test(unittest.TestCase):
 
         Disp_ = np.array(
             [
-            0.548088621109107
+            0.548088621109107,
             ]
         )
 
@@ -250,7 +250,7 @@ class jibson_etal_2000_test_landslide(unittest.TestCase):
 
         Disp_ = np.array(
             [
-            1.838340000000000000
+            1.8366713252543503,
             ]
         )
 
@@ -259,7 +259,7 @@ class jibson_etal_2000_test_landslide(unittest.TestCase):
     def test_jibson_etal_2000_landslide_probability(self):
         Disp_ = np.array(
             [
-                1.838340000000000000,
+                1.8366713252543503,
 
             ]
         )

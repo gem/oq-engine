@@ -6,13 +6,13 @@ from openquake.sep.landslide.static_safety_factor import (
     infinite_slope_fs,
 )
 
-slope_array = np.linspace(0.0, 60.0)
+slope = np.linspace(0.0, 60.0)
 
 
 class test_factors_of_safety(unittest.TestCase):
     def test_static_factor_of_safety_wet(self):
         sfs = infinite_slope_fs(
-            slope_array, cohesion=20e3, friction_angle=30.0
+            slope, cohesion=20e3, friction_angle=30.0, saturation_coeff= 0.1, slab_thickness = 2.5, soil_dry_density= 1500.0
         )
 
         sfs_ = np.array(
@@ -74,10 +74,12 @@ class test_factors_of_safety(unittest.TestCase):
 
     def test_static_factor_of_safety_dry(self):
         sfs = infinite_slope_fs(
-            slope_array,
+            slope,
             cohesion=20e3,
             friction_angle=30.0,
             saturation_coeff=0.0,
+            slab_thickness = 2.5,
+            soil_dry_density= 1500.0
         )
 
         sfs_ = np.array(

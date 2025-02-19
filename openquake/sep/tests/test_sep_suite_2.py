@@ -4,20 +4,17 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from openquake.sep.landslide.common import (
-    static_factor_of_safety,
-    rock_slope_static_factor_of_safety,
+from openquake.sep.landslide.static_safety_factor import (
+    infinite_slope_fs,
 )
-from openquake.sep.landslide.newmark import (
-    newmark_critical_accel,
-    newmark_displ_from_pga_M,
-    prob_failure_given_displacement,
+from openquake.sep.landslide.displacement import (
+    critical_accel,
+    jibson_2007_model_b,
 )
-from openquake.sep.landslide.rockfalls import (
-    critical_accel_rock_slope,
-    newmark_displ_from_pga,
+
+from openquake.sep.landslide.probability import (
+    nowicki_jessee_2018,
 )
-from openquake.sep.landslide.nowicki_jessee import nowicki_jessee_2018
 
 from openquake.sep.classes import (
     PicklableInferenceSession,
@@ -50,27 +47,18 @@ class test_landslides_cali_small(unittest.TestCase):
         sites = pd.read_csv(site_data_file)
         self.sites = sites
 
-        self.sites["Fs"] = static_factor_of_safety(
+        self.sites["Fs"] = infinite_slope_fs(
             slope=sites.slope.to_numpy(),
             cohesion=sites.cohesion_mid.to_numpy(),
             friction_angle=sites.friction_mid.to_numpy(),
             saturation_coeff=sites.saturation.to_numpy(),
             soil_dry_density=sites.dry_density.to_numpy(),
+            slab_thickness = sites.slab_thickness.to_numpy(),
         )
 
-        self.sites["Fs_rs"] = rock_slope_static_factor_of_safety(
-            slope=sites.slope,
-            cohesion=sites.cohesion_mid,
-            friction_angle=sites.friction_mid,
-            relief=sites.relief,
-        )
 
-        self.sites["crit_accel"] = newmark_critical_accel(
+        self.sites["crit_accel"] = critical_accel(
             self.sites.Fs, self.sites.slope
-        )
-
-        self.sites["crit_accel_rs"] = critical_accel_rock_slope(
-            self.sites.Fs_rs, self.sites.slope, self.sites.friction_mid
         )
 
         self.pga = np.array(
@@ -90,7 +78,7 @@ class test_landslides_cali_small(unittest.TestCase):
 
         self.pgv = np.array([10, 20, 30, 40, 45, 50, 55, 60, 65, 70])
 
-    def test_static_factor_of_safety(self):
+    def test_infinite_slope_fs(self):
         factor_of_safety = np.array(
             [
                 17.74377843,
@@ -110,25 +98,6 @@ class test_landslides_cali_small(unittest.TestCase):
             self.sites["Fs"], factor_of_safety
         )
 
-    def test_rock_slope_static_factor_of_safety(self):
-        factor_of_safety = np.array(
-            [
-                2.071956744,
-                2.080927766,
-                2.167042027,
-                0.915956159,
-                0.222637517,
-                1.980662682,
-                1.573928892,
-                -199.6988708,
-                2.118003659,
-                2.079743754,
-            ]
-        )
-
-        np.testing.assert_array_almost_equal(
-            self.sites["Fs_rs"], factor_of_safety
-        )
 
     def test_critical_accel(self):
         ca = np.array(
@@ -148,27 +117,10 @@ class test_landslides_cali_small(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(self.sites["crit_accel"], ca)
 
-    def test_critical_accel_rs(self):
-        ca = np.array(
-            [
-                3.199987178,
-                3.552731915,
-                3.344287126,
-                0,
-                0,
-                3.049107153,
-                2.395455067,
-                0,
-                3.617319351,
-                3.550633786,
-            ]
-        )
-
-        np.testing.assert_array_almost_equal(self.sites["crit_accel_rs"], ca)
 
     def test_newmark_displacement(self):
-        self.sites["newmark_disp"] = newmark_displ_from_pga_M(
-            pga=self.pga, critical_accel=self.sites["crit_accel"], M=7.5
+        self.sites["newmark_disp"] = jibson_2007_model_b(
+            pga=self.pga, crit_accel=self.sites["crit_accel"], mag=7.5
         )
 
         nd = np.array(
@@ -177,31 +129,6 @@ class test_landslides_cali_small(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(self.sites["newmark_disp"], nd)
 
-    def test_newmark_prob_displacement(self):
-        self.sites["newmark_disp"] = newmark_displ_from_pga_M(
-            pga=self.pga, critical_accel=self.sites["crit_accel"], M=7.5
-        )
-
-        self.sites["prob_disp"] = prob_failure_given_displacement(
-            self.sites["newmark_disp"]
-        )
-
-        prob_d = np.array([0.0, 0.0, 0.0, 0.335, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-
-        np.testing.assert_array_almost_equal(self.sites["prob_disp"], prob_d)
-
-    def test_rock_slope_coseismic_displacement(self):
-        self.sites["rock_slope_displacement"] = newmark_displ_from_pga(
-            pga=self.pga, critical_accel=self.sites["crit_accel_rs"]
-        )
-
-        nd = np.array(
-            [0.0, 0.0, 0.0, 1.080767, 1.080767, 0.0, 0.0, 1.080767, 0.0, 0.0]
-        )
-
-        np.testing.assert_array_almost_equal(
-            self.sites["rock_slope_displacement"], nd
-        )
 
     def test_nowicki_jessee_18(self):
         prob_ls, coverage = nowicki_jessee_2018(
