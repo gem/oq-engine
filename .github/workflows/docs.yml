@@ -122,7 +122,7 @@ jobs:
           MULTI_DOCS_FOR_DEVEL: "false"
         run: |
           bash --version
-          LTS_VER=$(grep '^Current LTS' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
+          LTS_VER=$(grep '^The current LTS' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
           ENG_VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
 
           if [ -z "$BUILD" ]; then
