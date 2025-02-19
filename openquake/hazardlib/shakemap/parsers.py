@@ -780,7 +780,8 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     :param use_shakemap: download the ShakeMap only if True
     :param rupture_file: None
     :param station_data_file: None
-    :param download_usgs_stations: download USGS stations if station_data_file is None
+    :param download_usgs_stations: download USGS stations, only if
+        station_data_file is None and the ShakeMap is not used
     :returns: (rupture object or None, rupture dictionary, error dictionary or {})
     """
     rupdic = {}
