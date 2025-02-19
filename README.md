@@ -28,6 +28,7 @@ DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
 ### Current Long Term Support (LTS) release - for users wanting stability
 
+<!-- WARNING! LTS Version is read by .github/workflows/docs.yml action processing the next line, if you change the 'The current LTS version is **OpenQuake Engine 3.23**' part, change that script accordingly.  -->
 The current LTS version is **OpenQuake Engine 3.23** 'Bellamy'. [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.23.html) [(branch)](https://github.com/gem/oq-engine/tree/engine-3.23)
 
 The code name for version 3.23 is **Bellamy**, in memory of the English seismologist [Ethel Bellamy](https://en.wikipedia.org/wiki/Ethel_Bellamy).
