@@ -733,7 +733,7 @@ function capitalizeFirstLetter(val) {
                         conversion_issues += '<p>' + data.error + '</p>';
                         $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
                     }
-                    $('#station_data_file').val(data.station_data_file);
+                    $('#station_data_file_from_usgs').val(data.station_data_file);
                     if (data.station_data_issue) {
                         $('#station_data_file_loaded').val('N.A. (conversion issue)');
                         conversion_issues += '<p>' + data.station_data_issue + '</p>';
@@ -867,6 +867,13 @@ function capitalizeFirstLetter(val) {
             });
             $('#clearStationDataFile').click(function() {
                 $('#station_data_file_input').val('');
+                $('#maximum_distance_stations').val('');
+                $('#maximum_distance_stations').prop('disabled', true);
+            });
+            $('#clearStationDataFromUsgs').click(function() {
+                $('#station_data_file_from_usgs').val('');
+                $('#station_data_file_loaded').val('');
+                $('#station_data_file').val('');
                 $('#maximum_distance_stations').val('');
                 $('#maximum_distance_stations').prop('disabled', true);
             });

@@ -726,11 +726,13 @@ def impact_get_rupture_data(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    station_data_file = None
     user = request.user
     user.testdir = None
+    # NOTE: at this stage, attempt to download station data from USGS
     rup, rupdic, _oqparams, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file)
+        request.POST, user, rupture_path, station_data_file,
+        download_usgs_stations=True)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
@@ -783,10 +785,16 @@ def impact_run(request):
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    station_data_file_from_usgs = request.POST.get('station_data_file_from_usgs', '')
+    # giving priority to the user-uploaded stations
+    if not station_data_file and station_data_file_from_usgs:
+        station_data_file = station_data_file_from_usgs
     user = request.user
     user.testdir = None
+    # at this stage, do not attempt to re-load station data from the USGS
     _rup, rupdic, params, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file)
+        request.POST, user, rupture_path, station_data_file,
+        download_usgs_stations=False)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)

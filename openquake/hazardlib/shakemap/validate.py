@@ -251,6 +251,7 @@ def get_tmap_keys(exposure_hdf5, countries):
 
 
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,
+                    download_usgs_stations=True,
                     monitor=performance.Monitor()):
     """
     This is called by `impact_get_rupture_data` and `impact_run`.
@@ -258,6 +259,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     returns (rup, rupdic, [station_file], error).
     In the second case the form contains all fields and returns
     (rup, rupdic, params, error).
+    Only in the former case we need to attempt to download station data from the USGS
     """
     err = {}
     dic, params, err = _validate(POST)
@@ -275,7 +277,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
 
     rup, rupdic, err = get_rup_dic(
         dic, user, approach, use_shakemap, rupture_file, station_data_file,
-        monitor)
+        download_usgs_stations, monitor)
     if err:
         return None, None, None, err
     # round floats
