@@ -28,13 +28,13 @@ DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
 ### Current Long Term Support (LTS) release - for users wanting stability
 
-Current LTS version is the **OpenQuake Engine 3.16** 'Angela':
+Current LTS version is the **OpenQuake Engine 3.23** 'Bellamy':
 
-The code name for version 3.16 is **Angela**, in memory of the Italian science journalist [Piero Angela](https://en.wikipedia.org/wiki/Piero_Angela). [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.16.html)
+The code name for version 3.23 is **Bellamy**, in memory of the English seismologist [Ethel Bellamy](https://en.wikipedia.org/wiki/Ethel_Bellamy). [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.23.html)
 
 ### Latest release - for users needing the latest features
 
-Latest stable version is the **OpenQuake Engine 3.22**.* [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.22.html)
+Latest stable version is the **OpenQuake Engine 3.23**.* [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.23.html)
 
 <!-- GEM END -->
 
