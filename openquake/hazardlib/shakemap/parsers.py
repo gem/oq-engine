@@ -45,7 +45,6 @@ from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter
 from openquake.hazardlib.source.rupture import (
     get_multiplanar, is_matrix, build_planar_rupture_from_dict)
-from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -788,6 +787,10 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         rupdic.update(rupture_file=rupture_file,
                       station_data_file=station_data_file,
                       require_dip_strike=True)
+        try:
+            rup = build_planar_rupture_from_dict(rupdic)
+        except ValueError as exc:
+            err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
 
     if rupture_file and rupture_file.endswith('.xml'):
@@ -823,12 +826,13 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
 
     if approach == 'build_rup_from_usgs':
         rupdic['nodal_planes'], err = _get_nodal_planes(properties)
-        rupdic['msrs'] = [msr.__class__.__name__
-                          for msr in get_available_magnitude_scalerel()]
+        rupdic['aspect_ratio'] = dic['aspect_ratio']
+        rupdic['msr'] = dic['msr']
         if err:
             return None, rupdic, err
 
-    if not rup_data and approach != 'use_pnt_rup_from_usgs':
+    if not rup_data and approach not in ['use_pnt_rup_from_usgs',
+                                         'build_rup_from_usgs']:
         with monitor('Downloading rupture json'):
             rup_data, rupture_file = download_rupture_data(
                 usgs_id, contents, user)
@@ -846,7 +850,10 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         rupdic['station_data_file_from_usgs'] = False
     if not rup_data:
         # in parsers_test
-        rup = build_planar_rupture_from_dict(rupdic)
+        try:
+            rup = build_planar_rupture_from_dict(rupdic)
+        except ValueError as exc:
+            err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
 
     rup = convert_to_oq_rupture(rup_data)

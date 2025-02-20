@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Fixed modified_gsim (valid.py) to work with more complex
+    GMMs (e.g. NGAEast GMPE Tables) + added a unit test
+
 python3-oq-engine (3.23.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
