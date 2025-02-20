@@ -868,15 +868,11 @@ function capitalizeFirstLetter(val) {
             });
             $('#clearStationDataFile').click(function() {
                 $('#station_data_file_input').val('');
-                $('#maximum_distance_stations').val('');
-                $('#maximum_distance_stations').prop('disabled', true);
             });
             $('#clearStationDataFromUsgs').click(function() {
                 $('#station_data_file_from_usgs').val('');
                 $('#station_data_file_loaded').val('');
                 $('#station_data_file').val('');
-                $('#maximum_distance_stations').val('');
-                $('#maximum_distance_stations').prop('disabled', true);
             });
             $("#impact_run_form > input").click(function() {
                 $(this).css("background-color", "white");
@@ -944,13 +940,6 @@ function capitalizeFirstLetter(val) {
             });
             $("#impact_run_form > input").click(function() {
                 $(this).css("background-color", "white");
-            });
-            $('#station_data_file_input').on('change', function() {
-                if ($(this).get(0).files.length > 0) {
-                    $('#maximum_distance_stations').prop('disabled', false);
-                } else {
-                    $('#maximum_distance_stations').prop('disabled', true);
-                }
             });
         });
 })($, Backbone, _, gem_oq_server_url);
