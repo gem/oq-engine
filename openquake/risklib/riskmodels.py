@@ -405,6 +405,8 @@ class RiskModel(object):
         sid = assets['site_id']
         if loss_type == 'occupants':
             val = assets['occupants_%s' % self.time_event].to_numpy()
+        elif loss_type in 'affected injured':
+            val = assets['value-residents'].to_numpy()
         else:
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)

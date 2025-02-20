@@ -1212,11 +1212,11 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     return station_data, imts
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
+def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     """
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
-    :param exp_types: the expected loss types
+    :param inp_types: the input loss types
     :returns: (site collection, asset collection, discarded, exposure)
     """
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
@@ -1257,7 +1257,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
 
     # check on missing fields in the exposure
     if 'risk' in oqparam.calculation_mode:
-        for exp_type in exp_types:
+        for exp_type in inp_types:
             if not any(exp_type in name
                        for name in assetcol.array.dtype.names):
                 raise InvalidFile('The exposure %s is missing %s' %
