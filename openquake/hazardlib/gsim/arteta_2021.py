@@ -325,7 +325,8 @@ class ArtetaEtAl2021SlabVs30(ArtetaEtAl2021InterVs30):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Required distance measure is hypocentral for in-slab events
-    REQUIRES_DISTANCES = {'rhypo', 'backarc'}
+    REQUIRES_DISTANCES = {'rhypo'}
+    REQUIRES_SITES_PARAMETERS = {'backarc'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
