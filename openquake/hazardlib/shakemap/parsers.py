@@ -694,7 +694,7 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, shakemap_version,
             # in parsers_test
             err_msg = f'Unable to download from {url}: {exc}'
             err = {"status": "failed", "error_msg": err_msg}
-            return None, None, None, None, err
+            return None, None, None, None, None, err
 
     js = json.loads(text)
     properties = js['properties']
@@ -707,6 +707,8 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, shakemap_version,
                       if skm['properties']['event-description'] == shakemap_version]
     else:
         shakemap = _get_preferred_item(shakemaps)
+        # if the shakemap_version was not specified, set it as the preferred one
+        shakemap_version = shakemap['properties']['event-description']
     contents = shakemap['contents']
 
     if (user.level == 1 or use_shakemap) and 'download/grid.xml' in contents:
@@ -722,7 +724,7 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, shakemap_version,
         shakemap_array = get_shakemap_array(grid_fname)
     else:
         shakemap_array = None
-    return contents, properties, shakemap_array, shakemaps_list, err
+    return contents, properties, shakemap_array, shakemap_version, shakemaps_list, err
 
 
 def _get_nodal_planes(properties):
@@ -822,9 +824,11 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
             return rup, rupdic, err
 
     assert usgs_id
-    contents, properties, shakemap, shakemaps_list, err = _contents_properties_shakemap(
-        usgs_id, user, use_shakemap, dic.get('shakemap_version', None), monitor)
+    contents, properties, shakemap, shakemap_version, shakemaps_list, err = \
+        _contents_properties_shakemap(
+            usgs_id, user, use_shakemap, dic.get('shakemap_version', None), monitor)
     rupdic['shakemaps_list'] = shakemaps_list
+    rupdic['shakemap_version'] = shakemap_version
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:

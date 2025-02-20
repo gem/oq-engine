@@ -792,6 +792,9 @@ function capitalizeFirstLetter(val) {
                             const $option = $('<option>').text(shakemap_version);
                             $select.append($option);
                         }
+                        if ('shakemap_version' in data) {
+                            $select.val(data.shakemap_version);
+                        }
                     } else {
                         $('div#shakemap_version').addClass('hidden');
                     }

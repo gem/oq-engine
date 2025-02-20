@@ -124,13 +124,16 @@ class ShakemapParsersTestCase(unittest.TestCase):
             use_shakemap=True)
         self.assertEqual(dic['shakemaps_list'],
                          ['ShakeMap Atlas v4', 'Corinth, Greece'])
+        self.assertEqual(dic['shakemap_version'], 'ShakeMap Atlas v4')
         # get data from different shakemap versions
         _rup, dic, _err = get_rup_dic(
             {'usgs_id': 'usp0001ccb', 'shakemap_version': 'ShakeMap Atlas v4'},
             user=user, approach='use_pnt_rup_from_usgs', use_shakemap=True)
+        self.assertEqual(dic['shakemap_version'], 'ShakeMap Atlas v4')
         _rup, dic, _err = get_rup_dic(
             {'usgs_id': 'usp0001ccb', 'shakemap_version': 'Corinth, Greece'},
             user=user, approach='use_pnt_rup_from_usgs', use_shakemap=True)
+        self.assertEqual(dic['shakemap_version'], 'Corinth, Greece')
 
 
 """
