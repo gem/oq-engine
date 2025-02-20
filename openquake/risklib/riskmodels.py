@@ -403,9 +403,9 @@ class RiskModel(object):
         imt = self.imt_by_lt[loss_type]
         col = self.alias.get(imt, imt)
         sid = assets['site_id']
-        if loss_type in 'occupants injured':
+        if loss_type == 'occupants':
             val = assets['occupants_%s' % self.time_event].to_numpy()
-        elif loss_type == 'affected':
+        elif loss_type in 'affected injured':
             val = assets['value-residents'].to_numpy()
         else:
             val = assets['value-' + loss_type].to_numpy()
