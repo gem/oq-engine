@@ -1,0 +1,4 @@
+#,,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.24.0-gitdc0933e7fc', start_date='2025-02-20T08:02:13', checksum=3499539554, investigation_time=None, risk_investigation_time=None"
+asset_id,ID_0,ID_1,ID_2,ID_3,NAME_0,NAME_1,NAME_2,NAME_3,OCCUPANCY,taxonomy,lon,lat,affected,injured
+Res_4358,ALB,7,No_tag,47l215,Albania,Korce,No_tag,Drenove,Res,CR/LWAL+CDM+DUM/H4/RES,20.79708,40.60625,0.00000E+00,1.05500E-07
+Res_8321,ALB,12,No_tag,4cz353,Albania,Vlore,No_tag,Aliko,Res,CR/LWAL+CDM+DUM/H6/RES,20.07708,39.84625,0.00000E+00,0.00000E+00
