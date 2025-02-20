@@ -702,6 +702,10 @@ function capitalizeFirstLetter(val) {
                     }
                     formData.append('msr', $("select#msr").find(':selected').val());
                 }
+                const $shakemap_selector = $("select#shakemap_version");
+                if ($shakemap_selector.length && $shakemap_selector.is(":has(option)")) {
+                    formData.append('shakemap_version', $shakemap_selector.find(':selected').val());
+                }
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/impact_get_rupture_data",
@@ -778,6 +782,18 @@ function capitalizeFirstLetter(val) {
                         $('#rake').val(nodal_plane.rake);
                         $('#dip').val(nodal_plane.dip);
                         $('#strike').val(nodal_plane.strike);
+                    }
+                    if ('shakemaps_list' in data) {
+                        $('div#shakemap_version').removeClass('hidden');
+                        const shakemap_versions = data.shakemaps_list;
+                        const $select = $('select#shakemap_version');
+                        $select.empty();
+                        for (shakemap_version of shakemap_versions) {
+                            const $option = $('<option>').text(shakemap_version);
+                            $select.append($option);
+                        }
+                    } else {
+                        $('div#shakemap_version').addClass('hidden');
                     }
                     $('#mosaic_model').empty();
                     $.each(data.mosaic_models, function(index, mosaic_model) {

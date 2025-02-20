@@ -132,6 +132,7 @@ ARISTOTLE_FORM_LABELS = {
     'maximum_distance_stations': 'Maximum distance of stations (km)',
     'nodal_plane': 'Nodal plane',
     'msr': 'Magnitude scaling relationship',
+    'shakemap_version': 'ShakeMap version',
 }
 
 ARISTOTLE_FORM_PLACEHOLDERS = {
@@ -275,7 +276,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     approach = POST['approach']
     if approach == 'build_rup_from_usgs':
         dic['msr'] = POST['msr']
-
+    if 'shakemap_version' in POST:
+        dic['shakemap_version'] = POST['shakemap_version']
     rup, rupdic, err = get_rup_dic(
         dic, user, approach, use_shakemap, rupture_file, station_data_file,
         download_usgs_stations, monitor)

@@ -117,6 +117,21 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['msr'], '')
         self.assertEqual(dic['aspect_ratio'], 2.0)
 
+    def test_8(self):
+        # collect multiple shakemap versions
+        _rup, dic, _err = get_rup_dic(
+            {'usgs_id': 'usp0001ccb'}, user=user, approach='use_pnt_rup_from_usgs',
+            use_shakemap=True)
+        self.assertEqual(dic['shakemaps_list'],
+                         ['ShakeMap Atlas v4', 'Corinth, Greece'])
+        # get data from different shakemap versions
+        _rup, dic, _err = get_rup_dic(
+            {'usgs_id': 'usp0001ccb', 'shakemap_version': 'ShakeMap Atlas v4'},
+            user=user, approach='use_pnt_rup_from_usgs', use_shakemap=True)
+        _rup, dic, _err = get_rup_dic(
+            {'usgs_id': 'usp0001ccb', 'shakemap_version': 'Corinth, Greece'},
+            user=user, approach='use_pnt_rup_from_usgs', use_shakemap=True)
+
 
 """
 NB: to profile a test you can use

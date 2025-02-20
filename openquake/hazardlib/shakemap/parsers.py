@@ -675,7 +675,8 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     return rupdic
 
 
-def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
+def _contents_properties_shakemap(usgs_id, user, use_shakemap, shakemap_version,
+                                  monitor):
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
     #     url = SHAKEMAP_URL.format(usgs_id)
     #     f.write(urlopen(url).read())
@@ -693,13 +694,19 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
             # in parsers_test
             err_msg = f'Unable to download from {url}: {exc}'
             err = {"status": "failed", "error_msg": err_msg}
-            return None, None, None, err
+            return None, None, None, None, err
 
     js = json.loads(text)
     properties = js['properties']
 
+    shakemaps = properties['products']['shakemap']
+    shakemaps_list = [skm['properties']['event-description'] for skm in shakemaps]
     # NB: currently we cannot find a case with missing shakemap
-    shakemap = _get_preferred_item(properties['products']['shakemap'])
+    if shakemap_version:
+        [shakemap] = [skm for skm in shakemaps
+                      if skm['properties']['event-description'] == shakemap_version]
+    else:
+        shakemap = _get_preferred_item(shakemaps)
     contents = shakemap['contents']
 
     if (user.level == 1 or use_shakemap) and 'download/grid.xml' in contents:
@@ -715,7 +722,7 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
         shakemap_array = get_shakemap_array(grid_fname)
     else:
         shakemap_array = None
-    return contents, properties, shakemap_array, err
+    return contents, properties, shakemap_array, shakemaps_list, err
 
 
 def _get_nodal_planes(properties):
@@ -815,21 +822,26 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
             return rup, rupdic, err
 
     assert usgs_id
-    contents, properties, shakemap, err = _contents_properties_shakemap(
-        usgs_id, user, use_shakemap, monitor)
+    contents, properties, shakemap, shakemaps_list, err = _contents_properties_shakemap(
+        usgs_id, user, use_shakemap, dic.get('shakemap_version', None), monitor)
+    rupdic['shakemaps_list'] = shakemaps_list
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
-        rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
+        _rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
         if err:
             return None, None, err
+        else:
+            rupdic.update(_rupdic)
     elif ('download/rupture.json' not in contents
           or approach == 'use_finite_rup_from_usgs'):
         # happens for us6000f65h in parsers_test
-        rupdic, err = load_rupdic_from_finite_fault(
+        _rupdic, err = load_rupdic_from_finite_fault(
             usgs_id, properties['mag'], properties['products'])
         if err:
             return None, None, err
+        else:
+            rupdic.update(_rupdic)
 
     if approach == 'build_rup_from_usgs':
         rupdic['nodal_planes'], err = _get_nodal_planes(properties)
@@ -843,8 +855,9 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         with monitor('Downloading rupture json'):
             rup_data, rupture_file = download_rupture_data(
                 usgs_id, contents, user)
-    if not rupdic:
-        rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
+    if not rupdic or 'lon' not in rupdic:
+        _rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
+        rupdic.update(_rupdic)
     if (approach != 'use_shakemap_from_usgs' and not station_data_file
             and download_usgs_stations):
         with monitor('Downloading stations'):
