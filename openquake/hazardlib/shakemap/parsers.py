@@ -811,7 +811,6 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
-
     if rupture_file:
         if rupture_file.endswith('.xml'):
             rup, rupdic, err = _get_rup_dic_from_xml(
@@ -833,6 +832,7 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
             if err:
                 return None, None, err
             if approach == 'build_rup_from_usgs':
+                rupdic['require_dip_strike'] = True
                 rupdic['nodal_planes'], err = _get_nodal_planes(properties)
                 if err:
                     return None, None, err
@@ -840,7 +840,6 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
                     rupdic.update(rupdic['nodal_planes']['NP1'])
         else:
             rupdic = dic.copy()
-            rupdic['require_dip_strike'] = True
     elif ('download/rupture.json' not in contents
           or approach == 'use_finite_rup_from_usgs'):
         # happens for us6000f65h in parsers_test
