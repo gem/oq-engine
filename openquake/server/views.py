@@ -747,7 +747,8 @@ def impact_get_rupture_data(request):
             with_cities=False, return_base64=True, rupture=rup)
         del rupdic['shakemap_array']
     elif rup is not None:
-        img_base64 = plot_rupture(rup, figsize=(8, 8), return_base64=True)
+        img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
+                                  return_base64=True)
         rupdic['rupture_png'] = img_base64
     return HttpResponse(content=json.dumps(rupdic), content_type=JSON,
                         status=200)
