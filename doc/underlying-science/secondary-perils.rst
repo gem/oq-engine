@@ -417,29 +417,29 @@ Factors contributing to slope failures are rather complex. The permanent displac
 (1965) <https://www.icevirtuallibrary.com/doi/abs/10.1680/geot.1965.15.2.139>`_ is used to model the dynamic performance
 of slopes (`Jibson et al., 2000 <https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_, 
 `Jibson 2007 <https://www.sciencedirect.com/science/article/pii/S0013795207000300?via%3Dihub>`_). It considers a slope
-as a rigid block resting on an inclined plane at an angle :math:`\slope` (derived from Digital Elevation Model, DEM). 
-When the input motion which is expressed in terms of acceleration exceeds the critical acceleration, :math:`crit_accel`, the
+as a rigid block resting on an inclined plane at an angle :math:`slope` (derived from Digital Elevation Model, DEM). 
+When the input motion which is expressed in terms of acceleration exceeds the critical acceleration, :math:`critaccel`, the
 block starts to move. The critical acceleration accounts for the shear strength and geometrical characteristics of the
 sliding surface, and is calculated as:
 
 .. math:: 
 
-   crit_accel =(F_{s}-1)\ - \sin(\slope)\cdot g \\ (17)
+   critaccel =(F_{s}-1)\ - \sin(slope)\cdot g \\ (17)
 
-The static factor of safety is calculated according to the infinite slope model(`Jibson et al., 2000 <https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_),
+The static factor of safety is calculated according to the infinite slope model (`Jibson et al., 2000 <https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_),
 which is well suited for shallow disrupted slides, one of the most common landslide types during earthquakes 
 (`Keefer, 1984 <https://people.wou.edu/~taylors/g407/Spring_2022/Keefer_1984_Landslides_Coseismic.pdf>`_):
 
 .. math::
 
-    F_{s} = \frac{cohesion'}{\soil_dry_density slab_thickness \sin(\slope)} + \frac{\tan(\friction_angle')}{\tan(\slope)} - \frac{saturation_coeff \water_density \tan(\friction_angle')}{\soil_dry_density \tan(\slope)} \\(18)
+    F_{s} = \frac{cohesion'}{soildrydensity slabthickness \sin(slope)} + \frac{\tan(frictionangle')}{\tan(slope)} - \frac{saturationcoeff waterdensity \tan(frictionangle')}{soildrydensity \tan(slope)} \\(18)
 
 where: :math:`cohesion' \, [\text{Pa}]` is the effective cohesion with typical values ranging from :math:`20 \text{kPa}` for
-soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`\slope^\circ` is the slope angle. :math:`\friction_angle'^\circ` is 
+soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`slope^\circ` is the slope angle. :math:`frictionangle'^\circ` is 
 the effective friction angle with typical values ranging from :math:`30^\circ` to :math:`40^\circ`. 
-:math:`\soil_dry_density \, [\text{kg/m^3}]` is the dry density of the material. It ranges from :math:`1500 \, \text{kg/m^3}` 
-for soils to :math:`2500 - 3200 \, \text{kg/m^3}`. :math:`slab_thickness` is the slope-normal thickness of a failure slab in meters and :math:`saturation_coeff` 
-is the proportion of slab thickness that is saturated. :math:`\water_density \, [\text{kg/m^3}]` 
+:math:`\soildrydensity \, [\text{kg/m^3}]` is the dry density of the material. It ranges from :math:`1500 \, \text{kg/m^3}` 
+for soils to :math:`2500 - 3200 \, \text{kg/m^3}`. :math:`slabthickness` is the slope-normal thickness of a failure slab in meters and :math:`saturationcoeff` 
+is the proportion of slab thickness that is saturated. :math:`\waterdensity \, [\text{kg/m^3}]` 
 is the unit weight of water which equals to :math:`1000 \, \text{kg/m^3}`.
 
 Note that the units of the input parameters reported in this document corresponds to the format required by the Engine 
@@ -464,18 +464,18 @@ for 2270 strong-motion records and by assuming critical acceleration values in t
 
 Model a
 
-..math::
+.. math::
 	
-	\log(Disp_{cm}) = 0.215 + \log [\left( 1 - \frac{crit_accel}{PGA}} \right)^{2.341} \cdot \left( \frac{crit_accel}{PGA} \right)^{-1.438}] \\ (19)
+	\log(Disp_{cm}) = 0.215 + \log [\left( 1 - \frac{critaccel}{PGA}} \right)^{2.341} \cdot \left( \frac{critaccel}{PGA} \right)^{-1.438}] \\ (19)
 
 Model b
 
-..math::
+.. math::
 
-	\log(Disp_{cm}) = -2.710 + \log [\left( 1 - \frac{crit_accel}{PGA} \right)^{2.335} \cdot \left( \frac{crit_accel}{PGA} \right)^{−1.478}] + 0.424 M \\ (20)
+	\log(Disp_{cm}) = -2.710 + \log [\left( 1 - \frac{critaccel}{PGA} \right)^{2.335} \cdot \left( \frac{critaccel}{PGA} \right)^{−1.478}] + 0.424 M \\ (20)
 
 where :math:`Disp_{cm}` is the predicted co-seismic displacement in cm, but it is converted to m by OQ; :math:`PGA` is the Peak Ground Acceleration in g;
-:math:`crit_accel` is the landslide critical acceleration in g and :math:`M` is the moment magnitude of the earthquake. Jibson (2007) recommends using model b
+:math:`critaccel` is the landslide critical acceleration in g and :math:`M` is the moment magnitude of the earthquake. Jibson (2007) recommends using model b
 only when magnitude is between 5.3 and 7.6.
 
 
@@ -487,7 +487,7 @@ Cho & Rathje (2022)
 for the maximum earthquake-induced displacement along the surface of slope failures subjected to shallow crustal earthquakes.
 The dataset used to derive the predictive models consists of displacement values calculated by finite element numerical modelling for 49 slope models
 and 1051 earthquakes. The most efficient model developed by the authors computes earthquake-induced displacements (:math:`Disp_{cm}`, in cm) as a function of the 
-landslide critical acceleration (:math:`crit_accel`, in g units), the :math:`PGV`(in cm/s), the natural period of the slope (:math:`T_{slope}`, in s) and the :math:`H ratio`, i.e., the ratio
+landslide critical acceleration (:math:`critaccel`, in g units), the :math:`PGV` (in cm/s), the natural period of the slope (:math:`T_{slope}`, in s) and the :math:`H ratio`, i.e., the ratio
 between the landslide thickness and the slope height:
 
 .. math::
@@ -498,15 +498,17 @@ If :math:`H_{ratio} \leq 0.6`:
 
 .. math::
 
-    a_{0} = -1.01 + 1.57 \cdot \ln(T_{slope}) - 0.25 \cdot \ln(crit_accel) \\ (22)
+    a_{0} = -1.01 + 1.57 \cdot \ln(T_{slope}) - 0.25 \cdot \ln(critaccel) \\ (22)
+
     a_{1} = 0.81 - 1.05 \cdot \ln(T_{slope}) - 0.60 \cdot (\ln(T_{slope}))^2 \\ (23)
 
 If :math:`H_{ratio} > 0.6`:
 
 .. math::
 
-    a_{0} = -4.50 - 1.37 \cdot \ln(crit_accel) \\ (24)
-    a_{1} = 1.51 + 0.10 \cdot \ln(crit_accel) \\ (25)
+    a_{0} = -4.50 - 1.37 \cdot \ln(critaccel) \\ (24)
+
+    a_{1} = 1.51 + 0.10 \cdot \ln(critaccel) \\ (25)
 	
 
 Displacements returned by openquake are converted to m.
@@ -524,27 +526,27 @@ Model a
 
 .. math::
 
-   \ln(Disp) = -9.891 + 1.873 \ln{(PGV)} - 5.964 crit_accel + 0.285 M \\ (26)
+   \ln(Disp) = -9.891 + 1.873 \ln{(PGV)} - 5.964 critaccel + 0.285 M \\ (26)
    
 Model b
 
 .. math::
 
-   \ln(Disp) = -2.965 + 2.127 \ln{(PGA)} - 6.583 crit_accel + 0.535 M \\ (27)
+   \ln(Disp) = -2.965 + 2.127 \ln{(PGA)} - 6.583 critaccel + 0.535 M \\ (27)
    
 Model c
 
 .. math::
 
-   \ln(Disp) = -10.246 - 2.165 \ln{\left(\frac{crit_accel}{PGA}\right)} + 7.844 crit_accel + 0.654 M \\ (28)
+   \ln(Disp) = -10.246 - 2.165 \ln{\left(\frac{critaccel}{PGA}\right)} + 7.844 critaccel + 0.654 M \\ (28)
    
 Model d
 
 .. math::
 
-   \ln(Disp) = -8.360 + 1.873 \ln{(PGV)} - 0.347 \ln{\left(\frac{crit_accel}{PGA}\right)} - 5.964 crit_accel \\ (29)
+   \ln(Disp) = -8.360 + 1.873 \ln{(PGV)} - 0.347 \ln{\left(\frac{critaccel}{PGA}\right)} - 5.964 critaccel \\ (29)
    
-where :math:`PGA` is in g units, :math:`PGV` is in cm/s, :math:`crit_accel` is the landslide critical acceleration in g and :math:`M` is the moment magnitude.
+where :math:`PGA` is in g units, :math:`PGV` is in cm/s, :math:`critaccel` is the landslide critical acceleration in g and :math:`M` is the moment magnitude.
 
 
 ***********************
@@ -553,19 +555,19 @@ Saygili & Rathje (2008)
 
 `Saygili & Rathje (2008) <https://ascelibrary.org/doi/10.1061/%28ASCE%291090-0241%282008%29134%3A6%28790%29>`_ have proposed predictive models for
 earthquake-induced displacements of landslides based on the rigid-block hypothesis by `Newmark (1965) <https://www.icevirtuallibrary.com/doi/abs/10.1680/geot.1965.15.2.139>`_.
-The models were defined by using displacement values computed assuming critical acceleration values (:math:`crit_accel`, in g units) from 0.05g and 0.3g and
+The models were defined by using displacement values computed assuming critical acceleration values (:math:`critaccel`, in g units) from 0.05g and 0.3g and
 2383 ground-motions. The authors reccomend to use the predictive model that computes displacements as a function of :math:`PGA` and :math:`PGV`, as considering simultaneously these 
 ground-motion parameters reduces the standard deviation.
 
 .. math::
 
-   \ln (Disp_{cm}) = -1.56 - 4.58 \cdot \left(\frac{crit_accel}{PGA}\right) 
-   - 20.84 \cdot \left(\frac{crit_accel}{PGA}\right)^2 
-   + 44.75 \cdot \left(\frac{crit_accel}{PGA}\right)^3 
-   - 30.50 \cdot \left(\frac{crit_accel}{PGA}\right)^4 
+   \ln (Disp_{cm}) = -1.56 - 4.58 \cdot \left(\frac{critaccel}{PGA}\right) 
+   - 20.84 \cdot \left(\frac{critaccel}{PGA}\right)^2 
+   + 44.75 \cdot \left(\frac{critaccel}{PGA}\right)^3 
+   - 30.50 \cdot \left(\frac{critaccel}{PGA}\right)^4 
    - 0.64 \cdot \ln(PGA) + 1.55 \cdot \ln(PGV) \\ (30)
    
-where :math:`Disp_{cm}` is the earthquake-induced displacement in cm (converted to m OQ), :math:`PGA` is g units, :math:`crit_accel` is the landslide critical acceleration in g and 
+where :math:`Disp_{cm}` is the earthquake-induced displacement in cm (converted to m OQ), :math:`PGA` is g units, :math:`critaccel` is the landslide critical acceleration in g and 
 :math:`PGV` is in cm/s.
 
 ***********************
@@ -578,11 +580,11 @@ dependent from the moment magnitude :math:`M` of the earthquake.
 
 .. math::
 
-   \ln (Disp_{cm}) = 4.89 - 4.85 \left(\frac{crit_accel}{PGA}\right) - 19.64 \left(\frac{crit_accel}{PGA}\right)^2 
-   + 42.49 \left(\frac{crit_accel}{PGA}\right)^3 - 29.06 \left(\frac{crit_accel}{PGA}\right)^4 
+   \ln (Disp_{cm}) = 4.89 - 4.85 \left(\frac{critaccel}{PGA}\right) - 19.64 \left(\frac{critaccel}{PGA}\right)^2 
+   + 42.49 \left(\frac{critaccel}{PGA}\right)^3 - 29.06 \left(\frac{critaccel}{PGA}\right)^4 
    + 0.72 \ln(PGA) + 0.89 (M - 6) \\ (31)
    
-where :math:`Disp_{cm}` is the earthquake-induced displacement in cm (but converted to m by OQ), :math:`PGA` is g units, :math:`crit_accel` is the landslide critical acceleration in g and 
+where :math:`Disp_{cm}` is the earthquake-induced displacement in cm (but converted to m by OQ), :math:`PGA` is g units, :math:`critaccel` is the landslide critical acceleration in g and 
 :math:`M` is the moment magnitude of the earthquake.
 
 ***********************
@@ -595,10 +597,10 @@ previously proposed by `Jibson (1993) <https://onlinepubs.trb.org/Onlinepubs/trr
 
 .. math::
 
-	\log (Disp_{cm}) = 1.521\log (IA) - 1.993 \log (crit_accel) - 1.546   \\ (32)
+	\log (Disp_{cm}) = 1.521\log (IA) - 1.993 \log (critaccel) - 1.546   \\ (32)
 
 where :math:`Disp_{cm}` is the co-seismic displacement in cm, then converted to m by OQ, :math:`IA` is the Arias Intensity in m/s and 
-:math:`crit_accel` is the landslide critical acceleration in g units.
+:math:`critaccel` is the landslide critical acceleration in g units.
 
 `Jibson et al. (2000) <https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_ have also proposed a regression curve for the computation of 
 the probability of slope failure (:math:`P(f)`) as function of Newmark displacements computed according to eq.32 for the Northridge earthquake:
