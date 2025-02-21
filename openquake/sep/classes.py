@@ -18,10 +18,7 @@
 import abc
 import inspect
 from openquake.hazardlib import imt
-from openquake.sep.landslide.static_safety_factor import (
-    infinite_slope_fs,
-)
-
+from openquake.sep.landslide.static_safety_factor import infinite_slope_fs
 from openquake.sep.landslide.displacement import (
     critical_accel,
     jibson_2007_model_a,
@@ -35,14 +32,12 @@ from openquake.sep.landslide.displacement import (
     rathje_saygili_2009,
     jibson_etal_2000,
 )
-
 from openquake.sep.landslide.probability import(
     nowicki_jessee_2018,
     LANDCOVER_TABLE,
     LITHOLOGY_TABLE,
     jibson_etal_2000_probability,
 )
-
 from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability,
     zhu_etal_2015_general,
@@ -589,9 +584,6 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
 
     outputs = ["LiqOccur", "LiqProb"]
 
-    def __init__(self):
-        pass
-
     def prepare(self, sites):
         model_file = (
             "liquefaction/data/todorovic_silva_2022/todorovic_silva_2022.onnx.gz"
@@ -735,9 +727,6 @@ class ChoRathje2022Landslides(SecondaryPeril):
     ''' 
     outputs = ["Disp"]
 
-    def __init__(self):
-        pass
-
     def prepare(self, sites):
         sites.add_col(
             "Fs",
@@ -775,11 +764,7 @@ class FotopoulouPitilakis2015ALandslides(SecondaryPeril):
     Computes earthquake-induced displacements of landslides from
     pgv and moment magnitude.
     '''
-
     outputs = ["Disp"]
-
-    def __init__(self):
-        pass
 
     def prepare(self, sites):
         sites.add_col(
@@ -818,9 +803,6 @@ class FotopoulouPitilakis2015BLandslides(SecondaryPeril):
     '''
     outputs = ["Disp"]
 
-    def __init__(self):
-        pass
-
     def prepare(self, sites):
         sites.add_col(
             "Fs",
@@ -857,9 +839,6 @@ class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
     '''
     outputs = ["Disp"]
 
-    def __init__(self):
-        pass
-
     def prepare(self, sites):
         sites.add_col(
             "Fs",
@@ -895,12 +874,8 @@ class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
     '''
     Computes earthquake-induced displacements of landslides from pgv and 
     pga
-    '''
-    
+    '''    
     outputs = ["Disp"]
-
-    def __init__(self):
-        pass
 
     def prepare(self, sites):
         sites.add_col(
@@ -949,9 +924,6 @@ class SaygiliRathje2008Landslides(SecondaryPeril):
     Computes earthquake-induced displacements from pga and pgv
     '''   
     outputs = ["Disp"]
-
-    def __init__(self):
-        pass
 
     def prepare(self, sites):
         sites.add_col(
@@ -1005,9 +977,6 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
     ''' 
     outputs = ["Disp"]
 
-    def __init__(self):
-        pass
-
     def prepare(self, sites):
         sites.add_col(
             "Fs",
@@ -1044,11 +1013,7 @@ class JibsonEtAl2000Landslides(SecondaryPeril):
     Computes earthquake-induced displacements and related probability according to
     Jibson et al. (2000) as function of arias intensity.
     '''
-
     outputs = ["Disp", "DispProb"]
-
-    def __init__(self):
-        pass
 
     def prepare(self, sites):
         sites.add_col(

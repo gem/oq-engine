@@ -25,7 +25,7 @@ level 6            calculators
 level 5            commonlib
 level 4            risklib
 level 3            hmtk
-level 2            hazardlib
+level 2            hazardlib, sep
 level 1            baselib
 """
 import os.path
@@ -35,6 +35,7 @@ from openquake.baselib.general import assert_independent
 
 
 class IndependenceTestCase(unittest.TestCase):
+
     def test_hazardlib(self):
         assert_independent('openquake.hazardlib', 'openquake.calculators')
 

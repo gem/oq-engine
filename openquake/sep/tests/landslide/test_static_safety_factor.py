@@ -1,11 +1,6 @@
 import unittest
-
 import numpy as np
-
-from openquake.sep.landslide.static_safety_factor import (
-    infinite_slope_fs,
-)
-
+from openquake.sep.landslide.static_safety_factor import infinite_slope_fs
 
 slope = np.linspace(0.0, 60.0)
 
