@@ -1,3 +1,10 @@
+  [Marco Pagani, Michele Simionato]
+  * Fixed ArtetaEtAl2021SlabVs30 by adding backarc to the site parameters
+
+  [Manuela Villani, Michele Simionato]
+  * Extended the global_ses script to override several input parameters;
+    extended `oq show_attrs` to work with any HDF5 file
+
   [Christopher Brooks]
   * Fixed modified_gsim (valid.py) to work with more complex
     GMMs (e.g. NGAEast GMPE Tables) + added a unit test
