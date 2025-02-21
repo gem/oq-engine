@@ -1,3 +1,7 @@
+  [Mara Mita, Catarina Costa]
+  * Added new landslide models and replaced NewmarkDisplacement,
+    GrantEtAl2016RockSlopeFailure, NowickiJessee2018Landslides
+
   [Marco Pagani, Michele Simionato]
   * Fixed ArtetaEtAl2021SlabVs30 by adding backarc to the site parameters
 
