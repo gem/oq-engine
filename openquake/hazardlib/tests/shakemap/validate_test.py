@@ -61,13 +61,6 @@ class AristotleValidateTestCase(unittest.TestCase):
         self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
-    def test_1c(self):
-        # giving a ValueError with aspect_ratio 2
-        POST = {'usgs_id': 'us6000jllz', 'approach': 'build_rup_from_usgs',
-                'msr': 'WC1994', 'aspect_ratio': '2'}
-        _rup, _rupdic, _params, err = impact_validate(POST, user)
-        self.assertIn('The depth must be greater', err['error_msg'])
-
     def test_2(self):
         POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs',
                 'msr': ''}

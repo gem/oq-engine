@@ -828,9 +828,19 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
-        rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
-        if err:
-            return None, None, err
+        if dic.get('lon', None) is None:  # do not override user-inserted values if present
+            rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
+            if err:
+                return None, None, err
+            if approach == 'build_rup_from_usgs':
+                rupdic['nodal_planes'], err = _get_nodal_planes(properties)
+                if err:
+                    return None, None, err
+                else:
+                    rupdic.update(rupdic['nodal_planes']['NP1'])
+        else:
+            rupdic = dic.copy()
+            rupdic['require_dip_strike'] = True
     elif ('download/rupture.json' not in contents
           or approach == 'use_finite_rup_from_usgs'):
         # happens for us6000f65h in parsers_test
@@ -838,13 +848,6 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
             usgs_id, properties['mag'], properties['products'])
         if err:
             return None, None, err
-
-    if approach == 'build_rup_from_usgs':
-        rupdic['nodal_planes'], err = _get_nodal_planes(properties)
-        rupdic['aspect_ratio'] = dic['aspect_ratio']
-        rupdic['msr'] = dic['msr']
-        if err:
-            return None, rupdic, err
 
     if not rup_data and approach not in ['use_pnt_rup_from_usgs',
                                          'build_rup_from_usgs']:
