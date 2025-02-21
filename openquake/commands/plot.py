@@ -1092,7 +1092,7 @@ def make_figure_rupture(extractors, what):
         [ex] = extractors
         dstore = ex.dstore
         rup = get_ebrupture(dstore, rup_id=0).rupture
-    return plot_rupture(rup)
+    return plot_rupture(rup, with_borders=False)
 
 
 def make_figure_rupture_3d(extractors, what):
