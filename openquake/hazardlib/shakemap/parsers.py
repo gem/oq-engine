@@ -858,6 +858,8 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     if not rup_data:
         # in parsers_test
         try:
+            if approach == 'use_pnt_rup_from_usgs':
+                rupdic['msr'] = 'PointMSR'
             rup = build_planar_rupture_from_dict(rupdic)
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
