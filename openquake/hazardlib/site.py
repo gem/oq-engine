@@ -269,6 +269,9 @@ site_param_dt = {
     'precip': numpy.float64,
     'lithology': (numpy.bytes_,2),
     'landcover': (numpy.float64),
+    'hratio': (numpy.float64),
+    'tslope': (numpy.float64),
+    'slab_thickness': (numpy.float64),
 
     # parameters for YoudEtAl2002
     'freeface_ratio': numpy.float64,
