@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import ast
 import time
 import gzip
 import json
@@ -28,6 +30,7 @@ from shapely.geometry import Polygon, LineString
 from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
+from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import (
@@ -39,6 +42,22 @@ from openquake.calculators.postproc.aelo_plots import (
 
 
 ZOOM_MARGIN = 8
+
+
+def getparams(what):
+    """
+    >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10')
+    {'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}
+    """
+    assert '?' in what, what
+    dic = {}
+    for namevalue in what.split('?')[1].split('&'):
+        name, value = namevalue.split('=')
+        try:
+            dic[name] = ast.literal_eval(value)
+        except ValueError:
+            dic[name] = value
+    return dic
 
 
 def make_figure_magdist(extractors, what):
@@ -1056,12 +1075,24 @@ def make_figure_sources(extractors, what):
 
 def make_figure_rupture(extractors, what):
     """
+    There are two ways of using this command:
+
     $ oq plot "rupture?"
+
+    extracts the rupture from an already performed scenario calculation;
+    
+    $ oq plot "rupture?mag=6&lon=10&lat=45&dep=10&rake=45&msr=WC1994"
+
+    builds a new planar rupture.
     """
-    [ex] = extractors
-    dstore = ex.dstore
-    ebr = get_ebrupture(dstore, rup_id=0)
-    return plot_rupture(ebr.rupture)
+    params = getparams(what)
+    if params:
+        rup = build_planar_rupture_from_dict(params)
+    else:
+        [ex] = extractors
+        dstore = ex.dstore
+        rup = get_ebrupture(dstore, rup_id=0).rupture
+    return plot_rupture(rup)
 
 
 def make_figure_rupture_3d(extractors, what):
