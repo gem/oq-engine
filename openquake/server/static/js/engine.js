@@ -751,8 +751,6 @@ function capitalizeFirstLetter(val) {
                     else if (data.require_dip_strike) {
                         $('#dip').prop('disabled', false);
                         $('#strike').prop('disabled', false);
-                        $('#dip').val('90');
-                        $('#strike').val('0');
                     } else {
                         $('#dip').prop('disabled', true);
                         $('#strike').prop('disabled', true);

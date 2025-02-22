@@ -106,7 +106,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_7(self):
         dic_in = {'usgs_id': 'us6000jllz', 'lon': None, 'lat': None, 'dep': None,
-                  'mag': None, 'msr': '', 'aspect_ratio': 2.0, 'rake': None,
+                  'mag': None, 'msr': '', 'aspect_ratio': 2, 'rake': None,
                   'dip': None, 'strike': None}
         _rup, dic, _err = get_rup_dic(
             dic_in, user=user, approach='build_rup_from_usgs', use_shakemap=True)
@@ -114,8 +114,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
             dic['nodal_planes'],
             {'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
              'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}})
-        self.assertEqual(dic['msr'], '')
-        self.assertEqual(dic['aspect_ratio'], 2.0)
 
     def test_8(self):
         dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256,
@@ -125,6 +123,31 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['msr'], 'PointMSR')
         self.assertAlmostEqual(rup.surface.length, 0.0133224)
         self.assertAlmostEqual(rup.surface.width, 0.0070800)
+
+    def test_9(self):
+        dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256, 'dep': 10,
+                  'mag': 7.8, 'msr': 'WC1994', 'aspect_ratio': 3,
+                  'rake': -179.18, 'dip': 88.71, 'strike': 317.63}
+        _rup, dic, _err = get_rup_dic(
+            dic_in, user=user, approach='build_rup_from_usgs', use_shakemap=True)
+        self.assertEqual(dic['dep'], 10)
+        self.assertEqual(dic['dip'], 88.71)
+        self.assertEqual(dic['lat'], 37.2256)
+        self.assertEqual(dic['lon'], 37.0143)
+        self.assertEqual(dic['mag'], 7.8)
+        self.assertEqual(dic['msr'], 'WC1994')
+        self.assertEqual(dic['rake'], -179.18)
+        self.assertEqual(dic['strike'], 317.63)
+        self.assertEqual(dic['require_dip_strike'], True)
+        self.assertEqual(dic['aspect_ratio'], 3)
+
+    def test_10(self):
+        dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256, 'dep': 10.0,
+                  'mag': 7.8, 'msr': 'WC1994', 'aspect_ratio': 2.0,
+                  'rake': -179.18, 'dip': 88.71, 'strike': 317.63}
+        _rup, _dic, err = get_rup_dic(
+            dic_in, user=user, approach='build_rup_from_usgs', use_shakemap=True)
+        self.assertIn('The depth must be greater', err['error_msg'])
 
 
 """
