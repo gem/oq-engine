@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Internal: introduced parameter `config.memory.gmf_data_rows`
+
   [Marco Pagani, Michele Simionato]
   * Fixed ArtetaEtAl2021SlabVs30 by adding backarc to the site parameters
 
