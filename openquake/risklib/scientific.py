@@ -1820,8 +1820,10 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
-    if xltype in ['affectedpop', 'injured']:
+    if xltype == 'affectedpop':
         return aval['residents']
+    elif xltype == 'injured':  # like fatalities
+        return aval[f'occupants_{time_event}']
     if consequence in ['collapsed', 'non_operational']:
         return aval['number']
     elif consequence in ['injured', 'fatalities']:
