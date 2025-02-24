@@ -117,6 +117,15 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['msr'], '')
         self.assertEqual(dic['aspect_ratio'], 2.0)
 
+    def test_8(self):
+        dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256,
+                  'dep': 10.0, 'mag': 7.8, 'rake': 0.0}
+        rup, dic, _err = get_rup_dic(
+            dic_in, user=user, approach='use_pnt_rup_from_usgs', use_shakemap=True)
+        self.assertEqual(dic['msr'], 'PointMSR')
+        self.assertAlmostEqual(rup.surface.length, 0.0133224)
+        self.assertAlmostEqual(rup.surface.width, 0.0070800)
+
 
 """
 NB: to profile a test you can use

@@ -303,8 +303,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error(
             'lo', {'lo': lt, 'sm1': sm, 'sm2': sm}, logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 4)
-        self.assertEqual(exc.message, "branchset weights don't sum up to 1.0",
-                         "wrong exception message: %s" % exc.message)
+        self.assertEqual(
+            exc.message, "branchset weights sum up to 1.1, not 1",
+            "wrong exception message: %s" % exc.message)
 
     def test_apply_to_nonexistent_branch(self):
         lt = _make_nrml("""\

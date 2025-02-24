@@ -326,6 +326,7 @@ class ArtetaEtAl2021SlabVs30(ArtetaEtAl2021InterVs30):
 
     #: Required distance measure is hypocentral for in-slab events
     REQUIRES_DISTANCES = {'rhypo'}
+    REQUIRES_SITES_PARAMETERS = {'backarc'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

@@ -1731,6 +1731,7 @@ def read_countries_df(buffer=0.1):
     """
     :returns: a DataFrame of geometries for the world countries
     """
+    logging.info('Reading geoBoundariesCGAZ_ADM0.sh')  # slow
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.shp')
     return read_geometries(fname, 'shapeGroup', buffer)
