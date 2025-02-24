@@ -86,7 +86,7 @@ def make_figure_hcurves(extractors, what):
                 logging.warning('There is a zero curve %s_%s', *ck)
             ax.loglog(imls, arr.flat, '-', label='%s_%s' % ck)
         for poe in oq.poes:
-            ax.plot(imls, [poe]*len(imls), label=f'{poe=}')
+            ax.loglog(imls, [poe]*len(imls), label=f'{poe=}')
         ax.grid(True)
         ax.legend()
     return plt
