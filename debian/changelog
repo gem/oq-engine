@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed `oq plot?hcurves`: the disaggregation PoEs were plotted in linear
+    scale and not in logarithmic scale
   * Internal: introduced parameter `config.memory.gmf_data_rows`
 
   [Marco Pagani, Michele Simionato]
