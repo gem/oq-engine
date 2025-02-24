@@ -163,11 +163,18 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
 }
 
 validators = {
+    'approach': valid.Choice('use_shakemap_from_usgs',
+                             'use_pnt_rup_from_usgs',
+                             'build_rup_from_usgs',
+                             'use_finite_rup_from_usgs',
+                             'provide_rup',
+                             'provide_rup_params'),
     'usgs_id': valid.simple_id,
     'lon': valid.longitude,
     'lat': valid.latitude,
     'dep': valid.positivefloat,
     'mag': valid.positivefloat,
+    'msr': valid.utf8,
     'aspect_ratio': valid.positivefloat,
     'rake': valid.rake_range,
     'dip': valid.dip_range,
@@ -190,7 +197,7 @@ def _validate(POST):
     validation_errs = {}
     invalid_inputs = []
     params = {}
-    dic = dict(usgs_id=None, lon=None, lat=None, dep=None,
+    dic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
                mag=None, msr=None, aspect_ratio=None, rake=None, dip=None, strike=None)
     for field, validation_func in validators.items():
         if field not in POST:
@@ -198,7 +205,7 @@ def _validate(POST):
         try:
             value = validation_func(POST.get(field))
         except Exception as exc:
-            blankable = ['dip', 'strike',
+            blankable = ['dip', 'strike', 'msr',
                          'maximum_distance_stations', 'local_timestamp']
             if field in blankable and POST.get(field) == '':
                 if field in dic:
@@ -272,12 +279,9 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
-    approach = POST['approach']
-    if approach == 'build_rup_from_usgs':
-        dic['msr'] = POST['msr']
 
     rup, rupdic, err = get_rup_dic(
-        dic, user, approach, use_shakemap, rupture_file, station_data_file,
+        dic, user, use_shakemap, rupture_file, station_data_file,
         download_usgs_stations, monitor)
     if err:
         return None, None, None, err
