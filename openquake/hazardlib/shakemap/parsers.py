@@ -828,7 +828,7 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
-        if dic.get('lon', None) is None:  # do not override user-inserted values if present
+        if dic.get('lon', None) is None:  # don't override user-inserted values
             rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
             if err:
                 return None, None, err
@@ -852,8 +852,7 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     if not rup_data and approach not in ['use_pnt_rup_from_usgs',
                                          'build_rup_from_usgs']:
         with monitor('Downloading rupture json'):
-            rup_data, rupture_file = download_rupture_data(
-                usgs_id, contents, user)
+            rup_data, rupture_file = download_rupture_data(usgs_id, contents, user)
     if not rupdic:
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
     if (approach != 'use_shakemap_from_usgs' and not station_data_file
