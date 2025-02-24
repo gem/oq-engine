@@ -37,6 +37,11 @@ from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
+from openquake.sep import classes
+
+RENAMED_SEPS = {
+    'NewmarkDisplacement': "Jibson2007BLandslides",
+    'GrantEtAl2016RockSlopeFailure': "Jibson2007ALandslides"}
 
 PRECISION = pmf.PRECISION
 
@@ -1265,6 +1270,21 @@ def version(value: str):
         if 'git' not in number:
             vers[i] = int(number)
     return tuple(vers)
+
+
+def secondary_perils(value: str):
+    """
+    >>> secondary_perils("Jibson2007ALandslides, AllstadtEtAl2022Liquefaction")
+    ['Jibson2007ALandslides', 'AllstadtEtAl2022Liquefaction']
+    """
+    clsnames = namelist(value)
+    out = []
+    for name in clsnames:
+        if name in RENAMED_SEPS:
+            raise ValueError(
+                f'{name} has been replaced with {RENAMED_SEPS[name]}')
+        out.append(getattr(classes, name).__name__)
+    return out
 
 
 ###########################################################################

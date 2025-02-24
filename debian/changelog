@@ -1,3 +1,7 @@
+  [Mara Mita, Catarina Costa]
+  * Added new landslide models and replaced NewmarkDisplacement,
+    GrantEtAl2016RockSlopeFailure, NowickiJessee2018Landslides
+
   [Michele Simionato]
   * Extended the output loss types to `affected` and `injured`
   * Fixed `oq plot?hcurves`: the disaggregation PoEs were plotted in linear
