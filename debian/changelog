@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended the output loss types to `affected` and `injured`
   * Fixed `oq plot?hcurves`: the disaggregation PoEs were plotted in linear
     scale and not in logarithmic scale
   * Internal: introduced parameter `config.memory.gmf_data_rows`
