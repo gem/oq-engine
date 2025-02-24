@@ -27,6 +27,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
+from openquake.hazardlib.geo.utils import SiteAssociationError
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -305,8 +306,12 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         params['station_data_file'] = rupdic['station_data_file']
         with monitor('get_oqparams'):
             ap = AristotleParam(**params)
-            oqparams = ap.get_oqparams(
-                dic['usgs_id'], mosaic_models, trts, use_shakemap)
+            try:
+                oqparams = ap.get_oqparams(
+                    dic['usgs_id'], mosaic_models, trts, use_shakemap)
+            except SiteAssociationError as exc:
+                oqparams = None
+                err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, oqparams, err
     else:  # called by impact_get_rupture_data
         return rup, rupdic, params, err
