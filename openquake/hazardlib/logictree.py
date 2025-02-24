@@ -640,7 +640,7 @@ class SourceModelLogicTree(object):
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(
                 branchset_node, self.filename,
-                "branchset weights don't sum up to 1.0")
+                f"branchset weights sum up to {weight_sum}, not 1")
         if ''.join(values) and len(set(values)) < len(values):
             raise LogicTreeError(
                 branchset_node, self.filename,

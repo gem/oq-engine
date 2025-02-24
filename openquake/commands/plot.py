@@ -100,12 +100,13 @@ def make_figure_hcurves(extractors, what):
         ax.set_xlabel('%s, site %s, inv_time=%dy' %
                       (imt, site, oq.investigation_time))
         ax.set_ylabel('PoE')
+        ax.set_xlabel('acceleration')
         for ck, arr in got.items():
             if (arr == 0).all():
                 logging.warning('There is a zero curve %s_%s', *ck)
             ax.loglog(imls, arr.flat, '-', label='%s_%s' % ck)
         for poe in oq.poes:
-            ax.plot(imls, [poe]*len(imls), label=f'{poe=}')
+            ax.loglog(imls, [poe]*len(imls), label=f'{poe=}')
         ax.grid(True)
         ax.legend()
     return plt
