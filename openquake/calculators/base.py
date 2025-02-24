@@ -814,7 +814,7 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        inp_types = set(self.crmodel.loss_types) - {'injured', 'affected'}
+        inp_types = set(self.crmodel.loss_types) - {'injured', 'affectedpop'}
         self.sitecol, self.assetcol, discarded, exposure = \
             readinput.get_sitecol_assetcol(
                 oq, haz_sitecol, inp_types, self.datastore)
