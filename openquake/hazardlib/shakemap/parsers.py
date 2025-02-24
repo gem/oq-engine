@@ -773,7 +773,7 @@ def _get_rup_from_json(usgs_id, rupture_file, station_data_file):
     return rup, rupdic, rup_data
 
 
-def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
+def get_rup_dic(dic, user=User(),
                 use_shakemap=False, rupture_file=None,
                 station_data_file=None, download_usgs_stations=True,
                 monitor=performance.Monitor()):
@@ -787,8 +787,6 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
 
     :param dic: dictionary with ShakeMap ID and other parameters
     :param user: User instance
-    :param approach: the workflow selected by the user
-        (default: 'use_shakemap_from_usgs')
     :param use_shakemap: download the ShakeMap only if True
     :param rupture_file: None
     :param station_data_file: None
@@ -800,6 +798,7 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     rup_data = {}
     err = {}
     usgs_id = dic['usgs_id']
+    approach = dic['approach']
     rup = None
     if approach == 'provide_rup_params':
         rupdic = dic.copy()
@@ -811,7 +810,6 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
-
     if rupture_file:
         if rupture_file.endswith('.xml'):
             rup, rupdic, err = _get_rup_dic_from_xml(
