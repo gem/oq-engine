@@ -855,8 +855,9 @@ class EventBasedCalculator(base.HazardCalculator):
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.hazard_curves_from_gmfs:
-            if size > 4E7:
-                msg = 'gmf_data has {:_d} rows'.format(size)
+            maxsize = int(config.memory.gmf_data_rows)
+            if size > maxsize:
+                msg = 'gmf_data has {:_d} rows > {:_d}'.format(size, maxsize)
                 raise RuntimeError(f'{msg}: too big to compute the hcurves')
             build_hcurves(self)
             if oq.compare_with_classical:  # compute classical curves

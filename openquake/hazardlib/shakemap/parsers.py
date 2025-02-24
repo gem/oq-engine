@@ -761,6 +761,18 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file, station_data_file):
     return rup, rupdic, err
 
 
+def _get_rup_from_json(usgs_id, rupture_file, station_data_file):
+    rup = None
+    rupdic = {}
+    with open(rupture_file) as f:
+        rup_data = json.load(f)
+    if usgs_id == 'FromFile':
+        rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
+        rupdic['station_data_file'] = station_data_file
+        rup = convert_to_oq_rupture(rup_data)
+    return rup, rupdic, rup_data
+
+
 def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
                 use_shakemap=False, rupture_file=None,
                 station_data_file=None, download_usgs_stations=True,
@@ -800,18 +812,14 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
 
-    if rupture_file and rupture_file.endswith('.xml'):
-        rup, rupdic, err = _get_rup_dic_from_xml(
-            usgs_id, user, rupture_file, station_data_file)
+    if rupture_file:
+        if rupture_file.endswith('.xml'):
+            rup, rupdic, err = _get_rup_dic_from_xml(
+                usgs_id, user, rupture_file, station_data_file)
+        elif rupture_file.endswith('.json'):
+            rup, rupdic, rup_data = _get_rup_from_json(usgs_id, rupture_file,
+                                                       station_data_file)
         if err or usgs_id == 'FromFile':
-            return rup, rupdic, err
-    elif rupture_file and rupture_file.endswith('.json'):
-        with open(rupture_file) as f:
-            rup_data = json.load(f)
-        if usgs_id == 'FromFile':
-            rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
-            rupdic['station_data_file'] = station_data_file
-            rup = convert_to_oq_rupture(rup_data)
             return rup, rupdic, err
 
     assert usgs_id
@@ -858,6 +866,8 @@ def get_rup_dic(dic, user=User(), approach='use_shakemap_from_usgs',
     if not rup_data:
         # in parsers_test
         try:
+            if approach == 'use_pnt_rup_from_usgs':
+                rupdic['msr'] = 'PointMSR'
             rup = build_planar_rupture_from_dict(rupdic)
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}

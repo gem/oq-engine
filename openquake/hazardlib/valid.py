@@ -39,9 +39,9 @@ from openquake.hazardlib.calc.filters import (  # noqa
 )
 from openquake.sep import classes
 
-OBSOLETE_SEPS = {
-    'NewmarkDisplacement', 'GrantEtAl2016RockSlopeFailure',
-    'NowickiJessee2018Landslides'}
+RENAMED_SEPS = {
+    'NewmarkDisplacement': "Jibson2007BLandslides",
+    'GrantEtAl2016RockSlopeFailure': "Jibson2007ALandslides"}
 
 PRECISION = pmf.PRECISION
 
@@ -1280,11 +1280,9 @@ def secondary_perils(value: str):
     clsnames = namelist(value)
     out = []
     for name in clsnames:
-        if name in OBSOLETE_SEPS:
+        if name in RENAMED_SEPS:
             raise ValueError(
-                f'{name} has been replaced: see https://docs.openquake.org/'
-                'oq-engine/master/manual/underlying-science/secondary-perils'
-                '.html')
+                f'{name} has been replaced with {RENAMED_SEPS[name]}')
         out.append(getattr(classes, name).__name__)
     return out
 

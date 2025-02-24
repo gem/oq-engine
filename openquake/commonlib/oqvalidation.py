@@ -913,7 +913,7 @@ ALL_COST_TYPES = [
     '+'.join(s) for l_idx in range(len(COST_TYPES))
     for s in itertools.combinations(COST_TYPES, l_idx + 1)]
 VULN_TYPES = COST_TYPES + [
-    'number', 'area', 'occupants', 'residents', 'affected', 'injured']
+    'number', 'area', 'occupants', 'residents', 'affectedpop', 'injured']
 
 
 def check_same_levels(imtls):
