@@ -20,6 +20,7 @@ import os
 import unittest
 from openquake.hazardlib.shakemap.parsers import (
     get_rup_dic, User, utc_to_local_time)
+from openquake.hazardlib.source.rupture import BaseRupture
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
@@ -157,6 +158,23 @@ class ShakemapParsersTestCase(unittest.TestCase):
         _rup, _dic, err = get_rup_dic(
             dic_in, user=user, use_shakemap=False)
         self.assertIn('The depth must be greater', err['error_msg'])
+
+    def test_12(self):
+        current_dir = os.path.dirname(__file__)
+        rupture_file_path = os.path.join(current_dir, 'data', 'fault_rupture.xml')
+        dic_in = {'usgs_id': 'FromFile', 'approach': 'provide_rup'}
+        rup, dic, _err = get_rup_dic(
+            dic_in, user=user, use_shakemap=False, rupture_file=rupture_file_path)
+        self.assertIsInstance(rup, BaseRupture)
+        self.assertEqual(dic['lon'], 84.4)
+        self.assertEqual(dic['lat'], 27.6)
+        self.assertEqual(dic['dep'], 30.0)
+        self.assertEqual(dic['mag'], 7.0)
+        self.assertEqual(dic['rake'], 90.0)
+        self.assertAlmostEqual(dic['strike'], 295.2473184)
+        self.assertAlmostEqual(dic['dip'], 30.0833517)
+        self.assertEqual(dic['usgs_id'], 'FromFile')
+        self.assertIn('.xml', dic['rupture_file'])
 
 
 """
