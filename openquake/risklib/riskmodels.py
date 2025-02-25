@@ -403,8 +403,10 @@ class RiskModel(object):
         imt = self.imt_by_lt[loss_type]
         col = self.alias.get(imt, imt)
         sid = assets['site_id']
-        if loss_type == 'occupants':
+        if loss_type in 'occupants injured':
             val = assets['occupants_%s' % self.time_event].to_numpy()
+        elif loss_type == 'affectedpop':
+            val = assets['value-residents'].to_numpy()
         else:
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
@@ -639,7 +641,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         for riskfunc in self.risklist:
             ids_by_kind[riskfunc.kind].add(riskfunc.id)
         kinds = tuple(ids_by_kind)  # vulnerability, fragility, ...
-        fnames = [fname for kind, fname in inputs.items() if kind.endswith(kinds)]
+        fnames = [fname for kind, fname in inputs.items()
+                  if kind.endswith(kinds)]
         if len(ids_by_kind) > 1:
             k = next(iter(ids_by_kind))
             base_ids = set(ids_by_kind.pop(k))

@@ -27,6 +27,7 @@ from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
+from openquake.hazardlib.geo.utils import SiteAssociationError
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -114,6 +115,7 @@ ARISTOTLE_FORM_LABELS = {
     'lat': 'Latitude (degrees)',
     'dep': 'Depth (km)',
     'mag': 'Magnitude (Mw)',
+    'aspect_ratio': 'Aspect ratio',
     'rake': 'Rake (degrees)',
     'local_timestamp': 'Local timestamp of the event',
     'time_event': 'Time of the event',
@@ -141,6 +143,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'lat': '-90 ≤ float ≤ 90',
     'dep': 'float ≥ 0',
     'mag': 'float ≥ 0',
+    'aspect_ratio': 'float ≥ 0',
     'rake': '-180 ≤ float ≤ 180',
     'local_timestamp': '',
     'time_event': 'day|night|transit',
@@ -161,11 +164,19 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
 }
 
 validators = {
+    'approach': valid.Choice('use_shakemap_from_usgs',
+                             'use_pnt_rup_from_usgs',
+                             'build_rup_from_usgs',
+                             'use_finite_rup_from_usgs',
+                             'provide_rup',
+                             'provide_rup_params'),
     'usgs_id': valid.simple_id,
     'lon': valid.longitude,
     'lat': valid.latitude,
     'dep': valid.positivefloat,
     'mag': valid.positivefloat,
+    'msr': valid.utf8,
+    'aspect_ratio': valid.positivefloat,
     'rake': valid.rake_range,
     'dip': valid.dip_range,
     'strike': valid.strike_range,
@@ -187,15 +198,15 @@ def _validate(POST):
     validation_errs = {}
     invalid_inputs = []
     params = {}
-    dic = dict(usgs_id=None, lon=None, lat=None, dep=None,
-               mag=None, rake=None, dip=None, strike=None)
+    dic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
+               mag=None, msr=None, aspect_ratio=None, rake=None, dip=None, strike=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
         try:
             value = validation_func(POST.get(field))
         except Exception as exc:
-            blankable = ['dip', 'strike',
+            blankable = ['dip', 'strike', 'msr',
                          'maximum_distance_stations', 'local_timestamp']
             if field in blankable and POST.get(field) == '':
                 if field in dic:
@@ -248,6 +259,7 @@ def get_tmap_keys(exposure_hdf5, countries):
 
 
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,
+                    download_usgs_stations=True,
                     monitor=performance.Monitor()):
     """
     This is called by `impact_get_rupture_data` and `impact_run`.
@@ -255,6 +267,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     returns (rup, rupdic, [station_file], error).
     In the second case the form contains all fields and returns
     (rup, rupdic, params, error).
+    Only in the former case, if stations have not been downloaded yet, we try to
+    download station data from the USGS
     """
     err = {}
     dic, params, err = _validate(POST)
@@ -266,11 +280,10 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
-    approach = POST['approach']
 
     rup, rupdic, err = get_rup_dic(
-        dic, user, approach, use_shakemap, rupture_file, station_data_file,
-        monitor)
+        dic, user, use_shakemap, rupture_file, station_data_file,
+        download_usgs_stations, monitor)
     if err:
         return None, None, None, err
     # round floats
@@ -288,15 +301,17 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    if 'msr' in POST:
-        rupdic['msr'] = POST['msr']
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
         with monitor('get_oqparams'):
             ap = AristotleParam(**params)
-            oqparams = ap.get_oqparams(
-                dic['usgs_id'], mosaic_models, trts, use_shakemap)
+            try:
+                oqparams = ap.get_oqparams(
+                    dic['usgs_id'], mosaic_models, trts, use_shakemap)
+            except SiteAssociationError as exc:
+                oqparams = None
+                err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, oqparams, err
     else:  # called by impact_get_rupture_data
         return rup, rupdic, params, err

@@ -71,6 +71,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+affectedpop injured
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -1819,6 +1820,10 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
+    if xltype == 'affectedpop':
+        return aval['residents']
+    elif xltype == 'injured':  # like fatalities
+        return aval[f'occupants_{time_event}']
     if consequence in ['collapsed', 'non_operational']:
         return aval['number']
     elif consequence in ['injured', 'fatalities']:

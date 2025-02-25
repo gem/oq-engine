@@ -46,6 +46,7 @@ import numpy
 from openquake.baselib import hdf5, config, parallel
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
+from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
@@ -725,11 +726,13 @@ def impact_get_rupture_data(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    station_data_file = None
     user = request.user
     user.testdir = None
+    # NOTE: at this stage, attempt to download station data from USGS
     rup, rupdic, _oqparams, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file)
+        request.POST, user, rupture_path, station_data_file,
+        download_usgs_stations=True)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
@@ -744,7 +747,8 @@ def impact_get_rupture_data(request):
             with_cities=False, return_base64=True, rupture=rup)
         del rupdic['shakemap_array']
     elif rup is not None:
-        img_base64 = plot_rupture(rup, figsize=(8, 8), return_base64=True)
+        img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
+                                  return_base64=True)
         rupdic['rupture_png'] = img_base64
     return HttpResponse(content=json.dumps(rupdic), content_type=JSON,
                         status=200)
@@ -769,7 +773,7 @@ def impact_run(request):
     :param request:
         a `django.http.HttpRequest` object containing
         usgs_id, rupture_file,
-        lon, lat, dep, mag, rake, dip, strike,
+        lon, lat, dep, mag, aspect_ratio, rake, dip, strike,
         local_timestamp, time_event,
         maximum_distance, trt,
         truncation_level, number_of_ground_motion_fields,
@@ -782,10 +786,17 @@ def impact_run(request):
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
+    station_data_file_from_usgs = request.POST.get('station_data_file_from_usgs', '')
+    # giving priority to the user-uploaded stations
+    if not station_data_file and station_data_file_from_usgs:
+        station_data_file = station_data_file_from_usgs
     user = request.user
     user.testdir = None
+    # at this stage, do not attempt to re-load station data from the USGS if they are
+    # missing or if the user explicitly decided to ignore them
     _rup, rupdic, params, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file)
+        request.POST, user, rupture_path, station_data_file,
+        download_usgs_stations=False)
     if err:
         return HttpResponse(content=json.dumps(err), content_type=JSON,
                             status=400 if 'invalid_inputs' in err else 500)
@@ -1273,6 +1284,8 @@ def web_engine(request, **kwargs):
         params['impact_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
         params['impact_default_usgs_id'] = \
             settings.ARISTOTLE_DEFAULT_USGS_ID
+        params['msrs'] = [msr.__class__.__name__
+                          for msr in get_available_magnitude_scalerel()]
     return render(
         request, "engine/index.html", params)
 

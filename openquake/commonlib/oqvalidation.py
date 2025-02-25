@@ -913,7 +913,7 @@ ALL_COST_TYPES = [
     '+'.join(s) for l_idx in range(len(COST_TYPES))
     for s in itertools.combinations(COST_TYPES, l_idx + 1)]
 VULN_TYPES = COST_TYPES + [
-    'number', 'area', 'occupants', 'residents', 'affected', 'injured']
+    'number', 'area', 'occupants', 'residents', 'affectedpop', 'injured']
 
 
 def check_same_levels(imtls):
@@ -1128,7 +1128,7 @@ class OqParam(valid.ParamSet):
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
     mea_tau_phi = valid.Param(valid.boolean, False)
-    secondary_perils = valid.Param(valid.namelist, [])
+    secondary_perils = valid.Param(valid.secondary_perils, [])
     sec_peril_params = valid.Param(valid.dictionary, {})
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)

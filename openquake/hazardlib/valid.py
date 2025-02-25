@@ -37,6 +37,11 @@ from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
+from openquake.sep import classes
+
+RENAMED_SEPS = {
+    'NewmarkDisplacement': "Jibson2007BLandslides",
+    'GrantEtAl2016RockSlopeFailure': "Jibson2007ALandslides"}
 
 PRECISION = pmf.PRECISION
 
@@ -194,8 +199,11 @@ def modified_gsim(gmpe, **kwargs):
 
     mgs = modified_gsim(gsim, add_between_within_stds={'with_betw_ratio':1.5})
     """
-    text = gmpe._toml.replace('[', '[ModifiableGMPE.gmpe.') + '\n'
-    text += toml.dumps({'ModifiableGMPE': kwargs})
+    name, *args = gmpe._toml.split('\n')
+    text = name.replace('[', '[ModifiableGMPE.gmpe.')
+    for arg in args:
+        text += '\n' + arg
+    text += '\n' + toml.dumps({'ModifiableGMPE': kwargs})
     return gsim(text)
 
 
@@ -1169,6 +1177,14 @@ def positiveints(value):
     return ints
 
 
+def indexes(value):
+    """
+    >>> indexes("1,2,A")
+    ('1', '2', 'A')
+    """
+    return tuple(value.split(','))
+
+
 def tile_spec(value):
     """
     Specify a tile with a string of format "no:nt"
@@ -1262,6 +1278,21 @@ def version(value: str):
         if 'git' not in number:
             vers[i] = int(number)
     return tuple(vers)
+
+
+def secondary_perils(value: str):
+    """
+    >>> secondary_perils("Jibson2007ALandslides, AllstadtEtAl2022Liquefaction")
+    ['Jibson2007ALandslides', 'AllstadtEtAl2022Liquefaction']
+    """
+    clsnames = namelist(value)
+    out = []
+    for name in clsnames:
+        if name in RENAMED_SEPS:
+            raise ValueError(
+                f'{name} has been replaced with {RENAMED_SEPS[name]}')
+        out.append(getattr(classes, name).__name__)
+    return out
 
 
 ###########################################################################

@@ -1,3 +1,24 @@
+  [Mara Mita, Catarina Costa]
+  * Added new landslide models and replaced NewmarkDisplacement,
+    GrantEtAl2016RockSlopeFailure, NowickiJessee2018Landslides
+
+  [Michele Simionato]
+  * Extended the output loss types to `affected` and `injured`
+  * Fixed `oq plot?hcurves`: the disaggregation PoEs were plotted in linear
+    scale and not in logarithmic scale
+  * Internal: introduced parameter `config.memory.gmf_data_rows`
+
+  [Marco Pagani, Michele Simionato]
+  * Fixed ArtetaEtAl2021SlabVs30 by adding backarc to the site parameters
+
+  [Manuela Villani, Michele Simionato]
+  * Extended the global_ses script to override several input parameters;
+    extended `oq show_attrs` to work with any HDF5 file
+
+  [Christopher Brooks]
+  * Fixed modified_gsim (valid.py) to work with more complex
+    GMMs (e.g. NGAEast GMPE Tables) + added a unit test
+
 python3-oq-engine (3.23.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]

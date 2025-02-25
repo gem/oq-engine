@@ -1025,12 +1025,12 @@ def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
 
 def build_planar_rupture_from_dict(rupture_dict):
     """
-    Leverage the build_planar function to build a rupture with a PlanarSurface
-    suitable for scenario calculations
+    Build a rupture with a PlanarSurface.
 
-    :param rupture_dict: a dictionary containing at least the coordinates of the
-        hypocenter ('lon', 'lat' and 'dep'), the magnitude ('mag') and the 'rake'
-        and, optionally, the 'trt' (default '*'), the 'strike' (default 0) and
+    :param rupture_dict:
+        a dictionary containing at least the coordinates of the hypocenter
+        ('lon', 'lat' and 'dep'), the magnitude ('mag') and the 'rake' and,
+        optionally, the 'trt' (default '*'), the 'strike' (default 0) and
         the 'dip' (default 90).
     :returns: a BaseRupture with a PlanarSurface built around the site
     """
@@ -1040,13 +1040,12 @@ def build_planar_rupture_from_dict(rupture_dict):
     strike = r.get('strike', 0)
     dip = r.get('dip', 90)
     if not r.get('msr'):
-        rup = build_planar(
-            hypo, r['mag'], r['rake'],
-            strike, dip, trt)
+        # use the IPT method, to be removed
+        rup = build_planar(hypo, r['mag'], r['rake'], strike, dip, trt)
     else:
         aratio = r.get('aspect_ratio', 2.)
         msr = MSR[r['msr']]()
-        rup = get_planar(
-            site.Site(Point(r['lon'], r['lat'], r['dep'])), msr, r['mag'], aratio,
-            strike, dip, r['rake'], trt, ztor=None)
+        site_ = site.Site(Point(r['lon'], r['lat'], r['dep']))
+        rup = get_planar(site_, msr, r['mag'], aratio,
+                         strike, dip, r['rake'], trt)
     return rup

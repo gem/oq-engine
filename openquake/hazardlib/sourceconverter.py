@@ -1175,8 +1175,7 @@ class SourceConverter(RuptureConverter):
                 probs.append(prb)
                 mags.append(~rupnode.magnitude)
                 rakes.append(~rupnode.rake)
-                indexes = rupnode.sectionIndexes['indexes']
-                idxs.append(tuple(indexes.split(',')))
+                idxs.append(rupnode.sectionIndexes['indexes'])
         with context(self.fname, node):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)

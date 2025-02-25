@@ -310,7 +310,7 @@ validators = {
     'type': valid.simple_id,
     'dims': valid.positiveints,
     'iml': valid.positivefloat,
-    'index': valid.positiveints,
+    'indexes': valid.indexes,
     'value': valid.positivefloat,
     'assetLifeExpectancy': valid.positivefloat,
     'interestRate': valid.positivefloat,

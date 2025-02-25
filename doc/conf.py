@@ -124,12 +124,6 @@ html_theme_options = {
             "type": "fontawesome",
         },
         {
-            "name": "X/Twitter",
-            "url": "https://x.com/GEMwrld",
-            "icon": "fa-brands fa-square-x-twitter",
-            "type": "fontawesome",
-        },
-        {
             "name": "YouTube",
             "url": "https://youtube.com/@gemglobalearthquakemodel3652",
             "icon": "fa-brands fa-square-youtube",

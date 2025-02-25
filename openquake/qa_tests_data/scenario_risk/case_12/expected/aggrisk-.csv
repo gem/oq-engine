@@ -1,0 +1,4 @@
+#,,"generated_by='OpenQuake engine 3.24.0-git9a320d0992', start_date='2025-02-20T09:18:53', checksum=1096989786, investigation_time=None, risk_investigation_time=None"
+loss_type,loss_value,loss_ratio
+affectedpop,7.02600E-07,3.76527E-09
+injured,1.09800E-07,5.88424E-10
