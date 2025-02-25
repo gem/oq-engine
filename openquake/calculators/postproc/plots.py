@@ -20,6 +20,8 @@ import io
 import os
 import base64
 import numpy
+import contextily
+from pyproj import Transformer
 from shapely.geometry import MultiPolygon
 from openquake.commonlib import readinput, datastore
 from openquake.hmtk.plotting.patch import PolygonPatch
@@ -31,6 +33,23 @@ def import_plt():
     else:
         import matplotlib.pyplot as plt
     return plt
+
+
+def add_basemap(ax, min_x, min_y, max_x, max_y,
+                source=contextily.providers.CartoDB.Positron):
+    # NOTE: another interesting option:
+    # source = contextily.providers.TopPlusOpen.Grey
+    img, extent = contextily.bounds2img(min_x, min_y, max_x, max_y, source=source)
+    ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
+    ax.text(
+        0.01, 0.01,  # Position: Bottom-left corner (normalized coordinates)
+        source['attribution'],
+        transform=ax.transAxes,  # Place text relative to axes
+        fontsize=8, color="black", alpha=0.5,
+        ha="left",  # Horizontal alignment
+        va="bottom",  # Vertical alignment
+    )
+    return ax
 
 
 def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
@@ -45,6 +64,7 @@ def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
     xlim = x_center - max_range / 2, x_center + max_range / 2
     ylim = y_center - max_range / 2, y_center + max_range / 2
     return xlim, ylim
+
 
 def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
     plt = import_plt()
@@ -113,30 +133,35 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
         matplotlib.use(backend)
     _fig, ax = plt.subplots(figsize=figsize)
     ax.set_aspect('equal')
-    ax.grid(True)
+    # ax.grid(True)
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
     title = 'Avg GMF for %s' % imt
     ax.set_title(title)
     gmf = shakemap_array['val'][imt]
-    markersize = 5
-    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
-                      cmap='jet', s=markersize)
-    plt.colorbar(coll)
-    ax = add_borders(ax, alpha=0.2)
-    min_x = shakemap_array['lon'].min()
-    max_x = shakemap_array['lon'].max()
-    min_y = shakemap_array['lat'].min()
-    max_y = shakemap_array['lat'].max()
+    markersize = 0.005
+    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
+    x_webmercator, y_webmercator = transformer.transform(
+        shakemap_array['lon'], shakemap_array['lat'])
+    min_x, min_y, max_x, max_y = (min(x_webmercator),
+                                  min(y_webmercator),
+                                  max(x_webmercator),
+                                  max(y_webmercator))
     if rupture is not None:
-        ax, rup_min_x, rup_min_y, rup_max_x, rup_max_y = add_rupture(
-            ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
+        ax, rup_min_x, rup_min_y, rup_max_x, rup_max_y = add_rupture_webmercator(
+            ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=1,
             surf_facecolor='none', surf_linestyle='--')
         min_x = min(min_x, rup_min_x)
         max_x = max(max_x, rup_max_x)
         min_y = min(min_y, rup_min_y)
         max_y = max(max_y, rup_max_y)
-    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
+    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
+    min_x, max_x = xlim
+    min_y, max_y = ylim
+    add_basemap(ax, min_x, min_y, max_x, max_y)
+    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
+                      alpha=0.4)
+    plt.colorbar(coll, ax=ax)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     if with_cities:
@@ -151,10 +176,9 @@ def plot_avg_gmf(ex, imt):
     plt = import_plt()
     _fig, ax = plt.subplots(figsize=(10, 10))
     ax.set_aspect('equal')
-    ax.grid(True)
+    # ax.grid(True)
     ax.set_xlabel('Lon')
     ax.set_ylabel('Lat')
-
     title = 'Avg GMF for %s' % imt
     assetcol = get_assetcol(ex.calc_id)
     if assetcol is not None:
@@ -162,22 +186,22 @@ def plot_avg_gmf(ex, imt):
         if country_iso_codes is not None:
             title += ' (Countries: %s)' % country_iso_codes
     ax.set_title(title)
-
     avg_gmf = ex.get('avg_gmf?imt=%s' % imt)
     gmf = avg_gmf[imt]
     markersize = 5
-    coll = ax.scatter(avg_gmf['lons'], avg_gmf['lats'], c=gmf, cmap='jet',
-                      s=markersize)
-    plt.colorbar(coll)
-
-    ax = add_borders(ax)
-
-    minx = avg_gmf['lons'].min()
-    maxx = avg_gmf['lons'].max()
-    miny = avg_gmf['lats'].min()
-    maxy = avg_gmf['lats'].max()
-
-    xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
+    transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
+    x_webmercator, y_webmercator = transformer.transform(
+        avg_gmf['lons'], avg_gmf['lats'])
+    min_x, min_y, max_x, max_y = (min(x_webmercator),
+                                  min(y_webmercator),
+                                  max(x_webmercator),
+                                  max(y_webmercator))
+    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
+    min_x, max_x = xlim
+    min_y, max_y = ylim
+    add_basemap(ax, min_x, min_y, max_x, max_y)
+    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
+    plt.colorbar(coll, ax=ax)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     return plt
@@ -193,6 +217,25 @@ def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
         fill_params['facecolor'] = facecolor
     ax.fill(*surface.get_surface_boundaries(), **fill_params)
     return surface.get_bounding_box()
+
+
+def add_surface_webmercator(
+        ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    lon, lat = surface.get_surface_boundaries()
+    x, y = transformer.transform(lon, lat)  # Transform lat/lon to Web Mercator
+    fill_params = {
+        'alpha': alpha,
+        'edgecolor': 'grey',
+        'label': label
+    }
+    if facecolor is not None:
+        fill_params['facecolor'] = facecolor
+    ax.fill(x, y, **fill_params)
+    lon_min, lon_max, lat_max, lat_min = surface.get_bounding_box()
+    x_min, y_max = transformer.transform(lon_min, lat_max)  # Top-left corner
+    x_max, y_min = transformer.transform(lon_max, lat_min)  # Bottom-right corner
+    return x_min, x_max, y_min, y_max
 
 
 def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
@@ -226,6 +269,30 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
     return ax, min_x, min_y, max_x, max_y
 
 
+def add_rupture_webmercator(
+        ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
+        surf_facecolor=None, surf_linestyle='-'):
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    min_x, max_x = float('inf'), float('-inf')
+    min_y, max_y = float('inf'), float('-inf')
+    if hasattr(rup.surface, 'surfaces'):
+        for surf_idx, surface in enumerate(rup.surface.surfaces):
+            min_x_, max_x_, min_y_, max_y_ = add_surface_webmercator(
+                ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
+                facecolor=surf_facecolor, linestyle=surf_linestyle)
+            min_x, max_x = min(min_x, min_x_), max(max_x, max_x_)
+            min_y, max_y = min(min_y, min_y_), max(max_y, max_y_)
+    else:
+        min_x, max_x, min_y, max_y = add_surface_webmercator(
+            ax, rup.surface, 'Surface', alpha=surf_alpha,
+            facecolor=surf_facecolor, linestyle=surf_linestyle)
+    hypo_x, hypo_y = transformer.transform(rup.hypocenter.longitude,
+                                           rup.hypocenter.latitude)
+    ax.plot(hypo_x, hypo_y, marker='*', color='orange', label='Hypocenter',
+            alpha=hypo_alpha, linestyle='', markersize=hypo_markersize)
+    return ax, min_x, min_y, max_x, max_y
+
+
 def plot_rupture(rup, backend=None, figsize=(10, 10),
                  with_cities=False, with_borders=True, return_base64=False):
     # NB: matplotlib is imported inside since it is a costly import
@@ -247,6 +314,33 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     ax.set_ylim(*ylim)
     if with_cities:
         ax = add_cities(ax, xlim, ylim)
+    ax.legend()
+    if return_base64:
+        return plt_to_base64(plt)
+    else:
+        return plt
+
+
+def plot_rupture_webmercator(rup, backend=None, figsize=(10, 10), return_base64=False):
+    # NB: matplotlib is imported inside since it is a costly import
+    plt = import_plt()
+    if backend is not None:
+        # we may need to use a non-interactive backend
+        import matplotlib
+        matplotlib.use(backend)
+    _fig, ax = plt.subplots(figsize=figsize)
+    ax.set_aspect('equal')
+    # ax.grid(True)
+    ax, min_x, min_y, max_x, max_y = add_rupture_webmercator(
+        ax, rup, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.3,
+        surf_linestyle='--')
+    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
+    min_x, max_x = xlim
+    min_y, max_y = ylim
+    add_basemap(ax, min_x, min_y, max_x, max_y,
+                source=contextily.providers.TopPlusOpen.Color)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
     ax.legend()
     if return_base64:
         return plt_to_base64(plt)
