@@ -284,7 +284,7 @@ def get_reference_basin_depth(region, vs30):
         # High vs30 clip value
         find_upp = vs30 >= 570
         ln_zref[find_upp] = 7.6
-        # Intermediate values are not clipped
+        # Intermediate vs30 values are not clipped
         find_mid = (vs30 > 200) & (vs30 < 570)
         ln_zref[find_mid] = 8.52 - 0.88 * np.log(vs30[find_mid]/200)
 
@@ -293,7 +293,7 @@ def get_reference_basin_depth(region, vs30):
         # High vs30 clip value
         find_upp = vs30 > 800
         ln_zref[find_upp] = 4.1
-        # Intermediate values are not clipped
+        # Intermediate vs30 values are not clipped
         find_mid = (vs30 > 170) & (vs30 <= 800)
         ln_zref[find_mid] = 7.3 - 2.066 * np.log(vs30[find_mid] / 170.0)
 
