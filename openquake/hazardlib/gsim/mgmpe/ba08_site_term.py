@@ -60,7 +60,7 @@ class BA08SiteTerm(GMPE):
     soil conditions in the estimation of ground motion using the site term
     from :class:`openquake.hazardlib.gsim.boore_atkinson_2008.BooreAtkinson2008`.
 
-    The user should be mindful of ensuring the GMM was derived for an
+    The user should be mindful of ensuring the base GMM was derived for an
     appropriate reference velocity (the BA08 site term was developed
     for a reference of 760 m/s).
 
