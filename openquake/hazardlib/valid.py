@@ -1180,7 +1180,7 @@ def positiveints(value):
 def indexes(value):
     """
     >>> indexes("1,2,A")
-    ("1", "2", "A")
+    ('1', '2', 'A')
     """
     return tuple(value.split(','))
 
