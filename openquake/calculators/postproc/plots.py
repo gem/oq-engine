@@ -229,10 +229,8 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
         import matplotlib
         matplotlib.use(backend)
     _fig, ax = plt.subplots(figsize=figsize)
-    if hasattr(rup.surface, 'length') and hasattr(rup.surface, 'width'):
-        ax.set_title(f"length={rup.surface.length}, width={rup.surface.width}")
-    elif hasattr(rup.surface, 'get_width') and hasattr(rup.surface, 'get_area'):
-        ax.set_title(f"width={rup.surface.get_width()}, area={rup.surface.get_area()}")
+    ax.set_title(
+        f"width={rup.surface.get_width():.4f}, area={rup.surface.get_area():.4f}")
     ax.set_aspect('equal')
     ax.grid(True)
     ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
