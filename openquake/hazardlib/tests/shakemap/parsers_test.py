@@ -115,6 +115,18 @@ class ShakemapParsersTestCase(unittest.TestCase):
             {'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
              'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}})
 
+    def test_7b(self):
+        # Case reading nodal planes first from the moment-tensor (not found) then
+        # falling back to reading them from the focal-mechanism
+        dic_in = {'usgs_id': 'usp0001ccb', 'lon': None, 'lat': None, 'dep': None,
+                  'mag': None, 'msr': '', 'aspect_ratio': 2, 'rake': None,
+                  'dip': None, 'strike': None, 'approach': 'build_rup_from_usgs'}
+        _rup, dic, _err = get_rup_dic(dic_in, user=user, use_shakemap=True)
+        self.assertEqual(
+            dic['nodal_planes'],
+            {'NP1': {'dip': 37.0, 'rake': -64.0, 'strike': 285.0},
+             'NP2': {'dip': 57.0, 'rake': -109.0, 'strike': 73.0}})
+
     def test_8(self):
         dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256,
                   'dep': 10.0, 'mag': 7.8, 'rake': 0.0,

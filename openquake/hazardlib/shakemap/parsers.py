@@ -720,13 +720,25 @@ def _contents_properties_shakemap(usgs_id, user, use_shakemap, monitor):
 
 def _get_nodal_planes(properties):
     # in parsers_test
+    nodal_planes = {}
     err = {}
-    if 'moment-tensor' not in properties['products']:
+    # try first reading from the moment tensor, if available. If nodal planes can not be
+    # collected from there, fallback attempting to read them from the focal mechanism
+    if 'moment-tensor' in properties['products']:
+        moment_tensor = _get_preferred_item(properties['products']['moment-tensor'])
+        nodal_planes = _get_nodal_planes_from_product(moment_tensor)
+    if not nodal_planes and 'focal-mechanism' in properties['products']:
+        focal_mechanism = _get_preferred_item(properties['products']['focal-mechanism'])
+        nodal_planes = _get_nodal_planes_from_product(focal_mechanism)
+    if not nodal_planes:
         err = {'status': 'failed',
                'error_msg': 'Unable to retrieve information about the nodal options'}
         return None, err
-    moment_tensor = _get_preferred_item(properties['products']['moment-tensor'])
-    props = moment_tensor['properties']
+    return nodal_planes, err
+
+
+def _get_nodal_planes_from_product(product):
+    props = product['properties']
     nodal_planes = {}
     for key, value in props.items():
         if key.startswith('nodal-plane-'):
@@ -736,7 +748,7 @@ def _get_nodal_planes(properties):
             if plane not in nodal_planes:
                 nodal_planes[plane] = {}
             nodal_planes[plane][attr] = float(value)
-    return nodal_planes, err
+    return nodal_planes
 
 
 def _get_rup_dic_from_xml(usgs_id, user, rupture_file, station_data_file):
