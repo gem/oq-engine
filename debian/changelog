@@ -1,6 +1,8 @@
   [Christopher Brooks]
   * Added Boore and Atkinson (2008) site term to the
-    ModifiableGMPE capabilities + added unit test.  
+    ModifiableGMPE capabilities and as an input arg
+    for the Atkinson and Macias (2009) GMM as required
+    for the US 2023 model + added unit tests.
   
   [Mara Mita, Catarina Costa]
   * Added new landslide models and replaced NewmarkDisplacement,
