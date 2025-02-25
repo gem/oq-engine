@@ -1,3 +1,7 @@
+  [Christopher Brooks]
+  * Added Boore and Atkinson (2008) site term to the
+    ModifiableGMPE capabilities + added unit test.  
+  
   [Mara Mita, Catarina Costa]
   * Added new landslide models and replaced NewmarkDisplacement,
     GrantEtAl2016RockSlopeFailure, NowickiJessee2018Landslides
