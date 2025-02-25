@@ -1,3 +1,8 @@
+  [Christopher Brooks]
+  * Fixed the AbrahamsonGulerce2020 GMM's ln_zref equations to
+    match as detailed in equations 2.1 and 2.2 of the model's
+    paper.
+
   [Mara Mita, Catarina Costa]
   * Added new landslide models and replaced NewmarkDisplacement,
     GrantEtAl2016RockSlopeFailure, NowickiJessee2018Landslides
