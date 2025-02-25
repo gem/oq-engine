@@ -217,6 +217,12 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
+    # Make sure to display also the hypocenter in case it is outside all surfaces
+    # (it may be useful for debugging purposes)
+    min_x = min(min_x, rup.hypocenter.x)
+    max_x = max(max_x, rup.hypocenter.x)
+    min_y = min(min_y, rup.hypocenter.y)
+    max_y = max(max_y, rup.hypocenter.y)
     return ax, min_x, min_y, max_x, max_y
 
 
@@ -229,7 +235,8 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
         import matplotlib
         matplotlib.use(backend)
     _fig, ax = plt.subplots(figsize=figsize)
-    ax.set_title(f"length={rup.surface.length}, width={rup.surface.width}")
+    ax.set_title(
+        f"width={rup.surface.get_width():.4f}, area={rup.surface.get_area():.4f}")
     ax.set_aspect('equal')
     ax.grid(True)
     ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
