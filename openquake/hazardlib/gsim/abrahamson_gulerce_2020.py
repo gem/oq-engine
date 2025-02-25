@@ -280,12 +280,28 @@ def get_reference_basin_depth(region, vs30):
     on the Vs30, is returned according to equations 2.1 and 2.2
     """
     if region == "CAS":
-        ln_zref = np.clip(8.52 - 0.88 * np.log(vs30 / 200.0), 7.6, 8.52)
+        ln_zref = np.full_like(vs30, 8.52) # Low vs30 clip value (< 200 m/s)
+        # High vs30 clip value
+        find_upp = vs30 >= 570
+        ln_zref[find_upp] = 7.6
+        # Intermediate values are not clipped
+        find_mid = (vs30 > 200) & (vs30 < 570)
+        ln_zref[find_mid] = 8.52 - 0.88 * np.log(vs30[find_mid]/200)
+
+
     elif region == "JPN":
-        ln_zref = np.clip(7.3 - 2.066 * np.log(vs30 / 170.0), 4.1, 7.3)
+        ln_zref = np.full_like(vs30, 7.3) # Low vs30 clip value (< 170 m/s)
+        # High vs30 clip value
+        find_upp = vs30 > 800
+        ln_zref[find_upp] = 4.1
+        # Intermediate values are not clipped
+        find_mid = (vs30 > 170) & (vs30 <= 800)
+        ln_zref[find_mid] = 7.3 - 2.066 * np.log(vs30[find_mid] / 170.0)
+
     else:
         raise ValueError("No reference basin depth term defined for region %s"
                          % region)
+
     return np.exp(ln_zref)
 
 
