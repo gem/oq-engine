@@ -1177,6 +1177,14 @@ def positiveints(value):
     return ints
 
 
+def indexes(value):
+    """
+    >>> indexes("1,2,A")
+    ("1", "2", "A")
+    """
+    return tuple(value.split(','))
+
+
 def tile_spec(value):
     """
     Specify a tile with a string of format "no:nt"
