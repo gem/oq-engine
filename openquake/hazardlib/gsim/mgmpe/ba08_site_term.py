@@ -42,7 +42,7 @@ def _get_ba08_site_term(imt, ctx):
     C_SR = BooreAtkinson2008.COEFFS_SOIL_RESPONSE[imt]
     
     # Compute PGA on rock
-    ctx.rake = np.full_like(ctx.vs30, 60)
+    ctx.rake = np.full_like(ctx.vs30, 60) #TODO fix/remove hack
     pga4nl = _get_pga_on_rock(C_PGA, ctx)
 
     # Get linear
@@ -59,12 +59,10 @@ class BA08SiteTerm(GMPE):
     Implements a modified GMPE class that can be used to account for local
     soil conditions in the estimation of ground motion using the site term
     from :class:`openquake.hazardlib.gsim.boore_atkinson_2008.BooreAtkinson2008`.
-    
-    The BA08SiteTerm can be applied to any GMPE that natively uses the vs30
-    parameter or, if vs30 is not used, the GMPE must specify a reference
-    velocity (i.e. DEFINED_FOR_REFERENCE_VELOCITY) between 730 and 790 m/s
-    (applying +/- 30 m/s bounds to the reference velocity of 760 m/s defined
-    in BA08).
+
+    The user should be mindful of ensuring the GMM was derived for an
+    appropriate reference velocity (the BA08 site term was developed
+    for a reference of 760 m/s).
 
     :param gmpe_name:
         The name of a GMPE class
@@ -83,25 +81,9 @@ class BA08SiteTerm(GMPE):
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
         
-        # Check if this GMPE has the necessary requirements
-        req = 'DEFINED_FOR_REFERENCE_VELOCITY'
-        if not (hasattr(self.gmpe, req)
-                or
-                'vs30' in self.gmpe.REQUIRES_SITES_PARAMETERS):
-            msg = f'{self.gmpe} does not use vs30 or lacks a defined reference velocity'
-            raise AttributeError(msg)
+        # Check if GMM has vs30 in req site params + add if missing
         if 'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS:
             self.REQUIRES_SITES_PARAMETERS |= {'vs30'}
-        
-        # Check compatibility of reference velocity
-        if not hasattr(self.gmpe, req):
-            msg = f'The original GMPE must have the {req} parameter'
-            raise ValueError(msg)
-        if not (self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY >= 730
-                and
-                self.gmpe.DEFINED_FOR_REFERENCE_VELOCITY <= 790):
-            msg = 'DEFINED_FOR_REFERENCE_VELOCITY outside of range'
-            raise ValueError(msg)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
