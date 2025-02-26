@@ -814,8 +814,7 @@ def get_rup_dic(dic, user=User(),
     rup = None
     if approach == 'provide_rup_params':
         rupdic = dic.copy()
-        rupdic.update(rupture_file=rupture_file,
-                      station_data_file=station_data_file,
+        rupdic.update(rupture_file=rupture_file, station_data_file=station_data_file,
                       require_dip_strike=True)
         try:
             rup = build_planar_rupture_from_dict(rupdic)
@@ -831,7 +830,6 @@ def get_rup_dic(dic, user=User(),
                                                        station_data_file)
         if err or usgs_id == 'FromFile':
             return rup, rupdic, err
-
     assert usgs_id
     contents, properties, shakemap, err = _contents_properties_shakemap(
         usgs_id, user, use_shakemap, monitor)
@@ -851,18 +849,20 @@ def get_rup_dic(dic, user=User(),
         else:
             rupdic = dic.copy()
             rupdic['require_dip_strike'] = True
-    elif ('download/rupture.json' not in contents
-          or approach == 'use_finite_rup_from_usgs'):
+    elif 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
         rupdic, err = load_rupdic_from_finite_fault(
             usgs_id, properties['mag'], properties['products'])
         if err:
             return None, None, err
-
     if not rup_data and approach not in ['use_pnt_rup_from_usgs',
                                          'build_rup_from_usgs']:
         with monitor('Downloading rupture json'):
             rup_data, rupture_file = download_rupture_data(usgs_id, contents, user)
+        if not rupture_file and approach == 'use_finite_rup_from_usgs':
+            err = {"status": "failed",
+                   "error_msg": 'Unable to retrieve rupture geometries'}
+            return None, None, err
     if not rupdic:
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
     if (approach != 'use_shakemap_from_usgs' and not station_data_file

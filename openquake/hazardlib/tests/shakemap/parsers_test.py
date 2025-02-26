@@ -76,6 +76,18 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['station_data_file_from_usgs'], True)
         self.assertEqual(dic['station_data_issue'], 'No stations were found')
 
+    def test_3b(self):
+        rup, _dic, _err = get_rup_dic(
+            {'usgs_id': 'usp0001ccb', 'approach': 'use_finite_rup_from_usgs'},
+            user=user, use_shakemap=True)
+        self.assertIsInstance(rup, BaseRupture)
+
+    def test_3c(self):
+        _rup, _dic, err = get_rup_dic(
+            {'usgs_id': 'us6000f65h', 'approach': 'use_finite_rup_from_usgs'},
+            user=user, use_shakemap=True)
+        self.assertIn('Unable to retrieve rupture geometries', err['error_msg'])
+
     def test_4(self):
         # point_rup
         _rup, dic, _err = get_rup_dic(
