@@ -317,7 +317,7 @@ def ASH():
 
 
 # secondary IMTs
-sec_imts = 'Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb'.split()
+sec_imts = 'Disp DispProb LiqProb LiqOccur LqSE LsSE PGDMax LSD PGDGeomMean LsProb'.split()
 
 
 def Disp():
@@ -348,12 +348,19 @@ def LiqOccur():
     return IMT('LiqOccur')
 
 
-def LSE():
+def LqSE():
     """
-    Liquefaction or Landslide spatial extent.
+    Liquefaction spatial extent.
     """
-    return IMT('LSE')
+    return IMT('LqSE')
 
+
+def LsSE():
+    """
+    Landslide spatial extent.
+    """
+    return IMT('LsSE')
+    
 
 def PGDMax(vert_settlement, lat_spread):
     """

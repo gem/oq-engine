@@ -234,14 +234,14 @@ and the probability of liquefaction is calculated using equation (3). Zero proba
 
 The proposed probability threshold to convert to class outcome is 0.4.
 
-Another model's outcome is liquefaction spatial extent, :math:`LSE`. After an earthquake LSE is the spatial area 
+Another model's outcome is liquefaction spatial extent, :math:`LqSE`. After an earthquake, :math:`LqSE` is the spatial area 
 covered by surface manifestations of liquefaction reported as a percentage of liquefied material within that pixel. 
 Logistic regression with the same form was fit for the two models, with only difference in squaring the denominator to 
-improve the fit. The regression coefficients are given in Table 2.:
+improve the fit. The regression coefficients are given in Table 2.
 
 .. math::
 
-	L(P) = \frac{a}{\left( 1 + b\,e^{-c\,P} \right)^2} \\ (9)
+	LqSE(P) = \frac{a}{\left( 1 + b\,e^{-c\,P} \right)^2} \\ (9)
 
 .. raw:: latex
 
@@ -326,7 +326,7 @@ model proposed by `Rashidian et al. (2020) <https://www.sciencedirect.com/scienc
 as a base with slight changes to limit unrealistic extrapolations. The authors proposed capping the mean annual 
 precipitation at :math:`2500 \, \text{mm}`, and :math:`PGV = 150 \, \text{cm/s}`. The magnitude scaling factor 
 :math:`MSF`, explanatory variables, :math:`X`, probability of liquefaction, :math:`P(L)`, and liquefaction spatial 
-extent, :math:`LSE` are calculated using the set of equations previously shown. The proposed probability threshold to 
+extent, :math:`LqSE` are calculated using the set of equations previously shown. The proposed probability threshold to 
 convert to class outcome is 0.4.
 
 #######################
@@ -432,14 +432,13 @@ which is well suited for shallow disrupted slides, one of the most common landsl
 
 .. math::
 
-    F_{s} = \frac{cohesion'}{soildrydensity slabthickness \sin(slope)} + \frac{\tan(frictionangle')}{\tan(slope)} - \frac{saturationcoeff waterdensity \tan(frictionangle')}{soildrydensity \tan(slope)} \\(18)
+    F_{s} = \frac{cohesion'}{sdd\, slabth\, sin(slope)} + \frac{\tan(fricangle')}{\tan(slope)} - \frac{satcoeff\,  waterdensity\, tan(fricangle')}{sdd\, tan(slope)} \\(18)
 
 where: :math:`cohesion' \, [\text{Pa}]` is the effective cohesion with typical values ranging from :math:`20 \text{kPa}` for
-soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`slope^\circ` is the slope angle. :math:`frictionangle'^\circ` is 
+soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`slope^\circ` is the slope angle. :math:`fricangle'^\circ` is 
 the effective friction angle with typical values ranging from :math:`30^\circ` to :math:`40^\circ`. 
-:math:`\soildrydensity \, [\text{kg/m^3}]` is the dry density of the material. It ranges from :math:`1500 \, \text{kg/m^3}` 
-for soils to :math:`2500 - 3200 \, \text{kg/m^3}`. :math:`slabthickness` is the slope-normal thickness of a failure slab in meters and :math:`saturationcoeff` 
-is the proportion of slab thickness that is saturated. :math:`\waterdensity \, [\text{kg/m^3}]` 
+:math:`sdd \, [\text{kg/m^3}]` is the dry density of the material, :math:`slabth` is the slope-normal thickness of a failure slab in meters and :math:`satcoeff` 
+is the proportion of slab thickness that is saturated. :math:`waterdensity \, [\text{kg/m^3}]` 
 is the unit weight of water which equals to :math:`1000 \, \text{kg/m^3}`.
 
 Note that the units of the input parameters reported in this document corresponds to the format required by the Engine 
@@ -466,7 +465,7 @@ Model a
 
 .. math::
 	
-	\log(Disp_{cm}) = 0.215 + \log [\left( 1 - \frac{critaccel}{PGA}} \right)^{2.341} \cdot \left( \frac{critaccel}{PGA} \right)^{-1.438}] \\ (19)
+	\log(Disp_{cm}) = 0.215 + \log [\left( 1 - \frac{critaccel}{PGA} \right)^{2.341} \cdot \left( \frac{critaccel}{PGA} \right)^{-1.438}] \\ (19)
 
 Model b
 
@@ -639,17 +638,17 @@ Coefficients \alpha and \beta values are estimated for several rock and landcove
 reader is reffered to the original study by `Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_, 
 where the coefficient values are reported in Table 3. 
 
-Probability of landsliding is then evaluated using logistic regression.
+Probability of landsliding is then evaluated using logistic regression:
 
 .. math::
 
 	P(L) = \frac{1}{1+e^X} \\ (35)
 
-These probabilities are converted to areal percentages to unbias the predictions.
+These probabilities are converted to areal percentages to unbias the predictions:
 
 .. math::
 
-	L_{P}(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (36)
+	LsSE(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (36)
 
 Furthermore, we introduced modifications by the USGS, capping the peak ground velocity at :math:`PGV = 211 \, \text{cm/s}`, 
 and compound topographic index at :math:`CTI = 19`. To exclude high probabilities of landsliding in nearly flat areas due to 
