@@ -42,7 +42,6 @@ def _get_ba08_site_term(imt, ctx):
     C_SR = BooreAtkinson2008.COEFFS_SOIL_RESPONSE[imt]
     
     # Compute PGA on rock
-    ctx.rake = np.full_like(ctx.vs30, 60) #TODO fix/remove hack
     pga4nl = _get_pga_on_rock(C_PGA, ctx)
 
     # Get linear
@@ -84,6 +83,10 @@ class BA08SiteTerm(GMPE):
         # Check if GMM has vs30 in req site params + add if missing
         if 'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS:
             self.REQUIRES_SITES_PARAMETERS |= {'vs30'}
+
+        # Check if GMM has rake in req rup params + add if missing
+        if 'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
+            self.REQUIRES_SITES_PARAMETERS |= {'rake'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
