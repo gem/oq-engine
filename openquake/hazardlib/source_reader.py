@@ -312,10 +312,12 @@ def get_csm(oq, full_lt, dstore=None):
 
     # split multifault sources if there is a single site
     try:
-        if len(sitecol := dstore['sitecol']) > 1:
-            sitecol = None
-    except TypeError:  # 'NoneType' object is not subscriptable
+        sitecol = dstore['sitecol']
+    except (KeyError, TypeError):  # 'NoneType' object is not subscriptable
         sitecol = None
+    else:
+        if len(sitecol) > 1:
+            sitecol = None
     # must be called *after* _fix_dupl_ids
     fix_geometry_sections(smdict, csm.src_groups,
                           dstore.tempname if dstore else '',
