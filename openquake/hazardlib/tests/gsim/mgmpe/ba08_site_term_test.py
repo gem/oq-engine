@@ -76,6 +76,7 @@ class BA08SiteTermTestCase(unittest.TestCase):
             [gmpe, mgmpe], ['PGA', 'SA(0.1)', 'SA(1.0)'])
         ctx = new_ctx(cmaker, 4)
         ctx.dip = 90.
+        ctx.rake = 60.
         ctx.rjb = np.array([1., 10., 30., 70.])
         ctx.vs30 = 760. # BA08 reference velocity
         ctx.vs30measured = 1

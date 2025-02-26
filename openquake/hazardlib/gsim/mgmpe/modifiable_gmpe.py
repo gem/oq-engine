@@ -274,7 +274,7 @@ class ModifiableGMPE(GMPE):
         if 'add_between_within_stds' in self.params:
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
-
+            
         if ('ba08_site_term' in self.params and
             'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS):
             # hazardlib/gsim/utils/get_fault_type_dummy_variables is called
