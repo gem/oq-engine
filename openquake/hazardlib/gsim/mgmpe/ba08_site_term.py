@@ -40,7 +40,7 @@ def _get_ba08_site_term(imt, ctx):
     vs30 = ctx.vs30
     C_PGA = BooreAtkinson2008.COEFFS[PGA()]
     C_SR = BooreAtkinson2008.COEFFS_SOIL_RESPONSE[imt]
-    
+        
     # Compute PGA on rock
     pga4nl = _get_pga_on_rock(C_PGA, ctx)
 
