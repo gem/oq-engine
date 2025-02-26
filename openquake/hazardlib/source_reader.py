@@ -24,7 +24,7 @@ import logging
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat, config
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc, site
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -314,7 +314,7 @@ def get_csm(oq, full_lt, dstore=None):
     try:
         if len(sitecol := dstore['sitecol']) > 1:
             sitecol = None
-    except KeyError:  # missing sitecol
+    except TypeError:  # 'NoneType' object is not subscriptable
         sitecol = None
     # must be called *after* _fix_dupl_ids
     fix_geometry_sections(smdict, csm.src_groups,
