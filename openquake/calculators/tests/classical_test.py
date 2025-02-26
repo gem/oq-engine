@@ -684,7 +684,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
         # test contexts
-        ctx = view('rup:ufc3mean_0@0', self.calc.datastore)
+        ctx = view('rup:ufc3mean_0@A', self.calc.datastore)
         fname = general.gettemp(text_table(ctx, ext='org'))
         self.assertEqualFiles('expected/context.org', fname)
 

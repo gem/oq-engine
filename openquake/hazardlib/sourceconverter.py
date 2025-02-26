@@ -1148,10 +1148,11 @@ class SourceConverter(RuptureConverter):
             with context(self.fname, node):
                 idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
                 mags = rounded_unique(dic['mag'], idxs)
+            faults = ()  # FIXME: read {tag: indexes}
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt, idxs,
                                    dic['probs_occur'],
-                                   mags, dic['rake'],
+                                   mags, dic['rake'], faults,
                                    self.investigation_time,
                                    self.infer_occur_rates)
             return mfs
@@ -1160,7 +1161,13 @@ class SourceConverter(RuptureConverter):
         rakes = []
         idxs = []
         num_probs = None
-        for i, rupnode in enumerate(node):
+        try:
+            faults = node.faults
+            nodes = node.nodes[1:]
+        except AttributeError:
+            faults = ()
+            nodes = node.nodes[1:]
+        for i, rupnode in enumerate(nodes):
             with context(self.fname, rupnode):
                 prb = valid.probabilities(rupnode['probs_occur'])
                 if num_probs is None:  # first time
@@ -1178,9 +1185,10 @@ class SourceConverter(RuptureConverter):
                 idxs.append(rupnode.sectionIndexes['indexes'])
         with context(self.fname, node):
             mags = rounded_unique(mags, idxs)
+            faults = {f['tag']: f['indexes'] for f in faults}
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes,
+        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes, faults,
                                self.investigation_time,
                                self.infer_occur_rates)
         return mfs
