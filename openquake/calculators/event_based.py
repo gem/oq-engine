@@ -458,7 +458,7 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
     """
     dic = {}
     E = len(weights)
-    C = len(gmf_df.columns) - 1  # number of data columns gmv_...
+    C = len(min_iml)
     for sid, df in gmf_df.groupby(gmf_df.index):
         eid = df.pop('eid')
         gmvs = numpy.ones((E, C), F32) * min_iml
@@ -810,8 +810,6 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs = self.datastore['events'][:]['rlz_id']
         self.weights = self.datastore['weights'][:][rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
-        for sec_imt in self.oqparam.sec_imts:  # ignore secondary perils
-            del gmf_df[sec_imt]
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)
         if e == 0:
@@ -823,10 +821,13 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.info('Stored {:_d} relevant event IDs'.format(e))
 
         # really compute and store the avg_gmf
-        M = len(self.oqparam.min_iml)
-        avg_gmf = numpy.zeros((2, len(self.sitecol.complete), M), F32)
+        M = len(self.oqparam.imtls)
+        C = len(self.oqparam.all_imts())
+        avg_gmf = numpy.zeros((2, len(self.sitecol.complete), C), F32)
+        min_iml = numpy.ones(C) * 1E-10
+        min_iml[:M] = self.oqparam.min_iml
         for sid, avgstd in compute_avg_gmf(
-                gmf_df, self.weights, self.oqparam.min_iml).items():
+                gmf_df, self.weights, min_iml).items():
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
         # make avg_gmf plots only if running via the webui
