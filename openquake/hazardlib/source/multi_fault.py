@@ -302,6 +302,8 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                    del_rupture_idxs=True):
     """
     Serialize MultiFaultSources
+ 
+    :returns: (split_dic, secparams)
     """
     assert mfsources
     assert len(sectiondict) < TWO32, len(sectiondict)
@@ -362,9 +364,9 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                 split_dic[src.source_id].append(split)
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sectiondict.values()])
-        h5['secparams'] = build_secparams(src.get_sections())
+        h5['secparams'] = secparams = build_secparams(sectiondict.values())
 
-    return split_dic
+    return split_dic, secparams
 
 
 def load(hdf5path):

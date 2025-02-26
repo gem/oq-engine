@@ -414,11 +414,11 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
                 if src.code == b'F':
                     mfsources.append(src)
         if mfsources:
-            split_dic = save_and_split(mfsources, sections, hdf5path, site1)
+            split_dic, secparams = save_and_split(
+                mfsources, sections, hdf5path, site1)
             for sg in src_groups:
                 replace(sg.sources, split_dic, 'source_id')
-            with hdf5.File(hdf5path, 'r') as h5:
-                return h5['secparams'][:]
+            return secparams
     return ()
 
 
