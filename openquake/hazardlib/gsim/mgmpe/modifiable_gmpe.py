@@ -281,6 +281,10 @@ class ModifiableGMPE(GMPE):
             # from AB06 and requires the rake parameter so add here if missing
             self.gmpe.REQUIRES_RUPTURE_PARAMETERS |= {"rake"}
 
+        if ('ba08_site_term' in self.params and
+            'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
+            self.gmpe.REQUIRES_SITES_PARAMETERS |= {"vs30"}
+
         if ('cb14_basin_term' in self.params or 'm9_basin_term' in self.params
             ) and ( 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
             self.gmpe.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
@@ -319,7 +323,7 @@ class ModifiableGMPE(GMPE):
                     if isinstance(self.params[key][subkey], dict):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
-
+                        
     # called by the ContextMaker
     def set_tables(self, mags, imts):
         """
