@@ -78,7 +78,7 @@ class BA08SiteTerm(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, gmpe_name, **kwargs):
-        self.gmpe = registry[gmpe_name]()
+        self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
         
         # Check if GMM has vs30 in req site params + add if missing
