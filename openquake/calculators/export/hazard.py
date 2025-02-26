@@ -514,8 +514,11 @@ def export_avg_gmf_csv(ekey, dstore):
         dic = dict(site_id=sitecol.complete.sids)
     dic['lon'] = sitecol.complete.lons
     dic['lat'] = sitecol.complete.lats
-    data = dstore['avg_gmf'][:]  # shape (2, N, M)
-    for m, imt in enumerate(oq.imtls):
+    data = dstore['avg_gmf'][:]  # shape (2, N, C)
+    imts = list(oq.imtls)
+    for m, imt in enumerate(oq.all_imts()):
+        if m < len(imts):
+            imt = imts[m]
         dic['gmv_' + imt] = data[0, :, m]
         dic['gsd_' + imt] = data[1, :, m]
     fname = dstore.build_fname('avg_gmf', '', 'csv')

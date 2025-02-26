@@ -284,6 +284,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_22(self):
         # losses with liquefaction and landslides
         self.run_calc(case_22.__file__, 'job_h.ini')
+
+        # checking avg_gmf
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)
+
+        # doing the risk
         hc_id = str(self.calc.datastore.calc_id)
         out = self.run_calc(case_22.__file__, 'job_r.ini',
                             hazard_calculation_id=hc_id, exports='csv')
