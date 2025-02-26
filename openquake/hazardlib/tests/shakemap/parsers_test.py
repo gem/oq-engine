@@ -88,6 +88,14 @@ class ShakemapParsersTestCase(unittest.TestCase):
             user=user, use_shakemap=True)
         self.assertIn('Unable to retrieve rupture geometries', err['error_msg'])
 
+    def test_3d(self):
+        # TODO: make it possible to convert this kind of geometries
+        _rup, dic, _err = get_rup_dic(
+            {'usgs_id': 'us6000jllz', 'approach': 'use_finite_rup_from_usgs'},
+            user=user, use_shakemap=True)
+        self.assertIn('Unable to convert the rupture from the USGS format',
+                      dic['rupture_issue'])
+
     def test_4(self):
         # point_rup
         _rup, dic, _err = get_rup_dic(
