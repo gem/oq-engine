@@ -24,7 +24,7 @@ import logging
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat, config
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc, site
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -310,14 +310,18 @@ def get_csm(oq, full_lt, dstore=None):
         dstore.create_dset('grp_probability', numpy.array(probs, lst),
                            fillvalue=None)
 
-    # must be called *after* _fix_dupl_ids
-    if oq.sites and len(oq.sites) == 1 and oq.use_rates:
-        lon, lat, _dep = oq.sites[0]
-        site1 = site.SiteCollection.from_points([lon], [lat])
+    # split multifault sources if there is a single site
+    try:
+        sitecol = dstore['sitecol']
+    except (KeyError, TypeError):  # 'NoneType' object is not subscriptable
+        sitecol = None
     else:
-        site1 = None
-    hdf5path = dstore.tempname if dstore else ''
-    fix_geometry_sections(smdict, csm.src_groups, hdf5path, site1)
+        if len(sitecol) > 1:
+            sitecol = None
+    # must be called *after* _fix_dupl_ids
+    fix_geometry_sections(smdict, csm.src_groups,
+                          dstore.tempname if dstore else '',
+                          sitecol if oq.disagg_by_src and oq.use_rates else None)
     return csm
 
 
@@ -414,11 +418,11 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
                 if src.code == b'F':
                     mfsources.append(src)
         if mfsources:
-            split_dic = save_and_split(mfsources, sections, hdf5path, site1)
+            split_dic, secparams = save_and_split(
+                mfsources, sections, hdf5path, site1)
             for sg in src_groups:
                 replace(sg.sources, split_dic, 'source_id')
-            with hdf5.File(hdf5path, 'r') as h5:
-                return h5['secparams'][:]
+            return secparams
     return ()
 
 
