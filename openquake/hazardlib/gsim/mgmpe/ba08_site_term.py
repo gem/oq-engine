@@ -86,7 +86,7 @@ class BA08SiteTerm(GMPE):
 
         # Check if GMM has rake in req rup params + add if missing
         if 'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
-            self.REQUIRES_SITES_PARAMETERS |= {'rake'}
+            self.REQUIRES_RUPTURE_PARAMETERS |= {'rake'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
