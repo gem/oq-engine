@@ -296,7 +296,8 @@ def _set_rupids_by_tag(src, allrids, dists, s2i):
         src.rupids_by_tag['off'] = off_rupids
 
 
-# NB: as side effect delete _rupture_idxs and add .hdf5path and possibly .tags
+# NB: as side effect delete _rupture_idxs,
+# add .hdf5path and possibly .rupids_by_tag
 def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                    del_rupture_idxs=True):
     """
