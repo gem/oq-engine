@@ -312,14 +312,14 @@ def get_csm(oq, full_lt, dstore=None):
 
     # split multifault sources if there is a single site
     try:
-        sitecol = dstore['sitecol']
-        if len(sitecol) > 1 or not oq.use_rates:
+        if len(sitecol := dstore['sitecol']) > 1:
             sitecol = None
-    except KeyError:
+    except KeyError:  # missing sitecol
         sitecol = None
-    hdf5path = dstore.tempname if dstore else ''
     # must be called *after* _fix_dupl_ids
-    fix_geometry_sections(smdict, csm.src_groups, hdf5path, sitecol)
+    fix_geometry_sections(smdict, csm.src_groups,
+                          dstore.tempname if dstore else '',
+                          sitecol if oq.disagg_by_src and oq.use_rates else None)
     return csm
 
 

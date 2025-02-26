@@ -679,9 +679,24 @@ class ClassicalTestCase(CalculatorTestCase):
                           source_model_logic_tree_file='wrong_ssmLT.xml')
 
         # test calculation with multi-fault
+        self.run_calc(case_75.__file__, 'job.ini', disagg_by_src='false')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+        # test the source is not split
+        sinfo = self.calc.datastore['source_info'][:]
+        self.assertEqual(decode(sinfo['source_id']), ['ufc3mean_0'])
+        ae(sinfo['num_ruptures'], [5])
+
+        # test calculation with multi-fault and disagg_by_src
         self.run_calc(case_75.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+        # test the source is split into 2 tags
+        sinfo = self.calc.datastore['source_info'][:]
+        self.assertEqual(decode(sinfo['source_id']), ['ufc3mean_0@A', 'ufc3mean_0@B'])
+        ae(sinfo['num_ruptures'], [4, 1])
 
         # test contexts
         ctx = view('rup:ufc3mean_0@A', self.calc.datastore)

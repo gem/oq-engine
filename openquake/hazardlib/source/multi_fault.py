@@ -269,31 +269,36 @@ class MultiFaultSource(BaseSeismicSource):
 
 
 def _set_rupids_by_tag(src, allrids, dists, s2i):
+
+    # compute distances so that in the next step
+    # the tags are ordered by closest section to the site
     closest = []  # (dist, ftag, fids)
-    for ftag, idxs in src.faults.items():
+    for tag, idxs in src.faults.items():
         fids = U32([s2i[idx] for idx in idxs])
         rid = np.argmin(dists[fids])
-        closest.append((dists[rid], ftag, fids))
+        closest.append((dists[rid], tag, fids))
 
+    # build dictionary src.rupids_by_tag with the indices of
+    # ruptures belonging to each fault source; care is taken
+    # so that the indices are disjoint
     off_rupids = []
     used_rupids = []
     src.rupids_by_tag = {}
-    for _dist, tag, rids in sorted(closest):
+    for _dist, tag, fids in sorted(closest):
         src.rupids_by_tag[tag] = []
         # loop through all ruptures in the source 
-        for ii, rupi in enumerate(allrids):
-            # is there overlap between the section ids of the rupture and the fault 
-            if any(r in rids for r in rupi):
-                if ii not in used_rupids:
-                    # add the rupture to the new ones for the source
-                    src.rupids_by_tag[tag].append(ii)
-                    used_rupids.append(ii)
+        for rupid, rids in enumerate(allrids):
+            # overlap between the section ids of the rupture and the fault?
+            if len(np.intersect1d(rids, fids, assume_unique=True)):
+                if rupid not in used_rupids:
+                    src.rupids_by_tag[tag].append(rupid)
+                    used_rupids.append(rupid)
 
     # put the rest in another tag
     off_rupids = np.setdiff1d(np.arange(len(allrids)), used_rupids,
                             assume_unique=True)
     if len(off_rupids):
-        src.rupids_by_tag['off'] = off_rupids
+        src.rupids_by_tag['off_rupids'] = off_rupids
 
 
 # NB: as side effect delete _rupture_idxs,
