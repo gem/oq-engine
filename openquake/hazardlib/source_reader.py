@@ -310,14 +310,16 @@ def get_csm(oq, full_lt, dstore=None):
         dstore.create_dset('grp_probability', numpy.array(probs, lst),
                            fillvalue=None)
 
-    # must be called *after* _fix_dupl_ids
-    if oq.sites and len(oq.sites) == 1 and oq.use_rates:
-        lon, lat, _dep = oq.sites[0]
-        site1 = site.SiteCollection.from_points([lon], [lat])
-    else:
-        site1 = None
+    # split multifault sources if there is a single site
+    try:
+        sitecol = dstore['sitecol']
+        if len(sitecol) > 1 or not oq.use_rates:
+            sitecol = None
+    except KeyError:
+        sitecol = None
     hdf5path = dstore.tempname if dstore else ''
-    fix_geometry_sections(smdict, csm.src_groups, hdf5path, site1)
+    # must be called *after* _fix_dupl_ids
+    fix_geometry_sections(smdict, csm.src_groups, hdf5path, sitecol)
     return csm
 
 
