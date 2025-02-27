@@ -1,4 +1,3 @@
- 
   [Kendra Johnson, Michele Simionato]
   * Implemented splitting of multifault sources into faults when using
     disagg_by_src=true and use_rates=true
