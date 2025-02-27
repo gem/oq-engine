@@ -155,6 +155,24 @@ gunicorn -w N wsgi:application
 
 where `N` is the number of workers. We suggest `N = 4`.
 
+### Using Environment Variables in systemd Units
+
+Systemd has Environment directive which sets environment variables for executed processes. It takes a space-separated list of variable assignments. This option may be specified more than once in which case all listed variables will be set. If the same variable is set twice, the later setting will override the earlier setting. If the empty string is assigned to this option, the list of environment variables is reset, all prior assignments have no effect.
+
+With example below you can configure dbserver daemon with the DJANGO_SETTINGS_MODULE variable. 
+
+Just edit `/etc/systemd/system/openquake-dbserver.service` for openquake-dbserver.service:
+
+```
+[Service]
+# Env Vars
+Environment=DJANGO_SETTINGS_MODULE=openquake.server.settings
+
+```
+
+Then run `sudo systemctl daemon-reload` and `sudo systemct restart etcd2.service` to apply new environments to dbserver daemon.
+
+
 ### Limit systemd services with control group (slice)
 
 If you need to set a limit on the resources available for the OpenQuake service, Systemd offers a simple solution to create resource limits for a service,
