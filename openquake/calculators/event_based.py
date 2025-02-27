@@ -105,7 +105,7 @@ def build_hcurves(calc):
     hcurves = {}
     for (sid, rlz), df in gmf_df.groupby(['sid', 'rlz_id']):
         with hc_mon:
-            poes = gmvs_to_poes(df, imtls, oq.ses_per_logic_tree_path, M)
+            poes = gmvs_to_poes(df, imtls, oq.ses_per_logic_tree_path)
             for m, imt in enumerate(imtls):
                 hcurves[rsi2str(rlz, sid, imt)] = poes[m]
     pmaps = {r: MapArray(calc.sitecol.sids, L1*C, 1).fill(0)
@@ -653,12 +653,12 @@ class EventBasedCalculator(base.HazardCalculator):
                     hdf5.extend(self.datastore['gmf_data/slice_by_event'], sbe)
                 hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
-                for m in range(len(primary)):
-                    hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
-                                df[f'gmv_{m}'])
+                for imt in primary:
+                    hdf5.extend(self.datastore[f'gmf_data/{imt}'],
+                                df[imt].to_numpy())
                 for sec_imt in sec_imts:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
-                                df[sec_imt])
+                                df[sec_imt].to_numpy())
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(df)
@@ -852,7 +852,8 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.ground_motion_fields or 'gmf_data' not in self.datastore:
             return
         # check seed dependency unless the number of GMFs is huge
-        size = self.datastore.getsize('gmf_data/gmv_0')
+        imt0 = list(oq.imtls)[0]
+        size = self.datastore.getsize(f'gmf_data/{imt0}')
         if 'gmf_data' in self.datastore and size < 4E9 and not oq.ruptures_hdf5:
             # TODO: check why there is an error for ruptures_hdf5
             logging.info('Checking stored GMFs')

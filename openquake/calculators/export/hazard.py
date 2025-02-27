@@ -432,8 +432,8 @@ def export_gmf_data_csv(ekey, dstore):
         del df['sid']
     else:
         ren = {'sid': 'site_id', 'eid': 'event_id'}
-    for m, imt in enumerate(imts):
-        ren[f'gmv_{m}'] = 'gmv_' + imt
+    for imt in imts:
+        ren[imt] = 'gmv_' + imt
     for imt in oq.sec_imts:
         ren[imt] = f'sep_{imt}'
     df.rename(columns=ren, inplace=True)

@@ -55,8 +55,8 @@ class ScenarioTestCase(CalculatorTestCase):
     def frequencies(self, case, fst_value, snd_value):
         self.execute(case.__file__, 'job.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        gmvs0 = df.loc[0]['gmv_0'].to_numpy()
-        gmvs1 = df.loc[1]['gmv_0'].to_numpy()
+        gmvs0 = df.loc[0]['PGA'].to_numpy()
+        gmvs1 = df.loc[1]['PGA'].to_numpy()
         realizations = float(self.calc.oqparam.number_of_ground_motion_fields)
         gmvs_within_range_fst = count_close(fst_value, gmvs0, gmvs1)
         gmvs_within_range_snd = count_close(snd_value, gmvs0, gmvs1)
@@ -67,9 +67,9 @@ class ScenarioTestCase(CalculatorTestCase):
         self.execute(case.__file__, 'job.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
         median = {imt: [] for imt in self.calc.oqparam.imtls}
-        for imti, imt in enumerate(self.calc.oqparam.imtls):
+        for imt in self.calc.oqparam.imtls:
             for sid in self.calc.sitecol.sids:
-                gmvs = df.loc[sid][f'gmv_{imti}'].to_numpy()
+                gmvs = df.loc[sid][imt].to_numpy()
                 median[imt].append(numpy.median(gmvs))
         return median
 
@@ -262,7 +262,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(ds['sitecol']), 4)
         self.assertEqual(len(ds['gmf_data/sid']), 40)
         df1 = self.calc.datastore.read_df('gmf_data')
-        for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
+        for gmv in 'PGA SA(0.3) SA(0.6) SA(1.0)'.split():
             for g1, g2 in zip(df0[gmv], df1[gmv]):
                 assert abs(g1-g2) < 5E-6, (gmv, g1, g2)
 
@@ -283,7 +283,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(ds['sitecol']), 1)
         self.assertEqual(len(ds['gmf_data/sid']), 10)
         df1 = self.calc.datastore.read_df('gmf_data')
-        for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
+        for gmv in 'PGA SA(0.3) SA(0.6) SA(1.0)'.split():
             for g0, g1 in zip(df0[gmv], df1[gmv]):
                 assert abs(g0-g1) < 6E-6, (gmv, g0, g1)
 

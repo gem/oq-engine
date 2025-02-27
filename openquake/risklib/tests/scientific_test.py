@@ -33,8 +33,8 @@ eids = numpy.arange(3)
 def call(vf, gmvs, eids):
     rng = scientific.MultiEventRNG(42, eids)
     gmf_df = pandas.DataFrame(
-        dict(eid=eids, gmv_0=gmvs, sid=numpy.zeros(len(eids))))
-    return [vf(None, gmf_df, 'gmv_0', rng).loss.to_numpy()]
+        dict(eid=eids, PGA=gmvs, sid=numpy.zeros(len(eids))))
+    return [vf(None, gmf_df, 'PGA', rng).loss.to_numpy()]
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
@@ -661,8 +661,8 @@ class RiskComputerTestCase(unittest.TestCase):
                      "distribution_name": "LN"}}}}
         gmfs = {'eid': [0, 1],
                 'sid': [0, 0],
-                'gmv_0': [.23, .31]}
-        rc = riskmodels.get_riskcomputer(dic, alias={'PGA': 'gmv_0'})
+                'PGA': [.23, .31]}
+        rc = riskmodels.get_riskcomputer(dic)
         print(toml.dumps(dic))
         for k, v in rc.todict().items():
             self.assertEqual(dic[k], v)
@@ -679,11 +679,6 @@ class RiskComputerTestCase(unittest.TestCase):
         print(out)
 
     def test2(self):
-        alias = {'PGA': 'gmv_0',
-                 'SA(0.2)': 'gmv_1',
-                 'SA(0.5)': 'gmv_2',
-                 'SA(0.8)': 'gmv_3',
-                 'SA(1.0)': 'gmv_4'}
         dic = {'calculation_mode': 'event_based_risk',
                'risk_functions': {
                    'groundshaking#nonstructural#RM': {
@@ -706,12 +701,12 @@ class RiskComputerTestCase(unittest.TestCase):
 
         gmfs = {'eid': [0, 2],
                 'sid': [0, 0],
-                'gmv_0': [.23, .31],
-                'gmv_1': [.23, .41],
-                'gmv_2': [.23, .51],
-                'gmv_3': [.23, .32],
-                'gmv_4': [.23, .21]}
-        rc = riskmodels.get_riskcomputer(dic, alias)
+                'PGA': [.23, .31],
+                'SA(0.2)': [.23, .41],
+                'SA(0.5)': [.23, .51],
+                'SA(0.8)': [.23, .32],
+                'SA(1.0)': [.23, .21]}
+        rc = riskmodels.get_riskcomputer(dic)
         print(toml.dumps(dic))
         asset_df = pandas.DataFrame({
             'area': [10.0, 1.0],
@@ -774,7 +769,7 @@ class RiskComputerTestCase(unittest.TestCase):
                       'nodamage': 1e-10,
                       'peril': 'landslide'}}}}
         limit_states = 'slight moderate extreme complete'.split()
-        rc = riskmodels.get_riskcomputer(rcdic, {'PGA': 'gmv_0'}, limit_states)
+        rc = riskmodels.get_riskcomputer(rcdic, limit_states)
         asset_df = pandas.DataFrame({
             'id': ['a1'],
             'lon': [83.31],
@@ -786,7 +781,7 @@ class RiskComputerTestCase(unittest.TestCase):
         gmf_df = pandas.DataFrame({
             'eid': [0, 1],
             'sid': [0, 0],
-            'gmv_0': [.098234, .165975],
+            'PGA': [.098234, .165975],
             'DispProb': [.335, .335]})
         dd5 = rc.get_dd5(asset_df, gmf_df)  # (P, A, E, L, D)
         dd0 = dd5[0, 0, 0, 0, 1:]

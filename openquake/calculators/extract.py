@@ -1022,8 +1022,8 @@ def extract_losses_by_asset(dstore, what):
 def _gmf(df, num_sites, imts, sec_imts):
     # convert data into the composite array expected by QGIS
     gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts + sec_imts])
-    for m, imt in enumerate(imts + sec_imts):
-        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}'] if imt in imts else df[imt]
+    for imt in imts + sec_imts:
+        gmfa[imt][U32(df.sid)] = df[imt]
     return gmfa
 
 
@@ -1039,9 +1039,8 @@ def extract_gmf_scenario(dstore, what):
     eids = dstore['gmf_data/eid'][:]
     rlzs = dstore['events']['rlz_id']
     ok = rlzs[eids] == rlz_id
-    m = list(oq.imtls).index(imt)
     eids = eids[ok]
-    gmvs = dstore[f'gmf_data/gmv_{m}'][ok]
+    gmvs = dstore[f'gmf_data/{imt}'][ok]
     sids = dstore['gmf_data/sid'][ok]
     try:
         N = len(dstore['complete'])
@@ -1079,7 +1078,7 @@ def extract_gmf_npz(dstore, what):
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
-# extract the relevant GMFs as an npz file with fields eid, sid, gmv_
+# extract the relevant GMFs as an npz file with fields eid, sid, imt...
 @extract.add('relevant_gmfs')
 def extract_relevant_gmfs(dstore, what):
     qdict = parse(what)

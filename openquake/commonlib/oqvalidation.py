@@ -1817,22 +1817,15 @@ class OqParam(valid.ParamSet):
         :returns: a composite data type for the GMFs
         """
         lst = [('sid', U32), ('eid', U32)]
-        for m, imt in enumerate(self.get_primary_imtls()):
-            lst.append((f'gmv_{m}', F32))
-        for out in self.sec_imts:
-            lst.append((out, F32))
+        for imt in self.all_imts():
+            lst.append((imt, F32))
         return numpy.dtype(lst)
 
     def all_imts(self):
         """
-        :returns: gmv_0, ... gmv_M, sec_imt...
+        :returns: imt..., sec_imt...
         """
-        lst = []
-        for m, imt in enumerate(self.get_primary_imtls()):
-            lst.append(f'gmv_{m}')
-        for out in self.sec_imts:
-            lst.append(out)
-        return lst
+        return list(self.get_primary_imtls()) + self.sec_imts
 
     def get_sec_perils(self):
         """
