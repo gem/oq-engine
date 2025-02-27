@@ -98,8 +98,8 @@ def build_hcurves(calc):
         calc.datastore.read_df('events', 'id')[['rlz_id']])
     imtls = {imt: imls for imt, imls in oq.imtls.items()}
     for sec_imt in oq.sec_imts:
-        min_ = gmf_df[sec_imt].min() + 1E-10
-        max_ = gmf_df[sec_imt].max() + 2E-10
+        min_ = gmf_df[sec_imt].min() + 1E-10  # to ensure min_ > 0
+        max_ = gmf_df[sec_imt].max() + 2E-10  # to ensure max_ > min_
         imtls[sec_imt] = valid.logscale(min_, max_, L1)
     hc_mon = calc._monitor('building hazard curves', measuremem=False)
     hcurves = {}
