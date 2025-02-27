@@ -492,6 +492,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     res = {}
     for m, imt in enumerate(gc.imts):
         res[imt] = arr = numpy.zeros((N, E), F32)
-        for sid, eid, gmv in zip(df.sid, df.eid, df[imt]):
+        for sid, eid, gmv in zip(df.sid, df.eid, df[str(imt)]):
             arr[sid, eid] = gmv
     return res
