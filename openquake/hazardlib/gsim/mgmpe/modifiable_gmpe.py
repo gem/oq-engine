@@ -275,7 +275,6 @@ class ModifiableGMPE(GMPE):
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
             
-        # If missing req params based on underlying gsim add to the MGMPE class
         if ('ba08_site_term' in self.params and
             'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS):
             # hazardlib/gsim/utils/get_fault_type_dummy_variables is called
