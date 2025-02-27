@@ -1591,8 +1591,8 @@ class LossCurvesMapsBuilder(object):
                  weights, eff_time, risk_investigation_time, pla_factor=None):
         if return_periods[-1] > eff_time:
             raise ValueError(
-                'The return_period %s is longer than the eff_time per rlz %s'
-                % (return_periods[-1], eff_time))
+                'The return_period %s is longer than the eff_time per rlz'
+                ' [%s years]' % (return_periods[-1], eff_time))
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt

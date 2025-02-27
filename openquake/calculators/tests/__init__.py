@@ -30,7 +30,7 @@ import numpy
 from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.baselib import general, parallel, writers
-from openquake.commonlib import datastore, readinput, oqvalidation, logs
+from openquake.commonlib import datastore, readinput, logs
 
 OUTPUTS = os.path.join(os.path.dirname(__file__), 'outputs')
 OQ_CALC_OUTPUTS = os.environ.get('OQ_CALC_OUTPUTS')
@@ -133,11 +133,8 @@ class CalculatorTestCase(unittest.TestCase):
         self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
             else testfile
         params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
-        oq = oqvalidation.OqParam(**params)
-        oq._input_files = readinput.get_input_files(oq)
-        oq.validate()
-        log = logs.init('job', params)
-        return base.calculators(oq, log.calc_id)
+        log = logs.init(params)
+        return base.calculators(log.get_oqparam(), log.calc_id)
 
     def run_calc(self, testfile, job_ini, **kw):
         """
