@@ -163,6 +163,24 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'msr': '',
 }
 
+ARISTOTLE_FORM_DEFAULTS = {
+    'usgs_id': '',
+    'lon': '',
+    'lat': '',
+    'dep': '',
+    'mag': '',
+    'aspect_ratio': '2',
+    'rake': '',
+    'dip': '90',
+    'strike': '0',
+    'maximum_distance': '200',
+    'truncation_level': '3',
+    'number_of_ground_motion_fields': '100',
+    'asset_hazard_distance': '15',
+    'ses_seed': '42',
+    'maximum_distance_stations': '',
+}
+
 validators = {
     'approach': valid.Choice('use_shakemap_from_usgs',
                              'use_pnt_rup_from_usgs',

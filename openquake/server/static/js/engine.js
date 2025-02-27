@@ -502,6 +502,18 @@ function capitalizeFirstLetter(val) {
         $('#submit_impact_get_rupture').text(btn_txt);
     }
 
+    function reset_rupture_form_inputs() {
+        // FIXME: read defaults from openquake.hazardlib.shakemap.validate
+        var defaults = {'lon': '', 'lat': '', 'dep': '', 'mag': '',
+                        'aspect_ratio': '2', 'rake': '', 'dip': '90', 'strike': '0'}
+        for (field in defaults) {
+            $('input#' + field).val(defaults[field]);
+        }
+        // nodal planes are re-populated when loading rupture data; msrs are populated only once
+        $('select#nodal_plane').empty();
+        $('select#msr').val('');
+    }
+
     /* classic event management */
     $(document).ready(
         function () {
@@ -618,6 +630,10 @@ function capitalizeFirstLetter(val) {
                 $('#submit_impact_calc').prop('disabled', lonValue === '');
             }
             toggleRunCalcBtnState();
+
+            $('input[name="usgs_id"]').on('input', function() {
+                reset_rupture_form_inputs();
+            });
 
             $('input[name="impact_approach"]').change(function () {
                 const selected_approach = $(this).val();
