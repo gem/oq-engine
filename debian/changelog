@@ -1,8 +1,4 @@
-  [Christopher Brooks]
-  * Added Boore and Atkinson (2008) site term to the ModifiableGMPE
-    capabilities and as an input arg for the Atkinson and Macias (2009)
-    GMM as required for the US 2023 model + added unit tests.  
-  
+ 
   [Kendra Johnson, Michele Simionato]
   * Implemented splitting of multifault sources into faults when using
     disagg_by_src=true and use_rates=true
