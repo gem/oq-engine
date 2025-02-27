@@ -109,8 +109,8 @@ def _idriss_magnitude_weighting_factor(mag: float):
 
 def _liquefaction_spatial_extent(a: float, b: float, c: float, p: float):
     """
-    Calculates the liquefaction spatial extent (LSE) in % as per formulae 2
-    from the Reference. LSE after an earthquake is the spatial area covered
+    Calculates the liquefaction spatial extent (LqSE) in % as per formulae 2
+    from the Reference. LqSE after an earthquake is the spatial area covered
     by surface manifestations of liquefaction reported as a percentage of a
     pixel at a specific location on the map.
 
@@ -119,8 +119,8 @@ def _liquefaction_spatial_extent(a: float, b: float, c: float, p: float):
     Bulletin of the Seismological Society of America, 107(3), 1365–1385.
     https://doi.org/10.1785/0120160198
     """
-    LSE = a / (1 + b * np.exp(-c * p)) ** 2
-    return LSE
+    LqSE = a / (1 + b * np.exp(-c * p)) ** 2
+    return LqSE
 
 
 def zhu_etal_2015_general(
@@ -195,7 +195,7 @@ def zhu_etal_2017_coastal(
     The optimal threshold probability value to convert the predicted
     probability into binary classification is 0.4 (see p.13 from the
     Reference).
-    Liquefaction spatial extent (LSE) is calculated as per formulae 2 from the
+    Liquefaction spatial extent (LqSE) is calculated as per formulae 2 from the
     Reference. Model's coefficients are given in Table 6 (Model 1).
 
     Reference: Zhu, J., Baise, L. G., & Thompson, E. M. (2017).
@@ -219,7 +219,7 @@ def zhu_etal_2017_coastal(
         prob_liq: Probability of liquefaction at the site.
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
-        LSE: Liquefaction spatial extent (in %).
+        LqSE: Liquefaction spatial extent (in %).
     """
     Xg = (
         pgv_coeff * np.log(pgv)
@@ -237,8 +237,8 @@ def zhu_etal_2017_coastal(
     # probability when VS30 > 620 m/s.
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
-    LSE = _liquefaction_spatial_extent(42.08, 62.59, 11.43, prob_liq)
-    return prob_liq, out_class, LSE
+    LqSE = _liquefaction_spatial_extent(42.08, 62.59, 11.43, prob_liq)
+    return prob_liq, out_class, LqSE
 
 
 def zhu_etal_2017_general(
@@ -265,7 +265,7 @@ def zhu_etal_2017_general(
     The optimal threshold probability value to convert the predicted
     probability into binary classification is 0.4
     (see p.13 from the Reference).
-    Liquefaction spatial extent (LSE) is calculated as per formulae 2 from the
+    Liquefaction spatial extent (LqSE) is calculated as per formulae 2 from the
     Reference. Model's coefficients are given in Table 6 (Model 2).
 
     Reference: Zhu, J., Baise, L. G., & Thompson, E. M. (2017).
@@ -289,7 +289,7 @@ def zhu_etal_2017_general(
         prob_liq: Probability of liquefaction at the site.
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
-        LSE: Liquefaction spatial extent (in %).
+        LqSE: Liquefaction spatial extent (in %).
     """
     Xg = (
         pgv_coeff * np.log(pgv_scaling_factor * pgv)
@@ -306,8 +306,8 @@ def zhu_etal_2017_general(
     # probability when VS30 > 620 m/s.
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
-    LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
-    return prob_liq, out_class, LSE
+    LqSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
+    return prob_liq, out_class, LqSE
 
 
 def rashidian_baise_2020(
@@ -336,7 +336,7 @@ def rashidian_baise_2020(
     The optimal threshold probability value to convert the predicted
     probability into binary classification is 0.4
     (see p.13 from Zhu et al., 2017).
-    Liquefaction spatial extent (LSE) is calculated as per formulae 3 from the
+    Liquefaction spatial extent (LqSE) is calculated as per formulae 3 from the
     Reference. Model's coefficients corresponds to the ones for Model 2 from
     Zhu et al., 2017.
 
@@ -386,8 +386,8 @@ def rashidian_baise_2020(
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     prob_liq = np.where(pga < 0.1, 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
-    LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
-    return prob_liq, out_class, LSE
+    LqSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
+    return prob_liq, out_class, LqSE
 
 
 def allstadt_etal_2022(
@@ -467,8 +467,8 @@ def allstadt_etal_2022(
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     prob_liq = np.where(pga < 0.1, 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
-    LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
-    return prob_liq, out_class, LSE
+    LqSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
+    return prob_liq, out_class, LqSE
 
 
 def akhlagi_etal_2021_model_a(

@@ -227,7 +227,7 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
 
-    outputs = ["LiqProb", "LiqOccur", "LSE"]
+    outputs = ["LiqProb", "LiqOccur", "LqSE"]
 
     def __init__(
         self,
@@ -254,7 +254,7 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGV":
-                prob_liq, out_class, lse = zhu_etal_2017_coastal(
+                prob_liq, out_class, lqse = zhu_etal_2017_coastal(
                     pgv=gmf,
                     vs30=sites.vs30,
                     dr=sites.dr,
@@ -263,7 +263,7 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
                 )
             out.append(prob_liq)
             out.append(out_class)
-            out.append(lse)
+            out.append(lqse)
         return out
 
 
@@ -273,7 +273,7 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
 
-    outputs = ["LiqProb", "LiqOccur", "LSE"]
+    outputs = ["LiqProb", "LiqOccur", "LqSE"]
 
     def __init__(
         self,
@@ -300,7 +300,7 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGV":
-                prob_liq, out_class, lse = zhu_etal_2017_general(
+                prob_liq, out_class, lqse = zhu_etal_2017_general(
                     pgv=gmf,
                     vs30=sites.vs30,
                     dw=sites.dw,
@@ -309,7 +309,7 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
                 )
             out.append(prob_liq)
             out.append(out_class)
-            out.append(lse)
+            out.append(lqse)
         return out
 
 
@@ -319,7 +319,7 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
 
-    outputs = ["LiqProb", "LiqOccur", "LSE"]
+    outputs = ["LiqProb", "LiqOccur", "LqSE"]
 
     def __init__(
         self,
@@ -358,7 +358,7 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
             raise ValueError(
                 "Both PGA and PGV are required to compute liquefaction probability using the RashidianBaise2020Liquefaction model"
             )
-        prob_liq, out_class, lse = rashidian_baise_2020(
+        prob_liq, out_class, lqse = rashidian_baise_2020(
             pga=pga,
             pgv=pgv,
             vs30=sites.vs30,
@@ -368,7 +368,7 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
         )
         out.append(prob_liq)
         out.append(out_class)
-        out.append(lse)
+        out.append(lqse)
         return out
 
 
@@ -378,7 +378,7 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
     to binary output via the predefined probability threshold.
     """
 
-    outputs = ["LiqProb", "LiqOccur", "LSE"]
+    outputs = ["LiqProb", "LiqOccur", "LqSE"]
 
     def __init__(
         self,
@@ -417,7 +417,7 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
                 "probability using the AllstadtEtAl2022Liquefaction model"
             )
 
-        prob_liq, out_class, lse = allstadt_etal_2022(
+        prob_liq, out_class, lqse = allstadt_etal_2022(
             pga=pga,
             pgv=pgv,
             mag=mag,
@@ -428,7 +428,7 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
         )
         out.append(prob_liq)
         out.append(out_class)
-        out.append(lse)
+        out.append(lqse)
         return out
 
 
@@ -1049,7 +1049,7 @@ class NowickiJessee2018Landslides(SecondaryPeril):
     Computes the landslide probability from PGV and areal coverage.
     """
 
-    outputs = ["LsProb", "LSE"]
+    outputs = ["LsProb", "LsSE"]
 
     def __init__(
         self,
@@ -1090,7 +1090,7 @@ class NowickiJessee2018Landslides(SecondaryPeril):
                 "probability using the NowickiJessee2018Landslides model"
             )
         
-        prob_ls, lse = nowicki_jessee_2018(
+        prob_ls, lsse = nowicki_jessee_2018(
             pga = pga,
             pgv = pgv,
             slope=sites.slope,
@@ -1099,7 +1099,7 @@ class NowickiJessee2018Landslides(SecondaryPeril):
             cti=sites.cti,
         )
         out.append(prob_ls)
-        out.append(lse)
+        out.append(lsse)
             
         return out
         
