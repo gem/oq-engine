@@ -275,19 +275,20 @@ class ModifiableGMPE(GMPE):
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
             
+        # If missing req params based on underlying gsim add to the MGMPE class
         if ('ba08_site_term' in self.params and
             'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS):
             # hazardlib/gsim/utils/get_fault_type_dummy_variables is called
             # from AB06 and requires the rake parameter so add here if missing
-            self.gmpe.REQUIRES_RUPTURE_PARAMETERS |= {"rake"}
+            self.REQUIRES_RUPTURE_PARAMETERS |= {"rake"}
 
         if ('ba08_site_term' in self.params and
             'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
-            self.gmpe.REQUIRES_SITES_PARAMETERS |= {"vs30"}
+            self.REQUIRES_SITES_PARAMETERS |= {"vs30"}
 
         if ('cb14_basin_term' in self.params or 'm9_basin_term' in self.params
             ) and ( 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
-            self.gmpe.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
+            self.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
 
         # This is required by the `sigma_model_alatik2015` function
         key = 'sigma_model_alatik2015'
