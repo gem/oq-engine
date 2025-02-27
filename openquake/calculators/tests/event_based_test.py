@@ -530,6 +530,8 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('avg_gmf.csv', fname)
 
+        # TODO: export hcurves and hmaps
+
     def test_case_27(self):
         # splitting ruptures + gmf1 + gmf2
         self.run_calc(case_27.__file__, 'job.ini',
