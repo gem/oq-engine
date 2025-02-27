@@ -68,7 +68,7 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
 
 def event_based_damage(df, oq, dstore, monitor):
     """
-    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
+    :param df: a DataFrame of GMFs with fields sid, eid, imt, ...
     :param oq: parameters coming from the job.ini
     :param dstore: a DataStore instance
     :param monitor: a Monitor instance

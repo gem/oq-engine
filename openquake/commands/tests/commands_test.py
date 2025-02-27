@@ -627,7 +627,7 @@ Source Loss Table'''.splitlines())
                                 'site_model_uniform_grid_rock.csv -n 1 -t 0 '
                                 f'--spatialcorr no -c no --site-effects={eff}')
                 got = out.getvalue()
-                assert f'gmv_0={exp}' in got
+                assert f'gmv={exp}' in got
 
 
 class CheckInputTestCase(unittest.TestCase):

@@ -377,12 +377,11 @@ Then you can use the GmfComputer class to perform the calculation:
 >>> from openquake.hazardlib.calc.gmf import GmfComputer
 >>> gc = GmfComputer(ebr, sitecol, cmaker)
 >>> gc.compute_all()  # returns a DataFrame
-      gmv_0  eid  sid  rlz
+        PGA  eid  sid  rlz
 0  0.660239    0    0    0
 1  0.301583    1    0    0
 
-`gmv_0` is the value of the ground motion field for the first IMT (i.e PGA in this
-case), `eid` the event ID, `sid` the site ID (there is a single site in this case)
+`PGA` is the value of the ground motion field for the first IMT, `eid` the event ID, `sid` the site ID (there is a single site in this case)
 and `rlz` the realization index.
 In scenario calculations there is a realization for each GSIM and in this case
 there is a single GSIM, so rlz=0. The total number of events is the number
@@ -397,7 +396,7 @@ It is also possible to perform calculations with point-like ruptures
 >>> rup =  PointRupture(mag, cmaker.trt, site.location, occ_rate, cmaker.tom)
 >>> ebr = EBRupture(rup, n_occ=2, seed=42)
 >>> GmfComputer(ebr, sitecol, cmaker).compute_all()
-      gmv_0  eid  sid  rlz
+        PGA  eid  sid  rlz
 0  0.541180    0    0    0
 1  0.247199    1    0    0
 

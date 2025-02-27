@@ -250,7 +250,6 @@ class RiskModel(object):
     """
     time_event = None  # used in scenario_risk
     compositemodel = None  # set by get_crmodel
-    alias = None  # set in save_crmodel
 
     def __init__(self, calcmode, taxonomy, risk_functions, **kw):
         self.calcmode = calcmode
@@ -401,7 +400,6 @@ class RiskModel(object):
         :returns: a DataFrame with columns eid, eid, loss
         """
         imt = self.imt_by_lt[loss_type]
-        col = self.alias.get(imt, imt)
         sid = assets['site_id']
         if loss_type in 'occupants injured':
             val = assets['occupants_%s' % self.time_event].to_numpy()
@@ -411,7 +409,7 @@ class RiskModel(object):
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[peril][loss_type]
-        return vf(asset_df, gmf_df, col, rndgen,
+        return vf(asset_df, gmf_df, imt, rndgen,
                   self.minimum_asset_loss.get(loss_type, 0.))
 
     scenario = ebrisk = scenario_risk = event_based_risk
@@ -428,8 +426,7 @@ class RiskModel(object):
         and D the number of damage states.
         """
         imt = self.imt_by_lt[loss_type]
-        col = self.alias.get(imt, imt)
-        gmvs = gmf_df[col].to_numpy()
+        gmvs = gmf_df[imt].to_numpy()
         ffs = self.risk_functions[peril][loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
@@ -468,7 +465,7 @@ def get_riskmodel(taxonomy, oqparam, risk_functions):
 
 
 # used only in riskmodels_test
-def get_riskcomputer(dic, alias, limit_states=()):
+def get_riskcomputer(dic, limit_states=()):
     # builds a RiskComputer instance from a suitable dictionary
     rc = scientific.RiskComputer.__new__(scientific.RiskComputer)
     rc.D = len(limit_states) + 1
@@ -505,7 +502,6 @@ def get_riskcomputer(dic, alias, limit_states=()):
                        {peril: group_by_lt(by_peril[peril]) for peril in by_peril},
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
-        rm.alias = alias
         rc[riskid] = rm
     if 'wdic' in dic:
         for rlt, weight in dic['wdic'].items():
