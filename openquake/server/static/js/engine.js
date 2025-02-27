@@ -729,8 +729,8 @@ function capitalizeFirstLetter(val) {
                     $('#rupture_from_usgs').val(data.rupture_from_usgs);
                     $('#rupture_from_usgs_loaded').val(data.rupture_from_usgs ? 'Loaded' : 'N.A.');
                     var conversion_issues = '';
-                    if ('error' in data) {  // data.error comes from the rupture dictionary and refers to rupture importing/converting
-                        conversion_issues += '<p>' + data.error + '</p>';
+                    if ('rupture_issue' in data) {
+                        conversion_issues += '<p>' + data.rupture_issue + '</p>';
                         $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
                     }
                     // NOTE: these are stations downloaded from the USGS and not those uploaded by the user
