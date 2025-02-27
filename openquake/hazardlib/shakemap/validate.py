@@ -28,6 +28,7 @@ from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
+from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -181,6 +182,9 @@ ARISTOTLE_FORM_DEFAULTS = {
     'maximum_distance_stations': '',
 }
 
+
+msr_choices = [msr.__class__.__name__ for msr in get_available_magnitude_scalerel()]
+
 validators = {
     'approach': valid.Choice('use_shakemap_from_usgs',
                              'use_pnt_rup_from_usgs',
@@ -193,7 +197,7 @@ validators = {
     'lat': valid.latitude,
     'dep': valid.positivefloat,
     'mag': valid.positivefloat,
-    'msr': valid.utf8,
+    'msr': valid.Choice(*msr_choices),
     'aspect_ratio': valid.positivefloat,
     'rake': valid.rake_range,
     'dip': valid.dip_range,
@@ -224,8 +228,8 @@ def _validate(POST):
         try:
             value = validation_func(POST.get(field))
         except Exception as exc:
-            blankable = ['dip', 'strike', 'msr',
-                         'maximum_distance_stations', 'local_timestamp']
+            blankable = ['dip', 'strike', 'maximum_distance_stations',
+                         'local_timestamp']
             if field in blankable and POST.get(field) == '':
                 if field in dic:
                     dic[field] = None

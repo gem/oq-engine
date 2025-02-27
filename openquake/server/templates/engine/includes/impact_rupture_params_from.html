@@ -22,9 +22,8 @@
                 <div id="msr" class="impact_form_row hidden">
                   <label for="msr">{{ impact_form_labels.msr }}</label>
                   <select name="msr" id="msr" class="impact-select">
-                    <option value="" selected></option>
                     {% for msr in msrs %}
-                    <option value="{{ msr }}">{{ msr }}</option>
+                    <option value="{{ msr }}"{% if msr == 'WC1994' %} selected{% endif %}>{{ msr }}</option>
                     {% endfor %}
                   </select>
                 </div>
