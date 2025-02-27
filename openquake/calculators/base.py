@@ -906,11 +906,6 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         if len(self.crmodel):
-            # NB: the alias dict must be filled after import_gmf
-            alias = {imt: 'gmv_%d' % i for i, imt in enumerate(
-                self.oqparam.get_primary_imtls())}
-            for rm in self.crmodel._riskmodels.values():
-                rm.alias = alias
             logging.info('Storing risk model')
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
@@ -1304,25 +1299,16 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
     names = [n for n in names if n != 'custom_site_id']
-    imts = [name.lstrip('gmv_')
-            for name in names if name not in ('sid', 'eid')]
+    # strip prefix `gmv_` from the column name
+    imts = [name[4:] for name in names if name not in ('sid', 'eid')]
     oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:
         raise ValueError('The calculation needs %s which is missing from %s' %
                          (', '.join(missing), fname))
-    imt2idx = {imt: i for i, imt in enumerate(oqparam.imtls)}
     arr = numpy.zeros(len(array), oqparam.gmf_data_dt())
     for name in names:
-        if name.startswith('gmv_'):
-            try:
-                m = imt2idx[name[4:]]
-            except KeyError:  # the file contains more than enough IMTs
-                pass
-            else:
-                arr[f'gmv_{m}'][:] = array[name]
-        else:
-            arr[name] = array[name]
+        arr[name[4:] if name.startswith('gmv_') else name] = array[name]
 
     if 'sid' not in names:
         # there is a custom_site_id instead
@@ -1523,8 +1509,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R
         assert N is not None  # pass len(complete) here
     items = [('sid', U32 if N == 0 else data['sid']),
              ('eid', U32 if N == 0 else data['eid'])]
-    for m in range(M):
-        col = f'gmv_{m}'
+    for col in map(str, prim_imts):
         items.append((col, F32 if data is None else data[col]))
     for imt in sec_imts:
         items.append((str(imt), F32 if N == 0 else data[imt]))
