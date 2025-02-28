@@ -523,11 +523,6 @@ function capitalizeFirstLetter(val) {
                 input.val(impact_form_defaults[field]);
             }
         }
-        accessory_fields = ['rupture_from_usgs_loaded', 'rupture_file_input', 'require_dip_strike',
-                            'station_data_file_input', 'station_data_file_loaded']
-        for (field of accessory_fields) {
-            $('input#' + field).val('');
-        }
         $('#rupture-map').hide();
         $('#shakemap-image-row').hide();
     }

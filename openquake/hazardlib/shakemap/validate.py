@@ -187,6 +187,11 @@ IMPACT_FORM_DEFAULTS = {
     'station_data_file': '',
     'maximum_distance_stations': '',
     'msr': 'WC1994',
+    'rupture_from_usgs_loaded': '',
+    'rupture_file_input': '',
+    'require_dip_strike': '',
+    'station_data_file_input': '',
+    'station_data_file_loaded': '',
 }
 
 
