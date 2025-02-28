@@ -166,13 +166,16 @@ IMPACT_FORM_PLACEHOLDERS = {
 
 IMPACT_FORM_DEFAULTS = {
     'usgs_id': '',
+    'rupture_from_usgs': '',
+    'rupture_file': '',
     'lon': '',
     'lat': '',
     'dep': '',
     'mag': '',
-    'msr': 'WC1994',
     'aspect_ratio': '2',
     'rake': '',
+    'local_timestamp': '',
+    'time_event': 'day',
     'dip': '90',
     'strike': '0',
     'maximum_distance': '200',
@@ -180,7 +183,10 @@ IMPACT_FORM_DEFAULTS = {
     'number_of_ground_motion_fields': '100',
     'asset_hazard_distance': '15',
     'ses_seed': '42',
+    'station_data_file_from_usgs': '',
+    'station_data_file': '',
     'maximum_distance_stations': '',
+    'msr': 'WC1994',
 }
 
 
