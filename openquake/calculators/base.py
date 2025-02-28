@@ -1482,6 +1482,7 @@ def import_gmfs_hdf5(dstore, oq):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
                 fileno += 1
+                imtlist = f['gmf_data'].attrs['imts'].split()
                 size = len(f['gmf_data/sid'])
                 logging.info('Reading {:_d} rows from {}'.format(size, fname))
                 sids = numpy.array(list(conv))
@@ -1492,7 +1493,11 @@ def import_gmfs_hdf5(dstore, oq):
                         df.loc[df.sid == sid, 'sid'] = idx
                     df['eid'] += nE  # add an offset to the event IDs
                     for col in df.columns:
-                        hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
+                        if col.startswith('gmv_'):  # before v3.24
+                            name = imtlist[int(col[4:])]
+                        else:
+                            name = col
+                        hdf5.extend(dstore[f'gmf_data/{name}'], df[col])
             nE += ne
             num_ev_rup_site.append((nE, len(rups), len(conv)))
         oq.hazard_imtls = {imt: [0] for imt in attrs['imts']}
