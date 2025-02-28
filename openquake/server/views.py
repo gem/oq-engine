@@ -36,7 +36,7 @@ from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
-    HttpResponseForbidden)
+    HttpResponseForbidden, JsonResponse)
 from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -273,7 +273,7 @@ def get_impact_form_defaults(request):
     """
     Return a json string with a dictionary of oq-impact form field names and defaults
     """
-    return HttpResponse(content=json.dumps(IMPACT_FORM_DEFAULTS), content_type=JSON)
+    return JsonResponse(IMPACT_FORM_DEFAULTS)
 
 
 def _make_response(error_msg, error_line, valid):
