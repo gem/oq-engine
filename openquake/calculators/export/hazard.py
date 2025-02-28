@@ -105,47 +105,6 @@ def add_imt(fname, imt):
     return os.path.join(os.path.dirname(fname), newname)
 
 
-def export_hcurves_by_imt_csv(
-        key, kind, dstore, fname, sitecol, imtls, comment):
-    """
-    Export the curves of the given realization into CSV.
-
-    :param key: output_type and export_type
-    :param kind: a string with the kind of output (realization or statistics)
-    :param dstore: a DataStore instance
-    :param fname: name of the exported file
-    :param sitecol: site collection
-    :param imtls: intensity measure type and levels
-    :param comment: comment dictionary
-    """
-    nsites = len(sitecol)
-    for imt, imls in imtls.items():
-        dest = add_imt(fname, imt)
-        lst = [('lon', F32), ('lat', F32), ('depth', F32)]
-        for iml in imls:
-            lst.append(('poe-%.7f' % iml, F32))
-        custom = 'custom_site_id' in sitecol.array.dtype.names
-        if custom:
-            lst.insert(0, ('custom_site_id', 'S8'))
-        array = extract(
-            dstore, 'hcurves?kind=%s&imt=%s' % (kind, imt))[kind]
-        hcurves = numpy.zeros(nsites, lst)
-        if custom:
-            for sid, csi, lon, lat, dep in zip(
-                    range(nsites), sitecol.custom_site_id,
-                    sitecol.lons, sitecol.lats, sitecol.depths):
-                hcurves[sid] = (csi, lon, lat, dep) + tuple(array[sid, 0, :])
-        else:
-            hcurves = numpy.zeros(nsites, lst)
-            for sid, lon, lat, dep in zip(
-                    range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
-                hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
-        comment.update(imt=imt)
-        writers.write_csv(dest, hcurves, comment=comment,
-                          header=[name for (name, dt) in lst])
-        yield dest
-
-
 def hazard_curve_name(dstore, ekey, kind):
     """
     :param calc_id: the calculation ID
@@ -224,7 +183,48 @@ def get_all_imtls(dstore):
         grp = dstore['all_imtls']
     except KeyError:
         return {}
-    return DictArray({imt: dset[:] for imt, dset in grp.items()})
+    return DictArray({imt: grp[imt][:] for imt in grp.attrs['imts'].split()})
+
+
+def export_hcurves_by_imt_csv(
+        key, kind, dstore, fname, sitecol, imtls, comment):
+    """
+    Export the curves of the given realization into CSV.
+
+    :param key: output_type and export_type
+    :param kind: a string with the kind of output (realization or statistics)
+    :param dstore: a DataStore instance
+    :param fname: name of the exported file
+    :param sitecol: site collection
+    :param imtls: intensity measure type and levels
+    :param comment: comment dictionary
+    """
+    nsites = len(sitecol)
+    for imt, imls in imtls.items():
+        dest = add_imt(fname, imt)
+        lst = [('lon', F32), ('lat', F32), ('depth', F32)]
+        for iml in imls:
+            lst.append(('poe-%.7f' % iml, F32))
+        custom = 'custom_site_id' in sitecol.array.dtype.names
+        if custom:
+            lst.insert(0, ('custom_site_id', 'S8'))
+        array = extract(
+            dstore, 'hcurves?kind=%s&imt=%s' % (kind, imt))[kind]
+        hcurves = numpy.zeros(nsites, lst)
+        if custom:
+            for sid, csi, lon, lat, dep in zip(
+                    range(nsites), sitecol.custom_site_id,
+                    sitecol.lons, sitecol.lats, sitecol.depths):
+                hcurves[sid] = (csi, lon, lat, dep) + tuple(array[sid, 0, :])
+        else:
+            hcurves = numpy.zeros(nsites, lst)
+            for sid, lon, lat, dep in zip(
+                    range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
+                hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
+        comment.update(imt=imt)
+        writers.write_csv(dest, hcurves, comment=comment,
+                          header=[name for (name, dt) in lst])
+        yield dest
 
 
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
