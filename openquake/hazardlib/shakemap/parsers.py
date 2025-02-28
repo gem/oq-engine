@@ -361,10 +361,9 @@ def read_usgs_stations_json(js: bytes):
     return stations
 
 
-def usgs_to_ecd_format(stations, exclude_imts=()):
+def usgs_stations_to_oq_format(stations, exclude_imts=(), seismic_only=False):
     '''
-    Adjust USGS format to match the ECD (Earthquake Consequence Database)
-    format
+    Convert from ShakeMap stations format to the OpenQuake format
     '''
     # Adjust column names to match format
     stations.columns = stations.columns.str.upper()
@@ -389,21 +388,21 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
                 imts.append(col)
     # Identify relevant columns
     cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE',
-            'STATION_TYPE', 'VS30'] + imts
+            'STATION_TYPE', 'DISTANCE', 'VS30'] + imts
     df = stations[cols].copy()
     # Add missing columns
     df.loc[:, 'VS30_TYPE'] = 'inferred'
     df.loc[:, 'REFERENCES'] = 'Stations_USGS'
-    # Adjust PGA and SA untis to [g]. USGS uses [% g]
+    # Adjust PGA and SA units to [g]. USGS uses [% g]
     adj_cols = [imt for imt in imts
                 if '_VALUE' in imt and
                 'PGV' not in imt and
                 'MMI' not in imt]
     df.loc[:, adj_cols] = round(df.loc[:, adj_cols].
                                 apply(pd.to_numeric, errors='coerce') / 100, 6)
-    df_seismic = df[df['STATION_TYPE'] == 'seismic']
-    df_seismic_non_null = df_seismic.dropna()
-    return df_seismic_non_null
+    if seismic_only:
+        df = df.loc[df.STATION_TYPE == 'seismic'].dropna()
+    return df
 
 
 def _get_preferred_item(items):
@@ -452,7 +451,8 @@ def download_station_data_file(usgs_id, contents, user):
                    f' "station_type" is not specified, so we can not'
                    f' identify the "seismic" stations.')
             return None, msg
-        df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
+        df = usgs_stations_to_oq_format(
+            stations, exclude_imts=('SA(3.0)',), seismic_only=True)
         if len(df) < 1:
             if original_len > 1:
                 if seismic_len > 1:
