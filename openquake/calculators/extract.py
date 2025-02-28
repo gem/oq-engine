@@ -1021,7 +1021,6 @@ def extract_losses_by_asset(dstore, what):
 
 def _gmf(df, num_sites, imts, sec_imts):
     # convert data into the composite array expected by QGIS
-    # df can be a DataFrame or a Series
     gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts + sec_imts])
     for imt in imts + sec_imts:
         gmfa[imt][U32(df.sid)] = df[imt]
@@ -1072,14 +1071,13 @@ def extract_gmf_npz(dstore, what):
     # rename old (version <= 3.23) column names
     rename_dic = {f'gmv_{i}': imt for i, imt in enumerate(imt_list)}
     try:
-        df = dstore.read_df('gmf_data', 'eid').rename(
-            columns=rename_dic).loc[eid]
+        df = dstore.read_df('gmf_data', 'eid').rename(columns=rename_dic)
     except KeyError:
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
     else:
         prim_imts = list(oq.get_primary_imtls())
-        gmfa = _gmf(df, n, prim_imts, oq.sec_imts)
+        gmfa = _gmf(df[df.index == eid], n, prim_imts, oq.sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
