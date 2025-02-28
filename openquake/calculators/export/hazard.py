@@ -106,43 +106,44 @@ def add_imt(fname, imt):
 
 
 def export_hcurves_by_imt_csv(
-        key, kind, fname, sitecol, array, imt, imls, comment):
+        key, kind, dstore, fname, sitecol, imtls, comment):
     """
     Export the curves of the given realization into CSV.
 
     :param key: output_type and export_type
     :param kind: a string with the kind of output (realization or statistics)
+    :param dstore: a DataStore instance
     :param fname: name of the exported file
     :param sitecol: site collection
-    :param array: an array of shape (N, 1, L1) and dtype numpy.float32
-    :param imt: intensity measure type
-    :param imls: intensity measure levels
+    :param imtls: intensity measure type and levels
     :param comment: comment dictionary
     """
     nsites = len(sitecol)
-    dest = add_imt(fname, imt)
-    lst = [('lon', F32), ('lat', F32), ('depth', F32)]
-    for iml in imls:
-        lst.append(('poe-%.7f' % iml, F32))
-    custom = 'custom_site_id' in sitecol.array.dtype.names
-    if custom:
-        lst.insert(0, ('custom_site_id', 'S8'))
-    hcurves = numpy.zeros(nsites, lst)
-    if custom:
-        for sid, csi, lon, lat, dep in zip(
-                range(nsites), sitecol.custom_site_id,
-                sitecol.lons, sitecol.lats, sitecol.depths):
-            hcurves[sid] = (csi, lon, lat, dep) + tuple(array[sid, 0, :])
-    else:
+    for imt, imls in imtls.items():
+        dest = add_imt(fname, imt)
+        lst = [('lon', F32), ('lat', F32), ('depth', F32)]
+        for iml in imls:
+            lst.append(('poe-%.7f' % iml, F32))
+        custom = 'custom_site_id' in sitecol.array.dtype.names
+        if custom:
+            lst.insert(0, ('custom_site_id', 'S8'))
+        array = extract(
+            dstore, 'hcurves?kind=%s&imt=%s' % (kind, imt))[kind]
         hcurves = numpy.zeros(nsites, lst)
-        for sid, lon, lat, dep in zip(
-                range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
-            hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
-    comment.update(imt=imt)
-    
-    
-    return writers.write_csv(dest, hcurves, comment=comment,
-                             header=[name for (name, dt) in lst])
+        if custom:
+            for sid, csi, lon, lat, dep in zip(
+                    range(nsites), sitecol.custom_site_id,
+                    sitecol.lons, sitecol.lats, sitecol.depths):
+                hcurves[sid] = (csi, lon, lat, dep) + tuple(array[sid, 0, :])
+        else:
+            hcurves = numpy.zeros(nsites, lst)
+            for sid, lon, lat, dep in zip(
+                    range(nsites), sitecol.lons, sitecol.lats, sitecol.depths):
+                hcurves[sid] = (lon, lat, dep) + tuple(array[sid, 0, :])
+        comment.update(imt=imt)
+        writers.write_csv(dest, hcurves, comment=comment,
+                          header=[name for (name, dt) in lst])
+        yield dest
 
 
 def hazard_curve_name(dstore, ekey, kind):
@@ -215,6 +216,17 @@ def export_aelo_csv(key, dstore):
     return [fname]
 
 
+def get_all_imtls(dstore):
+    """
+    :returns: a DictArray imt->imls if the datastore contains 'all_imtls'
+    """
+    try:
+        grp = dstore['all_imtls']
+    except KeyError:
+        return {}
+    return DictArray({imt: dset[:] for imt, dset in grp.items()})
+
+
 @export.add(('hcurves', 'csv'), ('hmaps', 'csv'), ('uhs', 'csv'))
 def export_hcurves_csv(ekey, dstore):
     """
@@ -258,14 +270,9 @@ def export_hcurves_csv(ekey, dstore):
                 imtls = DictArray(
                     {imt: oq.soil_intensities for imt in oq.imtls})
             else:
-                imtls = oq.imtls
-            for imt, imls in imtls.items():
-                hcurves = extract(
-                    dstore, 'hcurves?kind=%s&imt=%s' % (kind, imt))[kind]
-                fnames.append(
-                    export_hcurves_by_imt_csv(
-                        ekey, kind, fname, sitecol, hcurves, imt, imls,
-                        comment))
+                imtls = get_all_imtls(dstore) or oq.imtls
+            fnames.extend(export_hcurves_by_imt_csv(
+                ekey, kind, dstore, fname, sitecol, imtls, comment))
     return sorted(fnames)
 
 
