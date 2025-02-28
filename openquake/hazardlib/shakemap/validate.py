@@ -170,6 +170,7 @@ IMPACT_FORM_DEFAULTS = {
     'lat': '',
     'dep': '',
     'mag': '',
+    'msr': 'WC1994',
     'aspect_ratio': '2',
     'rake': '',
     'dip': '90',

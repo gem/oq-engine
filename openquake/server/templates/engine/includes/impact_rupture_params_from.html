@@ -23,7 +23,7 @@
                   <label for="msr">{{ impact_form_labels.msr }}</label>
                   <select name="msr" id="msr" class="impact-select">
                     {% for msr in msrs %}
-                    <option value="{{ msr }}"{% if msr == 'WC1994' %} selected{% endif %}>{{ msr }}</option>
+                    <option value="{{ msr }}"{% if msr == impact_form_defaults.msr %} selected{% endif %}>{{ msr }}</option>
                     {% endfor %}
                   </select>
                 </div>
