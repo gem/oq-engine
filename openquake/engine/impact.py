@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-Master script for running an ARISTOTLE analysis
+Master script for running an impact analysis
 """
 import sys
 import os

@@ -52,10 +52,13 @@ if settings.WEBUI:
                     name="aelo_changelog"),
         ]
     elif settings.APPLICATION_MODE == 'ARISTOTLE':
-        urlpatterns.append(
+        urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_impact$',
                     views.web_engine_get_outputs_impact,
-                    name="outputs_impact"))
+                    name="outputs_impact"),
+            re_path(r'^v1/get_impact_form_defaults$', views.get_impact_form_defaults,
+                    name="impact_form_defaults"),
+        ]
 
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]
