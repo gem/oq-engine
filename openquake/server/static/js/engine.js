@@ -516,6 +516,17 @@ function capitalizeFirstLetter(val) {
         $('#rupture-map').hide();
     }
 
+    function reset_impact_forms() {
+        for (field in impact_form_defaults) {
+            var input = $('input#' + field);
+            if (input.length) {
+                input.val(impact_form_defaults[field]);
+            }
+        }
+        $('#rupture-map').hide();
+        $('#shakemap-image-row').hide();
+    }
+
     /* classic event management */
     $(document).ready(
         function () {
@@ -654,6 +665,7 @@ function capitalizeFirstLetter(val) {
             $('input[name="impact_approach"]').change(function () {
                 const selected_approach = $(this).val();
                 set_retrieve_data_btn_txt('initial');
+                reset_impact_forms();
                 if (approaches_requiring_usgs_id.includes(selected_approach)) {
                     $('#rupture_from_usgs_grp').removeClass('hidden');
                     $('#usgs_id_grp').removeClass('hidden');
