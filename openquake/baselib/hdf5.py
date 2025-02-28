@@ -488,7 +488,7 @@ class File(h5py.File):
                 # for an exposure with more than 65536 assets
                 if isinstance(k, tuple):  # multikey
                     k = '-'.join(k)
-                key = '%s/%s' % (path, quote_plus(k))
+                key = '%s/%s' % (path, k)
                 self[key] = v
             if isinstance(obj, Group):
                 self.save_attrs(
