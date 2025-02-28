@@ -513,6 +513,7 @@ function capitalizeFirstLetter(val) {
         // nodal planes are re-populated when loading rupture data; msrs are populated only once
         $('select#nodal_plane').empty();
         $('select#msr').val('WC1994');
+        $('#rupture-map').hide();
     }
 
     /* classic event management */
