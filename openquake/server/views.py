@@ -48,8 +48,8 @@ from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
-    impact_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS,
-    ARISTOTLE_FORM_DEFAULTS)
+    impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
+    IMPACT_FORM_DEFAULTS)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -769,7 +769,7 @@ def get_uploaded_file_path(request, filename):
 @require_http_methods(['POST'])
 def impact_run(request):
     """
-    Run an ARISTOTLE calculation.
+    Run an impact calculation.
 
     :param request:
         a `django.http.HttpRequest` object containing
@@ -1281,11 +1281,11 @@ def web_engine(request, **kwargs):
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
-        params['impact_form_labels'] = ARISTOTLE_FORM_LABELS
-        params['impact_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
-        params['impact_form_defaults'] = ARISTOTLE_FORM_DEFAULTS
+        params['impact_form_labels'] = IMPACT_FORM_LABELS
+        params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
+        params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
         params['impact_default_usgs_id'] = \
-            settings.ARISTOTLE_DEFAULT_USGS_ID
+            settings.IMPACT_DEFAULT_USGS_ID
         params['msrs'] = [msr.__class__.__name__
                           for msr in get_available_magnitude_scalerel()]
     return render(

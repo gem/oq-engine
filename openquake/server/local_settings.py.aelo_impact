@@ -4,7 +4,7 @@ APPLICATION_MODE = <'AELO'|'ARISTOTLE'>
 ALLOWED_HOSTS = (<domain_name_of_the_server>, 'localhost', '127.0.0.1')
 DISABLE_VERSION_WARNING = True
 
-ARISTOTLE_DEFAULT_USGS_ID = ''
+IMPACT_DEFAULT_USGS_ID = ''
 
 # By default it is 'openquake'
 # WEBUI_USER =

@@ -107,7 +107,7 @@ class AristotleParam:
         return params
 
 
-ARISTOTLE_FORM_LABELS = {
+IMPACT_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
     'rupture_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
@@ -136,7 +136,7 @@ ARISTOTLE_FORM_LABELS = {
     'msr': 'Magnitude scaling relationship',
 }
 
-ARISTOTLE_FORM_PLACEHOLDERS = {
+IMPACT_FORM_PLACEHOLDERS = {
     'usgs_id': 'USGS ID or custom',
     'rupture_from_usgs': '',
     'rupture_file': 'Rupture model XML',
@@ -164,7 +164,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'msr': '',
 }
 
-ARISTOTLE_FORM_DEFAULTS = {
+IMPACT_FORM_DEFAULTS = {
     'usgs_id': '',
     'lon': '',
     'lat': '',
@@ -236,7 +236,7 @@ def _validate(POST):
                 else:
                     params[field] = None
                 continue
-            validation_errs[ARISTOTLE_FORM_LABELS[field]] = str(exc)
+            validation_errs[IMPACT_FORM_LABELS[field]] = str(exc)
             invalid_inputs.append(field)
             continue
         if field in dic:
