@@ -1067,8 +1067,10 @@ def extract_gmf_npz(dstore, what):
         complete = dstore['sitecol']
     sites = get_sites(complete)
     n = len(sites)
+    imt_list = dstore['gmf_data'].attrs['imts'].split()
+    rename_dic = {f'gmv_{i}': imt for i, imt in enumerate(imt_list)}
     try:
-        df = dstore.read_df('gmf_data', 'eid').loc[eid]
+        df = dstore.read_df('gmf_data', 'eid').loc[eid].rename(columns=rename_dic)
     except KeyError:
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
