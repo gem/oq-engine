@@ -1293,8 +1293,11 @@ def web_engine(request, **kwargs):
         params['impact_form_labels'] = IMPACT_FORM_LABELS
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
+
+        # this is usually '' but it can be set in the local settings for debugging
         params['impact_default_usgs_id'] = \
             settings.IMPACT_DEFAULT_USGS_ID
+
         params['msrs'] = [msr.__class__.__name__
                           for msr in get_available_magnitude_scalerel()]
     return render(
