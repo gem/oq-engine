@@ -267,6 +267,15 @@ def get_ini_defaults(request):
     return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_impact_form_defaults(request):
+    """
+    Return a json string with a dictionary of oq-impact form field names and defaults
+    """
+    return HttpResponse(content=json.dumps(IMPACT_FORM_DEFAULTS), content_type=JSON)
+
+
 def _make_response(error_msg, error_line, valid):
     response_data = dict(error_msg=error_msg,
                          error_line=error_line,
