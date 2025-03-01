@@ -35,7 +35,7 @@ exp_with_basin = np.array([[-1.35815033, -3.78220564, -5.293704  ],
                            [-1.86104115, -3.63337845, -4.88431736],
                            [-3.04727152, -4.58047065, -5.43751783]])
 
-class M9BasinTermTestCase(unittest.TestCase):
+class CB14BasinTermTestCase(unittest.TestCase):
 
     def test_instantiation(self):
         mgmpe = CB14BasinTerm(gmpe_name='AtkinsonMacias2009')
@@ -55,10 +55,8 @@ class M9BasinTermTestCase(unittest.TestCase):
         
     def test_all(self):
         """
-        Test that the M9 basin term applied to Kuehn et al. (2020)
-        provides the expected values (using sites with z2pt5 above
-        and below 6 km threshold and considering SAs with periods
-        above and below 1.9 s)
+        Test that the CB14 basin term applied to Atkinson and
+        Macias (2009) provides the expected values.
         """
         am09 = valid.gsim('AtkinsonMacias2009')
         
@@ -70,6 +68,7 @@ class M9BasinTermTestCase(unittest.TestCase):
 
         # Make GMM with basin term using ModifiableGMPE and kwargs
         mgmpe_val = valid.modified_gsim(am09, cb14_basin_term={})
+
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
         cmaker = simple_cmaker([gmpe, mgmpe_cls, mgmpe_val], imts)                       
