@@ -241,7 +241,7 @@ def get_available_gsims(request):
     Return a list of strings with the available GSIMs
     """
     gsims = list(gsim.get_available_gsims())
-    return JsonResponse(gsims, safe=False)
+    return HttpResponse(content=json.dumps(gsims), content_type=JSON)
 
 
 @cross_domain_ajax
@@ -458,7 +458,7 @@ def calc_list(request, id=None):
             return HttpResponseNotFound()
         [response_data] = response_data
 
-    return JsonResponse(response_data, safe=False)
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @csrf_exempt
@@ -595,7 +595,7 @@ def calc_log(request, calc_id, start, stop):
         response_data = logs.dbcmd('get_log_slice', calc_id, start, stop)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return JsonResponse(response_data, safe=False)
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @require_http_methods(['GET'])
@@ -1079,7 +1079,7 @@ def calc_traceback(request, calc_id):
         response_data = logs.dbcmd('get_traceback', calc_id)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return JsonResponse(response_data, safe=False)
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @cross_domain_ajax
@@ -1186,7 +1186,7 @@ def aggrisk_tags(request, calc_id):
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
 
-    return JsonResponse(df.to_json(), status=200, safe=False)
+    return HttpResponse(content=df.to_json(), content_type=JSON, status=200)
 
 
 @cross_domain_ajax
