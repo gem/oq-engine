@@ -1,14 +1,19 @@
 import os.path
 import unittest
 import numpy
+import json
+from urllib.request import urlopen
+
 try:
     import shapefile  # optional dependency
 except ImportError:
-    shapefile = None
+    shapefile = None    
 
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.shakemap.parsers import \
-    get_shakemap_array, get_array_shapefile
+from openquake.hazardlib.shakemap.parsers import (get_shakemap_array,
+                                                  get_array_shapefile,
+                                                  read_usgs_stations_json, 
+                                                  usgs_stations_to_oq_format)
 
 aae = numpy.testing.assert_almost_equal
 F32 = numpy.float32
@@ -20,7 +25,8 @@ FIELDMAP = {
     'PSA10': ('val', 'SA(1.0)'),
     'PSA30': ('val', 'SA(3.0)'),
 }
-
+US_GOV = 'https://earthquake.usgs.gov'
+SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
 
 class ShakemapConverterTestCase(unittest.TestCase):
     def test_pga(self):
@@ -104,6 +110,22 @@ class ShakemapConverterTestCase(unittest.TestCase):
         aae(test_data['val']['PGA'], data['val']['PGA'])
         aae(test_data['bbox']['minx'], data['bbox']['minx'])
 
+    def test_usgs_station_conversion(self):
+        # Check USGS to OQ conversion station data is working correctly
+        s_id = "usp000gvtu" # Emilia Romagna 2012 EQ
+        url = SHAKEMAP_URL.format(s_id)
+        text = urlopen(url).read()
+        js = json.loads(text)
+        st_url = js['properties']['products']['shakemap'][0]['contents'][
+            'download/stationlist.json']['url']
+        json_bytes = urlopen(st_url).read()
+        stations = read_usgs_stations_json(json_bytes)
+        df = usgs_stations_to_oq_format(stations,
+                                exclude_imts=('SA(3.0)'),
+                                seismic_only=True)
+        assert len(df.index) == 179 # 179 records
+        assert list(df.columns) == exp_cols
+        
 
 example_sa = """\
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -159,3 +181,8 @@ example_pga = """\
 </grid_data>
 </shakemap_grid>
 """
+
+exp_cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE', 'STATION_TYPE',
+            'DISTANCE', 'VS30', 'MMI_VALUE', 'MMI_STDDEV', 'DISTANCE_STDDEV',
+            'PGA_LN_SIGMA', 'PGA_VALUE', 'PGV_LN_SIGMA', 'PGV_VALUE',
+            'SA(1.0)_LN_SIGMA', 'SA(1.0)_VALUE', 'VS30_TYPE', 'REFERENCES']
