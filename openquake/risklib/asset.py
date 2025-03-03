@@ -24,8 +24,10 @@ import os
 
 import numpy
 import pandas
+from shapely import contains_xy
 
-from openquake.baselib import hdf5, general
+
+from openquake.baselib import hdf5, general, config
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
@@ -220,7 +222,7 @@ class TagCollection(object):
                        for tagidx, tagname in zip(tagidxs, tagnames))
         return values
 
-    def get_aggkey(self, alltagnames, max_aggregations):
+    def get_aggkey(self, alltagnames):
         """
         :param alltagnames: array of (Ag, T) tag names
         :returns: a dictionary tuple of indices -> tagvalues
@@ -228,6 +230,7 @@ class TagCollection(object):
         aggkey = {}
         if not alltagnames:
             return aggkey
+        max_aggs = int(config.memory.max_aggregations)
         for ag, tagnames in enumerate(alltagnames):
             alltags = [getattr(self, tagname) for tagname in tagnames]
             ranges = [range(1, len(tags)) for tags in alltags]
@@ -237,11 +240,11 @@ class TagCollection(object):
             if len(aggkey) >= TWO16:
                 logging.warning('Performing {:_d} aggregations!'.
                                 format(len(aggkey)))
-            if len(aggkey) >= max_aggregations:
+            if len(aggkey) >= max_aggs:
                 # forbid too many aggregations
                 raise ValueError(
                     'Too many aggregation tags: %d >= max_aggregations=%d' %
-                    (len(aggkey), max_aggregations))
+                    (len(aggkey), max_aggs))
         return aggkey
 
     def gen_tags(self, tagname):
@@ -431,7 +434,7 @@ class AssetCollection(object):
         """
         return [f for f in self.array.dtype.names if f.startswith('value-')]
 
-    def get_agg_values(self, aggregate_by, max_aggregations):
+    def get_agg_values(self, aggregate_by):
         """
         :param aggregate_by:
             a list of Ag lists of tag names
@@ -440,7 +443,7 @@ class AssetCollection(object):
         """
         allnames = tagset(aggregate_by)
         aggkey = {key: k for k, key in enumerate(
-            self.tagcol.get_aggkey(aggregate_by, max_aggregations))}
+            self.tagcol.get_aggkey(aggregate_by))}
         K = len(aggkey)
         dic = {tagname: self[tagname] for tagname in allnames}
         for field in self.fields:
@@ -465,12 +468,29 @@ class AssetCollection(object):
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
 
-    def build_aggids(self, aggregate_by, max_aggregations):
+    # tested in impact_test#1
+    def agg_by_geom(self, geometries):
+        """
+        Aggregate by a list of G geometries.
+        :returns: a structured array of G elements
+        """
+        lonlats = numpy.column_stack([self['lon'], self['lat']])
+        dt = [(f, F32) for f in self.fields + self.occfields]
+        agg_values = numpy.zeros(len(geometries), dt)
+        for g, geom in enumerate(geometries):
+            assets_inside = self[contains_xy(geom, lonlats)]
+            for vf in self.fields:
+                agg_values[g][vf] = assets_inside['value-' + vf].sum()
+            for of in self.occfields:
+                agg_values[g][of] = assets_inside[of].sum()
+        return agg_values
+
+    def build_aggids(self, aggregate_by):
         """
         :param aggregate_by: list of Ag lists of strings
         :returns: (array of (Ag, A) integers, list of K strings)
         """
-        aggkey = self.tagcol.get_aggkey(aggregate_by, max_aggregations)
+        aggkey = self.tagcol.get_aggkey(aggregate_by)
         aggids = numpy.zeros((len(aggregate_by), len(self)), U32)
         key2i = {key: i for i, key in enumerate(aggkey)}
         for ag, aggby in enumerate(aggregate_by):
