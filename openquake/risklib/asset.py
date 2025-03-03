@@ -666,6 +666,7 @@ def _get_exposure(fname, stop=None):
         exp.datafiles = [os.path.join(dirname, f) for f in assets_text.split()]
     else:
         exp.datafiles = []
+    exp.fname = fname
     return exp, xml.assets
 
 
