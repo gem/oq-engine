@@ -20,6 +20,7 @@ import os
 import pathlib
 import unittest
 import pytest
+from openquake.commonlib.readinput import read_countries_df
 from openquake.calculators.checkers import check
 from openquake.calculators.export import export
 
@@ -42,6 +43,11 @@ def check_export_job(dstore):
                       'residents_vulnerability.xml',
                       'structural_vulnerability.xml',
                       'taxonomy_mapping.csv']
+
+    df = read_countries_df()
+    arr = dstore['assetcol'].agg_by_geom(df.geom)
+    ok = arr['number'] != 0  # indices where there are assets
+    assert list(df[ok].code) == ['JPN']
 
 
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
