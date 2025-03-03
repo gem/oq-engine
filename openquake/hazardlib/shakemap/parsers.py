@@ -378,14 +378,10 @@ def usgs_stations_to_oq_format(stations, exclude_imts=(), seismic_only=False):
     # Identify columns for IMTs:
     imts = []
     for col in stations.columns:
-        if 'DISTANCE_STDDEV' == col:
-            continue
-        if '_VALUE' in col or '_LN_SIGMA' in col or '_STDDEV' in col:
+        if col == 'DISTANCE_STDDEV' or any(x in col for x in ['_VALUE', '_LN_SIGMA', '_STDDEV']):
             for imt in exclude_imts:
-                if imt in col:
-                    break
-            else:
-                imts.append(col)
+                if imt not in col and col not in imts:
+                    imts.append(col)
     # Identify relevant columns
     cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE',
             'STATION_TYPE', 'DISTANCE', 'VS30'] + imts
