@@ -25,6 +25,7 @@ from scipy.constants import g
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
 
 
@@ -78,10 +79,14 @@ class AtkinsonMacias2009(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
-    def __init__(self, cb14_basin_term=False, m9_basin_term=False):
+    def __init__(self, ba08_site_term=False,
+                 cb14_basin_term=False, m9_basin_term=False):
         if cb14_basin_term or m9_basin_term:
-            self.REQUIRES_SITES_PARAMETERS = frozenset(
-            self.REQUIRES_SITES_PARAMETERS | {'z2pt5'})
+            self.REQUIRES_SITES_PARAMETERS |= {'z2pt5'}
+        if ba08_site_term:
+            self.REQUIRES_SITES_PARAMETERS |= {'vs30'}
+            self.REQUIRES_RUPTURE_PARAMETERS |= {'rake'}
+        self.ba08_site_term = ba08_site_term
         self.cb14_basin_term = cb14_basin_term
         self.m9_basin_term = m9_basin_term
         
@@ -98,7 +103,11 @@ class AtkinsonMacias2009(GMPE):
             # Convert mean from cm/s and cm/s/s and from common logarithm to
             # natural logarithm
             ln_mean = np.log((10.0 ** (imean - 2.0)) / g)
-            
+            # Set a null site term
+            fs = np.zeros(len(ln_mean))
+            # Apply the ba08 site term if specified
+            if self.ba08_site_term:
+                fs = _get_ba08_site_term(imt, ctx) 
             # Set a null basin term
             fb = np.zeros(len(ln_mean))
             # Apply cb14 basin term if specified
@@ -109,8 +118,8 @@ class AtkinsonMacias2009(GMPE):
             if self.m9_basin_term and imt.period >= 1.9:
                 fb[ctx.z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
             
-            # Add basin term (if any) to mean and get sigma
-            mean[m] = ln_mean + fb
+            # Add site/basin term (if any) to mean and get sigma
+            mean[m] = ln_mean + fs + fb
             sig[m] = np.log(10.0 ** C["sigma"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""
