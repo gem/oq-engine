@@ -121,7 +121,7 @@ class ShakemapConverterTestCase(unittest.TestCase):
         json_bytes = urlopen(st_url).read()
         stations = read_usgs_stations_json(json_bytes)
         df = usgs_stations_to_oq_format(stations,
-                                exclude_imts=('SA(3.0)'),
+                                exclude_imts=("SA(3.0)"),
                                 seismic_only=True)
         assert len(df.index) == 179 # 179 records
         assert list(df.columns) == exp_cols
@@ -183,6 +183,7 @@ example_pga = """\
 """
 
 exp_cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE', 'STATION_TYPE',
-            'DISTANCE', 'VS30', 'MMI_VALUE', 'MMI_STDDEV', 'DISTANCE_STDDEV',
-            'PGA_LN_SIGMA', 'PGA_VALUE', 'PGV_LN_SIGMA', 'PGV_VALUE',
-            'SA(1.0)_LN_SIGMA', 'SA(1.0)_VALUE', 'VS30_TYPE', 'REFERENCES']
+            'DISTANCE', 'VS30', 'MMI_VALUE', 'MMI_STDDEV', 'PGA_LN_SIGMA',
+            'PGA_VALUE', 'PGV_LN_SIGMA', 'PGV_VALUE', 'SA(0.3)_LN_SIGMA',
+            'SA(0.3)_VALUE', 'SA(1.0)_LN_SIGMA', 'SA(1.0)_VALUE', 'VS30_TYPE',
+            'REFERENCES']

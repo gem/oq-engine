@@ -36,6 +36,7 @@ from dataclasses import dataclass
 import pandas as pd
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from timezonefinder import TimezoneFinder
 from shapely.geometry import Polygon
 import numpy
 
@@ -242,16 +243,6 @@ def utc_to_local_time(utc_timestamp, lon, lat):
     """
     Convert a timestamp '%Y-%m-%dT%H:%M:%S.%fZ' into a datetime object
     """
-    try:
-        # NOTE: mandatory dependency for ARISTOTLE
-        from timezonefinder import TimezoneFinder
-    except ImportError:
-        raise ImportError(
-            'The python package "timezonefinder" is not installed. It is'
-            ' required in order to convert the UTC time to the local time of'
-            ' the event. You can install it from'
-            ' https://wheelhouse.openquake.org/v3/linux/ choosing the one'
-            ' corresponding to the installed python version.')
     tf = TimezoneFinder()
     timezone_str = tf.timezone_at(lng=lon, lat=lat)
     if timezone_str is None:
@@ -377,12 +368,13 @@ def usgs_stations_to_oq_format(stations, exclude_imts=(), seismic_only=False):
         }, inplace=True)
     # Identify columns for IMTs:
     imts = []
-    for col in stations.columns:
-        if col == 'DISTANCE_STDDEV' or any(
-            x in col for x in ['_VALUE', '_LN_SIGMA', '_STDDEV']):
-            for imt in exclude_imts:
-                if imt not in col and col not in imts:
-                    imts.append(col)
+    for col in stations.columns:  
+        if ('_VALUE' in col or '_LN_SIGMA' in col or
+            '_STDDEV' in col and col != 'DISTANCE_STDDEV'):
+            imt = col.split('_')[0]
+            if imt not in exclude_imts:
+                assert col not in imts
+                imts.append(col)        
     # Identify relevant columns
     cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE',
             'STATION_TYPE', 'DISTANCE', 'VS30'] + imts
