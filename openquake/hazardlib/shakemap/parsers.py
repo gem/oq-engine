@@ -827,10 +827,11 @@ def get_rup_dic(dic, user=User(),
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
-        rupdic = dic.copy()
         if dic.get('lon', None) is None:  # don't override user-inserted values
-            rupdic_, err = load_rupdic_from_origin(usgs_id, properties['products'])
-            rupdic.update(rupdic_)
+            rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
+            for key in dic:
+                if dic[key] is not None:
+                    rupdic[key] = dic[key]
             if err:
                 return None, None, err
             if approach == 'build_rup_from_usgs':
@@ -840,6 +841,7 @@ def get_rup_dic(dic, user=User(),
                 else:
                     rupdic.update(rupdic['nodal_planes']['NP1'])
         else:
+            rupdic = dic.copy()
             rupdic['require_dip_strike'] = True
     elif 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
