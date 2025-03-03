@@ -241,7 +241,7 @@ def get_available_gsims(request):
     Return a list of strings with the available GSIMs
     """
     gsims = list(gsim.get_available_gsims())
-    return HttpResponse(content=json.dumps(gsims), content_type=JSON)
+    return JsonResponse(gsims, safe=False)
 
 
 @cross_domain_ajax
@@ -264,7 +264,7 @@ def get_ini_defaults(request):
                 pass
             else:
                 ini_defs[name] = obj.default
-    return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)
+    return JsonResponse(ini_defs)
 
 
 @cross_domain_ajax
@@ -280,8 +280,7 @@ def _make_response(error_msg, error_line, valid):
     response_data = dict(error_msg=error_msg,
                          error_line=error_line,
                          valid=valid)
-    return HttpResponse(
-        content=json.dumps(response_data), content_type=JSON)
+    return JsonResponse(response_data)
 
 
 @csrf_exempt
@@ -408,7 +407,7 @@ def calc(request, calc_id):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps(info), content_type=JSON)
+    return JsonResponse(info)
 
 
 @require_http_methods(['GET'])
@@ -459,8 +458,7 @@ def calc_list(request, id=None):
             return HttpResponseNotFound()
         [response_data] = response_data
 
-    return HttpResponse(content=json.dumps(response_data),
-                        content_type=JSON)
+    return JsonResponse(response_data, safe=False)
 
 
 @csrf_exempt
@@ -473,19 +471,18 @@ def calc_abort(request, calc_id):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         message = {'error': 'Unknown job %s' % calc_id}
-        return HttpResponse(content=json.dumps(message), content_type=JSON)
+        return JsonResponse(message)
 
     if job.status not in ('submitted', 'executing'):
         message = {'error': 'Job %s is not running' % job.id}
-        return HttpResponse(content=json.dumps(message), content_type=JSON)
+        return JsonResponse(message)
 
     # only the owner or superusers can abort a calculation
     if (job.user_name not in utils.get_valid_users(request) and
             not utils.is_superuser(request)):
         message = {'error': ('User %s has no permission to abort job %s' %
                              (request.user, job.id))}
-        return HttpResponse(content=json.dumps(message), content_type=JSON,
-                            status=403)
+        return JsonResponse(message, status=403)
 
     if job.pid:  # is a spawned job
         try:
@@ -496,10 +493,10 @@ def calc_abort(request, calc_id):
             logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
             logs.dbcmd('set_status', job.id, 'aborted')
         message = {'success': 'Killing job %d' % job.id}
-        return HttpResponse(content=json.dumps(message), content_type=JSON)
+        return JsonResponse(message)
 
     message = {'error': 'PID for job %s not found' % job.id}
-    return HttpResponse(content=json.dumps(message), content_type=JSON)
+    return JsonResponse(message)
 
 
 @csrf_exempt
@@ -517,12 +514,10 @@ def calc_remove(request, calc_id):
         return HttpResponseNotFound()
 
     if 'success' in message:
-        return HttpResponse(content=json.dumps(message),
-                            content_type=JSON, status=200)
+        return JsonResponse(message, status=200)
     elif 'error' in message:
         logging.error(message['error'])
-        return HttpResponse(content=json.dumps(message),
-                            content_type=JSON, status=403)
+        return JsonResponse(message, status=403)
     else:
         # This is an untrapped server error
         logging.error(message)
@@ -539,12 +534,10 @@ def share_job(user_level, calc_id, share):
         return HttpResponseNotFound()
 
     if 'success' in message:
-        return HttpResponse(content=json.dumps(message),
-                            content_type=JSON, status=200)
+        return JsonResponse(message, status=200)
     elif 'error' in message:
         logging.error(message['error'])
-        return HttpResponse(content=json.dumps(message),
-                            content_type=JSON, status=403)
+        return JsonResponse(message, status=403)
     else:
         raise AssertionError(
             f"share_job must return 'success' or 'error'!? Returned: {message}")
@@ -602,7 +595,7 @@ def calc_log(request, calc_id, start, stop):
         response_data = logs.dbcmd('get_log_slice', calc_id, start, stop)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+    return JsonResponse(response_data, safe=False)
 
 
 @require_http_methods(['GET'])
@@ -615,7 +608,7 @@ def calc_log_size(request, calc_id):
         response_data = logs.dbcmd('get_log_size', calc_id)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+    return JsonResponse(response_data)
 
 
 @csrf_exempt
@@ -652,8 +645,7 @@ def calc_run(request):
     else:
         response_data = dict(status='created', job_id=job_id)
         status = 200
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
-                        status=status)
+    return JsonResponse(response_data, status=status)
 
 
 def aelo_callback(
@@ -744,8 +736,7 @@ def impact_get_rupture_data(request):
         request.POST, user, rupture_path, station_data_file,
         download_usgs_stations=True)
     if err:
-        return HttpResponse(content=json.dumps(err), content_type=JSON,
-                            status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.3, 6.3)  # fitting in a single row in the template without resizing
@@ -760,8 +751,7 @@ def impact_get_rupture_data(request):
         img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
                                   return_base64=True)
         rupdic['rupture_png'] = img_base64
-    return HttpResponse(content=json.dumps(rupdic), content_type=JSON,
-                        status=200)
+    return JsonResponse(rupdic, status=200)
 
 
 def get_uploaded_file_path(request, filename):
@@ -808,8 +798,7 @@ def impact_run(request):
         request.POST, user, rupture_path, station_data_file,
         download_usgs_stations=False)
     if err:
-        return HttpResponse(content=json.dumps(err), content_type=JSON,
-                            status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
@@ -847,8 +836,7 @@ def impact_run(request):
               impact_callback))
     proc.start()
 
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
-                        status=200)
+    return JsonResponse(response_data, status=200)
 
 
 def aelo_validate(request):
@@ -894,8 +882,7 @@ def aelo_validate(request):
         logging.error(err_msg)
         response_data = {"status": "failed", "error_msg": err_msg,
                          "invalid_inputs": invalid_inputs}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=400)
+        return JsonResponse(response_data, status=400)
     return lon, lat, vs30, siteid, asce_version
 
 
@@ -926,8 +913,7 @@ def aelo_run(request):
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': str(exc)}
         logging.error('', exc_info=True)
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=400)
+        return JsonResponse(response_data, status=400)
     [jobctx] = engine.create_jobs(
         [params],
         config.distribution.log_level, None, utils.get_user(request), None)
@@ -963,8 +949,7 @@ def aelo_run(request):
     mp.Process(target=aelo.main, args=(
         lon, lat, vs30, siteid, asce_version, job_owner_email, outputs_uri_web,
         jobctx, aelo_callback)).start()
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
-                        status=200)
+    return JsonResponse(response_data, status=200)
 
 
 def submit_job(request_files, ini, username, hc_id):
@@ -1094,7 +1079,7 @@ def calc_traceback(request, calc_id):
         response_data = logs.dbcmd('get_traceback', calc_id)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+    return JsonResponse(response_data)
 
 
 @cross_domain_ajax
@@ -1201,8 +1186,7 @@ def aggrisk_tags(request, calc_id):
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
 
-    return HttpResponse(content=df.to_json(),
-                        content_type=JSON, status=200)
+    return JsonResponse(df.to_json(), status=200)
 
 
 @cross_domain_ajax
@@ -1589,13 +1573,11 @@ def on_same_fs(request):
         data = open(filename, 'rb').read(32)
         checksum = zlib.adler32(data, checksum) & 0xffffffff
         if checksum == int(checksum_in):
-            return HttpResponse(content=json.dumps({'success': True}),
-                                content_type=JSON, status=200)
+            return JsonResponse({'success': True}, status=200)
     except (IOError, ValueError):
         pass
 
-    return HttpResponse(content=json.dumps({'success': False}),
-                        content_type=JSON, status=200)
+    return JsonResponse({'success': False}, status=200)
 
 
 @require_http_methods(['GET'])
