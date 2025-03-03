@@ -1079,7 +1079,7 @@ def calc_traceback(request, calc_id):
         response_data = logs.dbcmd('get_traceback', calc_id)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return JsonResponse(response_data)
+    return JsonResponse(response_data, safe=False)
 
 
 @cross_domain_ajax
@@ -1186,7 +1186,7 @@ def aggrisk_tags(request, calc_id):
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
 
-    return JsonResponse(df.to_json(), status=200)
+    return JsonResponse(df.to_json(), status=200, safe=False)
 
 
 @cross_domain_ajax
