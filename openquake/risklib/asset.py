@@ -24,6 +24,8 @@ import os
 
 import numpy
 import pandas
+from shapely import contains_xy
+
 
 from openquake.baselib import hdf5, general, config
 from openquake.baselib.node import Node, context
@@ -464,6 +466,21 @@ class AssetCollection(object):
                 agg_values[aggkey[ag, key]] = tuple(grp[vfields].sum())
         if self.fields:  # missing in scenario_damage case_8
             agg_values[K] = tuple(dataf[vfields].sum())
+        return agg_values
+
+    def agg_by_geom(self, geometries):
+        """
+        Aggregate by a list of G geometries.
+        :returns: a structured array of G elements
+        """
+        lonlats = numpy.column_stack([self['lon'], self['lat']])
+        vfields = self.fields + self.occfields
+        value_dt = [(f, F32) for f in vfields]
+        agg_values = numpy.zeros(len(geometries), value_dt)
+        for g, geom in enumerate(geometries):
+            assets_inside = self[contains_xy(geom, lonlats)]
+            for vf in vfields:
+                agg_values[g][vf] = assets_inside[vf].sum()
         return agg_values
 
     def build_aggids(self, aggregate_by):
