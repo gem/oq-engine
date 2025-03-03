@@ -20,7 +20,6 @@ Helpers for testing the calculators, used in oq-risk-tests
 """
 import os
 import re
-import sys
 import time
 import pathlib
 import numpy
@@ -111,6 +110,7 @@ def check(ini, hc_id=None, exports='', what='', prefix='', rtol=1E-4):
     return calc
 
 
+# called in run-demos
 def check_ini(path, hc):
     dic = readinput.get_params(path)
     if hc:  # disable hazard checks by setting a fake hazard_calculation_id
@@ -124,21 +124,4 @@ def check_ini(path, hc):
     dic2 = readinput.get_params(tmp_ini)
     missing = set(dic) - set(dic2) - {'intensity_measure_types', 'export_dir'}
     if missing:
-        breakpoint()
-
-
-def check_inis(demo_dir):
-    """
-    Check that oqparam.to_ini() works on all the .ini files in demo_dir
-    """
-    for cwd, dirs, files in os.walk(demo_dir):
-        for f in files:
-            if f.endswith('.ini') and not f.endswith('.tmp.ini'):
-                path = os.path.join(cwd, f)
-                print(path)
-                check_ini(path, hc='risk' in f)
-
-
-if __name__ == '__main__':
-    # called by run-demos.sh
-    check_inis(sys.argv[1])
+        raise RuntimeError(missing)
