@@ -331,7 +331,7 @@ def DispProb():
     """
     Displacement probability
     """
-    return IMT('RSD595')
+    return IMT('DispProb')
 
 
 def LiqProb():
