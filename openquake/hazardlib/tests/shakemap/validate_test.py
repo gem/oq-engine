@@ -61,9 +61,16 @@ class AristotleValidateTestCase(unittest.TestCase):
         self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
-    def test_2(self):
+    def test_2a(self):
         POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs',
                 'msr': ''}
+        _rup, _rupdic, _params, err = impact_validate(POST, user)
+        # msr can not be empty
+        self.assertIn('Magnitude scaling relationship', err['error_msg'])
+
+    def test_2b(self):
+        POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs',
+                'msr': 'WC1994'}
         _rup, rupdic, _params, err = impact_validate(POST, user)
         self.assertEqual(rupdic['rupture_from_usgs'], True)
         self.assertEqual(rupdic['require_dip_strike'], True)
@@ -139,7 +146,7 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
         POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs',
-                'msr': ''}
+                'msr': 'WC1994'}
         _rup, rupdic, _oqparams, err = impact_validate(POST, user)
         self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mag'], 7.0)

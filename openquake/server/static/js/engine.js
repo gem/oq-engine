@@ -469,6 +469,8 @@ function capitalizeFirstLetter(val) {
             'running': 'Building rupture...'}
     }
 
+    var impact_form_defaults = {};
+
     function require_usgs_id() {
         approach_selector = $('input[name="impact_approach"]');
         if (approach_selector.length > 0) {
@@ -500,6 +502,29 @@ function capitalizeFirstLetter(val) {
         const approach = get_selected_approach();
         const btn_txt = retrieve_data_btn_txt_map[approach][state];
         $('#submit_impact_get_rupture').text(btn_txt);
+    }
+
+    function reset_rupture_form_inputs() {
+        var rupture_form_fields = [
+            'lon', 'lat', 'dep', 'mag', 'aspect_ratio', 'rake', 'dip', 'strike']
+        for (field of rupture_form_fields) {
+            $('input#' + field).val(impact_form_defaults[field]);
+        }
+        // nodal planes are re-populated when loading rupture data; msrs are populated only once
+        $('select#nodal_plane').empty();
+        $('select#msr').val('WC1994');
+        $('#rupture-map').hide();
+    }
+
+    function reset_impact_forms() {
+        for (field in impact_form_defaults) {
+            var input = $('input#' + field);
+            if (input.length) {
+                input.val(impact_form_defaults[field]);
+            }
+        }
+        $('#rupture-map').hide();
+        $('#shakemap-image-row').hide();
     }
 
     /* classic event management */
@@ -610,6 +635,20 @@ function capitalizeFirstLetter(val) {
             });
 
 
+            // IMPACT
+
+            $.ajax({
+                url:  "/v1/get_impact_form_defaults",
+                method: "GET",
+                dataType: "json",
+                success: function(data) {
+                    impact_form_defaults = data;
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error loading impact_from_defaults:", error);
+                }
+            });
+
             function toggleRunCalcBtnState() {
                 var lonValue = $('#lon').val();
                 if (typeof lonValue !== 'undefined') {
@@ -619,9 +658,14 @@ function capitalizeFirstLetter(val) {
             }
             toggleRunCalcBtnState();
 
+            $('input[name="usgs_id"]').on('input', function() {
+                reset_rupture_form_inputs();
+            });
+
             $('input[name="impact_approach"]').change(function () {
                 const selected_approach = $(this).val();
                 set_retrieve_data_btn_txt('initial');
+                reset_impact_forms();
                 if (approaches_requiring_usgs_id.includes(selected_approach)) {
                     $('#rupture_from_usgs_grp').removeClass('hidden');
                     $('#usgs_id_grp').removeClass('hidden');
