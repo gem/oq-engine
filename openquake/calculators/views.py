@@ -1196,8 +1196,7 @@ def view_calc_risk(token, dstore):
     gmf_df = gmf_df[gmf_df.eid == int(event_id)]
     ws = dstore['weights']
     rlz_id = dstore['events']['rlz_id']
-    aggids, _ = assetcol.build_aggids(
-        oq.aggregate_by, oq.max_aggregations)
+    aggids, _ = assetcol.build_aggids(oq.aggregate_by)
     agg_keys = numpy.concatenate(
         [dstore['agg_keys'][:], numpy.array([b'total'])])
     ARK = (oq.A, len(ws), oq.K)

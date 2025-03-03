@@ -353,8 +353,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         monitor.save('rlz_id', self.rlzs)
         monitor.save('weights', self.datastore['weights'][:])
         if oq.K:
-            aggids, _ = self.assetcol.build_aggids(
-                oq.aggregate_by, oq.max_aggregations)
+            aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
             aggids = ()
         monitor.save('aggids', aggids)

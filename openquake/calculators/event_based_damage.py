@@ -178,10 +178,10 @@ class DamageCalculator(EventBasedRiskCalculator):
             oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore, oq)  # check
-        self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, oq.L, self.crmodel)
+        self.dmgcsq = zero_dmgcsq(
+            len(self.assetcol), self.R, oq.L, self.crmodel)
         if oq.K:
-            aggids, _ = self.assetcol.build_aggids(
-                oq.aggregate_by, oq.max_aggregations)
+            aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
             aggids = 0
         smap = calc.starmap_from_gmfs(
