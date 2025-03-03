@@ -674,6 +674,10 @@ def build_multi_fault_source_node(multi_fault_source):
                         nodes=nodes)
         rup_nodes.append(rup_node)
 
+    if multi_fault_source.faults:
+        faults = [Node('fault', {'tag': tag, 'indexes': ','.join(indexes)})
+                  for tag, indexes in multi_fault_source.faults.items()]
+        rup_nodes.insert(0, Node('faults', nodes=faults))
     return Node("multiFaultSource",
                 get_source_attributes(multi_fault_source),
                 nodes=rup_nodes)
@@ -801,7 +805,7 @@ def write_source_model(dest, sources_or_groups, name=None,
         for grp_node in nodes:
             for src_node in grp_node:
                 if src_node["id"] in gridded_attrs:
-                    src_node.nodes = []
+                    src_node.nodes = [n for n in src_node.nodes if n.tag == 'faults']
         out.append(dest5)
 
     # produce a geometryModel if there are MultiFaultSources
