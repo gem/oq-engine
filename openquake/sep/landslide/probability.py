@@ -56,8 +56,8 @@ def sigmoid(x):
 
 
 def _landslide_spatial_extent(p: float):
-    """Calculates the landslide spatial extent (LSE) as per formulae 9
-    from the Reference. LSE after an earthquake can be interpreted as the
+    """Calculates the landslide spatial extent (LsSE) as per formulae 9
+    from the Reference. LsSE after an earthquake can be interpreted as the
     portion of each cell that is expected to have landslide occurrence.
 
     Reference: Nowicki Jessee, M. A., Hamburger, M. W., Allstadt, K., 
@@ -71,8 +71,8 @@ def _landslide_spatial_extent(p: float):
     b = 5.237
     c = -3.042
     d = 4.035
-    LSE = 100 *     np.exp(a + b * p + c * p**2 + d * p**3)
-    return LSE
+    LsSE = 100 * np.exp(a + b * p + c * p**2 + d * p**3)
+    return LsSE
 
     
 def nowicki_jessee_2018(
@@ -117,7 +117,7 @@ def nowicki_jessee_2018(
 
     :returns:
         prob_ls: Probability of landslide.
-        coverage: Landslide areal coverage.
+        LsSE: Landslide areal coverage.
     """
 
     if isinstance(lithology, str):
@@ -145,12 +145,12 @@ def nowicki_jessee_2018(
     )
 
     prob_ls = sigmoid(Xg)
-    LSE = _landslide_spatial_extent(prob_ls)
+    LsSE = _landslide_spatial_extent(prob_ls)
 
     # Slope cutoff proposed by Allstadt et al. (2022), minimum pga threshold proposed by Jibson and Harp (2016)
-    LSE = np.where((slope < 2) | (pga < 0.02), 0, LSE)
+    LsSE = np.where((slope < 2) | (pga < 0.02), 0, LsSE)
 
-    return prob_ls, LSE
+    return prob_ls, LsSE
     
     
 def jibson_etal_2000_probability(
