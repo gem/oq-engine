@@ -703,6 +703,8 @@ def impact_callback(
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
             if key == 'rupture_dict':
+                # NOTE: params['rupture_dict'] is a string representation of a Python
+                # dictionary, not a valid JSON string, so we can't use json.loads
                 rupdic = ast.literal_eval(params['rupture_dict'])
                 for rupkey, rupval in rupdic.items():
                     if rupkey not in exclude_from_print:
