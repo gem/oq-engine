@@ -851,7 +851,7 @@ def get_rupture(oqparam):
     elif rupture_model and rupture_model.endswith('.json'):
         with open(rupture_model) as f:
             rup_data = json.load(f)
-        rup = convert_to_oq_rupture(rup_data)
+        rup, _err_msg = convert_to_oq_rupture(rup_data)
     if rup is None:  # assume rupture_dict
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
@@ -1022,7 +1022,8 @@ def _cons_coeffs(df, perils, loss_dt, limit_states):
             if len(the_df) == 1:
                 coeffs[peril][loss_type] = the_df[limit_states].to_numpy()[0]
             elif len(the_df) > 1:
-                raise ValueError(f'Multiple consequences for {loss_type=}, {peril=}\n%s' % the_df)
+                raise ValueError(
+                    f'Multiple consequences for {loss_type=}, {peril=}\n%s' % the_df)
     return coeffs
 
 
@@ -1339,7 +1340,8 @@ def _taxonomy_mapping(filename, taxidx):
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
-    assert set(tmap_df) == {'country', 'peril', 'taxonomy', 'risk_id', 'weight'}, set(tmap_df)
+    assert set(tmap_df) == {'country', 'peril', 'taxonomy',
+                            'risk_id', 'weight'}, set(tmap_df)
     taxos = set()
     for (taxo, per), df in tmap_df.groupby(['taxonomy', 'peril']):
         taxos.add(taxo)

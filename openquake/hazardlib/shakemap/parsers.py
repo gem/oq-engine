@@ -223,7 +223,8 @@ def convert_to_oq_rupture(rup_json):
     """
     Convert USGS json (output of download_rupture_data) into an hazardlib rupture
 
-    :returns: None if not convertible
+    :returns: a openquake.hazardlib.source.rupture.BaseRupture object if convertible and
+        an error message if not convertible
     """
     ftype = rup_json['features'][0]['geometry']['type']
     multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
@@ -235,7 +236,13 @@ def convert_to_oq_rupture(rup_json):
         trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
         mag = rup_json['metadata']['mag']
         rup = get_multiplanar(multicoords, mag, rake, trt)
-        return rup
+        return rup, None
+    else:
+        if ftype != 'MultiPolygon':
+            err_msg = f'able to convert only MultiPolygon geometries (not {ftype})'
+        else:
+            err_msg = 'at least one surface is not rectangular'
+        return None, err_msg
 
 
 def utc_to_local_time(utc_timestamp, lon, lat):
@@ -377,13 +384,13 @@ def usgs_stations_to_oq_format(stations, exclude_imts=(), seismic_only=False):
         }, inplace=True)
     # Identify columns for IMTs:
     imts = []
-    for col in stations.columns:  
+    for col in stations.columns:
         if ('_VALUE' in col or '_LN_SIGMA' in col or
-            '_STDDEV' in col and col != 'DISTANCE_STDDEV'):
+                '_STDDEV' in col and col != 'DISTANCE_STDDEV'):
             imt = col.split('_')[0]
             if imt not in exclude_imts:
                 assert col not in imts
-                imts.append(col)        
+                imts.append(col)
     # Identify relevant columns
     cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE',
             'STATION_TYPE', 'DISTANCE', 'VS30'] + imts
@@ -779,7 +786,7 @@ def _get_rup_from_json(usgs_id, rupture_file, station_data_file):
     if usgs_id == 'FromFile':
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
         rupdic['station_data_file'] = station_data_file
-        rup = convert_to_oq_rupture(rup_data)
+        rup, _err_msg = convert_to_oq_rupture(rup_data)
     return rup, rupdic, rup_data
 
 
@@ -885,10 +892,12 @@ def get_rup_dic(dic, user=User(),
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
-    rup = convert_to_oq_rupture(rup_data)
+    rup, err_msg = convert_to_oq_rupture(rup_data)
     if rup is None:
         # in parsers_test for us6000jllz
-        rupdic['rupture_issue'] = 'Unable to convert the rupture from the USGS format'
+        rupture_issue = f'Unable to convert the rupture from the USGS format: {err_msg}'
+        rup = None
+        rupdic['rupture_issue'] = rupture_issue
         rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
     return rup, rupdic, err
