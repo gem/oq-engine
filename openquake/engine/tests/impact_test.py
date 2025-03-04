@@ -62,7 +62,8 @@ def test_impact5():
     agg_values = calc.assetcol.get_agg_values
 
     # this is a case where there are no assets inside the MMI multipolygons
-    with fiona.open(f'zip://{calc.oqparam.inputs['mmi_shapes']}!mi.shp') as f:
+    shapes = calc.oqparam.inputs['mmi_shapes']
+    with fiona.open(f'zip://{shapes}!mi.shp') as f:
         for feat in f:
             values = agg_values([['ID_1']], shape(feat.geometry))
             assert values['number'].sum() == 0
