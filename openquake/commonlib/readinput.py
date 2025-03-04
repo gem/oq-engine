@@ -179,7 +179,7 @@ def _normalize(key, fnames, base_path):
                 name = 'exposure.xml'
             elif key == 'source_model_logic_tree_file':
                 name = 'ssmLT.xml'
-            elif key == 'mmi_shapes_file':
+            elif key == 'mmi_file':
                 filenames.append(os.path.join(base_path, val))
                 continue
             else:

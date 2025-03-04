@@ -954,7 +954,7 @@ class OqParam(valid.ParamSet):
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
-        'reqv_ignore_sources', 'amplification', 'station_data', 'mmi_shapes',
+        'reqv_ignore_sources', 'amplification', 'station_data', 'mmi',
         'nonstructural_fragility',
         'nonstructural_consequence',
         'structural_fragility',
