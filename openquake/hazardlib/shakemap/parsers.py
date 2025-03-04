@@ -377,13 +377,13 @@ def usgs_stations_to_oq_format(stations, exclude_imts=(), seismic_only=False):
         }, inplace=True)
     # Identify columns for IMTs:
     imts = []
-    for col in stations.columns:  
+    for col in stations.columns:
         if ('_VALUE' in col or '_LN_SIGMA' in col or
             '_STDDEV' in col and col != 'DISTANCE_STDDEV'):
             imt = col.split('_')[0]
             if imt not in exclude_imts:
                 assert col not in imts
-                imts.append(col)        
+                imts.append(col)
     # Identify relevant columns
     cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE',
             'STATION_TYPE', 'DISTANCE', 'VS30'] + imts
@@ -649,6 +649,22 @@ def download_rupture_data(usgs_id, shakemap_contents, user):
     return rup_data, gettemp(text, prefix='rup_', suffix='.json')
 
 
+def download_mmi(usgs_id, shakemap_contents, user):
+    shape = shakemap_contents.get('download/shape.zip')
+    if shape is None:
+        return None
+    url = shape['url']
+    if user.testdir:  # in parsers_test
+        mmi_file = os.path.join(user.testdir, f'{usgs_id}-shp.zip')
+        logging.info(f'Using {mmi_file}')
+    else:
+        logging.info('Downloading shape.zip (mmi_file)')
+        mmi_file = gettemp(prefix='mmi_', suffix='.zip')
+        with urlopen(url) as resp, open(mmi_file, 'wb') as f:
+            f.write(resp.read())
+    return mmi_file
+
+
 def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     """
     Convert JSON data coming from the USGS into a rupdic with keys
@@ -784,8 +800,8 @@ def _get_rup_from_json(usgs_id, rupture_file, station_data_file):
 
 
 def get_rup_dic(dic, user=User(),
-                use_shakemap=False, rupture_file=None,
-                station_data_file=None, download_usgs_stations=True,
+                use_shakemap=False, rupture_file=None, station_data_file=None,
+                download_usgs_stations=True,
                 monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
@@ -866,6 +882,8 @@ def get_rup_dic(dic, user=User(),
             return None, None, err
     if not rupdic:
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
+    if 'mmi_file' not in rupdic:
+        rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
     if (approach != 'use_shakemap_from_usgs' and not station_data_file
             and download_usgs_stations):
         with monitor('Downloading stations'):

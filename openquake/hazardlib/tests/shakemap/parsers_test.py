@@ -75,6 +75,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['rupture_file'], None)
         self.assertEqual(dic['station_data_file_from_usgs'], True)
         self.assertEqual(dic['station_data_issue'], 'No stations were found')
+        self.assertIsNotNone(dic['mmi_file'])
 
     def test_3b(self):
         rup, _dic, _err = get_rup_dic(
