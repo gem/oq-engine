@@ -827,7 +827,7 @@ def get_rup_dic(dic, user=User(),
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
-        if dic.get('lon', None) is None:  # don't override user-inserted values
+        if dic.get('lon') is None:  # don't override user-inserted values
             rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
             for key in dic:
                 if dic[key] is not None:
