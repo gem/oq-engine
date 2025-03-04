@@ -4,7 +4,7 @@ import numpy
 try:
     import shapefile  # optional dependency
 except ImportError:
-    shapefile = None    
+    shapefile = None
 
 from openquake.baselib.general import gettemp
 from openquake.hazardlib.shakemap.parsers import (
