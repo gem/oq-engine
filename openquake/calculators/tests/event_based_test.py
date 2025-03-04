@@ -128,8 +128,8 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
             gmf = dstore.read_df('gmf_data', 'sid')
-            gmvs_site_0 = gmf.loc[0]['gmv_0']
-            gmvs_site_1 = gmf.loc[1]['gmv_0']
+            gmvs_site_0 = gmf.loc[0].PGA
+            gmvs_site_1 = gmf.loc[1].PGA
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_0, gmvs_site_1, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
@@ -529,6 +529,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_26.__file__, 'job_liq.ini')
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('avg_gmf.csv', fname)
+
+        # TODO: export hcurves and hmaps
 
     def test_case_27(self):
         # splitting ruptures + gmf1 + gmf2

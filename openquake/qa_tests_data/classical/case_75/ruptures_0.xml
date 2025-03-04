@@ -1,46 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<nrml
-xmlns="http://openquake.org/xmlns/nrml/0.5"
-xmlns:gml="http://www.opengis.net/gml"
->
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
   <!-- old style UCERF, no .hdf5, generic indexes; for new style UCERF with
        .hdf5 and numeric indexes starting from 0 see case_65 -->
-    <sourceModel investigation_time="1.0" name="test">
-        <sourceGroup rup_interdep="indep" src_interdep="indep"
-        tectonicRegion="Active Shallow Crust">
-            <multiFaultSource id="ufc3mean_0" name="UCERF3 Mean" >
+  <sourceModel investigation_time="1.0" name="test">
+    <sourceGroup rup_interdep="indep" src_interdep="indep"
+                 tectonicRegion="Active Shallow Crust">
+      <multiFaultSource id="ufc3mean_0" name="UCERF3 Mean" >
 
-                <multiPlanesRupture probs_occur="0.98 0.02" >
-                    <magnitude> 7.0 </magnitude>
-                    <sectionIndexes indexes="1,2,3"/>
-                    <rake>180.0</rake>
-                </multiPlanesRupture>
+        <faults>
+          <fault tag="A" indexes="1,2"/>
+          <fault tag="B" indexes="3"/>
+        </faults>
 
-                <multiPlanesRupture probs_occur="0.96 0.04" >
-                    <magnitude> 6.0 </magnitude>
-                    <sectionIndexes indexes="1"/>
-                    <rake>180.0</rake>
-                </multiPlanesRupture>
-
-                <multiPlanesRupture probs_occur="0.95 0.05" >
-                    <magnitude> 6.0 </magnitude>
-                    <sectionIndexes indexes="2" />
-                    <rake>180.0</rake>
-                </multiPlanesRupture>
-
-                <multiPlanesRupture probs_occur="0.96 0.04" >
-                    <magnitude> 6.0 </magnitude>
-                    <sectionIndexes indexes="3" />
-                    <rake>180.0</rake>
-                </multiPlanesRupture>
-
-                <multiPlanesRupture probs_occur="0.97 0.03" >
-                    <magnitude> 6.0 </magnitude>
-                    <sectionIndexes indexes="2,3" />
-                    <rake>180.0</rake>
-                </multiPlanesRupture>
-
-            </multiFaultSource>
-        </sourceGroup>
-    </sourceModel>
+        <multiPlanesRupture probs_occur="0.98 0.02" >
+          <magnitude> 7.0 </magnitude>
+          <sectionIndexes indexes="1,2,3"/>
+          <rake>180.0</rake>
+        </multiPlanesRupture>
+        
+        <multiPlanesRupture probs_occur="0.96 0.04" >
+          <magnitude> 6.0 </magnitude>
+          <sectionIndexes indexes="1"/>
+          <rake>180.0</rake>
+        </multiPlanesRupture>
+        
+        <multiPlanesRupture probs_occur="0.95 0.05" >
+          <magnitude> 6.0 </magnitude>
+          <sectionIndexes indexes="2" />
+          <rake>180.0</rake>
+        </multiPlanesRupture>
+        
+        <multiPlanesRupture probs_occur="0.96 0.04" >
+          <magnitude> 6.0 </magnitude>
+          <sectionIndexes indexes="3" />
+          <rake>180.0</rake>
+        </multiPlanesRupture>
+        
+        <multiPlanesRupture probs_occur="0.97 0.03" >
+          <magnitude> 6.0 </magnitude>
+          <sectionIndexes indexes="2,3" />
+          <rake>180.0</rake>
+        </multiPlanesRupture>
+        
+      </multiFaultSource>
+    </sourceGroup>
+  </sourceModel>
 </nrml>

@@ -81,18 +81,16 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def check_round_trip(self, fname):
         smodel = nrml.to_python(fname, conv)
-        fd, name = tempfile.mkstemp(suffix='.xml')
+        fd, self.saved = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
-            written = write_source_model(name, smodel)
-        with open(name + '.toml', 'w') as f:
+            written = write_source_model(self.saved, smodel)
+        with open(self.saved + '.toml', 'w') as f:
             tomldump(smodel, f)
         if len(written) == 2:  # .xml + .hdf5
             assert os.path.exists(written[1])
             os.remove(written[1])
-        elif open(name).read() != open(fname).read():
-            raise Exception('Different files: %s %s' % (name, fname))
-        os.remove(name)
-        os.remove(name + '.toml')
+        elif open(self.saved).read() != open(fname).read():
+            raise Exception('Different files: %s %s' % (self.saved, fname))
         return smodel
 
     def test_mixed(self):
@@ -103,6 +101,9 @@ class SourceWriterTestCase(unittest.TestCase):
 
     def test_multi_fault(self):
         self.check_round_trip(MULTIFAULT)
+        # make sure faults are saved correctly if present
+        xml = open(self.saved).read()
+        self.assertIn('<fault indexes="0,1" tag="f1"/>', xml)
 
     def test_kite_fault(self):
         self.check_round_trip(KITEFAULT)
@@ -137,7 +138,11 @@ class SourceWriterTestCase(unittest.TestCase):
             sm = toml.load(f)['sourceModel']
         self.assertEqual(smodel.name, sm['_name'])
 
-    # NB: UCERF-like sources are tested in multi_fault_test.py
+    def teardown(self):
+        os.remove(self.saved)
+        os.remove(self.saved + '.toml')
+        
+    # NB: UCERF-like sources are also tested in multi_fault_test.py
 
 
 class TOMLTestCase(unittest.TestCase):

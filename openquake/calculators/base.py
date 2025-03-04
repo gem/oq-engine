@@ -906,11 +906,6 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         if len(self.crmodel):
-            # NB: the alias dict must be filled after import_gmf
-            alias = {imt: 'gmv_%d' % i for i, imt in enumerate(
-                self.oqparam.get_primary_imtls())}
-            for rm in self.crmodel._riskmodels.values():
-                rm.alias = alias
             logging.info('Storing risk model')
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
@@ -1116,8 +1111,7 @@ class HazardCalculator(BaseCalculator):
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
-                self.datastore, self.assetcol, oq.loss_types,
-                oq.aggregate_by, oq.max_aggregations)
+                self.datastore, self.assetcol, oq.loss_types, oq.aggregate_by)
 
         if 'post_loss_amplification' in oq.inputs:
             df = pandas.read_csv(oq.inputs['post_loss_amplification']
@@ -1304,25 +1298,17 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
     names = [n for n in names if n != 'custom_site_id']
-    imts = [name.lstrip('gmv_')
+    # strip prefix `gmv_` from the column name
+    imts = [name[4:] if name.startswith('gmv_') else name
             for name in names if name not in ('sid', 'eid')]
     oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:
         raise ValueError('The calculation needs %s which is missing from %s' %
                          (', '.join(missing), fname))
-    imt2idx = {imt: i for i, imt in enumerate(oqparam.imtls)}
     arr = numpy.zeros(len(array), oqparam.gmf_data_dt())
     for name in names:
-        if name.startswith('gmv_'):
-            try:
-                m = imt2idx[name[4:]]
-            except KeyError:  # the file contains more than enough IMTs
-                pass
-            else:
-                arr[f'gmv_{m}'][:] = array[name]
-        else:
-            arr[name] = array[name]
+        arr[name[4:] if name.startswith('gmv_') else name] = array[name]
 
     if 'sid' not in names:
         # there is a custom_site_id instead
@@ -1438,12 +1424,12 @@ def import_ruptures_hdf5(h5, fnames):
         'trt_smr_start_stop', data=idx_start_stop(ruptures['trt_smr']))
 
 
-def import_gmfs_hdf5(dstore, oqparam):
+def import_gmfs_hdf5(dstore, oq):
     """
     Import in the datastore a ground motion field HDF5 file.
 
     :param dstore: the datastore
-    :param oqparam: an OqParam instance
+    :param oq: an OqParam instance
     :returns: event_ids
     """
     # NB: once we tried to use ExternalLinks to avoid copying the GMFs,
@@ -1456,22 +1442,38 @@ def import_gmfs_hdf5(dstore, oqparam):
     # even if bloated (also because of SURA issues having the external
     # file under NFS and calc_XXX.hdf5 in the local filesystem)
     if 'oqparam' not in dstore:
-        dstore['oqparam'] = oqparam
-    fnames = oqparam.inputs['gmfs']
+        dstore['oqparam'] = oq
+    fnames = oq.inputs['gmfs']
     size = sum(os.path.getsize(f) for f in fnames)
     logging.warning('Importing %d files, %s',
                     len(fnames), general.humansize(size))
-    attrs = _getset_attrs(oqparam)
+    attrs = _getset_attrs(oq)
     E = sum(attrs['num_events'])
     rups = []
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
             dstore['sitecol'] = f['sitecol']  # complete by construction
-            f.copy('gmf_data', dstore.hdf5)
+            if 'gmv_0' in f['gmf_data']:  # old format <= v3.23
+                imts = f['gmf_data'].attrs['imts']
+                imtlist = imts.split()
+                grp = dstore.hdf5.create_group('gmf_data')
+                for nam, val in f['gmf_data'].attrs.items():
+                    if nam == '__pdcolumns__':
+                        grp.attrs['__pdcolumns__'] = 'eid sid ' + imts
+                    else:
+                        grp.attrs[nam] = val
+                for col in f['gmf_data']:
+                    if col.startswith('gmv_'):  # before v3.24
+                        name = imtlist[int(col[4:])]
+                    else:
+                        name = col
+                    f.copy(f'gmf_data/{col}', grp, name)
+            else:
+                f.copy('gmf_data', dstore.hdf5)
     else:  # merge the sites and the gmfs, tested in scenario/case_33
         convs = import_sites_hdf5(dstore, fnames)
-        create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
-                        R=oqparam.number_of_logic_tree_samples)
+        create_gmf_data(dstore, oq.all_imts(), E=E,
+                        R=oq.number_of_logic_tree_samples)
         num_ev_rup_site = []
         fileno = 0
         nE = 0
@@ -1479,6 +1481,7 @@ def import_gmfs_hdf5(dstore, oqparam):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
                 fileno += 1
+                imtlist = f['gmf_data'].attrs['imts'].split()
                 size = len(f['gmf_data/sid'])
                 logging.info('Reading {:_d} rows from {}'.format(size, fname))
                 sids = numpy.array(list(conv))
@@ -1489,10 +1492,14 @@ def import_gmfs_hdf5(dstore, oqparam):
                         df.loc[df.sid == sid, 'sid'] = idx
                     df['eid'] += nE  # add an offset to the event IDs
                     for col in df.columns:
-                        hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
+                        if col.startswith('gmv_'):  # before v3.24
+                            name = imtlist[int(col[4:])]
+                        else:
+                            name = col
+                        hdf5.extend(dstore[f'gmf_data/{name}'], df[col])
             nE += ne
             num_ev_rup_site.append((nE, len(rups), len(conv)))
-        oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
+        oq.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
@@ -1502,7 +1509,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
     logging.info('Storing %d events, %d relevant', E, e)
     dstore['events'] = events
-    n = oqparam.number_of_logic_tree_samples
+    n = oq.number_of_logic_tree_samples
     if n:
         dstore['weights'] = numpy.full(n, 1/n)
     else:
@@ -1523,8 +1530,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R
         assert N is not None  # pass len(complete) here
     items = [('sid', U32 if N == 0 else data['sid']),
              ('eid', U32 if N == 0 else data['eid'])]
-    for m in range(M):
-        col = f'gmv_{m}'
+    for col in map(str, prim_imts):
         items.append((col, F32 if data is None else data[col]))
     for imt in sec_imts:
         items.append((str(imt), F32 if N == 0 else data[imt]))
@@ -1551,20 +1557,20 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R
         dstore['avg_gmf'] = avg_gmf
 
 
-def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
+def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
     if aggby:
-        aggids, aggtags = assetcol.build_aggids(aggby, maxagg)
+        aggids, aggtags = assetcol.build_aggids(aggby)
         logging.info('Storing %d aggregation keys', len(aggids))
         agg_keys = ['\t'.join(tags) for tags in aggtags]
         dstore['agg_keys'] = numpy.array(agg_keys, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
     if assetcol.get_value_fields():
-        dstore['agg_values'] = assetcol.get_agg_values(aggby, maxagg)
+        dstore['agg_values'] = assetcol.get_agg_values(aggby)
 
 
 def store_gmfs(calc, sitecol, shakemap, gmf_dict):

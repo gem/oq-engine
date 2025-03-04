@@ -470,11 +470,6 @@ max:
   Example: *max = true*.
   Default: False
 
-max_aggregations:
-  Maximum number of aggregation keys.
-  Example: *max_aggregations = 200_000*
-  Default: 100_000
-
 max_blocks:
   INTERNAL. Used in classical calculations
 
@@ -1074,7 +1069,6 @@ class OqParam(valid.ParamSet):
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_aggregations = valid.Param(valid.positivefloat, 1E5)
     max_blocks = valid.Param(valid.positiveint, 100)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_gmvs_chunk = valid.Param(valid.positiveint, 100_000)  # for 2GB limit
@@ -1817,22 +1811,15 @@ class OqParam(valid.ParamSet):
         :returns: a composite data type for the GMFs
         """
         lst = [('sid', U32), ('eid', U32)]
-        for m, imt in enumerate(self.get_primary_imtls()):
-            lst.append((f'gmv_{m}', F32))
-        for out in self.sec_imts:
-            lst.append((out, F32))
+        for imt in self.all_imts():
+            lst.append((imt, F32))
         return numpy.dtype(lst)
 
     def all_imts(self):
         """
-        :returns: gmv_0, ... gmv_M, sec_imt...
+        :returns: imt..., sec_imt...
         """
-        lst = []
-        for m, imt in enumerate(self.get_primary_imtls()):
-            lst.append(f'gmv_{m}')
-        for out in self.sec_imts:
-            lst.append(out)
-        return lst
+        return list(self.get_primary_imtls()) + self.sec_imts
 
     def get_sec_perils(self):
         """

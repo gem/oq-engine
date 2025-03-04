@@ -25,8 +25,8 @@ from openquake.hazardlib import valid
 aae = np.testing.assert_almost_equal
 
 # Mean ground-shaking values array: exp_res[gmm][imt]
-exp_res = np.array([
-       [[-4.73116981, -6.72824192, -8.69828689],
+exp_res = np.array(
+      [[[-4.73116981, -6.72824192, -8.69828689],
         [-5.14424676, -6.37286291, -7.60510263],
         [-5.85932703, -6.80133893, -7.56254085]],
 
@@ -162,7 +162,7 @@ p20_adj = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
                      'usgs_basin_scaling="true"')
 p20_def = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"')
 
-# AtkinsonMacias2009 (m9 and cb14 vs m9)
+# AtkinsonMacias2009 (m9 cb14 basin terms, ba08 site term)
 a09_adj = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"\n'
                      'm9_basin_term="true"')
 a09_def = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"')

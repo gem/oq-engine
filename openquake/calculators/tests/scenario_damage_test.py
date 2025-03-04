@@ -233,7 +233,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_14(self):
         # inconsistent IDs between fragility and consequence
         with self.assertRaises(RuntimeError) as ctx:
-            self.run_calc(case_14.__file__, 'job.ini')
+            self.run_calc(case_14.__file__, 'job_wrong.ini')
         self.assertIn(
             "{'CR+PC/LDUAL/HBET:8.19/m'} are not in the CompositeRiskModel",
             str(ctx.exception))
@@ -284,6 +284,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_22(self):
         # losses with liquefaction and landslides
         self.run_calc(case_22.__file__, 'job_h.ini')
+
+        # checking avg_gmf
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)
+
+        # doing the risk
         hc_id = str(self.calc.datastore.calc_id)
         out = self.run_calc(case_22.__file__, 'job_r.ini',
                             hazard_calculation_id=hc_id, exports='csv')

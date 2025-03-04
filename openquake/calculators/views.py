@@ -885,8 +885,7 @@ def view_global_gmfs(token, dstore):
     Display GMFs on the first IMT averaged on everything for debugging purposes
     """
     imtls = dstore['oqparam'].imtls
-    row = [dstore[f'gmf_data/gmv_{m}'][:].mean(axis=0)
-           for m in range(len(imtls))]
+    row = [dstore[f'gmf_data/{imt}'][:].mean(axis=0) for imt in imtls]
     return text_table([row], header=imtls)
 
 
@@ -932,16 +931,15 @@ class GmpeExtractor(object):
 @view.add('extreme_gmvs')
 def view_extreme_gmvs(token, dstore):
     """
-    Display table of extreme GMVs with fields (eid, gmv_0, sid, rlz. rup)
+    Display table of extreme GMVs with fields (eid, imt, sid, rlz. rup)
     """
     if ':' in token:
         maxgmv = float(token.split(':')[1])
     else:
         maxgmv = 5  # PGA=5g is default value defining extreme GMVs
     imt0 = list(dstore['oqparam'].imtls)[0]
-
     eids = dstore['gmf_data/eid'][:]
-    gmvs = dstore['gmf_data/gmv_0'][:]
+    gmvs = dstore[f'gmf_data/{imt0}'][:]
     sids = dstore['gmf_data/sid'][:]
     msg = ''
     err = binning_error(gmvs, eids)
@@ -952,8 +950,8 @@ def view_extreme_gmvs(token, dstore):
         rups = dstore['ruptures'][:]
         rupdict = dict(zip(rups['id'], rups))
         gmpe = GmpeExtractor(dstore)
-        df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
-        extreme_df = df[df.gmv_0 > maxgmv].rename(columns={'gmv_0': imt0})
+        df = pandas.DataFrame({'imt': gmvs, 'sid': sids}, eids)
+        extreme_df = df[df.imt > maxgmv].rename(columns={'imt': imt0})
         if len(extreme_df) == 0:
             return 'No PGAs over %s g found' % maxgmv
         ev = dstore['events'][()][extreme_df.index]
@@ -1065,8 +1063,8 @@ def view_gmvs_to_hazard(token, dstore):
     num_ses = oq.ses_per_logic_tree_path
     data = dstore.read_df('gmf_data', 'sid').loc[sid]
     tbl = []
-    for imti, (imt, imls) in enumerate(oq.imtls.items()):
-        gmv = data['gmv_%d' % imti].to_numpy()
+    for imt, imls in oq.imtls.items():
+        gmv = data[imt].to_numpy()
         for iml in imls:
             # same algorithm as in _gmvs_to_haz_curve
             exceeding = numpy.sum(gmv >= iml)
@@ -1198,8 +1196,7 @@ def view_calc_risk(token, dstore):
     gmf_df = gmf_df[gmf_df.eid == int(event_id)]
     ws = dstore['weights']
     rlz_id = dstore['events']['rlz_id']
-    aggids, _ = assetcol.build_aggids(
-        oq.aggregate_by, oq.max_aggregations)
+    aggids, _ = assetcol.build_aggids(oq.aggregate_by)
     agg_keys = numpy.concatenate(
         [dstore['agg_keys'][:], numpy.array([b'total'])])
     ARK = (oq.A, len(ws), oq.K)
@@ -1526,6 +1523,7 @@ def view_mean_perils(token, dstore):
     """
     oq = dstore['oqparam']
     pdcols = dstore.get_attr('gmf_data', '__pdcolumns__').split()
+    # FIXME
     perils = [col for col in pdcols[2:] if not col.startswith('gmv_')]
     N = len(dstore['sitecol/sids'])
     sid = dstore['gmf_data/sid'][:]

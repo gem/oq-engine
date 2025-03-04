@@ -68,7 +68,7 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
 
 def event_based_damage(df, oq, dstore, monitor):
     """
-    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
+    :param df: a DataFrame of GMFs with fields sid, eid, imt, ...
     :param oq: parameters coming from the job.ini
     :param dstore: a DataStore instance
     :param monitor: a Monitor instance
@@ -178,10 +178,10 @@ class DamageCalculator(EventBasedRiskCalculator):
             oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore, oq)  # check
-        self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, oq.L, self.crmodel)
+        self.dmgcsq = zero_dmgcsq(
+            len(self.assetcol), self.R, oq.L, self.crmodel)
         if oq.K:
-            aggids, _ = self.assetcol.build_aggids(
-                oq.aggregate_by, oq.max_aggregations)
+            aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
             aggids = 0
         smap = calc.starmap_from_gmfs(

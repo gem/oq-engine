@@ -361,10 +361,9 @@ def read_usgs_stations_json(js: bytes):
     return stations
 
 
-def usgs_to_ecd_format(stations, exclude_imts=()):
+def usgs_stations_to_oq_format(stations, exclude_imts=(), seismic_only=False):
     '''
-    Adjust USGS format to match the ECD (Earthquake Consequence Database)
-    format
+    Convert from ShakeMap stations format to the OpenQuake format
     '''
     # Adjust column names to match format
     stations.columns = stations.columns.str.upper()
@@ -378,32 +377,30 @@ def usgs_to_ecd_format(stations, exclude_imts=()):
         }, inplace=True)
     # Identify columns for IMTs:
     imts = []
-    for col in stations.columns:
-        if 'DISTANCE_STDDEV' == col:
-            continue
-        if '_VALUE' in col or '_LN_SIGMA' in col or '_STDDEV' in col:
-            for imt in exclude_imts:
-                if imt in col:
-                    break
-            else:
-                imts.append(col)
+    for col in stations.columns:  
+        if ('_VALUE' in col or '_LN_SIGMA' in col or
+            '_STDDEV' in col and col != 'DISTANCE_STDDEV'):
+            imt = col.split('_')[0]
+            if imt not in exclude_imts:
+                assert col not in imts
+                imts.append(col)        
     # Identify relevant columns
     cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE',
-            'STATION_TYPE', 'VS30'] + imts
+            'STATION_TYPE', 'DISTANCE', 'VS30'] + imts
     df = stations[cols].copy()
     # Add missing columns
     df.loc[:, 'VS30_TYPE'] = 'inferred'
     df.loc[:, 'REFERENCES'] = 'Stations_USGS'
-    # Adjust PGA and SA untis to [g]. USGS uses [% g]
+    # Adjust PGA and SA units to [g]. USGS uses [% g]
     adj_cols = [imt for imt in imts
                 if '_VALUE' in imt and
                 'PGV' not in imt and
                 'MMI' not in imt]
     df.loc[:, adj_cols] = round(df.loc[:, adj_cols].
                                 apply(pd.to_numeric, errors='coerce') / 100, 6)
-    df_seismic = df[df['STATION_TYPE'] == 'seismic']
-    df_seismic_non_null = df_seismic.dropna()
-    return df_seismic_non_null
+    if seismic_only:
+        df = df.loc[df.STATION_TYPE == 'seismic'].dropna()
+    return df
 
 
 def _get_preferred_item(items):
@@ -452,7 +449,8 @@ def download_station_data_file(usgs_id, contents, user):
                    f' "station_type" is not specified, so we can not'
                    f' identify the "seismic" stations.')
             return None, msg
-        df = usgs_to_ecd_format(stations, exclude_imts=('SA(3.0)',))
+        df = usgs_stations_to_oq_format(
+            stations, exclude_imts=('SA(3.0)',), seismic_only=True)
         if len(df) < 1:
             if original_len > 1:
                 if seismic_len > 1:
@@ -814,8 +812,7 @@ def get_rup_dic(dic, user=User(),
     rup = None
     if approach == 'provide_rup_params':
         rupdic = dic.copy()
-        rupdic.update(rupture_file=rupture_file,
-                      station_data_file=station_data_file,
+        rupdic.update(rupture_file=rupture_file, station_data_file=station_data_file,
                       require_dip_strike=True)
         try:
             rup = build_planar_rupture_from_dict(rupdic)
@@ -831,15 +828,17 @@ def get_rup_dic(dic, user=User(),
                                                        station_data_file)
         if err or usgs_id == 'FromFile':
             return rup, rupdic, err
-
     assert usgs_id
     contents, properties, shakemap, err = _contents_properties_shakemap(
         usgs_id, user, use_shakemap, monitor)
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
-        if dic.get('lon', None) is None:  # don't override user-inserted values
+        if dic.get('lon') is None:  # don't override user-inserted values
             rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
+            for key in dic:
+                if dic[key] is not None:
+                    rupdic[key] = dic[key]
             if err:
                 return None, None, err
             if approach == 'build_rup_from_usgs':
@@ -851,18 +850,20 @@ def get_rup_dic(dic, user=User(),
         else:
             rupdic = dic.copy()
             rupdic['require_dip_strike'] = True
-    elif ('download/rupture.json' not in contents
-          or approach == 'use_finite_rup_from_usgs'):
+    elif 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
         rupdic, err = load_rupdic_from_finite_fault(
             usgs_id, properties['mag'], properties['products'])
         if err:
             return None, None, err
-
     if not rup_data and approach not in ['use_pnt_rup_from_usgs',
                                          'build_rup_from_usgs']:
         with monitor('Downloading rupture json'):
             rup_data, rupture_file = download_rupture_data(usgs_id, contents, user)
+        if not rupture_file and approach == 'use_finite_rup_from_usgs':
+            err = {"status": "failed",
+                   "error_msg": 'Unable to retrieve rupture geometries'}
+            return None, None, err
     if not rupdic:
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
     if (approach != 'use_shakemap_from_usgs' and not station_data_file

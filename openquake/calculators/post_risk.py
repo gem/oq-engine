@@ -518,8 +518,7 @@ class PostRiskCalculator(base.RiskCalculator):
             if not hasattr(self, 'assetcol'):
                 self.assetcol = ds.parent['assetcol']
             base.save_agg_values(
-                ds, self.assetcol, oq.loss_types,
-                oq.aggregate_by, oq.max_aggregations)
+                ds, self.assetcol, oq.loss_types, oq.aggregate_by)
             aggby = ds.parent['oqparam'].aggregate_by
             self.reaggreate = (aggby and oq.aggregate_by and
                                set(oq.aggregate_by[0]) < set(aggby[0]))
