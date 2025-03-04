@@ -434,10 +434,12 @@ class AssetCollection(object):
         """
         return [f for f in self.array.dtype.names if f.startswith('value-')]
 
-    def get_agg_values(self, aggregate_by):
+    def get_agg_values(self, aggregate_by, geometry=None):
         """
         :param aggregate_by:
-            a list of Ag lists of tag names
+            a list of lists of tag names (i.e. [['NAME_1']])
+        :param geometry:
+            if given, restrict the assets to the ones inside it
         :returns:
             a structured array of length K+1 with the value fields
         """
@@ -445,11 +447,17 @@ class AssetCollection(object):
         aggkey = {key: k for k, key in enumerate(
             self.tagcol.get_aggkey(aggregate_by))}
         K = len(aggkey)
-        dic = {tagname: self[tagname] for tagname in allnames}
+        if geometry:
+            lonlats = numpy.column_stack([self['lon'], self['lat']])
+            array = self.array[contains_xy(geometry, lonlats)]
+        else:
+            array = self.array
+        
+        dic = {tagname: array[tagname] for tagname in allnames}
         for field in self.fields:
-            dic[field] = self['value-' + field]
+            dic[field] = array['value-' + field]
         for field in self.occfields:
-            dic[field] = self[field]
+            dic[field] = array[field]
         vfields = self.fields + self.occfields
         value_dt = [(f, F32) for f in vfields]
         agg_values = numpy.zeros(K+1, value_dt)
@@ -466,23 +474,6 @@ class AssetCollection(object):
                 agg_values[aggkey[ag, key]] = tuple(grp[vfields].sum())
         if self.fields:  # missing in scenario_damage case_8
             agg_values[K] = tuple(dataf[vfields].sum())
-        return agg_values
-
-    # tested in impact_test#1
-    def agg_by_geom(self, geometries):
-        """
-        Aggregate by a list of G geometries.
-        :returns: a structured array of G elements
-        """
-        lonlats = numpy.column_stack([self['lon'], self['lat']])
-        dt = [(f, F32) for f in self.fields + self.occfields]
-        agg_values = numpy.zeros(len(geometries), dt)
-        for g, geom in enumerate(geometries):
-            assets_inside = self[contains_xy(geom, lonlats)]
-            for vf in self.fields:
-                agg_values[g][vf] = assets_inside['value-' + vf].sum()
-            for of in self.occfields:
-                agg_values[g][of] = assets_inside[of].sum()
         return agg_values
 
     def build_aggids(self, aggregate_by):
