@@ -800,8 +800,8 @@ def _get_rup_from_json(usgs_id, rupture_file, station_data_file):
 
 
 def get_rup_dic(dic, user=User(),
-                use_shakemap=False, rupture_file=None, station_data_file=None,
-                download_usgs_stations=True,
+                use_shakemap=False, rupture_file=None,
+                station_data_file=None, download_usgs_stations=True,
                 monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
