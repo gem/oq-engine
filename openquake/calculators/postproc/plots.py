@@ -46,6 +46,7 @@ def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
     ylim = y_center - max_range / 2, y_center + max_range / 2
     return xlim, ylim
 
+
 def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
     plt = import_plt()
     polys = read_df(buffer)['geom']
