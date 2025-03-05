@@ -910,6 +910,7 @@ def extract_mmi_tags(dstore, what):
     values = dstore['mmi_tags']
     acc = general.AccumDict(accum=[])
     K = len(keys)
+    ok = numpy.zeros(K, bool)
     for agg_id in range(K):
         for agg_key, key in zip(aggby, keys[agg_id]):
             acc[agg_key].append(key)
@@ -917,7 +918,8 @@ def extract_mmi_tags(dstore, what):
             array = values[mmi][agg_id]  # structured array with loss types
             for lt in array.dtype.names:
                 acc[f'{lt}_{mmi}'].append(array[lt])
-    df = pandas.DataFrame(acc)
+                ok[agg_id] += array[lt]
+    df = pandas.DataFrame(acc)[ok]
     return df
 
 
