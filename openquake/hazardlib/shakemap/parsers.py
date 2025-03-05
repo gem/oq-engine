@@ -239,7 +239,7 @@ def convert_to_oq_rupture(rup_json):
         return rup, None
     else:
         if ftype != 'MultiPolygon':
-            err_msg = f'able to convert only MultiPolygon geometries (not {ftype})'
+            err_msg = f'only MultiPolygon geometries are accepted (not {ftype})'
         else:
             err_msg = 'at least one surface is not rectangular'
         return None, err_msg
