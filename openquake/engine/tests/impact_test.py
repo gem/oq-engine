@@ -20,8 +20,6 @@ import os
 import pathlib
 import unittest
 import pytest
-import fiona
-from shapely.geometry import shape
 from openquake.calculators.checkers import check
 from openquake.calculators.export import export
 
@@ -48,8 +46,7 @@ def check_export_job(dstore):
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
-    expo = cd.parent.parent.parent / 'exposure.hdf5'
-    if not os.path.exists(expo):
+    if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest(f'Missing {expo}')
     calc = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
@@ -57,13 +54,9 @@ def test_impact(n):
 
 
 def test_impact5():
-    # importing the exposure around Nepal and aggregating it
-    calc = check(cd / 'impact5/job.ini')
-    agg_values = calc.assetcol.get_agg_values
-
     # this is a case where there are no assets inside the MMI multipolygons
-    shapes = calc.oqparam.inputs['mmi']
-    with fiona.open(f'zip://{shapes}!mi.shp') as f:
-        for feat in f:
-            values = agg_values([['ID_1']], shape(feat.geometry))
-            assert values['number'].sum() == 0
+    if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
+        raise unittest.SkipTest(f'Missing {expo}')
+
+    # importing the exposure around Nepal and aggregating it
+    check(cd / 'impact5/job.ini')

@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Extended `source_model.serialise_to_nrml` to accept a `mesh_spacing`
+    parameter
+
+  [Marco Pagani, Valeria Cascone]
+  * Added an get_width and get_length methods to Strasser et al. (2010) MSR
+
+  [Michele Simionato]
   * Added an input `mmi_shapes_file` for use in OQ Impact
 
   [Christopher Brooks]
