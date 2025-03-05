@@ -24,8 +24,8 @@ import os
 
 import numpy
 import pandas
-from shapely import contains_xy
-
+import fiona
+from shapely import geometry, contains_xy
 
 from openquake.baselib import hdf5, general, config
 from openquake.baselib.node import Node, context
@@ -46,6 +46,19 @@ OCC_FIELDS = ('day', 'night', 'transit')
 ANR_FIELDS = {'area', 'number', 'residents'}
 VAL_FIELDS = {'structural', 'nonstructural', 'contents',
               'business_interruption'}
+
+
+def to_mmi(value, MMIs=('I', 'II', 'III', 'IV', 'V', 'VI', 'VII',
+                        'VIII', 'IX', 'X')):
+    """
+    :param value: float in the range 1..10
+    :returns: string "I" .. "X" representing a MMI
+    """
+    if value >= 10.5:
+        raise ValueError(f'{value} is too large to be an MMI')
+    elif value < 0.5:
+        raise ValueError(f'{value} is too small to be an MMI')
+    return MMIs[round(value) - 1]
 
 
 def add_dupl_fields(df, oqfields):
@@ -475,6 +488,25 @@ class AssetCollection(object):
         if self.fields:  # missing in scenario_damage case_8
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
+
+    def get_mmi_values(self, aggregate_by, mmi_file):
+        """
+        :param aggregate_by:
+            a list of lists of tag names (i.e. [['NAME_1']])
+        :param mmi_file:
+            shapefile containing MMI geometries and values
+        :returns:
+            a dictionary MMI -> array with the value fields
+        """
+        out = {}
+        with fiona.open(f'zip://{mmi_file}!mi.shp') as f:
+            for feat in f:
+                geom = geometry.shape(feat.geometry)
+                mmi = to_mmi(feat.properties['PARAMVALUE'])
+                values = self.get_agg_values(aggregate_by, geom)
+                if values['number'].any():
+                    out[mmi] = values
+        return out
 
     def build_aggids(self, aggregate_by):
         """

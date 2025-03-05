@@ -49,6 +49,22 @@ class StrasserInterfaceTestCase(BaseMSRTestCase):
         self._test_get_median_mag(1541.70045, None, 7.14, places=2)
         self._test_get_median_mag(13803.84265, None, 7.94, places=2)
 
+    def test_get_length(self):
+        """
+        Testing the calculation of rupture length
+        """
+        self._test_get_median_length(6.0, 10.78946722, places=3)
+        self._test_get_median_length(7.0, 41.49540426, places=3)
+        self._test_get_median_length(8.0, 159.58791472, places=3)
+
+    def test_get_width(self):
+        """
+        Testing the calculation of rupture length
+        """
+        self._test_get_median_width(6.0, 16.74942876, places=3)
+        self._test_get_median_width(7.0, 37.58374043, places=3)
+        self._test_get_median_width(8.0, 84.33347578, places=3)
+
 
 class StrasserIntraslabTestCase(BaseMSRTestCase):
     '''

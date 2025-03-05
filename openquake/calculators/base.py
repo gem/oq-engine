@@ -728,6 +728,11 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
                 self.save_crmodel()
+            if oq.impact and 'mmi' in oq.inputs:
+                logging.info('Computing MMI-aggregated values')
+                if mmi_values := self.assetcol.get_mmi_values(
+                        oq.aggregate_by, oq.inputs['mmi']):
+                    self.datastore['mmi_values'] = mmi_values
 
     def pre_execute_from_parent(self):
         """
