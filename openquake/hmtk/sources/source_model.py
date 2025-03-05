@@ -49,6 +49,7 @@ Module implements
 :class:`openquake.hmtk.sources.source_model.mtkSourceModel`, the
 general class to describe a set of seismogenic sources
 """
+
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.hmtk.sources.point_source import mtkPointSource
@@ -94,7 +95,11 @@ class mtkSourceModel(object):
         return len(self.sources)
 
     def serialise_to_nrml(
-        self, filename, complex_mesh_spacing=2, use_defaults=False
+        self,
+        filename,
+        mesh_spacing=2,
+        complex_mesh_spacing=2,
+        use_defaults=False,
     ):
         """
         Writes the source model to a nrml source model file given by the
@@ -110,7 +115,7 @@ class mtkSourceModel(object):
         """
         source_model = self.convert_to_oqhazardlib(
             PoissonTOM(1.0),
-            2.0,
+            mesh_spacing,
             complex_mesh_spacing,
             10.0,
             use_defaults=use_defaults,
