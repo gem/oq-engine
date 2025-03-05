@@ -907,7 +907,7 @@ def extract_mmi_tags(dstore, what):
         [aggby] = oq.aggregate_by
     keys = numpy.array([line.decode('utf8').split('\t')
                         for line in dstore['agg_keys'][:]])
-    values = dstore['mmi_values']
+    values = dstore['mmi_tags']
     acc = general.AccumDict(accum=[])
     K = len(keys)
     for agg_id in range(K):
