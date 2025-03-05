@@ -520,7 +520,6 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
     rupdic = {'lon': lon, 'lat': lat, 'dep': float(p['depth']),
               'mag': mag, 'rake': 0.,
               'local_timestamp': str(local_time), 'time_event': time_event,
-              'require_dip_strike': True,
               'pga_map_png': None, 'mmi_map_png': None,
               'usgs_id': usgs_id, 'rupture_file': None}
     return rupdic, err
@@ -555,7 +554,6 @@ def load_rupdic_from_origin(usgs_id, products):
     rupdic = {'lon': lon, 'lat': lat, 'dep': dep,
               'mag': mag, 'rake': rake,
               'local_timestamp': str(local_time), 'time_event': time_event,
-              'require_dip_strike': True,
               'pga_map_png': None, 'mmi_map_png': None,
               'usgs_id': usgs_id, 'rupture_file': None}
     return rupdic, err
@@ -676,12 +674,8 @@ def download_mmi(usgs_id, shakemap_contents, user):
 def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     """
     Convert JSON data coming from the USGS into a rupdic with keys
-    lon, lat, dep, mag, rake, local_timestamp, require_dip_strike, shakemap,
-    usgs_id, rupture_file
+    lon, lat, dep, mag, rake, local_timestamp, shakemap, usgs_id, rupture_file
     """
-    # geometry is Point for us7000n05d
-    feats = rup_data['features']
-    require_dip_strike = len(feats) == 1 and feats[0]['geometry']['type'] == 'Point'
     md = rup_data['metadata']
     lon = md['lon']
     lat = md['lat']
@@ -691,7 +685,6 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     rupdic = {'lon': lon, 'lat': lat, 'dep': md['depth'],
               'mag': md['mag'], 'rake': md['rake'],
               'local_timestamp': str(local_time), 'time_event': time_event,
-              'require_dip_strike': require_dip_strike,
               'shakemap_array': shakemap_array,
               'usgs_id': usgs_id, 'rupture_file': rup_path}
     return rupdic
@@ -836,8 +829,7 @@ def get_rup_dic(dic, user=User(),
     rup = None
     if approach == 'provide_rup_params':
         rupdic = dic.copy()
-        rupdic.update(rupture_file=rupture_file, station_data_file=station_data_file,
-                      require_dip_strike=True)
+        rupdic.update(rupture_file=rupture_file, station_data_file=station_data_file)
         try:
             rup = build_planar_rupture_from_dict(rupdic)
         except ValueError as exc:
@@ -875,7 +867,6 @@ def get_rup_dic(dic, user=User(),
                     rupdic.update(rupdic['nodal_planes']['NP1'])
         else:
             rupdic = dic.copy()
-            rupdic['require_dip_strike'] = True
     elif 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
         rupdic, err = load_rupdic_from_finite_fault(
@@ -915,7 +906,6 @@ def get_rup_dic(dic, user=User(),
     rup, err_msg = convert_to_oq_rupture(rup_data)
     if rup is None:  # in parsers_test for us6000jllz
         rupdic['rupture_issue'] = err_msg
-        rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
     return rup, rupdic, err
 

@@ -765,7 +765,6 @@ function capitalizeFirstLetter(val) {
                     $('#strike').val('strike' in data ? data.strike : '0');
                     $('#local_timestamp').val(data.local_timestamp);
                     $('#time_event').val(data.time_event);
-                    $('#require_dip_strike').val(data.require_dip_strike);
                     // NOTE: due to security restrictions in web browsers, it is not possible to programmatically
                     //       set a specific file in an HTML file input element using JavaScript or jQuery,
                     //       therefore we can not pre-populate the rupture_file_input with the rupture_file
@@ -791,15 +790,6 @@ function capitalizeFirstLetter(val) {
                     if ($('#rupture_file_input')[0].files.length == 1) {
                         $('#dip').prop('disabled', true);
                         $('#strike').prop('disabled', true);
-                    }
-                    else if (data.require_dip_strike) {
-                        $('#dip').prop('disabled', false);
-                        $('#strike').prop('disabled', false);
-                    } else {
-                        $('#dip').prop('disabled', true);
-                        $('#strike').prop('disabled', true);
-                        $('#dip').val('');
-                        $('#strike').val('');
                     }
                     if ('nodal_planes' in data) {
                         const nodal_planes = data.nodal_planes;
@@ -937,7 +927,6 @@ function capitalizeFirstLetter(val) {
                 formData.append('rake', $("#rake").val());
                 formData.append('dip', $("#dip").val());
                 formData.append('strike', $("#strike").val());
-                formData.append('require_dip_strike', $("#require_dip_strike").val());
                 formData.append('time_event', $("#time_event").val());
                 formData.append('maximum_distance', $("#maximum_distance").val());
                 formData.append('mosaic_model', $('#mosaic_model').val());
