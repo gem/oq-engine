@@ -851,7 +851,9 @@ def get_rupture(oqparam):
     elif rupture_model and rupture_model.endswith('.json'):
         with open(rupture_model) as f:
             rup_data = json.load(f)
-        rup, _err_msg = convert_to_oq_rupture(rup_data)
+        rup, err_msg = convert_to_oq_rupture(rup_data)
+        if err_msg:
+            logging.warning(err_msg)
     if rup is None:  # assume rupture_dict
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup

@@ -239,9 +239,10 @@ def convert_to_oq_rupture(rup_json):
         return rup, None
     else:
         if ftype != 'MultiPolygon':
-            err_msg = f'only MultiPolygon geometries are accepted (not {ftype})'
+            reason = f'only MultiPolygon geometries are accepted (not {ftype})'
         else:
-            err_msg = 'at least one surface is not rectangular'
+            reason = 'at least one surface is not rectangular'
+        err_msg = f'Unable to convert the rupture from the USGS format: {reason}'
         return None, err_msg
 
 
@@ -786,8 +787,8 @@ def _get_rup_from_json(usgs_id, rupture_file, station_data_file):
     if usgs_id == 'FromFile':
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
         rupdic['station_data_file'] = station_data_file
-        rup, _err_msg = convert_to_oq_rupture(rup_data)
-    return rup, rupdic, rup_data
+        rup, err_msg = convert_to_oq_rupture(rup_data)
+    return rup, rupdic, rup_data, err_msg
 
 
 def get_rup_dic(dic, user=User(),
@@ -831,8 +832,10 @@ def get_rup_dic(dic, user=User(),
             rup, rupdic, err = _get_rup_dic_from_xml(
                 usgs_id, user, rupture_file, station_data_file)
         elif rupture_file.endswith('.json'):
-            rup, rupdic, rup_data = _get_rup_from_json(usgs_id, rupture_file,
-                                                       station_data_file)
+            rup, rupdic, rup_data, err_msg = _get_rup_from_json(
+                usgs_id, rupture_file, station_data_file)
+            if err_msg:
+                err = {"status": "failed", "error_msg": err_msg}
         if err or usgs_id == 'FromFile':
             return rup, rupdic, err
     assert usgs_id
@@ -895,9 +898,8 @@ def get_rup_dic(dic, user=User(),
     rup, err_msg = convert_to_oq_rupture(rup_data)
     if rup is None:
         # in parsers_test for us6000jllz
-        rupture_issue = f'Unable to convert the rupture from the USGS format: {err_msg}'
         rup = None
-        rupdic['rupture_issue'] = rupture_issue
+        rupdic['rupture_issue'] = err_msg
         rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
     return rup, rupdic, err
