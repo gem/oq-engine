@@ -128,7 +128,7 @@ Parameters: None
 Response:
 
 A JSON object corresponding to a pandas DataFrame. The names of the
-columns are "ID_1,OCCUPANCY", "loss_type", "value", "lossmea", "lossq05",
+columns are "ID_1", "loss_type", "value", "lossmea", "lossq05",
 "lossq95".
 
 ***********************************
