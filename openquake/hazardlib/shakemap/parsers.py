@@ -904,8 +904,7 @@ def get_rup_dic(dic, user=User(),
         rupdic['station_data_file'] = station_data_file
         rupdic['station_data_issue'] = None
         rupdic['station_data_file_from_usgs'] = False
-    if not rup_data:
-        # in parsers_test
+    if not rup_data:  # in parsers_test
         try:
             if approach == 'use_pnt_rup_from_usgs':
                 rupdic['msr'] = 'PointMSR'
@@ -914,8 +913,7 @@ def get_rup_dic(dic, user=User(),
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
     rup, err_msg = convert_to_oq_rupture(rup_data)
-    if rup is None:
-        # in parsers_test for us6000jllz
+    if rup is None:  # in parsers_test for us6000jllz
         rupdic['rupture_issue'] = err_msg
         rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
