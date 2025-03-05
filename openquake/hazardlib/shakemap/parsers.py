@@ -657,6 +657,22 @@ def download_rupture_data(usgs_id, shakemap_contents, user):
     return rup_data, gettemp(text, prefix='rup_', suffix='.json')
 
 
+def download_mmi(usgs_id, shakemap_contents, user):
+    shape = shakemap_contents.get('download/shape.zip')
+    if shape is None:
+        return None
+    url = shape['url']
+    if user.testdir:  # in parsers_test
+        mmi_file = os.path.join(user.testdir, f'{usgs_id}-shp.zip')
+        logging.info(f'Using {mmi_file}')
+    else:
+        logging.info('Downloading shape.zip (mmi_file)')
+        mmi_file = gettemp(prefix='mmi_', suffix='.zip')
+        with urlopen(url) as resp, open(mmi_file, 'wb') as f:
+            f.write(resp.read())
+    return mmi_file
+
+
 def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     """
     Convert JSON data coming from the USGS into a rupdic with keys
@@ -876,6 +892,8 @@ def get_rup_dic(dic, user=User(),
             return None, None, err
     if not rupdic:
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
+    if 'mmi_file' not in rupdic:
+        rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
     if (approach != 'use_shakemap_from_usgs' and not station_data_file
             and download_usgs_stations):
         with monitor('Downloading stations'):
@@ -886,8 +904,7 @@ def get_rup_dic(dic, user=User(),
         rupdic['station_data_file'] = station_data_file
         rupdic['station_data_issue'] = None
         rupdic['station_data_file_from_usgs'] = False
-    if not rup_data:
-        # in parsers_test
+    if not rup_data:  # in parsers_test
         try:
             if approach == 'use_pnt_rup_from_usgs':
                 rupdic['msr'] = 'PointMSR'
@@ -896,8 +913,7 @@ def get_rup_dic(dic, user=User(),
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
     rup, err_msg = convert_to_oq_rupture(rup_data)
-    if rup is None:
-        # in parsers_test for us6000jllz
+    if rup is None:  # in parsers_test for us6000jllz
         rupdic['rupture_issue'] = err_msg
         rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb

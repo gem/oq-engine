@@ -131,6 +131,12 @@ A JSON object corresponding to a pandas DataFrame. The names of the
 columns are "ID_1", "loss_type", "value", "lossmea", "lossq05",
 "lossq95".
 
+**********************************
+GET /v1/calc/:calc_id/mmi_tags
+**********************************
+
+FIXME
+
 ***********************************
 GET /v1/calc/:calc_id/extract/:spec
 ***********************************

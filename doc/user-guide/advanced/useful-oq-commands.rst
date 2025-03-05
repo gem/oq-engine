@@ -137,6 +137,7 @@ info exports* command; the number of exporters defined changes at each version::
 	Hazard Maps "hmaps" ['csv', 'xml', 'npz']
 	Input Files "input" ['zip']
 	Mean Conditional Spectra "cs-stats" ['csv']
+	Exposure grouped by Admin1 and MMI "mmi_tags" ['csv']
 	Realizations "realizations" ['csv']
 	Source Loss Table "src_loss_table" ['csv']
 	Total Risk "agg_risk" ['csv']
