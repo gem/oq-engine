@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import ast
 import csv
 import shutil
 import json
@@ -692,12 +693,23 @@ def impact_callback(
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
     params_to_print = ''
+    exclude_from_print = []
+    if 'shakemap_uri' in params:
+        exclude_from_print = [
+            'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
+            'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type', 'gsim',
+            'shakemap_uri', 'require_dip_strike', 'rupture_file', 'rupture_from_usgs']
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
             if key == 'rupture_dict':
-                params_to_print += params[key] + '\n'
-            else:
+                # NOTE: params['rupture_dict'] is a string representation of a Python
+                # dictionary, not a valid JSON string, so we can't use json.loads
+                rupdic = ast.literal_eval(params['rupture_dict'])
+                for rupkey, rupval in rupdic.items():
+                    if rupkey not in exclude_from_print:
+                        params_to_print += f'{rupkey}: {rupval}\n'
+            elif key not in exclude_from_print:
                 params_to_print += f'{key}: {val}\n'
 
     from_email = settings.EMAIL_HOST_USER

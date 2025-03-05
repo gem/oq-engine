@@ -20,7 +20,6 @@ import os
 import pathlib
 import unittest
 import pytest
-from openquake.commonlib.readinput import read_countries_df
 from openquake.calculators.checkers import check
 from openquake.calculators.export import export
 
@@ -28,8 +27,7 @@ cd = pathlib.Path(__file__).parent
 
 
 def check_export_job(dstore):
-    fnames = export(('job', 'zip'), dstore)
-    fnames = [os.path.basename(f) for f in fnames]
+    fnames = [os.path.basename(f) for f in export(('job', 'zip'), dstore)]
     assert fnames == ['exposure.xml',
                       'assetcol.csv',
                       'job.ini',
@@ -44,18 +42,21 @@ def check_export_job(dstore):
                       'structural_vulnerability.xml',
                       'taxonomy_mapping.csv']
 
-    df = read_countries_df()
-    arr = dstore['assetcol'].agg_by_geom(df.geom)
-    ok = arr['number'] != 0  # indices where there are assets
-    assert list(df[ok].code) == ['JPN']
-
 
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
-    expo = cd.parent.parent.parent / 'exposure.hdf5'
-    if not os.path.exists(expo):
+    if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest(f'Missing {expo}')
     calc = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
-        check_export_job(calc.datastore)
+        check_export_job(calc.datastore)        
+
+
+def test_impact5():
+    # this is a case where there are no assets inside the MMI multipolygons
+    if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
+        raise unittest.SkipTest(f'Missing {expo}')
+
+    # importing the exposure around Nepal and aggregating it
+    check(cd / 'impact5/job.ini')

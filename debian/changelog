@@ -1,7 +1,17 @@
+  [Michele Simionato]
+  * Extended `source_model.serialise_to_nrml` to accept a `mesh_spacing`
+    parameter
+
+  [Marco Pagani, Valeria Cascone]
+  * Added an get_width and get_length methods to Strasser et al. (2010) MSR
+
+  [Michele Simionato]
+  * Added an input `mmi_shapes_file` for use in OQ Impact
+
   [Christopher Brooks]
   * Added Boore and Atkinson (2008) site term to the ModifiableGMPE
     capabilities and as an input arg for the Atkinson and Macias (2009)
-    GMM as required for the US 2023 model + added unit tests.   
+    GMM as required for the US 2023 model + added unit tests.
 
   [Michele Simionato]
   * Extended `avg_gmf` to the secondary perils

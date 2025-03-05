@@ -954,7 +954,7 @@ class OqParam(valid.ParamSet):
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
-        'reqv_ignore_sources', 'amplification', 'station_data',
+        'reqv_ignore_sources', 'amplification', 'station_data', 'mmi',
         'nonstructural_fragility',
         'nonstructural_consequence',
         'structural_fragility',
@@ -1886,7 +1886,7 @@ class OqParam(valid.ParamSet):
     @property
     def impact(self):
         """
-        Return True if we are in Aristotle mode, i.e. there is an HDF5
+        Return True if we are in OQImpact mode, i.e. there is an HDF5
         exposure with a known structure
         """
         exposures = self.inputs.get('exposure', [])
@@ -1895,7 +1895,8 @@ class OqParam(valid.ParamSet):
             if not self.quantiles:
                 self.quantiles = [0.05, 0.95]
             if not self.aggregate_by:
-                self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
+                # self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
+                self.aggregate_by = [['ID_1']]
         return yes
 
     @property
