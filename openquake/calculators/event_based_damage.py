@@ -243,13 +243,15 @@ class DamageCalculator(EventBasedRiskCalculator):
         for p in range(P):
             for r in range(self.R):
                 self.dmgcsq[p, :, r] /= prc.num_events[r]
-                ndamaged = self.dmgcsq[p, :, r, :, 1:D].sum(axis=2)  # shape (A, L)
+                ndamaged = self.dmgcsq[p, :, r, :, 1:D].sum(axis=2)
+                # shape (A, L)
                 for li in range(L):
                     # set no_damage
                     self.dmgcsq[p, :, r, li, 0] = number - ndamaged[:, li]
 
         assert (self.dmgcsq >= 0).all()  # sanity check
-        self.datastore['damages-rlzs'] = arr = self.crmodel.to_multi_damage(self.dmgcsq)
+        self.datastore['damages-rlzs'] = arr = self.crmodel.to_multi_damage(
+            self.dmgcsq)
         s = oq.hazard_stats()
         if s and self.R > 1:
             _statnames, statfuncs = zip(*s.items())
