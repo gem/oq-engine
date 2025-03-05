@@ -893,6 +893,34 @@ def extract_aggrisk_tags(dstore, what):
     return df
 
 
+@extract.add('mmi_tags')
+def extract_mmi_tags(dstore, what):
+    """
+    Aggregates mmi by tag. Use it as /extract/mmi_tags?
+    """
+    oq = dstore['oqparam']
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        # see impact_test.py
+        aggby = [','.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        # see event_based_risk_test/case_1
+        [aggby] = oq.aggregate_by
+    keys = numpy.array([line.decode('utf8').split('\t')
+                        for line in dstore['agg_keys'][:]])
+    values = dstore['mmi_values']
+    acc = general.AccumDict(accum=[])
+    K = len(keys)
+    for agg_id in range(K):
+        for agg_key, key in zip(aggby, keys[agg_id]):
+            acc[agg_key].append(key)
+        for mmi in list(values):
+            array = values[mmi][agg_id]  # structured array with loss types
+            for lt in array.dtype.names:
+                acc[f'{lt}_{mmi}'].append(array[lt])
+    df = pandas.DataFrame(acc)
+    return df
+
+
 @extract.add('agg_losses')
 def extract_agg_losses(dstore, what):
     """
