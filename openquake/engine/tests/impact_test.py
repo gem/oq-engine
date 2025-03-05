@@ -48,8 +48,7 @@ def check_export_job(dstore):
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
-    expo = cd.parent.parent.parent / 'exposure.hdf5'
-    if not os.path.exists(expo):
+    if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest(f'Missing {expo}')
     calc = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
@@ -57,6 +56,10 @@ def test_impact(n):
 
 
 def test_impact5():
+    # NB: expecting exposure in oq-engine and not in mosaic_dir!
+    if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
+        raise unittest.SkipTest(f'Missing {expo}')
+
     # importing the exposure around Nepal and aggregating it
     calc = check(cd / 'impact5/job.ini')
     agg_values = calc.assetcol.get_agg_values
