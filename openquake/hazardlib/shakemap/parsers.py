@@ -898,7 +898,6 @@ def get_rup_dic(dic, user=User(),
     rup, err_msg = convert_to_oq_rupture(rup_data)
     if rup is None:
         # in parsers_test for us6000jllz
-        rup = None
         rupdic['rupture_issue'] = err_msg
         rupdic['require_dip_strike'] = True
     # in parsers_test for usp0001ccb
