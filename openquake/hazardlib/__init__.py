@@ -198,7 +198,8 @@ def get_flt(hparams, branchID=''):
     else:
         gslt = gsim_lt.GsimLogicTree(
             inputs['gsim_logic_tree'], smlt.tectonic_region_types)
-    return logictree.FullLogicTree(smlt, gslt)
+    flt = logictree.FullLogicTree(smlt, gslt)
+    return flt
 
 
 class Input(object):
