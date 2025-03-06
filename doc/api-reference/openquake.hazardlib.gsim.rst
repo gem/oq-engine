@@ -896,6 +896,14 @@ lin_lee_2008
     :undoc-members:
     :show-inheritance:
 
+liu_macedo_2022
+----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.liu_macedo_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 manea_2021
 -----------------------------------------------
 

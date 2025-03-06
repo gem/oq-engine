@@ -1,3 +1,8 @@
+  [Kyle Smith]
+  * Added a new gsim file liu_macedo_2022.py to implement the
+    Cumulative Absolute Velocity ground motion
+    models from Liu and Macedo (2022)
+
   [Michele Simionato]
   * Added an extractor `losses_by_site`
   * Improved `oq info sources` and `oq show relevant_sources:<IMT>`
