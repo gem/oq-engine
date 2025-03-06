@@ -192,7 +192,6 @@ IMPACT_FORM_DEFAULTS = {
     'msr': 'WC1994',
     'rupture_from_usgs_loaded': '',
     'rupture_file_input': '',
-    'require_dip_strike': '',
     'station_data_file_input': '',
     'station_data_file_loaded': '',
 }

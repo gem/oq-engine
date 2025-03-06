@@ -68,7 +68,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['rake'], 0.0)
         self.assertEqual(dic['local_timestamp'], '2021-08-14 08:29:08-04:00')
         self.assertEqual(dic['time_event'], 'transit')
-        self.assertEqual(dic['require_dip_strike'], True)
         self.assertEqual(dic['pga_map_png'], None)
         self.assertEqual(dic['mmi_map_png'], None)
         self.assertEqual(dic['usgs_id'], 'us6000f65h')
@@ -105,7 +104,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['lon'], 37.0143)
         self.assertEqual(dic['lat'], 37.2256)
         self.assertEqual(dic['dep'], 10.)
-        self.assertEqual(dic['require_dip_strike'], True)
 
     def test_5(self):
         # 12 vertices instead of 4 in rupture.json
@@ -113,7 +111,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
             {'usgs_id': 'us20002926', 'approach': 'use_shakemap_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIsNone(rup)
-        self.assertEqual(dic['require_dip_strike'], True)
         rupture_issue = ('Unable to convert the rupture from the USGS format: at'
                          ' least one surface is not rectangular')
         self.assertEqual(dic['rupture_issue'], rupture_issue)
@@ -123,7 +120,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
             {'usgs_id': 'usp0001ccb', 'approach': 'use_pnt_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertEqual(dic['mag'], 6.7)
-        self.assertEqual(dic['require_dip_strike'], True)
         self.assertEqual(dic['station_data_issue'],
                          '3 stations were found, but none of them are seismic')
 
@@ -172,7 +168,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['msr'], 'WC1994')
         self.assertEqual(dic['rake'], -179.18)
         self.assertEqual(dic['strike'], 317.63)
-        self.assertEqual(dic['require_dip_strike'], True)
         self.assertEqual(dic['aspect_ratio'], 3)
 
     def test_10(self):
