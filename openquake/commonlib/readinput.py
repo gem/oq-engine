@@ -991,7 +991,10 @@ def get_composite_source_model(oqparam, dstore=None):
     :param dstore:
          an open datastore where to save the source info
     """
-    logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
+    if 'source_model_logic_tree' in oqparam.inputs:
+        logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
+    elif 'source_model' in oqparam.inputs:
+        logging.info('Reading %s', oqparam.inputs['source_model'])
     h5 = dstore.hdf5 if dstore else None
     with Monitor('building full_lt', measuremem=True, h5=h5):
         full_lt = get_full_lt(oqparam)  # builds the weights
