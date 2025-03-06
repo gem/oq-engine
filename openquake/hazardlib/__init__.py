@@ -155,14 +155,22 @@ def get_smlt(hparams, sourceID=''):
     :returns:
         :class:`openquake.hazardlib.logictree.SourceModelLogicTree` object
     """
-    args = (hparams['inputs']['source_model_logic_tree'],
-            hparams.get('random_seed', 42),
-            hparams.get('number_of_logic_tree_samples', 0),
+    if 'source_model_logic_tree' in hparams['inputs']:
+        args = (hparams['inputs']['source_model_logic_tree'],
+                hparams.get('random_seed', 42),
+                hparams.get('number_of_logic_tree_samples', 0),
+                hparams.get('sampling_method', 'early_weights'),
+                False,
+                hparams.get('smlt_branch', ''),
+                sourceID)
+        smlt = logictree.SourceModelLogicTree(*args)
+    elif 'source_model' in hparams['inputs']:
+        smlt = logictree.SourceModelLogicTree.trivial(
+            hparams['inputs']['source_model'],
             hparams.get('sampling_method', 'early_weights'),
-            False,
-            hparams.get('smlt_branch', ''),
             sourceID)
-    smlt = logictree.SourceModelLogicTree(*args)
+    else:
+        raise RuntimeError('Missing source_model_logic_tree and source_model')
     if 'discard_trts' in hparams:
         discard_trts = {s.strip() for s in hparams['discard_trts'].split(',')}
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
