@@ -464,6 +464,47 @@ def check_extent(lons, lats, msg=''):
     return int(dx), int(dy), int(dz)
 
 
+def get_bboxes(sources):
+    """
+    :returns: an array of euclidean bounding boxes of shape (N, 4, 3)
+    """
+    lons = numpy.zeros((len(sources), 4), F32)
+    lats = numpy.zeros((len(sources), 4), F32)
+    for i, src in enumerate(sources):
+        west, south, east, north = get_bounding_box(src, 0.)
+        # tl, tr, bl, br
+        lons[i, 0] = west
+        lats[i, 0] = north
+        lons[i, 1] = east
+        lats[i, 1] = north
+        lons[i, 2] = west
+        lats[i, 2] = south
+        lons[i, 3] = east
+        lats[i, 3] = south
+    return spherical_to_cartesian(lons, lats)
+
+
+def get_bboxes_distances(site, bboxes):
+    """
+    :param site: a Site instance
+    :param bboxes: an array of shape (N, 4, 3)
+    :returns: an array of lenght N
+ 
+    >>> from openquake.hazardlib.site import Site
+    >>> s = Site(geometry.Point(21., 5.))
+    >>> lons = [[10, 20, 10, 20]]
+    >>> lats = [[10, 10, 0, 0]]
+    >>> bboxes = spherical_to_cartesian(lons, lats)
+    >>> get_bboxes_distances(s, bboxes)
+    array([566.6052], dtype=float32)
+    """
+    xyz = spherical_to_cartesian(site.location.x, site.location.y).reshape(1, 3)
+    dst = numpy.zeros((len(bboxes), 4), F32)
+    for i in range(4):
+        dst[:, i] = cdist(xyz, bboxes[:, i])
+    return dst.min(axis=1)
+    
+    
 def get_bbox(lons, lats, xlons=(), xlats=()):
     """
     :returns: (minlon, minlat, maxlon, maxlat)
