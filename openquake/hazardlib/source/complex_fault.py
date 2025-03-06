@@ -20,6 +20,7 @@ defines :class:`ComplexFaultSource`.
 import copy
 import numpy
 
+from scipy.stats import truncnorm
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
@@ -174,7 +175,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         sfc = ComplexFaultSurface.from_fault_data(self.edges, 2.0)
         return sfc.get_area()
 
-    def iter_ruptures(self, **kwargs):
+    def iter_ruptures(self):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
@@ -182,7 +183,22 @@ class ComplexFaultSource(ParametricSeismicSource):
         Uses :func:`_float_ruptures` for finding possible rupture locations
         on the whole fault surface.
         """
+        for r in self._iter_ruptures():
+            yield r
+
+    def _iter_ruptures(self, **kwargs):
+        """
+        Local rupture generator. It accepts some configuration parameters such
+        as a `step` parameter that controls the excution of additional checks
+        and the `count` flag, when True the function
+        """
         step = kwargs.get('step', 1)
+        only_count = kwargs.get('count', False)
+        eps_ar_low = kwargs.get('eps_low', None)
+        eps_ar_upp = kwargs.get('eps_upp', None)
+        num_bins = kwargs.get('num_bins', None)
+        self._nr = []
+
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing)
         if step > 1:  # do the expensive check only in preclassical
@@ -190,29 +206,94 @@ class ComplexFaultSource(ParametricSeismicSource):
         whole_fault_mesh = whole_fault_surface.mesh
         _cell_center, cell_length, _cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
+
+        msr = self.magnitude_scaling_relationship
+
         for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
-            rupture_area = self.magnitude_scaling_relationship.get_median_area(
-                mag, self.rake)
-            rupture_length = numpy.sqrt(
-                rupture_area * self.rupture_aspect_ratio)
-            rupture_slices = _float_ruptures(
-                rupture_area, rupture_length, cell_area, cell_length)
-            occurrence_rate = mag_occ_rate / float(len(rupture_slices))
-            for rupture_slice in rupture_slices[::step**2]:
-                mesh = whole_fault_mesh[rupture_slice]
-                # XXX: use surface centroid as rupture's hypocenter
-                # XXX: instead of point with middle index
-                hypocenter = mesh.get_middle_point()
-                try:
-                    surface = ComplexFaultSurface(mesh)
-                except ValueError as e:
-                    raise ValueError("Invalid source with id=%s. %s" % (
-                        self.source_id, str(e)))
-                rup = ParametricProbabilisticRupture(
-                    mag, self.rake, self.tectonic_region_type, hypocenter,
-                    surface, occurrence_rate, self.temporal_occurrence_model)
-                rup.mag_occ_rate = mag_occ_rate
-                yield rup
+
+            # Computing rupture parameters
+            rupture_area = msr.get_median_area(mag, self.rake)
+
+            # Create the list with the values of the rupture length
+            if eps_ar_upp is not None and eps_ar_low is not None:
+
+                log10_ar_std = ((msr.get_std_dev_length(mag)**2 +
+                                 msr.get_std_dev_width(mag)**2))**0.5
+
+                # Mean aspect ratio
+                mean_log_asr = numpy.log10(msr.get_median_length(mag) /
+                                           msr.get_median_width(mag))
+
+                # Shape parameters of the double truncated Gaussian
+                shp_a = ((mean_log_asr + eps_ar_low * log10_ar_std) /
+                         log10_ar_std)
+                shp_b = ((mean_log_asr + eps_ar_upp * log10_ar_std) /
+                         log10_ar_std)
+
+                # Normalized x-values
+                asr_norm = numpy.linspace(shp_a, shp_b, num_bins+1)
+
+                # Compute mid point of each bin
+                mid = asr_norm[:-1] + numpy.diff(asr_norm) / 2
+
+                # Compute the pdf for the mid of each bin
+                pmf = truncnorm.pdf(mid, shp_a, shp_b)
+                pmf /= numpy.sum(pmf)
+
+                # Get aspect ratios
+                asrs = 10.0**((mid * log10_ar_std) + mean_log_asr)
+
+                # Compute rupture lenghts
+                rup_lens = numpy.sqrt(rupture_area * asrs)
+
+            else:
+                rup_lens = [numpy.sqrt(
+                    rupture_area * self.rupture_aspect_ratio)]
+                pmf = [1.0]
+
+            assert numpy.abs(1.0 - numpy.sum(pmf)) < 1e-5
+
+            # Loop over the rupture lengths
+            tmp = 0.0
+            for rupture_length, wei in zip(rup_lens, pmf):
+
+                rupture_slices = _float_ruptures(
+                    rupture_area, rupture_length, cell_area, cell_length)
+
+                # Compute occurrence rates
+                occurrence_rate = (
+                    mag_occ_rate / float(len(rupture_slices)) * wei)
+                tmp += occurrence_rate
+
+                # Just counting the ruptures
+                if only_count:
+                    self._nr.append(len(rupture_slices))
+                    yield len(rupture_slices)
+                    continue
+
+                for rupture_slice in rupture_slices[::step**2]:
+                    mesh = whole_fault_mesh[rupture_slice]
+                    # XXX: use surface centroid as rupture's hypocenter
+                    # XXX: instead of point with middle index
+                    hypocenter = mesh.get_middle_point()
+                    try:
+                        surface = ComplexFaultSurface(mesh)
+                    except ValueError as e:
+                        raise ValueError("Invalid source with id=%s. %s" % (
+                            self.source_id, str(e)))
+                    rup = ParametricProbabilisticRupture(
+                        mag,
+                        self.rake,
+                        self.tectonic_region_type,
+                        hypocenter,
+                        surface,
+                        occurrence_rate,
+                        self.temporal_occurrence_model
+                    )
+                    rup.mag_occ_rate = mag_occ_rate
+                    yield rup
+
+            assert numpy.abs(mag_occ_rate - tmp) < 1e-5
 
     def count_ruptures(self):
         """
@@ -221,22 +302,8 @@ class ComplexFaultSource(ParametricSeismicSource):
         """
         if self.num_ruptures:
             return self.num_ruptures
-        whole_fault_surface = ComplexFaultSurface.from_fault_data(
-            self.edges, self.rupture_mesh_spacing)
-        whole_fault_mesh = whole_fault_surface.mesh
-        _cell_center, cell_length, _cell_width, cell_area = (
-            whole_fault_mesh.get_cell_dimensions())
-        self._nr = []
-        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
-            if mag_occ_rate == 0:
-                continue
-            rupture_area = self.magnitude_scaling_relationship.get_median_area(
-                mag, self.rake)
-            rupture_length = numpy.sqrt(
-                rupture_area * self.rupture_aspect_ratio)
-            rupture_slices = _float_ruptures(
-                rupture_area, rupture_length, cell_area, cell_length)
-            self._nr.append(len(rupture_slices))
+        if not self._nr:
+            self._nr = [v for v in self._iter_ruptures(count= True)]
         return sum(self._nr)
 
     def modify_set_geometry(self, edges, spacing):
