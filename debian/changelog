@@ -4,6 +4,8 @@
 
   [Marco Pagani, Valeria Cascone]
   * Added an get_width and get_length methods to Strasser et al. (2010) MSR
+  * Added a method to the ComplexFaultSource that creates ruptures considering
+    variability in the aspect ratio
 
   [Michele Simionato]
   * Added an input `mmi_shapes_file` for use in OQ Impact
