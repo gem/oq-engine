@@ -47,8 +47,13 @@ def main(calc_id: int):
         logging.info('Duplicates %s not removed' % bad_dupl)
     ok_ids = general.group_array(info[['source_id', 'code']], 'source_id')
     with performance.Monitor() as mon:
-        good, total = readinput.reduce_source_model(
-            oqparam.inputs['source_model_logic_tree'], ok_ids)
+        if 'source_model_logic_tree' in oqparam.inputs:
+            good, total = readinput.reduce_source_model(
+                oqparam.inputs['source_model_logic_tree'], ok_ids)
+        else:
+            sms = [oqparam.inputs['source_model']]
+            [dic] = readinput.reduce_sm(sms, sorted(ok_ids))
+            good, total = dic['good'], dic['total']
     logging.info('Removed %d/%d sources', total - good, num_ids)
     print(mon)
 
