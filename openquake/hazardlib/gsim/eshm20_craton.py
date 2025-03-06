@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -84,7 +84,7 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
     f760 = _get_f760(C_F760, ctx.vs30,
                      NGAEastGMPE.CONSTANTS)
     # Get the linear amplification factor
-    f_lin = _get_fv(C_LIN, ctx, f760,
+    f_lin = _get_fv(C_LIN, ctx.vs30, f760,
                     NGAEastGMPE.CONSTANTS)
     # Get the nonlinear amplification from Hashash et al., (2017)
     f_nl, f_rk = get_fnl(C_NL, pga_r, ctx.vs30, period)
@@ -211,21 +211,22 @@ class ESHM20Craton(GMPE):
     #: Defined for a reference velocity of 3000 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 3000.0
 
-    def __init__(self, **kwargs):
+    def __init__(self, epsilon=0, tau_model="global", phi_model="global",
+                 ergodic=True, tau_quantile=None, phi_ss_quantile=None,
+                 site_epsilon=0.):
         """
         Instantiates the class with additional terms controlling both the
         epistemic uncertainty in the median and the preferred aleatory
         uncertainty model ('global', 'cena_constant', 'cena'), and the quantile
         of the epistemic uncertainty model (float in the range 0 to 1, or None)
         """
-        super().__init__(**kwargs)
-        self.epsilon = kwargs.get("epsilon", 0.0)
-        self.tau_model = kwargs.get("tau_model", "global")
-        self.phi_model = kwargs.get("phi_model", "global")
-        self.ergodic = kwargs.get("ergodic", True)
-        self.tau_quantile = kwargs.get("tau_quantile", None)
-        self.phi_ss_quantile = kwargs.get("phi_ss_quantile", None)
-        self.site_epsilon = kwargs.get("site_epsilon", 0.0)
+        self.epsilon = epsilon
+        self.tau_model = tau_model
+        self.phi_model = phi_model
+        self.ergodic = ergodic
+        self.tau_quantile = tau_quantile
+        self.phi_ss_quantile = phi_ss_quantile
+        self.site_epsilon = site_epsilon
         self.PHI_S2SS = None
         # define the standard deviation model from the NGA East aleatory
         # uncertainty model according to the calibrations specified by the user
@@ -253,7 +254,7 @@ class ESHM20Craton(GMPE):
             else:
                 # Avoid re-calculating PGA if that was already done!
                 mean[m] = np.copy(pga_r)
-
+            
             mean[m] += get_site_amplification(
                 self.site_epsilon, imt, np.exp(pga_r), ctx)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -200,7 +200,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     if isinstance(value, numpy.bool_):
         return '1' if value else '0'
     elif isinstance(value, bytes):
-        return value.decode('utf8')
+        return value.decode('utf8', 'ignore')
     elif isinstance(value, str):
         return value
     elif hasattr(value, '__len__'):
@@ -910,7 +910,7 @@ class ValidatingXmlParser(object):
 
     def _start_element(self, longname, attrs):
         try:
-            xmlns, name = longname.split('}')
+            _xmlns, name = longname.split('}')
         except ValueError:  # no namespace in the longname
             name = tag = longname
         else:  # fix the tag with an opening brace

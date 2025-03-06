@@ -79,8 +79,8 @@ class StewartEtAl2016(BooreEtAl2014):
 
     REQUIRES_ATTRIBUTES = {'region', 'sof'}
 
-    def __init__(self, region='CAL', sof=True, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, region='CAL', sof=True):
+        super().__init__()  # important
         self.region = region
         self.sof = sof
 

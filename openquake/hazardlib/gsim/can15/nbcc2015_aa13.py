@@ -106,21 +106,19 @@ class NBCC2015_AA13(GMPETable):
     REQUIRES_DISTANCES = ""
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    def __init__(self, **kwargs):
-        # kwargs must contain the keys REQUIRES_DISTANCES,
-        # DEFINED_FOR_TECTONIC_REGION_TYPE, gmpe_table
-        fname = kwargs['gmpe_table']
-        if isinstance(fname, io.BytesIO):
+    def __init__(self, gmpe_table, REQUIRES_DISTANCES,
+                 DEFINED_FOR_TECTONIC_REGION_TYPE):
+        if isinstance(gmpe_table, io.BytesIO):
             # magic happening in the engine when reading the gsim from HDF5
             pass
         else:
             # fname is really a filename (absolute in the engine)
-            kwargs['gmpe_table'] = os.path.join(
-                BASE_PATH_AA13, os.path.basename(fname))
-        super().__init__(**kwargs)
-        self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
-        self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
-            'DEFINED_FOR_TECTONIC_REGION_TYPE']
+            gmpe_table = os.path.join(
+                BASE_PATH_AA13, os.path.basename(gmpe_table))
+        super().__init__(gmpe_table)
+        self.REQUIRES_DISTANCES = frozenset(REQUIRES_DISTANCES)
+        self.DEFINED_FOR_TECTONIC_REGION_TYPE = \
+            DEFINED_FOR_TECTONIC_REGION_TYPE
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

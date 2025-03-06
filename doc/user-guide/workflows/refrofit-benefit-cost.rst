@@ -1,5 +1,7 @@
-Refrofit Benefit-Cost Ratio Analysis
-====================================
+.. _refrofit-benefit-cost-intro:
+
+Refrofit Benefit-Cost Ratio
+===========================
 
 This calculator represents a decision-support tool for deciding whether the employment of retrofitting measures to a 
 collection of existing buildings is advantageous from an economical point of view. For this assessment, the expected 

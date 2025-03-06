@@ -69,7 +69,6 @@ jobs:
       GITHUB_REF: ${{ github.ref }}
       GITHUB_HD_REF: ${{ github.head_ref }}
       GITHUB_BS_REF: ${{ github.base_ref }}
-
     steps:
       - name: run if workflow_dispatch
         if: github.event_name == 'workflow_dispatch'
@@ -118,12 +117,12 @@ jobs:
           GITHUB_HD_REF: ${{ github.head_ref }}
           GITHUB_BS_REF: ${{ github.base_ref }}
           UPLOAD: ${{ github.event.inputs.git-ref }}
-
+          DJANGO_SETTINGS_MODULE: "openquake.server.settings"
           # JUST TO TEST MULTI_DOCS
-          MULTI_DOCS_FOR_DEVEL: "true"
+          MULTI_DOCS_FOR_DEVEL: "false"
         run: |
           bash --version
-          LTS_VER=$(grep '^Current LTS' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
+          LTS_VER=$(grep '^The current LTS' README.md  | sed 's/.*OpenQuake Engine //g;s/\*\*.*//g')
           ENG_VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
 
           if [ -z "$BUILD" ]; then
@@ -151,9 +150,9 @@ jobs:
               fi
           fi
 
-          REL_VERS="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
+          REL_VERS="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | grep -v -- '-' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
           LATEST_VER="$(echo "$REL_VERS" | tail -n 1)"
-          ALL_VERS="$((git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' ; echo "$ENG_VER") | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | uniq | tac)"
+          ALL_VERS="$((git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | grep -v -- '-' ; echo "$ENG_VER") | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | uniq | tac)"
           PDFDOCS="manuals/"
           TARGET_LINK=""
           PDF_VER_LINK=""
@@ -380,17 +379,42 @@ jobs:
           # PAY ATTENTION: engine folder is 'doc', not 'docs'
           # cd doc && make html && make latexpdf
           cd doc && make html 2>&1 | tee full.log
-          grep WARNING < full.log > warnings.log
-          echo
-          echo "=== WARNINGS ==="
-          echo
-          cat warnings.log
-          echo
-          echo
-          echo "=== WARNINGS SUMMARY ==="
-          cat warnings.log |  sed 's/.*WARNING/WARNING/g' | sed "s/WARNING: 'myst' cross-reference target not found.*/WARNING: 'myst' cross-reference target not found/g" | sed 's/WARNING: undefined label.*/WARNING: undefined label/g' | sed 's/WARNING: duplicate label.*/WARNING: duplicate label/g' | sed 's/WARNING: Duplicate explicit target name.*/WARNING: Duplicate explicit target name/g' | sort | uniq -c
 
+          warn_found=n
+          err_found=n
+          # NOTE: without '|| true' the action would fail if there are no warnings
+          grep WARNING < full.log > warnings.log || true
+          grep ERROR < full.log > errors.log || true
 
+          if [ $(wc -c < warnings.log) -gt 0 ]; then
+              echo
+              echo "=== WARNINGS FOUND ==="
+              echo
+              cat warnings.log
+              echo
+              echo
+              echo "=== WARNINGS SUMMARY ==="
+              cat warnings.log |  sed 's/.*WARNING/WARNING/g' | sed "s/WARNING: 'myst' cross-reference target not found.*/WARNING: 'myst' cross-reference target not found/g" | sed 's/WARNING: undefined label.*/WARNING: undefined label/g' | sed 's/WARNING: duplicate label.*/WARNING: duplicate label/g' | sed 's/WARNING: Duplicate explicit target name.*/WARNING: Duplicate explicit target name/g' | sort | uniq -c
+              warn_found=y
+          else
+              echo "=== NO WARNINGS FOUND ==="
+          fi
+
+          if [ $(wc -c < errors.log) -gt 0 ]; then
+              echo
+              echo "=== ERRORS FOUND ==="
+              echo
+              cat errors.log
+              echo
+              err_found=y
+          else
+              echo "=== NO ERRORS FOUND ==="
+          fi
+
+          if [ "$warn_found" = "y" -o "$err_found" = "y" ]; then
+              echo "fix all warnings and errors to complete this workflow"
+              exit 1
+          fi
 
           # if [ "$DOCS_SSH" ]; then
           #     echo "Uploading OpenQuake Manual (PDF)"

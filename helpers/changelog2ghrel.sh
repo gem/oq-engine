@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# changelog2ghrel.sh  Copyright (C) 2024 GEM Foundation
+# changelog2ghrel.sh  Copyright (C) 2024-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>
-set -x
+# set -x
 set -e
 
 which grep sed sort uniq >/dev/null
@@ -32,7 +32,7 @@ cat <<EOF
   ./helpers/changelog2ghrel.sh [-h|--help]
 
     -c                if present checks contributors of current block of
-                      changelog 
+                      changelog
     <maj.min.bugfix>  if present extracts the block of changelog related
                       to a specific oq-engine release
 
@@ -46,12 +46,12 @@ EOF
 
 per_ver_changelog () {
     version_in="$1"
-    
+
     (
         if [ "$version_in" ]; then
             cat debian/changelog | sed -n "/^python3-oq-engine (${version_in}-.*/,/^python3-oq-engine .*/p"
         else
-            cat debian/changelog | sed '/^python3-oq-engine.*/q' | sed '$ d' 
+            cat debian/changelog | sed '/^python3-oq-engine.*/q' | sed '$ d'
         fi
     )
 }
@@ -85,8 +85,7 @@ LIST_CONTRIB="$(per_ver_changelog "$version_in"| grep '^  \[[^\]*\]$' | sed 's/,
 IFS='
 '
 for contr in $LIST_CONTRIB; do
-    grep -q "^${contr}[ \t]\+" CONTRIBUTORS.txt
-    if [ $? -ne 0 ]; then
+    if ! grep -q "^${contr}[ \t]\+" CONTRIBUTORS.txt; then
         echo "Contributor '$contr' not found in CONTRIBUTORS.txt"
         exit 1
     fi
@@ -102,9 +101,9 @@ dict_contribs=""
 LIST_CONTRIB=$(echo "$LIST_CONTRIB")
 for contr in $LIST_CONTRIB; do
     gh_contr="$(grep "^${contr}" CONTRIBUTORS.txt | grep '(@[^)]\+)' | sed 's/.*(@/@/g;s/).*//g')"
-        
+
     dict_contribs="$dict_contribs$contr|$contr ($gh_contr)$NL"
-done        
+done
 
 per_ver_changelog "$version_in" | grep -v -- '^ --' | sed '/./b;:n;N;s/\n$//;tn' \
 | sed 's/^[a-z][^(]*(\([^\-]\+\).*/## Release \1/g;' | sed 's/^  \(\[.*\]\)/_\1_/g' \
@@ -112,5 +111,3 @@ per_ver_changelog "$version_in" | grep -v -- '^ --' | sed '/./b;:n;N;s/\n$//;tn'
 echo "$dict_contribs" | sed '/./!d;s/\([^|]*\)|*\(.*\)/s%\1%\2%g/' - | sed -f - /tmp/changelog2ghrel_$$.txt
 
 rm -f /tmp/changelog2ghrel_$$.txt
-
-

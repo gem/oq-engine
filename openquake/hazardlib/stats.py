@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2023 GEM Foundation
+# Copyright (c) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -78,12 +78,12 @@ def norm_cdf(x, a, s):
     Gaussian cumulative distribution function; if s=0, returns an
     Heaviside function instead. NB: for x=a, 0.5 is returned for all s.
 
-    >>> norm_cdf(1.2, 1, .1)
-    0.9772498680518208
+    >>> round(norm_cdf(1.2, 1, .1), 10)
+    0.9772498681
     >>> norm_cdf(1.2, 1, 0)
     1.0
-    >>> norm_cdf(.8, 1, .1)
-    0.022750131948179216
+    >>> round(norm_cdf(.8, 1, .1), 10)
+    0.0227501319
     >>> norm_cdf(.8, 1, 0)
     0.0
     >>> norm_cdf(1, 1, .1)
@@ -212,6 +212,18 @@ def quantile_curve(quantile, curves, weights=None):
         # get the quantile from the interpolated CDF
         result[idx] = numpy.interp(quantile, cw['w'].cumsum(), cw['c'])
     return result
+
+
+# NB: this will be obsolete in numpy 2+
+def weighted_quantiles(qs, values, weights):
+    """
+    Compute weighted quantiles
+    """
+    vw = numpy.zeros(len(values), cw_dt)  # (value, weight)
+    vw['c'] = values
+    vw['w'] = weights
+    vw.sort(order='c')
+    return numpy.interp(qs, vw['w'].cumsum() / vw['w'].sum(), vw['c'])
 
 
 def max_curve(values, weights=None):

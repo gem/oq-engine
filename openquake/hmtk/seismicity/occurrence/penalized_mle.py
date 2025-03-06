@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2015-2023 GEM Foundation, G. Weatherill, M. Pagani
+# Copyright (C) 2015-2025 GEM Foundation, G. Weatherill, M. Pagani
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
@@ -131,11 +131,11 @@ class PenalizedMLE(SeismicityOccurrence):
             delta,
             kval,
             tval,
-            lamda,
-            cum_rate,
+            _lamda,
+            _cum_rate,
             cum_count,
-            nmx,
-            nmt,
+            _nmx,
+            _nmt,
         ) = self._get_rate_counts(catalogue, config, completeness)
         n_val = np.sum(kval)
         if not n_val:
@@ -143,7 +143,7 @@ class PenalizedMLE(SeismicityOccurrence):
         assert n_val == cum_count[0]
         # Get the penalized MLE value (also returns correlation coefficient
         # rho - but not used!)
-        bval, sigmab, rate, sigma_rate, rho = self._run_penalized_mle(
+        bval, sigmab, rate, sigma_rate, _rho = self._run_penalized_mle(
             config, delta, kval, tval, cum_count, betap, beta, wbu, wau
         )
         np.log10(rate) + bval * completeness[0, 1]

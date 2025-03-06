@@ -43,7 +43,7 @@ def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
     # exceedance) for the conditioning IMT. `cs_poes` are the probabilities of
     # exceedance characterising the values in `imls`. `phi_b` is float.
     # `invtime` is the investigation time [yr]. `c` has shape M x ? x ?
-    M, _, _ = c.shape
+    _M, _, _ = c.shape
     mu = mean_stds[0]  # shape (M, U)
     sig = mean_stds[1]  # shape (M, U)
 
@@ -82,13 +82,17 @@ def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
                 c[m, 2, p] = ws @ (term2**2 + term3**2)
 
 
-# http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
+# Lin, T., Harmsen, S. C., Baker, J. W., & Luco, N. (2013). 
+# Conditional spectrum computation incorporating multiple 
+# causal earthquakes and ground-motion prediction models. 
+# Bulletin of the Seismological Society of America, 103(2 A), 1103–1116. 
+# https://doi.org/10.1785/0120110293
 def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
     """
     Compute the contributions to the conditional spectra, in a form
     suitable for later composition.
 
-    NB: at the present if works only for poissonian contexts
+    NB: at the present it works only for Poissonian contexts
 
     :param ctxt:
        a context array

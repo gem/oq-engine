@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@ import pprint
 import logging
 from openquake.commonlib import logs, datastore
 from openquake.calculators.extract import WebExtractor
-from openquake.engine import engine
+from openquake.calculators.base import expose_outputs
 
 
 def main(calc_id):
@@ -51,8 +51,8 @@ def main(calc_id):
         webex.close()
     with datastore.read(calc_id) as dstore:
         pprint.pprint(dstore.get_attrs('/'))
-        engine.expose_outputs(dstore, status='complete')
+        expose_outputs(dstore, status='complete')
     logging.info('Imported calculation %s successfully', calc_id)
 
 
-main.calc_id = 'calculation ID or pathname'
+main.calc_id = 'calculation ID or pathname ~/oqdata/calc_XXX.hdf5'

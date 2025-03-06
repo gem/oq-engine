@@ -30,7 +30,7 @@ import openquake.hazardlib.gsim.abrahamson_2014 as ASK14
 import openquake.hazardlib.gsim.chiou_youngs_2014 as CY14
 import openquake.hazardlib.gsim.campbell_bozorgnia_2014 as CB14
 
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, PGV
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2014 import AbrahamsonEtAl2014
 from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
@@ -55,7 +55,8 @@ def _check_imts(imts):
                              + str(MAX_SA) + 's.')
 
 
-def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
+# NB: this is calling the basin term
+def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, imt, rjb):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling
@@ -70,23 +71,12 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
     BSSA14_1100 = BA14._get_linear_site_term(C, np.array([1100.0]))
     BSSA14_2000 = BA14._get_linear_site_term(C, np.array([2000.0]))
 
-    # Need OQ IMT for CanadaSHM6 hard rock factor
-    if period == 0.0:
-        imt = PGA()
-    elif period == -1.0:
-        imt = PGV()
-    else:
-        try:
-            imt = SA(period)
-        except TypeError:
-            imt = period  # for some versions of OQ period=imt
-
     # CanadaSHM6 hard rock site factor
     flin[sites.vs30 > 1100] = CanadaSHM6_hardrock_site_factor(
         BSSA14_1100[0], BSSA14_2000[0], sites.vs30[sites.vs30 > 1100], imt)
 
     fnl = BA14._get_nonlinear_site_term(C, sites.vs30, pga_rock)
-    fbd = BA14._get_basin_depth_term(region, C, sites, period)  # returns 0
+    fbd = BA14._get_basin_term(C, sites, region, imt)  # returns 0
     fbd = 0.0
 
     return flin + fnl + fbd
@@ -120,7 +110,7 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
                 BA14._get_magnitude_scaling_term(self.sof, C, ctx) +
                 BA14._get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling_ba14(self.kind, self.region, C, pga_rock,
-                                       ctx, imt.period, ctx.rjb))
+                                       ctx, imt, ctx.rjb))
             sig[m], tau[m], phi[m] = BA14._get_stddevs(self.kind, C, ctx)
 
 # =============================================================================
@@ -162,19 +152,19 @@ def shm6_site_correction(C, mean, ctx, imt):
     mean[vs30_ge1100] = factor + cy14_760 + mean[vs30_ge1100]
 
 
-def get_mean_stddevs_cy14(name, C, ctx):
+def get_mean_stddevs_cy14(region, C, ctx, conf):
     """
     Return mean and standard deviation values
     """
     # Get ground motion on reference rock
-    ln_y_ref = CY14.get_ln_y_ref(name, C, ctx)
+    ln_y_ref = CY14.get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
 
     # Set basin depth to 0
     f_z1pt0 = 0.0
 
     # Get linear amplification term
-    f_lin = CY14.get_linear_site_term(name, C, ctx)
+    f_lin = CY14.get_linear_site_term(region, C, ctx)
 
     # Get nonlinear amplification term
     f_nl, f_nl_scaling = CY14.get_nonlinear_site_term(C, ctx, y_ref)
@@ -184,7 +174,7 @@ def get_mean_stddevs_cy14(name, C, ctx):
 
     # Get standard deviations
     sig, tau, phi = CY14.get_stddevs(
-        name, C, ctx, ctx.mag, y_ref, f_nl_scaling)
+        conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
 
     return mean, sig, tau, phi
 
@@ -205,7 +195,7 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
     """
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -215,14 +205,13 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
         Notes:
             - Centered cdpp already defaulted to 0
         """
-        name = self.__class__.__name__
 
         # Checking the IMTs used to compute ground-motion
         _check_imts(imts)
 
         # Reference to page 1144, PSA might need PGA value
         pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs_cy14(
-            name, self.COEFFS[PGA()], ctx)
+            self.region, self.COEFFS[PGA()], ctx, self.conf)
 
         # Processing IMTs
         for m, imt in enumerate(imts):
@@ -234,8 +223,8 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
 
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
-                imt_mean, imt_sig, imt_tau, imt_phi = \
-                    get_mean_stddevs_cy14(name, self.COEFFS[imt], ctx)
+                imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs_cy14(
+                    self.region, self.COEFFS[imt], ctx, self.conf)
                 # reference to page 1144
                 # Predicted PSA value at T ≤ 0.3s should be set equal to the
                 # value of PGA when it falls below the predicted PGA
@@ -245,7 +234,6 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
 
                 # Site term correction fos SHM6
                 shm6_site_correction(self.COEFFS[imt], mean[m], ctx, imt)
-
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
 
 # =============================================================================
@@ -293,7 +281,7 @@ class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
 
     See also header in CanadaSHM6_ActiveCrust.py
     """
-    REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30'}
+    REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30', 'z1pt0'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -429,13 +417,13 @@ class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
             # Get stddevs for PGA on basement rock
             tau_lnpga_b = CB14._get_taulny(C_PGA, ctx.mag)
             phi_lnpga_b = np.sqrt(CB14._get_philny(C_PGA, ctx.mag) ** 2. -
-                                  CB14.CONSTS["philnAF"] ** 2.)
+                                  C["philnAF"] ** 2.)
 
             # Get tau_lny on the basement rock
             tau_lnyb = CB14._get_taulny(C, ctx.mag)
             # Get phi_lny on the basement rock
             phi_lnyb = np.sqrt(CB14._get_philny(C, ctx.mag) ** 2. -
-                               CB14.CONSTS["philnAF"] ** 2.)
+                               C["philnAF"] ** 2.)
             # Get site scaling term
             alpha = CB14._get_alpha(C, ctx.vs30, pga1100)
             # Evaluate tau according to equation 29
@@ -444,7 +432,7 @@ class CanadaSHM6_ActiveCrust_CampbellBozorgnia2014(CampbellBozorgnia2014):
 
             # Evaluate phi according to equation 30
             p = np.sqrt(
-                phi_lnyb**2 + CB14.CONSTS["philnAF"]**2 +
+                phi_lnyb**2 + C["philnAF"]**2 +
                 alpha**2 * phi_lnpga_b**2 +
                 2.0 * alpha * C["rholny"] * phi_lnyb * phi_lnpga_b)
             sig[m] = np.sqrt(t**2 + p**2)

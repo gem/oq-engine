@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel investigation_time="1.0" name="ssm">
+
+        <!-- STABLE SHALLOW CRUST -->
+        <sourceGroup rup_interdep="indep" src_interdep="indep" tectonicRegion="Stable Shallow Crust" >
+            <nonParametricSeismicSource id="ssc2" name="ssc2">
+
+                <singlePlaneRupture probs_occur="0.995 0.005" >
+                    <magnitude> 6.0 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="1.6" lat="0.0" lon="0.2"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.15" lon="0.1"/>
+                        <topRight depth="0.0" lat="0.15" lon="0.1"/>
+                        <bottomLeft depth="12.0" lat="-0.15" lon="0.1"/>
+                        <bottomRight depth="12.0" lat="0.15" lon="0.1"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+
+                <singlePlaneRupture probs_occur="0.999 0.001" >
+                    <magnitude> 6.5 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="1.6" lat="0.0" lon="0.2"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.15" lon="0.1"/>
+                        <topRight depth="0.0" lat="0.15" lon="0.1"/>
+                        <bottomLeft depth="12.0" lat="-0.15" lon="0.1"/>
+                        <bottomRight depth="12.0" lat="0.15" lon="0.1"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+
+            </nonParametricSeismicSource>
+        </sourceGroup>
+
+        <!-- ACTIVE SHALLOW CRUST -->
+        <sourceGroup rup_interdep="indep" src_interdep="indep" tectonicRegion="Active Shallow Crust" >
+            <nonParametricSeismicSource id="asc2" name="ssc2">
+
+                <singlePlaneRupture probs_occur="0.99 0.01" >
+                    <magnitude> 5.5 </magnitude>
+                    <rake> 0.0 </rake>
+                    <hypocenter depth="1.6" lat="0.0" lon="-0.05"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.15" lon="0.05"/>
+                        <topRight depth="0.0" lat="0.15" lon="0.05"/>
+                        <bottomLeft depth="12.0" lat="-0.15" lon="0.05"/>
+                        <bottomRight depth="12.0" lat="0.15" lon="0.05"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+
+            </nonParametricSeismicSource>
+            <pointSource id="2" name="Point Source">
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            0 0
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        1.0000000E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.5000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.0000000E+00" bValue="1.0000000E+00" maxMag="7.0000000E+00" minMag="5.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="3.0000000E+01" probability="1.0000000E-01" rake="0.0000000E+00" strike="4.5000000E+01"/>
+                    <nodalPlane dip="3.0000000E+01" probability="1.0000000E-01" rake="9.0000000E+01" strike="4.5000000E+01"/>
+                    <nodalPlane dip="3.0000000E+01" probability="1.0000000E-01" rake="0.0000000E+00" strike="6.0000000E+01"/>
+                    <nodalPlane dip="3.0000000E+01" probability="2.0000000E-01" rake="9.0000000E+01" strike="6.0000000E+01"/>
+                    <nodalPlane dip="3.0000000E+01" probability="2.0000000E-01" rake="0.0000000E+00" strike="3.0000000E+01"/>
+                    <nodalPlane dip="3.0000000E+01" probability="3.0000000E-01" rake="9.0000000E+01" strike="3.0000000E+01"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="4.0000000E+00" probability="4.0000000E-01"/>
+                    <hypoDepth depth="8.0000000E+00" probability="4.0000000E-01"/>
+                    <hypoDepth depth="2.0000000E+00" probability="2.0000000E-01"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+
+    </sourceModel>
+</nrml>

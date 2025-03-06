@@ -10,7 +10,7 @@
     <site lat="-29.453409" lon="21.402483" vs30="394.522033691" vs30Type="inferred" z1pt0="294.604" z2pt5="1.285"/>
     <site lat="-26.268135" lon="25.519648" vs30="288.788116455" vs30Type="inferred" z1pt0="448.903" z2pt5="1.836"/>
     <site lat="-25.873624" lon="30.298965" vs30="900.0" vs30Type="inferred" z1pt0="15.811" z2pt5="0.5"/>
-    <site lat="-23.785335" lon="29.289763" vs30="594.8308105469999" vs30Type="inferred" z1pt0="101.085" z2pt5="0.803"/>
+    <site lat="-23.785334" lon="29.289763" vs30="594.8308105469999" vs30Type="inferred" z1pt0="101.085" z2pt5="0.803"/>
   </siteModel>
 </nrml>
 

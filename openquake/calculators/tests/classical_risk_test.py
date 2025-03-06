@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,6 +20,7 @@ from openquake.qa_tests_data.classical_risk import (
     case_2, case_3, case_4, case_5, case_master)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
+from openquake.baselib import InvalidFile
 
 
 class ClassicalRiskTestCase(CalculatorTestCase):
@@ -31,6 +32,21 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
         [fname] = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_maps.csv', fname)
+
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
+
+    def test_prob_above1(self):
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(
+                case_2.__file__, 'job_risk-prob_above1.ini')
+        self.assertIn('contains probabilities > 1', str(ctx.exception))
+
+    def test_prob_below0(self):
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(
+                case_2.__file__, 'job_risk-prob_below0.ini')
+        self.assertIn('contains probabilities < 0', str(ctx.exception))
 
     def test_case_3(self):
         self.run_calc(case_3.__file__, 'job.ini', exports='csv')
@@ -81,8 +97,12 @@ class ClassicalRiskTestCase(CalculatorTestCase):
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
 
+        # checking custom_site_id in UHS curves
+        [mean, _q15] = export(('uhs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs-mean.csv', mean, delta=1E-5)
+
         # checking the avg_losses
-        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        [_, fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname),
                               fname, delta=1E-5)
 

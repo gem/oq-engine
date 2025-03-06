@@ -18,6 +18,38 @@ h2 {
     }
 }
 
+@media (min-width: 1070px) and (max-width: 1120px) {
+    .aelo-input,
+    .aelo-select {
+        width: 170px!important;
+    }
+}
+
+@media (min-width: 960px) and (max-width: 1069px) {
+    .aelo-input,
+    .aelo-select {
+        width: 160px!important;
+    }
+}
+
+@media (min-width: 760px) and (max-width: 959px) {
+    .aelo-input {
+        width: 80%!important;
+    }
+    .aelo-select {
+        width: 170px!important;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 759px) {
+    .aelo-input {
+        width: 80%!important;
+    }
+    .aelo-select {
+        width: 140px!important;
+    }
+}
+
 .container,
 .navbar-static-top .container,
 .navbar-fixed-top .container,
@@ -167,19 +199,26 @@ nav.main-nav ul li.tools {
 
 footer.footer {
     background: #bebebe;
-    font-size: 12px;
+    font-size: 14px;
     position: fixed;
     bottom: 0;
-    padding-left: 10%;
-    padding-right: 10%;
     float: left;
     width: 80%;
     height: auto;
-    padding-top: 0;
+    color: rgb(0, 0, 0, 0.8);
+    padding: 0.2rem 10%;
 }
 
 footer.footer form label {
     color: #fff;
+}
+
+footer.footer a {
+    color: rgb(0, 0, 0, 0.8);
+}
+
+footer.footer .pull-left span {
+    font-weight: bold;
 }
 
 #new-release-box {
@@ -262,24 +301,49 @@ tr.asce_output {
 }
 
 .aelo-input {
-    width: 241px;
+    width: 193px;
     vertical-align: top!important;
     height: 11px!important;
     padding-bottom: 10px!important;
 }
 
-.aristotle_form_row label {
+.aelo-label {
+    font-weight: bold;
+}
+
+.aelo-select {
+    height: 33px!important;
+}
+
+.table-aelo-form {
+    margin-bottom: 0;
+}
+
+.table-aelo-form tr th {
+    padding: 0;
+}
+
+.table-aelo-form td {
+    padding: 0;
+    border-top: 0;
+}
+
+.impact_form_row label {
     margin-bottom: 10px;
 }
 
-.aristotle_form_row label {
+.impact_form_row label {
     display: inline-block;
-    width: 100px;
+    width: 225px;
 }
 
-.aristotle_form_row input {
+.impact_form_row input {
     /* width: calc(100% - 110px); /1* Adjust according to label width *1/ */
     box-sizing: border-box;
+}
+
+.impact-select {
+    width: 206px;
 }
 
 
@@ -326,4 +390,93 @@ tr.asce_output {
 
 .calc-list-btn {
     width: 56px;
+}
+
+.impact-losses-container {
+    width: 100%;
+    display: block;
+    overflow-x: scroll;
+    position: relative;
+}
+
+table#impact-losses {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table#impact-losses th td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+#impact-losses-download {
+  margin-top: 10px;
+}
+
+.changelog {
+    width: 80%;
+    margin: 50px auto;
+    border-collapse: collapse;
+}
+.changelog th, .changelog td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: left;
+}
+.changelog th {
+    background-color: #f2f2f2;
+}
+
+.changelog td:nth-child(1), .changelog th:nth-child(1) {
+    width: 15%;
+}
+.changelog td:nth-child(2), .changelog th:nth-child(2) {
+    width: 15%;
+}
+.changelog td:nth-child(3), .changelog th:nth-child(3) {
+    width: 70%;
+}
+
+.shakemap-image-container {
+    float: left;
+    /* If we want to adjust the size of images instead of making them of the suitable size
+    /* width: 50%; */
+}
+
+/* If we want to adjust the size of images instead of making them of the suitable size
+/* .shakemap-image-container img{ */
+/*     width: 600px; */
+/* } */
+
+.shakemap-clear-float {
+    clear: both;
+    margin-bottom: 30px;
+}
+
+/* Hide all form elements except the submit button */
+.hidden_except_submit input:not([type="submit"]),
+.hidden_except_submit select,
+.hidden_except_submit textarea,
+.hidden_except_submit button:not([type="submit"]),
+.hidden_except_submit label {
+  display: none;
+}
+
+.hidden {
+    display: none;
+}
+
+#impact_approach {
+  display: block;  /* each label in its own row */
+  margin-bottom: 20px; /* Space between radio options */
+}
+
+input[type="radio"] {
+  margin-right: 5px; /* Space between radio button and label text */
+}
+
+#clearStationDataFromUsgs {
+    margin-left: 40px;
+    margin-bottom: 8px;
 }

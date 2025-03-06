@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -179,7 +179,7 @@ class _GeographicObjects(object):
             except ValueError:  # no field of name depth
                 depths = numpy.zeros_like(lons)
         else:
-            raise TypeError('%r not supported' % objects)
+            raise TypeError('{} not supported'.format(objects))
         self.kdtree = cKDTree(spherical_to_cartesian(lons, lats, depths))
 
     def get_closest(self, lon, lat, depth=0):
@@ -233,7 +233,7 @@ class _GeographicObjects(object):
 
     def assoc2(self, exp, assoc_dist, region, mode):
         """
-        Associated a list of assets by site to the site collection used
+        Associated an exposure to the site collection used
         to instantiate GeographicObjects.
 
         :param exp: Exposure instance
@@ -307,7 +307,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
     :param mode:
         if 'strict' fail if at least one site is not associated
         if 'error' fail if all sites are not associated
-    :returns: (filtered site collection, filtered objects)
+    :returns: (filtered site collection, filtered objects, discarded objects)
     """
     return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
 
@@ -464,6 +464,24 @@ def check_extent(lons, lats, msg=''):
     return int(dx), int(dy), int(dz)
 
 
+def get_bbox(lons, lats, xlons=(), xlats=()):
+    """
+    :returns: (minlon, minlat, maxlon, maxlat)
+    """
+    assert len(lons) == len(lats)
+    assert len(xlons) == len(xlats)
+    arr = numpy.empty(len(lons) + len(xlons), [('lon', float), ('lat', float)])
+    if len(xlons):
+        arr['lon'] = numpy.concatenate([lons, xlons])
+    else:
+        arr['lon'] = lons
+    if len(xlats):
+        arr['lat'] = numpy.concatenate([lats, xlats])
+    else:
+        arr['lat'] = lats
+    return get_bounding_box(arr, 0)
+
+
 def get_bounding_box(obj, maxdist):
     """
     Return the dilated bounding box of a geometric object.
@@ -472,6 +490,7 @@ def get_bounding_box(obj, maxdist):
         an object with method .get_bounding_box, or with an attribute .polygon
         or a list of locations
     :param maxdist: maximum distance in km
+    :returns: (minlon, minlat, maxlon, maxlat)
     """
     if hasattr(obj, 'get_bounding_box'):
         return obj.get_bounding_box(maxdist)
@@ -538,7 +557,7 @@ def get_spherical_bounding_box(lons, lats):
     return west, east, north, south
 
 
-@compile('(f8,f8,f8[:],f8[:])')
+@compile(['(f8,f8,f8[:],f8[:])', '(f8,f8,f4[:],f4[:])'])
 def project_reverse(lambda0, phi0, lons, lats):
     sin_phi0, cos_phi0 = math.sin(phi0), math.cos(phi0)
     # "reverse" mode, arguments are actually abscissae
@@ -559,7 +578,8 @@ def project_reverse(lambda0, phi0, lons, lats):
     return xx, yy
 
 
-@compile(['(f8,f8,f8,f8)', '(f8,f8,f8[:],f8[:])', '(f8,f8,f8[:,:],f8[:,:])'])
+@compile(['(f8,f8,f8,f8)', '(f8,f8,f8[:],f8[:])', '(f8,f8,f8[:,:],f8[:,:])',
+          '(f8,f8,f4,f4)', '(f8,f8,f4[:],f4[:])', '(f8,f8,f4[:,:],f4[:,:])'])
 def project_direct(lambda0, phi0, lons, lats):
     lambdas, phis = numpy.radians(lons), numpy.radians(lats)
     cos_phis = numpy.cos(phis)
@@ -609,7 +629,7 @@ class OrthographicProjection(object):
     kilometers (error doesn't exceed 1 km up until then).
     """
     @classmethod
-    def from_lons_lats(cls, lons, lats):
+    def from_(cls, lons, lats):
         idx = numpy.isfinite(lons)
         return cls(*get_spherical_bounding_box(lons[idx], lats[idx]))
 
@@ -631,7 +651,7 @@ class OrthographicProjection(object):
         else:
             return numpy.array([xx, yy, deps])
 
-        
+
 def get_middle_point(lon1, lat1, lon2, lat2):
     """
     Given two points return the point exactly in the middle lying on the same
@@ -880,6 +900,7 @@ def geohash(lons, lats, length):
     return chars
 
 
+# corresponds to blocks of 2.4 km
 def geohash5(coords):
     """
     :returns: a geohash of length 5*len(points) as a string
@@ -892,6 +913,7 @@ def geohash5(coords):
     return b'_'.join(row.tobytes() for row in arr).decode('ascii')
 
 
+# corresponds to blocks of 78 km
 def geohash3(lons, lats):
     """
     :returns: a geohash of length 3 as a 16 bit integer
@@ -906,12 +928,39 @@ def geohash3(lons, lats):
 def geolocate(lonlats, geom_df, exclude=()):
     """
     :param lonlats: array of shape (N, 2) of (lon, lat)
-    :param geom_df: DataFrame of geometries keyed by a "code" field
+    :param geom_df: DataFrame of geometries with a "code" field
+    :param exclude: List of codes to exclude from the results
     :returns: codes associated to the points
+
+    NB: if the "code" field is not a primary key, i.e. there are
+    different geometries with the same code, performs an "or", i.e.
+    associates the code if at least one of the geometries matches
     """
     codes = numpy.array(['???'] * len(lonlats))
-    for code, geom in zip(geom_df.code, geom_df.geom):
-        if code in exclude:
-            continue
-        codes[contains_xy(geom, lonlats)] = code
+    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
+    for code, df in filtered_geom_df.groupby('code'):
+        ok = numpy.zeros(len(lonlats), bool)
+        for geom in df.geom:
+            ok |= contains_xy(geom, lonlats)
+        codes[ok] = code
     return codes
+
+
+def geolocate_geometries(geometries, geom_df, exclude=()):
+    """
+    :param geometries: NumPy array of Shapely geometries to check
+    :param geom_df: DataFrame of geometries with a "code" field
+    :param exclude: List of codes to exclude from the results
+    :returns: NumPy array where each element contains a list of codes
+        of geometries that intersect each input geometry
+    """
+    result_codes = numpy.empty(len(geometries), dtype=object)
+    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
+    for i, input_geom in enumerate(geometries):
+        intersecting_codes = set()  # to store intersecting codes for current geometry
+        for code, df in filtered_geom_df.groupby('code'):
+            target_geoms = df['geom'].values  # geometries associated with this code
+            if any(target_geom.intersects(input_geom) for target_geom in target_geoms):
+                intersecting_codes.add(code)
+        result_codes[i] = sorted(intersecting_codes)
+    return result_codes

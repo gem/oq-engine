@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@
 import numpy
 import matplotlib.pyplot as plt
 from openquake.baselib import sap, datastore
-from openquake.calculators.getters import PmapGetter
+from openquake.calculators.getters import MapGetter
 
 
 def compare_mean_curves(calc_ref: int, calc: int, nsigma: float = 3):
@@ -43,9 +43,9 @@ def compare_mean_curves(calc_ref: int, calc: int, nsigma: float = 3):
     if not common:
         raise RuntimeError('There are no common sites between calculation '
                            '%d and %d' % (calc_ref, calc))
-    pmap_ref = PmapGetter(dstore_ref, sids=[site_id_ref[lonlat]
+    pmap_ref = MapGetter(dstore_ref, sids=[site_id_ref[lonlat]
                                             for lonlat in common]).get_mean()
-    pmap = PmapGetter(dstore, sids=[site_id[lonlat]
+    pmap = MapGetter(dstore, sids=[site_id[lonlat]
                                     for lonlat in common]).get_mean()
     for lonlat in common:
         mean, std = pmap[site_id[lonlat]].array.T  # shape (2, N)

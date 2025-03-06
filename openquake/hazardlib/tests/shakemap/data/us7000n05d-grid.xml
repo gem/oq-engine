@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="us7000n05d" shakemap_id="us7000n05d" shakemap_version="4" code_version="4.1.5" process_timestamp="2024-10-08T20:49:35" shakemap_originator="us" map_status="automatic" shakemap_event_type="ACTUAL">
+<event event_id="us7000n05d" magnitude="7.4" depth="127.3" lat="-23.0791" lon="-67.8404" event_timestamp="2024-07-19T01:50:48" event_network="us" event_description="41 km ESE of San Pedro de Atacama, Antofagasta, CL" intensity_observations="16" seismic_stations="20" point_source="True" />
+<grid_specification lon_min="-71.2167" lat_min="-26.0667" lon_max="-64.5667" lat_max="-19.9833" nominal_lon_spacing="0.0167" nominal_lat_spacing="0.0167" nlon="400" nlat="366"/><grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="MMI" units="intensity" />
+<grid_field index="4" name="PGA" units="%g" />
+<grid_field index="5" name="PGV" units="cm/s" />
+<grid_field index="6" name="PSA03" units="%g" />
+<grid_field index="7" name="PSA06" units="%g" />
+<grid_field index="8" name="PSA10" units="%g" />
+<grid_field index="9" name="PSA30" units="%g" />
+<grid_field index="10" name="SVEL" units="m/s" />
+<grid_data>
+-71.2167 -19.9833 3.5 0.9238 1.216 1.774 1.357 0.9225 0.2259 600
+-71.2000 -19.9833 3.5 0.9316 1.222 1.789 1.367 0.9282 0.227 600
+-71.1833 -19.9833 3.5 0.9395 1.229 1.804 1.376 0.934 0.2282 600
+-71.1667 -19.9833 3.5 0.9474 1.236 1.819 1.385 0.9398 0.2294 600
+-71.1500 -19.9833 3.5 0.9555 1.242 1.834 1.395 0.9457 0.2305 600
+-71.1333 -19.9833 3.5 0.9638 1.249 1.849 1.404 0.9516 0.2317 600
+-71.1167 -19.9833 3.5 0.9721 1.256 1.865 1.414 0.9576 0.2329 600
+-71.1000 -19.9833 3.5 0.9805 1.263 1.881 1.424 0.9637 0.2341 600
+</grid_data>
+</shakemap_grid>

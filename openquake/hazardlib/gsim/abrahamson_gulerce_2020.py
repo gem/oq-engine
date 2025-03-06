@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,8 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
-
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z2pt5_usgs_basin_scaling
 
 # The regions for which the model is supported. If not listed then the
 # global model (GLO) should be applied
@@ -288,7 +289,7 @@ def get_reference_basin_depth(region, vs30):
     return np.exp(ln_zref)
 
 
-def get_basin_depth_scaling(C, region, vs30, z25):
+def _get_basin_term(C, ctx, region, usgs_baf):
     """
     Returns the basin depth scaling term, applicable only for the Cascadia
     and Japan regions, defined in equations 3.9 - 3.11 and corrected in the
@@ -300,18 +301,22 @@ def get_basin_depth_scaling(C, region, vs30, z25):
     if region not in ("CAS", "JPN"):
         # Basin depth defined only for Cascadia and Japan, so return 0
         return 0.0
+
+    # Convert z25 from km to m
+    z25 = 1000.0 * ctx.z2pt5
+
     # Define the reference basin depth from Vs30
-    z25_ref = get_reference_basin_depth(region, vs30)
+    z25_ref = get_reference_basin_depth(region, ctx.vs30)
     # Normalise the basin depth term (Equation 3.9)
     ln_z25_prime = np.log((z25 + 50.0) / (z25_ref + 50.0))
-    f_basin = np.zeros(vs30.shape)
+    f_basin = np.zeros(ctx.vs30.shape)
     if region == "JPN":
         # Japan Basin (Equation 3.10)
         f_basin = C["a41"] * np.clip(ln_z25_prime, -2.0, np.inf)
     else:
         # Cascadia Basin (Equation 3.11)
         idx = ln_z25_prime > 0.0
-        f_basin[idx] = C["a39"] * ln_z25_prime[idx]
+        f_basin[idx] = C["a39"] * ln_z25_prime[idx] * usgs_baf[idx]
     return f_basin
 
 
@@ -335,17 +340,11 @@ def get_acceleration_on_reference_rock(C, trt, region, ctx, apply_adjustment):
             get_site_amplification_term(C, region, vs30, null_pga1000))
 
 
-def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment):
+def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment,
+                          usgs_baf):
     """
     Returns the mean acceleration on soil
     """
-    if region in ("CAS", "JPN"):
-        # Convert z25 from km to m
-        z25 = 1000.0 * ctx.z2pt5
-    else:
-        # Basin depths will be ignored, so set zeros
-        z25 = np.zeros(ctx.vs30.shape)
-
     return (get_base_term(C, region, apply_adjustment) +
             get_magnitude_scaling_term(C, trt, region, ctx.mag) +
             get_geometric_spreading_term(C, region, ctx.mag, ctx.rrup) +
@@ -353,7 +352,7 @@ def get_mean_acceleration(C, trt, region, ctx, pga1000, apply_adjustment):
             get_rupture_depth_scaling_term(C, trt, ctx) +
             get_inslab_scaling_term(C, trt, region, ctx.mag, ctx.rrup) +
             get_site_amplification_term(C, region, ctx.vs30, pga1000) +
-            get_basin_depth_scaling(C, region, ctx.vs30, z25))
+            _get_basin_term(C, ctx, region, usgs_baf))
 
 
 def _get_f2(t1, t2, t3, t4, alpha, period):
@@ -589,6 +588,8 @@ class AbrahamsonGulerce2020SInter(GMPE):
         apply_usa_adjustment (bool): Apply the modeller designated Alaska or
                                      Cascadia adjustments (available only for
                                      the regions "USA-AK" or "CAS")
+        usgs_basin_scaling (bool): Scaling factor to be applied to basin term
+                                   based on USGS basin model
         sigma_mu_epsilon (float): Number of standard deviations to multiply
                                   sigma mu (the standard deviation of the
                                   median) for the epistemic uncertainty model
@@ -623,19 +624,29 @@ class AbrahamsonGulerce2020SInter(GMPE):
     #: Defined for a reference velocity of 1000 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1000.0
 
+    # Other required params
+    REQUIRES_ATTRIBUTES = {'region', 'ergodic', 'apply_usa_adjustment',
+                           'usgs_basin_scaling', 'sigma_mu_epsilon'}
+
     def __init__(self, region="GLO", ergodic=True, apply_usa_adjustment=False,
-                 sigma_mu_epsilon=0.0, **kwargs):
-        super().__init__(**kwargs)
+                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
         assert region in SUPPORTED_REGIONS, "Region %s not supported by %s" \
             % (region, self.__class__.__name__)
         self.region = region
         self.ergodic = ergodic
         self.apply_usa_adjustment = apply_usa_adjustment
+        self.usgs_basin_scaling = usgs_basin_scaling
         self.sigma_mu_epsilon = sigma_mu_epsilon
+        
         # If running for Cascadia or Japan then z2.5 is needed
         if region in ("CAS", "JPN"):
             self.REQUIRES_SITES_PARAMETERS = \
                 self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
+        
+        # USGS basin scaling only used if region is set to Cascadia
+        if self.usgs_basin_scaling and self.region != "CAS":
+            raise ValueError('USGS basin scaling is only applicable to the '
+                             'Cascadia region for AbrahamsonGulerce2020.')
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -652,8 +663,17 @@ class AbrahamsonGulerce2020SInter(GMPE):
 
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
+
+            # Get USGS basin scaling factor if required (can only be for
+            # CAS region)
+            if self.usgs_basin_scaling:
+                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
+            else:
+                usgs_baf = np.ones(len(ctx.vs30))
+            
             mean[m] = get_mean_acceleration(C, trt, self.region, ctx, pga1000,
-                                            self.apply_usa_adjustment)
+                                            self.apply_usa_adjustment, usgs_baf)
+
             if self.sigma_mu_epsilon:
                 # Apply an epistmic adjustment factor
                 mean[m] += (self.sigma_mu_epsilon *

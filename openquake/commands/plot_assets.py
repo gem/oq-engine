@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2023 GEM Foundation
+# Copyright (C) 2017-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,17 +18,17 @@
 
 import os
 import numpy
-import fiona
 import shapely
 import logging
-from shapely.geometry import MultiPolygon, shape
 from openquake.commonlib import datastore
-from openquake.hazardlib.geo.utils import cross_idl
-from openquake.qa_tests_data import global_risk
+from openquake.hazardlib.geo.utils import cross_idl, get_bbox
+from openquake.calculators.getters import get_ebrupture
+from openquake.calculators.postproc.plots import (
+    add_borders, get_assetcol, get_country_iso_codes, add_rupture, adjust_limits)
 
 
-def main(calc_id: int = -1, site_model=False, shapefile_path=None,
-         save_to=None):
+def main(calc_id: int = -1, site_model=False,
+         save_to=None, *, show=True, assets_only=False):
     """
     Plot the sites and the assets
     """
@@ -37,75 +37,100 @@ def main(calc_id: int = -1, site_model=False, shapefile_path=None,
     import matplotlib.pyplot as p
     from openquake.hmtk.plotting.patch import PolygonPatch
 
-    if shapefile_path is None:
-        shapefile_dir = os.path.dirname(global_risk.__file__)
-        shapefile_path = os.path.join(
-            shapefile_dir, 'geoBoundariesCGAZ_ADM0.shp')
-    polys = [shape(pol['geometry']) for pol in fiona.open(shapefile_path)]
-    cm = p.get_cmap('RdBu')
-    num_colours = len(polys)
-
     dstore = datastore.read(calc_id)
+    oq = dstore['oqparam']
     try:
-        region = dstore['oqparam'].region
+        region = oq.region
     except KeyError:
         region = None
     sitecol = dstore['sitecol']
-    try:
-        assetcol = dstore['assetcol'][()]
-    except AttributeError:
-        assetcol = dstore['assetcol'].array
-    fig = p.figure()
-    ax = fig.add_subplot(111)
+    assetcol = get_assetcol(calc_id)
+    _fig, ax = p.subplots(figsize=(10, 10))
     if region:
         region_geom = shapely.wkt.loads(region)
         pp = PolygonPatch(region_geom, alpha=0.1)
         ax.add_patch(pp)
+    ax.set_aspect('equal')
     ax.grid(True)
+    if assets_only:
+        markersize_site_model = markersize_assets = 5
+    else:
+        markersize_site_model = markersize_sitecol = markersize_assets = 18
+        markersize_discarded = markersize_assets
     if site_model and 'site_model' in dstore:
         sm = dstore['site_model']
         sm_lons, sm_lats = sm['lon'], sm['lat']
         if len(sm_lons) > 1 and cross_idl(*sm_lons):
             sm_lons %= 360
         p.scatter(sm_lons, sm_lats, marker='.', color='orange',
-                  label='site model')
+                  label='site model', s=markersize_site_model)
     # p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
     #           color='gray', label='grid')
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green',
-              label='assets')
-    p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black',
-              label='sites')
-    if 'discarded' in dstore:
-        disc = numpy.unique(dstore['discarded']['lon', 'lat'])
-        p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
-                  label='discarded')
-
-    for idx, poly in enumerate(polys):
-        colour = cm(1. * idx / num_colours)
-        if isinstance(poly, MultiPolygon):
-            for onepoly in poly.geoms:
-                ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=0.1))
+              label='assets', s=markersize_assets)
+    if not assets_only:
+        p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black',
+                  label='sites', s=markersize_sitecol)
+        if 'discarded' in dstore:
+            disc = numpy.unique(dstore['discarded']['lon', 'lat'])
+            p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
+                      label='discarded', s=markersize_discarded)
+    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
+    if oq.rupture_xml or oq.rupture_dict:
+        use_shakemap = dstore['oqparam'].shakemap_uri
+        if use_shakemap:
+            lon, lat = oq.rupture_dict['lon'], oq.rupture_dict['lat']
         else:
-            ax.add_patch(PolygonPatch(poly, fc=colour, alpha=0.1))
+            rec = dstore['ruptures'][0]
+            lon, lat, _dep = rec['hypo']
+            dist = sitecol.get_cdist(rec)
+            print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
+        xlon, xlat = [lon], [lat]
+        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE' and not use_shakemap:
+            # assuming there is only 1 rupture, so rup_id=0
+            rup = get_ebrupture(dstore, rup_id=0).rupture
+            ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
+        else:
+            p.scatter(xlon, xlat, marker='*', color='orange',
+                      label='hypocenter', alpha=.5)
+    else:
+        xlon, xlat = [], []
+
+    ax = add_borders(ax)
 
     if region:
         minx, miny, maxx, maxy = region_geom.bounds
     else:
-        minx = assetcol['lon'].min()
-        maxx = assetcol['lon'].max()
-        miny = assetcol['lat'].min()
-        maxy = assetcol['lat'].max()
-    w, h = maxx - minx, maxy - miny
-    ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
-    ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
-    ax.legend()
+        minx, miny, maxx, maxy = get_bbox(
+            assetcol['lon'], assetcol['lat'], xlon, xlat)
+    minx = min(minx, min_x)
+    maxx = max(maxx, max_x)
+    miny = min(miny, min_y)
+    maxy = max(maxy, max_y)
+    xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+
+    country_iso_codes = get_country_iso_codes(calc_id, assetcol)
+    if country_iso_codes is not None:
+        # NOTE: use following lines to add custom items without changing title
+        # ax.plot([], [], ' ', label=country_iso_codes)
+        # ax.legend()
+        title = 'Countries: %s' % country_iso_codes
+        ax.legend(title=title)
+    else:
+        ax.legend()
+
     if save_to:
         p.savefig(save_to, alpha=True, dpi=300)
         logging.info(f'Plot saved to {save_to}')
-    p.show()
+    if show:
+        p.show()
+    return p
 
 
 main.calc_id = 'a computation id'
 main.site_model = 'plot the site model too'
-main.shapefile_path = 'a shapefile with country/region borders'
 main.save_to = 'save the plot to this filename'
+main.show = 'show the plot'
+main.assets_only = 'display assets only (without sites and discarded)'

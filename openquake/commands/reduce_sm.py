@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -40,6 +40,10 @@ def main(calc_id: int):
     with datastore.read(calc_id) as dstore:
         oqparam = dstore['oqparam']
         info = dstore['source_info'][()]
+    if oqparam.ps_grid_spacing:
+        raise RuntimeError(
+            'I cannot reduce the source model since ps_grid_spacing was used '
+            'in the precalculation')
     src_ids = info['source_id']
     num_ids = len(src_ids)
     bad_dupl = get_dupl(python3compat.decode(src_ids))

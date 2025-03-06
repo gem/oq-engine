@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -249,11 +249,7 @@ class TromansEtAl2019(GMPE):
 
     def __init__(self, gmpe_name, branch="central", sigma_mu_epsilon=0.0,
                  homoskedastic_sigma=False,  scaling_factor=None,
-                 vskappa=None, phi_ds2s=True, **kwargs):
-        super().__init__(gmpe_name=gmpe_name, branch=branch,
-                         homoskedastic_sigma=homoskedastic_sigma,
-                         scaling_factor=scaling_factor, vskappa=vskappa,
-                         phi_ds2s=phi_ds2s, **kwargs)
+                 vskappa=None, phi_ds2s=True):
         self.gmpe = registry[gmpe_name]()
         # Update the required_parameters
         for name in uppernames:

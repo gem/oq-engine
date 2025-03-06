@@ -1,5 +1,5 @@
-Outputs from Classical PSHA
-===========================
+Classical PSHA
+==============
 
 By default, the classical PSHA calculator computes and stores hazard curves for each logic tree sample considered.
 
@@ -73,14 +73,15 @@ shows a sample of the CSV file used to describe a hazard map, and and
 :ref:`the second listing <lst:output_uhs>` below shows a sample of the
 CSV used to describe a uniform hazard spectrum.
 In both cases, the files contain a commented line as in the 	
-:ref:`hazard curve lst:output_hazard_curves_csv`. The following	
+:ref:`hazard curve <lst:output_hazard_curves_csv>`. The following
 row has the column headers: the site coordinates (*lon, lat*), and then a 	
 set of two-part column names that indicate the IMT and probability	
 of exceedance corresponding to the investigation time; the remaining rows	
 give the values for each site. 
+
 .. container:: listing
 
-   .. code:: xml
+   .. code:: csv
       :number-lines:
       :name: lst:output_hazard_map_csv
 
@@ -92,7 +93,7 @@ give the values for each site.
 
 .. container:: listing
 
-   .. code:: xml
+   .. code:: csv
       :number-lines:
       :name: lst:output_uhs
 

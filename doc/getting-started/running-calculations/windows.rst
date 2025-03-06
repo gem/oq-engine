@@ -1,7 +1,7 @@
-.. _windows:
+.. _running_on_windows:
 
-Running the OpenQuake Engine on Windows
-=======================================
+On Windows
+==========
 
 The OpenQuake Engine on Windows can be run via a command line interface or a WebUI.
 

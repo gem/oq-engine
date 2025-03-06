@@ -1,27 +1,28 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2024, GEM Foundation
-# 
+#
+# Copyright (C) 2024-2025, GEM Foundation
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
 import numpy
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
-from openquake.commonlib import logs, logictree
+from openquake.commonlib import logs
+from openquake.hazardlib import logictree
 from openquake.commonlib.readinput import get_site_collection
-from openquake.calculators.base import calculators, store_shakemap
+from openquake.calculators.base import calculators, store_gmfs
 
 
 # see qa_tests_data/scenario/case_21
@@ -72,9 +73,10 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
                       'spatialcorr': spatialcorr,
                       'crosscorr': crosscorr,
                       'cholesky_limit': cholesky_limit}
-            store_shakemap(calc, sitecol, shakemap, gmfdic)
-    gmv_0 = calc.datastore.read_df('gmf_data').gmv_0.max()
-    print(f'Maximum {gmv_0=}')
+            store_gmfs(calc, sitecol, shakemap, gmfdic)
+    imt0 = list(oq.imtls)[0]
+    gmv = calc.datastore.read_df('gmf_data')[imt0].max()
+    print(f'Maximum {gmv=}')
     print('See the output with silx view %s' % calc.datastore.filename)
 
 

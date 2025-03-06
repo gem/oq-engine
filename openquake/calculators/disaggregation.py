@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,18 +21,18 @@ Disaggregation calculator core functionality
 """
 
 import logging
+import psutil
 import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
-from openquake.hazardlib import stats, probability_map, valid
+from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.commonlib import util
-from openquake.calculators import getters
-from openquake.calculators import base
+from openquake.calculators import base, getters
 
 POE_TOO_BIG = '''\
 Site #%d: you are trying to disaggregate for poe=%s.
@@ -120,6 +120,20 @@ def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic):
     smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic))
 
 
+def check_memory(N, Z, shape8D):
+    """
+    Raise an error if the calculation will require too much memory
+    """
+    avail_gb = psutil.virtual_memory().available / 1024**3
+    req_gb = numpy.prod(shape8D) * N * Z * 8 / 1024**3
+    if avail_gb < req_gb*2:
+        # req_gb*2 because when storing the outputs a lot more memory will be used
+        raise MemoryError('You have %.1f GB available but %.1f GB are required. '
+                          'The solution is to reduce the number of bins' %
+                          (avail_gb, req_gb*2))
+    logging.info('The AccumDict will require %.1f GB', req_gb)
+
+
 @base.calculators.add('disaggregation')
 class DisaggregationCalculator(base.HazardCalculator):
     """
@@ -141,7 +155,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 'The number of sites is to disaggregate is %d, but you have '
                 'max_sites_disagg=%d' % (self.N, few))
         self.oqparam.mags_by_trt = self.datastore['source_mags']
-        all_edges, shapedic = disagg.get_edges_shapedic(
+        all_edges, _shapedic = disagg.get_edges_shapedic(
             self.oqparam, self.sitecol, self.R)
         *b, trts = all_edges
         T = len(trts)
@@ -173,28 +187,25 @@ class DisaggregationCalculator(base.HazardCalculator):
             oq, self.sitecol, self.R)
         logging.info(self.shapedic)
         self.save_bin_edges(edges)
-        self.full_lt = self.datastore['full_lt']
         self.poes_disagg = oq.poes_disagg or (None,)
         self.imts = list(oq.imtls)
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        nrows = len(dstore['_rates/sid'])
-        self.pgetter = getters.PmapGetter(
-            dstore, full_lt, [(0, nrows + 1)], oq.imtls, oq.poes)
+        self.mgetters = getters.map_getters(dstore, full_lt, disagg=True)
 
         # build array rlzs (N, Z)
         if oq.rlz_index is None:
             Z = oq.num_rlzs_disagg
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
-                for sid in self.sitecol.sids:
-                    hcurve = self.pgetter.get_hcurve(sid)
+                for sid in range(self.N):
+                    hcurve = self.mgetters[sid].get_hcurve(sid)
                     mean = getters.build_stat_curve(
-                        hcurve, oq.imtls, stats.mean_curve, full_lt.weights)
+                        hcurve, oq.imtls, stats.mean_curve, full_lt.weights,
+                        full_lt.wget)
                     # get the closest realization to the mean
-                    rlzs[sid] = util.closest_to_ref(
-                        hcurve.array.T, mean.array)[:Z]
+                    rlzs[sid] = util.closest_to_ref(hcurve.T, mean)[:Z]
             self.datastore['best_rlzs'] = rlzs
         else:
             Z = len(oq.rlz_index)
@@ -213,7 +224,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             for m, imt in enumerate(oq.imtls):
                 iml3[:, m] = oq.iml_disagg[imt]
         else:
-            iml3 = probability_map.compute_hmaps(
+            iml3 = map_array.compute_hmaps(
                 mean_curves, oq.imtls, oq.poes)
         if iml3.sum() == 0:
             raise SystemExit('Cannot do any disaggregation: zero hazard')
@@ -244,7 +255,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 for grp_id, df in gb}
         else:
             src_mutex_by_grp = {}
-        ctx_by_grp = read_ctx_by_grp(dstore)
+        ctx_by_grp = read_ctx_by_grp(dstore)  # little memory used here
         totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
         logging.info('Read {:_d} contexts'.format(totctxs))
         self.datastore.swmr_on()
@@ -294,7 +305,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                 continue
 
             # split by tiles
-            for tile in self.sitecol.split(ntasks):
+            for tile_get in self.sitecol.split(ntasks):
+                tile = tile_get(self.sitecol)
                 ctx = ctxt[numpy.isin(ctxt.sids, tile.sids)]
                 if len(ctx) * cmaker.Z > maxsize:
                     # split by magbin too
@@ -309,7 +321,9 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         shape8D = (s['trt'], s['mag'], s['dist'], s['lon'], s['lat'], s['eps'],
                    s['M'], s['P'])
+        check_memory(self.N, self.Z, shape8D)
         acc = AccumDict(accum=numpy.zeros(shape8D))
+        # NB: a lot of memory can go in this AccumDict, please reduce the bins
         results = smap.reduce(self.agg_result, acc)
         return results  # s, r -> array 8D
 

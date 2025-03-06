@@ -193,7 +193,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             for sfc in self.msrf.surfaces:
                 mesh = sfc.mesh
                 ax.plot(mesh.lons.flatten(), mesh.lats.flatten(),
-                        mesh.depths.flatten(), '.', color = 'red')
+                        mesh.depths.flatten(), '.', color='red')
             ax.set_xlabel('Lon')
             ax.invert_zaxis()
             plt.show()
@@ -332,7 +332,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
 
         if PLOTTING:
             title = f'{type(self).__name__} - Ry0'
-            fig, ax = _plt_results(self.clo, self.cla, dst, self.msrf, title)
+            _fig, ax = _plt_results(self.clo, self.cla, dst, self.msrf, title)
             for line in self.msrf.tor.lines:
                 ax.plot(line.coo[:, 0], line.coo[:, 1], '-r', lw=3)
             ax.plot(self.msrf.tor.olon, self.msrf.tor.olat, 'o')

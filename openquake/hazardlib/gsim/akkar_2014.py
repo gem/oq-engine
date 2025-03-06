@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -170,8 +170,7 @@ class AkkarEtAlRjb2014(GMPE):
 
     DEFINED_FOR_REFERENCE_VELOCITY = 800
 
-    def __init__(self, adjustment_factor=1.0, **kwargs):
-        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+    def __init__(self, adjustment_factor=1.0):
         [self.kind] = self.REQUIRES_DISTANCES
         self.adjustment_factor = np.log(adjustment_factor)
 

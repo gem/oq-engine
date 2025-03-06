@@ -1,0 +1,7 @@
+taxonomy,consequence,peril,slight,moderate,extreme,complete
+Concrete1,losses,groundshaking,0.04,0.31,0.6,1
+Wood1,losses,groundshaking,0.04,0.31,0.6,1
+Concrete1,losses,liquefaction,0,0,0,1
+Wood1,losses,liquefaction,0,0,0,1
+Concrete1,losses,landslide,0,0,0,1
+Wood1,losses,landslide,0,0,0,1

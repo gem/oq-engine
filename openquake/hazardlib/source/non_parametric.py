@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -57,7 +57,9 @@ class NonParametricSeismicSource(BaseSeismicSource):
 
     def __init__(self, source_id, name, tectonic_region_type, data,
                  weights=None):
-        super().__init__(source_id, name, tectonic_region_type)
+        self.source_id = source_id
+        self.name = name
+        self.tectonic_region_type = tectonic_region_type
         self.data = data
         if weights is not None:
             assert len(weights) == len(data), (len(weights), len(data))
@@ -197,19 +199,11 @@ class NonParametricSeismicSource(BaseSeismicSource):
         return '<%s %s gridded=%s>' % (
             self.__class__.__name__, self.source_id, self.is_gridded())
 
-    @property
     def mesh_size(self):
         """
-        :returns: the number of points in the underlying meshes (reduced)
+        :returns: the number of points in the underlying meshes
         """
-        n = 0
-        for rup in self.iter_ruptures(step=50):  # reduced
-            if isinstance(rup.surface, MultiSurface):
-                for sfc in rup.surface.surfaces:
-                    n += len(sfc.mesh)
-            else:
-                n += len(rup.surface.mesh)
-        return n
+        return sum(mesh.lons.size for mesh in self.iter_meshes())
 
     @property
     def polygon(self):
@@ -217,14 +211,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
         The convex hull of a few subsurfaces
         """
         lons, lats = [], []
-        for rup in self.iter_ruptures(step=50):  # reduced
-            if isinstance(rup.surface, MultiSurface):
-                for sfc in rup.surface.surfaces:
-                    lons.extend(sfc.mesh.lons.flat)
-                    lats.extend(sfc.mesh.lats.flat)
-            else:
-                lons.extend(rup.surface.mesh.lons.flat)
-                lats.extend(rup.surface.mesh.lats.flat)
+        for mesh in self.iter_meshes():
+            mesh = mesh.reduce(10)
+            lons.extend(mesh.lons.flat)
+            lats.extend(mesh.lats.flat)
 
         condition = numpy.isfinite(lons).astype(int)
         lons = numpy.extract(condition, lons)

@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,10 +23,11 @@ Module :mod:`openquake.hazardlib.source.rupture` defines classes
 import abc
 import numpy
 import math
+import logging
 import itertools
 import json
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, site, scalerel
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import (
     Mesh, RectangularMesh, surface_to_arrays)
@@ -46,6 +47,8 @@ TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO30 = 2 ** 30
 TWO32 = 2 ** 32
+
+MSR = scalerel._get_available_class(scalerel.BaseMSR)
 
 pmf_dt = numpy.dtype([
     ('prob', float),
@@ -86,7 +89,8 @@ rupture_dt = numpy.dtype([
     ('hypo', (F32, 3)),
     ('geom_id', U32),
     ('nsites', U32),
-    ('e0', U32)])
+    ('e0', U32),
+    ('model', '<S3')])
 
 code2cls = {}
 
@@ -582,19 +586,15 @@ class ParametricProbabilisticRupture(BaseRupture):
 class PointSurface:
     """
     A fake surface used in PointRuptures.
-    The parameters `hypocenter` and `strike` are determined by
-    collapsing the corresponding parameters in the original PointSource.
     """
-    def __init__(self, hypocenter, strike, dip):
+    def __init__(self, hypocenter):
         self.hypocenter = hypocenter
-        self.strike = strike
-        self.dip = dip
 
     def get_strike(self):
-        return self.strike
+        return 0
 
     def get_dip(self):
-        return self.dip
+        return 0
 
     def get_top_edge_depth(self):
         return self.hypocenter.depth
@@ -627,17 +627,17 @@ class PointRupture(ParametricProbabilisticRupture):
     A rupture coming from a far away PointSource, so that the finite
     size effects can be neglected.
     """
-    def __init__(self, mag, rake, tectonic_region_type, hypocenter, strike,
-                 dip, occurrence_rate, temporal_occurrence_model, zbot):
+    def __init__(self, mag, tectonic_region_type, hypocenter,
+                 occurrence_rate, temporal_occurrence_model, zbot=0):
+        self.mag = mag
         self.tectonic_region_type = tectonic_region_type
         self.hypocenter = hypocenter
-        self.mag = mag
-        self.strike = strike
-        self.rake = rake
-        self.dip = dip
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
-        self.surface = PointSurface(hypocenter, strike, dip)
+        self.surface = PointSurface(hypocenter)
+        self.rake = 0
+        self.dip = 0
+        self.strike = 0
         self.zbot = zbot  # bottom edge depth, used in Campbell-Bozorgnia
 
 
@@ -718,7 +718,7 @@ class ExportedRupture(object):
     Simplified Rupture class with attributes rupid, events_by_ses, indices
     and others, used in export.
 
-    :param rupid: rupture.seed ID
+    :param rupid: rupture ID
     :param events_by_ses: dictionary ses_idx -> event records
     :param indices: site indices
     """
@@ -743,17 +743,22 @@ class EBRupture(object):
     """
     seed = 'NA'  # set by the engine
 
-    def __init__(self, rupture, source_id, trt_smr, n_occ=1, id=None, e0=0):
+    def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0, e0=0, seed=42):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
         self.id = source_id * TWO30 + id
         self.e0 = e0
+        self.seed = seed
 
     @property
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
+
+    @property
+    def mag(self):
+        return self.rupture.mag
 
     def get_eids(self):
         """
@@ -873,7 +878,7 @@ def get_ruptures(fname_csv):
         trt_smr = aw.trts.index(row['trt']) * TWO24
         tup = (u, row['seed'], 0, trt_smr,
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
-               minlon, minlat, maxlon, maxlat, hypo, u, 1, 0)
+               minlon, minlat, maxlon, maxlat, hypo, u, 1, 0, '???')
         rups.append(tup)
         geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:
@@ -881,6 +886,52 @@ def get_ruptures(fname_csv):
     dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
     # NB: PMFs for nonparametric ruptures are missing
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
+
+
+def fix_vertices_order(array43):
+    """
+    Make sure the point inside array43 are in the form top_left, top_right,
+    bottom_left, bottom_right
+    The convention used in the USGS format has the last two points inverted
+    with respect to what is expected by OQ
+    """
+    top_left = array43[0]
+    top_right = array43[1]
+    bottom_left = array43[3]
+    bottom_right = array43[2]
+    return numpy.array([top_left, top_right, bottom_left, bottom_right])
+
+
+def is_matrix(rows):
+    """
+    :returns: False if the rows have different lenghts
+    """
+    lens = [len(row) for row in rows]
+    return len(set(lens)) == 1
+
+
+def get_multiplanar(multipolygon_coords, mag, rake, trt):
+    """
+    :param multipolygon_coords:
+       an array or list of shape (P, 5, 3) coming from geojson
+    :returns: a BaseRupture with a PlanarSurface or a multiPlanarSurface
+    """
+    # NB: in geojson the last vertex is the same as the first, so I discard it
+    # expecting shape (P, 4, 3)
+    coords = numpy.array(multipolygon_coords, float)[:, :-1, :]
+    P, vertices, _ = coords.shape
+    if vertices != 4:
+        raise ValueError('Expecting 4 vertices, got %d' % vertices)
+    for p, array43 in enumerate(coords):
+        coords[p] = fix_vertices_order(array43)
+    if P == 1:
+        surf = PlanarSurface.from_array(coords[0, :, :].T)
+    else:
+        surf = geo.MultiSurface([geo.PlanarSurface.from_array(array.T)
+                                 for array in coords])
+    rup = BaseRupture(mag, rake, trt, surf.get_middle_point(), surf)
+    rup.rup_id = 0
+    return rup
 
 
 def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
@@ -896,6 +947,7 @@ def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
     return rup
 
 
+# use a hard-coded MSR
 def _width_length(mag, rake):
     assert rake is None or -180 <= rake <= 180, rake
     if rake is None:
@@ -921,6 +973,11 @@ def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
     # with a fixed Magnitude-Scaling Relationship
     rdip = math.radians(dip)
     rup_width, rup_length = _width_length(mag, rake)
+    if rup_length > 1000.:
+        logging.error(f'{rup_length=} is wrong, the hand-coded MSR is wrong, '
+                      'using 1000 km instead')
+        rup_length = 1000.
+
     # calculate the height of the rupture being projected
     # on the vertical plane:
     rup_proj_height = rup_width * math.sin(rdip)
@@ -964,4 +1021,31 @@ def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
     rup.rup_id = 0
     vars(rup).update(vars(hypocenter))
     return rup
-    
+
+
+def build_planar_rupture_from_dict(rupture_dict):
+    """
+    Build a rupture with a PlanarSurface.
+
+    :param rupture_dict:
+        a dictionary containing at least the coordinates of the hypocenter
+        ('lon', 'lat' and 'dep'), the magnitude ('mag') and the 'rake' and,
+        optionally, the 'trt' (default '*'), the 'strike' (default 0) and
+        the 'dip' (default 90).
+    :returns: a BaseRupture with a PlanarSurface built around the site
+    """
+    r = rupture_dict
+    hypo = Point(r['lon'], r['lat'], r['dep'])
+    trt = r.get('trt', '*')
+    strike = r.get('strike', 0)
+    dip = r.get('dip', 90)
+    if not r.get('msr'):
+        # use the IPT method, to be removed
+        rup = build_planar(hypo, r['mag'], r['rake'], strike, dip, trt)
+    else:
+        aratio = r.get('aspect_ratio', 2.)
+        msr = MSR[r['msr']]()
+        site_ = site.Site(Point(r['lon'], r['lat'], r['dep']))
+        rup = get_planar(site_, msr, r['mag'], aratio,
+                         strike, dip, r['rake'], trt)
+    return rup

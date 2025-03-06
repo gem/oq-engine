@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,7 @@ import numpy
 import pandas
 
 from openquake.baselib.python3compat import encode, decode
-from openquake.commonlib import readinput, logs
+from openquake.commonlib import logs
 from openquake.calculators import views
 
 
@@ -155,5 +155,4 @@ def build_report(job_ini, output_dir=None):
         rw.save(report)
     except IOError as exc:  # permission error
         sys.stderr.write(str(exc) + '\n')
-    readinput.Global.reset()  # ugly hack
     return report

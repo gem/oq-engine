@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.abrahamson_silva_1997 import AbrahamsonSilva1997
+from openquake.hazardlib.gsim.abrahamson_silva_1997 import (AbrahamsonSilva1997,
+                                                            AbrahamsonSilva1997Vertical)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -38,4 +39,19 @@ class AbrahamsonSilva1997TestCase(BaseGSIMTestCase):
 
     def test_std_total(self):
         self.check('AS97/AS97_STD_TOTAL.csv',
+                   max_discrep_percentage=0.1)
+
+class AbrahamsonSilva1997VerticalTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AbrahamsonSilva1997Vertical
+
+    def test_mean_ss(self):
+        self.check('AS97/AS97_MEAN_DS_V.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_mean_reverse(self):
+        self.check('AS97/AS97_MEAN_ROCK_V.csv',
+                   max_discrep_percentage=0.1)
+
+    def test_std_total(self):
+        self.check('AS97/AS97_STD_TOTAL_V.csv',
                    max_discrep_percentage=0.1)

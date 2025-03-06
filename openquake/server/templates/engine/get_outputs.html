@@ -30,6 +30,18 @@
                   Show hazard map</a>
               </div>
               {% endif %}
+              {% for img in avg_gmf %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
+                  Show average GMF - {{ img|get_imt }}</a>
+              </div>
+              {% endfor %}
+              {% if assets %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
+                  Show assets</a>
+              </div>
+              {% endif %}
               {% if governing_mce %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
@@ -46,7 +58,7 @@
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
                   {# NOTE: uncomment below to show the IMT #}
-                  {# Show hazard curves per source - {{ img|get_disagg_by_src_imt }}</a> #}
+                  {# Show hazard curves per source - {{ img|get_imt }}</a> #}
                   Show hazard curves per source</a>
               </div>
               {% endfor %}

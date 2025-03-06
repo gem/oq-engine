@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,6 @@ from openquake.hazardlib.const import TRT, StdDev
 from openquake.hazardlib import imt as imt_module
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.baselib.python3compat import round
-
 
 _get_mean = CallableDict()
 
@@ -93,7 +92,7 @@ def _return_tables(self, mag, imt, which):
         else:
             iml_table = self.stddev[imt.string][:]
 
-        n_d, n_s, n_m = iml_table.shape
+        n_d, _n_s, n_m = iml_table.shape
         iml_table = iml_table.reshape([n_d, n_m])
     else:
         if which == "IMLs":
@@ -105,8 +104,8 @@ def _return_tables(self, mag, imt, which):
 
         low_period = round(periods[0], 7)
         high_period = round(periods[-1], 7)
-        if (round(imt.period, 7) < low_period) or (
-                round(imt.period, 7) > high_period):
+        period = round(imt.period, 7)
+        if period < low_period or period > high_period:
             raise ValueError("Spectral period %.3f outside of valid range "
                              "(%.3f to %.3f)" % (imt.period, periods[0],
                                                  periods[-1]))
@@ -180,19 +179,12 @@ class GMPETable(GMPE):
 
     kind = "base"
 
-    @property
-    def filename(self):
-        """
-        Full pathname of the underlying HDF5 table
-        """
-        return self.kwargs.get('gmpe_table', self.gmpe_table)
-
-    def __init__(self, **kwargs):
+    def __init__(self, gmpe_table):
         """
         Executes the preprocessing steps at the instantiation stage to read in
         the tables from hdf5 and hold them in memory.
         """
-        super().__init__(**kwargs)
+        self.gmpe_table = self.filename = gmpe_table
         # populated by the ContextManager once imts and magnitudes are known
         with h5py.File(self.filename, "r") as fle:
             self.distance_type = decode(fle["Distances"].attrs["metric"])

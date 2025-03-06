@@ -1,5 +1,5 @@
-#,,,,,,"generated_by='OpenQuake engine 3.13.0-git797650a0ab', start_date='2021-09-29T07:50:24', checksum=3590982611"
-asset_id,taxonomy,lon,lat,structural~no_damage,structural~LS1,structural~LS2
+#,,,,,,"generated_by='OpenQuake engine 3.22.0-git6e6623ae9e', start_date='2024-11-18T09:23:44', checksum=1720217140"
+asset_id,taxonomy,lon,lat,structural-no_damage,structural-LS1,structural-LS2
 a1,RM,15.48000,38.09000,1.252400E+03,1.160500E+03,5.871000E+02
 a3,RM,15.48000,38.25000,1.274000E+02,3.635000E+02,5.091000E+02
 a2,RC,15.56000,38.17000,6.723000E+02,9.649000E+02,3.628000E+02

@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel name="NZL slab MPS ">
+    <pointSource id="slab_p1" name="point_1" tectonicRegion="Subduction Intraslab">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>-178.9068 -35.3424</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>20</upperSeismoDepth>
+        <lowerSeismoDepth>80</lowerSeismoDepth>
+      </pointGeometry>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="37.292"/>
+      </hypoDepthDist>
+      <magScaleRel>PointMSR</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="2.4977085037" bValue="1.06" minMag="5.0" maxMag="6.5"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.32" strike="217" dip="57.0" rake="-84"/>
+        <nodalPlane probability="0.36" strike="230.0" dip="57.0" rake="-84"/>
+        <nodalPlane probability="0.32" strike="243" dip="57.0" rake="-84"/>
+      </nodalPlaneDist>
+    </pointSource>
+    <pointSource id="slab_p2" name="point_2" tectonicRegion="Subduction Intraslab">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>-178.9068 -35.3424</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>20</upperSeismoDepth>
+        <lowerSeismoDepth>80</lowerSeismoDepth>
+      </pointGeometry>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="37.292"/>
+      </hypoDepthDist>
+      <magScaleRel>CScalingMSR.C=4.15</magScaleRel>
+      <ruptAspectRatio>1.3</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="2.4977085037" bValue="1.06" minMag="6.6" maxMag="8.15"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.32" strike="217" dip="57.0" rake="-84"/>
+        <nodalPlane probability="0.36" strike="230.0" dip="57.0" rake="-84"/>
+        <nodalPlane probability="0.32" strike="243" dip="57.0" rake="-84"/>
+      </nodalPlaneDist>
+    </pointSource>
+    <pointSource id="slab_3" name="point_3" tectonicRegion="Subduction Intraslab">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>-179.0097 -35.2982</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>20</upperSeismoDepth>
+        <lowerSeismoDepth>80</lowerSeismoDepth>
+      </pointGeometry>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="37.812"/>
+      </hypoDepthDist>
+      <magScaleRel>PointMSR</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="2.4977085037" bValue="1.06" minMag="5.0" maxMag="6.5"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.32" strike="217" dip="57.0" rake="-84"/>
+        <nodalPlane probability="0.36" strike="230.0" dip="57.0" rake="-84"/>
+        <nodalPlane probability="0.32" strike="243" dip="57.0" rake="-84"/>
+      </nodalPlaneDist>
+    </pointSource>
+    <pointSource id="slab_4" name="point_4" tectonicRegion="Subduction Intraslab">
+      <pointGeometry>
+        <gml:Point>
+          <gml:pos>-179.0097 -35.2982</gml:pos>
+        </gml:Point>
+        <upperSeismoDepth>20</upperSeismoDepth>
+        <lowerSeismoDepth>80</lowerSeismoDepth>
+      </pointGeometry>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="37.812"/>
+      </hypoDepthDist>
+      <magScaleRel>CScalingMSR.C=4.15</magScaleRel>
+      <ruptAspectRatio>1.3</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="2.4977085037" bValue="1.06" minMag="6.6" maxMag="8.15"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.32" strike="217" dip="57.0" rake="-84"/>
+        <nodalPlane probability="0.36" strike="230.0" dip="57.0" rake="-84"/>
+        <nodalPlane probability="0.32" strike="243" dip="57.0" rake="-84"/>
+      </nodalPlaneDist>
+    </pointSource>
+  </sourceModel>
+</nrml>

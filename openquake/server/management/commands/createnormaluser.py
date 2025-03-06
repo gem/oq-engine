@@ -21,10 +21,15 @@ class Command(BaseCommand):
         parser.add_argument(
             'email', type=str,
             help='The email that will be assigned to the user')
+        parser.add_argument(
+            '--level', type=int,
+            default=0,
+            help='The interface level that will be assigned to the user (0, 1 or 2')
 
     def handle(self, *args, **kwargs):
         username = kwargs['username']
         email = kwargs['email']
+        level = kwargs['level']
         # secure password, like '4x]>@;4)'
         password = ''.join((
             secrets.choice(
@@ -35,10 +40,13 @@ class Command(BaseCommand):
         if User.objects.filter(username=username).exists():
             logger.error(f'The username "{username}" is already taken!')
             exit(1)
-        logger.info(f'Creating normal user: {username}')
+        logger.info(f'Creating normal user: {username=}, {email=}, {level=}')
         user = User.objects.create_user(
             username, password=password, email=email)
         user.save()
+        profile = user.profile
+        profile.level = level
+        profile.save()
         logger.info(f'Sending reset password email to: {user.email}')
         form = PasswordResetForm({'email': user.email})
         assert form.is_valid()
@@ -52,21 +60,23 @@ class Command(BaseCommand):
                 request.META['SERVER_PORT'] = '80'
         else:
             request.META['SERVER_PORT'] = settings.SERVER_PORT
-        if settings.APPLICATION_MODE.upper() == 'AELO':
-            password_reset_subject = (
-                'registration/normal_user_creation_email_subject_aelo.txt')
-            email_template_name = (
-                'registration/normal_user_creation_email_aelo.txt')
+        # NOTE: we don't expect to use email notifications when PAM is enabled, so we
+        # can avoid forcing the user to actualize the templates
+        if 'django_pam.auth.backends.PAMBackend' in settings.AUTHENTICATION_BACKENDS:
+            subject_template_name = \
+                'registration/normal_user_creation_email_subject.txt.default.tmpl'
+            email_template_name = \
+                'registration/normal_user_creation_email_content.txt.default.tmpl'
         else:
-            password_reset_subject = (
-                'registration/normal_user_creation_email_subject.txt')
-            email_template_name = (
-                'registration/normal_user_creation_email.txt')
+            subject_template_name = \
+                'registration/normal_user_creation_email_subject.txt'
+            email_template_name = \
+                'registration/normal_user_creation_email_content.txt'
         form.save(
             domain_override=(settings.SERVER_NAME
                              if settings.USE_REVERSE_PROXY else None),
             request=request,
             use_https=settings.USE_HTTPS,
             from_email=settings.EMAIL_HOST_USER,
-            subject_template_name=password_reset_subject,
+            subject_template_name=subject_template_name,
             email_template_name=email_template_name)

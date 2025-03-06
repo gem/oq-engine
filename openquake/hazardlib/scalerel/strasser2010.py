@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -67,6 +67,32 @@ class StrasserInterface(BaseMSRSigma, BaseASRSigma):
         """
         return 0.286
 
+    def get_median_length(self, mag):
+        """
+        Get median length of the rupture given moment magnitude
+        """
+        return 10.0 ** (-2.477 + 0.585 * mag)
+
+    def get_std_dev_length(self, mag):
+        """
+        Get median length standard deviation of the rupture given moment
+        magnitude
+        """
+        return 0.180
+
+    def get_median_width(self, mag):
+        """
+        Get median width of the rupture given moment magnitude
+        """
+        return 10.0 ** (-0.882 + 0.351 * mag)
+
+    def get_std_dev_width(self, mag):
+        """
+        Get median width standard deviation of the rupture given moment
+        magnitude
+        """
+        return 0.173
+
 
 class StrasserIntraslab(BaseMSRSigma, BaseASRSigma):
     """
@@ -103,7 +129,7 @@ class StrasserIntraslab(BaseMSRSigma, BaseASRSigma):
         """
         return 4.054 + 0.981 * log10(area)
 
-    def get_std_dev_mag(self, rake):
+    def get_std_dev_mag(self, area, rake):
         """
         Standard deviation on the magnitude for the Strasser et al. (2010)
         area relation.

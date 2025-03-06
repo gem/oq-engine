@@ -1,8 +1,10 @@
-Classical Probabilistic Seismic Damage and Risk Analysis
-========================================================
+Classical Damage and Risk
+=========================
 
-Classical Probabilistic Seismic Damage Analysis
------------------------------------------------
+.. _classical-damage-intro:
+
+Classical Damage
+----------------
 
 The classical PSHA-based damage calculator integrates the fragility functions for an asset with the seismic hazard curve 
 at the location of the asset, to give the expected damage distribution for the asset within a specified time period. The 
@@ -25,8 +27,10 @@ files are depicted in :ref:`the figure below. <classical-psha-calc>`
 
    Classical PSHA-based Damage Calculator input/output structure.
 
-Classical Probabilistic Seismic Risk Analysis
----------------------------------------------
+.. _classical-risk-intro:
+
+Classical Risk
+--------------
 
 The classical PSHA-based risk calculator convolves through numerical integration, the probabilistic vulnerability 
 functions for an asset with the seismic hazard curve at the location of the asset, to give the loss distribution for the 

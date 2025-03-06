@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -442,9 +442,40 @@ class SmoothedSeismicity(object):
                 grid_count[kmarker] = grid_count[kmarker] + adjust
         return grid_count
 
-    def create_3D_grid(
-        self, catalogue, completeness_table, t_f=1.0, mag_inc=0.1
-    ):
+    def _xyz(self):
+        x_bins = np.arange(
+            self.grid_limits["xmin"],
+            self.grid_limits["xmax"],
+            self.grid_limits["xspc"],
+        )
+        if x_bins[-1] < self.grid_limits["xmax"]:
+            x_bins = np.hstack([x_bins, x_bins[-1] + self.grid_limits["xspc"]])
+
+        y_bins = np.arange(
+            self.grid_limits["ymin"],
+            self.grid_limits["ymax"],
+            self.grid_limits["yspc"],
+        )
+        if y_bins[-1] < self.grid_limits["ymax"]:
+            y_bins = np.hstack([y_bins, y_bins[-1] + self.grid_limits["yspc"]])
+
+        z_bins = np.arange(
+            self.grid_limits["zmin"],
+            self.grid_limits["zmax"] + self.grid_limits["zspc"],
+            self.grid_limits["zspc"],
+        )
+
+        if z_bins[-1] < self.grid_limits["zmax"]:
+            z_bins = np.hstack([z_bins, z_bins[-1] + self.grid_limits["zspc"]])
+
+        # Define centre points of grid cells
+        grid_x, grid_y = np.meshgrid(
+            (x_bins[1:] + x_bins[:-1]) / 2.0, (y_bins[1:] + y_bins[:-1]) / 2.0
+        )
+        return grid_x, grid_y, z_bins
+
+    def create_3D_grid(self, catalogue, completeness_table,
+                       t_f=1.0, mag_inc=0.1):
         """
         Counts the earthquakes observed in a three dimensional grid
 
@@ -472,36 +503,7 @@ class SmoothedSeismicity(object):
            if only one depth layer is considered)
 
         """
-        x_bins = np.arange(
-            self.grid_limits["xmin"],
-            self.grid_limits["xmax"],
-            self.grid_limits["xspc"],
-        )
-        if x_bins[-1] < self.grid_limits["xmax"]:
-            x_bins = np.hstack([x_bins, x_bins[-1] + self.grid_limits["xspc"]])
-
-        y_bins = np.arange(
-            self.grid_limits["ymin"],
-            self.grid_limits["ymax"],
-            self.grid_limits["yspc"],
-        )
-        if y_bins[-1] < self.grid_limits["ymax"]:
-            y_bins = np.hstack([y_bins, y_bins[-1] + self.grid_limits["yspc"]])
-
-        z_bins = np.arange(
-            self.grid_limits["zmin"],
-            self.grid_limits["zmax"] + self.grid_limits["zspc"],
-            self.grid_limits["zspc"],
-        )
-
-        if z_bins[-1] < self.grid_limits["zmax"]:
-            z_bins = np.hstack([z_bins, z_bins[-1] + self.grid_limits["zspc"]])
-
-        # Define centre points of grid cells
-        gridx, gridy = np.meshgrid(
-            (x_bins[1:] + x_bins[:-1]) / 2.0, (y_bins[1:] + y_bins[:-1]) / 2.0
-        )
-
+        gridx, gridy, z_bins = self._xyz()
         n_x, n_y = np.shape(gridx)
         gridx = np.reshape(gridx, [n_x * n_y, 1])
         gridy = np.reshape(np.flipud(gridy), [n_x * n_y, 1])

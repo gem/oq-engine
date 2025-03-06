@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,7 @@ import sys
 import operator
 from contextlib import contextmanager
 import numpy
-from scipy.spatial import cKDTree, distance
+from scipy.spatial import KDTree, distance
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
@@ -35,6 +35,9 @@ MINMAG = 2.5
 MAXMAG = 10.2  # to avoid breaking PAC
 MAX_DISTANCE = 2000  # km, ultra big distance used if there is no filter
 trt_smr = operator.attrgetter('trt_smr')
+
+class FilteredAway(Exception):
+    pass
 
 
 def magstr(mag):
@@ -107,7 +110,6 @@ def get_distances(rupture, sites, param):
         dist = numpy.zeros_like(sites.lons)
     else:
         raise ValueError('Unknown distance measure %r' % param)
-    dist.flags.writeable = False
     return dist
 
 
@@ -204,7 +206,10 @@ class IntegrationDistance(dict):
         >>> md
         {'default': [(2.5, 50), (10.2, 50)]}
         """
-        items_by_trt = floatdict(value)
+        if value == 'magdist':
+            items_by_trt = {'default': [(3, 0), (6, 150), (10, 600)]}
+        else:
+            items_by_trt = floatdict(value)
         self = cls()
         for trt, items in items_by_trt.items():
             if isinstance(items, list):
@@ -227,15 +232,19 @@ class IntegrationDistance(dict):
         >>> maxdist.cut({'default': 5.})
         >>> maxdist
         {'default': [(5.0, 87.5), (8.0, 200.0)]}
+
+        >>> maxdist = IntegrationDistance.new('200')
+        >>> maxdist.cut({"Active Shallow Crust": 5.2, "default": 4.})
+        >>> maxdist
+        {'default': [(4.0, 200.0), (10.2, 200)], 'Active Shallow Crust': [(5.2, 200.0), (10.2, 200)]}
         """
-        all_trts = set(self) | set(min_mag_by_trt)
         if 'default' not in self:
             maxval = max(self.values(),
                          key=lambda val: max(dist for mag, dist in val))
             self['default'] = maxval
         if 'default' not in min_mag_by_trt:
             min_mag_by_trt['default'] = min(min_mag_by_trt.values())
-        for trt in all_trts:
+        for trt in set(self) | set(min_mag_by_trt):
             min_mag = getdefault(min_mag_by_trt, trt)
             if not min_mag:
                 continue
@@ -318,6 +327,22 @@ def split_source(src):
     return splits
 
 
+def close_ruptures(ruptures, sites, dist=800.):
+    """
+    :returns: array of ruptures close to the sites
+    """    
+    hypos = ruptures['hypo']
+    kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
+    ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
+    all_sids = kr.query_ball_tree(ks, dist, eps=.1)
+    out = []
+    for r, sids in enumerate(all_sids):
+        if sids:
+            ruptures[r]['nsites'] = len(sids)
+            out.append(ruptures[r])
+    return numpy.array(out)
+
+
 default = IntegrationDistance({'default': [(MINMAG, 1000), (MAXMAG, 1000)]})
 
 
@@ -360,7 +385,7 @@ class SourceFilter(object):
         try:
             bbox = get_bounding_box(src, maxdist)
         except Exception as exc:
-            raise exc.__class__('source %s: %s' % (src.source_id, exc))
+            raise exc.__class__('source %r: %s' % (src.source_id, exc))
         return bbox
 
     def get_rectangle(self, src):
@@ -403,7 +428,9 @@ class SourceFilter(object):
         if not self.integration_distance:  # do not filter
             return self.sitecol.sids
         if trt:  # rupture proxy
-            assert hasattr(self.integration_distance, 'x')
+            if not hasattr(self.integration_distance, 'x'):
+                raise ValueError('The SourceFilter was instantiated with '
+                                 'maximum_distance and not maximum_distance(trt)')
             dlon = get_longitudinal_extent(
                 src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
             dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.
@@ -419,16 +446,18 @@ class SourceFilter(object):
             trt = src_or_rec.tectonic_region_type
             try:
                 bbox = self.get_enlarged_box(src_or_rec, maxdist)
+            except FilteredAway:
+                return U32([])
             except BBoxError:  # do not filter
                 return self.sitecol.sids
             return self.sitecol.within_bbox(bbox)
 
     def _close_sids(self, lon, lat, dep, dist):
         if not hasattr(self, 'kdt'):
-            self.kdt = cKDTree(self.sitecol.xyz)
+            self.kdt = KDTree(self.sitecol.xyz)
         xyz = spherical_to_cartesian(lon, lat, dep)
         sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
-        sids.sort()
+        sids.sort()  # for cross-platform consistency
         return sids
 
     def filter(self, sources):
@@ -445,13 +474,14 @@ class SourceFilter(object):
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
 
-    def get_close(self, tors):
+    def get_close(self, secparams):
         """
-        :param tors: a structured array with fields tl0, tl1, tr0, tr1
-        :returns: an array with the number of close sites per bbox
+        :param secparams: a structured array with fields tl0, tl1, tr0, tr1
+        :returns: an array with the number of close sites per secparams
         """
         xyz = self.sitecol.xyz
-        tl0, tl1, tr0, tr1 = tors['tl0'], tors['tl1'], tors['tr0'], tors['tr1']
+        tl0, tl1, tr0, tr1 = (secparams['tl0'], secparams['tl1'],
+                              secparams['tr0'], secparams['tr1'])
         distl = distance.cdist(xyz, spherical_to_cartesian(tl0, tl1))
         distr = distance.cdist(xyz, spherical_to_cartesian(tr0, tr1))
         dists = numpy.min([distl, distr], axis=0)  # shape (N, S)

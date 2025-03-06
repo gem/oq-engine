@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<fragilityModel id="fm1" assetCategory="buildings" lossCategory="contents">
+
+  <description>cont ff | tax3 | imt1 | zero miniml</description>
+  <limitStates>ds1 ds2 ds3 ds4</limitStates>
+
+  <fragilityFunction id="tax1" format="continuous" shape="logncdf">
+    <imls imt="PGA" noDamageLimit="0.0" minIML="0.0" maxIML="5.0"/>
+    <params ls="ds1" mean="0.25" stddev="0.50"/>
+	<params ls="ds2" mean="0.50" stddev="0.90"/>
+	<params ls="ds3" mean="1.00" stddev="1.80"/>
+	<params ls="ds4" mean="2.00" stddev="3.10"/>
+  </fragilityFunction>
+
+  <fragilityFunction id="tax2" format="continuous" shape="logncdf">
+    <imls imt="PGA" noDamageLimit="0.0" minIML="0.0" maxIML="5.0"/>
+    <params ls="ds1" mean="0.50" stddev="0.40"/>
+	<params ls="ds2" mean="0.75" stddev="0.60"/>
+	<params ls="ds3" mean="1.25" stddev="1.00"/>
+	<params ls="ds4" mean="2.00" stddev="1.60"/>
+  </fragilityFunction>
+
+  <fragilityFunction id="tax3" format="continuous" shape="logncdf">
+    <imls imt="PGA" noDamageLimit="0.0" minIML="0.0" maxIML="5.0"/>
+    <params ls="ds1" mean="0.60" stddev="0.45"/>
+	<params ls="ds2" mean="0.90" stddev="0.75"/>
+	<params ls="ds3" mean="1.50" stddev="1.00"/>
+	<params ls="ds4" mean="2.50" stddev="1.75"/>
+  </fragilityFunction>
+
+</fragilityModel>
+
+</nrml>

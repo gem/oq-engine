@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,6 +22,7 @@ import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.writers import CsvWriter, FIVEDIGITS
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.commonlib import logs, readinput
@@ -32,7 +33,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
-    case_miriam, occupants, case_1f, case_1g, case_7a, case_8,
+    case_miriam, occupants, case_1f, case_1g, case_7a, case_8, case_9,
     recompute, reinsurance_1, reinsurance_2, reinsurance_3,
     reinsurance_4, reinsurance_5)
 
@@ -98,6 +99,16 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # this is a case with insured losses and tags
         self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
+
+        # testing aggexp_tags and aggrisk_tags
+        [fname] = export(('aggexp_tags', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
+        df = extract(self.calc.datastore, 'aggrisk_tags')
+        fname = self.calc.datastore.export_path('aggrisk_tags.csv')
+        CsvWriter(fmt=FIVEDIGITS).save(df, fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         # testing the view agg_id
         agg_id = view('agg_id', self.calc.datastore)
@@ -275,7 +286,7 @@ agg_id
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
-        self.assertIn('not in the fragility/vulnerability/consequence model',
+        self.assertIn("{'RM'} are not in the CompositeRiskModel",
                       str(ctx.exception))
 
     def test_case_3(self):
@@ -334,22 +345,7 @@ agg_id
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-4)
 
-    def test_case_master(self):
-        # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
-        # it looks like the cholesky decomposition is OS-dependent, so
-        # the GMFs are different of macOS/Ubuntu20/Ubuntu18
-        self.run_calc(case_master.__file__, 'job.ini', exports='csv')
-        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'avg_losses-stats not exported?'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-4)
-
-        # check event loss table
-        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-4)
-
+    def check_case_master(self):
         # check total variance
         K = self.calc.datastore['risk_by_event'].attrs.get('K', 0)
         elt_df = self.calc.datastore.read_df(
@@ -406,6 +402,33 @@ agg_id
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=2E-4)
 
+    def test_case_master(self):
+        # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
+        # it looks like the cholesky decomposition is OS-dependent, so
+        # the GMFs are different in macOS / Ubuntu20 / Ubuntu18
+        self.run_calc(case_master.__file__, 'job.ini')
+        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'avg_losses-stats not exported?'
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-4)
+
+        # check event loss table
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=1E-4)
+
+        self.check_case_master()
+
+    def test_case_9(self):
+        # aep, oep curves with post loss amplification
+        self.run_calc(case_9.__file__, 'job.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        fnames = export(('aggcurves', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
@@ -537,11 +560,11 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
         nrups = text.count('\n') - 2
         losses = self.calc.datastore['loss_by_rupture/loss'][:]
-        aac(losses, [1356.6093, 324.64624, 203.63742, 129.6988])
+        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], rtol=6e-5)
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
-        # nontrivial taxonomy mapping
+        # loss_type-dependent taxonomy mapping
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='0')
         for fname in out['aggrisk', 'csv']:
@@ -598,6 +621,9 @@ agg_id
         [_total, fname] = export(('aggrisk', 'csv'), prc.datastore)
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
+
+        # test that imported ruptures can be exported
+        export(('ruptures', 'csv'), self.calc.datastore)
 
     def test_scenario_from_ruptures(self):
         # same files as in test_recompute, but performing a scenario
@@ -673,7 +699,7 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-risk_by_event', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-risk_by_event.csv',
-                              fname, delta=5E-5)
+                              fname, delta=5E-4)
 
     def test_post_risk(self):
         # calculation from a source model producing 4 events

@@ -25,14 +25,6 @@ calc module
     :undoc-members:
     :show-inheritance:
 
-hazard_writers module
------------------------------------------
-
-.. automodule:: openquake.commonlib.hazard_writers
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 logs module
 -------------------------------
 

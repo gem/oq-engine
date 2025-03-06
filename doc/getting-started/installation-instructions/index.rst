@@ -3,53 +3,38 @@
 Installing the OpenQuake engine
 ===============================
 
-The OpenQuake Engine runs on Linux, macOS and Windows; on laptops, workstations, standalone servers and multi-node 
-clusters. Due to its large range of use cases it can be installed in several different ways.
+The OpenQuake Engine runs on Linux, macOS and Windows; on laptops,
+workstations, standalone servers and multi-node clusters. Due to its
+large range of use cases it can be installed in several different
+ways. The minimum hardware requirements are
 
-	Warning: If you already have an engine installation, before installing the new version you must uninstall the old one.
-
-Instructive YouTube video for the installation procedure:
-
-.. youtube:: J46boursIRc
-   :align: center
-
-.. _hardware-requirements:
-
-Hardware requirements
----------------------
-
-The minimum required to install the engine and run the demos is
-
-- 8 GB of RAM (16 GB on macOS Ventura)
+- 16 GB of RAM
 - 4 GB of free disk space
 
-To run any serious calculation (i.e. a model in GEM mosaic) you need at least 2 GB of RAM per thread for hazard 
-calculations and even more memory for risk calculations. For instance, on a recent i9 processor with 32 threads you 
-would need at least 64 GB of RAM.
+To run any serious calculation (i.e. a model in GEM mosaic) you need
+at least 2 GB of RAM per thread for hazard calculations and even more
+memory for risk calculations. For instance, on a recent i9 processor
+with 32 threads you would need at least 64 GB of RAM.
 
-Installing the Long Term Support (LTS) version
-----------------------------------------------
+If you want to use the latest feature of the engine you should install
+the latest available version, noting the there is a new version every 3-4
+months. If you want stability, you should install the Long Term
+Support version that changes only every two years.
 
-**On Windows**
+If you have a Windows machine and you are not interested
+in developing with the engine, the recommended approach is to use
+the Windows installer: :ref:`windows`.
 
-Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.7-1.exe . 
-Then follow the wizard on screen.
+If you have a Mac or Linux machine and you are not interested
+in developing with the engine, the recommended approach is to use
+the :doc:`universal installer <universal>` in ``user`` mode.
 
-	Warning: Administrator level access may be required.
+Users wanting to develop with the engine (for instance to implement
+new GMPES) must clone the engine reepository and
+use the :doc:`universal installer <universal>` in ``devel`` mode.
 
-**On MacOS or Linux**
-
-See instructions for the :doc:`universal installer <universal>` script, 
-and consider the specific LTS to be installed.
-
-Installing the latest version
------------------------------
-
-See instructions for the :doc:`universal installer <universal>` script. 
-This script works for Linux, macOS and Windows, on laptops, workstations, standalone servers and multi-node clusters.
-
-Changing the OpenQuake Engine version
--------------------------------------
+Changing the version
+--------------------
 
 To change the version of the engine, make sure to uninstall the current version, before installing a new version.
 See the corresponding chapters following the link below.
@@ -62,23 +47,23 @@ Other installation methods
 
 **Using ``pip``**
 
-The OpenQuake Engine is also available on `PyPI <https://pypi.python.org/pypi/openquake.engine>`_ and can be installed 
+The OpenQuake Engine is also available on `PyPI <https://pypi.python.org/pypi/openquake.engine>`_ and can be installed
 in any Python 3 environment via ``pip``::
 
 	```
-	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py310-linux64.txt openquake.engine
+	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-linux64.txt openquake.engine
 	```
 
-This works for Linux and Python 3.10. You can trivially adapt the command to other operating systems. For instance for Windows it would be::
+This works for Linux and Python 3.11. You can trivially adapt the command to other operating systems. For instance for Windows it would be::
 
 	```
-	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py310-win64.txt openquake.engine
+	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-win64.txt openquake.engine
 	```
 
 and for Mac, it would be::
 
 	```
-	$ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py310-macos.txt openquake.engine
+	$ pip install -r https://github.com/gem/oq-engine/raw/master/requirements-py311-macos.txt openquake.engine
 	```
 
 Cloud
@@ -89,7 +74,7 @@ A set of :doc:`Docker containers <docker>` for installing the engine in the clou
 Getting help
 ------------
 
-If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: 
+If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list:
 https://groups.google.com/g/openquake-users
 
 
@@ -99,11 +84,9 @@ https://groups.google.com/g/openquake-users
 
    universal
    windows
-   ubuntu
-   ubuntu-nightly
+   macos
    development
    cluster
-   rhel
    server
    slurm
    tools

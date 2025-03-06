@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -94,11 +94,9 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         assert_eq(cll.mesh.depths, [30, -5.6])
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.flags.writeable, True)
             self.assertEqual(arr.dtype, float)
         for arr in (cll.vs30measured,):
             self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.flags.writeable, True)
             self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
 

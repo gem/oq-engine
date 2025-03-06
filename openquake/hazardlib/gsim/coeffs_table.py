@@ -18,12 +18,14 @@
 
 import re
 import math
+import copy
+import toml
 import scipy
 import numpy as np
 from openquake.baselib.general import RecordBuilder
 from openquake.hazardlib.imt import from_string
 
-SA_LIKE_PREFIXES = ['SA', 'EA', 'FA', 'DR', 'Av']
+SA_LIKE_PREFIXES = ['SA', 'EA', 'FA', 'DR', 'Av', 'SD']
 
 
 class CoeffsTable(object):
@@ -142,10 +144,21 @@ class CoeffsTable(object):
         firstdic = ddic[next(iter(ddic))]
         self = object.__new__(cls)
         self.rb = RecordBuilder(**firstdic)
-        self._coeffs = {imt: self.rb(**dic) for imt, dic in ddic.items()}
+        self._coeffs = {}
+        for imt, dic in ddic.items():
+            if isinstance(imt, str):
+                imt = from_string(imt)
+            self._coeffs[imt] = self.rb(**dic) 
         self.logratio = logratio
         self.opt = opt
         return self
+
+    @classmethod
+    def fromtoml(cls, string):
+        """
+        Builds a CoeffsTable from a TOML string
+        """
+        return cls.fromdict(toml.loads(string))
 
     def __init__(self, table, **kwargs):
         self._coeffs = {}  # cache
@@ -156,12 +169,11 @@ class CoeffsTable(object):
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
         self.rb = self._setup_table_from_str(table, sa_damping)
         if self.opt == 1:
-            keys = list(self._coeffs)
-            num_coeff = len(self._coeffs[keys[0]])
-            self.cmtx = np.zeros((len(self._coeffs.keys()), num_coeff))
-            periods = np.array([imt.period for imt in keys])
+            imts = list(self._coeffs)
+            periods = np.array([imt.period for imt in imts])
             idxs = np.argsort(periods)
-            self.cmtx = np.array([self._coeffs[keys[i]].tolist() for i in idxs])
+            # regular array, if you want a composite one use .to_array()
+            self.cmtx = np.array([self._coeffs[imts[i]].tolist() for i in idxs])
             self.periods = periods[idxs]
 
     def _setup_table_from_str(self, table, sa_damping):
@@ -175,8 +187,9 @@ class CoeffsTable(object):
         dt = RecordBuilder(**{name: 0. for name in header[1:]})
         for line in lines:
             row = line.split()
-            imt_name_or_period = row[0] if row[0].startswith("AvgSA") else\
-                row[0].upper()
+            imt_name_or_period = (
+                row[0] if row[0].startswith("AvgSA") or
+                row[0].startswith("SDi") else row[0].upper())
             if imt_name_or_period == 'SA':  # protect against stupid mistakes
                 raise ValueError('specify period as float value '
                                  'to declare SA IMT')
@@ -205,7 +218,7 @@ class CoeffsTable(object):
             if re.search('^(SA|EAS|FAS|DRVT)', imt.string):
                 tmp = np.array(self._coeffs[imt])
                 coeffs.append([tmp[i] for i in coeff_list])
-                if re.search('^(SA|AvgSA)', imt.string):
+                if re.search('^(SA|AvgSA|SDi)', imt.string):
                     pof.append(imt.period)
                 elif re.search('^(EAS|FAS|DRVT)', imt.string):
                     pof.append(imt.frequency)
@@ -217,6 +230,9 @@ class CoeffsTable(object):
         pof = pof[idx]
         coeffs = coeffs[idx, :]
         return pof, coeffs
+
+    def __iter__(self):
+        return iter(self._coeffs)
 
     def __getitem__(self, imt):
         """
@@ -274,6 +290,80 @@ class CoeffsTable(object):
             vals = fit(np.log10(imt.period))
             self._coeffs[imt] = c = self.rb(*vals)
         return c
+
+    def update_coeff(self, coeff_name, value_by_imt):
+        """
+        Update a coefficient in the table.
+
+        :param coeff_name: name of the coefficient
+        :param value_by_imt: dictionary imt -> coeff_value
+        """
+        for imt, coeff_value in value_by_imt.items():
+            self._coeffs[imt][coeff_name] = coeff_value
+
+    def __or__(self, other):
+        """
+        :param other: a subtable of self
+        :returns: a new table obtained by overriding self with other
+        """
+        for imt in other._coeffs:
+            assert imt in self._coeffs, imt
+        new = copy.deepcopy(self)
+        for name in other.rb.names:
+            by_imt = {imt: rec[name] for imt, rec in other._coeffs.items()}
+            new.update_coeff(name, by_imt)
+        return new
+
+    def __ior__(self, other):
+        """
+        :param other: a subtable of self
+        :returns: a new table obtained by overriding self with other
+        """
+        return self | other
+
+    def assert_equal(self, other):
+        """
+        Compare two tables of coefficients
+        """
+        assert sorted(self) == sorted(other), (sorted(self), sorted(other))
+        for imt in self:
+            rec0 = self[imt]
+            rec1 = other[imt]
+            names = rec0.dtype.names
+            assert rec1.dtype.names == names, (rec1.dtype.names, names)
+            for name in names:
+                assert rec0[name] == rec1[name], (name, rec0[name], rec1[name])
+
+    def get_diffs(self, other):
+        """
+        :returns: a list of tuples [(imt, field, value_self, value_other), ...]
+        """
+        assert sorted(self) == sorted(other), (sorted(self), sorted(other))
+        diffs = []
+        for imt in self:
+            rec0 = self[imt]
+            rec1 = other[imt]
+            names = rec0.dtype.names
+            assert rec1.dtype.names == names, (rec1.dtype.names, names)
+            for name in names:
+                if rec0[name] != rec1[name]:
+                    diffs.append((imt.string, name, rec0[name], rec1[name]))
+        return diffs
+
+    def to_array(self):
+        """
+        :returns: a composite array with the coefficient names as columns
+        """
+        return np.array([self[imt] for imt in self._coeffs])
+
+    def to_dict(self):
+        """
+        :returns: a double dictionary imt -> coeff -> value
+        """
+        ddic = {}
+        for imt, rec in self._coeffs.items():
+            ddic[imt.string] = dict(zip(rec.dtype.names, map(float, rec)))
+        return ddic
 
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, ' '.join(self.rb.names))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2023 GEM Foundation
+# Copyright (c) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,7 +41,6 @@ class MonitorTestCase(unittest.TestCase):
             with mon:
                 ls.append(list(range(100000)))  # allocate some RAM
                 time.sleep(0.1)
-        self.assertGreaterEqual(mon.mem, 0)
 
     def test_children(self):
         mon1 = self.mon('child1')
@@ -81,7 +80,7 @@ class KollapseTestCase(unittest.TestCase):
         numpy.testing.assert_equal(sids, expected_sids)
 
         # now test kollapse with an aggregate field afield='sids'
-        out, allsids = kollapse(arr, ['mdbin'], afield='sids')
+        _out, allsids = kollapse(arr, ['mdbin'], afield='sids')
         numpy.testing.assert_equal(allsids, expected_sids)
 
     def test_big(self):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import platform
 import os
+import sys
+import platform
 import unittest.mock as mock
 import time
 import shutil
@@ -25,8 +26,17 @@ import unittest
 import itertools
 import tempfile
 import numpy
-import sys
+import pandas
+
 from openquake.baselib import parallel, general, hdf5, performance
+
+
+def process_df(df, monitor):
+    acc = dict(mag=[], dist=[])
+    for (mag, dist) in zip(df.mag, df.dist):
+        acc['mag'].append(mag)
+        acc['dist'].append(dist * 2)
+    return pandas.DataFrame(acc)
 
 
 def get_length(data, monitor):
@@ -141,6 +151,14 @@ class StarmapTestCase(unittest.TestCase):
         smap = parallel.Starmap(countletters, data)
         self.assertEqual(smap.reduce(), {'n': 19})
 
+    def test_apply_to_dataframe(self):
+        orig_df = pandas.DataFrame(dict(mag=[5.0, 5.1, 5.2, 5.3],
+                                        dist=[100., 110., 120., 99.]))
+        smap = parallel.Starmap.apply(process_df, (orig_df,))
+        out_df = pandas.concat(smap).sort_values('mag')
+        self.assertEqual(list(out_df.mag), [5.0, 5.1, 5.2, 5.3])
+        self.assertEqual(list(out_df.dist), [200.0, 220.0, 240.0, 198.0])
+
     @classmethod
     def tearDownClass(cls):
         parallel.Starmap.shutdown()
@@ -234,3 +252,28 @@ class SplitTaskTestCase(unittest.TestCase):
         self.assertAlmostEqual(res, 48.6718458266)
         """
         shutil.rmtree(tmpdir)
+
+
+def update(s_array, index, value, monitor):
+    """
+    Update a shared array
+    """
+    with s_array as arr:
+        arr[index] = value
+
+
+class SharedArrayTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.s_array = parallel.SharedArray((2, 2), float, 0.)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.s_array.unlink()
+
+    def test(self):
+        parallel.Starmap(update, [(self.s_array, index, value)
+                                  for index, value in zip([0, 1], [.1, .2])]
+        ).reduce()
+        with self.s_array as arr:
+            numpy.testing.assert_allclose(arr, [[.1, .1], [.2, .2]])

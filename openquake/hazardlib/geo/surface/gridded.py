@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -165,9 +165,8 @@ class GriddedSurface(BaseSurface):
             return self.strike
 
         # Create a projection centered in the center of the cloud of points
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(
-                self.mesh.lons.flatten(), self.mesh.lats.flatten()))
+        proj = geo_utils.OrthographicProjection.from_(
+            self.mesh.lons.flatten(), self.mesh.lats.flatten())
 
         # Project the coordinates
         lons, lats = self.mesh.lons.flatten(), self.mesh.lats.flatten()
@@ -177,7 +176,7 @@ class GriddedSurface(BaseSurface):
         coo[:, 1] = tmp[:, 1]
         coo[:, 2] = self.mesh.depths.flatten()
         coo[:, 2] *= -1
-        pnt0, vers = geo_utils.plane_fit(coo)
+        _pnt0, vers = geo_utils.plane_fit(coo)
 
         # Find the angle between the surface projection of the unit vector and
         # the north direction

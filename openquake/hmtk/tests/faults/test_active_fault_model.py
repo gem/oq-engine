@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -185,7 +185,9 @@ class TestmtkActiveFaultModel(unittest.TestCase):
         )
         fault2.generate_config_set(config)
         self.model.faults = [fault1, fault2]
+        self.more_tests()
 
+    def more_tests(self):
         # Generate source model
         self.model.build_fault_model()
         self.assertEqual(len(self.model.source_model.sources), 4)
@@ -250,7 +252,7 @@ class TestmtkActiveFaultModelCollapse(unittest.TestCase):
         )
         mesh_spacing = 1.0
         reader = FaultYmltoSource(input_file)
-        fault_model, tectonic_region = reader.read_file(mesh_spacing)
+        fault_model, _tectonic_region = reader.read_file(mesh_spacing)
         fault_model.build_fault_model(
             collapse=True, bin_width=0.05, rendered_msr=WC1994()
         )

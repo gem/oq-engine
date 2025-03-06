@@ -142,7 +142,8 @@ the functionality only works for hazard calculations
 but it is expected to grow in the future.
 
 14. Several other improvements have been made to oq-lite, too many to list
-them all; please see the [changelog](https://raw.githubusercontent.com/gem/oq-risklib/engine-1.5/debian/changelog) for the complete list.
+them all; please see the [changelog](https://github.com/gem/oq-risklib/raw/engine-1.5/debian/changelog)
+for the complete list.
 
 15. We added a functionality `write_source_model` to serialize sources in XML.
 Also we improved the reading of XML files and the error message in case of
@@ -153,8 +154,8 @@ to install.
 16. We added a check on the site parameters distance. If a site model
 file is provided in a hazard calculation, and if no site parameters are
 available within a radius of 5 km for a particular site, a
-warning is raised. The goal is to signal the user if she used an
-incorrect site model file with respect to the sites she is using. The
+warning is raised. The goal is to signal the user if they used an
+incorrect site model file with respect to the sites they are using. The
 calculation still runs and complete, since sometimes you may not have
 site parameters data close enough to the sites of interests.
 

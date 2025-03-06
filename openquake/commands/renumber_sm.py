@@ -2,8 +2,7 @@ import logging
 import operator
 import collections
 from openquake.baselib import parallel, general
-from openquake.commonlib import logictree
-from openquake.hazardlib import nrml
+from openquake.hazardlib import nrml, logictree
 
 
 Source = collections.namedtuple('Source', 'node value')

@@ -1,8 +1,8 @@
 Demos and Tutorials
 ===================
 
-Demonstrative Examples for Hazard Module
-----------------------------------------
+Demos for the Hazard Module
+---------------------------
 
 A number of hazard calculation demos are provided with the OpenQuake engine installation, showing different examples of 
 input and configuration files, for different use cases.
@@ -15,22 +15,23 @@ This is the list of demos which illustrate how to use the OpenQuake engine for v
 - CharacteristicFaultSourceCase3ClassicalPSHA
 - ComplexFaultSourceClassicalPSHA
 - Disaggregation
-- **EventBasedLiquefaction**
+- EventBasedLiquefaction
 - EventBasedPSHA
-- **GMPETablePSHA**
-- **LatinSamplingClassicalPSHA**
+- GMPETablePSHA
+- LatinSamplingClassicalPSHA
 - LogicTreeCase1ClassicalPSHA
 - LogicTreeCase2ClassicalPSHA
 - LogicTreeCase3ClassicalPSHA
-- **MultiPointClassicalPSHA**
-- **NonparametricSourcesClassicalPSHA**
+- MultiPointClassicalPSHA
+- NonparametricSourcesClassicalPSHA
 - PointSourceClassicalPSHA
-- **ScenarioCase1**
-- **ScenarioCase2**
-- **ScenarioLiquefaction**
+- ScenarioCase1
+- ScenarioCase2
+- ScenarioCase3
+- ScenarioLiquefaction
 - SimpleFaultSourceClassicalPSHA
 
-The documentation for the **bold** analysis cases is a work in progress. However, the demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/hazard>`__.
+The demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/hazard>`__. Feel free to run such examples and to play with the inputs and the outputs.
 
 ********************
 Classical PSHA Demos
@@ -552,8 +553,8 @@ corresponding hazard maps for 0.1 probability are also calculated (``hazard_maps
 
   Ground motion fields (PGA) with spatial correlation
 
-Demonstrative Examples for Risk Module
---------------------------------------
+Demos for the Risk Module
+-------------------------
 
 The following sections describe the set of demos that have been compiled to demonstrate some of the features and usage of 
 the risk calculators of the OpenQuake engine. These demos can be found in a public repository on GitHub at the following 

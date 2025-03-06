@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,12 +17,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import shutil
 import numpy
 import pandas
-from openquake.hazardlib import valid, nrml, sourceconverter, sourcewriter
+from openquake.hazardlib import (
+    valid, nrml, sourceconverter, sourcewriter, logictree)
 from openquake.baselib import general
-from openquake.commonlib import logictree
 
 
 def save_bak(fname, node, num_nodes, total):
@@ -79,7 +80,14 @@ def main(fname, reduction_factor: valid.probability,
     case, it is also able to reduce .csv files by sampling the lines.
     This is a debugging utility to reduce large computations to small ones.
     """
-    if fname.endswith('.csv'):
+    if fname.endswith('.json'):  # used to sample the USGS stations
+        with open(fname) as f:
+            data = json.load(f)
+        data['features'] = general.random_filter(data['features'], reduction_factor)
+        with open(fname, 'w') as f:
+            json.dump(data, f)
+        return
+    elif fname.endswith('.csv'):
         df = pandas.read_csv(fname, dtype=str)
         idxs = general.random_filter(numpy.arange(len(df)), reduction_factor)
         shutil.copy(fname, fname + '.bak')
@@ -95,6 +103,11 @@ def main(fname, reduction_factor: valid.probability,
         arr = numpy.array(general.random_filter(array, reduction_factor))
         numpy.save(fname, arr)
         print('Extracted %d rows out of %d' % (len(arr), len(array)))
+        return
+    elif fname.endswith('_test.py'):
+        # tests are not installed, so this import cannot stay at top-level
+        from openquake.hazardlib.tests.gsim.utils import reduce_gsim_test
+        print(reduce_gsim_test(fname, reduction_factor))
         return
     node = nrml.read(fname)
     model = node[0]

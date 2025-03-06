@@ -1,12 +1,12 @@
-#,,"generated_by='OpenQuake engine 3.17.0-gitc157a3bc4c', start_date='2023-04-24T09:32:02', checksum=1392157118"
-site_id,event_id,gmv_MMI
-0,0,8.93593E+00
-0,1,9.10102E+00
-0,2,9.45290E+00
-0,3,9.35729E+00
-0,4,9.07065E+00
-0,5,9.41431E+00
-0,6,9.17935E+00
-0,7,9.09084E+00
-0,8,9.50116E+00
-0,9,8.92327E+00
+#,,"generated_by='OpenQuake engine 3.20.0-git6a5db97d59', start_date='2024-06-03T09:31:14', checksum=1392157118"
+event_id,gmv_MMI,custom_site_id
+0,8.93593E+00,7zzzzzzz
+1,9.10102E+00,7zzzzzzz
+2,9.45290E+00,7zzzzzzz
+3,9.35729E+00,7zzzzzzz
+4,9.07065E+00,7zzzzzzz
+5,9.41431E+00,7zzzzzzz
+6,9.17935E+00,7zzzzzzz
+7,9.09084E+00,7zzzzzzz
+8,9.50116E+00,7zzzzzzz
+9,8.92327E+00,7zzzzzzz

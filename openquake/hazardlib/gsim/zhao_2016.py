@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,10 +29,10 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 import copy
 import numpy as np
 import pandas as pd
-import fiona
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo import Point
@@ -196,7 +196,6 @@ def get_sof_term_asc(trt, C, ctx):
     return res
 
 
-
 @get_sof_term.add(const.TRT.UPPER_MANTLE)
 def get_sof_term_um(trt, C, ctx):
     """
@@ -285,7 +284,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store=None,
     idx = x_ij <= 30.0
     if np.any(idx):
         g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
-                                      x_ij[idx] + gn_exp)    
+                                      x_ij[idx] + gn_exp)
     # equation 5
     c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     # equation 4
@@ -344,8 +343,8 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store=None,
     """
     Returns the distance scaling term in equation 2a
 
-    Non-ergodic path effects are applied here if specified within an implementation
-    of :class:`ZhaoEtAl2016SSlabPErg`. 
+    Non-ergodic path effects are applied here if specified within an
+    implementation of :class:`ZhaoEtAl2016SSlabPErg`.
     """
     cctx = copy.copy(ctx)
     # Check if need to apply non-ergodic path effects
@@ -520,7 +519,7 @@ def get_volc_zones(volc_polygons):
         for i, f in enumerate(inp):
             
             # Get zone_id
-            zone_id[i] = pd.Series(f['properties'])[0]
+            zone_id[i] = pd.Series(f['properties']).iloc[0]
             
             # Per zone get lat and lon of each polygon vertices
             for c, coo in enumerate(f['geometry']['coordinates'][0]):
@@ -592,9 +591,7 @@ class ZhaoEtAl2016Asc(GMPE):
     #: Required distance measure is Rrup and Rvolc
     REQUIRES_DISTANCES = {'rrup', 'rvolc'}
 
-    def __init__(self, volc_arc_file=None, **kwargs):
-        super().__init__(volc_arc_file=volc_arc_file, **kwargs)
-        
+    def __init__(self, volc_arc_file=None):
         if volc_arc_file is not None:
             with open(volc_arc_file, 'rb') as fle:
                 self.volc_arc_str = fle.read().decode('utf-8')
@@ -615,7 +612,7 @@ class ZhaoEtAl2016Asc(GMPE):
             C = self.COEFFS[imt]
             C_SITE = self.COEFFS_SITE[imt]
             trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
-            s_c, idx = _get_site_classification(ctx.vs30)
+            _s_c, idx = _get_site_classification(ctx.vs30)
             volc_arc_str = self.volc_arc_str
             pgn_store = self.pgn_store
             pgn_per_zone = self.pgn_per_zone
@@ -948,7 +945,7 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     # Additional rupture parameters required for ray tracing
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_lat', 'hypo_lon', 'hypo_depth',
                                    'ztor', 'rake', 'strike', 'dip'}
-    
+
     # Requires site coordinates for ray tracing
     REQUIRES_SITES_PARAMETERS = {'vs30', 'lon', 'lat'}
 
