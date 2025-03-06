@@ -407,7 +407,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         # save 'source_groups'
         if self.sitecol is not None:
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-                store_tiles(self.datastore, self.csm, self.sitecol, self.cmakers))
+                store_tiles(self.datastore, self.csm,
+                            self.sitecol, self.cmakers))
 
         # save gsims
         toml = []

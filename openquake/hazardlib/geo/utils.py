@@ -487,7 +487,7 @@ def get_bboxes(sources):
 def get_bboxes_distances(site, bboxes):
     """
     :param site: a Site instance
-    :param bboxes: an array of shape (N, 4, 3)
+    :param bboxes: a list of sources or an array of shape (N, 4, 3)
     :returns: an array of lenght N
  
     >>> from openquake.hazardlib.site import Site
@@ -498,7 +498,10 @@ def get_bboxes_distances(site, bboxes):
     >>> get_bboxes_distances(s, bboxes)
     array([566.6052], dtype=float32)
     """
-    xyz = spherical_to_cartesian(site.location.x, site.location.y).reshape(1, 3)
+    xyz = spherical_to_cartesian(
+        site.location.x, site.location.y).reshape(1, 3)
+    if not hasattr(bboxes, 'shape'):  # assume sources
+        bboxes = get_bboxes(bboxes)
     dst = numpy.zeros((len(bboxes), 4), F32)
     for i in range(4):
         dst[:, i] = cdist(xyz, bboxes[:, i])
