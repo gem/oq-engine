@@ -201,7 +201,7 @@ def get_flt(hparams, branchID=""):
     inputs = hparams["inputs"]
     if "source_model_logic_tree" not in hparams["inputs"]:
         smlt = logictree.SourceModelLogicTree.trivial(
-            inputs.get("source_model", "fake.xml")
+            inputs.get("source_model", "_fake.xml")
         )
     else:
         smlt = get_smlt(hparams, branchID)
