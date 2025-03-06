@@ -47,6 +47,7 @@ class AristotleParam:
     local_timestamp: str = None
     rupture_file: str = None
     station_data_file: str = None
+    mmi_file: str = None
     maximum_distance_stations: float = None
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
@@ -61,6 +62,8 @@ class AristotleParam:
             inputs['rupture_model'] = self.rupture_file
         if self.station_data_file:
             inputs['station_data'] = self.station_data_file
+        if self.mmi_file:
+            inputs['mmi'] = self.mmi_file
         if not self.mosaic_model:
             self.mosaic_model = mosaic_models[0]
             if len(mosaic_models) > 1:
@@ -189,7 +192,6 @@ IMPACT_FORM_DEFAULTS = {
     'msr': 'WC1994',
     'rupture_from_usgs_loaded': '',
     'rupture_file_input': '',
-    'require_dip_strike': '',
     'station_data_file_input': '',
     'station_data_file_loaded': '',
 }
@@ -338,6 +340,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
+        params['mmi_file'] = rupdic.get('mmi_file')
         with monitor('get_oqparams'):
             ap = AristotleParam(**params)
             try:
