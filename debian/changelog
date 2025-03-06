@@ -4,6 +4,7 @@
 
   [Marco Pagani, Valeria Cascone]
   * Added an get_width and get_length methods to Strasser et al. (2010) MSR
+  * Fixed a bug in the Thingbaijam et al. (2017) MSR
 
   [Michele Simionato]
   * Added an input `mmi_shapes_file` for use in OQ Impact
