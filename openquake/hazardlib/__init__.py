@@ -189,13 +189,8 @@ def get_flt(hparams, branchID=''):
     """
     inputs = hparams['inputs']
     if 'source_model_logic_tree' not in hparams['inputs']:
-        smlt = logictree.SourceModelLogicTree.fake()
-        if 'source_model' in inputs:
-            smpath = inputs['source_model']
-            smlt.basepath = os.path.dirname(smpath)
-            smlt.collect_source_model_data('b0', smpath)  # populate trts
-        else:  # rupture model
-            smlt.tectonic_region_types = ['*']
+        smlt = logictree.SourceModelLogicTree.trivial(
+            inputs.get('source_model', 'fake.xml'))
     else:
         smlt = get_smlt(hparams, branchID)
     if 'gsim' in hparams:
