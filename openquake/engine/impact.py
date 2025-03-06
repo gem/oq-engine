@@ -64,7 +64,7 @@ def main_cmd(usgs_id, rupture_file=None,
              ses_seed='42', local_timestamp='',
              exposure_hdf5=None, station_data_file=None,
              maximum_distance_stations='',
-             msr='', approach='use_shakemap_from_usgs',
+             msr='WC1994', approach='use_shakemap_from_usgs',
              loglevel='warn',
              userlevel=2):
     """
@@ -73,7 +73,8 @@ def main_cmd(usgs_id, rupture_file=None,
     # NB: ugly hack to pass exposure_hdf5 to impact_validate
     if exposure_hdf5 is None:
         assert config.directory.mosaic_dir
-        exposure_hdf5 = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
+        exposure_hdf5 = os.path.join(config.directory.mosaic_dir,
+                                     'exposure.hdf5')
     AristotleParam.exposure_hdf5 = exposure_hdf5
 
     loc = locals().copy()

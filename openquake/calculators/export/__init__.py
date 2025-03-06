@@ -54,6 +54,7 @@ DISPLAY_NAME = {
     'cs-stats': 'Mean Conditional Spectra',
     'median_spectra': 'Median Spectra per Site and PoE',
     'median_spectrum_disagg': 'Median Spectrum Disaggregation',
+    'mmi_tags': 'Exposure grouped by Admin1 and MMI',
     'reinsurance-avg_policy': 'Average Reinsurance By Policy',
     'reinsurance-avg_portfolio': 'Average Reinsurance',
     'reinsurance-risk_by_event': 'Reinsurance By Event',

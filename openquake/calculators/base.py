@@ -732,7 +732,7 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Computing MMI-aggregated values')
                 if mmi_values := self.assetcol.get_mmi_values(
                         oq.aggregate_by, oq.inputs['mmi']):
-                    self.datastore['mmi_values'] = mmi_values
+                    self.datastore['mmi_tags'] = mmi_values
 
     def pre_execute_from_parent(self):
         """
@@ -1750,6 +1750,8 @@ def expose_outputs(dstore, owner=USER, status='complete'):
     if len(rlzs) > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5
+    if 'mmi_tags' in hdf5:
+        dskeys.add('mmi_tags')
     if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
         if oq.hazard_stats() or oq.individual_rlzs or len(rlzs) == 1:
             dskeys.add('hcurves')
