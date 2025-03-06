@@ -425,8 +425,10 @@ class SourceModelLogicTree(object):
         self.basepath = os.path.dirname(source_model_file)
         self.source_id = source_id
         self.source_data = []
-        self.tectonic_region_types = set()
-        if source_model_file != "_fake.xml":
+        if source_model_file == "_fake.xml":
+            self.tectonic_region_types = {"*"}
+        else:
+            self.tectonic_region_types = set()
             self.collect_source_model_data("br0", source_model_file)
         self.source_data = numpy.array(self.source_data, source_dt)
         self.info = Info([source_model_file], [], collections.defaultdict(list))
