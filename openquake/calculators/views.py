@@ -1603,6 +1603,7 @@ def view_relevant_sources(token, dstore):
         return aw.array[rates > .1 * rates[0]]
     else:
         m = list(oq.imtls).index(imt)
+        assert list(oq.hazard_stats())[0] == 'mean', oq.hazard_stats()
         iml = dstore['hmaps-stats'][0, 0, m, 0]  # the first site and poe
         aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
         rates = aw.array['rate']  # for each source in decreasing order
