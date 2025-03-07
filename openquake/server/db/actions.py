@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2023 GEM Foundation
+# Copyright (C) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 import os
 import getpass
 import operator
-from datetime import datetime
+from datetime import datetime, timezone
 
 from openquake.baselib import general
 from openquake.hazardlib import valid
@@ -28,6 +28,7 @@ from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
 from openquake.calculators.export import DISPLAY_NAME
 
+UTC = timezone.utc
 JOB_TYPE = '''CASE
 WHEN calculation_mode LIKE '%risk'
 OR calculation_mode LIKE '%bcr'
@@ -293,7 +294,7 @@ def finish(db, job_id, status):
         a string such as 'successful' or 'failed'
     """
     db('UPDATE job SET ?D WHERE id=?x',
-       dict(is_running=False, status=status, stop_time=datetime.utcnow()),
+       dict(is_running=False, status=status, stop_time=datetime.now(UTC)),
        job_id)
 
 

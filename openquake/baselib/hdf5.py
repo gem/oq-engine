@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -488,7 +488,7 @@ class File(h5py.File):
                 # for an exposure with more than 65536 assets
                 if isinstance(k, tuple):  # multikey
                     k = '-'.join(k)
-                key = '%s/%s' % (path, quote_plus(k))
+                key = '%s/%s' % (path, k)
                 self[key] = v
             if isinstance(obj, Group):
                 self.save_attrs(

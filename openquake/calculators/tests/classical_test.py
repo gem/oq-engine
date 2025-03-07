@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,8 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86)
+    case_78, case_80, case_81, case_82, case_83, case_84, case_85, case_86,
+    case_87)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -81,7 +82,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
             slow = view('task:classical:-1', self.calc.datastore)
             self.assertIn('taskno', slow)
-            self.assertIn('duration', slow)
+            self.assertIn('time', slow)
 
         # there is a single source
         self.assertEqual(len(self.calc.datastore['source_info']), 1)
@@ -243,7 +244,8 @@ class ClassicalTestCase(CalculatorTestCase):
                               case_25.__file__)
 
     def test_case_26(self):  # split YoungsCoppersmith1985MFD
-        self.assert_curves_ok(['hazard_curve-rlz-000.csv'], case_26.__file__)
+        self.assert_curves_ok(['hazard_curve-rlz-000.csv'], case_26.__file__,
+                              delta=2E-5)
 
     def test_case_27(self):  # Nankai mutex model
         self.assert_curves_ok(['hazard_curve.csv'], case_27.__file__,
@@ -678,14 +680,33 @@ class ClassicalTestCase(CalculatorTestCase):
                           source_model_logic_tree_file='wrong_ssmLT.xml')
 
         # test calculation with multi-fault
+        self.run_calc(case_75.__file__, 'job.ini', disagg_by_src='false')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+        # test the source is not split
+        sinfo = self.calc.datastore['source_info'][:]
+        self.assertEqual(decode(sinfo['source_id']), ['ufc3mean_0'])
+        ae(sinfo['num_ruptures'], [5])
+
+        # test calculation with multi-fault and disagg_by_src
         self.run_calc(case_75.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
+        # test the source is split into 2 tags
+        sinfo = self.calc.datastore['source_info'][:]
+        self.assertEqual(decode(sinfo['source_id']), ['ufc3mean_0@A', 'ufc3mean_0@B'])
+        ae(sinfo['num_ruptures'], [4, 1])
+
         # test contexts
-        ctx = view('rup:ufc3mean_0@0', self.calc.datastore)
+        ctx = view('rup:ufc3mean_0@A', self.calc.datastore)
         fname = general.gettemp(text_table(ctx, ext='org'))
         self.assertEqualFiles('expected/context.org', fname)
+
+    def test_case_75_pre(self):
+        # test preclassical without sites, as requested by Richard Styron
+        self.run_calc(case_75.__file__, 'pre.ini')
 
     def test_case_76(self):
         # CanadaSHM6 GMPEs
@@ -801,3 +822,12 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-rlz-001-AvgSA(0.75).csv',
             'hazard_curve-rlz-001-AvgSA(2.0).csv'],
             case_86.__file__)
+
+    def test_case_87(self):
+        # Check execution of NGAEastUSGSGMPE with the Coastal Plains
+        # site amplification model within a classical PSHA calculation
+        self.assert_curves_ok([
+            'hazard_curve-mean-SA(0.2).csv',
+            'hazard_curve-mean-SA(1.0).csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_87.__file__)

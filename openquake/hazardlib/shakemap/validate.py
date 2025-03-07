@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,12 +21,14 @@ import logging
 from dataclasses import dataclass
 import numpy
 
-from openquake.baselib import config, hdf5, performance
+from openquake.baselib import config, general, hdf5, performance
 from openquake.hazardlib import valid
 from openquake.commonlib import readinput
 from openquake.commonlib.calc import get_close_mosaic_models
 from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
+from openquake.hazardlib.geo.utils import SiteAssociationError
+from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -45,9 +47,10 @@ class AristotleParam:
     local_timestamp: str = None
     rupture_file: str = None
     station_data_file: str = None
+    mmi_file: str = None
     maximum_distance_stations: float = None
 
-    def get_oqparams(self, mosaic_models, trts):
+    def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
         :returns: job_ini dictionary
         """
@@ -55,12 +58,12 @@ class AristotleParam:
             self.exposure_hdf5 = os.path.join(MOSAIC_DIR, 'exposure.hdf5')
         inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
         rupdic = self.rupture_dict
-        if 'shakemap_array' in rupdic:
-            del rupdic['shakemap_array']
         if self.rupture_file:
             inputs['rupture_model'] = self.rupture_file
         if self.station_data_file:
             inputs['station_data'] = self.station_data_file
+        if self.mmi_file:
+            inputs['mmi'] = self.mmi_file
         if not self.mosaic_model:
             self.mosaic_model = mosaic_models[0]
             if len(mosaic_models) > 1:
@@ -69,6 +72,7 @@ class AristotleParam:
         if not self.trt:
             # NOTE: using the first tectonic region type
             self.trt = next(iter(trts[self.mosaic_model]))
+        shakemap_array = rupdic.pop('shakemap_array', ())
         params = dict(
             calculation_mode='scenario_risk',
             rupture_dict=str(rupdic),
@@ -81,6 +85,11 @@ class AristotleParam:
             asset_hazard_distance=str(self.asset_hazard_distance),
             ses_seed=str(self.ses_seed),
             inputs=inputs)
+        if use_shakemap:
+            fname = general.gettemp(suffix='.npy')
+            numpy.save(fname, shakemap_array)
+            params['shakemap_uri'] = str(dict(kind='file_npy', fname=fname))
+            params['gsim'] = '[FromFile]'
         if self.local_timestamp is not None:
             params['local_timestamp'] = self.local_timestamp
         if self.maximum_distance_stations is not None:
@@ -101,7 +110,7 @@ class AristotleParam:
         return params
 
 
-ARISTOTLE_FORM_LABELS = {
+IMPACT_FORM_LABELS = {
     'usgs_id': 'Rupture identifier',
     'rupture_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
@@ -110,6 +119,7 @@ ARISTOTLE_FORM_LABELS = {
     'lat': 'Latitude (degrees)',
     'dep': 'Depth (km)',
     'mag': 'Magnitude (Mw)',
+    'aspect_ratio': 'Aspect ratio',
     'rake': 'Rake (degrees)',
     'local_timestamp': 'Local timestamp of the event',
     'time_event': 'Time of the event',
@@ -125,9 +135,11 @@ ARISTOTLE_FORM_LABELS = {
     'station_data_file_from_usgs': 'Station data from USGS',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'Maximum distance of stations (km)',
+    'nodal_plane': 'Nodal plane',
+    'msr': 'Magnitude scaling relationship',
 }
 
-ARISTOTLE_FORM_PLACEHOLDERS = {
+IMPACT_FORM_PLACEHOLDERS = {
     'usgs_id': 'USGS ID or custom',
     'rupture_from_usgs': '',
     'rupture_file': 'Rupture model XML',
@@ -135,6 +147,7 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'lat': '-90 ≤ float ≤ 90',
     'dep': 'float ≥ 0',
     'mag': 'float ≥ 0',
+    'aspect_ratio': 'float ≥ 0',
     'rake': '-180 ≤ float ≤ 180',
     'local_timestamp': '',
     'time_event': 'day|night|transit',
@@ -150,14 +163,56 @@ ARISTOTLE_FORM_PLACEHOLDERS = {
     'station_data_file_from_usgs': '',
     'station_data_file': 'Station data CSV',
     'maximum_distance_stations': 'float ≥ 0',
+    'nodal_plane': '',
+    'msr': '',
 }
 
+IMPACT_FORM_DEFAULTS = {
+    'usgs_id': '',
+    'rupture_from_usgs': '',
+    'rupture_file': '',
+    'lon': '',
+    'lat': '',
+    'dep': '',
+    'mag': '',
+    'aspect_ratio': '2',
+    'rake': '',
+    'local_timestamp': '',
+    'time_event': 'day',
+    'dip': '90',
+    'strike': '0',
+    'maximum_distance': '200',
+    'truncation_level': '3',
+    'number_of_ground_motion_fields': '100',
+    'asset_hazard_distance': '15',
+    'ses_seed': '42',
+    'station_data_file_from_usgs': '',
+    'station_data_file': '',
+    'maximum_distance_stations': '',
+    'msr': 'WC1994',
+    'rupture_from_usgs_loaded': '',
+    'rupture_file_input': '',
+    'station_data_file_input': '',
+    'station_data_file_loaded': '',
+}
+
+
+msr_choices = [msr.__class__.__name__ for msr in get_available_magnitude_scalerel()]
+
 validators = {
+    'approach': valid.Choice('use_shakemap_from_usgs',
+                             'use_pnt_rup_from_usgs',
+                             'build_rup_from_usgs',
+                             'use_finite_rup_from_usgs',
+                             'provide_rup',
+                             'provide_rup_params'),
     'usgs_id': valid.simple_id,
     'lon': valid.longitude,
     'lat': valid.latitude,
     'dep': valid.positivefloat,
     'mag': valid.positivefloat,
+    'msr': valid.Choice(*msr_choices),
+    'aspect_ratio': valid.positivefloat,
     'rake': valid.rake_range,
     'dip': valid.dip_range,
     'strike': valid.strike_range,
@@ -179,23 +234,23 @@ def _validate(POST):
     validation_errs = {}
     invalid_inputs = []
     params = {}
-    dic = dict(usgs_id=None, lon=None, lat=None, dep=None,
-               mag=None, rake=None, dip=None, strike=None)
+    dic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
+               mag=None, msr=None, aspect_ratio=None, rake=None, dip=None, strike=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
         try:
             value = validation_func(POST.get(field))
         except Exception as exc:
-            blankable = ['dip', 'strike',
-                         'maximum_distance_stations', 'local_timestamp']
+            blankable = ['dip', 'strike', 'maximum_distance_stations',
+                         'local_timestamp']
             if field in blankable and POST.get(field) == '':
                 if field in dic:
                     dic[field] = None
                 else:
                     params[field] = None
                 continue
-            validation_errs[ARISTOTLE_FORM_LABELS[field]] = str(exc)
+            validation_errs[IMPACT_FORM_LABELS[field]] = str(exc)
             invalid_inputs.append(field)
             continue
         if field in dic:
@@ -239,27 +294,34 @@ def get_tmap_keys(exposure_hdf5, countries):
     return keys
 
 
-def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
-                       monitor=performance.Monitor()):
+def impact_validate(POST, user, rupture_file=None, station_data_file=None,
+                    download_usgs_stations=True,
+                    monitor=performance.Monitor()):
     """
-    This is called by `aristotle_get_rupture_data` and `aristotle_run`.
+    This is called by `impact_get_rupture_data` and `impact_run`.
     In the first case the form contains only usgs_id and rupture_file and
     returns (rup, rupdic, [station_file], error).
     In the second case the form contains all fields and returns
     (rup, rupdic, params, error).
+    Only in the former case, if stations have not been downloaded yet, we try to
+    download station data from the USGS
     """
+    err = {}
     dic, params, err = _validate(POST)
     if err:
         return None, dic, params, err
 
-    # NOTE: in level 1 interface there is no checkbox and the ShakeMap has to be used.
-    #       in level 2 interface the checkbox is unchecked by default
-    use_shakemap = True
+    # NOTE: in level 1 interface the ShakeMap has to be used.
+    #       in level 2 interface it depends from the selected approach
+    use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
 
-    rup, rupdic = get_rup_dic(
-        dic['usgs_id'], user, use_shakemap, rupture_file, station_data_file, monitor)
+    rup, rupdic, err = get_rup_dic(
+        dic, user, use_shakemap, rupture_file, station_data_file,
+        download_usgs_stations, monitor)
+    if err:
+        return None, None, None, err
     # round floats
     for k, v in rupdic.items():
         if isinstance(v, float):  # lon, lat, dep, strike, dip
@@ -275,11 +337,18 @@ def aristotle_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    if len(params) > 1:  # called by aristotle_run
+    if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = rupdic['station_data_file']
+        params['mmi_file'] = rupdic.get('mmi_file')
         with monitor('get_oqparams'):
-            oqparams = AristotleParam(**params).get_oqparams(mosaic_models, trts)
+            ap = AristotleParam(**params)
+            try:
+                oqparams = ap.get_oqparams(
+                    dic['usgs_id'], mosaic_models, trts, use_shakemap)
+            except SiteAssociationError as exc:
+                oqparams = None
+                err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, oqparams, err
-    else:  # called by aristotle_get_rupture_data
+    else:  # called by impact_get_rupture_data
         return rup, rupdic, params, err

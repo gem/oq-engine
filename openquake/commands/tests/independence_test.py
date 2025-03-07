@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2023 GEM Foundation
+# Copyright (C) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,7 @@ level 6            calculators
 level 5            commonlib
 level 4            risklib
 level 3            hmtk
-level 2            hazardlib
+level 2            hazardlib, sep
 level 1            baselib
 """
 import os.path
@@ -35,6 +35,7 @@ from openquake.baselib.general import assert_independent
 
 
 class IndependenceTestCase(unittest.TestCase):
+
     def test_hazardlib(self):
         assert_independent('openquake.hazardlib', 'openquake.calculators')
 

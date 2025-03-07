@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -36,7 +36,7 @@ def _get_available_class(base_class):
     scalerel submodule with classes that derives from `base_class`,
     keyed by class name.
     '''
-    gsims = {}
+    classes = {}  # class_name -> class
     for fname in os.listdir(os.path.dirname(__file__)):
         if fname.endswith('.py'):
             modname, _ext = os.path.splitext(fname)
@@ -46,16 +46,23 @@ def _get_available_class(base_class):
                 if inspect.isclass(cls) and issubclass(cls, base_class) \
                         and cls != base_class \
                         and not inspect.isabstract(cls):
-                    gsims[cls.__name__] = cls
-    return dict((k, gsims[k]) for k in sorted(gsims))
+                    classes[cls.__name__] = cls
+    return dict((k, classes[k]) for k in sorted(classes))
 
 
 def get_available_magnitude_scalerel():
     '''
-    Return an ordered dictionary with the available Magnitude ScaleRel
-    classes, keyed by class name.
+    Return a list of the available Magnitude ScaleRel instances.
     '''
-    return _get_available_class(BaseMSR)
+    dic = _get_available_class(BaseMSR)
+    msrs = []
+    for name, cls in dic.items():
+        if inspect.signature(cls).parameters:
+            # ignore CScaling
+            pass
+        else:
+            msrs.append(cls())
+    return msrs
 
 
 def get_available_sigma_magnitude_scalerel():
@@ -88,6 +95,6 @@ def get_available_scalerel():
     keyed by class name.
     '''
     ret = get_available_area_scalerel()
-    ret.update(get_available_magnitude_scalerel())
+    ret.update(_get_available_class(BaseMSR))
 
     return ret

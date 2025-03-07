@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,7 +33,7 @@ import platform
 import functools
 #import multiprocessing.pool
 from os.path import getsize
-from datetime import datetime
+from datetime import datetime, timezone
 import psutil
 import h5py
 import numpy
@@ -51,6 +51,7 @@ from openquake.calculators import base
 from openquake.calculators.base import expose_outputs
 
 
+UTC = timezone.utc
 USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
 
@@ -90,7 +91,10 @@ def set_concurrent_tasks_default(calc):
         OqParam.concurrent_tasks.default = num_workers * 2
     else:
         num_workers = parallel.Starmap.num_cores
-    logging.warning('Using %d %s workers', num_workers, dist)
+    if dist == 'no':
+        logging.warning('Disabled distribution')
+    else:
+        logging.warning('Using %d %s workers', num_workers, dist)
 
 
 class MasterKilled(KeyboardInterrupt):
@@ -276,6 +280,22 @@ def stop_workers(job_id):
     print(w.WorkerMaster(job_id).stop())
 
 
+def watchdog(calc_id, pid, timeout):
+    """
+    If the job takes longer than the timeout, kills it
+    """
+    while True:
+        time.sleep(30)
+        [(start, status)] = logs.dbcmd(
+            'SELECT start_time, status FROM job WHERE id=?x', calc_id)
+        if status != 'executing':
+            break
+        elif (datetime.now() - start).seconds > timeout:
+            os.kill(pid, signal.SIGTERM)
+            logs.dbcmd('finish', calc_id, 'aborted')
+            break
+
+
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False):
     """
     Run jobs using the specified config file and other options.
@@ -292,7 +312,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
         max_cores = int(config.distribution.max_cores)
         if tot_cores > max_cores:
             raise ValueError('You can use at most %d nodes' %
-                             max_cores // parallel.Starmap.num_cores)
+                             (max_cores // parallel.Starmap.num_cores))
 
     if concurrent_jobs is None:
         # // 8 is chosen so that the core occupation in cole is decent
@@ -333,7 +353,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
             raise
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
-               'start_time': datetime.utcnow()}
+               'start_time': datetime.now(UTC)}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
         if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
@@ -358,13 +378,6 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
-    except Exception:
-        ids = [jc.calc_id for jc in jobctxs]
-        rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
-                          "AND status IN ('created', 'executing')", ids)
-        for jid, in rows:
-            logs.dbcmd("set_status", jid, 'failed')
-        raise
     finally:
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)

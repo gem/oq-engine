@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -128,8 +128,8 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
             gmf = dstore.read_df('gmf_data', 'sid')
-            gmvs_site_0 = gmf.loc[0]['gmv_0']
-            gmvs_site_1 = gmf.loc[1]['gmv_0']
+            gmvs_site_0 = gmf.loc[0].PGA
+            gmvs_site_1 = gmf.loc[1].PGA
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_0, gmvs_site_1, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
@@ -521,7 +521,7 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         arr = read_csv(fname, {'custom_site_id': str, None: float})[:2]
         self.assertEqual(arr.dtype.names,
-                         ('event_id', 'gmv_PGA',
+                         ('event_id', 'gmv_IA',
                           'sep_Disp', 'sep_DispProb', 'custom_site_id'))
 
     def test_case_26_liq(self):
@@ -529,6 +529,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.run_calc(case_26.__file__, 'job_liq.ini')
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('avg_gmf.csv', fname)
+
+        # TODO: export hcurves and hmaps
 
     def test_case_27(self):
         # splitting ruptures + gmf1 + gmf2

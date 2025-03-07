@@ -1,5 +1,0 @@
-#!/usr/bin/env python3
-import sys
-from openquake.engine.aristotle import main_cmd
-if __name__ == '__main__':
-    main_cmd(sys.argv[1], loglevel='info')  # us7000k9f0

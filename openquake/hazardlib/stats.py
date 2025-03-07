@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2023 GEM Foundation
+# Copyright (c) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -212,6 +212,18 @@ def quantile_curve(quantile, curves, weights=None):
         # get the quantile from the interpolated CDF
         result[idx] = numpy.interp(quantile, cw['w'].cumsum(), cw['c'])
     return result
+
+
+# NB: this will be obsolete in numpy 2+
+def weighted_quantiles(qs, values, weights):
+    """
+    Compute weighted quantiles
+    """
+    vw = numpy.zeros(len(values), cw_dt)  # (value, weight)
+    vw['c'] = values
+    vw['w'] = weights
+    vw.sort(order='c')
+    return numpy.interp(qs, vw['w'].cumsum() / vw['w'].sum(), vw['c'])
 
 
 def max_curve(values, weights=None):

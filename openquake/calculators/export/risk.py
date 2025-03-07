@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -134,10 +134,8 @@ def export_aggrisk(ekey, dstore):
 
     aggrisk = dstore.read_df('aggrisk')
     dest = dstore.build_fname('aggrisk-{}', '', 'csv')
-    agg_values = assetcol.get_agg_values(
-        oq.aggregate_by, oq.max_aggregations)
-    aggids, aggtags = assetcol.build_aggids(
-        oq.aggregate_by, oq.max_aggregations)
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
+    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     return _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest)
 
 
@@ -153,11 +151,9 @@ def export_aggrisk_stats(ekey, dstore):
     dest = dstore.build_fname(key + '-stats-{}', '', 'csv')
     dataf = extract(dstore, 'risk_stats/' + key)
     assetcol = dstore['assetcol']
-    agg_values = assetcol.get_agg_values(
-        oq.aggregate_by, oq.max_aggregations)
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
     K = len(agg_values) - 1
-    aggids, aggtags = assetcol.build_aggids(
-        oq.aggregate_by, oq.max_aggregations)
+    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     pairs = [([], dataf.agg_id == K)]  # full aggregation
     for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
         pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
@@ -173,6 +169,19 @@ def export_aggrisk_stats(ekey, dstore):
         writer.save(df, fname, df.columns, comment=dstore.metadata)
         fnames.append(fname)
     return fnames
+
+
+@export.add(('mmi_tags', 'csv'))
+def export_mmi_tags(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    dest = dstore.build_fname('mmi_tags', '', 'csv')
+    df = extract(dstore, 'mmi_tags')
+    writer.save(df, dest, df.columns, comment=dstore.metadata)
+    return [dest]
 
 
 def _get_data(dstore, dskey, loss_types, stats):
@@ -594,6 +603,19 @@ def _fix(col):
     return col
 
 
+@export.add(('aggexp_tags', 'csv'))
+def export_aggexp_tags_csv(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    df = extract(dstore, ekey[0] + '?')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('%s.%s' % ekey)
+    writer.save(df, fname, comment=dstore.metadata)
+    return [fname]
+
+
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
     """
@@ -602,10 +624,8 @@ def export_aggcurves_csv(ekey, dstore):
     """
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    agg_values = assetcol.get_agg_values(
-        oq.aggregate_by, oq.max_aggregations)
-    aggids, aggtags = assetcol.build_aggids(
-        oq.aggregate_by, oq.max_aggregations)
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
+    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     E = len(dstore['events'])
     R = len(dstore['weights'])
     K = len(dstore['agg_values']) - 1
@@ -722,7 +742,7 @@ def convert_df_to_vulnerability(loss_type, df):
         root.append(vfunc)
     return root
 
-    
+
 def export_vulnerability_xml(dstore, edir):
     fnames = []
     for loss_type, df in dstore.read_df('crm').groupby('loss_type'):
@@ -741,15 +761,14 @@ def export_assetcol_csv(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     df = pandas.DataFrame(assetcol)
     tagcol = dstore['assetcol'].tagcol
-    tagnames = tagcol.tagnames
-    sorted_cols = sorted([col for col in tagnames if col in df.columns])
-    unsorted_cols = [col for col in df.columns if col not in tagnames]
-    df = df[unsorted_cols + sorted_cols]
-    for asset_idx in range(len(assetcol)):
-        for tagname in tagnames:
-            tag_id = df[tagname][asset_idx]
-            tag_str = tagcol.get_tag(tagname, tag_id).split('=')[1]
-            df.loc[asset_idx, tagname] = tag_str
+    tagnames = sorted(tagcol.tagnames)
+    df = df[[col for col in df.columns if col not in tagnames]]
+    for tagname in tagnames:
+        tags = []
+        for asset_idx in range(len(assetcol)):
+            tag_id = assetcol[tagname][asset_idx]
+            tags.append(tagcol.get_tag(tagname, tag_id).split('=')[1])
+        df[tagname] = tags
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
     df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
     dest_csv = dstore.export_path('%s.%s' % ekey)

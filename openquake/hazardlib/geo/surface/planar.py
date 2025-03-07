@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -796,7 +796,6 @@ class PlanarSurface(BaseSurface):
         pbr = Point(bot_right[0], bot_right[1], depth + height / 2).round()
         ptl = Point(top_left[0], top_left[1], depth - height / 2).round()
         ptr = Point(top_right[0], top_right[1], depth - height / 2).round()
-
         return cls(strike, dip, ptl, ptr, pbr, pbl)
 
     @classmethod

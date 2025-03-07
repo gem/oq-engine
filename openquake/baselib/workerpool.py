@@ -24,7 +24,7 @@ import getpass
 import tempfile
 import functools
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 import psutil
 from openquake.baselib import (
     DotDict, zeromq as z, general, performance, parallel, config, sap)
@@ -33,6 +33,8 @@ try:
 except ImportError:
     def setproctitle(title):
         "Do nothing"
+
+UTC = timezone.utc
 
 
 def init_workers():
@@ -256,7 +258,7 @@ def call(func, args, taskno, mon, executing):
 def errback(job_id, task_no, exc):
     # NB: job_id can be None if the Starmap was invoked without h5
     from openquake.commonlib.logs import dbcmd
-    dbcmd('log', job_id, datetime.utcnow(), 'ERROR',
+    dbcmd('log', job_id, datetime.now(UTC), 'ERROR',
           '%s/%s' % (job_id, task_no), str(exc))
     e = exc.__class__('in job %d, task %d' % (job_id, task_no))
     raise e.with_traceback(exc.__traceback__)

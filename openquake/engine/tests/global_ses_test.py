@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,16 +17,18 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from unittest.mock import patch
-from openquake.baselib import general, hdf5
+import numpy
+from openquake.baselib import hdf5
 from openquake.qa_tests_data import mosaic_for_ses
 from openquake.commonlib.datastore import read
-from openquake.commonlib.readinput import read_geometries
-from openquake.calculators import base, event_based
+from openquake.calculators import base
 from openquake.engine import global_ses
 
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
-RUP_HDF5 = 'rups.hdf5'
+RUP_HDF5 = os.path.join(MOSAIC_DIR, 'rups.hdf5')
+aac = numpy.testing.assert_allclose
+def path(job_ini):
+    return os.path.join(MOSAIC_DIR, job_ini)
 
 
 def check(dstore, fnames):
@@ -41,15 +43,27 @@ def check(dstore, fnames):
         assert dstore['avg_gmf'].shape == (2, 167, 1)
 
 
-def test_EUR_MIE():
+def setup_module():
     global_ses.MODELS = ['EUR', 'MIE']
-    with general.chdir(MOSAIC_DIR):
-        mdf = read_geometries('mosaic.geojson', 'name', 0.).set_index('code')
-        with patch.dict(event_based.__dict__, mosaic_df=mdf):
-            try:
-                fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
-                dstore = base.run_calc('job.ini').datastore
-                check(dstore, fnames)                
-            finally:
-                if os.path.exists(RUP_HDF5):
-                    os.remove(RUP_HDF5)
+    fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
+    dstore = base.run_calc(path('job.ini')).datastore
+    check(dstore, fnames)
+
+
+def test_sites():  # 6 sites
+    dstore = base.run_calc(path('job_sites.ini')).datastore
+    gmvs = dstore['avg_gmf'][0, :, 0]
+    aac(gmvs, [0.0201735, 0.0202367, 0.0203708,
+               0.0202335, 0.0202477, 0.0202308], atol=1E-6)
+
+
+def test_site_model():  # 5 sites
+    dstore = base.run_calc(path('job_sm.ini')).datastore
+    gmvs = dstore['avg_gmf'][0, :, 0]
+    aac(gmvs, [0.020281, 0.020274, 0.020219,
+               0.020302, 0.020263], atol=1E-6)
+
+
+def teardown_module():
+    if os.path.exists(RUP_HDF5):
+        os.remove(RUP_HDF5)

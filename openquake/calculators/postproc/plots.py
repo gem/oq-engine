@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2024, GEM Foundation
+# Copyright (C) 2024-2025, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,6 +45,7 @@ def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
     xlim = x_center - max_range / 2, x_center + max_range / 2
     ylim = y_center - max_range / 2, y_center + max_range / 2
     return xlim, ylim
+
 
 def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
     plt = import_plt()
@@ -212,16 +213,22 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
             max_y = max(max_y, max_y_)
     else:
         min_x, max_x, max_y, min_y = add_surface(
-            ax, rup.surface, 'Surface', alpha=surf_alpha, facecolor=surf_facecolor,
-            linestyle=surf_linestyle)
+            ax, rup.surface, 'Surface', alpha=surf_alpha,
+            facecolor=surf_facecolor, linestyle=surf_linestyle)
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
+    # Make sure to display also the hypocenter in case it is outside all surfaces
+    # (it may be useful for debugging purposes)
+    min_x = min(min_x, rup.hypocenter.x)
+    max_x = max(max_x, rup.hypocenter.x)
+    min_y = min(min_y, rup.hypocenter.y)
+    max_y = max(max_y, rup.hypocenter.y)
     return ax, min_x, min_y, max_x, max_y
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
-                 with_cities=False, return_base64=False):
+                 with_cities=False, with_borders=True, return_base64=False):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     if backend is not None:
@@ -229,10 +236,16 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
         import matplotlib
         matplotlib.use(backend)
     _fig, ax = plt.subplots(figsize=figsize)
+    title = f"width={rup.surface.get_width():.4f}"
+    if hasattr(rup.surface, 'length'):
+        title += f", length={rup.surface.length:.4f}"
+    title += f", area={rup.surface.get_area():.4f}"
+    ax.set_title(title)
     ax.set_aspect('equal')
     ax.grid(True)
     ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
-    ax = add_borders(ax)
+    if with_borders:
+        ax = add_borders(ax)
     xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)

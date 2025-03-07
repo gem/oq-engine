@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,6 +28,9 @@ from openquake.baselib.general import gettemp
 
 
 def loadnpz(lines):
+    if hasattr(lines, 'content'):
+        # there was an error and we got an HTTP response from Django
+        raise RuntimeError(lines.content.decode('utf-8'))
     bio = io.BytesIO(b''.join(ln for ln in lines))
     return numpy.load(bio)
 

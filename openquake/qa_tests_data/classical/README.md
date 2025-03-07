@@ -52,3 +52,4 @@
 | case_82 | tests two mps, only one with reqv that should collapse points                                          |
 | case_83 | Tests non-ergodic path effect modifications for Zhao et al. 2016 GMM                                   |
 | case_85 | Tests Conditional GMPE (Macedo Et Al (2019)) in classical PSHA                                         |
+| case_87 | Tests execution of NGAEastUSGSGMPE with Chapman and Guo (2021) coastal plains site amp model           |

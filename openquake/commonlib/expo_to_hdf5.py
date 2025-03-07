@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2024, GEM Foundation
-# 
+#
+# Copyright (C) 2024-2025, GEM Foundation
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -25,7 +25,7 @@ import h5py
 from openquake.baselib import hdf5, sap, general
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
-from openquake.commonlib.datastore import build_dstore_log
+from openquake.commonlib.datastore import create_job_dstore
 from openquake.risklib.asset import _get_exposure
 
 U16 = numpy.uint16
@@ -203,7 +203,7 @@ def main(exposures_xml):
     NB: works only for the exposures of the global risk model, having
     field names like LONGITUDE, LATITUDE, etc
     """
-    dstore, log = build_dstore_log()
+    log, dstore = create_job_dstore()
     with dstore, log:
         store(exposures_xml, dstore)
     return dstore.filename

@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024 GEM Foundation
+# Copyright (C) 2019-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-FROM python:3.11 AS compile-image
+FROM python:3.11-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 RUN apt-get update &&  \
@@ -37,7 +37,7 @@ ENV LOCKDOWN=False
 #ADD openquake.cfg /opt/openquake/openquake.cfg
 #
 WORKDIR ${HOME}
-RUN mkdir oqdata 
+RUN mkdir oqdata
 #
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT

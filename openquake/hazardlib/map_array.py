@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2023 GEM Foundation
+# Copyright (c) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -167,10 +167,6 @@ def check_hmaps(hcurves, imtls, poes):
                 if  rel_err > .05:
                     raise ValueError(f'The {imt} hazard curve for {site_id=} cannot '
                                      f'be inverted reliably around {poe=}')
-                elif rel_err > .01:
-                    logging.warning(
-                        f'The {imt} hazard curve for {site_id=} cannot be '
-                        f'inverted reliably around {poe=}: {iml=}, {iml99=}')
 
 
 # not used right now

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -154,6 +154,7 @@ def print_geohash(what):
     print(gh.decode('ascii'))
 
 
+# tested in run-demos.sh
 def print_usgs_rupture(what):
     """
     Show the parameters of a rupture downloaded from the USGS site.
@@ -163,8 +164,9 @@ def print_usgs_rupture(what):
     try:
         usgs_id = what.split(':', 1)[1]
     except IndexError:
-        return 'Example: oq show usgs_rupture:us70006sj8'
-    print(get_rup_dic(usgs_id)[1])
+        return 'Example: oq info usgs_rupture:us70006sj8'
+    dic = dict(usgs_id=usgs_id, approach='use_rupture_from_usgs')
+    print(get_rup_dic(dic)[1])
 
 
 def source_model_info(sm_nodes):
@@ -314,8 +316,11 @@ def main(what, report=False):
                     col.append(' ' * maxlen)
             print(''.join(col))
     elif what == 'sources':
-        for cls in gen_subclasses(BaseSeismicSource):
-            print(cls.__name__)
+        pairs = sorted((cls.__name__, cls.code)
+                       for cls in gen_subclasses(BaseSeismicSource)
+                       if hasattr(cls, 'code'))
+        for i, (name, code) in enumerate(pairs, 1):
+            print('%02d' % i, code.decode('ascii'), name)
     elif what == 'disagg':
         for out in pmf_map:
             print(out)

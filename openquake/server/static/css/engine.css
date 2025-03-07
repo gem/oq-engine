@@ -328,21 +328,21 @@ tr.asce_output {
     border-top: 0;
 }
 
-.aristotle_form_row label {
+.impact_form_row label {
     margin-bottom: 10px;
 }
 
-.aristotle_form_row label {
+.impact_form_row label {
     display: inline-block;
     width: 225px;
 }
 
-.aristotle_form_row input {
+.impact_form_row input {
     /* width: calc(100% - 110px); /1* Adjust according to label width *1/ */
     box-sizing: border-box;
 }
 
-.aristotle-select {
+.impact-select {
     width: 206px;
 }
 
@@ -392,25 +392,25 @@ tr.asce_output {
     width: 56px;
 }
 
-.aristotle-losses-container {
+.impact-losses-container {
     width: 100%;
     display: block;
     overflow-x: scroll;
     position: relative;
 }
 
-table#aristotle-losses {
+table#impact-losses {
     border-collapse: collapse;
     width: 100%;
 }
 
-table#aristotle-losses th td {
+table#impact-losses th td {
     border: 1px solid #dddddd;
     text-align: left;
     padding: 8px;
 }
 
-#aristotle-losses-download {
+#impact-losses-download {
   margin-top: 10px;
 }
 
@@ -461,4 +461,22 @@ table#aristotle-losses th td {
 .hidden_except_submit button:not([type="submit"]),
 .hidden_except_submit label {
   display: none;
+}
+
+.hidden {
+    display: none;
+}
+
+#impact_approach {
+  display: block;  /* each label in its own row */
+  margin-bottom: 20px; /* Space between radio options */
+}
+
+input[type="radio"] {
+  margin-right: 5px; /* Space between radio button and label text */
+}
+
+#clearStationDataFromUsgs {
+    margin-left: 40px;
+    margin-bottom: 8px;
 }

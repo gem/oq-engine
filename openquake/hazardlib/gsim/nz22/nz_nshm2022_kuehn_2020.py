@@ -208,15 +208,14 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         sigma_mu_epsilon=0.0,
         modified_sigma=False,
     ):
-        self.region = region
-        self.m_b = m_b
-        self.sigma_mu_epsilon = sigma_mu_epsilon
+        super().__init__(region=region, m_b=m_b, sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
         # reset override of REQUIRES_SITES_PARAMETERS done by super
         if self.region in ("NZL"):
             self.REQUIRES_SITES_PARAMETERS = \
                 self.__class__.REQUIRES_SITES_PARAMETERS
+            
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -241,8 +240,8 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         pga1100 = np.exp(
             get_mean_values(C_PGA, self.region, 0., trt, m_b, ctx, None,
                             _get_basin_term) + get_backarc_term(trt, PGA(), ctx))
-        # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
-        # ensure that SA ( T ) does not fall below PGA on soil
+        # For PGA and SA (T <= 0.1) we need to define PGA on soil to
+        # ensure that SA (T) does not fall below PGA on soil
         pga_soil = None
         for imt in imts:
             if ("PGA" in imt.string) or ("SA" in imt.string) and (imt.period <= 0.1):
@@ -290,7 +289,11 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
-    """ """
-
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
+    # Need vs30 + backarc also for inslab
+    REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
+
+    # Other required params
+    REQUIRES_ATTRIBUTES = {'region', 'm_b', 'sigma_mu_model', 'sigma_mu_epsilon'}

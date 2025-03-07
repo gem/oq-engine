@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,7 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
-PERILTYPE = numpy.array(['earthquake', 'liquefaction', 'landslide'])
+PERILTYPE = numpy.array(['groundshaking', 'liquefaction', 'landslide'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -71,6 +71,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+affectedpop injured
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -95,7 +96,7 @@ def pairwise(iterable):
     """
     :param iterable: a sequence of N values (s0, s1, ...)
     :returns: N-1 pairs (s0, s1), (s1, s2), (s2, s3), ...
- 
+
     >>> list(pairwise('ABC'))
     [('A', 'B'), ('B', 'C')]
     """
@@ -1316,8 +1317,8 @@ def dds_to_poes(dmg_dists):
     """
     arr = numpy.fliplr(numpy.fliplr(dmg_dists).cumsum(axis=1))
     return arr
-    
-    
+
+
 def compose_dds(dmg_dists):
     """
     Compose an array of N damage distributions:
@@ -1590,8 +1591,8 @@ class LossCurvesMapsBuilder(object):
                  weights, eff_time, risk_investigation_time, pla_factor=None):
         if return_periods[-1] > eff_time:
             raise ValueError(
-                'The return_period %s is longer than the eff_time per rlz %s'
-                % (return_periods[-1], eff_time))
+                'The return_period %s is longer than the eff_time per rlz'
+                ' [%s years]' % (return_periods[-1], eff_time))
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt
@@ -1683,10 +1684,10 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # peril, lt -> outs
         weights = collections.defaultdict(list)  # peril, lt -> weights
-        perils = {'earthquake'}
+        perils = {'groundshaking'}
         for riskid, rm in self.items():
             for (peril, lt), res in rm(asset_df, haz, rndgen).items():
-                # res is an array of fractions of shape (A, E, D) 
+                # res is an array of fractions of shape (A, E, D)
                 weights[peril, lt].append(self.wdic[riskid, peril])
                 dic[peril, lt].append(res)
                 perils.add(peril)
@@ -1819,6 +1820,10 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
+    if xltype == 'affectedpop':
+        return aval['residents']
+    elif xltype == 'injured':  # like fatalities
+        return aval[f'occupants_{time_event}']
     if consequence in ['collapsed', 'non_operational']:
         return aval['number']
     elif consequence in ['injured', 'fatalities']:

@@ -24,7 +24,7 @@ import logging
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat, config
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc, site
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -122,12 +122,13 @@ def create_source_info(csm, h5):
     for srcid, srcs in general.groupby(
             csm.get_sources(), basename).items():
         src = srcs[0]
-        num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
         trti = csm.full_lt.trti.get(src.tectonic_region_type, 0)
         lens.append(len(src.trt_smrs))
-        row = [srcid, src.grp_id, src.code, 0, 0, num_ruptures,
-               src.weight, mutex, trti]
+        row = [srcid, src.grp_id, src.code, 0, 0,
+               sum(s.num_ruptures for s in srcs),
+               sum(s.weight for s in srcs),
+               mutex, trti]
         data[srcid] = row
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
@@ -309,14 +310,18 @@ def get_csm(oq, full_lt, dstore=None):
         dstore.create_dset('grp_probability', numpy.array(probs, lst),
                            fillvalue=None)
 
-    # must be called *after* _fix_dupl_ids
-    if oq.sites and len(oq.sites) == 1 and oq.use_rates:
-        lon, lat, _dep = oq.sites[0]
-        site1 = site.SiteCollection.from_points([lon], [lat])
+    # split multifault sources if there is a single site
+    try:
+        sitecol = dstore['sitecol']
+    except (KeyError, TypeError):  # 'NoneType' object is not subscriptable
+        sitecol = None
     else:
-        site1 = None
-    hdf5path = dstore.tempname if dstore else ''
-    fix_geometry_sections(smdict, csm.src_groups, hdf5path, site1)
+        if len(sitecol) > 1:
+            sitecol = None
+    # must be called *after* _fix_dupl_ids
+    fix_geometry_sections(smdict, csm.src_groups,
+                          dstore.tempname if dstore else '',
+                          sitecol if oq.disagg_by_src and oq.use_rates else None)
     return csm
 
 
@@ -413,11 +418,11 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
                 if src.code == b'F':
                     mfsources.append(src)
         if mfsources:
-            split_dic = save_and_split(mfsources, sections, hdf5path, site1)
+            split_dic, secparams = save_and_split(
+                mfsources, sections, hdf5path, site1)
             for sg in src_groups:
                 replace(sg.sources, split_dic, 'source_id')
-            with hdf5.File(hdf5path, 'r') as h5:
-                return h5['secparams'][:]
+            return secparams
     return ()
 
 
@@ -637,7 +642,6 @@ class CompositeSourceModel:
             baseid = basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
-            row[WEIGHT] += weight
             row[NUM_SITES] += nsites
 
     def count_ruptures(self):
@@ -711,7 +715,6 @@ class CompositeSourceModel:
         oq = cmakers[0].oq
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
-        self.splits = []
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
@@ -729,7 +732,6 @@ class CompositeSourceModel:
                     sg, min(hint, oq.max_blocks), lambda s: s.weight))
                 tiles = max(hint / oq.max_blocks * splits, splits)
             tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
-            self.splits.append(splits)
             cmaker.tiling = tiling
             cmaker.gsims = list(cmaker.gsims)  # save data transfer
             cmaker.codes = sg.codes

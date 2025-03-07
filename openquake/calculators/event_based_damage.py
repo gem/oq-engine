@@ -22,7 +22,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, general
-from openquake.hazardlib.stats import set_rlzs_stats
+from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific, connectivity
 from openquake.commonlib import datastore, calc
 from openquake.calculators import base
@@ -68,7 +68,7 @@ def damage_from_gmfs(gmfslices, oqparam, dstore, monitor):
 
 def event_based_damage(df, oq, dstore, monitor):
     """
-    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
+    :param df: a DataFrame of GMFs with fields sid, eid, imt, ...
     :param oq: parameters coming from the job.ini
     :param dstore: a DataStore instance
     :param monitor: a Monitor instance
@@ -178,10 +178,10 @@ class DamageCalculator(EventBasedRiskCalculator):
             oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore, oq)  # check
-        self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, oq.L, self.crmodel)
+        self.dmgcsq = zero_dmgcsq(
+            len(self.assetcol), self.R, oq.L, self.crmodel)
         if oq.K:
-            aggids, _ = self.assetcol.build_aggids(
-                oq.aggregate_by, oq.max_aggregations)
+            aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
             aggids = 0
         smap = calc.starmap_from_gmfs(
@@ -231,8 +231,10 @@ class DamageCalculator(EventBasedRiskCalculator):
         prc.assetcol = self.assetcol
         if hasattr(self, 'exported'):
             prc.exported = self.exported
-        with prc.datastore:
-            prc.run(exports='')
+
+        prc.pre_execute()
+        res = prc.execute()
+        prc.post_execute(res)
 
         P, _A, _R, L, _Dc = self.dmgcsq.shape
         D = len(self.crmodel.damage_states)
@@ -241,14 +243,21 @@ class DamageCalculator(EventBasedRiskCalculator):
         for p in range(P):
             for r in range(self.R):
                 self.dmgcsq[p, :, r] /= prc.num_events[r]
-                ndamaged = self.dmgcsq[p, :, r, :, 1:D].sum(axis=2)  # shape (A, L)
+                ndamaged = self.dmgcsq[p, :, r, :, 1:D].sum(axis=2)
+                # shape (A, L)
                 for li in range(L):
                     # set no_damage
                     self.dmgcsq[p, :, r, li, 0] = number - ndamaged[:, li]
 
         assert (self.dmgcsq >= 0).all()  # sanity check
-        self.datastore['damages-rlzs'] = self.crmodel.to_multi_damage(self.dmgcsq)
-        set_rlzs_stats(self.datastore, 'damages-rlzs', asset_id=self.assetcol['id'])
+        self.datastore['damages-rlzs'] = arr = self.crmodel.to_multi_damage(
+            self.dmgcsq)
+        s = oq.hazard_stats()
+        if s and self.R > 1:
+            _statnames, statfuncs = zip(*s.items())
+            weights = self.datastore['weights'][:]
+            self.datastore.hdf5.create_dataset(
+                'damages-stats', data=compute_stats2(arr, statfuncs, weights))
 
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')
