@@ -719,8 +719,9 @@ class HazardCalculator(BaseCalculator):
             calc.run(remove=False)
             calc.datastore.close()
             for name in (
-                'csm param sitecol assetcol crmodel realizations max_gb max_weight '
-                'amplifier policy_df treaty_df full_lt exported trt_rlzs gids'
+                'csm param sitecol assetcol crmodel realizations max_gb '
+                'max_weight amplifier policy_df treaty_df full_lt exported '
+                'trt_rlzs gids'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -830,10 +831,11 @@ class HazardCalculator(BaseCalculator):
             self.datastore['discarded'] = discarded
             if 'scenario' in oq.calculation_mode:
                 # this is normal for the case of scenario from rupture
-                logging.info('%d assets were discarded because too far '
-                             'from the rupture; use `oq show discarded` '
-                             'to show them and `oq plot_assets` to plot '
-                             'them' % len(discarded))
+                if not oq.calculation_mode.startswith('scenario'):
+                    logging.info('%d assets were discarded because too far '
+                                 'from the rupture; use `oq show discarded` '
+                                 'to show them and `oq plot_assets` to plot '
+                                 'them' % len(discarded))
             elif not oq.discard_assets:  # raise an error
                 self.datastore['assetcol'] = self.assetcol
                 raise RuntimeError(
