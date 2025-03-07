@@ -1055,12 +1055,12 @@ def extract_losses_by_site(dstore, what):
     :returns: a DataFrame (lon, lat, number, structural, ...)
     """
     sitecol = dstore['sitecol']
-    dic = {'lon': sitecol.lons, 'lat': sitecol.lats}
+    dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
     grp = dstore.getitem('avg_losses-stats')
     for loss_type in grp:
         losses = grp[loss_type][:, 0]
-        dic[loss_type] = general.fast_agg(array['site_id'], losses)
+        dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))
     return pandas.DataFrame(dic)
 
 
