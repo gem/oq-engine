@@ -37,9 +37,9 @@ def critical_accel(
     print(crit_accel)
     print("crit_accel")
     if np.isscalar(crit_accel):
-        return max([0.0, crit_accel])
+        return max([0.0001, crit_accel])
     else:
-        return np.array([max([0.0, ca]) for ca in crit_accel])
+        return np.array([max([0.0001, ca]) for ca in crit_accel])
                      
 
 def jibson_2007_model_a( 
@@ -442,7 +442,7 @@ def fotopoulou_pitilakis_2015_model_d(pgv, pga, crit_accel):
     '''
     crit_accel_threshold: float = 0.05
     
-    # Corrections of invalid values
+    # Corrections of invalid values       
     if np.isscalar(pga):
         if pga == 0.0:
             pga = 1e-5
