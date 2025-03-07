@@ -45,7 +45,7 @@ class ThingbaijamInterface(BaseMSRSigma, BaseASRSigma):
         """
         Returns std
         """
-        return 10**0.150
+        return 0.150
 
     def get_median_mag(self, area, rake):
         """
@@ -79,7 +79,7 @@ class ThingbaijamStrikeSlip(BaseMSRSigma, BaseASRSigma):
         """
         Returns std
         """
-        return 10**0.184
+        return 0.184
 
     def get_median_mag(self, area, rake):
         """

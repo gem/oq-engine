@@ -171,6 +171,19 @@ def export_aggrisk_stats(ekey, dstore):
     return fnames
 
 
+@export.add(('mmi_tags', 'csv'))
+def export_mmi_tags(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    dest = dstore.build_fname('mmi_tags', '', 'csv')
+    df = extract(dstore, 'mmi_tags')
+    writer.save(df, dest, df.columns, comment=dstore.metadata)
+    return [dest]
+
+
 def _get_data(dstore, dskey, loss_types, stats):
     name, kind = dskey.split('-')  # i.e. ('avg_losses', 'stats')
     if kind == 'stats':

@@ -2255,6 +2255,7 @@ class OqParam(valid.ParamSet):
                 or 'ins_loss' in self.inputs):
             return
         if ('source_model_logic_tree' not in self.inputs and
+                'source_model' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and
                 self.hazard_calculation_id is None):
             raise ValueError('Missing source_model_logic_tree in %s '

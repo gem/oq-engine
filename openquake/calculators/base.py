@@ -602,8 +602,8 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
-        if ('source_model_logic_tree' in oq.inputs and
-                oq.hazard_calculation_id is None):
+        if ('source_model_logic_tree' in oq.inputs or
+            'source_model' in oq.inputs) and oq.hazard_calculation_id is None:
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)
@@ -719,8 +719,9 @@ class HazardCalculator(BaseCalculator):
             calc.run(remove=False)
             calc.datastore.close()
             for name in (
-                'csm param sitecol assetcol crmodel realizations max_gb max_weight '
-                'amplifier policy_df treaty_df full_lt exported trt_rlzs gids'
+                'csm param sitecol assetcol crmodel realizations max_gb '
+                'max_weight amplifier policy_df treaty_df full_lt exported '
+                'trt_rlzs gids'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -732,7 +733,7 @@ class HazardCalculator(BaseCalculator):
                 logging.info('Computing MMI-aggregated values')
                 if mmi_values := self.assetcol.get_mmi_values(
                         oq.aggregate_by, oq.inputs['mmi']):
-                    self.datastore['mmi_values'] = mmi_values
+                    self.datastore['mmi_tags'] = mmi_values
 
     def pre_execute_from_parent(self):
         """
@@ -830,10 +831,11 @@ class HazardCalculator(BaseCalculator):
             self.datastore['discarded'] = discarded
             if 'scenario' in oq.calculation_mode:
                 # this is normal for the case of scenario from rupture
-                logging.info('%d assets were discarded because too far '
-                             'from the rupture; use `oq show discarded` '
-                             'to show them and `oq plot_assets` to plot '
-                             'them' % len(discarded))
+                if not oq.calculation_mode.startswith('scenario'):
+                    logging.info('%d assets were discarded because too far '
+                                 'from the rupture; use `oq show discarded` '
+                                 'to show them and `oq plot_assets` to plot '
+                                 'them' % len(discarded))
             elif not oq.discard_assets:  # raise an error
                 self.datastore['assetcol'] = self.assetcol
                 raise RuntimeError(
@@ -1750,6 +1752,8 @@ def expose_outputs(dstore, owner=USER, status='complete'):
     if len(rlzs) > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5
+    if 'mmi_tags' in hdf5:
+        dskeys.add('mmi_tags')
     if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
         if oq.hazard_stats() or oq.individual_rlzs or len(rlzs) == 1:
             dskeys.add('hcurves')
