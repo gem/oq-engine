@@ -45,7 +45,8 @@
                 <label for"station_data_file_from_usgs">{{ impact_form_labels.station_data_file_from_usgs }}</label>
                 <input class="impact-input" type="hidden" id="station_data_file_from_usgs" name="station_data_file_from_usgs" placeholder="{{ impact_form_placeholders.station_data_file_from_usgs }}" disabled />
                 <input class="impact-input" type="text" id="station_data_file_loaded" name="station_data_file_loaded" disabled />
-                <button type="button" id="clearStationDataFromUsgs">Clear Data</button>
+                <button type="button" class="station-btn" id="clearStationDataFromUsgs">Clear Data</button>
+                <button type="button" class="station-btn" id="getStationDataFromUsgs">Retrieve from the USGS</button>
               </div>
               <div class="impact_form_row hidden-for-shakemap hidden">
                 <label for"station_data_file">{{ impact_form_labels.station_data_file }}</label>
