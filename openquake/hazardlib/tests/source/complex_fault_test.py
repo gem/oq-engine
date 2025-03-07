@@ -21,6 +21,7 @@ from openquake.hazardlib.source.complex_fault import (ComplexFaultSource,
                                                       _float_ruptures)
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 from openquake.hazardlib.scalerel.peer import PeerMSR
 from openquake.hazardlib.scalerel.strasser2010 import StrasserInterface
 from openquake.hazardlib.mfd import EvenlyDiscretizedMFD, ArbitraryMFD
@@ -141,6 +142,48 @@ class ComplexFaultSourceIterRupturesTestCase(
             num_bins=10,
         ):
             pass
+
+    def test_spatially_variable_rate(self):
+
+        edges = [[(0.0, 0.0, 0.0), (1.5, 0.0, 0.0)],
+                 [(0.0, -0.5, 40.0), (1.5, -0.5, 40.0)]]
+
+        # Create the complex fault source
+        src = self._make_source(
+            test_data.TEST1_MFD,
+            test_data.TEST1_RUPTURE_ASPECT_RATIO,
+            test_data.TEST1_MESH_SPACING,
+            edges
+        )
+
+        # Replace MSR and MFD
+        src.magnitude_scaling_relationship = StrasserInterface()
+        src.mfd = ArbitraryMFD(
+            magnitudes=[7.0, 8.0],
+            occurrence_rates=[0.1, 0.01]
+        )
+
+        # Get fault surface
+        sfc = ComplexFaultSurface.from_fault_data(
+            src.edges,
+            src.rupture_mesh_spacing
+        )
+
+        # Compute cell weights
+        weights = numpy.zeros((sfc.mesh.lons.shape[0] - 1,
+                               sfc.mesh.lons.shape[1] - 1))
+        weights = numpy.random.rand(weights.shape[0], weights.shape[1])
+        weights /= numpy.sum(weights)
+
+        # Compute ruptures
+        for r in src._iter_ruptures(
+            eps_low=-2,
+            eps_upp=2,
+            num_bins=10,
+            cell_weights=weights,
+        ):
+            pass
+
 
     def test_2(self):
         # Complex fault source equivalent to Simple fault source defined by
@@ -275,16 +318,16 @@ class FloatRupturesTestCase(unittest.TestCase):
         rupture_area = 3.1
         rupture_length = 1.0
 
-        slices = _float_ruptures(rupture_area, rupture_length,
-                                 cell_area, cell_length)
+        slices, _ = _float_ruptures(rupture_area, rupture_length,
+                                    cell_area, cell_length, None)
         self.assertEqual(len(slices), 2)
         s1, s2 = slices
         self.assertEqual(s1, (slice(0, 3), slice(0, 3)))
         self.assertEqual(s2, (slice(0, 3), slice(1, 4)))
 
         rupture_area = 4.2
-        slices = _float_ruptures(rupture_area, rupture_length,
-                                 cell_area, cell_length)
+        slices, _ = _float_ruptures(rupture_area, rupture_length,
+                                    cell_area, cell_length, None)
         self.assertEqual(len(slices), 1)
         self.assertEqual(slices, [s1])
 
@@ -296,8 +339,8 @@ class FloatRupturesTestCase(unittest.TestCase):
         rupture_area = 13.0
         rupture_length = 12.0
 
-        slices = _float_ruptures(rupture_area, rupture_length,
-                                 cell_area, cell_length)
+        slices, _ = _float_ruptures(rupture_area, rupture_length,
+                                    cell_area, cell_length, None)
         self.assertEqual(len(slices), 2)
         s1, s2 = slices
         self.assertEqual(s1, (slice(0, 3), slice(0, 3)))
@@ -312,8 +355,8 @@ class FloatRupturesTestCase(unittest.TestCase):
         rupture_area = 2.1
         rupture_length = 1.0
 
-        slices = _float_ruptures(rupture_area, rupture_length,
-                                 cell_area, cell_length)
+        slices, _ = _float_ruptures(rupture_area, rupture_length,
+                                    cell_area, cell_length, None)
         self.assertEqual(len(slices), 6)
         tl, tm, tr, bl, bm, br = slices
         self.assertEqual(tl, (slice(0, 3), slice(0, 2)))

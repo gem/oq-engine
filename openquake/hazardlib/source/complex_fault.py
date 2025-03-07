@@ -30,7 +30,8 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 MINWEIGHT = 100
 
 
-def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
+def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length,
+                    gweights):
     """
     Get all possible unique rupture placements on the fault surface.
 
@@ -44,6 +45,9 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
     :param cell_length:
         2d numpy array of the shape as ``cell_area`` representing cells'
         length in km.
+    :param gweights:
+        2d numpy array with the same shape of ``cell_area`` with weights
+        defining the density of occurrence in each cell
     :returns:
         A list of slice objects. Number of items in the list is equal to number
         of possible locations of the requested rupture on the fault surface.
@@ -55,9 +59,10 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
     if rupture_area >= numpy.sum(cell_area):
         # requested rupture area exceeds the total surface area.
         # return the single slice that doesn't cut anything out.
-        return [slice(None)]
+        return [[slice(None)], []]
 
     rupture_slices = []
+    rupture_weights = []
 
     dead_ends = set()
     for row in range(nrows):
@@ -98,7 +103,7 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
                 if row == 0:
                     if last_col == ncols:
                         # there is no place to extend, exiting
-                        return rupture_slices
+                        return rupture_slices, rupture_weights
                     else:
                         # try to extend along length
                         areas_acc = numpy.sum(cell_area[:, col:], axis=0)
@@ -109,7 +114,7 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
                         if last_col == ncols \
                                 and areas_acc[rup_cols] < rupture_area:
                             # still doesn't fit, return
-                            return rupture_slices
+                            return rupture_slices, rupture_weights
                 else:
                     # row is not the first and the required area exceeds
                     # available area starting from target row and column.
@@ -123,7 +128,12 @@ def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
             # data (like cell_area or cell_length).
             rupture_slices.append((slice(row, last_row + 1),
                                    slice(col, last_col + 1)))
-    return rupture_slices
+            if gweights is not None:
+                rupture_weights.append(
+                    numpy.sum(gweights[row:last_row, col:last_col])
+                )
+
+    return rupture_slices, rupture_weights
 
 
 class ComplexFaultSource(ParametricSeismicSource):
@@ -192,23 +202,31 @@ class ComplexFaultSource(ParametricSeismicSource):
         as a `step` parameter that controls the excution of additional checks
         and the `count` flag, when True the function
         """
+
+        # Get variables
         step = kwargs.get('step', 1)
         only_count = kwargs.get('count', False)
         eps_ar_low = kwargs.get('eps_low', None)
         eps_ar_upp = kwargs.get('eps_upp', None)
         num_bins = kwargs.get('num_bins', None)
+        gweights = kwargs.get('cell_weights', None)
+
+        # Instantiate variables
         self._nr = []
 
+        # Compute fault surface and get mesh
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing)
         if step > 1:  # do the expensive check only in preclassical
             whole_fault_surface.check_proj_polygon()
         whole_fault_mesh = whole_fault_surface.mesh
+
+        # Compute parameters of the cells forming the grid
         _cell_center, cell_length, _cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
 
+        # Loop over the magnitudes in the MFD
         msr = self.magnitude_scaling_relationship
-
         for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
 
             # Computing rupture parameters
@@ -255,17 +273,24 @@ class ComplexFaultSource(ParametricSeismicSource):
 
             # Loop over the rupture lengths
             tmp = 0.0
+            weis = 0.0
             for rupture_length, wei in zip(rup_lens, pmf):
 
-                rupture_slices = _float_ruptures(
-                    rupture_area, rupture_length, cell_area, cell_length)
+                rupture_slices, rupture_weights = _float_ruptures(
+                    rupture_area, rupture_length, cell_area, cell_length,
+                    gweights
+                )
 
                 # Compute occurrence rates
-                occurrence_rate = (
-                    mag_occ_rate / float(len(rupture_slices)) * wei)
-                tmp += occurrence_rate
+                try:
+                    occurrence_rate = (
+                        mag_occ_rate / float(len(rupture_slices)) * wei)
+                except:
+                    breakpoint(5)
+                tmp += mag_occ_rate * wei
+                weis += wei
 
-                # Just counting the ruptures
+                # Just counting the ruptures. We skip rupture generation.
                 if only_count:
                     self._nr.append(len(rupture_slices))
                     yield len(rupture_slices)
