@@ -602,8 +602,8 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
-        if ('source_model_logic_tree' in oq.inputs and
-                oq.hazard_calculation_id is None):
+        if ('source_model_logic_tree' in oq.inputs or
+            'source_model' in oq.inputs) and oq.hazard_calculation_id is None:
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)

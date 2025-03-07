@@ -381,20 +381,40 @@ class SourceModelLogicTree(object):
                               'setMSRAbsolute')
 
     @classmethod
+    def trivial(cls, source_model_file, sampling_method='early_weights',
+                source_id=''):
+        """
+        :returns: a trivial SourceModelLogicTree with a single branch
+        """
+        self = object.__new__(cls)
+        self.basepath = os.path.dirname(source_model_file)
+        self.source_id = source_id
+        self.source_data = []
+        if source_model_file == '_fake.xml':
+            self.tectonic_region_types = {'*'}
+        else:
+            self.tectonic_region_types = set()
+            self.collect_source_model_data('br0', source_model_file)
+        self.source_data = numpy.array(self.source_data, source_dt)
+        self.info = Info([source_model_file], [], collections.defaultdict(list))
+
+        arr = numpy.array(
+            [('bs0', 'br0', 'sourceModel', source_model_file, 1)], branch_dt)
+        dic = dict(filename=source_model_file, seed=0, num_samples=0,
+                   sampling_method=sampling_method, num_paths=1,
+                   is_source_specific=0, source_data=self.source_data,
+                   tectonic_region_types=self.tectonic_region_types,
+                   source_id=source_id, branchID='',
+                   bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
+        self.__fromh5__(arr, dic)
+        return self
+
+    @classmethod
     def fake(cls):
         """
         :returns: a fake SourceModelLogicTree with a single branch
         """
-        self = object.__new__(cls)
-        arr = numpy.array([('bs0', 'b0', 'sourceModel', 'fake.xml', 1)],
-                          branch_dt)
-        dic = dict(filename='fake.xml', seed=0, num_samples=0,
-                   sampling_method='early_weights', num_paths=1,
-                   is_source_specific=0, source_data=[],
-                   tectonic_region_types=set(), source_id='', branchID='',
-                   bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
-        self.__fromh5__(arr, dic)
-        return self
+        return cls.trivial('_fake.xml')
 
     def __init__(self, filename, seed=0, num_samples=0,
                  sampling_method='early_weights', test_mode=False,
@@ -460,7 +480,7 @@ class SourceModelLogicTree(object):
         """
         :returns: a new logic tree reduced to a single source
         """
-        # NB: source_id can contain "@" in the case of a split multi fault source
+        # NB: source_id contains "@" in the case of a split multi fault source
         num_samples = self.num_samples if num_samples is None else num_samples
         new = self.__class__(self.filename, self.seed, num_samples,
                              self.sampling_method, self.test_mode,
@@ -1351,7 +1371,7 @@ class FullLogicTree(object):
         rlzs = self.get_realizations()
         trtis = range(len(self.gsim_lt.values))
         smrs = numpy.array([sm.ordinal for sm in self.sm_rlzs])
-        if self.source_model_lt.filename == 'fake.xml':  # scenario
+        if self.source_model_lt.filename == '_fake.xml':  # scenario
             smr_by_ltp = {'~'.join(sm_rlz.lt_path): i
                           for i, sm_rlz in enumerate(self.sm_rlzs)}
             smidx = numpy.zeros(self.get_num_paths(), int)
