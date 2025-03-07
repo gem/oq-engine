@@ -113,7 +113,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
             user=user, use_shakemap=True)
         self.assertIsNone(rup)
         rupture_issue = ('Unable to convert the rupture from the USGS format: '
-                         ' at least one surface is not rectangular')
+                         'at least one surface is not rectangular')
         self.assertEqual(dic['rupture_issue'], rupture_issue)
 
     def test_6(self):
