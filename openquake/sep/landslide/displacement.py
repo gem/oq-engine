@@ -39,9 +39,9 @@ def critical_accel(
     print(crit_accel)
     print("crit_accel")
     if np.isscalar(crit_accel):
-        return max([0.0001, crit_accel])
+        return max([crit_accel_threshold, crit_accel])
     else:
-        return np.array([max([0.0001, ca]) for ca in crit_accel])
+        return np.array([max([crit_accel_threshold, ca]) for ca in crit_accel])
                      
 
 def jibson_2007_model_a( 
