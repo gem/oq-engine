@@ -507,34 +507,8 @@ class AssetCollection(object):
                     if mmi not in out:
                         out[mmi] = values[:-1]  # discard total
                     else:
-                        for lt in values.dtype.names:
-                            out[mmi][lt] += values[lt][:-1]
-        _aggids, aggtags = self.build_aggids(aggregate_by)
-        aggtags = numpy.array(aggtags)  # shape (K+1, T)
-        dfs = []
-        for mmi in out:
-            dic = {key: aggtags[:, k] for k, key in enumerate(aggregate_by[0])}
-            dic.update({col: out[mmi][col] for col in out[mmi].dtype.names})
-            df = pandas.DataFrame(dic)
-            df['mmi'] = mmi
-            dfs.append(df)
-        if not dfs:
-            return ()
-        df = pandas.concat(dfs)
-        return df[df.number > 0]
-
-    # not used yet
-    def agg_by_site(self):
-        """
-        :returns: an array of aggregated values indexed by site ID
-        """
-        N = self['site_id'].max() + 1
-        vfields = self.fields + self.occfields
-        agg_values = numpy.zeros(N, [(f, F32) for f in vfields])
-        for vf in vfields:
-            arr = self['value-' + vf if vf in self.fields else vf]
-            agg_values[vf] = general.fast_agg(self['site_id'], arr)
-        return agg_values
+                        out[mmi] += values
+        return out
 
     # not used yet
     def agg_by_site(self):
