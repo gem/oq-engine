@@ -507,7 +507,8 @@ class AssetCollection(object):
                     if mmi not in out:
                         out[mmi] = values[:-1]  # discard total
                     else:
-                        out[mmi] += values
+                        for lt in values.dtype.names:
+                            out[mmi][lt] += values[lt]
         return out
 
     # not used yet
