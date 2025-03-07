@@ -25,7 +25,7 @@ import os
 import numpy
 import pandas
 import fiona
-from shapely import geometry, contains_xy
+from shapely import geometry, prepare, contains_xy
 
 from openquake.baselib import hdf5, general, config
 from openquake.baselib.node import Node, context
@@ -461,8 +461,7 @@ class AssetCollection(object):
             self.tagcol.get_aggkey(aggregate_by))}
         K = len(aggkey)
         if geometry:
-            lonlats = numpy.column_stack([self['lon'], self['lat']])
-            array = self.array[contains_xy(geometry, lonlats)]
+            array = self.array[contains_xy(geometry, self['lon'], self['lat'])]
         else:
             array = self.array
         
@@ -502,14 +501,29 @@ class AssetCollection(object):
         with fiona.open(f'zip://{mmi_file}!mi.shp') as f:
             for feat in f:
                 geom = geometry.shape(feat.geometry)
+                prepare(geom)  # MANDATORY: gives an incredible speedup!
                 mmi = to_mmi(feat.properties['PARAMVALUE'])
                 values = self.get_agg_values(aggregate_by, geom)
                 if values['number'].any():
                     if mmi not in out:
                         out[mmi] = values
                     else:
-                        out[mmi] += values
+                        for lt in values.dtype.names:
+                            out[mmi][lt] += values[lt]
         return out
+
+    # not used yet
+    def agg_by_site(self):
+        """
+        :returns: an array of aggregated values indexed by site ID
+        """
+        N = self['site_id'].max() + 1
+        vfields = self.fields + self.occfields
+        agg_values = numpy.zeros(N, [(f, F32) for f in vfields])
+        for vf in vfields:
+            arr = self['value-' + vf if vf in self.fields else vf]
+            agg_values[vf] = general.fast_agg(self['site_id'], arr)
+        return agg_values
 
     def build_aggids(self, aggregate_by):
         """
