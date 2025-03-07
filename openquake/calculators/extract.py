@@ -1049,6 +1049,21 @@ def extract_losses_by_asset(dstore, what):
         yield 'rlz-000', data
 
 
+@extract.add('losses_by_site')
+def extract_losses_by_site(dstore, what):
+    """
+    :returns: a DataFrame (lon, lat, number, structural, ...)
+    """
+    sitecol = dstore['sitecol']
+    dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
+    array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
+    grp = dstore.getitem('avg_losses-stats')
+    for loss_type in grp:
+        losses = grp[loss_type][:, 0]
+        dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))
+    return pandas.DataFrame(dic)
+
+
 def _gmf(df, num_sites, imts, sec_imts):
     # convert data into the composite array expected by QGIS
     gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts + sec_imts])
