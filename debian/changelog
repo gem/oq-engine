@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an extractor `losses_by_site`
   * Extended `source_model.serialise_to_nrml` to accept a `mesh_spacing`
     parameter
 
