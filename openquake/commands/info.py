@@ -316,8 +316,11 @@ def main(what, report=False):
                     col.append(' ' * maxlen)
             print(''.join(col))
     elif what == 'sources':
-        for cls in gen_subclasses(BaseSeismicSource):
-            print(cls.__name__)
+        pairs = sorted((cls.__name__, cls.code)
+                       for cls in gen_subclasses(BaseSeismicSource)
+                       if hasattr(cls, 'code'))
+        for i, (name, code) in enumerate(pairs, 1):
+            print('%02d' % i, code.decode('ascii'), name)
     elif what == 'disagg':
         for out in pmf_map:
             print(out)
