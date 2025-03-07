@@ -1,9 +1,6 @@
   [Michele Simionato]
   * Added command `oq info apply_uncertainty`
   * Added an extractor `losses_by_site`
-  * Improved `oq info sources` and `oq show relevant_sources:<IMT>`
-  * Internal: accepted `source_model_file` in place of
-    `source_model_logic_tree_file`
   * Extended `source_model.serialise_to_nrml` to accept a `mesh_spacing`
     parameter
 
