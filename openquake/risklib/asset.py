@@ -505,7 +505,10 @@ class AssetCollection(object):
                 mmi = to_mmi(feat.properties['PARAMVALUE'])
                 values = self.get_agg_values(aggregate_by, geom)
                 if values['number'].any():
-                    out[mmi] = values
+                    if mmi not in out:
+                        out[mmi] = values
+                    else:
+                        out[mmi] += values
         return out
 
     def build_aggids(self, aggregate_by):
