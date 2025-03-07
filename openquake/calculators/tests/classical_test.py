@@ -300,6 +300,11 @@ class ClassicalTestCase(CalculatorTestCase):
         fname = general.gettemp(text_table(rel, ext='org'))
         self.assertEqualFiles('expected/rel_source.org', fname)
 
+        # check relevant sources
+        rel = view('relevant_sources:PGV', self.calc.datastore)
+        fname = general.gettemp(text_table(rel, ext='org'))
+        self.assertEqualFiles('expected/rel_source.org', fname)
+
     def test_case_29(self):  # non parametric source with 2 KiteSurfaces
         check = False
 
