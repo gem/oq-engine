@@ -730,10 +730,13 @@ class HazardCalculator(BaseCalculator):
                 self.read_inputs()
                 self.save_crmodel()
             if oq.impact and 'mmi' in oq.inputs:
-                logging.info('Computing MMI-aggregated values')
-                if mmi_values := self.assetcol.get_mmi_values(
-                        oq.aggregate_by, oq.inputs['mmi']):
-                    self.datastore['mmi_tags'] = mmi_values
+                if len(self.assetcol) < 10_000:
+                    logging.info('Computing MMI-aggregated values')
+                    if mmi_values := self.assetcol.get_mmi_values(
+                            oq.aggregate_by, oq.inputs['mmi']):
+                        self.datastore['mmi_tags'] = mmi_values
+                else:
+                    logging.info('Too many assets to aggregate by MMI!')
 
     def pre_execute_from_parent(self):
         """
