@@ -100,7 +100,7 @@ def make_figure_hcurves(extractors, what):
         ax.set_xlabel('%s, site %s, inv_time=%dy' %
                       (imt, site, oq.investigation_time))
         ax.set_ylabel('PoE')
-        ax.set_xlabel('acceleration')
+        ax.set_xlabel(f'{imt} (g units)')
         for ck, arr in got.items():
             if (arr == 0).all():
                 logging.warning('There is a zero curve %s_%s', *ck)
