@@ -127,10 +127,12 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             else:
                 mask = None
             src.set_msparams(secparams, mask, ry0, mon1, mon2)
-        elif src.code == b'P' and sites:
+        elif src.code in b'pP' and sites:
             # special case, compute distances
             distances = sites.get_cdist(src.location)
-            src.nsites = (distances <= maxdist).sum()
+            radius = src._get_max_rupture_projection_radius()
+            src.nsites = (distances <= maxdist + radius +
+                          src.ps_grid_spacing*.707).sum()
         elif sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
