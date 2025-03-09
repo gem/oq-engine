@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added command `oq info apply_uncertainty`
   * Added an extractor `losses_by_site`
   * Improved `oq info sources` and `oq show relevant_sources:<IMT>`
   * Internal: accepted `source_model_file` in place of
