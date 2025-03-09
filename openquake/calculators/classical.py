@@ -34,7 +34,8 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.map_array import RateMap, MapArray, rates_dt, check_hmaps
+from openquake.hazardlib.map_array import (
+    RateMap, MapArray, rates_dt, check_hmaps)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -583,9 +584,13 @@ class ClassicalCalculator(base.HazardCalculator):
         for cmaker, tilegetters, blocks, nsplits in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
-                for tgetters in block_splitter(tilegetters, nsplits):
-                    allargs.append((block, tgetters, cmaker, ds))
-                    n_out.append(len(tgetters))
+                # nsites can be zero for pointlike sources if discarded
+                # by preclassical
+                srcs = [src for src in block if src.nsites]
+                if srcs:
+                    for tgetters in block_splitter(tilegetters, nsplits):
+                        allargs.append((srcs, tgetters, cmaker, ds))
+                        n_out.append(len(tgetters))
             splits.append(nsplits)
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
@@ -611,7 +616,8 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         n_out = []
         for cmaker, tilegetters, blocks, splits in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks, True):
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
+                True):
             for block in blocks:
                 for tgetter in tilegetters:
                     allargs.append((tgetter, cmaker, ds))
