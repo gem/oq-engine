@@ -518,6 +518,8 @@ class AssetCollection(object):
             df = pandas.DataFrame(dic)
             df['mmi'] = mmi
             dfs.append(df)
+        if not dfs:
+            return ()
         df = pandas.concat(dfs)
         return df[df.number > 0]
 
