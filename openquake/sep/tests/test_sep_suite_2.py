@@ -119,7 +119,7 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(self.sites["newmark_disp"], nd)
 
     def test_nowicki_jessee_18(self):
-        prob_ls, coverage = nowicki_jessee_2018(
+        prob_ls, LsSE = nowicki_jessee_2018(
             pga=self.pga,
             pgv=self.pgv,
             slope=self.sites["slope"],
@@ -156,7 +156,7 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
             ]
         )
         np.testing.assert_array_almost_equal(prob_ls, zlp)
-        np.testing.assert_array_almost_equal(coverage, cls)
+        np.testing.assert_array_almost_equal(LsSE, cls)
 
 
 class CaliSmallLiquefactionTestCase(unittest.TestCase):
@@ -245,7 +245,7 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
         np.testing.assert_array_almost_equal(out_class, clq)
 
     def test_zhu17_coastal(self):
-        prob_liq, out_class, LSE = zhu_etal_2017_coastal(
+        prob_liq, out_class, LqSE = zhu_etal_2017_coastal(
             pgv=self.pgv,
             vs30=self.sites["vs30"],
             dr=self.sites["dr"],
@@ -267,7 +267,7 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
             ]
         )
         clq = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        lse = np.array(
+        lqse = np.array(
             [
                 0.266467348,
                 0.039739528,
@@ -283,10 +283,10 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
-        np.testing.assert_array_almost_equal(LSE, lse)
+        np.testing.assert_array_almost_equal(LqSE, lqse)
 
     def test_zhu17_general(self):
-        prob_liq, out_class, LSE = zhu_etal_2017_general(
+        prob_liq, out_class, LqSE = zhu_etal_2017_general(
             pgv=self.pgv,
             vs30=self.sites["vs30"],
             dw=self.sites["dw"],
@@ -308,7 +308,7 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
             ]
         )
         clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
-        lse = np.array(
+        lqse = np.array(
             [
                 1.482171022,
                 0.277301525,
@@ -324,10 +324,10 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
-        np.testing.assert_array_almost_equal(LSE, lse)
+        np.testing.assert_array_almost_equal(LqSE, lqse)
 
     def test_rashidian_baise_2020(self):
-        prob_liq, out_class, LSE = rashidian_baise_2020(
+        prob_liq, out_class, LqSE = rashidian_baise_2020(
             pgv=self.pgv,
             pga=self.pga,
             vs30=self.sites["vs30"],
@@ -350,7 +350,7 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
             ]
         )
         clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
-        lse = np.array(
+        lqse = np.array(
             [
                 1.482171022,
                 0.277301525,
@@ -366,10 +366,10 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
-        np.testing.assert_array_almost_equal(LSE, lse)
+        np.testing.assert_array_almost_equal(LqSE, lqse)
 
     def test_allstadt_2022(self):
-        prob_liq, out_class, LSE = allstadt_etal_2022(
+        prob_liq, out_class, LqSE = allstadt_etal_2022(
             pgv=self.pgv,
             pga=self.pga,
             mag=self.mag,
@@ -393,7 +393,7 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
             ]
         )
         clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
-        lse = np.array(
+        lqse = np.array(
             [
                 1.417553345,
                 0.268584431,
@@ -409,7 +409,7 @@ class CaliSmallLiquefactionTestCase(unittest.TestCase):
         )
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
-        np.testing.assert_array_almost_equal(LSE, lse)
+        np.testing.assert_array_almost_equal(LqSE, lqse)
 
     def test_akhlagi_2021_model_a(self):
         prob_liq, out_class = akhlagi_etal_2021_model_a(
