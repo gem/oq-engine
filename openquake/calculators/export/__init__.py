@@ -82,7 +82,7 @@ DISPLAY_NAME = {
 }
 
 
-FIELD_DESCRIPTION = {
+LOSS_FIELD_DESCRIPTION = {
     'contents': 'Contents loss (USD)',
     'nonstructural': 'Nonstructural loss (USD)',
     'structural': 'Structural loss (USD)',
@@ -90,6 +90,19 @@ FIELD_DESCRIPTION = {
     'area': 'Floor area lost (m2)',
     'number': 'Buildings beyond repair',
     'residents': 'Rendered homeless',
+}
+
+EXPOSURE_FIELD_DESCRIPTION = {
+    'number': 'Buildings',
+    'contents': 'Contents value (USD)',
+    'nonstructural': 'Nonstructural value (USD)',
+    'structural': 'Structural value (USD)',
+    'residents': 'Residents',
+    'area': 'Floor area (m2)',
+    'occupants_day': 'Occupants day',
+    'occupants_night': 'Occupants night',
+    'occupants_transit': 'Occupants transit hours',
+    'occupants_avg': 'Average number of occupants',
 }
 
 
