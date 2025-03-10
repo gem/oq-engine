@@ -350,7 +350,7 @@ def apply_uncertainties(bset_values, src_group):
     sg.sources = []
     sg.changes = 0
     for source in src_group:
-        oks = [bset.filter_source(source) for bset, value in bset_values]
+        oks = [bset.filter_source(source) for bset, _value in bset_values]
         if sum(oks):  # source not filtered out
             src = copy.deepcopy(source)
             srcs = []
@@ -686,7 +686,8 @@ class BranchSet(object):
                 pass
             else:
                 raise AssertionError("unknown filter '%s'" % key)
-        # All filters pass, return True.
+
+        # all filters pass (or no filters), keep the source
         return True
 
     def get_bset_values(self, ltpath):
