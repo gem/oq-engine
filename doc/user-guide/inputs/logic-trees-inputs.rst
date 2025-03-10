@@ -715,8 +715,9 @@ First, it is best to give some terminology.
 4. a GMPE logic tree is simple if it has at most one tectonic region type with multiple GMPEs
 5. a GMPE logic tree is complex if it has more than one tectonic region type with multiple GMPEs.
 
-Here is an example of trivial GMPE logic tree, in its XML input representation::
+Here is an example of trivial GMPE logic tree, in its XML input representation:
 
+.. xml:
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	     xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -825,7 +826,7 @@ Let’s assume that you have a zip archive called *SHARE.zip* containing the SHA
 logic tree file and the SHARE GMPE logic tree file as provided by the SHARE collaboration, as well as a job.ini file. 
 If you run::
 
-	``$ oq info SHARE.zip``
+	$ oq info SHARE.zip
 
 all the files will be parsed and the full logic tree of the computation will be generated. This is very fast, it runs in 
 exactly 1 minute on my laptop, which is impressive, since the XML of the SHARE source models is larger than 250 MB. 
@@ -901,11 +902,7 @@ respectively::
 	R = prod(R_i)
 
 In the demo the storage is over 4 times less (18 vs 81); in more complex cases the gain than can be much more impressive. 
-For instance the ZAF model in our mosaic (the national model for South Africa) contains a source specific logic tree 
-with 22 sources that can be decomposed as follows:
-
-In other words, by storing only 186 components we can save enough information to build 24_959_374_950_829_916_160 
-realizations, with a gain of over 10^17!
+For instance the ZAF model in our mosaic (the national model for South Africa) contains a source specific logic tree with 22 sources. In that case, by storing only 186 components we can save enough information to build 24_959_374_950_829_916_160 realizations, with a gain of over 10^17!
 
 ****************************
 Extracting the hazard curves
