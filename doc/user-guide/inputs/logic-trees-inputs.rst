@@ -223,8 +223,9 @@ The Seismic Source Logic Tree
 The structure of the Seismic Source Logic Tree consists of at least one *Branch Set*. The example provided below shows 
 the simplest Seismic Source Logic Tree structure that can be defined in a *Psha Input Model* for OpenQuake engine. It’s 
 a logic tree with just onebranchset with one *Branch* used to define the initial seismic source model (its weight will 
-be equal to one).::
+be equal to one).
 
+.. xml:
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -249,8 +250,9 @@ the geometry of sources) and one branching level accounting for the epistemic un
 
 Below we provide an example of such logic tree structure. Note that the uncertainty on the maximum magnitude is specified 
 in terms of relative increments with respect to the initial maximum magnitude defined for each source in the initial 
-seismic source models.::
+seismic source models.
 
+.. xml:
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -293,8 +295,9 @@ seismic source models.::
 Starting from OpenQuake engine v2.4, it is also possible to split a source model into several files and read them as if 
 they were a single file. The file names for the different files comprising a source model should be provided in the 
 source model logic tree file. For instance, a source model could be split by tectonic region using the following syntax 
-in the source model logic tree::
+in the source model logic tree:
 
+.. xml:
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -351,8 +354,9 @@ region used to characterise the sources in the PSHA input model.
 
 The example below in shows a simple *Ground Motion Logic Tree*. This logic tree assumes that all the sources in the PSHA 
 input model belong to “Active Shallow Crust” and uses for calculation the B. S.-J. Chiou and Youngs (2008) Ground Motion 
-Prediction Equation.::
+Prediction Equation.
 
+.. xml:
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -380,8 +384,9 @@ extendModel
 ***********
 
 Starting from engine 3.9 it is possible to define logic trees by adding sources to one or more base models. An example 
-will make things clear::
+will make things clear:
 
+.. xml:
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -443,8 +448,9 @@ correspond to the ``applyToBranches`` tag in the XML version of the logic tree. 
 logic tree is multiplicative and the total number of paths can be obtained simply by multiplying the number of paths in 
 each branchset. When ``applyToBranches`` is used, the logic tree becomes additive and the total number of paths can be 
 obtained by summing the number of paths in the different subtrees. For instance, let us extend the previous example by 
-adding another ``extendModel`` branchset and by using ``applyToBranches``::
+adding another ``extendModel`` branchset and by using ``applyToBranches``:
 
+.. xml:
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.4">
