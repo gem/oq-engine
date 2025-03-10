@@ -13,7 +13,9 @@ if not logger.handlers:
 g: float = 9.81
 
 def critical_accel(
-    factor_of_safety: Union[float, np.ndarray], slope: Union[float, np.ndarray]
+    factor_of_safety: Union[float, np.ndarray],
+    slope: Union[float, np.ndarray],
+    crit_accel_threshold: float = 0.0001,
 ) -> Union[float, np.ndarray]:
     """
     Calculates the critical acceleration, i.e. the acceleration at which the
@@ -37,9 +39,9 @@ def critical_accel(
     print(crit_accel)
     print("crit_accel")
     if np.isscalar(crit_accel):
-        return max([0.0, crit_accel])
+        return max([crit_accel_threshold, crit_accel])
     else:
-        return np.array([max([0.0, ca]) for ca in crit_accel])
+        return np.array([max([crit_accel_threshold, ca]) for ca in crit_accel])
                      
 
 def jibson_2007_model_a( 
@@ -48,7 +50,7 @@ def jibson_2007_model_a(
     c1: float = 0.215,
     c2: float = 2.341,
     c3: float = -1.438,
-    crit_accel_threshold: float = 0.05,
+    accel_ratio_threshold: float = 0.05,
 ) -> Union[float, np.ndarray]:
     """
     Calculates earthquake-induced displacements of landslides from PGA, and critical acceleration,
@@ -63,7 +65,7 @@ def jibson_2007_model_a(
 
     :param crit_accel:
         Critical Acceleration, measured in g; this is the acceleration at
-        which the rock-slope failures occur.
+        which the slope failures occur.
 
     :param c1:
         Empirical constant
@@ -74,8 +76,8 @@ def jibson_2007_model_a(
     :param c3:
         Empirical constant
 
-    :param crit_accel_threshold:
-        Lower bound for critical acceleration. Values close to or below zero
+    :param accel_ratio_threshold:
+        Lower bound for the acceleration ratio. Values close to or below zero
         may reflect an incorrect factor of safety calculation or site
         characterization, and produce unreasonably high displacements.
         Defaults to 0.05
@@ -96,11 +98,11 @@ def jibson_2007_model_a(
     if np.isscalar(accel_ratio):
         if accel_ratio > 1.0:
             accel_ratio = 1.0
-        elif accel_ratio <= crit_accel_threshold:
-            accel_ratio == crit_accel_threshold
+        elif accel_ratio <= accel_ratio_threshold:
+            accel_ratio == accel_ratio_threshold
     else:
         accel_ratio[accel_ratio > 1.0] = 1.0
-        accel_ratio[accel_ratio <= crit_accel_threshold] = crit_accel_threshold
+        accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
 
     pow_1 = (1 - accel_ratio) ** c2
     pow_2 = accel_ratio**c3
@@ -139,7 +141,7 @@ def jibson_2007_model_b(
     c2: float = 2.335,
     c3: float = -1.478,
     c4: float = 0.424,
-    crit_accel_threshold: float = 0.05,
+    accel_ratio_threshold: float = 0.05,
 ) -> Union[float, np.ndarray]:
     """
     Computes earthquake-induced displacements of landlsides from 
@@ -172,8 +174,8 @@ def jibson_2007_model_b(
     :param c4:
         Empirical constant
 
-    :param crit_accel_threshold:
-        Lower bound for critical acceleration. Values close to or below zero
+    :param accel_ratio_threshold:
+        Lower bound for the acceleration ratio. Values close to or below zero
         may reflect an incorrect factor of safety calculation or site
         characterization, and produce unreasonably high displacements.
         Defaults to 0.05
@@ -197,11 +199,11 @@ def jibson_2007_model_b(
     if np.isscalar(accel_ratio):
         if accel_ratio > 1.0:
             accel_ratio = 1.0
-        elif accel_ratio <= crit_accel_threshold:
-            accel_ratio == crit_accel_threshold
+        elif accel_ratio <= accel_ratio_threshold:
+            accel_ratio == accel_ratio_threshold
     else:
         accel_ratio[accel_ratio > 1.0] = 1.0
-        accel_ratio[accel_ratio <= crit_accel_threshold] = crit_accel_threshold
+        accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
 
     pow_1 = (1 - accel_ratio) ** c2
     pow_2 = accel_ratio**c3
@@ -386,7 +388,7 @@ def fotopoulou_pitilakis_2015_model_c(pga, mag, crit_accel):
         Disp: Earthquake-induced displacements in m.
     '''
     
-    crit_accel_threshold: float = 0.05
+    accel_ratio_threshold: float = 0.05
     
     # Corrections of invalid values
     if np.isscalar(pga):
@@ -401,11 +403,11 @@ def fotopoulou_pitilakis_2015_model_c(pga, mag, crit_accel):
     if np.isscalar(accel_ratio):
         if accel_ratio > 1.0:
             accel_ratio = 1.0
-        elif accel_ratio <= crit_accel_threshold:
-            accel_ratio == crit_accel_threshold
+        elif accel_ratio <= accel_ratio_threshold:
+            accel_ratio == accel_ratio_threshold
     else:
         accel_ratio[accel_ratio > 1.0] = 1.0
-        accel_ratio[accel_ratio <= crit_accel_threshold] = crit_accel_threshold
+        accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
     
     log_Disp = -10.246 - 2.165*np.log(accel_ratio) + 7.844*crit_accel + 0.654*mag
     Disp = np.power(e, log_Disp) #return Disp in m
@@ -440,9 +442,9 @@ def fotopoulou_pitilakis_2015_model_d(pgv, pga, crit_accel):
         Disp: Earthquake-induced displacements in m.
         
     '''
-    crit_accel_threshold: float = 0.05
+    accel_ratio_threshold: float = 0.05
     
-    # Corrections of invalid values
+    # Corrections of invalid values       
     if np.isscalar(pga):
         if pga == 0.0:
             pga = 1e-5
@@ -455,11 +457,11 @@ def fotopoulou_pitilakis_2015_model_d(pgv, pga, crit_accel):
     if np.isscalar(accel_ratio):
         if accel_ratio > 1.0:
             accel_ratio = 1.0
-        elif accel_ratio <= crit_accel_threshold:
-            accel_ratio == crit_accel_threshold
+        elif accel_ratio <= accel_ratio_threshold:
+            accel_ratio == accel_ratio_threshold
     else:
         accel_ratio[accel_ratio > 1.0] = 1.0
-        accel_ratio[accel_ratio <= crit_accel_threshold] = crit_accel_threshold
+        accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
     
     log_Disp = -8.360 + 1.873*np.log(pgv) - 0.347*np.log(crit_accel/pga) - 5.964*crit_accel
     Disp = np.power(e, log_Disp) #return Disp in m
@@ -492,7 +494,7 @@ def saygili_rathje_2008(pga, pgv, crit_accel):
     :returns:
         Disp: Earthquake-induced displacements in m.
     ''' 
-    crit_accel_threshold: float = 0.05
+    accel_ratio_threshold: float = 0.05
     
     # Corrections of invalid values
     if np.isscalar(pga):
@@ -507,11 +509,11 @@ def saygili_rathje_2008(pga, pgv, crit_accel):
     if np.isscalar(accel_ratio):
         if accel_ratio > 1.0:
             accel_ratio = 1.0
-        elif accel_ratio <= crit_accel_threshold:
-            accel_ratio == crit_accel_threshold
+        elif accel_ratio <= accel_ratio_threshold:
+            accel_ratio == accel_ratio_threshold
     else:
         accel_ratio[accel_ratio > 1.0] = 1.0
-        accel_ratio[accel_ratio <= crit_accel_threshold] = crit_accel_threshold
+        accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
         
     log_Disp = -1.56 - 4.58*(crit_accel/pga) - 20.84*(np.power((crit_accel/pga), 2)) + 44.75*(np.power((crit_accel/pga), 3)) - 30.50*(np.power((crit_accel/pga), 4)) - 0.64*(np.log(pga)) + 1.55*(np.log(pgv))
     Disp_cm = np.power(e, log_Disp)
@@ -545,7 +547,7 @@ def rathje_saygili_2009(pga, mag, crit_accel):
     :returns:
         Disp: Earthquake-induced displacements in m.
     '''
-    crit_accel_threshold: float = 0.05
+    accel_ratio_threshold: float = 0.05
     
     # Corrections of invalid values
     if np.isscalar(pga):
@@ -560,11 +562,11 @@ def rathje_saygili_2009(pga, mag, crit_accel):
     if np.isscalar(accel_ratio):
         if accel_ratio > 1.0:
             accel_ratio = 1.0
-        elif accel_ratio <= crit_accel_threshold:
-            accel_ratio == crit_accel_threshold
+        elif accel_ratio <= accel_ratio_threshold:
+            accel_ratio == accel_ratio_threshold
     else:
         accel_ratio[accel_ratio > 1.0] = 1.0
-        accel_ratio[accel_ratio <= crit_accel_threshold] = crit_accel_threshold
+        accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
         
     log_Disp = 4.89 -4.85*(crit_accel/pga) - 19.64*(np.power((crit_accel/pga), 2)) + 42.49*(np.power((crit_accel/pga), 3)) - 29.06*(np.power((crit_accel/pga), 4)) + 0.72*(np.log(pga)) + 0.89*(mag-6)
     Disp_cm = np.power(e, log_Disp) #in cm

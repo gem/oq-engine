@@ -45,8 +45,11 @@ TWO32 = 2 ** 32
 
 def source_data(sources):
     """
-    Set the source .id attribute to the index in the source_info table
-    :returns: a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
+    Set the source .id attribute to the index in the source_info table.
+    :param sources:
+        a list of source objects
+    :returns:
+        a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
     """
     data = AccumDict(accum=[])
     for src in sources:
@@ -59,7 +62,9 @@ def source_data(sources):
 
 
 def check_maxmag(pointlike):
-    """Check for pointlike sources with high magnitudes"""
+    """
+    Check for pointlike sources with high magnitudes
+    """
     for src in pointlike:
         maxmag = src.get_annual_occurrence_rates()[-1][0]
         if maxmag >= 9.:
@@ -402,7 +407,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         # save 'source_groups'
         if self.sitecol is not None:
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-                store_tiles(self.datastore, self.csm, self.sitecol, self.cmakers))
+                store_tiles(self.datastore, self.csm,
+                            self.sitecol, self.cmakers))
 
         # save gsims
         toml = []

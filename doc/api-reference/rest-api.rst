@@ -135,7 +135,21 @@ columns are "ID_1", "loss_type", "value", "lossmea", "lossq05",
 GET /v1/calc/:calc_id/mmi_tags
 **********************************
 
-FIXME
+Get exposure aggregated by MMI regions and tags.
+
+NB: this URL is valid only for ShakeMap based calculations downloading
+the MMI regions from the USGS service/
+
+Otherwise it returns a BadRequest error with HTTP code 400.
+
+Parameters: None
+
+Response:
+
+A JSON object corresponding to a pandas DataFrame. The names of the
+columns are "ID_1", "number", "contents", "nonstructural", "structural",
+"residents", "area",  "occupants_day", "occupants_night", "occupants_transit",
+"occupants_avg",  "mmi".
 
 ***********************************
 GET /v1/calc/:calc_id/extract/:spec

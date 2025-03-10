@@ -98,7 +98,7 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
                 5.53795977,
                 6.45917414,
                 5.791588,
-                0.0,
+                0.0001,
                 14.81513269,
                 5.26990181,
                 4.20417316,
