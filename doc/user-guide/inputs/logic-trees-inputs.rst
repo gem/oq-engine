@@ -23,8 +23,9 @@ The main components of a logic tree structure in the OpenQuake engine are the fo
    This set of uncertainties can be applied to the whole initial seismic source input model or just to a subset of 
    seismic sources. The sum of the weights/probabilities assigned to the set of branches always correspond to one.
 
-Below we provide a simple schema illustrating the skeleton of xml file containing the desciption of a logic tree::
+Below we provide a simple schema illustrating the skeleton of xml file containing the desciption of a logic tree:
 
+.. code-block:: xml
 	    <logicTreeBranchSet branchSetID=ID
 	                        uncertaintyType=TYPE>
 	        <logicTreeBranch>
@@ -48,8 +49,9 @@ A Branch set identifies a collection of branches (i.e. individual branches) whos
 Logic trees as described in the nrml schema
 -------------------------------------------
 
-In the NRML schema, a logic tree structure is defined through the ``logicTree`` element::
+In the NRML schema, a logic tree structure is defined through the ``logicTree`` element:
 
+.. code-block:: xml
 	<logicTree logicTreeID="ID">
 	...
 	</logicTree>
@@ -61,7 +63,7 @@ There are no restrictions on the number of Branch set that can be defined.
 Each ``logicTreeBranchSet`` has two required attributes: ``branchSetID`` and ``uncertaintyType``. The latter defines the 
 type of epistemic uncertainty this branchset is describing:
 
-.. xml:
+.. code-block:: xml
 	<logicTree logicTreeID="ID">
 	             <logicTreeBranchSet branchSetID="ID_1"
 	                     uncertaintyType="UNCERTAINTY_TYPE">
@@ -99,7 +101,7 @@ element (a string identifying an uncertainty model; the content of the string va
 attribute value of the branchSet element) and the ``uncertaintyWeight`` element (specifying the probability/weight 
 associated to the ``uncertaintyModel``):
 
-.. xml:
+.. code-block:: xml
 	< logicTree  logicTreeID="ID">
 	...
 	
@@ -132,41 +134,41 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
   (a list of available GMPEs can be obtained using ``oq info gsims`` and these are also documented 
   `here <https://docs.openquake.org/oq-engine/reference/master/openquake.hazardlib.gsim.html>`_):
 
-.. xml:
+.. code-block:: xml
 	<uncertaintyModel>GMPE_NAME</uncertaintyModel>
 
 - if ``uncertaintyType="sourceModel"``, the uncertainty model contains the paths to a source model file, e.g.:
 
-.. xml:
+.. code-block:: xml
 	<uncertaintyModel>SOURCE_MODEL_FILE_PATH</uncertaintyModel>
 
 - if ``uncertaintyType="maxMagGRRelative"``, the uncertainty model contains the increment to be added (or subtracted, 
   depending on the sign) to the Gutenberg-Richter maximum magnitude:
 	
-.. xml:
+.. code-block:: xml
    <uncertaintyModel>MAX_MAGNITUDE_INCREMENT</uncertaintyModel>
 
 - if ``uncertaintyType="bGRRelative"``, the uncertainty model contains the increment to be added (or subtracted, 
   depending on the sign) to the Gutenberg-Richter b value:
 
-.. xml:
+.. code-block:: xml
 	<uncertaintyModel>B_VALUE_INCREMENT</uncertaintyModel>
 
 - if ``uncertaintyType="abGRAbsolute"``, the uncertainty model must contain one a and b pair:
 
-.. xml:	
+.. code-block:: xml	
 	<uncertaintyModel>A_VALUE B_VALUE</uncertaintyModel>
 
 - if ``uncertaintyType="maxMagGRAbsolute"``, the uncertainty model must contain one Gutenberg-Richter maximum magnitude 
   value:
 
-.. xml:
+.. code-block:: xml
 	<uncertaintyModel>MAX_MAGNITUDE</uncertaintyModel>
 
 - if ``uncertaintyType="incrementalMFDAbsolute"``, the uncertainty model must contain an instance of the incremental MFD 
   node:
 
-.. xml:
+.. code-block:: xml
         <uncertaintyModel>
 	    <incrementalMFD
 	        minMag="MIN MAGNITUDE"
@@ -182,12 +184,12 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
   increase (positive) or decrease (negative) the fault dip. Note that if this increase results in an adjusted fault dip 
   greater than 90 degrees or less than 0 degrees an error will occur.:
 
-.. xml:
+.. code-block:: xml
 	<uncertaintyModel>DIP_INCREMENT</uncertaintyModel>
 
 - if ``uncertaintyType="simpleFaultDipAbsolute"`` then the uncertainty model must specify the dip angle (in degrees):
 
-.. xml:
+.. code-block:: xml
 	<uncertaintyModel>DIP</uncertaintyModel>
 
 - if ``uncertaintyType="complexFaultGeometryAbsolute"`` then the uncertainty model must contain a *valid* instance of the 
@@ -236,7 +238,7 @@ the simplest Seismic Source Logic Tree structure that can be defined in a *Psha 
 a logic tree with just onebranchset with one *Branch* used to define the initial seismic source model (its weight will 
 be equal to one).
 
-.. xml:
+.. code-block:: xml
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -263,7 +265,7 @@ Below we provide an example of such logic tree structure. Note that the uncertai
 in terms of relative increments with respect to the initial maximum magnitude defined for each source in the initial 
 seismic source models.
 
-.. xml:
+.. code-block:: xml
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -308,7 +310,7 @@ they were a single file. The file names for the different files comprising a sou
 source model logic tree file. For instance, a source model could be split by tectonic region using the following syntax 
 in the source model logic tree:
 
-.. xml:
+.. code-block:: xml
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -363,11 +365,12 @@ The Ground Motion Logic Tree
 The structure of the Ground Motion Logic Tree consists of a list of ground motion prediction equations for each tectonic 
 region used to characterise the sources in the PSHA input model.
 
-The example below in shows a simple *Ground Motion Logic Tree*. This logic tree assumes that all the sources in the PSHA 
-input model belong to “Active Shallow Crust” and uses for calculation the B. S.-J. Chiou and Youngs (2008) Ground Motion 
-Prediction Equation.
+The example below in shows a simple *Ground Motion Logic Tree*. This
+logic tree assumes that all the sources in the PSHA input model belong
+to “Active Shallow Crust” and uses for calculation the B. S.-J. Chiou
+and Youngs (2008) Ground Motion Prediction Equation.
 
-.. xml:
+.. code-block:: xml
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -397,7 +400,7 @@ extendModel
 Starting from engine 3.9 it is possible to define logic trees by adding sources to one or more base models. An example 
 will make things clear:
 
-.. xml:
+.. code-block:: xml
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -461,7 +464,7 @@ each branchset. When ``applyToBranches`` is used, the logic tree becomes additiv
 obtained by summing the number of paths in the different subtrees. For instance, let us extend the previous example by 
 adding another ``extendModel`` branchset and by using ``applyToBranches``:
 
-.. xml:
+.. code-block:: xml
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -717,7 +720,7 @@ First, it is best to give some terminology.
 
 Here is an example of trivial GMPE logic tree, in its XML input representation:
 
-.. xml:
+.. code-block:: xml
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	     xmlns="http://openquake.org/xmlns/nrml/0.4">
