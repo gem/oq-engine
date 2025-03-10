@@ -128,6 +128,7 @@ Parameters: None
 Response:
 
 A JSON object containing:
+
 - an 'impact' key containing a pandas DataFrame; the names of the columns are "ID_1", "loss_type",
   "value", "lossmea", "lossq05", "lossq95".
 - a 'loss_type_description' dictionary containing a description for each loss type.
@@ -148,10 +149,11 @@ Parameters: None
 Response:
 
 A JSON object containing:
+
 - an 'exposure_by_mmi' key corresponding to a pandas DataFrame; the names of the
-columns are "ID_1", "number", "contents", "nonstructural", "structural",
-"residents", "area",  "occupants_day", "occupants_night", "occupants_transit",
-"occupants_avg",  "mmi".
+  columns are "ID_1", "number", "contents", "nonstructural", "structural",
+  "residents", "area",  "occupants_day", "occupants_night", "occupants_transit",
+  "occupants_avg",  "mmi".
 - an exposure_type_description' dictionary containing a description for each exposure type.
 
 ***********************************
