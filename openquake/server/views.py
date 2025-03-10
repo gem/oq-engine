@@ -54,7 +54,8 @@ from openquake.hazardlib.shakemap.validate import (
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
-from openquake.calculators.export import export, FIELD_DESCRIPTION
+from openquake.calculators.export import (
+    export, LOSS_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
@@ -1172,9 +1173,9 @@ def calc_result(request, result_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def aggrisk_tags(request, calc_id):
+def get_impact(request, calc_id):
     """
-    Return aggrisk_tags, by ``calc_id``, as JSON.
+    Return impact results (aggrisk_tags), by ``calc_id``, as JSON.
 
     :param request:
         `django.http.HttpRequest` object.
@@ -1197,14 +1198,17 @@ def aggrisk_tags(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
-    return HttpResponse(content=df.to_json(), content_type=JSON, status=200)
+    response_data = {'loss_type_descriptions': LOSS_FIELD_DESCRIPTION,
+                     'impact': json.loads(df.to_json())}
+    return JsonResponse(response_data)
 
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def mmi_tags(request, calc_id):
+def get_exposure_by_mmi(request, calc_id):
     """
-    Return mmi_tags, by ``calc_id``, as JSON.
+    Return exposure aggregated by MMI regions and tags (mmi_tags),
+    by ``calc_id``, as JSON.
 
     :param request:
         `django.http.HttpRequest` object.
@@ -1227,7 +1231,9 @@ def mmi_tags(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'mmi_tags', tb),
             content_type='text/plain', status=400)
-    return HttpResponse(content=df.to_json(), content_type=JSON, status=200)
+    response_data = {'column_descriptions': EXPOSURE_FIELD_DESCRIPTION,
+                     'exposure_by_mmi': json.loads(df.to_json())}
+    return JsonResponse(response_data)
 
 
 @cross_domain_ajax
@@ -1507,8 +1513,8 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses_header = None
         else:
             losses_header = [
-                f'{field}<br><i>{FIELD_DESCRIPTION[field]}</i>'
-                if field in FIELD_DESCRIPTION
+                f'{field}<br><i>{LOSS_FIELD_DESCRIPTION[field]}</i>'
+                if field in LOSS_FIELD_DESCRIPTION
                 else field.capitalize()
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
@@ -1591,8 +1597,11 @@ def extract_html_table(request, calc_id, name):
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
     table_html = table.to_html(classes="table table-striped", index=False)
+    display_names = {'aggrisk_tags': 'Impact',
+                     'mmi_tags': 'Exposure by MMI'}
+    table_name = display_names[name] if name in display_names else name
     return render(request, 'engine/show_table.html',
-                  {'table_name': name, 'table_html': table_html})
+                  {'table_name': table_name, 'table_html': table_html})
 
 
 @csrf_exempt
