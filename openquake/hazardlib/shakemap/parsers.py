@@ -42,7 +42,7 @@ import numpy
 from openquake.baselib import performance
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
-from openquake.hazardlib import nrml, sourceconverter
+from openquake.hazardlib import nrml, sourceconverter, valid
 from openquake.hazardlib.source.rupture import (
     get_multiplanar, is_matrix, build_planar_rupture_from_dict)
 
@@ -807,6 +807,11 @@ def _get_rup_from_json(usgs_id, rupture_file):
 
 def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
     err = {}
+    try:
+        usgs_id = valid.simple_id(usgs_id)
+    except Exception as exc:
+        err = {'status': 'failed', 'error_msg': str(exc)}
+        return None, err
     contents, _properties, _shakemap, err = _contents_properties_shakemap(
         usgs_id, user, False, monitor)
     if err:
