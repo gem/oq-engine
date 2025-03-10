@@ -846,6 +846,14 @@ def extract_aggexp_tags(dstore, what):
     return _aggexp_tags(dstore)[0]
 
 
+@extract.add('mmi_tags')
+def extract_mmi_tags(dstore, what):
+    """
+    Aggregates exposure by MMI regions and tags. Use it as /extract/mmi_tags?
+    """
+    return dstore.read_df('mmi_tags')
+
+
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
     """
@@ -890,36 +898,6 @@ def extract_aggrisk_tags(dstore, what):
                 for qfield, qvalue in zip(qfields, qvalues):
                     acc[qfield].append(qvalue)
     df = pandas.DataFrame(acc)
-    return df
-
-
-@extract.add('mmi_tags')
-def extract_mmi_tags(dstore, what):
-    """
-    Aggregates mmi by tag. Use it as /extract/mmi_tags?
-    """
-    oq = dstore['oqparam']
-    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
-        # see impact_test.py
-        aggby = [','.join(a[0] for a in oq.aggregate_by)]
-    else:  # i.e. [['ID_0', 'OCCUPANCY']]
-        # see event_based_risk_test/case_1
-        [aggby] = oq.aggregate_by
-    keys = numpy.array([line.decode('utf8').split('\t')
-                        for line in dstore['agg_keys'][:]])
-    values = dstore['mmi_tags']
-    acc = general.AccumDict(accum=[])
-    K = len(keys)
-    ok = numpy.zeros(K, bool)
-    for agg_id in range(K):
-        for agg_key, key in zip(aggby, keys[agg_id]):
-            acc[agg_key].append(key)
-        for mmi in list(values):
-            array = values[mmi][agg_id]  # structured array with loss types
-            for lt in array.dtype.names:
-                acc[f'{lt}_{mmi}'].append(array[lt])
-                ok[agg_id] += array[lt]
-    df = pandas.DataFrame(acc)[ok]
     return df
 
 

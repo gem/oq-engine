@@ -12,7 +12,8 @@
   * Fixed a bug in the Thingbaijam et al. (2017) MSR
 
   [Michele Simionato]
-  * Added an input `mmi_shapes_file` for use in OQ Impact
+  * Added an input `mmi_shapes_file` for use in OQ Impact and then
+    a JSON output /v1/calc/:ID/mmi_tags
 
   [Christopher Brooks]
   * Added Boore and Atkinson (2008) site term to the ModifiableGMPE
