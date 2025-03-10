@@ -898,6 +898,10 @@ def extract_aggrisk_tags(dstore, what):
                 for qfield, qvalue in zip(qfields, qvalues):
                     acc[qfield].append(qvalue)
     df = pandas.DataFrame(acc)
+    total_df = df.groupby(aggby, as_index=False).sum()
+    total_df['loss_type'] = 'total'
+    df = pandas.concat([df, total_df], ignore_index=True)
+
     return df
 
 
