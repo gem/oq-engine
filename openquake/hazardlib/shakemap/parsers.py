@@ -809,7 +809,7 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
     err = {}
     try:
         usgs_id = valid.simple_id(usgs_id)
-    except Exception as exc:
+    except ValueError as exc:
         err = {'status': 'failed', 'error_msg': str(exc)}
         return None, err
     contents, _properties, _shakemap, err = _contents_properties_shakemap(
