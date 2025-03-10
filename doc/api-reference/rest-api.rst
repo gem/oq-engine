@@ -154,7 +154,7 @@ A JSON object containing:
   columns are "ID_1", "number", "contents", "nonstructural", "structural",
   "residents", "area",  "occupants_day", "occupants_night", "occupants_transit",
   "occupants_avg",  "mmi".
-- an exposure_type_description' dictionary containing a description for each exposure type.
+- a 'column_descriptions' dictionary containing a description for each exposure type.
 
 ***********************************
 GET /v1/calc/:calc_id/extract/:spec

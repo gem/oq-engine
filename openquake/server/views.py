@@ -1198,7 +1198,7 @@ def get_impact(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
-    response_data = {'loss_type_description': LOSS_FIELD_DESCRIPTION,
+    response_data = {'loss_type_descriptions': LOSS_FIELD_DESCRIPTION,
                      'impact': json.loads(df.to_json())}
     return JsonResponse(response_data)
 
@@ -1231,7 +1231,7 @@ def get_exposure_by_mmi(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'mmi_tags', tb),
             content_type='text/plain', status=400)
-    response_data = {'exposure_type_description': EXPOSURE_FIELD_DESCRIPTION,
+    response_data = {'column_descriptions': EXPOSURE_FIELD_DESCRIPTION,
                      'exposure_by_mmi': json.loads(df.to_json())}
     return JsonResponse(response_data)
 

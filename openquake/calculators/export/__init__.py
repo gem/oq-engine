@@ -103,6 +103,8 @@ EXPOSURE_FIELD_DESCRIPTION = {
     'occupants_night': 'Occupants night',
     'occupants_transit': 'Occupants transit hours',
     'occupants_avg': 'Average number of occupants',
+    'mmi': ('Macroseismic intensity (MMI) to which the given group'
+            ' of assets is subjected')
 }
 
 
