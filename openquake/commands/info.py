@@ -33,7 +33,7 @@ from decorator import FunctionMaker
 from openquake.baselib import config, hdf5
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import nrml, imt, logictree, site, geo
+from openquake.hazardlib import nrml, imt, logictree, site, geo, lt
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.gsim.base import registry
 from openquake.hazardlib.mfd.base import BaseMFD
@@ -286,10 +286,14 @@ def main(what, report=False):
             print(param)
             print(docs[param])
     elif what == 'loss_types':
-        ltypes = [lt for lt in scientific.LOSSTYPE
-                  if '+' not in lt and '_ins' not in lt]
-        for lt in sorted(ltypes):
-            print(lt)
+        ltypes = [ltype for ltype in scientific.LOSSTYPE
+                  if '+' not in ltype and '_ins' not in ltype]
+        for ltype in sorted(ltypes):
+            print(ltype)
+    elif what == 'apply_uncertainty':
+        uncs = [unc for unc in lt.apply_uncertainty if unc != 'dummy']
+        for i, unc in enumerate(sorted(uncs), 1):
+            print('%02d' % i, unc)
     elif what.startswith('mfd'):
         print_subclass(what, BaseMFD)
     elif what.startswith('msr'):
@@ -316,8 +320,11 @@ def main(what, report=False):
                     col.append(' ' * maxlen)
             print(''.join(col))
     elif what == 'sources':
-        for cls in gen_subclasses(BaseSeismicSource):
-            print(cls.__name__)
+        pairs = sorted((cls.__name__, cls.code)
+                       for cls in gen_subclasses(BaseSeismicSource)
+                       if hasattr(cls, 'code'))
+        for i, (name, code) in enumerate(pairs, 1):
+            print('%02d' % i, code.decode('ascii'), name)
     elif what == 'disagg':
         for out in pmf_map:
             print(out)
@@ -371,12 +378,12 @@ def main(what, report=False):
                 print('Generated', reportwriter.build_report(what))
             else:
                 oq = readinput.get_oqparam(what)
-                lt = readinput.get_logic_tree(oq)
+                ltree = readinput.get_logic_tree(oq)
                 size = humansize(oq.get_input_size())
                 print('calculation_mode: %s' % oq.calculation_mode)
                 print('description: %s' % oq.description)
                 print('input size: %s' % size)
-                for bset in lt.branchsets:
+                for bset in ltree.branchsets:
                     pprint(bset.to_list())
         if mon.duration > 1:
             print(mon)

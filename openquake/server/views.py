@@ -1216,7 +1216,36 @@ def aggrisk_tags(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
+    return HttpResponse(content=df.to_json(), content_type=JSON, status=200)
 
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
+def mmi_tags(request, calc_id):
+    """
+    Return mmi_tags, by ``calc_id``, as JSON.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param calc_id:
+        The id of the requested calculation.
+    :returns:
+        a JSON object as documented in rest-api.rst
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            df = _extract(ds, 'mmi_tags')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'mmi_tags', tb),
+            content_type='text/plain', status=400)
     return HttpResponse(content=df.to_json(), content_type=JSON, status=200)
 
 

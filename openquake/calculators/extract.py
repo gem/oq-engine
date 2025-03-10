@@ -846,6 +846,14 @@ def extract_aggexp_tags(dstore, what):
     return _aggexp_tags(dstore)[0]
 
 
+@extract.add('mmi_tags')
+def extract_mmi_tags(dstore, what):
+    """
+    Aggregates exposure by MMI regions and tags. Use it as /extract/mmi_tags?
+    """
+    return dstore.read_df('mmi_tags')
+
+
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
     """
@@ -890,36 +898,6 @@ def extract_aggrisk_tags(dstore, what):
                 for qfield, qvalue in zip(qfields, qvalues):
                     acc[qfield].append(qvalue)
     df = pandas.DataFrame(acc)
-    return df
-
-
-@extract.add('mmi_tags')
-def extract_mmi_tags(dstore, what):
-    """
-    Aggregates mmi by tag. Use it as /extract/mmi_tags?
-    """
-    oq = dstore['oqparam']
-    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
-        # see impact_test.py
-        aggby = [','.join(a[0] for a in oq.aggregate_by)]
-    else:  # i.e. [['ID_0', 'OCCUPANCY']]
-        # see event_based_risk_test/case_1
-        [aggby] = oq.aggregate_by
-    keys = numpy.array([line.decode('utf8').split('\t')
-                        for line in dstore['agg_keys'][:]])
-    values = dstore['mmi_tags']
-    acc = general.AccumDict(accum=[])
-    K = len(keys)
-    ok = numpy.zeros(K, bool)
-    for agg_id in range(K):
-        for agg_key, key in zip(aggby, keys[agg_id]):
-            acc[agg_key].append(key)
-        for mmi in list(values):
-            array = values[mmi][agg_id]  # structured array with loss types
-            for lt in array.dtype.names:
-                acc[f'{lt}_{mmi}'].append(array[lt])
-                ok[agg_id] += array[lt]
-    df = pandas.DataFrame(acc)[ok]
     return df
 
 
@@ -1047,6 +1025,21 @@ def extract_losses_by_asset(dstore, what):
         losses = cast(avg_losses, loss_dt)
         data = util.compose_arrays(assets, losses)
         yield 'rlz-000', data
+
+
+@extract.add('losses_by_site')
+def extract_losses_by_site(dstore, what):
+    """
+    :returns: a DataFrame (lon, lat, number, structural, ...)
+    """
+    sitecol = dstore['sitecol']
+    dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
+    array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
+    grp = dstore.getitem('avg_losses-stats')
+    for loss_type in grp:
+        losses = grp[loss_type][:, 0]
+        dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))
+    return pandas.DataFrame(dic)
 
 
 def _gmf(df, num_sites, imts, sec_imts):
