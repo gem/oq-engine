@@ -1175,7 +1175,7 @@ def calc_result(request, result_id):
 @require_http_methods(['GET', 'HEAD'])
 def get_impact(request, calc_id):
     """
-    Return aggrisk_tags, by ``calc_id``, as JSON.
+    Return impact results (aggrisk_tags), by ``calc_id``, as JSON.
 
     :param request:
         `django.http.HttpRequest` object.
@@ -1199,7 +1199,7 @@ def get_impact(request, calc_id):
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
     response_data = {'loss_type_description': LOSS_FIELD_DESCRIPTION,
-                     'losses': json.loads(df.to_json())}
+                     'impact': json.loads(df.to_json())}
     return JsonResponse(response_data)
 
 
@@ -1207,7 +1207,8 @@ def get_impact(request, calc_id):
 @require_http_methods(['GET', 'HEAD'])
 def get_exposure_by_mmi(request, calc_id):
     """
-    Return mmi_tags, by ``calc_id``, as JSON.
+    Return exposure aggregated by MMI regions and tags (mmi_tags),
+    by ``calc_id``, as JSON.
 
     :param request:
         `django.http.HttpRequest` object.

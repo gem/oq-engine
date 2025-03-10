@@ -114,11 +114,11 @@ Response:
 
 A list of error lines extracted from the log. If the calculation was successfull, the list is empty.
 
-**********************************
-GET /v1/calc/:calc_id/aggrisk_tags
-**********************************
+********************************
+GET /v1/calc/:calc_id/get_impact
+********************************
 
-Get risk results aggregated by tag, together with the corresponding exposure values.
+Get impact results aggregated by tag, together with the corresponding exposure values.
 
 NB: this URL is valid only for risk calculations with an aggregate_by parameter.
 Otherwise it returns a BadRequest error with HTTP code 400.
@@ -127,18 +127,19 @@ Parameters: None
 
 Response:
 
-A JSON object corresponding to a pandas DataFrame. The names of the
-columns are "ID_1", "loss_type", "value", "lossmea", "lossq05",
-"lossq95".
+A JSON object containing:
+- an 'impact' key containing a pandas DataFrame; the names of the columns are "ID_1", "loss_type",
+  "value", "lossmea", "lossq05", "lossq95".
+- a 'loss_type_description' dictionary containing a description for each loss type.
 
-**********************************
-GET /v1/calc/:calc_id/mmi_tags
-**********************************
+*****************************************
+GET /v1/calc/:calc_id/get_exposure_by_mmi
+*****************************************
 
 Get exposure aggregated by MMI regions and tags.
 
 NB: this URL is valid only for ShakeMap based calculations downloading
-the MMI regions from the USGS service/
+the MMI regions from the USGS service.
 
 Otherwise it returns a BadRequest error with HTTP code 400.
 
@@ -146,10 +147,12 @@ Parameters: None
 
 Response:
 
-A JSON object corresponding to a pandas DataFrame. The names of the
+A JSON object containing:
+- an 'exposure_by_mmi' key corresponding to a pandas DataFrame; the names of the
 columns are "ID_1", "number", "contents", "nonstructural", "structural",
 "residents", "area",  "occupants_day", "occupants_night", "occupants_transit",
 "occupants_avg",  "mmi".
+- an exposure_type_description' dictionary containing a description for each exposure type.
 
 ***********************************
 GET /v1/calc/:calc_id/extract/:spec
