@@ -1172,7 +1172,7 @@ def calc_result(request, result_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def aggrisk_tags(request, calc_id):
+def get_impact(request, calc_id):
     """
     Return aggrisk_tags, by ``calc_id``, as JSON.
 
@@ -1202,7 +1202,7 @@ def aggrisk_tags(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def mmi_tags(request, calc_id):
+def get_exposure_by_mmi(request, calc_id):
     """
     Return mmi_tags, by ``calc_id``, as JSON.
 
@@ -1591,8 +1591,11 @@ def extract_html_table(request, calc_id, name):
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
     table_html = table.to_html(classes="table table-striped", index=False)
+    display_names = {'aggrisk_tags': 'Impact',
+                     'mmi_tags': 'Exposure by MMI'}
+    table_name = display_names[name] if name in display_names else name
     return render(request, 'engine/show_table.html',
-                  {'table_name': name, 'table_html': table_html})
+                  {'table_name': table_name, 'table_html': table_html})
 
 
 @csrf_exempt
