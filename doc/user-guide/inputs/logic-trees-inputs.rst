@@ -59,8 +59,9 @@ A ``logicTree`` contains as a sequence of ``logicTreeBranchSet`` elements.
 There are no restrictions on the number of Branch set that can be defined.
 
 Each ``logicTreeBranchSet`` has two required attributes: ``branchSetID`` and ``uncertaintyType``. The latter defines the 
-type of epistemic uncertainty this *Branch* set is describing.::
+type of epistemic uncertainty this branchset is describing:
 
+.. xml:
 	<logicTree logicTreeID="ID">
 	             <logicTreeBranchSet branchSetID="ID_1"
 	                     uncertaintyType="UNCERTAINTY_TYPE">
@@ -96,8 +97,9 @@ Possible values for the ``uncertaintyType`` attribute are:
 A ``branchSet`` is defined as a sequence of ``logicTreeBranch`` elements, each specified by an ``uncertaintyModel`` 
 element (a string identifying an uncertainty model; the content of the string varies with the ``uncertaintyType`` 
 attribute value of the branchSet element) and the ``uncertaintyWeight`` element (specifying the probability/weight 
-associated to the ``uncertaintyModel``)::
+associated to the ``uncertaintyModel``):
 
+.. xml:
 	< logicTree  logicTreeID="ID">
 	...
 	
@@ -128,37 +130,44 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
 
 - if ``uncertaintyType="gmpeModel"``, the uncertainty model contains the name of a ground motion prediction equation 
   (a list of available GMPEs can be obtained using ``oq info gsims`` and these are also documented 
-  `here <https://docs.openquake.org/oq-engine/reference/master/openquake.hazardlib.gsim.html>`_)::
+  `here <https://docs.openquake.org/oq-engine/reference/master/openquake.hazardlib.gsim.html>`_):
 
+.. xml:
 	<uncertaintyModel>GMPE_NAME</uncertaintyModel>
 
-- if ``uncertaintyType="sourceModel"``, the uncertainty model contains the paths to a source model file, e.g.::
+- if ``uncertaintyType="sourceModel"``, the uncertainty model contains the paths to a source model file, e.g.:
 
+.. xml:
 	<uncertaintyModel>SOURCE_MODEL_FILE_PATH</uncertaintyModel>
 
 - if ``uncertaintyType="maxMagGRRelative"``, the uncertainty model contains the increment to be added (or subtracted, 
-  depending on the sign) to the Gutenberg-Richter maximum magnitude::
+  depending on the sign) to the Gutenberg-Richter maximum magnitude:
 	
-	<uncertaintyModel>MAX_MAGNITUDE_INCREMENT</uncertaintyModel>
+.. xml:
+   <uncertaintyModel>MAX_MAGNITUDE_INCREMENT</uncertaintyModel>
 
 - if ``uncertaintyType="bGRRelative"``, the uncertainty model contains the increment to be added (or subtracted, 
-  depending on the sign) to the Gutenberg-Richter b value::
-	
+  depending on the sign) to the Gutenberg-Richter b value:
+
+.. xml:
 	<uncertaintyModel>B_VALUE_INCREMENT</uncertaintyModel>
 
-- if ``uncertaintyType="abGRAbsolute"``, the uncertainty model must contain one a and b pair::
-	
+- if ``uncertaintyType="abGRAbsolute"``, the uncertainty model must contain one a and b pair:
+
+.. xml:	
 	<uncertaintyModel>A_VALUE B_VALUE</uncertaintyModel>
 
 - if ``uncertaintyType="maxMagGRAbsolute"``, the uncertainty model must contain one Gutenberg-Richter maximum magnitude 
-  value::
+  value:
 
+.. xml:
 	<uncertaintyModel>MAX_MAGNITUDE</uncertaintyModel>
 
 - if ``uncertaintyType="incrementalMFDAbsolute"``, the uncertainty model must contain an instance of the incremental MFD 
-  node::
+  node:
 
-	<uncertaintyModel>
+.. xml:
+        <uncertaintyModel>
 	    <incrementalMFD
 	        minMag="MIN MAGNITUDE"
 	        binWidth="BIN WIDTH">
@@ -171,12 +180,14 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
 
 - if ``uncertaintyType="simpleFaultDipRelative"`` then the uncertainty model must specify the number of degrees to 
   increase (positive) or decrease (negative) the fault dip. Note that if this increase results in an adjusted fault dip 
-  greater than 90 degrees or less than 0 degrees an error will occur.::
+  greater than 90 degrees or less than 0 degrees an error will occur.:
 
+.. xml:
 	<uncertaintyModel>DIP_INCREMENT</uncertaintyModel>
 
-- if ``uncertaintyType="simpleFaultDipAbsolute"`` then the uncertainty model must specify the dip angle (in degrees)::
+- if ``uncertaintyType="simpleFaultDipAbsolute"`` then the uncertainty model must specify the dip angle (in degrees):
 
+.. xml:
 	<uncertaintyModel>DIP</uncertaintyModel>
 
 - if ``uncertaintyType="complexFaultGeometryAbsolute"`` then the uncertainty model must contain a *valid* instance of the 
@@ -205,7 +216,7 @@ The ``logicTreeBranchSet`` element offers also a number of optional attributes a
 
 - ``applyToTectonicRegionType``: specifies to which tectonic region type the uncertainty applies to. Only one tectonic 
   region type can be defined (``Active Shallow Crust``, ``Stable Shallow Crust``, ``Subduction Interface``, ``Subduction 
-  IntraSlab``, ``Volcanic``), e.g.:
+  IntraSlab``, ``Volcanic``), e.g.::
 
 	applyToTectonicRegionType="Active Shallow Crust"
 
