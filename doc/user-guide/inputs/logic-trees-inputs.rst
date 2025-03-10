@@ -26,13 +26,14 @@ The main components of a logic tree structure in the OpenQuake engine are the fo
 Below we provide a simple schema illustrating the skeleton of xml file containing the desciption of a logic tree:
 
 .. code-block:: xml
-	    <logicTreeBranchSet branchSetID=ID
+
+	   <logicTreeBranchSet branchSetID=ID
 	                        uncertaintyType=TYPE>
 	        <logicTreeBranch>
 	            <uncertaintyModel>VALUE</uncertaintyModel>
 	            <uncertaintyWeight>WEIGHT</uncertaintyWeight>
 	        </logicTreeBranch>
-	    </logicTreeBranchSet>
+	   </logicTreeBranchSet>
 
 As it appears from this example, the structure of a logic tree is a set of nested elements.
 
@@ -52,7 +53,8 @@ Logic trees as described in the nrml schema
 In the NRML schema, a logic tree structure is defined through the ``logicTree`` element:
 
 .. code-block:: xml
-	<logicTree logicTreeID="ID">
+
+        <logicTree logicTreeID="ID">
 	...
 	</logicTree>
 
@@ -64,6 +66,7 @@ Each ``logicTreeBranchSet`` has two required attributes: ``branchSetID`` and ``u
 type of epistemic uncertainty this branchset is describing:
 
 .. code-block:: xml
+                
 	<logicTree logicTreeID="ID">
 	             <logicTreeBranchSet branchSetID="ID_1"
 	                     uncertaintyType="UNCERTAINTY_TYPE">
@@ -102,6 +105,7 @@ attribute value of the branchSet element) and the ``uncertaintyWeight`` element 
 associated to the ``uncertaintyModel``):
 
 .. code-block:: xml
+                
 	< logicTree  logicTreeID="ID">
 	...
 	
@@ -135,40 +139,47 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
   `here <https://docs.openquake.org/oq-engine/reference/master/openquake.hazardlib.gsim.html>`_):
 
 .. code-block:: xml
+                
 	<uncertaintyModel>GMPE_NAME</uncertaintyModel>
 
 - if ``uncertaintyType="sourceModel"``, the uncertainty model contains the paths to a source model file, e.g.:
 
 .. code-block:: xml
+                
 	<uncertaintyModel>SOURCE_MODEL_FILE_PATH</uncertaintyModel>
 
 - if ``uncertaintyType="maxMagGRRelative"``, the uncertainty model contains the increment to be added (or subtracted, 
   depending on the sign) to the Gutenberg-Richter maximum magnitude:
 	
 .. code-block:: xml
+                
    <uncertaintyModel>MAX_MAGNITUDE_INCREMENT</uncertaintyModel>
 
 - if ``uncertaintyType="bGRRelative"``, the uncertainty model contains the increment to be added (or subtracted, 
   depending on the sign) to the Gutenberg-Richter b value:
 
 .. code-block:: xml
+                
 	<uncertaintyModel>B_VALUE_INCREMENT</uncertaintyModel>
 
 - if ``uncertaintyType="abGRAbsolute"``, the uncertainty model must contain one a and b pair:
 
-.. code-block:: xml	
+.. code-block:: xml
+                
 	<uncertaintyModel>A_VALUE B_VALUE</uncertaintyModel>
 
 - if ``uncertaintyType="maxMagGRAbsolute"``, the uncertainty model must contain one Gutenberg-Richter maximum magnitude 
   value:
 
 .. code-block:: xml
+                
 	<uncertaintyModel>MAX_MAGNITUDE</uncertaintyModel>
 
 - if ``uncertaintyType="incrementalMFDAbsolute"``, the uncertainty model must contain an instance of the incremental MFD 
   node:
 
 .. code-block:: xml
+                
         <uncertaintyModel>
 	    <incrementalMFD
 	        minMag="MIN MAGNITUDE"
@@ -185,11 +196,13 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
   greater than 90 degrees or less than 0 degrees an error will occur.:
 
 .. code-block:: xml
+                
 	<uncertaintyModel>DIP_INCREMENT</uncertaintyModel>
 
 - if ``uncertaintyType="simpleFaultDipAbsolute"`` then the uncertainty model must specify the dip angle (in degrees):
 
 .. code-block:: xml
+                
 	<uncertaintyModel>DIP</uncertaintyModel>
 
 - if ``uncertaintyType="complexFaultGeometryAbsolute"`` then the uncertainty model must contain a *valid* instance of the 
@@ -239,6 +252,7 @@ a logic tree with just onebranchset with one *Branch* used to define the initial
 be equal to one).
 
 .. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -266,6 +280,7 @@ in terms of relative increments with respect to the initial maximum magnitude de
 seismic source models.
 
 .. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -311,6 +326,7 @@ source model logic tree file. For instance, a source model could be split by tec
 in the source model logic tree:
 
 .. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -371,6 +387,7 @@ to “Active Shallow Crust” and uses for calculation the B. S.-J. Chiou
 and Youngs (2008) Ground Motion Prediction Equation.
 
 .. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -401,6 +418,7 @@ Starting from engine 3.9 it is possible to define logic trees by adding sources 
 will make things clear:
 
 .. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -465,6 +483,7 @@ obtained by summing the number of paths in the different subtrees. For instance,
 adding another ``extendModel`` branchset and by using ``applyToBranches``:
 
 .. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -721,6 +740,7 @@ First, it is best to give some terminology.
 Here is an example of trivial GMPE logic tree, in its XML input representation:
 
 .. code-block:: xml
+
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	     xmlns="http://openquake.org/xmlns/nrml/0.4">
