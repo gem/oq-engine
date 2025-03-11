@@ -285,14 +285,19 @@ def _set_rupids_by_tag(src, allrids, dists, s2i):
     used_rupids = []
     src.rupids_by_tag = {}
     for _dist, tag, fids in sorted(closest):
-        src.rupids_by_tag[tag] = []
+        # instantiate rupture id list
+        rids_by_tag = []
+
         # loop through all ruptures in the source 
         for rupid, rids in enumerate(allrids):
             # overlap between the section ids of the rupture and the fault?
             if len(np.intersect1d(rids, fids, assume_unique=True)):
                 if rupid not in used_rupids:
-                    src.rupids_by_tag[tag].append(rupid)
+                    rids_by_tag.append(rupid)
                     used_rupids.append(rupid)
+        # only create the new key for that fault tag if there are ruptures
+        if len(rids_by_tag) > 0:
+            src.rupids_by_tag[tag] = rids_by_tag
 
     # put the rest in another tag
     off_rupids = np.setdiff1d(np.arange(len(allrids)), used_rupids,
