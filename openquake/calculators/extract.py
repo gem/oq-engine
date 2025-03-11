@@ -897,6 +897,22 @@ def extract_aggrisk_tags(dstore, what):
                 qvalues = qdf.loc[agg_id, loss_id].to_numpy()
                 for qfield, qvalue in zip(qfields, qvalues):
                     acc[qfield].append(qvalue)
+        elif lt == 'occupants':
+            # FIXME: adding 'injured' and 'affectedpop' loss types with not realistic
+            #        values, calculated as:
+            #                injured = occupants_avg * 2
+            #            affectedpop = occupants_avg * 10
+            lt = 'occupants_avg'
+            for new_lt, multiplier in [('injured', 2), ('affectedpop', 10)]:
+                for agg_key, key in zip(aggby, keys[agg_id]):
+                    acc[agg_key].append(key)
+                acc['loss_type'].append(new_lt)
+                acc['value'].append(values[agg_id][lt] * multiplier)
+                acc['lossmea'].append(loss * multiplier)
+                if len(qdf):
+                    qvalues = qdf.loc[agg_id, loss_id].to_numpy()
+                    for qfield, qvalue in zip(qfields, qvalues):
+                        acc[qfield].append(qvalue * multiplier)
     df = pandas.DataFrame(acc)
     total_df = df.groupby(aggby, as_index=False).sum()
     total_df['loss_type'] = 'total'
