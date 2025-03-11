@@ -90,6 +90,9 @@ AGGRISK_FIELD_DESCRIPTION = {
     'area': 'Floor area lost (m2)',
     'number': 'Buildings beyond repair',
     'residents': 'Rendered homeless',
+    'injured': 'Number of injured people',
+    'affectedpop': 'Number of people living in buildings with moderate or higher damage'
+
 }
 
 EXPOSURE_FIELD_DESCRIPTION = {
