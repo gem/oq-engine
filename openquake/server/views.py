@@ -1173,7 +1173,7 @@ def calc_result(request, result_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def get_impact(request, calc_id):
+def impact_results(request, calc_id):
     """
     Return impact results (aggrisk_tags), by ``calc_id``, as JSON.
 
@@ -1205,7 +1205,7 @@ def get_impact(request, calc_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def get_exposure_by_mmi(request, calc_id):
+def exposure_by_mmi(request, calc_id):
     """
     Return exposure aggregated by MMI regions and tags (mmi_tags),
     by ``calc_id``, as JSON.
