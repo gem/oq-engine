@@ -385,10 +385,7 @@ class SourceFilter(object):
         try:
             bbox = get_bounding_box(src, maxdist)
         except Exception as exc:
-            msg = ''
-            if '.' in src.source_id:
-                msg = 'Try setting "split_sources = false" in job file'
-            raise exc.__class__(f'source {src.source_id}: {exc}. \n {msg}')
+            raise exc.__class__('source %r: %s' % (src.source_id, exc))
         return bbox
 
     def get_rectangle(self, src):
