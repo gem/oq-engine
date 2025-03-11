@@ -115,7 +115,7 @@ Response:
 A list of error lines extracted from the log. If the calculation was successfull, the list is empty.
 
 ********************************
-GET /v1/calc/:calc_id/get_impact
+GET /v1/calc/:calc_id/impact
 ********************************
 
 Get impact results aggregated by tag, together with the corresponding exposure values.
@@ -134,7 +134,7 @@ A JSON object containing:
 - a 'loss_type_description' dictionary containing a description for each loss type.
 
 *****************************************
-GET /v1/calc/:calc_id/get_exposure_by_mmi
+GET /v1/calc/:calc_id/exposure_by_mmi
 *****************************************
 
 Get exposure aggregated by MMI regions and tags.
