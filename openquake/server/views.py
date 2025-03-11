@@ -55,7 +55,7 @@ from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
-    export, LOSS_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
+    export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
@@ -1198,8 +1198,8 @@ def get_impact(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
-    response_data = {'loss_type_descriptions': LOSS_FIELD_DESCRIPTION,
-                     'impact': json.loads(df.to_json())}
+    response_data = {'loss_type_descriptions': AGGRISK_FIELD_DESCRIPTION,
+                     'impact': df.to_dict()}
     return JsonResponse(response_data)
 
 
@@ -1232,7 +1232,7 @@ def get_exposure_by_mmi(request, calc_id):
             (exc.__class__.__name__, exc, 'mmi_tags', tb),
             content_type='text/plain', status=400)
     response_data = {'column_descriptions': EXPOSURE_FIELD_DESCRIPTION,
-                     'exposure_by_mmi': json.loads(df.to_json())}
+                     'exposure_by_mmi': df.to_dict()}
     return JsonResponse(response_data)
 
 
@@ -1513,8 +1513,8 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses_header = None
         else:
             losses_header = [
-                f'{field}<br><i>{LOSS_FIELD_DESCRIPTION[field]}</i>'
-                if field in LOSS_FIELD_DESCRIPTION
+                f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
+                if field in AGGRISK_FIELD_DESCRIPTION
                 else field.capitalize()
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])

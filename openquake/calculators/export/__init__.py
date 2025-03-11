@@ -82,7 +82,7 @@ DISPLAY_NAME = {
 }
 
 
-LOSS_FIELD_DESCRIPTION = {
+AGGRISK_FIELD_DESCRIPTION = {
     'contents': 'Contents loss (USD)',
     'nonstructural': 'Nonstructural loss (USD)',
     'structural': 'Structural loss (USD)',
