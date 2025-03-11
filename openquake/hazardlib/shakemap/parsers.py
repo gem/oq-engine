@@ -866,7 +866,8 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
         usgs_id, user, get_grid, monitor)
     if err:
         return None, None, err
-    if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
+    if approach in ['use_shakemap_from_usgs', 'use_pnt_rup_from_usgs',
+                    'build_rup_from_usgs']:
         if dic.get('lon') is None:  # don't override user-inserted values
             rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
             for key in dic:
@@ -888,11 +889,10 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
             usgs_id, properties['mag'], properties['products'])
         if err:
             return None, None, err
-    if not rup_data and approach not in ['use_pnt_rup_from_usgs',
-                                         'build_rup_from_usgs']:
+    if approach == 'use_finite_rup_from_usgs':
         with monitor('Downloading rupture json'):
             rup_data, rupture_file = download_rupture_data(usgs_id, contents, user)
-        if not rupture_file and approach == 'use_finite_rup_from_usgs':
+        if not rupture_file:
             err = {"status": "failed",
                    "error_msg": 'Unable to retrieve rupture geometries'}
             return None, None, err
@@ -900,10 +900,13 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
     if 'mmi_file' not in rupdic:
         rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
+    if approach == 'use_shakemap_from_usgs':
+        rupdic['shakemap_array'] = shakemap
+        return rup, rupdic, err
     if not rup_data:  # in parsers_test
+        if approach == 'use_pnt_rup_from_usgs':
+            rupdic['msr'] = 'PointMSR'
         try:
-            if approach == 'use_pnt_rup_from_usgs':
-                rupdic['msr'] = 'PointMSR'
             rup = build_planar_rupture_from_dict(rupdic)
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}

@@ -445,7 +445,7 @@ function capitalizeFirstLetter(val) {
         'use_shakemap_from_usgs',
         'use_pnt_rup_from_usgs',
         'build_rup_from_usgs',
-        'use_finite_rup_from_usgs',
+        'use_finite_rup_from_usgs'
     ];
 
     const retrieve_data_btn_txt_map = {
@@ -667,11 +667,14 @@ function capitalizeFirstLetter(val) {
                 set_retrieve_data_btn_txt('initial');
                 reset_impact_forms();
                 if (approaches_requiring_usgs_id.includes(selected_approach)) {
-                    $('#rupture_from_usgs_grp').removeClass('hidden');
                     $('#usgs_id_grp').removeClass('hidden');
                 } else {
-                    $('#rupture_from_usgs_grp').addClass('hidden');
                     $('#usgs_id_grp').addClass('hidden');
+                }
+                if (selected_approach == 'use_finite_rup_from_usgs') {
+                    $('#rupture_from_usgs_grp').removeClass('hidden');
+                } else {
+                    $('#rupture_from_usgs_grp').addClass('hidden');
                 }
                 if (selected_approach == 'provide_rup') {
                     $('#upload_rupture_grp').removeClass('hidden');
@@ -684,9 +687,7 @@ function capitalizeFirstLetter(val) {
                     $('#rup_params').removeClass('hidden');
                     $('div#msr').removeClass('hidden');
                     $('div#aspect_ratio').removeClass('hidden');
-                    if (selected_approach == 'build_rup_from_usgs') {
-                        $('#rupture_from_usgs_grp').addClass('hidden');
-                    } else {  // provide_rup_params
+                    if (selected_approach == 'provide_rup_params') {
                         $('#usgs_id').val('UserProvided');
                     }
                 } else {

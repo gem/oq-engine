@@ -117,7 +117,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
     def test_5(self):
         # 12 vertices instead of 4 in rupture.json
         rup, dic, _err = get_rup_dic(
-            {'usgs_id': 'us20002926', 'approach': 'use_shakemap_from_usgs'},
+            {'usgs_id': 'us20002926', 'approach': 'use_finite_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIsNone(rup)
         rupture_issue = ('Unable to convert the rupture from the USGS format: '
