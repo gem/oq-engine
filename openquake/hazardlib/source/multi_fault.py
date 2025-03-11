@@ -276,7 +276,7 @@ def _set_rupids_by_tag(src, allrids, dists, s2i):
     for tag, idxs in src.faults.items():
         fids = U32([s2i[idx] for idx in idxs])
         rid = np.argmin(dists[fids])
-        closest.append((dists[rid], tag, fids))
+        closest.append((dists[fids][rid], tag, fids))
 
     # build dictionary src.rupids_by_tag with the indices of
     # ruptures belonging to each fault source; care is taken
@@ -299,6 +299,7 @@ def _set_rupids_by_tag(src, allrids, dists, s2i):
                             assume_unique=True)
     if len(off_rupids):
         src.rupids_by_tag['off_rupids'] = off_rupids
+
 
 
 # NB: as side effect delete _rupture_idxs,

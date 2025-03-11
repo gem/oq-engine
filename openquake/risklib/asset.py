@@ -48,17 +48,16 @@ VAL_FIELDS = {'structural', 'nonstructural', 'contents',
               'business_interruption'}
 
 
-def to_mmi(value, MMIs=('I', 'II', 'III', 'IV', 'V', 'VI', 'VII',
-                        'VIII', 'IX', 'X')):
+def to_mmi(value):
     """
     :param value: float in the range 1..10
-    :returns: string "I" .. "X" representing a MMI
+    :returns: an MMI value in the range 1..10
     """
     if value >= 10.5:
         raise ValueError(f'{value} is too large to be an MMI')
     elif value < 0.5:
         raise ValueError(f'{value} is too small to be an MMI')
-    return MMIs[round(value) - 1]
+    return round(value) - 1
 
 
 def add_dupl_fields(df, oqfields):
@@ -495,7 +494,7 @@ class AssetCollection(object):
         :param mmi_file:
             shapefile containing MMI geometries and values
         :returns:
-            a dictionary MMI -> array with the value fields
+            a DataFrame with columns number, structural, ..., mmi
         """
         out = {}
         with fiona.open(f'zip://{mmi_file}!mi.shp') as f:
@@ -506,11 +505,36 @@ class AssetCollection(object):
                 values = self.get_agg_values(aggregate_by, geom)
                 if values['number'].any():
                     if mmi not in out:
-                        out[mmi] = values
+                        out[mmi] = values[:-1]  # discard total
                     else:
                         for lt in values.dtype.names:
-                            out[mmi][lt] += values[lt]
-        return out
+                            out[mmi][lt] += values[lt][:-1]
+        _aggids, aggtags = self.build_aggids(aggregate_by)
+        aggtags = numpy.array(aggtags)  # shape (K+1, T)
+        dfs = []
+        for mmi in out:
+            dic = {key: aggtags[:, k] for k, key in enumerate(aggregate_by[0])}
+            dic.update({col: out[mmi][col] for col in out[mmi].dtype.names})
+            df = pandas.DataFrame(dic)
+            df['mmi'] = mmi
+            dfs.append(df)
+        if not dfs:
+            return ()
+        df = pandas.concat(dfs)
+        return df[df.number > 0]
+
+    # not used yet
+    def agg_by_site(self):
+        """
+        :returns: an array of aggregated values indexed by site ID
+        """
+        N = self['site_id'].max() + 1
+        vfields = self.fields + self.occfields
+        agg_values = numpy.zeros(N, [(f, F32) for f in vfields])
+        for vf in vfields:
+            arr = self['value-' + vf if vf in self.fields else vf]
+            agg_values[vf] = general.fast_agg(self['site_id'], arr)
+        return agg_values
 
     # not used yet
     def agg_by_site(self):
