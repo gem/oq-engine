@@ -738,10 +738,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol)
         R = len(self.datastore['weights'])
-        if oq.individual_rlzs is None:  # not specified in the job.ini
-            individual_rlzs = (N == 1) * (R > 1)
-        else:
-            individual_rlzs = oq.individual_rlzs
         hstats = oq.hazard_stats()
         # initialize datasets
         P = len(oq.poes)
@@ -753,7 +749,7 @@ class ClassicalCalculator(base.HazardCalculator):
             L = oq.imtls.size
         L1 = self.L1 = L // M
         S = len(hstats)
-        if R == 1 or individual_rlzs:
+        if R == 1 or oq.individual_rlzs:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_descr(
                 'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
@@ -772,7 +768,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_shape_descr(
                     'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
-        return N, S, M, P, L1, individual_rlzs
+        return N, S, M, P, L1
 
     # called by execute before post_execute
     def build_curves_maps(self):
@@ -781,15 +777,15 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         hstats = oq.hazard_stats()
-        N, S, M, P, L1, individual = self._create_hcurves_maps()
+        N, S, M, P, L1 = self._create_hcurves_maps()
         if '_rates' in set(self.datastore) or not self.datastore.parent:
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
         wget = self.full_lt.wget
-        allargs = [(getter, wget, hstats, individual, oq.max_sites_disagg,
-                    self.amplifier) for getter in getters.map_getters(
-                        dstore, self.full_lt)]
+        allargs = [(getter, wget, hstats, oq.individual_rlzs,
+                    oq.max_sites_disagg, self.amplifier)
+                   for getter in getters.map_getters(dstore, self.full_lt)]
         if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')
             return
