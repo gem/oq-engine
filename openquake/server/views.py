@@ -1511,6 +1511,7 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses = (f'The risk can not be computed since the hazard is too low:'
                       f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
             losses_header = None
+            weights_precision = None
         else:
             losses_header = [
                 f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
