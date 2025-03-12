@@ -100,7 +100,8 @@ def check_rup_unique(spec_disagg):
 
 
 # NB: we are ignoring IMT-dependent weight
-def compute_median_spectrum(cmaker, context, uhs, monitor=performance.Monitor()):
+def compute_median_spectrum(
+        cmaker, context, uhs, monitor=performance.Monitor()):
     """
     For a given group, computes the median hazard spectrum using a weighted
     mean based on the poes.
