@@ -869,11 +869,10 @@ function capitalizeFirstLetter(val) {
             });
 
             $("#getStationDataFromUsgs").click(function () {
-                // TODO:
-                // - set this btn to loading
-                // - disable run button
-                // - check that usgs_id is given
+                $('#submit_impact_calc').prop('disabled', true);
+                $('#getStationDataFromUsgs').text('Loading...');
                 $('input[name="impact_approach"]').prop('disabled', true);
+                $('#station_data_file_loaded').val('');
                 var formData = new FormData();
                 const usgs_id = $.trim($("#usgs_id").val());
                 formData.append('usgs_id', usgs_id);
@@ -885,8 +884,6 @@ function capitalizeFirstLetter(val) {
                     contentType: false,
                     encode: true,
                 }).done(function (data) {
-                    // console.log(data);
-                    toggleRunCalcBtnState(); // FIXME
                     // NOTE: these are stations downloaded from the USGS and not those uploaded by the user
                     $('#station_data_file_from_usgs').val(data.station_data_file);
                     if (data.station_data_issue) {
@@ -896,14 +893,13 @@ function capitalizeFirstLetter(val) {
                         $('#station_data_file_loaded').val(data.station_data_file ? 'Loaded' : 'N.A.');
                     }
                 }).error(function (data) {
-                    // FIXME
+                    $('#station_data_file_loaded').val('');
                     var resp = JSON.parse(data.responseText);
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
                 }).always(function (data) {
-                    // TODO:
-                    // - set this btn to initial state
-                    // - restore run btn
+                    $('#submit_impact_calc').prop('disabled', false);
+                    $('#getStationDataFromUsgs').text('Retrieve from the USGS');
                     $('input[name="impact_approach"]').prop('disabled', false);
                 });
             });
