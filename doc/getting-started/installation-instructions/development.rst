@@ -113,12 +113,17 @@ convenience you can also add it as an ``alias`` in your ``~/.bashrc``
 Multiple installations
 ----------------------
 
-If any other installation of the Engine exists on the same machine, like
-a system-wide installation made with packages, you must change the
+If any other installation of the Engine exists on the same machine - like
+a system-wide installation made with packages - you should change the
 DbServer port from the default one (1908) to any other unused port.
-Using a DbServer started from a different codebase (which may be
-out-of-sync) could lead to unexpected behaviours and errors. To change
-the DbServer port ``oq-engine/openquake/engine/openquake.cfg`` must be
+
+If the two installations have the same structure of the database and
+the codebase is not that different (which is the normal case) everything will
+work even without changing the DbServer port.
+
+However, in general using a DbServer started from a different installation
+could lead to unexpected behaviours and errors. To change
+the DbServer port the file ``openquake.cfg`` must be
 updated:
 
 ::
@@ -128,6 +133,8 @@ updated:
    port = 1908         >  port = 1985
    authkey = changeme  |  authkey = changeme
    ## cut ##           |  ## cut ##
+
+The file should be put in your virtual environment.
 
 Running the tests
 -----------------
