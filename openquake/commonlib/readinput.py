@@ -208,7 +208,7 @@ def update(params, items, base_path):
     for key, value in items:
         if key in ('hazard_curves_csv', 'hazard_curves_file',
                    'gmfs_csv', 'gmfs_file',
-                   'site_model_csv', 'site_model_file',
+                   'site_model_csv', 'site_model_file', 'source_model_file',
                    'exposure_csv', 'exposure_file'):
             input_type, fnames = _normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
@@ -1184,8 +1184,8 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
-    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
-                 duplicates_strategy=duplicates_strategy)
+    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE',
+                 'STATION_ID', duplicates_strategy=duplicates_strategy)
     lons = df['LONGITUDE'].to_numpy()
     lats = df['LATITUDE'].to_numpy()
     nsites = len(sitecol.complete)
@@ -1300,7 +1300,8 @@ def impact_tmap(oqparam, taxidx):
         for key in exp['tmap']:
             # tmap has fields conversion, taxonomy, weight
             df = exp.read_df('tmap/' + key)
-            for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
+            for taxo, risk_id, weight in zip(
+                    df.taxonomy, df.conversion, df.weight):
                 if taxo in taxidx:
                     acc['country'].append(key)
                     acc['peril'].append('groundshaking')
