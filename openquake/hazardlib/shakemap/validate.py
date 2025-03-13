@@ -58,6 +58,8 @@ class AristotleParam:
             self.exposure_hdf5 = os.path.join(MOSAIC_DIR, 'exposure.hdf5')
         inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
         rupdic = self.rupture_dict
+        if not self.rupture_file and 'rupture_file' in rupdic:
+            self.rupture_file = rupdic['rupture_file']
         if self.rupture_file:
             inputs['rupture_model'] = self.rupture_file
         if self.station_data_file:
