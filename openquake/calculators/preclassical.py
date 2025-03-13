@@ -134,7 +134,8 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        if cmaker.split_sources and src.nsites:
+        if cmaker.split_sources and src.nsites and src.code != b'F':
+            # multifault source have been already split in save_and_split
             splits.extend(split_source(src))
         else:
             splits.append(src)
