@@ -76,6 +76,8 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_3(self):
         # with rupture_file
+        rupture_file = os.path.join(
+            os.path.dirname(__file__), 'data', 'fault_rupture.xml')
         POST = {
             'asset_hazard_distance': '15',
             'dep': '30',
@@ -99,7 +101,7 @@ class AristotleValidateTestCase(unittest.TestCase):
 
         for stations in (None, 'stationlist_seismic.csv'):
             _rup, rupdic, params, err = impact_validate(
-                POST, user, 'fault_rupture.xml', stations)
+                POST, user, rupture_file, stations)
             expected = {
                 'dep': 30.0,
                 'dip': 30.08335,
@@ -108,7 +110,7 @@ class AristotleValidateTestCase(unittest.TestCase):
                 'mag': 7.0,
                 'mosaic_models': ['CHN', 'IND'],
                 'rake': 90.0,
-                'rupture_file': 'fault_rupture.xml',
+                'rupture_file': rupture_file,
                 'rupture_from_usgs': True,
                 'strike': 295.24732,
                 'trts': {'CHN': ['Active Shallow Crust',

@@ -797,6 +797,8 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
 def _get_rup_from_json(usgs_id, rupture_file):
     rup = None
     rupdic = {}
+    rup_data = None
+    err_msg = None
     with open(rupture_file) as f:
         rup_data = json.load(f)
     if usgs_id == 'FromFile':
