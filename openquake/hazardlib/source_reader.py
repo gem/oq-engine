@@ -718,9 +718,13 @@ class CompositeSourceModel:
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
-            G = len(cmaker.gsims)
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
+            if sg.weight == 0:
+                # happens in LogicTreeTestCase::test_case_08 since the
+                # point sources are far away as determined in preclassical
+                continue
+            G = len(cmaker.gsims)
             splits = G * mb_per_gsim / max_mb
             hint = sg.weight / max_weight
             if sg.atomic or tiling:

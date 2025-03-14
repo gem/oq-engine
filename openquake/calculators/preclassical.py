@@ -119,6 +119,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
+    maxdist = cmaker.maximum_distance.y[-1]
     for src in srcs:
         if src.code == b'F':
             if N and N <= cmaker.max_sites_disagg:
@@ -126,7 +127,13 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             else:
                 mask = None
             src.set_msparams(secparams, mask, ry0, mon1, mon2)
-        if sites:
+        elif src.code in b'pP' and sites:
+            # special case, compute distances
+            distances = sites.get_cdist(src.location)
+            radius = src._get_max_rupture_projection_radius()
+            src.nsites = (distances <= maxdist + radius +
+                          src.ps_grid_spacing*.707).sum()
+        elif sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
             # print(f'{src.source_id=}, {src.nsites=}')
@@ -345,7 +352,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 newsg.sources = srcs
                 self.csm.src_groups[grp_id] = newsg
                 for src in srcs:
-                    assert src.weight, src
+                    if src.code not in b'pP':
+                        assert src.weight, src
                     assert src.num_ruptures, src
                     acc[src.code] += int(src.num_ruptures)
         self.csm.fix_src_offset()
