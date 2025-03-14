@@ -479,7 +479,7 @@ the amount of dependencies needed by `python-oq-engine` when installed on
 a single node. Specific configurations for _master_ and _workers_ nodes
 are provided by dedicated packages.
 This setup will be ported to Ubuntu packages too in the next release.
-See the [documentation](cluster) for further information.
+See the documentation for further information.
 
 Deprecations
 ------------------------------

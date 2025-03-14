@@ -235,3 +235,15 @@ def test_JPN():
         assert 'png/governing_mce.png' in calc.datastore
         assert 'png/hcurves.png' in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
+
+
+def test_MFK():
+    # multifault sources with kendra-splitting in Central East Asia;
+    # not testing the numbers, but preventing implementation errors like
+    # the one discussed in https://github.com/gem/oq-engine/pull/10434
+    job_ini = os.path.join(MOSAIC_DIR, 'Projects/AELO/aeloy3/py/Run_Jobs/'
+                           'CEA/site10/job_dos_vs30_760_small.ini')
+    with (mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}),
+          mock.patch('openquake.hazardlib.source.multi_fault.BLOCKSIZE', 5),
+          logs.init(job_ini) as log):
+        base.calculators(log.get_oqparam(), log.calc_id).run()
