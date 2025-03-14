@@ -720,7 +720,9 @@ class CompositeSourceModel:
         for cmaker in cmakers[grp_ids]:
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
-            if sg.weight == 0:  # in LogicTreeTestCase::test_case_08
+            if sg.weight == 0:
+                # happens in LogicTreeTestCase::test_case_08 since the
+                # point sources are far away as determined in preclassical
                 continue
             G = len(cmaker.gsims)
             splits = G * mb_per_gsim / max_mb
@@ -732,9 +734,6 @@ class CompositeSourceModel:
                 # if hint > max_blocks generate max_blocks and more tiles
                 blocks = list(general.split_in_blocks(
                     sg, min(hint, oq.max_blocks), lambda s: s.weight))
-                for block in blocks:
-                    for src in block:
-                        assert src.weight
                 tiles = max(hint / oq.max_blocks * splits, splits)
             tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
             cmaker.tiling = tiling
