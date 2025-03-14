@@ -4,6 +4,7 @@
     models from Liu and Macedo (2022)
 
   [Michele Simionato]
+  * Fixed `oq show rlz:` when the gsim logic tree was not properly reduced
   * Internal: turned multi_fault.BLOCKSIZE into a configurable parameter
     `config.memory.max_multi_fault_ruptures`
   * Added command `oq info apply_uncertainty`
