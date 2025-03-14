@@ -58,6 +58,8 @@ class AristotleParam:
             self.exposure_hdf5 = os.path.join(MOSAIC_DIR, 'exposure.hdf5')
         inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
         rupdic = self.rupture_dict
+        if not self.rupture_file and 'rupture_file' in rupdic:
+            self.rupture_file = rupdic['rupture_file']
         if self.rupture_file:
             inputs['rupture_model'] = self.rupture_file
         if self.station_data_file:
@@ -295,7 +297,6 @@ def get_tmap_keys(exposure_hdf5, countries):
 
 
 def impact_validate(POST, user, rupture_file=None, station_data_file=None,
-                    download_usgs_stations=True,
                     monitor=performance.Monitor()):
     """
     This is called by `impact_get_rupture_data` and `impact_run`.
@@ -303,8 +304,6 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     returns (rup, rupdic, [station_file], error).
     In the second case the form contains all fields and returns
     (rup, rupdic, params, error).
-    Only in the former case, if stations have not been downloaded yet, we try to
-    download station data from the USGS
     """
     err = {}
     dic, params, err = _validate(POST)
@@ -317,9 +316,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
 
-    rup, rupdic, err = get_rup_dic(
-        dic, user, use_shakemap, rupture_file, station_data_file,
-        download_usgs_stations, monitor)
+    rup, rupdic, err = get_rup_dic(dic, user, use_shakemap, rupture_file, monitor)
     if err:
         return None, None, None, err
     # round floats
@@ -339,7 +336,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['rupture_from_usgs'] = rup is not None
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
-        params['station_data_file'] = rupdic['station_data_file']
+        params['station_data_file'] = station_data_file
         params['mmi_file'] = rupdic.get('mmi_file')
         with monitor('get_oqparams'):
             ap = AristotleParam(**params)

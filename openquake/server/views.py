@@ -51,6 +51,7 @@ from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
     IMPACT_FORM_DEFAULTS)
+from openquake.hazardlib.shakemap.parsers import get_stations_from_usgs
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -740,13 +741,8 @@ def impact_get_rupture_data(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_file = None
-    user = request.user
-    user.testdir = None
-    # NOTE: at this stage, attempt to download station data from USGS
     rup, rupdic, _oqparams, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file,
-        download_usgs_stations=True)
+        request.POST, request.user, rupture_path)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
@@ -764,6 +760,26 @@ def impact_get_rupture_data(request):
                                   return_base64=True)
         rupdic['rupture_png'] = img_base64
     return JsonResponse(rupdic, status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_get_stations_from_usgs(request):
+    """
+    Retrieve station data corresponding to a given usgs id
+
+    :param request:
+        a `django.http.HttpRequest` object containing usgs_id
+    """
+    usgs_id = request.POST.get('usgs_id')
+    station_data_file, err = get_stations_from_usgs(usgs_id, user=request.user)
+    station_data_issue = None
+    if err:
+        station_data_issue = err['error_msg']
+    response_data = dict(station_data_file=station_data_file,
+                         station_data_issue=station_data_issue)
+    return JsonResponse(response_data)
 
 
 def get_uploaded_file_path(request, filename):
@@ -802,13 +818,8 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    user = request.user
-    user.testdir = None
-    # at this stage, do not attempt to re-load station data from the USGS if they are
-    # missing or if the user explicitly decided to ignore them
     _rup, rupdic, params, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file,
-        download_usgs_stations=False)
+        request.POST, request.user, rupture_path, station_data_file)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     for key in ['dip', 'strike']:
@@ -1197,7 +1208,36 @@ def aggrisk_tags(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
+    return HttpResponse(content=df.to_json(), content_type=JSON, status=200)
 
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
+def mmi_tags(request, calc_id):
+    """
+    Return mmi_tags, by ``calc_id``, as JSON.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param calc_id:
+        The id of the requested calculation.
+    :returns:
+        a JSON object as documented in rest-api.rst
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            df = _extract(ds, 'mmi_tags')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'mmi_tags', tb),
+            content_type='text/plain', status=400)
     return HttpResponse(content=df.to_json(), content_type=JSON, status=200)
 
 
@@ -1476,6 +1516,7 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses = (f'The risk can not be computed since the hazard is too low:'
                       f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
             losses_header = None
+            weights_precision = None
         else:
             losses_header = [
                 f'{field}<br><i>{FIELD_DESCRIPTION[field]}</i>'

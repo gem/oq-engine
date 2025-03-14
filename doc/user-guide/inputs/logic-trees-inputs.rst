@@ -23,15 +23,17 @@ The main components of a logic tree structure in the OpenQuake engine are the fo
    This set of uncertainties can be applied to the whole initial seismic source input model or just to a subset of 
    seismic sources. The sum of the weights/probabilities assigned to the set of branches always correspond to one.
 
-Below we provide a simple schema illustrating the skeleton of xml file containing the desciption of a logic tree::
+Below we provide a simple schema illustrating the skeleton of xml file containing the desciption of a logic tree:
 
-	    <logicTreeBranchSet branchSetID=ID
+.. code-block:: xml
+
+	   <logicTreeBranchSet branchSetID=ID
 	                        uncertaintyType=TYPE>
 	        <logicTreeBranch>
 	            <uncertaintyModel>VALUE</uncertaintyModel>
 	            <uncertaintyWeight>WEIGHT</uncertaintyWeight>
 	        </logicTreeBranch>
-	    </logicTreeBranchSet>
+	   </logicTreeBranchSet>
 
 As it appears from this example, the structure of a logic tree is a set of nested elements.
 
@@ -48,9 +50,11 @@ A Branch set identifies a collection of branches (i.e. individual branches) whos
 Logic trees as described in the nrml schema
 -------------------------------------------
 
-In the NRML schema, a logic tree structure is defined through the ``logicTree`` element::
+In the NRML schema, a logic tree structure is defined through the ``logicTree`` element:
 
-	<logicTree logicTreeID="ID">
+.. code-block:: xml
+
+        <logicTree logicTreeID="ID">
 	...
 	</logicTree>
 
@@ -59,8 +63,10 @@ A ``logicTree`` contains as a sequence of ``logicTreeBranchSet`` elements.
 There are no restrictions on the number of Branch set that can be defined.
 
 Each ``logicTreeBranchSet`` has two required attributes: ``branchSetID`` and ``uncertaintyType``. The latter defines the 
-type of epistemic uncertainty this *Branch* set is describing.::
+type of epistemic uncertainty this branchset is describing:
 
+.. code-block:: xml
+                
 	<logicTree logicTreeID="ID">
 	             <logicTreeBranchSet branchSetID="ID_1"
 	                     uncertaintyType="UNCERTAINTY_TYPE">
@@ -96,8 +102,10 @@ Possible values for the ``uncertaintyType`` attribute are:
 A ``branchSet`` is defined as a sequence of ``logicTreeBranch`` elements, each specified by an ``uncertaintyModel`` 
 element (a string identifying an uncertainty model; the content of the string varies with the ``uncertaintyType`` 
 attribute value of the branchSet element) and the ``uncertaintyWeight`` element (specifying the probability/weight 
-associated to the ``uncertaintyModel``)::
+associated to the ``uncertaintyModel``):
 
+.. code-block:: xml
+                
 	< logicTree  logicTreeID="ID">
 	...
 	
@@ -128,37 +136,51 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
 
 - if ``uncertaintyType="gmpeModel"``, the uncertainty model contains the name of a ground motion prediction equation 
   (a list of available GMPEs can be obtained using ``oq info gsims`` and these are also documented 
-  `here <https://docs.openquake.org/oq-engine/reference/master/openquake.hazardlib.gsim.html>`_)::
+  `here <https://docs.openquake.org/oq-engine/reference/master/openquake.hazardlib.gsim.html>`_):
 
+.. code-block:: xml
+                
 	<uncertaintyModel>GMPE_NAME</uncertaintyModel>
 
-- if ``uncertaintyType="sourceModel"``, the uncertainty model contains the paths to a source model file, e.g.::
+- if ``uncertaintyType="sourceModel"``, the uncertainty model contains the paths to a source model file, e.g.:
 
+.. code-block:: xml
+                
 	<uncertaintyModel>SOURCE_MODEL_FILE_PATH</uncertaintyModel>
 
 - if ``uncertaintyType="maxMagGRRelative"``, the uncertainty model contains the increment to be added (or subtracted, 
-  depending on the sign) to the Gutenberg-Richter maximum magnitude::
+  depending on the sign) to the Gutenberg-Richter maximum magnitude:
 	
-	<uncertaintyModel>MAX_MAGNITUDE_INCREMENT</uncertaintyModel>
+.. code-block:: xml
+                
+   <uncertaintyModel>MAX_MAGNITUDE_INCREMENT</uncertaintyModel>
 
 - if ``uncertaintyType="bGRRelative"``, the uncertainty model contains the increment to be added (or subtracted, 
-  depending on the sign) to the Gutenberg-Richter b value::
-	
+  depending on the sign) to the Gutenberg-Richter b value:
+
+.. code-block:: xml
+                
 	<uncertaintyModel>B_VALUE_INCREMENT</uncertaintyModel>
 
-- if ``uncertaintyType="abGRAbsolute"``, the uncertainty model must contain one a and b pair::
-	
+- if ``uncertaintyType="abGRAbsolute"``, the uncertainty model must contain one a and b pair:
+
+.. code-block:: xml
+                
 	<uncertaintyModel>A_VALUE B_VALUE</uncertaintyModel>
 
 - if ``uncertaintyType="maxMagGRAbsolute"``, the uncertainty model must contain one Gutenberg-Richter maximum magnitude 
-  value::
+  value:
 
+.. code-block:: xml
+                
 	<uncertaintyModel>MAX_MAGNITUDE</uncertaintyModel>
 
 - if ``uncertaintyType="incrementalMFDAbsolute"``, the uncertainty model must contain an instance of the incremental MFD 
-  node::
+  node:
 
-	<uncertaintyModel>
+.. code-block:: xml
+                
+        <uncertaintyModel>
 	    <incrementalMFD
 	        minMag="MIN MAGNITUDE"
 	        binWidth="BIN WIDTH">
@@ -171,12 +193,16 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
 
 - if ``uncertaintyType="simpleFaultDipRelative"`` then the uncertainty model must specify the number of degrees to 
   increase (positive) or decrease (negative) the fault dip. Note that if this increase results in an adjusted fault dip 
-  greater than 90 degrees or less than 0 degrees an error will occur.::
+  greater than 90 degrees or less than 0 degrees an error will occur.:
 
+.. code-block:: xml
+                
 	<uncertaintyModel>DIP_INCREMENT</uncertaintyModel>
 
-- if ``uncertaintyType="simpleFaultDipAbsolute"`` then the uncertainty model must specify the dip angle (in degrees)::
+- if ``uncertaintyType="simpleFaultDipAbsolute"`` then the uncertainty model must specify the dip angle (in degrees):
 
+.. code-block:: xml
+                
 	<uncertaintyModel>DIP</uncertaintyModel>
 
 - if ``uncertaintyType="complexFaultGeometryAbsolute"`` then the uncertainty model must contain a *valid* instance of the 
@@ -205,7 +231,7 @@ The ``logicTreeBranchSet`` element offers also a number of optional attributes a
 
 - ``applyToTectonicRegionType``: specifies to which tectonic region type the uncertainty applies to. Only one tectonic 
   region type can be defined (``Active Shallow Crust``, ``Stable Shallow Crust``, ``Subduction Interface``, ``Subduction 
-  IntraSlab``, ``Volcanic``), e.g.:
+  IntraSlab``, ``Volcanic``), e.g.::
 
 	applyToTectonicRegionType="Active Shallow Crust"
 
@@ -223,8 +249,10 @@ The Seismic Source Logic Tree
 The structure of the Seismic Source Logic Tree consists of at least one *Branch Set*. The example provided below shows 
 the simplest Seismic Source Logic Tree structure that can be defined in a *Psha Input Model* for OpenQuake engine. It’s 
 a logic tree with just onebranchset with one *Branch* used to define the initial seismic source model (its weight will 
-be equal to one).::
+be equal to one).
 
+.. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -249,8 +277,10 @@ the geometry of sources) and one branching level accounting for the epistemic un
 
 Below we provide an example of such logic tree structure. Note that the uncertainty on the maximum magnitude is specified 
 in terms of relative increments with respect to the initial maximum magnitude defined for each source in the initial 
-seismic source models.::
+seismic source models.
 
+.. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -293,8 +323,10 @@ seismic source models.::
 Starting from OpenQuake engine v2.4, it is also possible to split a source model into several files and read them as if 
 they were a single file. The file names for the different files comprising a source model should be provided in the 
 source model logic tree file. For instance, a source model could be split by tectonic region using the following syntax 
-in the source model logic tree::
+in the source model logic tree:
 
+.. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -349,10 +381,13 @@ The Ground Motion Logic Tree
 The structure of the Ground Motion Logic Tree consists of a list of ground motion prediction equations for each tectonic 
 region used to characterise the sources in the PSHA input model.
 
-The example below in shows a simple *Ground Motion Logic Tree*. This logic tree assumes that all the sources in the PSHA 
-input model belong to “Active Shallow Crust” and uses for calculation the B. S.-J. Chiou and Youngs (2008) Ground Motion 
-Prediction Equation.::
+The example below in shows a simple *Ground Motion Logic Tree*. This
+logic tree assumes that all the sources in the PSHA input model belong
+to “Active Shallow Crust” and uses for calculation the B. S.-J. Chiou
+and Youngs (2008) Ground Motion Prediction Equation.
 
+.. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -380,8 +415,10 @@ extendModel
 ***********
 
 Starting from engine 3.9 it is possible to define logic trees by adding sources to one or more base models. An example 
-will make things clear::
+will make things clear:
 
+.. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.5">
@@ -443,8 +480,10 @@ correspond to the ``applyToBranches`` tag in the XML version of the logic tree. 
 logic tree is multiplicative and the total number of paths can be obtained simply by multiplying the number of paths in 
 each branchset. When ``applyToBranches`` is used, the logic tree becomes additive and the total number of paths can be 
 obtained by summing the number of paths in the different subtrees. For instance, let us extend the previous example by 
-adding another ``extendModel`` branchset and by using ``applyToBranches``::
+adding another ``extendModel`` branchset and by using ``applyToBranches``:
 
+.. code-block:: xml
+                
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
 	      xmlns="http://openquake.org/xmlns/nrml/0.4">
@@ -698,7 +737,9 @@ First, it is best to give some terminology.
 4. a GMPE logic tree is simple if it has at most one tectonic region type with multiple GMPEs
 5. a GMPE logic tree is complex if it has more than one tectonic region type with multiple GMPEs.
 
-Here is an example of trivial GMPE logic tree, in its XML input representation::
+Here is an example of trivial GMPE logic tree, in its XML input representation:
+
+.. code-block:: xml
 
 	<?xml version="1.0" encoding="UTF-8"?>
 	<nrml xmlns:gml="http://www.opengis.net/gml"
@@ -808,7 +849,7 @@ Let’s assume that you have a zip archive called *SHARE.zip* containing the SHA
 logic tree file and the SHARE GMPE logic tree file as provided by the SHARE collaboration, as well as a job.ini file. 
 If you run::
 
-	``$ oq info SHARE.zip``
+	$ oq info SHARE.zip
 
 all the files will be parsed and the full logic tree of the computation will be generated. This is very fast, it runs in 
 exactly 1 minute on my laptop, which is impressive, since the XML of the SHARE source models is larger than 250 MB. 
@@ -884,11 +925,7 @@ respectively::
 	R = prod(R_i)
 
 In the demo the storage is over 4 times less (18 vs 81); in more complex cases the gain than can be much more impressive. 
-For instance the ZAF model in our mosaic (the national model for South Africa) contains a source specific logic tree 
-with 22 sources that can be decomposed as follows:
-
-In other words, by storing only 186 components we can save enough information to build 24_959_374_950_829_916_160 
-realizations, with a gain of over 10^17!
+For instance the ZAF model in our mosaic (the national model for South Africa) contains a source specific logic tree with 22 sources. In that case, by storing only 186 components we can save enough information to build 24_959_374_950_829_916_160 realizations, with a gain of over 10^17!
 
 ****************************
 Extracting the hazard curves

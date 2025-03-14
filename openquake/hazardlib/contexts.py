@@ -554,6 +554,7 @@ class ContextMaker(object):
     deltagetter = None
     fewsites = False
     tom = None
+    cluster = None  # set in PmapMaker
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
@@ -1191,9 +1192,9 @@ class ContextMaker(object):
         rup_indep = not rup_mutex
         sids = numpy.unique(ctxs[0].sids)
         pmap = MapArray(sids, size(self.imtls), len(self.gsims)).fill(rup_indep)
-        ptom = PoissonTOM(self.investigation_time)
+        self.tom = tom or PoissonTOM(self.investigation_time)
         for ctx in ctxs:
-            self.update(pmap, ctx, tom or ptom, rup_mutex)
+            self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
     def ratesNLG(self, srcgroup, sitecol):
@@ -1298,7 +1299,7 @@ class ContextMaker(object):
         eps = .01 * EPS if src.code == 'S' else EPS  # needed for EUR
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
-            return eps, 0
+            return (0, 0) if src.code in b'pP' else (eps, 0)
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
