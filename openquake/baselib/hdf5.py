@@ -19,6 +19,7 @@
 import os
 import csv
 import sys
+import gzip
 import inspect
 import tempfile
 import warnings
@@ -61,7 +62,8 @@ class CSVFile:
 
     def read_df(self):
         return pandas.read_csv(
-            self.fname, skiprows=self.skip, usecols=self.fields)
+            self.fname, skiprows=self.skip, usecols=self.fields,
+            encoding='utf-8-sig')
 
 
 def sanitize(value):
@@ -359,7 +361,7 @@ class File(h5py.File):
         :param key:
             name of the dataset
         :param nametypes:
-            pairs (name, dtype) or (name, array) or structured array or DataFrame
+            pairs (name, dtype)|(name, array)|structured array|DataFrame
         :param compression:
             the kind of HDF5 compression to use
         :param kw:
@@ -946,7 +948,11 @@ def sniff(fnames, sep=',', ignore=set()):
     common = None
     files = []
     for fname in fnames:
-        with open(fname, encoding='utf-8-sig', errors='ignore') as f:
+        if fname.endswith('.gz'):
+            f = gzip.open(fname, encoding='utf-8-sig', errors='ignore')
+        else:
+            f = open(fname, encoding='utf-8-sig', errors='ignore')
+        with f:
             skip = 0
             while True:
                 first = next(f)
@@ -982,7 +988,11 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
-    with open(fname, encoding='utf-8-sig', errors=errors) as f:
+    if fname.endswith('.gz'):
+        f = gzip.open(fname)
+    else:
+        f = open(fname, encoding='utf-8-sig', errors='ignore')
+    with f:
         while True:
             first = next(f)
             if first.startswith('#'):
