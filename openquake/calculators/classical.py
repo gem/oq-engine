@@ -584,13 +584,9 @@ class ClassicalCalculator(base.HazardCalculator):
         for cmaker, tilegetters, blocks, nsplits in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
-                # nsites can be zero for pointlike sources if discarded
-                # by preclassical
-                srcs = [src for src in block if src.nsites]
-                if srcs:
-                    for tgetters in block_splitter(tilegetters, nsplits):
-                        allargs.append((srcs, tgetters, cmaker, ds))
-                        n_out.append(len(tgetters))
+                for tgetters in block_splitter(tilegetters, nsplits):
+                    allargs.append((block, tgetters, cmaker, ds))
+                    n_out.append(len(tgetters))
             splits.append(nsplits)
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',

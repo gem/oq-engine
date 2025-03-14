@@ -352,7 +352,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 newsg.sources = srcs
                 self.csm.src_groups[grp_id] = newsg
                 for src in srcs:
-                    assert src.weight, src
+                    if src.code not in b'pP':
+                        assert src.weight, src
                     assert src.num_ruptures, src
                     acc[src.code] += int(src.num_ruptures)
         self.csm.fix_src_offset()
