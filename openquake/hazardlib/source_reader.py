@@ -718,9 +718,11 @@ class CompositeSourceModel:
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
-            G = len(cmaker.gsims)
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
+            if sg.weight == 0:  # in LogicTreeTestCase::test_case_08
+                continue
+            G = len(cmaker.gsims)
             splits = G * mb_per_gsim / max_mb
             hint = sg.weight / max_weight
             if sg.atomic or tiling:
@@ -730,6 +732,9 @@ class CompositeSourceModel:
                 # if hint > max_blocks generate max_blocks and more tiles
                 blocks = list(general.split_in_blocks(
                     sg, min(hint, oq.max_blocks), lambda s: s.weight))
+                for block in blocks:
+                    for src in block:
+                        assert src.weight
                 tiles = max(hint / oq.max_blocks * splits, splits)
             tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
             cmaker.tiling = tiling
