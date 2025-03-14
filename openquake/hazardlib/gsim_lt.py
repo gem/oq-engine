@@ -358,7 +358,7 @@ class GsimLogicTree(object):
                             if v is None:  # if volc_arc_file is None
                                 pass
                             else:
-                                # store in the attribute dictionary the data files
+                                # store the data files as attributes
                                 with open(gsim.kwargs[k], 'rb') as f:
                                     dic[f'{k}:{v}'] = f.read()
         return numpy.array(branches, dt), dic
@@ -404,6 +404,7 @@ class GsimLogicTree(object):
         if data:
             shutil.rmtree(dirname)
 
+    # tested in LogicTreeTestCase::test_case_12
     def reduce(self, trts):
         """
         Reduce the GsimLogicTree.
@@ -412,6 +413,8 @@ class GsimLogicTree(object):
         :returns: a reduced GsimLogicTree instance
         """
         new = copy.deepcopy(self)
+        new.bsetdict = {trt: bset for trt, bset in self.bsetdict.items()
+                        if trt in trts}
         new.values = {trt: self.values[trt] for trt in trts}
         if trts != {'*'}:
             new.branches = []

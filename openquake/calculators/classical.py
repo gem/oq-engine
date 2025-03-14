@@ -384,7 +384,7 @@ class Hazard:
         return mean_rates_by_src
 
 
-@base.calculators.add('classical', 'ucerf_classical')
+@base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator

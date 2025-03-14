@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed `oq info calculators` that was still displaying the obsolete and now
+    removed ucerf calculators
+  * Fixed `oq show rlz:` when the gsim logic tree was not properly reduced
   * Internal: turned multi_fault.BLOCKSIZE into a configurable parameter
     `config.memory.max_multi_fault_ruptures`
   * Added command `oq info apply_uncertainty`
