@@ -21,7 +21,7 @@ import copy
 import numpy as np
 from typing import Union
 
-from openquake.baselib import hdf5, performance, general
+from openquake.baselib import hdf5, performance, general, config
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
@@ -42,7 +42,7 @@ U16 = np.uint16
 U32 = np.uint32
 F32 = np.float32
 F64 = np.float64
-BLOCKSIZE = 5000
+BLOCKSIZE = int(config.memory.max_multi_fault_ruptures)
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 # NB: if too large, very few sources will be generated and a lot of
