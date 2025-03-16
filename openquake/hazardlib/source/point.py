@@ -85,35 +85,35 @@ def calc_average(pointsources):
         a dict with average strike, dip, rake, lon, lat, dep,
         upper_seismogenic_depth, lower_seismogenic_depth
     """
-    dic = dict(strike=[], dip=[], rake=[], dep=[], weight=[], dep_weight=[])
-    acc = dict(lon=[], lat=[], upper_seismogenic_depth=[], lower_seismogenic_depth=[],
+    node_w, dep_w, rate_w = [], [], []
+    acc = dict(lon=[], lat=[], strike=[], dip=[], rake=[], dep=[],
+               upper_seismogenic_depth=[], lower_seismogenic_depth=[],
                rupture_aspect_ratio=[])
-    rates = []
     trt = pointsources[0].tectonic_region_type
     for src in pointsources:
         assert src.tectonic_region_type == trt
-        rates.append(sum(r for m, r in src.get_annual_occurrence_rates()))
         ws, ds = zip(*src.nodal_plane_distribution.data)
-        dic['strike'].extend([np.strike for np in ds])
-        dic['dip'].extend([np.dip for np in ds])
-        dic['rake'].extend([np.rake for np in ds])
-        dic['weight'].extend(ws)
+        acc['strike'].extend([np.strike for np in ds])
+        acc['dip'].extend([np.dip for np in ds])
+        acc['rake'].extend([np.rake for np in ds])
+        node_w.extend(ws)
         ws, deps = zip(*src.hypocenter_distribution.data)
-        dic['dep'].extend(deps)
-        dic['dep_weight'].extend(ws)
+        acc['dep'].extend(deps)
+        dep_w.extend(ws)
         acc['lon'].append(src.location.x)
         acc['lat'].append(src.location.y)
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
-    for key in ('dip', 'strike', 'rake', 'dep'):
-        dic[key] = numpy.average(
-            dic[key], weights=dic['dep_weight'] if key=='dep' else dic['weight'])
-    del dic['weight'], dic['dep_weight']
-    dic.update({key: numpy.average(acc[key], weights=rates) for key in acc})
-    dic['lon'] = numpy.round(dic['lon'], 6)
-    dic['lat'] = numpy.round(dic['lat'], 6)
-    return dic
+        rate_w.append(sum(r for m, r in src.get_annual_occurrence_rates()))
+    for key in acc:
+        if key in ('dip', 'strike', 'rake'):
+            acc[key] = numpy.average(acc[key], weights=node_w)
+        elif key == 'dep':
+            acc[key] = numpy.average(acc[key], weights=dep_w)
+        else:
+            acc[key] = numpy.average(acc[key], weights=rate_w)
+    return acc
 
 
 class PointSource(ParametricSeismicSource):
