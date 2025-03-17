@@ -413,7 +413,7 @@ def calc_list(request, id=None):
     """
     base_url = _get_base_url(request)
     # always filter calculation list unless user is a superuser
-    calc_data = logs.dbcmd('get_calcs', request.GET,
+    calc_data = logs.dbcmd('get_calcs', dict(request.GET.items()),
                            utils.get_valid_users(request),
                            not utils.is_superuser(request), id)
 
