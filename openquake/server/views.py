@@ -423,12 +423,14 @@ def calc_list(request, id=None):
 
     Responses are in JSON.
     """
+    # with pytest openquake/server/tests/test_public_mode.py -k classical
+    # request.GET is <QueryDict: {'is_running': ['true']}>
     base_url = _get_base_url(request)
     # always filter calculation list unless user is a superuser
-    calc_data = logs.dbcmd('get_calcs', request.GET,
-                           utils.get_valid_users(request),
-                           not utils.is_superuser(request), id)
-
+    calc_data = logs.dbcmd(
+        'get_calcs', dict(request.GET.items()),
+        utils.get_valid_users(request),
+        not utils.is_superuser(request), id)
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
