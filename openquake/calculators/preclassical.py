@@ -131,8 +131,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             # special case, compute distances
             distances = sites.get_cdist(src.location)
             radius = src._get_max_rupture_projection_radius()
-            src.nsites = (distances <= maxdist + radius +
-                          src.ps_grid_spacing*.707).sum()
+            src.nsites = (distances <= maxdist + radius).sum()
         elif sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
