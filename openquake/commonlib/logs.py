@@ -33,7 +33,7 @@ LEVELS = {'debug': logging.DEBUG,
           'warn': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
-SIMPLE_TYPES = (str, int, float, datetime, list, tuple, dict, type(None))
+SIMPLE_TYPES = (str, int, float, bool, datetime, list, tuple, dict, type(None))
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 MODELS = []  # to be populated in get_tag
 
@@ -60,7 +60,8 @@ def dbcmd(action, *args):
     # make sure the passed arguments are simple (i.e. not Django
     # QueryDict that cannot be deserialized without settings.py)
     for arg in args:
-        assert isinstance(arg, SIMPLE_TYPES), arg
+        if type(arg) not in SIMPLE_TYPES:
+            raise TypeError(f'{arg} is not a simple type')
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
     if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # access the database directly
