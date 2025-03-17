@@ -532,7 +532,7 @@ def grid_point_sources(sources, ps_grid_spacing):
         if len(idxs) > 1:
             cnt += 1
             name = 'cps-%03d-%04d' % (grp_id, cnt)
-            cps = CollapsedPointSource(name, ps[idxs])
+            cps = CollapsedPointSource(name, ps[idxs])  # slow part
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
             cps.ps_grid_spacing = ps_grid_spacing

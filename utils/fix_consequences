@@ -28,15 +28,17 @@ def main(taxonomy_mapping: str, consequences: str):
     to taxonomy-based consequence functions
     """
     tmap = pandas.read_csv(taxonomy_mapping).set_index('conversion')
-    cons = pandas.read_csv(consequences).set_index('taxonomy')
-    cols = ['taxonomy'] + list(cons.columns)
-    df = cons.join(tmap, how='inner')[cols]
-    df.index.names = ['risk_id']
-    dfs = []
-    for _, grp in df.groupby(['taxonomy', 'consequence', 'loss_type']):
-        dfs.append(grp[0:1])  # take the first row
-    pandas.concat(dfs).to_csv(consequences)
-
+    for csq in consequences:
+        cons = pandas.read_csv(csq).set_index('taxonomy')
+        cols = ['taxonomy'] + list(cons.columns)
+        df = cons.join(tmap, how='inner')[cols]
+        df.index.names = ['risk_id']
+        dfs = []
+        for _, grp in df.groupby(['taxonomy', 'consequence', 'loss_type']):
+            dfs.append(grp[0:1])  # take the first row
+        pandas.concat(dfs).to_csv(csq)
+main.taxonomy_mapping = 'path to the taxonomy mapping file'
+main.consequences = dict(help='paths to the consequences files', nargs='+')
 
 if __name__ == '__main__':
     sap.run(main)

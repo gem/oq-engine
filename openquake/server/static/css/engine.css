@@ -476,7 +476,7 @@ input[type="radio"] {
   margin-right: 5px; /* Space between radio button and label text */
 }
 
-#clearStationDataFromUsgs {
+.station-btn {
     margin-left: 40px;
     margin-bottom: 8px;
 }
