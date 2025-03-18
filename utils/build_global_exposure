@@ -21,18 +21,18 @@ import os
 import logging
 import pandas
 import numpy
-from openquake.baselib import sap, general, performance, hdf5
+from openquake.baselib import sap, general, performance
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import expo_to_hdf5
 from openquake.qa_tests_data import mosaic
+from openquake.engine.global_ses import dt
 
 U16 = numpy.uint16
 MOSAIC_DIR = os.path.dirname(mosaic.__file__)
 F32 = numpy.float32
-dt = [('model', '<S3'), ('trt', '<61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
 def collect_exposures(grm_dir):
