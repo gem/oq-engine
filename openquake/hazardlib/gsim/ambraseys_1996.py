@@ -28,7 +28,15 @@ from openquake.hazardlib.imt import PGA, SA
 
 
 def _compute_magnitude(ctx, C):
-    return C['c1'] + (C['c2'] * ctx.mag)
+    """
+    Added a function that converts the input magnitudes Mw into Ms.
+    Function from Appendix 1 (pag. 9) of "Gruppo di Lavoro (2004). 
+    Redazione della mappa di pericolosità sismica prevista dall’Ordinanza
+    PCM 3274 del 20 marzo 2003. Rapporto Conclusivo per il Dipartimento 
+    della Protezione Civile, INGV, Milano-Roma"
+    """
+    Ms = (ctx.mag - 1.938)/0.673
+    return C['c1'] + (C['c2'] * Ms)
 
 def _compute_distance(ctx, C):
     #convertion from repi to rjb if M>6 (Montaldo et al 2005, eq. 3)
@@ -73,7 +81,9 @@ class AmbraseysEtAl1996(GMPE):
     SA are given up to 2 s.
     The regressions are developed considering the largest horizontal component
     
-    GMPE implemented as adopted in MPS04 (Montaldo et al 2005)
+    GMPE implemented as adopted in MPS04 (Montaldo et al 2005).
+    In this implementation, a convertion function from Mw to Ms is included 
+    to be consistent with the other gsims in OQ. 
     """
     #: Supported tectonic region type is 'active shallow crust'
 
