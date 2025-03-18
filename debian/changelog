@@ -1,3 +1,5 @@
+python3-oq-engine (3.23.1-1~xenial01) xenial; urgency=low
+
   [Marco Pagani]
   * Backported fix to Thingbaijam et al. (2017) scaling relation
 
@@ -6,6 +8,8 @@
     to break in server installations
   * Backported fix to `oq plot hcurves`
   * Backported fix to Arteta (2021) missing the backarc parameter
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 18 Mar 2025 08:38:28 +0000
 
 python3-oq-engine (3.23.0-1~xenial01) xenial; urgency=low
 
