@@ -1299,7 +1299,7 @@ class ContextMaker(object):
         eps = .01 * EPS if src.code == 'S' else EPS  # needed for EUR
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
-            return eps, 0
+            return (0, 0) if src.code in b'pP' else (eps, 0)
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
