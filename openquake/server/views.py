@@ -424,12 +424,14 @@ def calc_list(request, id=None):
 
     Responses are in JSON.
     """
+    # with pytest openquake/server/tests/test_public_mode.py -k classical
+    # request.GET is <QueryDict: {'is_running': ['true']}>
     base_url = _get_base_url(request)
     # always filter calculation list unless user is a superuser
-    calc_data = logs.dbcmd('get_calcs', request.GET,
-                           utils.get_valid_users(request),
-                           not utils.is_superuser(request), id)
-
+    calc_data = logs.dbcmd(
+        'get_calcs', dict(request.GET.items()),
+        utils.get_valid_users(request),
+        not utils.is_superuser(request), id)
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
@@ -742,9 +744,8 @@ def impact_get_rupture_data(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    user = request.user
-    user.testdir = None
-    rup, rupdic, _oqparams, err = impact_validate(request.POST, user, rupture_path)
+    rup, rupdic, _oqparams, err = impact_validate(
+        request.POST, request.user, rupture_path)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
@@ -774,10 +775,8 @@ def impact_get_stations_from_usgs(request):
     :param request:
         a `django.http.HttpRequest` object containing usgs_id
     """
-    user = request.user
-    user.testdir = None
     usgs_id = request.POST.get('usgs_id')
-    station_data_file, err = get_stations_from_usgs(usgs_id, user=user)
+    station_data_file, err = get_stations_from_usgs(usgs_id, user=request.user)
     station_data_issue = None
     if err:
         station_data_issue = err['error_msg']
@@ -822,10 +821,8 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    user = request.user
-    user.testdir = None
     _rup, rupdic, params, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file)
+        request.POST, request.user, rupture_path, station_data_file)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     for key in ['dip', 'strike']:

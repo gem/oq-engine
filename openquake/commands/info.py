@@ -165,7 +165,7 @@ def print_usgs_rupture(what):
         usgs_id = what.split(':', 1)[1]
     except IndexError:
         return 'Example: oq info usgs_rupture:us70006sj8'
-    dic = dict(usgs_id=usgs_id, approach='use_rupture_from_usgs')
+    dic = dict(usgs_id=usgs_id, approach='use_finite_rup_from_usgs')
     print(get_rup_dic(dic)[1])
 
 

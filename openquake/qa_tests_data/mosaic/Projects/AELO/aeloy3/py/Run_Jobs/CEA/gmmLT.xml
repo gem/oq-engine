@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+	<logicTree logicTreeID="">
+		<logicTreeBranchSet branchSetID="bs_00" uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust">
+			<logicTreeBranch branchID="b_00_00">
+				<uncertaintyModel>AbrahamsonEtAl2014</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_01">
+				<uncertaintyModel>BooreEtAl2014</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_02">
+				<uncertaintyModel>CampbellBozorgnia2014</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_03">
+				<uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_04">
+				<uncertaintyModel>CauzziEtAl2014</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+		<logicTreeBranchSet branchSetID="bs_01" uncertaintyType="gmpeModel" applyToTectonicRegionType="Stable Continental Region">
+			<logicTreeBranch branchID="b_01_05">
+				<uncertaintyModel>NGAEastUSGSSeedFrankel</uncertaintyModel>
+				<uncertaintyWeight>0.12500</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_06">
+				<uncertaintyModel>NGAEastUSGSSeedHA15</uncertaintyModel>
+				<uncertaintyWeight>0.12500</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_07">
+				<uncertaintyModel>NGAEastUSGSSeedSP15</uncertaintyModel>
+				<uncertaintyWeight>0.12500</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_08">
+				<uncertaintyModel>NGAEastUSGSSeedYA15</uncertaintyModel>
+				<uncertaintyWeight>0.12500</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_09">
+				<uncertaintyModel>NGAEastUSGSSammons1</uncertaintyModel>
+				<uncertaintyWeight>0.12500</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_10">
+				<uncertaintyModel>NGAEastUSGSSammons2</uncertaintyModel>
+				<uncertaintyWeight>0.12500</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_11">
+				<uncertaintyModel>NGAEastUSGSSammons3</uncertaintyModel>
+				<uncertaintyWeight>0.12500</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_12">
+				<uncertaintyModel>NGAEastUSGSSammons4</uncertaintyModel>
+				<uncertaintyWeight>0.12500</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+        <logicTreeBranchSet branchSetID="bs_02" uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction Intraslab">
+			<logicTreeBranch branchID="b_02_08">
+				<uncertaintyModel>AbrahamsonGulerce2020SSlab</uncertaintyModel>
+				<uncertaintyWeight>0.33000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_02_09">
+				<uncertaintyModel>ParkerEtAl2020SSlab</uncertaintyModel>
+				<uncertaintyWeight>0.33000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_02_10">
+				<uncertaintyModel>KuehnEtAl2020SSlab</uncertaintyModel>
+				<uncertaintyWeight>0.34000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+
+	</logicTree>
+</nrml>
+

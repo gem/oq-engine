@@ -140,7 +140,7 @@ class RiskFuncList(list):
         ddic = AccumDict(accum=AccumDict(accum=[]))
         dic = AccumDict(accum=[])
         for rf in self:
-            dic[rf.id, rf.peril].append(rf)
+            dic[rf.id, getattr(rf, 'peril', 'groundshaking')].append(rf)
         for (riskid, peril), rfs in dic.items():
             ddic[riskid][peril] = group_by_lt(rfs)
         num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
