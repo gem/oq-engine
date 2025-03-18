@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Do not store the `backarc` parameter when not needed
   * Fixed call to `v1/calc/list` breaking the DbServer
   * Extended the exposure reader to accept .csv.gz files
   * Fixed `oq info calculators` that was still displaying the obsolete and now
