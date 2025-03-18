@@ -41,10 +41,7 @@ def _compute_magnitude(ctx, C):
     PCM 3274 del 20 marzo 2003. Rapporto Conclusivo per il Dipartimento 
     della Protezione Civile, INGV, Milano-Roma"
     """
-    if ctx.mag < 5.5:
-        M = (ctx.mag - 1.145)/ 0.812 # to ML
-    else:
-        M = (ctx.mag - 1.938)/0.673 # to Ms
+    M = np.where(ctx.mag < 5.5, (ctx.mag - 1.145)/ 0.812, (ctx.mag - 1.938)/0.673)
     return C['a'] + (C['b'] * M)
 
 def _compute_distance(ctx, C):
