@@ -295,7 +295,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       ses_per_logic_tree_path='10')
         csv = extract(self.calc.datastore, 'ruptures').array
-        rups = get_ruptures(general.gettemp(csv))
+        rups = get_ruptures(general.gettemp(csv, suffix='.csv'))
         self.assertEqual(len(rups), 1)
 
         # check what QGIS will be seeing
