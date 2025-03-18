@@ -1,3 +1,12 @@
+  [Marco Pagani]
+  * Backported fix to Thingbaijam et al. (2017) scaling relation
+
+  [Michele Simionato]
+  * Backported fix to logs.dbcmd: querying the calculations caused the DbServer
+    to break in server installations
+  * Backported fix to `oq plot hcurves`
+  * Backported fix to Arteta (2021) missing the backarc parameter
+
 python3-oq-engine (3.23.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
