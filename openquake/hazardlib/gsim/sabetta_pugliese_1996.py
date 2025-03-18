@@ -31,7 +31,21 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 def _compute_magnitude(ctx, C):
-    return C['a'] + (C['b'] * ctx.mag)
+    """
+    Added a function that convert input magnitudes Mw into the
+    type of magnitudes requested by the model. Specifically,
+    it assumes M = ML for M < 5.5 and M = Ms for M >= 5.5
+    (Montaldo et al., 2005)
+    Function from Appendix 1 (pag. 7 and 9) of "Gruppo di Lavoro (2004). 
+    Redazione della mappa di pericolosità sismica prevista dall’Ordinanza
+    PCM 3274 del 20 marzo 2003. Rapporto Conclusivo per il Dipartimento 
+    della Protezione Civile, INGV, Milano-Roma"
+    """
+    if ctx.mag < 5.5:
+        M = (ctx.mag - 1.145)/ 0.812 # to ML
+    else:
+        M = (ctx.mag - 1.938)/0.673 # to Ms
+    return C['a'] + (C['b'] * M)
 
 def _compute_distance(ctx, C):
     return (C['c']* np.log10(np.sqrt(ctx.repi ** 2 + C['h'] ** 2)))
@@ -68,8 +82,11 @@ class SabettaPugliese1996(GMPE):
     ground motions. Bulletin of the Seismological Society of America, 86(2), 337-352.
     SA are given up to 4 s.
     The regressions are developed considering the largest horizontal component
+    and epicentral distance (Table 2 of Sabetta and Pugliese, 1996).
     
     GMPE implemented as adopted in MPS04 (Montaldo et al 2005)
+    In this implementation, a convertion function from Mw to Ms/ML is included 
+    to be consistent with the other gsims in OQ.
     """
     #: Supported tectonic region type is 'active shallow crust'
 
