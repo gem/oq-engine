@@ -506,7 +506,7 @@ def read_gsim_lt(oq):
     return gsim_lt
 
 
-@base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
+@base.calculators.add('event_based', 'scenario')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and

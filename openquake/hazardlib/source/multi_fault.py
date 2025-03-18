@@ -21,7 +21,7 @@ import copy
 import numpy as np
 from typing import Union
 
-from openquake.baselib import hdf5, performance, general
+from openquake.baselib import hdf5, performance, general, config
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
@@ -42,7 +42,7 @@ U16 = np.uint16
 U32 = np.uint32
 F32 = np.float32
 F64 = np.float64
-BLOCKSIZE = 5000
+BLOCKSIZE = int(config.memory.max_multi_fault_ruptures)
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 # NB: if too large, very few sources will be generated and a lot of
@@ -285,14 +285,19 @@ def _set_rupids_by_tag(src, allrids, dists, s2i):
     used_rupids = []
     src.rupids_by_tag = {}
     for _dist, tag, fids in sorted(closest):
-        src.rupids_by_tag[tag] = []
+        # instantiate rupture id list
+        rids_by_tag = []
+
         # loop through all ruptures in the source 
         for rupid, rids in enumerate(allrids):
             # overlap between the section ids of the rupture and the fault?
             if len(np.intersect1d(rids, fids, assume_unique=True)):
                 if rupid not in used_rupids:
-                    src.rupids_by_tag[tag].append(rupid)
+                    rids_by_tag.append(rupid)
                     used_rupids.append(rupid)
+        # only create the new key for that fault tag if there are ruptures
+        if len(rids_by_tag) > 0:
+            src.rupids_by_tag[tag] = rids_by_tag
 
     # put the rest in another tag
     off_rupids = np.setdiff1d(np.arange(len(allrids)), used_rupids,

@@ -170,7 +170,7 @@ Environment=DJANGO_SETTINGS_MODULE=openquake.server.settings
 
 ```
 
-Then run `sudo systemctl daemon-reload` and `sudo systemct restart etcd2.service` to apply new environments to dbserver daemon.
+Then run `sudo systemctl daemon-reload` and `sudo systemct restart openquake-dbserver.service` to apply new environments to dbserver daemon.
 
 
 ### Limit systemd services with control group (slice)

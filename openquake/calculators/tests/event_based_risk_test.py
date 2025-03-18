@@ -553,7 +553,7 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures').array
         nrups = text.count('\n') - 2
         self.assertEqual(nrups, 4)
-        rups = get_ruptures(gettemp(text))
+        rups = get_ruptures(gettemp(text, suffix='.csv'))
         aac(rups['n_occ'], [1, 1, 1, 1])
 
         # test extract?threshold for ruptures
