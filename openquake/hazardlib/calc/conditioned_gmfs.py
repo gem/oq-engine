@@ -26,7 +26,7 @@ https://doi.org/10.1785/0120210177
 The USGS ShakeMap implementation of Engler et al. (2022) is described
 in detail at: https://usgs.github.io/shakemap/manual4_0/tg_processing.html
 and the bulk of the implementation code resides in the ShakeMap Model module:
-https://github.com/usgs/shakemap/blob/main/shakemap/coremods/model.py
+https://code.usgs.gov/ghsc/esi/shakemap-modules/-/blob/main/src/shakemap_modules/coremods/model.py?
 
 This implementation is intended for generating conditional random
 ground motion fields for downstream use with the OpenQuake scenario
@@ -548,7 +548,7 @@ def get_mean_covs(
     cmaker_Y = cmaker.copy(imtls={target_imts[0].string: [0]})
 
     [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
-    mean_stds_Y = cmaker_D.get_mean_stds([ctx_Y])
+    mean_stds_Y = cmaker_Y.get_mean_stds([ctx_Y])
 
     # filter sites
     target = target_sitecol.filter(
