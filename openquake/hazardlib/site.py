@@ -443,8 +443,7 @@ class SiteCollection(object):
 
     xyz = Mesh.xyz
 
-    def set_global_params(
-            self, oq, req_site_params=('z1pt0', 'z2pt5')):
+    def set_global_params(self, oq, req_site_params=('z1pt0', 'z2pt5')):
         """
         Set the global site parameters
         (vs30, vs30measured, z1pt0, z2pt5)
