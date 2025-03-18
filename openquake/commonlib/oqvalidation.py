@@ -1684,7 +1684,8 @@ class OqParam(valid.ParamSet):
             if imt in sec_imts:
                 self.raise_invalid('you forgot to set secondary_perils =')
 
-        risk_perils = sorted(set(rf.peril for rf in risklist))
+        risk_perils = sorted(set(getattr(rf, 'peril', 'groundshaking')
+                                 for rf in risklist))
         return risk_perils
 
     def get_primary_imtls(self):
