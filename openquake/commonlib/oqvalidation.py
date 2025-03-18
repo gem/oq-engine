@@ -630,12 +630,6 @@ random_seed:
   Example: *random_seed = 1234*.
   Default: 42
 
-reference_backarc:
-  Used when there is no site model to specify a global backarc parameter,
-  used in some GMPEs. Can be True or False
-  Example: *reference_backarc = true*.
-  Default: False
-
 reference_depth_to_1pt0km_per_sec:
   Used when there is no site model to specify a global z1pt0 parameter,
   used in some GMPEs.
@@ -1106,7 +1100,6 @@ class OqParam(valid.ParamSet):
         valid.Choice('measured', 'inferred'), 'inferred')
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
-    reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
     reqv_ignore_sources = valid.Param(valid.namelist, [])
