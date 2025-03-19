@@ -174,7 +174,8 @@ def store(exposures_xml, dstore):
     for gh3, arr in smap:
         for name in FIELDS:
             if name in TAGS:
-                TAGS[name].append(arr[name])
+                vals = arr[name] if name in arr.dtype.names else ['NA'] * len(arr)
+                TAGS[name].append(vals)
             else:
                 acc[name].append(arr[name])
         n = len(arr)
