@@ -961,7 +961,7 @@ def sniff(fnames, sep=',', ignore=set(), require=()):
             common = set(header)
         else:
             common &= set(header)
-        common |= require
+        common |= set(require)
         files.append(
             CSVFile(fname, header, common, os.path.getsize(fname), skip))
     common -= ignore
