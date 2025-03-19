@@ -940,7 +940,7 @@ def find_error(fname, errors, dtype):
 
 
 # called in `oq info file.csv`
-def sniff(fnames, sep=',', ignore=set()):
+def sniff(fnames, sep=',', ignore=set(), require=()):
     """
     Read the first line of a set of CSV files by stripping the pre-headers.
 
@@ -961,6 +961,7 @@ def sniff(fnames, sep=',', ignore=set()):
             common = set(header)
         else:
             common &= set(header)
+        common |= require
         files.append(
             CSVFile(fname, header, common, os.path.getsize(fname), skip))
     common -= ignore

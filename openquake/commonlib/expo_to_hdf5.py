@@ -154,7 +154,7 @@ def store(exposures_xml, dstore):
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
         csvfiles.extend(exposure.datafiles)
-    files = hdf5.sniff(csvfiles, ',', IGNORE)
+    files = hdf5.sniff(csvfiles, ',', IGNORE, require=['ID_2'])
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
         [('ASSET_ID', h5py.string_dtype('ascii', 25))]
