@@ -40,7 +40,7 @@ TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = (numpy.bytes_, 24)
 for f in (None, 'ID_1'):
     CONV[f] = str
-TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'OCCUPANCY': []}
+TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 NAME_1 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
              .split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
@@ -49,7 +49,7 @@ FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'OCCUPANTS_PER_ASSET_DAY', 'OCCUPANTS_PER_ASSET_NIGHT',
           'OCCUPANTS_PER_ASSET_TRANSIT', 'TOTAL_AREA_SQM',
           'BUILDINGS', 'COST_STRUCTURAL_USD',
-          'LATITUDE', 'ID_0', 'ID_1'}
+          'LATITUDE', 'ID_0', 'ID_1', 'ID_2'}
 
 
 def add_geohash3(array):
