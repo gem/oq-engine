@@ -549,13 +549,13 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
         
         period_mce = [from_string(imt).period for imt in job_imts]
         
-        sds, sd1 = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
+        sds, sd1, sms, sm1 = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
         logging.info('(%.1f,%.1f) Sds=%s ',  lon, lat, sds)
         logging.info('(%.1f,%.1f) Sd1=%s ',  lon, lat, sd1)
         logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
         logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
         
-        yield sid, mag_dst_eps_sig, asce07, asce41, mce_df, sds, sd1
+        yield sid, mag_dst_eps_sig, asce07, asce41, mce_df, sds, sd1, sms, sm1
 
 
 def to_array(dic):
@@ -627,7 +627,6 @@ def main(dstore, csm):
         asce41[sid] = hdf5.dumps(a41)
         design_param[sid] = [sds, sd1, sms, sm1]
         
-        breakpoint()
         dstore[f'mag_dst_eps_sig/{sid}'] = mdes
         mce_dfs.append(mce_df)
 
