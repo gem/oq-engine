@@ -913,7 +913,8 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
     rup, err_msg = convert_to_oq_rupture(rup_data)
-    if rup is None:  # in parsers_test for us6000jllz
+    if rup is None and user.level > 1:  # in parsers_test for us6000jllz
+        # NOTE: hiding rupture-related issues to level 1 users
         rupdic['rupture_issue'] = err_msg
     # in parsers_test for usp0001ccb
     return rup, rupdic, err
