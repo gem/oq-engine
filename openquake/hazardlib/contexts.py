@@ -1313,7 +1313,9 @@ class ContextMaker(object):
         esites = (sum(len(ctx) for ctx in ctxs) * src.num_ruptures /
                   self.num_rups * multiplier)  # num_rups from get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
-        if src.code == b'N':  # increase weight in MEX and SAM
+        if src.code == b'S':  # improves EUR and USA
+            weight *= 2
+        elif src.code == b'N':  # increase weight in MEX and SAM
             weight *= 5.
         return max(weight, eps), int(esites)
 
