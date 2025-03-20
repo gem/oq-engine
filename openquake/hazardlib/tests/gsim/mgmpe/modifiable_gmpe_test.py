@@ -166,13 +166,15 @@ class ModifiableGMPETest(unittest.TestCase):
 
     def test_avg_gmpe_mgmpe(self):
         # Test instantiation of a ModifiableGMPE when spec in AvgGMPE
-        AvgGMPE(
-            b1={'ModifiableGMPE': {
-            'gmpe': {"AtkinsonBoore2006Modified2011": {}},
-            "add_between_within_stds": {'with_betw_ratio': 1.7},
-            'weight': 0.6}},
-            b2={'PezeshkEtAl2011NEHRPBC': {'weight': 0.4}})
-
+        gmm_toml =\
+        """
+        [AvgGMPE]
+        b1.ModifiableGMPE.gmpe.AtkinsonBoore2006Modified2011 = {}
+        b1.ModifiableGMPE.add_between_within_stds.with_betw_ratio = 1.7
+        b1.ModifiableGMPE.weight = 0.6
+        b2.PezeshkEtAl2011NEHRPBC.weight = 0.4
+        """
+        valid.gsim(gmm_toml) # Instantiate using valid.gsim from a toml
 
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """
