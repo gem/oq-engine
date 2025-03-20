@@ -41,7 +41,7 @@ CONV['ASSET_ID'] = (numpy.bytes_, 24)
 for f in (None, 'ID_1', 'ID_2'):
     CONV[f] = str
 TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [], 'OCCUPANCY': []}
-IGNORE = set('NAME_0 NAME_1 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
+IGNORE = set('NAME_0 NAME_1 NAME_2 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
              .split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
@@ -125,9 +125,10 @@ def gen_tasks(files, sample_assets, monitor):
     """
     for file in files:
         # read CSV in chunks
+        usecols = file.fields | {'ID_2'} if file.admin2 else {}
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
-            usecols=file.fields, skiprows=1, chunksize=1_000_000)
+            usecols=usecols, skiprows=1, chunksize=1_000_000)
         for i, df in enumerate(dfs):
             if sample_assets:
                 df = general.random_filter(df, float(sample_assets))
@@ -135,6 +136,8 @@ def gen_tasks(files, sample_assets, monitor):
                 continue
             if 'ID_1' not in df.columns:  # happens for many islands
                 df['ID_1'] = '???'
+            if 'ID_2' not in df.columns:  # happens for many contries in Africa
+                df['ID_2'] = '???'
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
             array = numpy.zeros(len(df), dt)
             for col in df.columns:
@@ -154,7 +157,7 @@ def store(exposures_xml, dstore):
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
         csvfiles.extend(exposure.datafiles)
-    files = hdf5.sniff(csvfiles, ',', IGNORE, require=['ID_2'])
+    files = hdf5.sniff(csvfiles, ',', IGNORE)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
         [('ASSET_ID', h5py.string_dtype('ascii', 25))]
@@ -174,8 +177,7 @@ def store(exposures_xml, dstore):
     for gh3, arr in smap:
         for name in FIELDS:
             if name in TAGS:
-                vals = arr[name] if name in arr.dtype.names else ['NA'] * len(arr)
-                TAGS[name].append(vals)
+                TAGS[name].append(arr[name])
             else:
                 acc[name].append(arr[name])
         n = len(arr)
