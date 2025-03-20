@@ -208,7 +208,7 @@ def main(exposures_xml):
         store(exposures_xml, dstore)
     return dstore.filename
 
-main.exposure_xml = dict(help='Exposure pathnames', nargs='+')
+main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
 
 
 if __name__ == '__main__':
