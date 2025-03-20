@@ -166,7 +166,7 @@ class ModifiableGMPETest(unittest.TestCase):
 
     def test_avg_gmpe_mgmpe(self):
         # Test instantiation of a ModifiableGMPE when spec in AvgGMPE
-        ag = AvgGMPE(
+        AvgGMPE(
             b1={'ModifiableGMPE': {
             'gmpe': {"AbrahamsonEtAl2014": {}},
             "add_between_within_stds": {'with_betw_ratio': 1.7},
