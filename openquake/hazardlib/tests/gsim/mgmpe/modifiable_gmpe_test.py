@@ -21,7 +21,6 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.contexts import simple_cmaker
-from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
     ModifiableGMPE, _dict_to_coeffs_table)
 
