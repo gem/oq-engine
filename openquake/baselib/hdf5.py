@@ -58,11 +58,16 @@ class CSVFile:
     fields: list[str]
     size: int
     skip: int
+    admin2: bool
 
     def read_df(self):
         return pandas.read_csv(
             self.fname, skiprows=self.skip, usecols=self.fields,
             encoding='utf-8-sig')
+
+    def countlines(self):
+        n = sum(1 for line in open(self.fname))
+        return n - self.skip
 
 
 def sanitize(value):
@@ -939,7 +944,7 @@ def find_error(fname, errors, dtype):
             return exc
 
 
-# called in `oq info file.csv`
+# called in `oq info file.csv`, used expecially for the exposures
 def sniff(fnames, sep=',', ignore=set()):
     """
     Read the first line of a set of CSV files by stripping the pre-headers.
@@ -961,8 +966,8 @@ def sniff(fnames, sep=',', ignore=set()):
             common = set(header)
         else:
             common &= set(header)
-        files.append(
-            CSVFile(fname, header, common, os.path.getsize(fname), skip))
+        files.append(CSVFile(fname, header, common, os.path.getsize(fname),
+                             skip, 'ID_2' in header))
     common -= ignore
     assert common, 'There is no common header subset among %s' % fnames
     return files
