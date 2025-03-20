@@ -312,6 +312,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
 
     # NOTE: in level 1 interface the ShakeMap has to be used.
     #       in level 2 interface it depends from the selected approach
+    if user.level == 1:
+        dic['approach'] = 'use_shakemap_from_usgs'
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
