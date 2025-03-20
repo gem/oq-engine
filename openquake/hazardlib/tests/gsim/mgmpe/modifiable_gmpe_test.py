@@ -168,7 +168,7 @@ class ModifiableGMPETest(unittest.TestCase):
         # Test instantiation of a ModifiableGMPE when spec in AvgGMPE
         AvgGMPE(
             b1={'ModifiableGMPE': {
-            'gmpe': {"AbrahamsonEtAl2014": {}},
+            'gmpe': {"YenierAtkinson2015BSSA": {}},
             "add_between_within_stds": {'with_betw_ratio': 1.7},
             'weight': 0.6}},
             b2={'SadighEtAl1997': {'weight': 0.4}})
