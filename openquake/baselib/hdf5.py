@@ -64,6 +64,10 @@ class CSVFile:
             self.fname, skiprows=self.skip, usecols=self.fields,
             encoding='utf-8-sig')
 
+    def countlines(self):
+        n = sum(1 for line in open(self.fname))
+        return n - self.skip
+
 
 def sanitize(value):
     """
