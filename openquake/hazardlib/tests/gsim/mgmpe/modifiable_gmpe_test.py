@@ -171,7 +171,7 @@ class ModifiableGMPETest(unittest.TestCase):
             'gmpe': {"AtkinsonBoore2006Modified2011": {}},
             "add_between_within_stds": {'with_betw_ratio': 1.7},
             'weight': 0.6}},
-            b2={'SadighEtAl1997': {'weight': 0.4}})
+            b2={'PezeshkEtAl2011NEHRPBC': {'weight': 0.4}})
 
 
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
