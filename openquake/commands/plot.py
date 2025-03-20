@@ -32,11 +32,12 @@ from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
-from openquake.calculators.getters import get_ebrupture
+from openquake.calculators.getters import get_ebrupture, get_rupture_from_dstore
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
-    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d)
+    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_webmercator,
+    plot_rupture_3d)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
 
@@ -1094,6 +1095,16 @@ def make_figure_rupture(extractors, what):
         dstore = ex.dstore
         rup = get_ebrupture(dstore, rup_id=0).rupture
     return plot_rupture(rup, with_borders=False)
+
+
+def make_figure_rupture_webmercator(extractors, what):
+    """
+    $ oq plot "rupture_webmercator?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    rup = get_rupture_from_dstore(dstore, rup_id=0)
+    return plot_rupture_webmercator(rup)
 
 
 def make_figure_rupture_3d(extractors, what):
