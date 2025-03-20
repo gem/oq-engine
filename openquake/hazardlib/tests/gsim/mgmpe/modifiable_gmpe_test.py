@@ -21,6 +21,7 @@ from openquake.hazardlib import valid
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.contexts import simple_cmaker
+from openquake.hazardlib.gsim.mgmpe.avg_gmpe import AvgGMPE
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
     ModifiableGMPE, _dict_to_coeffs_table)
 
@@ -162,6 +163,15 @@ class ModifiableGMPETest(unittest.TestCase):
 
         aae(phi[ORIG, 0], 0.6201)
         aae(sig[MODI, 0], 0.5701491121)
+
+    def test_avg_gmpe_mgmpe(self):
+        # Test instantiation of a ModifiableGMPE when spec in AvgGMPE
+        ag = AvgGMPE(
+            b1={'ModifiableGMPE': {
+            'gmpe': {"AbrahamsonEtAl2014": {}},
+            "add_between_within_stds": {'with_betw_ratio': 1.7},
+            'weight': 0.6}},
+            b2={'SadighEtAl1997': {'weight': 0.4}})
 
 
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
