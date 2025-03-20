@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Exposed the output `avg_gmf`
+  * Internal: enhanced `build_global_exposure` to work at admin level 2
+  * Do not store the `backarc` parameter when not needed
+  * Fixed call to `v1/calc/list` breaking the DbServer
+  * Extended the exposure reader to accept .csv.gz files
   * Fixed `oq info calculators` that was still displaying the obsolete and now
     removed ucerf calculators
   * Fixed `oq show rlz:` when the gsim logic tree was not properly reduced
@@ -137,7 +142,7 @@ python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
   * Extended the ShakeMap parser to read the intensities associated to SA(0.6)
   * Fixed a bug while exporting realizations.csv for scenario calculations
   * Added `webapi.calc_timeout` configuration parameter
-  * Reduced `conditioned_gmfs_gb` to 8 GB by default
+  * Reduced `conditioned_gmf_gb` to 8 GB by default
   * Parallelized `get_mean_covs` when conditioning the GMFs
 
   [Christopher Brooks]

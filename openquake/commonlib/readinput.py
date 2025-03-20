@@ -542,8 +542,9 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
         try:
             z[name] = sm[name]
         except ValueError:  # missing, use the global parameter
-            # exercised in the test classical/case_28_bis
-            z[name] = check_site_param(oqparam, name)
+            if name != 'backarc':  # backarc has default zero
+                # exercised in the test classical/case_28_bis
+                z[name] = check_site_param(oqparam, name)
     arrays.append(z)
 
 

@@ -530,8 +530,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s '
-              "AND status != 'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
+    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s AND status != '
+              "'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
