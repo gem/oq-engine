@@ -38,10 +38,10 @@ OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = (numpy.bytes_, 24)
-for f in (None, 'ID_1'):
+for f in (None, 'ID_1', 'ID_2'):
     CONV[f] = str
-TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'OCCUPANCY': []}
-IGNORE = set('NAME_0 NAME_1 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
+TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [], 'OCCUPANCY': []}
+IGNORE = set('NAME_0 NAME_1 NAME_2 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
              .split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
@@ -49,7 +49,7 @@ FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'OCCUPANTS_PER_ASSET_DAY', 'OCCUPANTS_PER_ASSET_NIGHT',
           'OCCUPANTS_PER_ASSET_TRANSIT', 'TOTAL_AREA_SQM',
           'BUILDINGS', 'COST_STRUCTURAL_USD',
-          'LATITUDE', 'ID_0', 'ID_1'}
+          'LATITUDE', 'ID_0', 'ID_1', 'ID_2'}
 
 
 def add_geohash3(array):
@@ -125,9 +125,10 @@ def gen_tasks(files, sample_assets, monitor):
     """
     for file in files:
         # read CSV in chunks
+        usecols = file.fields | {'ID_2'} if file.admin2 else {}
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
-            usecols=file.fields, skiprows=1, chunksize=1_000_000)
+            usecols=usecols, skiprows=1, chunksize=1_000_000)
         for i, df in enumerate(dfs):
             if sample_assets:
                 df = general.random_filter(df, float(sample_assets))
@@ -135,6 +136,8 @@ def gen_tasks(files, sample_assets, monitor):
                 continue
             if 'ID_1' not in df.columns:  # happens for many islands
                 df['ID_1'] = '???'
+            if 'ID_2' not in df.columns:  # happens for many contries in Africa
+                df['ID_2'] = '???'
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
             array = numpy.zeros(len(df), dt)
             for col in df.columns:
@@ -208,7 +211,7 @@ def main(exposures_xml):
         store(exposures_xml, dstore)
     return dstore.filename
 
-main.exposure_xml = dict(help='Exposure pathnames', nargs='+')
+main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
 
 
 if __name__ == '__main__':
