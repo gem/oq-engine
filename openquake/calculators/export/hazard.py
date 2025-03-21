@@ -745,14 +745,6 @@ def export_mce(ekey, dstore):
     writer.save(df, fname, comment=comment)
     return [fname]
 
-@export.add(('Sds_Sd1', 'csv'))
-def export_sds_sd1(ekey, dstore):
-    df = dstore.read_df('Sds_Sd1')
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    fname = dstore.export_path('Sds_Sd1.csv')
-    comment = dstore.metadata.copy()
-    writer.save(df, fname, comment=comment)
-    return [fname]
 
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):

@@ -348,6 +348,10 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, low_haz=False):
         Ss_seismicity = "n.a."
         S1_seismicity = "n.a."
 
+    period_mce = [from_string(imt).period for imt in job_imts]
+        
+    design = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
+    
     asce07 = {
              'PGA': mce['PGA'],
              'PGA_2_50': prob_mce_out['PGA'],
@@ -355,18 +359,25 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, low_haz=False):
              'PGA_det': det_mce['PGA'],
 
              'Ss': mce['SA(0.2)'],
+             'Sms': design[2],
+             'Sds': design[0],
              'Ss_RT': prob_mce_out['SA(0.2)'],
              'CRs': crs,
              'Ss_84th': det_imt['SA(0.2)'],
              'Ss_det': det_mce['SA(0.2)'],
              'Ss_seismicity': Ss_seismicity,
+             
+        
 
              'S1': mce['SA(1.0)'],
+             'Sm1': design[3],
+             'Sd1': design[1],
              'S1_RT': prob_mce_out['SA(1.0)'],
              'CR1': cr1,
              'S1_84th': det_imt['SA(1.0)'],
              'S1_det': det_mce['SA(1.0)'],
-             'S1_seismicity': S1_seismicity,
+             'S1_seismicity': S1_seismicity
+             
              }
     for key in asce07:
         if not isinstance(asce07[key], str):
@@ -518,8 +529,10 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     )
     sms = 1.5 * sds
     sm1 = 1.5 * sd1
+    
+    design = [sds,sd1,sms,sm1]
 
-    return sds, sd1, sms, sm1
+    return design
 
 def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
     """
@@ -547,15 +560,10 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
         logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
         
-        period_mce = [from_string(imt).period for imt in job_imts]
-        
-        sds, sd1, sms, sm1 = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
-        logging.info('(%.1f,%.1f) Sds=%s ',  lon, lat, sds)
-        logging.info('(%.1f,%.1f) Sd1=%s ',  lon, lat, sd1)
         logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
         logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
         
-        yield sid, mag_dst_eps_sig, asce07, asce41, mce_df, sds, sd1, sms, sm1
+        yield sid, mag_dst_eps_sig, asce07, asce41, mce_df
 
 
 def to_array(dic):
@@ -621,11 +629,11 @@ def main(dstore, csm):
             rtgm_dfs.append(rtgm_df)
 
     
-    for sid, mdes, a07, a41, mce_df, sds, sd1, sms, sm1 in calc_asce(dstore, csm, job_imts, DLLs,
+    for sid, mdes, a07, a41, mce_df in calc_asce(dstore, csm, job_imts, DLLs,
                                                  rtgm):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
-        design_param[sid] = [sds, sd1, sms, sm1]
+        #design_param[sid] = hdf5.dumps(design)
         
         dstore[f'mag_dst_eps_sig/{sid}'] = mdes
         mce_dfs.append(mce_df)
@@ -634,7 +642,7 @@ def main(dstore, csm):
         
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)
-    dstore['Sds_Sd1'] = to_array(design_param)
+    #dstore['Sds_Sd1'] = to_array(design_param)
 
     if mce_dfs:
         dstore.create_df('mce', pd.concat(mce_dfs))
