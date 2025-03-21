@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2024 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,10 +16,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 """
-Module exports :class:`NGAEastAUS23`
+Module exports :class:`NGAEastAUS23_vs3000`
 """
+import pathlib
 from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 
-fname = 'NGA-East_Backbone_Model.geometric.3000.mps.hdf5'
-add_alias('NGAEastAUS23_vs3000', GMPETable, gmpe_table=fname)
+path = pathlib.Path(__file__).parent
+fname = path / 'NGA-East_Backbone_Model.geometric.3000.mps.hdf5'
+add_alias("NGAEastAUS23_vs3000", GMPETable, gmpe_table=str(fname))
