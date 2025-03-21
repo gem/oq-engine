@@ -1920,6 +1920,7 @@ def read_cmakers(dstore, csm=None):
         oq.af = None
     if csm is None:
         csm = dstore['_csm']
+    if not hasattr(csm, 'full_lt'):
         csm.full_lt = dstore['full_lt'].init()
     cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
