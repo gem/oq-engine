@@ -1233,7 +1233,6 @@ class ContextMaker(object):
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imts)
         G = len(self.gsims)
-        out = numpy.zeros((4, G, M, N))
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
             # contexts already vectorized
             recarrays = ctxs
@@ -1243,6 +1242,7 @@ class ContextMaker(object):
             recarr = numpy.concatenate(
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
+        out = numpy.empty((4, G, M, N))
         for g, gsim in enumerate(self.gsims):
             out[:, g] = self.get_4MN(recarrays, gsim)
         return out
