@@ -26,7 +26,8 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
     PHI_SETUP, get_phi_ss, NGAEastGMPE, _get_f760, get_nonlinear_stddev,
-    get_linear_stddev, _get_fv, get_fnl)
+    get_linear_stddev, _get_fv, get_fnl, COEFFS_LINEAR, COEFFS_NONLINEAR,
+    COEFFS_F760)
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
 
@@ -71,9 +72,9 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
     (Hashash et al., 2019) amplification terms
     """
     # Get the coefficients for the IMT
-    C_LIN = NGAEastGMPE.COEFFS_LINEAR[imt]
-    C_F760 = NGAEastGMPE.COEFFS_F760[imt]
-    C_NL = NGAEastGMPE.COEFFS_NONLINEAR[imt]
+    C_LIN = COEFFS_LINEAR[imt]
+    C_F760 = COEFFS_F760[imt]
+    C_NL = COEFFS_NONLINEAR[imt]
     if str(imt).startswith("PGA"):
         period = 0.01
     elif str(imt).startswith("PGV"):
@@ -254,7 +255,7 @@ class ESHM20Craton(GMPE):
             else:
                 # Avoid re-calculating PGA if that was already done!
                 mean[m] = np.copy(pga_r)
-            
+
             mean[m] += get_site_amplification(
                 self.site_epsilon, imt, np.exp(pga_r), ctx)
 
