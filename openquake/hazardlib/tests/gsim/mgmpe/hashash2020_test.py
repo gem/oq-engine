@@ -33,7 +33,7 @@ class HashashEtAl2020Test(unittest.TestCase):
     def test_amplification_pga(self):
         vs30 = np.array([400.0, 2800.0, 3000.0])
         imtstr = from_string('PGA')
-        ref_pga = 0.1
+        ref_pga = np.ones_like(vs30) * 0.1
         ref_vs30 = 3000.0
         fv = hashash2020_non_linear_scaling(imtstr, vs30, ref_pga, ref_vs30)
         # results computed by hand

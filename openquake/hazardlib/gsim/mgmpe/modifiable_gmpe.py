@@ -93,6 +93,8 @@ def ceus2020_site_term(ctx, imt, me, si, ta, ph, wimp, ref_vs30, ref_pga):
     from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
         hashash2020_non_linear_scaling)
 
+    assert len(ref_pga) == len(ctx.vs30)
+
     # Original value of ground motion
     exp_mean = np.exp(me)
 
@@ -112,7 +114,7 @@ def cy14_site_term(ctx, imt, me, si, ta, phi):
     This function adds the CY14 site term to GMMs requiring it
     """
     C = ChiouYoungs2014.COEFFS[imt]
-    fa = _get_cy14_site_term(C, ctx.vs30, me) # Ref mean must be in natural log
+    fa = _get_cy14_site_term(C, ctx.vs30, me)  # Ref mean must be in nat log
     me[:] += fa
 
 

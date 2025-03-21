@@ -35,6 +35,8 @@ def hashash2020_non_linear_scaling(imt, vs30, ref_pga, ref_vs30):
     :param wimp:
     :param wgr:
     """
+
+    assert len(vs30) == len(ref_pga)
     C = COEFFS[imt]
 
     if np.abs(ref_vs30 - 3000) < 1e-1:
@@ -51,6 +53,9 @@ def hashash2020_non_linear_scaling(imt, vs30, ref_pga, ref_vs30):
 
     # Compute the argument of the logarithm in eq. 2
     coeff = (ref_pga + C['f3']) / C['f3']
+
+    if not hasattr(coeff, '__len__'):
+        coeff = np.array([coeff])
 
     # Initialize the output
     fnl = np.zeros_like(vs30)
