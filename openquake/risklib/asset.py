@@ -535,6 +535,19 @@ class AssetCollection(object):
             agg_values[vf] = general.fast_agg(self['site_id'], arr)
         return agg_values
 
+    # not used yet
+    def agg_by_site(self):
+        """
+        :returns: an array of aggregated values indexed by site ID
+        """
+        N = self['site_id'].max() + 1
+        vfields = self.fields + self.occfields
+        agg_values = numpy.zeros(N, [(f, F32) for f in vfields])
+        for vf in vfields:
+            arr = self['value-' + vf if vf in self.fields else vf]
+            agg_values[vf] = general.fast_agg(self['site_id'], arr)
+        return agg_values
+
     def build_aggids(self, aggregate_by):
         """
         :param aggregate_by: list of Ag lists of strings
