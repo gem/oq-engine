@@ -27,7 +27,8 @@ from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
     PHI_SETUP, get_phi_ss, NGAEastGMPE, _get_f760, get_nonlinear_stddev,
     get_linear_stddev, _get_fv, get_fnl, COEFFS_LINEAR, COEFFS_NONLINEAR,
-    COEFFS_F760)
+    COEFFS_F760, CONSTANTS)
+from openquake.hazardlib.gsim.nga_east import CONSTANTS as C_NGAE
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
 
@@ -82,11 +83,9 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
     else:
         period = imt.period
     # Get f760
-    f760 = _get_f760(C_F760, ctx.vs30,
-                     NGAEastGMPE.CONSTANTS)
+    f760 = _get_f760(C_F760, ctx.vs30, C_NGAE)
     # Get the linear amplification factor
-    f_lin = _get_fv(C_LIN, ctx.vs30, f760,
-                    NGAEastGMPE.CONSTANTS)
+    f_lin = _get_fv(C_LIN, ctx.vs30, f760, C_NGAE)
     # Get the nonlinear amplification from Hashash et al., (2017)
     f_nl, f_rk = get_fnl(C_NL, pga_r, ctx.vs30, period)
     # Mean amplification
@@ -98,12 +97,10 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
         # In the case of the linear model sigma_f760 and sigma_fv are
         # assumed independent and the resulting sigma_flin is the root
         # sum of squares (SRSS)
-        f760_stddev = _get_f760(C_F760, ctx.vs30,
-                                NGAEastGMPE.CONSTANTS,
-                                is_stddev=True)
+        f760_stddev = _get_f760(C_F760, ctx.vs30, C_NGAE, is_stddev=True)
         f_lin_stddev = np.sqrt(
             f760_stddev ** 2. + get_linear_stddev(
-                C_LIN, ctx.vs30, NGAEastGMPE.CONSTANTS) ** 2)
+                C_LIN, ctx.vs30, C_NGAE) ** 2)
         # Likewise, the epistemic uncertainty on the linear and nonlinear
         # model are assumed independent and the SRSS is taken
         f_nl_stddev = get_nonlinear_stddev(
