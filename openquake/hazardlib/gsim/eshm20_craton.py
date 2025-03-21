@@ -25,23 +25,25 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
-    PHI_SETUP, get_phi_ss, NGAEastGMPE, _get_f760, get_nonlinear_stddev,
-    get_linear_stddev, _get_fv, get_fnl)
+    PHI_SETUP, get_phi_ss, _get_f760, get_nonlinear_stddev,
+    get_linear_stddev, _get_fv, get_fnl, COEFFS_LINEAR, COEFFS_NONLINEAR,
+    COEFFS_F760)
+from openquake.hazardlib.gsim.nga_east import CONSTANTS as C_NGAE
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
 
-CONSTANTS = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
+CONST = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
 
 
 def get_distance_term(C, mag, rrup):
     """
     Returns the distance attenuation factor
     """
-    rval = np.sqrt(rrup ** 2. + CONSTANTS["h"] ** 2.)
-    rref_val = np.sqrt(CONSTANTS["Rref"] ** 2. +
-                       CONSTANTS["h"] ** 2.)
+    rval = np.sqrt(rrup ** 2. + CONST["h"] ** 2.)
+    rref_val = np.sqrt(CONST["Rref"] ** 2. +
+                       CONST["h"] ** 2.)
 
-    f_r = (C["c1"] + C["c2"] * (mag - CONSTANTS["Mref"])) *\
+    f_r = (C["c1"] + C["c2"] * (mag - CONST["Mref"])) *\
         np.log(rval / rref_val) + (C["c3"] * (rval - rref_val) / 100.)
     return f_r
 
@@ -59,8 +61,8 @@ def get_magnitude_scaling(C, mag):
     """
     Returns the magnitude scaling term
     """
-    d_m = mag - CONSTANTS["Mh"]
-    return np.where(mag <= CONSTANTS["Mh"],
+    d_m = mag - CONST["Mh"]
+    return np.where(mag <= CONST["Mh"],
                     C["e1"] + C["b1"] * d_m + C["b2"] * d_m ** 2.0,
                     C["e1"] + C["b3"] * d_m)
 
@@ -71,9 +73,9 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
     (Hashash et al., 2019) amplification terms
     """
     # Get the coefficients for the IMT
-    C_LIN = NGAEastGMPE.COEFFS_LINEAR[imt]
-    C_F760 = NGAEastGMPE.COEFFS_F760[imt]
-    C_NL = NGAEastGMPE.COEFFS_NONLINEAR[imt]
+    C_LIN = COEFFS_LINEAR[imt]
+    C_F760 = COEFFS_F760[imt]
+    C_NL = COEFFS_NONLINEAR[imt]
     if str(imt).startswith("PGA"):
         period = 0.01
     elif str(imt).startswith("PGV"):
@@ -81,11 +83,9 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
     else:
         period = imt.period
     # Get f760
-    f760 = _get_f760(C_F760, ctx.vs30,
-                     NGAEastGMPE.CONSTANTS)
+    f760 = _get_f760(C_F760, ctx.vs30, C_NGAE)
     # Get the linear amplification factor
-    f_lin = _get_fv(C_LIN, ctx.vs30, f760,
-                    NGAEastGMPE.CONSTANTS)
+    f_lin = _get_fv(C_LIN, ctx.vs30, f760, C_NGAE)
     # Get the nonlinear amplification from Hashash et al., (2017)
     f_nl, f_rk = get_fnl(C_NL, pga_r, ctx.vs30, period)
     # Mean amplification
@@ -97,12 +97,10 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
         # In the case of the linear model sigma_f760 and sigma_fv are
         # assumed independent and the resulting sigma_flin is the root
         # sum of squares (SRSS)
-        f760_stddev = _get_f760(C_F760, ctx.vs30,
-                                NGAEastGMPE.CONSTANTS,
-                                is_stddev=True)
+        f760_stddev = _get_f760(C_F760, ctx.vs30, C_NGAE, is_stddev=True)
         f_lin_stddev = np.sqrt(
             f760_stddev ** 2. + get_linear_stddev(
-                C_LIN, ctx.vs30, NGAEastGMPE.CONSTANTS) ** 2)
+                C_LIN, ctx.vs30, C_NGAE) ** 2)
         # Likewise, the epistemic uncertainty on the linear and nonlinear
         # model are assumed independent and the SRSS is taken
         f_nl_stddev = get_nonlinear_stddev(
@@ -254,7 +252,7 @@ class ESHM20Craton(GMPE):
             else:
                 # Avoid re-calculating PGA if that was already done!
                 mean[m] = np.copy(pga_r)
-            
+
             mean[m] += get_site_amplification(
                 self.site_epsilon, imt, np.exp(pga_r), ctx)
 

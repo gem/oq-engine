@@ -475,9 +475,9 @@ def get_site_amplification(self, imt, pga_r, vs30s, us23=False):
     (Hashash et al., 2019) amplification terms
     """
     # Get the coefficients for the IMT
-    C_LIN = self.COEFFS_LINEAR[imt]
-    C_F760 = self.COEFFS_F760[imt]
-    C_NL = self.COEFFS_NONLINEAR[imt]
+    C_LIN = COEFFS_LINEAR[imt]
+    C_F760 = COEFFS_F760[imt]
+    C_NL = COEFFS_NONLINEAR[imt]
     if str(imt).startswith("PGA"):
         period = 0.01
     elif str(imt).startswith("PGV"):
@@ -485,9 +485,9 @@ def get_site_amplification(self, imt, pga_r, vs30s, us23=False):
     else:
         period = imt.period
     # Get f760
-    f760 = _get_f760(C_F760, vs30s, self.CONSTANTS)
+    f760 = _get_f760(C_F760, vs30s, CONSTANTS)
     # Get the linear amplification factor
-    f_lin = _get_fv(C_LIN, vs30s, f760, self.CONSTANTS)
+    f_lin = _get_fv(C_LIN, vs30s, f760, CONSTANTS)
     # Get the nonlinear amplification from Hashash et al., (2017)
     f_nl, f_rk = get_fnl(C_NL, pga_r, vs30s, period, us23)
     # Mean amplification
@@ -510,10 +510,10 @@ def get_site_amplification_sigma(self, vs30s, f_rk, C_LIN, C_F760, C_NL):
     # assumed independent and the resulting sigma_flin is the root
     # sum of squares (SRSS)
     f760_stddev = _get_f760(C_F760, vs30s,
-                            self.CONSTANTS, is_stddev=True)
+                            CONSTANTS, is_stddev=True)
     f_lin_stddev = np.sqrt(
         f760_stddev ** 2. +
-        get_linear_stddev(C_LIN, vs30s, self.CONSTANTS) ** 2)
+        get_linear_stddev(C_LIN, vs30s, CONSTANTS) ** 2)
     # Likewise, the epistemic uncertainty on the linear and nonlinear
     # model are assumed independent and the SRSS is taken
     f_nl_stddev = get_nonlinear_stddev(C_NL, vs30s) * f_rk
@@ -611,7 +611,7 @@ def get_mean_amp(self, mag, ctx, imt, u_adj=None, cstl=None):
     # Get the Chapman and Guo (2021) Coastal Plains adjustment if req.
     if isinstance(cstl, dict) and isinstance(cstl['f_cpa'], np.ndarray):
         # Get site amp term with vs30 ref of 1000 m/s
-        vs_cg21 = np.full(len(ctx.vs30), 1000.) 
+        vs_cg21 = np.full(len(ctx.vs30), 1000.)
         amp_cpa = get_site_amplification(self, imt, np.exp(pga_r), vs_cg21)
         # Then compute adjustment per site
         cpa_term = cstl['f_cpa'] - amp_cpa * cstl['z_scale']
@@ -772,100 +772,8 @@ class NGAEastGMPE(GMPETable):
             # Get standard deviation model
             sig[m], tau[m], phi[m] = get_stddevs(self, ctx.mag, imt)
 
-    # Seven constants: vref, vL, vU, vw1, vw2, wt1 and wt2
-    CONSTANTS = {"vref": 760., "vL": 200., "vU": 2000.0,
-                 "vw1": 600.0, "vw2": 400.0, "wt1": 0.767, "wt2": 0.1}
 
-    # Coefficients for the linear model, taken from the electronic supplement
-    # to Stewart et al., (2017)
-    COEFFS_LINEAR = CoeffsTable(sa_damping=5, table="""\
-    imt           c      v1       v2      vf  sigma_vc  sigma_L  sigma_U
-    pgv      -0.449   331.0    760.0   314.0     0.251    0.306    0.334
-    pga      -0.290   319.0    760.0   345.0     0.300    0.345    0.480
-    0.010    -0.290   319.0    760.0   345.0     0.300    0.345    0.480
-    0.020    -0.303   319.0    760.0   343.0     0.290    0.336    0.479
-    0.030    -0.315   319.0    810.0   342.0     0.282    0.327    0.478
-    0.050    -0.344   319.0   1010.0   338.0     0.271    0.308    0.476
-    0.075    -0.348   319.0   1380.0   334.0     0.269    0.285    0.473
-    0.100    -0.372   317.0   1900.0   319.0     0.270    0.263    0.470
-    0.150    -0.385   302.0   1500.0   317.0     0.261    0.284    0.402
-    0.200    -0.403   279.0   1073.0   314.0     0.251    0.306    0.334
-    0.250    -0.417   250.0    945.0   282.0     0.238    0.291    0.357
-    0.300    -0.426   225.0    867.0   250.0     0.225    0.276    0.381
-    0.400    -0.452   217.0    843.0   250.0     0.225    0.275    0.381
-    0.500    -0.480   217.0    822.0   280.0     0.225    0.311    0.323
-    0.750    -0.510   227.0    814.0   280.0     0.225    0.330    0.310
-    1.000    -0.557   255.0    790.0   300.0     0.225    0.377    0.361
-    1.500    -0.574   276.0    805.0   300.0     0.242    0.405    0.375
-    2.000    -0.584   296.0    810.0   300.0     0.259    0.413    0.388
-    3.000    -0.588   312.0    820.0   313.0     0.306    0.410    0.551
-    4.000    -0.579   321.0    821.0   322.0     0.340    0.405    0.585
-    5.000    -0.558   324.0    825.0   325.0     0.340    0.409    0.587
-    7.500    -0.544   325.0    820.0   328.0     0.345    0.420    0.594
-    10.00    -0.507   325.0    820.0   330.0     0.350    0.440    0.600
-    """)
 
-    # Coefficients for the nonlinear model, taken from Table 2.1 of
-    # Hashash et al., (2017). The alternative f4 coefficients (f4_mod)
-    # are required for the US 2023 NSHMP and are taken from USGS repo:
-    # https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-east-usgs-siteamp.csv?ref_type=heads
-    COEFFS_NONLINEAR = CoeffsTable(sa_damping=5, table="""\
-    imt          f3         f4         f5     Vc   sigma_c  f4_mod 
-    pgv     0.06089   -0.08344   -0.00667   2257.0   0.120  -0.08344
-    pga     0.07520   -0.43755   -0.00131   2990.0   0.120  -0.43755
-    0.010   0.07520   -0.43755   -0.00131   2990.0   0.120  -0.43755
-    0.020   0.05660   -0.41511   -0.00098   2990.0   0.120  -0.41511
-    0.030   0.10360   -0.49871   -0.00127   2990.0   0.120  -0.49871
-    0.050   0.16781   -0.58073   -0.00187   2990.0   0.120  -0.58073
-    0.075   0.17386   -0.53646   -0.00259   2990.0   0.120  -0.53646
-    0.100   0.15083   -0.44661   -0.00335   2990.0   0.120  -0.44661
-    0.150   0.14272   -0.38264   -0.00410   2335.0   0.120  -0.38264
-    0.200   0.12815   -0.30481   -0.00488   1533.0   0.120  -0.30481
-    0.250   0.13286   -0.27506   -0.00564   1318.0   0.135  -0.27506
-    0.300   0.13070   -0.22825   -0.00655   1152.0   0.150  -0.22825
-    0.400   0.09414   -0.11591   -0.00872   1018.0   0.150  -0.13060
-    0.500   0.09888   -0.07793   -0.01028    939.0   0.150  -0.09571
-    0.750   0.06101   -0.01780   -0.01456    835.0   0.125  -0.02909
-    1.000   0.04367   -0.00478   -0.01823    951.0   0.060  -0.01057
-    1.500   0.00480   -0.00086   -0.02000    882.0   0.050  -0.00253
-    2.000   0.00164   -0.00236   -0.01296    879.0   0.040  -0.00236
-    3.000   0.00746   -0.00626   -0.01043    894.0   0.040  -0.00626
-    4.000   0.00269   -0.00331   -0.01215    875.0   0.030  -0.00331
-    5.000   0.00242   -0.00256   -0.01325    856.0   0.020  -0.00256
-    7.500   0.04219   -0.00536   -0.01418    832.0   0.020  -0.00536
-    10.00   0.05329   -0.00631   -0.01403    837.0   0.020  -0.00631
-    """)
-
-    # Note that the coefficient values at 0.1 s have been smoothed with respect
-    # to those needed in order to reproduce Figure 5 of Petersen et al. (2019)
-    # The original f760i was 0.674 +/- 0.366, and the values below are taken
-    # from the US NSHMP software
-    COEFFS_F760 = CoeffsTable(sa_damping=5, table="""\
-    imt       f760i     f760g   f760is   f760gs
-    pgv      0.3753     0.297    0.313    0.117
-    pga      0.1850     0.121    0.434    0.248
-    0.010    0.1850     0.121    0.434    0.248
-    0.020    0.1850     0.031    0.434    0.270
-    0.030    0.2240     0.000    0.404    0.229
-    0.050    0.3370     0.062    0.363    0.093
-    0.075    0.4750     0.211    0.322    0.102
-    0.100    0.5210     0.338    0.293    0.088
-    0.150    0.5860     0.470    0.253    0.066
-    0.200    0.4190     0.509    0.214    0.053
-    0.250    0.3320     0.509    0.177    0.052
-    0.300    0.2700     0.498    0.131    0.055
-    0.400    0.2090     0.473    0.112    0.060
-    0.500    0.1750     0.447    0.105    0.067
-    0.750    0.1270     0.386    0.138    0.077
-    1.000    0.0950     0.344    0.124    0.078
-    1.500    0.0830     0.289    0.112    0.081
-    2.000    0.0790     0.258    0.118    0.088
-    3.000    0.0730     0.233    0.111    0.100
-    4.000    0.0660     0.224    0.120    0.109
-    5.000    0.0640     0.220    0.108    0.115
-    7.500    0.0560     0.216    0.082    0.130
-    10.00    0.0530     0.218    0.069    0.137
-    """)
 
 
 # For the total standard deviation model the magnitude boundaries depend on
@@ -1063,3 +971,99 @@ for line in lines:
               gmpe_table=f"NGAEast_{key}.hdf5")
     add_alias(alias + 'TotalSigma', NGAEastGMPETotalSigma,
               gmpe_table=f"NGAEast_{key}.hdf5")
+
+
+# Coefficients for the linear model, taken from the electronic supplement
+# to Stewart et al., (2017)
+COEFFS_LINEAR = CoeffsTable(sa_damping=5, table="""\
+imt           c      v1       v2      vf  sigma_vc  sigma_L  sigma_U
+pgv      -0.449   331.0    760.0   314.0     0.251    0.306    0.334
+pga      -0.290   319.0    760.0   345.0     0.300    0.345    0.480
+0.010    -0.290   319.0    760.0   345.0     0.300    0.345    0.480
+0.020    -0.303   319.0    760.0   343.0     0.290    0.336    0.479
+0.030    -0.315   319.0    810.0   342.0     0.282    0.327    0.478
+0.050    -0.344   319.0   1010.0   338.0     0.271    0.308    0.476
+0.075    -0.348   319.0   1380.0   334.0     0.269    0.285    0.473
+0.100    -0.372   317.0   1900.0   319.0     0.270    0.263    0.470
+0.150    -0.385   302.0   1500.0   317.0     0.261    0.284    0.402
+0.200    -0.403   279.0   1073.0   314.0     0.251    0.306    0.334
+0.250    -0.417   250.0    945.0   282.0     0.238    0.291    0.357
+0.300    -0.426   225.0    867.0   250.0     0.225    0.276    0.381
+0.400    -0.452   217.0    843.0   250.0     0.225    0.275    0.381
+0.500    -0.480   217.0    822.0   280.0     0.225    0.311    0.323
+0.750    -0.510   227.0    814.0   280.0     0.225    0.330    0.310
+1.000    -0.557   255.0    790.0   300.0     0.225    0.377    0.361
+1.500    -0.574   276.0    805.0   300.0     0.242    0.405    0.375
+2.000    -0.584   296.0    810.0   300.0     0.259    0.413    0.388
+3.000    -0.588   312.0    820.0   313.0     0.306    0.410    0.551
+4.000    -0.579   321.0    821.0   322.0     0.340    0.405    0.585
+5.000    -0.558   324.0    825.0   325.0     0.340    0.409    0.587
+7.500    -0.544   325.0    820.0   328.0     0.345    0.420    0.594
+10.00    -0.507   325.0    820.0   330.0     0.350    0.440    0.600
+""")
+
+# Coefficients for the nonlinear model, taken from Table 2.1 of
+# Hashash et al., (2017). The alternative f4 coefficients (f4_mod)
+# are required for the US 2023 NSHMP and are taken from USGS repo:
+# https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/nga-east-usgs-siteamp.csv?ref_type=heads
+COEFFS_NONLINEAR = CoeffsTable(sa_damping=5, table="""\
+imt          f3         f4         f5     Vc   sigma_c  f4_mod
+pgv     0.06089   -0.08344   -0.00667   2257.0   0.120  -0.08344
+pga     0.07520   -0.43755   -0.00131   2990.0   0.120  -0.43755
+0.010   0.07520   -0.43755   -0.00131   2990.0   0.120  -0.43755
+0.020   0.05660   -0.41511   -0.00098   2990.0   0.120  -0.41511
+0.030   0.10360   -0.49871   -0.00127   2990.0   0.120  -0.49871
+0.050   0.16781   -0.58073   -0.00187   2990.0   0.120  -0.58073
+0.075   0.17386   -0.53646   -0.00259   2990.0   0.120  -0.53646
+0.100   0.15083   -0.44661   -0.00335   2990.0   0.120  -0.44661
+0.150   0.14272   -0.38264   -0.00410   2335.0   0.120  -0.38264
+0.200   0.12815   -0.30481   -0.00488   1533.0   0.120  -0.30481
+0.250   0.13286   -0.27506   -0.00564   1318.0   0.135  -0.27506
+0.300   0.13070   -0.22825   -0.00655   1152.0   0.150  -0.22825
+0.400   0.09414   -0.11591   -0.00872   1018.0   0.150  -0.13060
+0.500   0.09888   -0.07793   -0.01028    939.0   0.150  -0.09571
+0.750   0.06101   -0.01780   -0.01456    835.0   0.125  -0.02909
+1.000   0.04367   -0.00478   -0.01823    951.0   0.060  -0.01057
+1.500   0.00480   -0.00086   -0.02000    882.0   0.050  -0.00253
+2.000   0.00164   -0.00236   -0.01296    879.0   0.040  -0.00236
+3.000   0.00746   -0.00626   -0.01043    894.0   0.040  -0.00626
+4.000   0.00269   -0.00331   -0.01215    875.0   0.030  -0.00331
+5.000   0.00242   -0.00256   -0.01325    856.0   0.020  -0.00256
+7.500   0.04219   -0.00536   -0.01418    832.0   0.020  -0.00536
+10.00   0.05329   -0.00631   -0.01403    837.0   0.020  -0.00631
+    """)
+
+# Note that the coefficient values at 0.1 s have been smoothed with respect
+# to those needed in order to reproduce Figure 5 of Petersen et al. (2019)
+# The original f760i was 0.674 +/- 0.366, and the values below are taken
+# from the US NSHMP software
+COEFFS_F760 = CoeffsTable(sa_damping=5, table="""\
+imt       f760i     f760g   f760is   f760gs
+pgv      0.3753     0.297    0.313    0.117
+pga      0.1850     0.121    0.434    0.248
+0.010    0.1850     0.121    0.434    0.248
+0.020    0.1850     0.031    0.434    0.270
+0.030    0.2240     0.000    0.404    0.229
+0.050    0.3370     0.062    0.363    0.093
+0.075    0.4750     0.211    0.322    0.102
+0.100    0.5210     0.338    0.293    0.088
+0.150    0.5860     0.470    0.253    0.066
+0.200    0.4190     0.509    0.214    0.053
+0.250    0.3320     0.509    0.177    0.052
+0.300    0.2700     0.498    0.131    0.055
+0.400    0.2090     0.473    0.112    0.060
+0.500    0.1750     0.447    0.105    0.067
+0.750    0.1270     0.386    0.138    0.077
+1.000    0.0950     0.344    0.124    0.078
+1.500    0.0830     0.289    0.112    0.081
+2.000    0.0790     0.258    0.118    0.088
+3.000    0.0730     0.233    0.111    0.100
+4.000    0.0660     0.224    0.120    0.109
+5.000    0.0640     0.220    0.108    0.115
+7.500    0.0560     0.216    0.082    0.130
+10.00    0.0530     0.218    0.069    0.137
+""")
+
+# Seven constants: vref, vL, vU, vw1, vw2, wt1 and wt2
+CONSTANTS = {"vref": 760., "vL": 200., "vU": 2000.0,
+             "vw1": 600.0, "vw2": 400.0, "wt1": 0.767, "wt2": 0.1}
