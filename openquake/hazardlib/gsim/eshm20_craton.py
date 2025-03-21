@@ -25,7 +25,7 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
-    PHI_SETUP, get_phi_ss, NGAEastGMPE, _get_f760, get_nonlinear_stddev,
+    PHI_SETUP, get_phi_ss, _get_f760, get_nonlinear_stddev,
     get_linear_stddev, _get_fv, get_fnl, COEFFS_LINEAR, COEFFS_NONLINEAR,
     COEFFS_F760, CONSTANTS)
 from openquake.hazardlib.gsim.nga_east import CONSTANTS as C_NGAE
