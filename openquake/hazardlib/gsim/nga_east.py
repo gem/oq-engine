@@ -485,9 +485,9 @@ def get_site_amplification(self, imt, pga_r, vs30s, us23=False):
     else:
         period = imt.period
     # Get f760
-    f760 = _get_f760(C_F760, vs30s, self.CONSTANTS)
+    f760 = _get_f760(C_F760, vs30s, CONSTANTS)
     # Get the linear amplification factor
-    f_lin = _get_fv(C_LIN, vs30s, f760, self.CONSTANTS)
+    f_lin = _get_fv(C_LIN, vs30s, f760, CONSTANTS)
     # Get the nonlinear amplification from Hashash et al., (2017)
     f_nl, f_rk = get_fnl(C_NL, pga_r, vs30s, period, us23)
     # Mean amplification
@@ -510,10 +510,10 @@ def get_site_amplification_sigma(self, vs30s, f_rk, C_LIN, C_F760, C_NL):
     # assumed independent and the resulting sigma_flin is the root
     # sum of squares (SRSS)
     f760_stddev = _get_f760(C_F760, vs30s,
-                            self.CONSTANTS, is_stddev=True)
+                            CONSTANTS, is_stddev=True)
     f_lin_stddev = np.sqrt(
         f760_stddev ** 2. +
-        get_linear_stddev(C_LIN, vs30s, self.CONSTANTS) ** 2)
+        get_linear_stddev(C_LIN, vs30s, CONSTANTS) ** 2)
     # Likewise, the epistemic uncertainty on the linear and nonlinear
     # model are assumed independent and the SRSS is taken
     f_nl_stddev = get_nonlinear_stddev(C_NL, vs30s) * f_rk
