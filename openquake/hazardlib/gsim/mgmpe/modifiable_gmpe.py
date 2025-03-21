@@ -98,9 +98,6 @@ def ceus2020_site_term(ctx, imt, me, si, ta, ph, wimp, ref_vs30, ref_pga):
 
     assert len(ref_pga) == len(ctx.vs30)
 
-    # Original value of ground motion
-    exp_mean = np.exp(me)
-
     # Compute the linear term
     slin = stewart2020_linear_scaling(imt, ctx.vs30, wimp)
 
@@ -108,7 +105,6 @@ def ceus2020_site_term(ctx, imt, me, si, ta, ph, wimp, ref_vs30, ref_pga):
     snlin = hashash2020_non_linear_scaling(imt, ctx.vs30, ref_pga, ref_vs30)
 
     # Final mean
-    # me = me + slin + snlin
     me[:] += (slin + snlin)
 
 
