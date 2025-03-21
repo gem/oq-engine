@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -34,7 +34,6 @@ class SiteModelParam(object):
         self.reference_vs30_type = 'measured'
         self.reference_depth_to_1pt0km_per_sec = 3.4
         self.reference_depth_to_2pt5km_per_sec = 5.6
-        self.reference_backarc = False
 
 
 class SiteTestCase(unittest.TestCase):

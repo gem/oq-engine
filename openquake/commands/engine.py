@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -98,7 +98,7 @@ def main(
         exports='',
         log_level='info',
         sample_sources=False,
-        nodes:int=1):
+        nodes: int = 1):
     """
     Run a calculation using the traditional command line API
     """
@@ -128,7 +128,7 @@ def main(
 
     fname = os.path.expanduser(config.dbserver.file)
     if (os.environ.get('OQ_DATABASE', config.dbserver.host) == '127.0.0.1'
-        and getpass.getuser() != 'openquake'):  # no DbServer
+            and getpass.getuser() != 'openquake'):  # no DbServer
         if not os.path.exists(fname):
             upgrade_db = True  # automatically creates the db
             yes = True

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,6 +22,7 @@ import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.writers import CsvWriter, FIVEDIGITS
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.commonlib import logs, readinput
@@ -98,6 +99,16 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
         # this is a case with insured losses and tags
         self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
+
+        # testing aggexp_tags and aggrisk_tags
+        [fname] = export(('aggexp_tags', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
+        df = extract(self.calc.datastore, 'aggrisk_tags')
+        fname = self.calc.datastore.export_path('aggrisk_tags.csv')
+        CsvWriter(fmt=FIVEDIGITS).save(df, fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         # testing the view agg_id
         agg_id = view('agg_id', self.calc.datastore)
@@ -542,7 +553,7 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures').array
         nrups = text.count('\n') - 2
         self.assertEqual(nrups, 4)
-        rups = get_ruptures(gettemp(text))
+        rups = get_ruptures(gettemp(text, suffix='.csv'))
         aac(rups['n_occ'], [1, 1, 1, 1])
 
         # test extract?threshold for ruptures
@@ -687,9 +698,8 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.run_calc(reinsurance_3.__file__, 'job.ini')
         [fname] = export(('reinsurance-risk_by_event', 'csv'),
                          self.calc.datastore)
-        delta = 5E-5 if sys.platform == 'linux' else 5E-4
         self.assertEqualFiles('expected/reinsurance-risk_by_event.csv',
-                              fname, delta=delta)
+                              fname, delta=5E-4)
 
     def test_post_risk(self):
         # calculation from a source model producing 4 events

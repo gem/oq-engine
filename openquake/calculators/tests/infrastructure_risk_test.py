@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,8 +21,10 @@ import shutil
 import numpy
 from openquake.baselib import InvalidFile
 from openquake.qa_tests_data.infrastructure_risk import (
-    case_1, case_2, five_nodes_demsup_directed, five_nodes_demsup_directedunweighted,
-    five_nodes_demsup_multidirected, demand_supply, directed, eff_loss_random,
+    case_1, case_2, five_nodes_demsup_directed,
+    five_nodes_demsup_directedunweighted,
+    five_nodes_demsup_multidirected,
+    demand_supply, directed, eff_loss_random,
     multidirected, multigraph, undirected)
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase

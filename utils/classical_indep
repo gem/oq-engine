@@ -57,7 +57,7 @@ def classical_indep(calc_id: int):
     sources and ruptures.
     """
     parent = None if calc_id is None else datastore.read(calc_id)
-    dstore, log = datastore.build_dstore_log(parent=parent)
+    log, dstore = datastore.build_log_dstore(parent=parent)
     with dstore, log:
         oq = dstore.parent['oqparam']
         sitecol = dstore.parent['sitecol']
@@ -107,7 +107,7 @@ def classical_indep(calc_id: int):
     sources and ruptures.
     """
     parent = None if calc_id is None else datastore.read(calc_id)
-    dstore, log = datastore.build_dstore_log(parent=parent)
+    log, dstore = datastore.build_log_dstore(parent=parent)
     with dstore, log:
         oq = dstore.parent['oqparam']
         sitecol = dstore.parent['sitecol']

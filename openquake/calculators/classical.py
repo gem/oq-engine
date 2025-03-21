@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,8 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.map_array import RateMap, MapArray, rates_dt, check_hmaps
+from openquake.hazardlib.map_array import (
+    RateMap, MapArray, rates_dt, check_hmaps)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -168,8 +169,15 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
             yield result
         return
 
-    for tileget in tilegetters:
+    for tileno, tileget in enumerate(tilegetters):
         result = hazclassical(sources, tileget(sitecol), cmaker)
+        if tileno:
+            # source_data has keys src_id, grp_id, nsites, esites, nrupts,
+            # weight, ctimes, taskno
+            for key, lst in result['source_data'].items():
+                if key in ('weight', 'nrupts'):
+                    # avoid bogus weights in `oq show task:classical`
+                    lst[:] = [0. for _ in range(len(lst))]
         if cmaker.disagg_by_src:
             # do not remove zeros, otherwise AELO for JPN will break
             # since there are 4 sites out of 18 with zeros
@@ -179,8 +187,6 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         # print(f"{monitor.task_no=} {rmap=}")
 
         if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
-            if len(tilegetters) > 1:
-                del result['source_data']
             if config.directory.custom_tmp:
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, cmaker.num_chunks, None, monitor)
@@ -378,7 +384,7 @@ class Hazard:
         return mean_rates_by_src
 
 
-@base.calculators.add('classical', 'ucerf_classical')
+@base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
@@ -574,19 +580,21 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_regular(self, sgs, ds):
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks, splits in self.csm.split(
+        splits = {}
+        for cmaker, tilegetters, blocks, nsplits in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
-                for tgetters in block_splitter(tilegetters, splits):
+                for tgetters in block_splitter(tilegetters, nsplits):
                     allargs.append((block, tgetters, cmaker, ds))
-                n_out.append(len(tilegetters))
+                    n_out.append(len(tgetters))
+            splits[cmaker.grp_id] = nsplits
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
-        srcs = self.csm.get_sources()
-        maxsrc = max(srcs, key=lambda s: s.weight / self.csm.splits[s.grp_id])
+        srcs = [src for src in self.csm.get_sources() if src.weight]
+        maxsrc = max(srcs, key=lambda s: s.weight / splits[s.grp_id])
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
@@ -604,7 +612,8 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         n_out = []
         for cmaker, tilegetters, blocks, splits in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks, True):
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
+                True):
             for block in blocks:
                 for tgetter in tilegetters:
                     allargs.append((tgetter, cmaker, ds))
@@ -731,10 +740,6 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         N = len(self.sitecol)
         R = len(self.datastore['weights'])
-        if oq.individual_rlzs is None:  # not specified in the job.ini
-            individual_rlzs = (N == 1) * (R > 1)
-        else:
-            individual_rlzs = oq.individual_rlzs
         hstats = oq.hazard_stats()
         # initialize datasets
         P = len(oq.poes)
@@ -746,7 +751,7 @@ class ClassicalCalculator(base.HazardCalculator):
             L = oq.imtls.size
         L1 = self.L1 = L // M
         S = len(hstats)
-        if R == 1 or individual_rlzs:
+        if R == 1 or oq.individual_rlzs:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_descr(
                 'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
@@ -765,7 +770,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 self.datastore.set_shape_descr(
                     'hmaps-stats', site_id=N, stat=list(hstats),
                     imt=list(oq.imtls), poe=oq.poes)
-        return N, S, M, P, L1, individual_rlzs
+        return N, S, M, P, L1
 
     # called by execute before post_execute
     def build_curves_maps(self):
@@ -774,15 +779,15 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         oq = self.oqparam
         hstats = oq.hazard_stats()
-        N, S, M, P, L1, individual = self._create_hcurves_maps()
+        N, S, M, P, L1 = self._create_hcurves_maps()
         if '_rates' in set(self.datastore) or not self.datastore.parent:
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
         wget = self.full_lt.wget
-        allargs = [(getter, wget, hstats, individual, oq.max_sites_disagg,
-                    self.amplifier) for getter in getters.map_getters(
-                        dstore, self.full_lt)]
+        allargs = [(getter, wget, hstats, oq.individual_rlzs,
+                    oq.max_sites_disagg, self.amplifier)
+                   for getter in getters.map_getters(dstore, self.full_lt)]
         if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')
             return

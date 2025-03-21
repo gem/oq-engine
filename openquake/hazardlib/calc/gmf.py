@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -233,7 +233,7 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
         self.mea_tau_phi = []
-        self.gmv_fields = [f'gmv_{m}' for m in range(len(cmaker.imts))]
+        self.gmv_fields = [str(imt) for imt in cmaker.imts]
         self.mmi_index = -1
         for m, imt in enumerate(cmaker.imtls):
             if imt == 'MMI':
@@ -492,6 +492,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     res = {}
     for m, imt in enumerate(gc.imts):
         res[imt] = arr = numpy.zeros((N, E), F32)
-        for sid, eid, gmv in zip(df.sid, df.eid, df[f'gmv_{m}']):
+        for sid, eid, gmv in zip(df.sid, df.eid, df[str(imt)]):
             arr[sid, eid] = gmv
     return res

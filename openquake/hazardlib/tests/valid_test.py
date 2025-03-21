@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -161,6 +161,16 @@ class ValidationTestCase(unittest.TestCase):
 
     def test_modifiable_gmpe(self):
         gsim = valid.gsim('Lin2011foot')
+        gmpe = valid.modified_gsim(
+            gsim, add_between_within_stds={'with_betw_ratio':1.5})
+        valid.gsim(gmpe._toml)  # make sure the generated _toml is valid
+
+    def test_modifiable_gmpe_complex(self):
+        # Make an NGAEast GMPE and apply modifiable GMPE to it
+        text = "[NBCC2015_AA13]\nREQUIRES_DISTANCES=['RJB']\n"
+        text += "DEFINED_FOR_TECTONIC_REGION_TYPE='Active Crust Fault'\n"
+        text += "gmpe_table='WcrustFRjb_low_clC.hdf5'"
+        gsim = valid.gsim(text)
         gmpe = valid.modified_gsim(
             gsim, add_between_within_stds={'with_betw_ratio':1.5})
         valid.gsim(gmpe._toml)  # make sure the generated _toml is valid

@@ -82,7 +82,6 @@ file called ``[site_params]``. The simplest possibility is to define uniform sit
 	reference_vs30_value = 760.0
 	reference_depth_to_2pt5km_per_sec = 5.0
 	reference_depth_to_1pt0km_per_sec = 100.0
-        reference_backarc = 0
 
 Alternatively it is possible to define spatially variable soil properties in a separate file; the engine will then 
 assign to each investigation location the values of the closest point used to specify site conditions::

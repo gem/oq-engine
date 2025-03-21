@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,7 @@ class ThingbaijamInterface(BaseMSRSigma, BaseASRSigma):
         """
         Returns std
         """
-        return 10**0.150
+        return 0.150
 
     def get_median_mag(self, area, rake):
         """
@@ -79,7 +79,7 @@ class ThingbaijamStrikeSlip(BaseMSRSigma, BaseASRSigma):
         """
         Returns std
         """
-        return 10**0.184
+        return 0.184
 
     def get_median_mag(self, area, rake):
         """

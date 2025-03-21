@@ -7,8 +7,9 @@ except ImportError:
     shapefile = None
 
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.shakemap.parsers import \
-    get_shakemap_array, get_array_shapefile
+from openquake.hazardlib.shakemap.parsers import (
+    get_shakemap_array, get_array_shapefile, read_usgs_stations_json, 
+    usgs_stations_to_oq_format)
 
 aae = numpy.testing.assert_almost_equal
 F32 = numpy.float32
@@ -104,6 +105,16 @@ class ShakemapConverterTestCase(unittest.TestCase):
         aae(test_data['val']['PGA'], data['val']['PGA'])
         aae(test_data['bbox']['minx'], data['bbox']['minx'])
 
+    def test_usgs_station_conversion(self):
+        # Check USGS to OQ conversion station data is working correctly
+        with open(os.path.join(CDIR, 'data', 'usp000gvtu-stations.json')) as f:
+            stations = read_usgs_stations_json(f.read().encode('utf-8'))
+        df = usgs_stations_to_oq_format(stations,
+                                exclude_imts=("SA(3.0)"),
+                                seismic_only=True)
+        assert len(df.index) == 1 # 1 record
+        assert list(df.columns) == exp_cols
+        
 
 example_sa = """\
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -159,3 +170,9 @@ example_pga = """\
 </grid_data>
 </shakemap_grid>
 """
+
+exp_cols = ['STATION_ID', 'STATION_NAME', 'LONGITUDE', 'LATITUDE', 'STATION_TYPE',
+            'DISTANCE', 'VS30', 'MMI_VALUE', 'MMI_STDDEV', 'PGA_LN_SIGMA',
+            'PGA_VALUE', 'PGV_LN_SIGMA', 'PGV_VALUE', 'SA(0.3)_LN_SIGMA',
+            'SA(0.3)_VALUE', 'SA(1.0)_LN_SIGMA', 'SA(1.0)_VALUE', 'VS30_TYPE',
+            'REFERENCES']

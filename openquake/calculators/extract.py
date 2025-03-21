@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2023 GEM Foundation
+# Copyright (C) 2017-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,7 @@ from scipy.cluster.vq import kmeans2
 from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree
+from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
@@ -239,21 +239,24 @@ def extract_realizations(dstore, dummy):
     scenario = 'scenario' in oq.calculation_mode
     full_lt = dstore['full_lt']
     rlzs = full_lt.rlzs
-    bpaths = encode(rlzs['branch_path'])
+    if scenario and len(full_lt.trts) == 1:  # only one TRT
+        gsims = encode(dstore.getitem('full_lt/gsim_lt')['uncertainty'])
+        if 'shakemap' in oq.inputs:
+            gsims = ["[FromShakeMap]"]
+        bplen = max(len(gsim) for gsim in gsims)  # list of bytes
+    else:
+        bpaths = encode(rlzs['branch_path'])  # list of bytes
+        bplen = max(len(bp) for bp in bpaths)
+
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
-    bplen = max(len(bp) for bp in bpaths)
     dt = [('rlz_id', U32), ('branch_path', '<S%d' % bplen), ('weight', F32)]
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
     if scenario and len(full_lt.trts) == 1:  # only one TRT
-        gsims = dstore.getitem('full_lt/gsim_lt')['uncertainty']
-        if 'shakemap' in oq.inputs:
-            gsims = ["[FromShakeMap]"]
-        # NOTE: repr(gsim) has a form like "b'[ChiouYoungs2008]'"
-        arr['branch_path'] = ['"%s"' % repr(gsim)[2:-1].replace('"', '""')
-                              for gsim in gsims]  # quotes Excel-friendly
+        # quotes Excel-friendly
+        arr['branch_path'] = [gsim.replace(b'"', b'""') for gsim in gsims]
     else:  # use the compact representation for the branch paths
         arr['branch_path'] = bpaths
     return arr
@@ -766,7 +769,7 @@ def extract_agg_curves(dstore, what):
     tagvalues = [tagdict[t][0] for t in tagnames]
     if tagnames:
         lst = decode(dstore['agg_keys'][:])
-        agg_id = lst.index(','.join(tagvalues))
+        agg_id = lst.index('\t'.join(tagvalues))
     else:
         agg_id = 0  # total aggregation
     ep_fields = dstore.get_attr('aggcurves', 'ep_fields')
@@ -810,6 +813,96 @@ def extract_agg_curves(dstore, what):
     if tagnames:
         arr = arr.reshape(arr.shape + (1,) * len(tagnames))
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
+
+
+def _aggexp_tags(dstore):
+    oq = dstore['oqparam']
+    if not oq.aggregate_by:
+        raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        aggby = [','.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        [aggby] = oq.aggregate_by
+    keys = numpy.array([line.decode('utf8').split('\t')
+                        for line in dstore['agg_keys'][:]])
+    values = dstore['agg_values'][:-1]  # discard the total aggregation
+    ok = values['structural'] > 0
+    okvalues = values[ok]
+    dic = {}
+    for i, tag in enumerate(aggby):
+        dic[tag] = keys[ok, i]
+    for name in values.dtype.names:
+        dic[name] = okvalues[name]
+    df = pandas.DataFrame(dic)
+    return df, ok
+
+
+@extract.add('aggexp_tags')
+def extract_aggexp_tags(dstore, what):
+    """
+    Aggregate the exposure values (one for each loss type) by tag. Use it as
+    /extract/aggexp_tags?
+    """
+    return _aggexp_tags(dstore)[0]
+
+
+@extract.add('mmi_tags')
+def extract_mmi_tags(dstore, what):
+    """
+    Aggregates exposure by MMI regions and tags. Use it as /extract/mmi_tags?
+    """
+    return dstore.read_df('mmi_tags')
+
+
+@extract.add('aggrisk_tags')
+def extract_aggrisk_tags(dstore, what):
+    """
+    Aggregates risk by tag. Use it as /extract/aggrisk_tags?
+    """
+    oq = dstore['oqparam']
+    ws = dstore['weights'][:]
+    adf = dstore.read_df('aggrisk')
+    if 'aggrisk_quantiles' in dstore:
+        # normally there are two quantiles 0.05, 0.95
+        qdf = dstore.read_df('aggrisk_quantiles', ['agg_id', 'loss_id'])
+        qfields = [col for col in qdf.columns if col != 'agg_id']
+    else:
+        qdf = ()
+        qfields = []
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        # see impact_test.py
+        aggby = [','.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        # see event_based_risk_test/case_1
+        [aggby] = oq.aggregate_by
+    keys = numpy.array([line.decode('utf8').split('\t')
+                        for line in dstore['agg_keys'][:]])
+    values = dstore['agg_values'][:-1]  # discard the total aggregation
+    lossdic = general.AccumDict(accum=0)
+    K = len(keys)
+    for agg_id, rlz_id, loss, loss_id in zip(
+            adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
+        if agg_id < K:
+            lossdic[agg_id, loss_id] += loss * ws[rlz_id]
+    acc = general.AccumDict(accum=[])
+    for (agg_id, loss_id), loss in sorted(lossdic.items()):
+        lt = LOSSTYPE[loss_id]
+        if lt in values.dtype.names:
+            for agg_key, key in zip(aggby, keys[agg_id]):
+                acc[agg_key].append(key)
+            acc['loss_type'].append(lt)
+            acc['value'].append(values[agg_id][lt])
+            acc['lossmea'].append(loss)
+            if len(qdf):
+                qvalues = qdf.loc[agg_id, loss_id].to_numpy()
+                for qfield, qvalue in zip(qfields, qvalues):
+                    acc[qfield].append(qvalue)
+    df = pandas.DataFrame(acc)
+    total_df = df.groupby('loss_type', as_index=False).sum()
+    total_df[aggby] = '*total*'
+    df = pandas.concat([df, total_df], ignore_index=True)
+
+    return df
 
 
 @extract.add('agg_losses')
@@ -938,11 +1031,26 @@ def extract_losses_by_asset(dstore, what):
         yield 'rlz-000', data
 
 
+@extract.add('losses_by_site')
+def extract_losses_by_site(dstore, what):
+    """
+    :returns: a DataFrame (lon, lat, number, structural, ...)
+    """
+    sitecol = dstore['sitecol']
+    dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
+    array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
+    grp = dstore.getitem('avg_losses-stats')
+    for loss_type in grp:
+        losses = grp[loss_type][:, 0]
+        dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))
+    return pandas.DataFrame(dic)
+
+
 def _gmf(df, num_sites, imts, sec_imts):
     # convert data into the composite array expected by QGIS
     gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts + sec_imts])
-    for m, imt in enumerate(imts + sec_imts):
-        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}'] if imt in imts else df[imt]
+    for imt in imts + sec_imts:
+        gmfa[imt][U32(df.sid)] = df[imt]
     return gmfa
 
 
@@ -958,9 +1066,8 @@ def extract_gmf_scenario(dstore, what):
     eids = dstore['gmf_data/eid'][:]
     rlzs = dstore['events']['rlz_id']
     ok = rlzs[eids] == rlz_id
-    m = list(oq.imtls).index(imt)
     eids = eids[ok]
-    gmvs = dstore[f'gmf_data/gmv_{m}'][ok]
+    gmvs = dstore[f'gmf_data/{imt}'][ok]
     sids = dstore['gmf_data/sid'][ok]
     try:
         N = len(dstore['complete'])
@@ -987,18 +1094,21 @@ def extract_gmf_npz(dstore, what):
         complete = dstore['sitecol']
     sites = get_sites(complete)
     n = len(sites)
+    imt_list = dstore['gmf_data'].attrs['imts'].split()
+    # rename old (version <= 3.23) column names
+    rename_dic = {f'gmv_{i}': imt for i, imt in enumerate(imt_list)}
     try:
-        df = dstore.read_df('gmf_data', 'eid').loc[eid]
+        df = dstore.read_df('gmf_data', 'eid').rename(columns=rename_dic)
     except KeyError:
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
     else:
         prim_imts = list(oq.get_primary_imtls())
-        gmfa = _gmf(df, n, prim_imts, oq.sec_imts)
+        gmfa = _gmf(df[df.index == eid], n, prim_imts, oq.sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
-# extract the relevant GMFs as an npz file with fields eid, sid, gmv_
+# extract the relevant GMFs as an npz file with fields eid, sid, imt...
 @extract.add('relevant_gmfs')
 def extract_relevant_gmfs(dstore, what):
     qdict = parse(what)
@@ -1065,7 +1175,8 @@ def build_damage_dt(dstore):
     dt_list = []
     for peril in perils:
         for ds in ['no_damage'] + limit_states + csqs:
-            dt_list.append((ds if peril == 'earthquake' else f'{peril}_{ds}', F32))
+            dt_list.append((ds if peril == 'groundshaking'
+                            else f'{peril}_{ds}', F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])

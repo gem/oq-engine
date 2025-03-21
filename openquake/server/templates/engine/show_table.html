@@ -1,0 +1,20 @@
+{% extends "engine/base.html" %}
+<title>{% block title %}OpenQuake engine: {{ table_name }} from calculation {{ calc_id }}{% endblock %}</title>
+{% block main %}
+{{ block.super }}
+  <div class="content-wrap">
+    <div class="container">
+      <div class="row">
+        <div id="oq-body-wrapper">
+          <div class="span12">
+            <h2>{{ table_name }}</h2>
+            <div style="width: 100%; overflow-x: auto;">
+                {{ table_html|safe }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock main %}

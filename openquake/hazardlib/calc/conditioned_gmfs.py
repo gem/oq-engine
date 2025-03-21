@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2023 GEM Foundation
+# Copyright (C) 2023-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,7 +26,7 @@ https://doi.org/10.1785/0120210177
 The USGS ShakeMap implementation of Engler et al. (2022) is described
 in detail at: https://usgs.github.io/shakemap/manual4_0/tg_processing.html
 and the bulk of the implementation code resides in the ShakeMap Model module:
-https://github.com/usgs/shakemap/blob/main/shakemap/coremods/model.py
+https://code.usgs.gov/ghsc/esi/shakemap-modules/-/blob/main/src/shakemap_modules/coremods/model.py?
 
 This implementation is intended for generating conditional random
 ground motion fields for downstream use with the OpenQuake scenario
@@ -80,7 +80,7 @@ nominal_bias_mean:
 nominal_bias_stddev:
   sqrt of the mean of cov_BD_BD_yD
 mu_Y:
-  redicted mean of the intensity at the target sites
+  predicted mean of the intensity at the target sites
 phi_Y:
   predicted within-event standard deviation of the intensity at the target sites
 tau_Y:
@@ -235,9 +235,9 @@ class TempResult:
     native_data_available: bool
     corr_HD_HD: numpy.ndarray = 0
     cov_WD_WD_inv: numpy.ndarray = 0
-    D: numpy.ndarray = 0
+    phi_D_diag: numpy.ndarray = 0
     T_D: numpy.ndarray = 0
-    zD: numpy.ndarray = 0
+    zeta_D: numpy.ndarray = 0
 
 
 def _create_result(g, m, target_imt, observed_imts, station_data_filtered):
@@ -332,11 +332,11 @@ def create_result(g, m, target_imt, target_imts, observed_imts,
                 i * nss: (i + 1) * nss, 0]
 
     # The raw residuals
-    t.zD = yD - mu_yD
-    t.D = numpy.diag(phi_D.flatten())
+    t.zeta_D = yD - mu_yD
+    t.phi_D_diag = numpy.diag(phi_D.flatten())
 
     cov_WD_WD = compute_cov(station_sitecol, station_sitecol,
-                            t.conditioning_imts, t.conditioning_imts, t.D, t.D)
+                            t.conditioning_imts, t.conditioning_imts, t.phi_D_diag, t.phi_D_diag)
 
     # Add on the additional variance of the residuals
     # for the cases where the station data is uncertain
@@ -405,7 +405,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
         + numpy.linalg.pinv(r.corr_HD_HD))
 
     mu_HD_yD = numpy.linalg.multi_dot(
-        [cov_HD_HD_yD, r.T_D.T, r.cov_WD_WD_inv, r.zD])
+        [cov_HD_HD_yD, r.T_D.T, r.cov_WD_WD_inv, r.zeta_D])
 
     # Compute the distribution of the conditional between-event
     # residual B|Y2=y2
@@ -426,29 +426,40 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
 
     # Predicted uncertainty components at the target sites, from GSIM
     tau_Y = mean_stds[2, 0][:, None]
-    Y = numpy.diag(mean_stds[3, 0])
+    phi_Y_diag = numpy.diag(mean_stds[3, 0])
 
-    # Compute the mean of the conditional between-event residual B|YD=yD
-    # for the target sites; the shapes are (nsites, nstations),
-    # (nstations, nsites), (nsites, nsites) respectively
+    # Compute the within-event covariance matrices for the
+    # target sites and observation sites; the shapes are 
+    # (nsites, nstations) and (nstations, nsites) respectively
     cov_WY_WD = compute_cov(target_sitecol, station_sitecol,
-                            [target_imt], r.conditioning_imts, Y, r.D)
+                            [target_imt], r.conditioning_imts, phi_Y_diag, r.phi_D_diag)
     cov_WD_WY = compute_cov(station_sitecol, target_sitecol,
-                            r.conditioning_imts, [target_imt], r.D, Y)
-    cov_WY_WY = compute_cov(target_sitecol, target_sitecol,
-                            [target_imt], [target_imt], Y, Y)
+                            r.conditioning_imts, [target_imt], r.phi_D_diag, phi_Y_diag)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
     RC = cov_WY_WD @ r.cov_WD_WD_inv  # shape (nsites, nstations)
 
-    # compute the mean, shape (nsites, 1)
-    mu = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (r.zD - mu_BD_yD)
+    # # Compute the mean of the conditional between-event residual B|YD=yD
+    # # for the target sites
+    # mu_HN_yD = mu_HD_yD[0, None]
+    # mu_BY_yD = tau_Y @ mu_HN_yD
 
-    # covariance matrices can contain extremely small negative values
+    # Compute the conditioned mean of the ground motion
+    # at the target sites; shape (nsites, 1)
+    mu_Y_yD = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (r.zeta_D - mu_BD_yD)
+
+    # Compute the within-event covariance matrix for the
+    # target sites (apriori) (nsites, nsites)
+    cov_WY_WY = compute_cov(target_sitecol, target_sitecol,
+                            [target_imt], [target_imt], phi_Y_diag, phi_Y_diag)
+
+    # Both conditioned covariance matrices can contain extremely
+    # small negative values due to limitations of floating point
+    # operations (~ -10^-17 to -10^-15), these are clipped to zero
 
     # Compute the conditioned within-event covariance matrix
     # for the target sites clipped to zero, shape (nsites, nsites)
-    tau = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
+    cov_WY_WY_wD = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
 
     # Compute the scaling matrix "C" for the conditioned between-event
     # covariance matrix
@@ -460,8 +471,8 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
 
     # Compute the conditioned between-event covariance matrix
     # for the target sites clipped to zero, shape (nsites, nsites)
-    phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
-    return {(r.g, r.m): (mu, tau, phi, msg)}
+    cov_BY_BY_yD = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
+    return {(r.g, r.m): (mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg)}
 
 
 def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
@@ -537,7 +548,7 @@ def get_mean_covs(
     cmaker_Y = cmaker.copy(imtls={target_imts[0].string: [0]})
 
     [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
-    mean_stds_Y = cmaker_D.get_mean_stds([ctx_Y])
+    mean_stds_Y = cmaker_Y.get_mean_stds([ctx_Y])
 
     # filter sites
     target = target_sitecol.filter(

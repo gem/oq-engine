@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2023 GEM Foundation
+# Copyright (C) 2023-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,8 +30,8 @@ from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
 from openquake.engine import engine
-from openquake.engine.aristotle import main_cmd
-from openquake.engine.aelo import get_params_from
+from openquake.engine.impact import main_cmd
+from openquake.engine.aelo import get_params_from, get_mosaic_df
 from openquake.hazardlib.geo.utils import geolocate
 
 FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
@@ -85,7 +85,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
-    mosaic_df = readinput.read_mosaic_df(buffer=.1)
+    mosaic_df = get_mosaic_df(buffer=.1)
     sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
@@ -260,30 +260,30 @@ sample_rups.gmfs = 'compute GMFs'
 sample_rups.slowest = 'profile and show the slowest operations'
 
 
-aristotle_res = dict(count_errors=0, res_list=[])
+impact_res = dict(count_errors=0, res_list=[])
 
 
 def callback(job_id, params, exc=None):
     if exc:
         logging.error(str(exc), exc_info=True)
-        aristotle_res['count_errors'] += 1
+        impact_res['count_errors'] += 1
         error = str(exc)
     else:
         error = ''
     description = params['description']
-    aristotle_res['res_list'].append((job_id, description, error))
+    impact_res['res_list'].append((job_id, description, error))
 
 
-def aristotle(exposure_hdf5='', *,
-              rupfname=FAMOUS,
-              stations='',
-              mosaic_model='',
-              maximum_distance='300',
-              maximum_distance_stations='',
-              asset_hazard_distance='15',
-              number_of_ground_motion_fields='10'):
+def impact(exposure_hdf5='', *,
+           rupfname=FAMOUS,
+           stations='',
+           mosaic_model='',
+           maximum_distance='300',
+           maximum_distance_stations='',
+           asset_hazard_distance='15',
+           number_of_ground_motion_fields='10'):
     """
-    Run Aristotle calculations starting from a rupture file that can be
+    Run OQImpact calculations starting from a rupture file that can be
     an XML or a CSV (by default "famous_ruptures.csv"). You must pass
     a directory containing two files site_model.hdf5 and exposure.hdf5
     with a well defined structure.
@@ -322,23 +322,23 @@ def aristotle(exposure_hdf5='', *,
                  station_data_file=stations,
                  maximum_distance_stations=maximum_distance_stations)
     header = ['job_id', 'description', 'error']
-    print(views.text_table(aristotle_res['res_list'], header, ext='org'))
+    print(views.text_table(impact_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt)
-    if aristotle_res['count_errors']:
-        sys.exit(f'{aristotle_res["count_errors"]} error(s) occurred')
+    if impact_res['count_errors']:
+        sys.exit(f'{impact_res["count_errors"]} error(s) occurred')
 
 
-aristotle.exposure_hdf5 = 'Path to the file exposure.hdf5'
-aristotle.rupfname = ('Filename with the same format as famous_ruptures.csv '
+impact.exposure_hdf5 = 'Path to the file exposure.hdf5'
+impact.rupfname = ('Filename with the same format as famous_ruptures.csv '
                       'or file rupture_model.xml')
-aristotle.stations = 'Path to a csv file with the station data'
-aristotle.mosaic_model = 'Mosaic model 3-characters code'
-aristotle.maximum_distance = 'Maximum distance in km'
-aristotle.maximum_distance_stations = "Maximum distance from stations in km"
-aristotle.number_of_ground_motion_fields = 'Number of ground motion fields'
+impact.stations = 'Path to a csv file with the station data'
+impact.mosaic_model = 'Mosaic model 3-characters code'
+impact.maximum_distance = 'Maximum distance in km'
+impact.maximum_distance_stations = "Maximum distance from stations in km"
+impact.number_of_ground_motion_fields = 'Number of ground motion fields'
 
 # ################################## main ################################## #
 
-main = dict(run_site=run_site, aristotle=aristotle,
+main = dict(run_site=run_site, impact=impact,
             sample_rups=sample_rups)

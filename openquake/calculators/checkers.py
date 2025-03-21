@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2024, GEM Foundation
-# 
+#
+# Copyright (C) 2024-2025, GEM Foundation
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
@@ -20,10 +20,10 @@ Helpers for testing the calculators, used in oq-risk-tests
 """
 import os
 import re
-import sys
 import time
 import pathlib
 import numpy
+import pandas
 from openquake.baselib import hdf5
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base
@@ -59,7 +59,7 @@ def _data2rows(data):
     return rows
 
 
-def assert_close(tbl, fname):
+def assert_close(tbl, fname, atol=1E-5, rtol=1E-4):
     """
     Compare a text table with a filename containing the expected table
     """
@@ -73,10 +73,11 @@ def assert_close(tbl, fname):
         with open(fname) as f:
             expected = f.read()
         for exp, got in zip(_data2rows(expected), _data2rows(txt)):
-            aac(exp, got, atol=1E-5, rtol=1E-3)
+            aac(exp, got, atol, rtol)
 
 
-def check(ini, hc_id=None, exports='', what='', prefix=''):
+def check(ini, hc_id=None, exports='', what='', prefix='',
+          atol=1E-5, rtol=1E-4):
     """
     Perform a calculation and compare a view ("what") with the content of
     a corrisponding file (.txt or .org).
@@ -90,7 +91,7 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
     print('Spent %.1f seconds' % (time.time() - t0))
     if what:
         calc_id = calc.datastore.calc_id
-        fname = outdir / ('%s_%s.txt' % (what.replace(':', ''), calc_id))
+        fname = outdir / ('%s_%s.org' % (what.replace(':', ''), calc_id))
         try:
             tbl = view(what, calc.datastore)
         except KeyError:
@@ -101,13 +102,16 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
                 else:
                     df = hdf5.ArrayWrapper.from_(dset).to_dframe()
             except KeyError:
-                df = extract(calc.datastore, what).to_dframe()
+                df = extract(calc.datastore, what)
+                if not isinstance(df, pandas.DataFrame):
+                    df = df.to_dframe()
             tbl = text_table(df, ext='org')
         bname = prefix + re.sub(r'_\d+\.', '.', os.path.basename(fname))
-        assert_close(tbl, outdir / bname)
+        assert_close(tbl, outdir / bname, atol, rtol)
     return calc
 
 
+# called in run-demos
 def check_ini(path, hc):
     dic = readinput.get_params(path)
     if hc:  # disable hazard checks by setting a fake hazard_calculation_id
@@ -121,21 +125,4 @@ def check_ini(path, hc):
     dic2 = readinput.get_params(tmp_ini)
     missing = set(dic) - set(dic2) - {'intensity_measure_types', 'export_dir'}
     if missing:
-        breakpoint()
-
-
-def check_inis(demo_dir):
-    """
-    Check that oqparam.to_ini() works on all the .ini files in demo_dir
-    """
-    for cwd, dirs, files in os.walk(demo_dir):
-        for f in files:
-            if f.endswith('.ini') and not f.endswith('.tmp.ini'):
-                path = os.path.join(cwd, f)
-                print(path)
-                check_ini(path, hc='risk' in f)
-
-
-if __name__ == '__main__':
-    # called by run-demos.sh
-    check_inis(sys.argv[1])
+        raise RuntimeError(missing)

@@ -4,21 +4,16 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from openquake.sep.landslide.common import (
-    static_factor_of_safety,
-    rock_slope_static_factor_of_safety,
+from openquake.sep.landslide.static_safety_factor import (
+    infinite_slope_fs,
 )
-from openquake.sep.landslide.newmark import (
-    newmark_critical_accel,
-    newmark_displ_from_pga_M,
-    prob_failure_given_displacement,
+from openquake.sep.landslide.displacement import (
+    critical_accel,
+    jibson_2007_model_b,
 )
-from openquake.sep.landslide.rockfalls import (
-    critical_accel_rock_slope,
-    newmark_displ_from_pga,
-)
-from openquake.sep.landslide.nowicki_jessee import(
-    nowicki_jessee_2018
+
+from openquake.sep.landslide.probability import (
+    nowicki_jessee_2018,
 )
 
 from openquake.sep.classes import (
@@ -47,34 +42,21 @@ BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 site_data_file = os.path.join(BASE_DATA_PATH, "test_site_params.csv")
 
 
-class test_landslides_cali_small(unittest.TestCase):
+class CaliSmallLandslideTestCase(unittest.TestCase):
     def setUp(self):
         sites = pd.read_csv(site_data_file)
         self.sites = sites
-
-        self.sites["Fs"] = static_factor_of_safety(
-            slope=sites.slope,
-            cohesion=sites.cohesion_mid,
-            friction_angle=sites.friction_mid,
-            saturation_coeff=sites.saturation,
-            soil_dry_density=sites.dry_density,
+        self.sites["Fs"] = infinite_slope_fs(
+            slope=sites.slope.to_numpy(),
+            cohesion=sites.cohesion_mid.to_numpy(),
+            friction_angle=sites.friction_mid.to_numpy(),
+            saturation_coeff=sites.saturation.to_numpy(),
+            soil_dry_density=sites.dry_density.to_numpy(),
+            slab_thickness = sites.slab_thickness.to_numpy(),
         )
-
-        self.sites["Fs_rs"] = rock_slope_static_factor_of_safety(
-            slope=sites.slope,
-            cohesion=sites.cohesion_mid,
-            friction_angle=sites.friction_mid,
-            relief=sites.relief,
-        )
-
-        self.sites["crit_accel"] = newmark_critical_accel(
+        self.sites["crit_accel"] = critical_accel(
             self.sites.Fs, self.sites.slope
         )
-
-        self.sites["crit_accel_rs"] = critical_accel_rock_slope(
-            self.sites.Fs_rs, self.sites.slope, self.sites.friction_mid
-        )
-
         self.pga = np.array(
             [
                 0.29624916,
@@ -89,10 +71,9 @@ class test_landslides_cali_small(unittest.TestCase):
                 0.69782966,
             ]
         )
-
         self.pgv = np.array([10, 20, 30, 40, 45, 50, 55, 60, 65, 70])
 
-    def test_static_factor_of_safety(self):
+    def test_infinite_slope_fs(self):
         factor_of_safety = np.array(
             [
                 17.74377843,
@@ -107,26 +88,9 @@ class test_landslides_cali_small(unittest.TestCase):
                 14.75323389,
             ]
         )
-
-        np.testing.assert_array_almost_equal(self.sites["Fs"], factor_of_safety)
-
-    def test_rock_slope_static_factor_of_safety(self):
-        factor_of_safety = np.array(
-            [
-                2.071956744,
-                2.080927766,
-                2.167042027,
-                0.915956159,
-                0.222637517,
-                1.980662682,
-                1.573928892,
-                -199.6988708,
-                2.118003659,
-                2.079743754,
-            ]
+        np.testing.assert_array_almost_equal(
+            self.sites["Fs"], factor_of_safety
         )
-
-        np.testing.assert_array_almost_equal(self.sites["Fs_rs"], factor_of_safety)
 
     def test_critical_accel(self):
         ca = np.array(
@@ -134,7 +98,7 @@ class test_landslides_cali_small(unittest.TestCase):
                 5.53795977,
                 6.45917414,
                 5.791588,
-                0.0,
+                0.0001,
                 14.81513269,
                 5.26990181,
                 4.20417316,
@@ -143,57 +107,16 @@ class test_landslides_cali_small(unittest.TestCase):
                 6.28627584,
             ]
         )
-
         np.testing.assert_array_almost_equal(self.sites["crit_accel"], ca)
 
-    def test_critical_accel_rs(self):
-        ca = np.array(
-            [
-                3.199987178,
-                3.552731915,
-                3.344287126,
-                0,
-                0,
-                3.049107153,
-                2.395455067,
-                0,
-                3.617319351,
-                3.550633786,
-            ]
-        )
-
-        np.testing.assert_array_almost_equal(self.sites["crit_accel_rs"], ca)
-
     def test_newmark_displacement(self):
-        self.sites["newmark_disp"] = newmark_displ_from_pga_M(
-            pga=self.pga, critical_accel=self.sites["crit_accel"], M=7.5
+        self.sites["newmark_disp"] = jibson_2007_model_b(
+            pga=self.pga, crit_accel=self.sites["crit_accel"], mag=7.5
         )
-
-        nd = np.array([0.0, 0.0, 0.0, 2.19233517, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-
+        nd = np.array(
+            [0.0, 0.0, 0.0, 2.19233517, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        )
         np.testing.assert_array_almost_equal(self.sites["newmark_disp"], nd)
-
-    def test_newmark_prob_displacement(self):
-        self.sites["newmark_disp"] = newmark_displ_from_pga_M(
-            pga=self.pga, critical_accel=self.sites["crit_accel"], M=7.5
-        )
-
-        self.sites["prob_disp"] = prob_failure_given_displacement(
-            self.sites["newmark_disp"]
-        )
-
-        prob_d = np.array([0.0, 0.0, 0.0, 0.335, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-
-        np.testing.assert_array_almost_equal(self.sites["prob_disp"], prob_d)
-
-    def test_rock_slope_coseismic_displacement(self):
-        self.sites["rock_slope_displacement"] = newmark_displ_from_pga(
-            pga=self.pga, critical_accel=self.sites["crit_accel_rs"]
-        )
-
-        nd = np.array([0.0, 0.0, 0.0, 1.080767, 1.080767, 0.0, 0.0, 1.080767, 0.0, 0.0])
-
-        np.testing.assert_array_almost_equal(self.sites["rock_slope_displacement"], nd)
 
     def test_nowicki_jessee_18(self):
         prob_ls, coverage = nowicki_jessee_2018(
@@ -204,46 +127,44 @@ class test_landslides_cali_small(unittest.TestCase):
             landcover=self.sites["landcover"],
             cti=self.sites["cti"],
         )
-
         zlp = np.array(
             [
-                0.070513, 
-                0.260801, 
-                0.281926, 
-                0.980824, 
-                0.603409, 
+                0.070513,
+                0.260801,
+                0.281926,
+                0.980824,
+                0.603409,
                 0.602239,
-                0.856018, 
-                0.897942, 
-                0.62758 , 
-                0.581753
+                0.856018,
+                0.897942,
+                0.62758,
+                0.581753,
             ]
         )
-
         cls = np.array(
             [
-                0., 
-                0.172675, 
-                0., 
-                20.709538, 
-                0.953252, 
+                0.0,
+                0.172675,
+                0.0,
+                20.709538,
+                0.953252,
                 0.946616,
-                6.037904, 
-                8.884508, 
-                1.104123, 
-                0.839227])
-
+                6.037904,
+                8.884508,
+                1.104123,
+                0.839227,
+            ]
+        )
         np.testing.assert_array_almost_equal(prob_ls, zlp)
         np.testing.assert_array_almost_equal(coverage, cls)
 
 
-class test_liquefaction_cali_small(unittest.TestCase):
+class CaliSmallLiquefactionTestCase(unittest.TestCase):
     def setUp(self):
         sites = pd.read_csv(site_data_file)
         self.sites = sites
         self.mag = 7.5
         self.map_proportion_flag = True
-
         self.pga = np.array(
             [
                 0.29624916,
@@ -258,7 +179,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.69782966,
             ]
         )
-
         self.pgv = np.array([10, 20, 30, 40, 45, 50, 55, 60, 65, 70])
 
     def test_hazus_liquefaction_prob(self):
@@ -269,7 +189,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
             groundwater_depth=self.sites["gwd"],
             do_map_proportion_correction=self.map_proportion_flag,
         )
-
         lp = np.array(
             [
                 0.20710826,
@@ -284,7 +203,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.04664702,
             ]
         )
-
         np.testing.assert_array_almost_equal(self.sites["haz_liq_prob"], lp)
 
     def test_zhu15_general(self):
@@ -294,7 +212,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
             cti=self.sites["cti"],
             vs30=self.sites["vs30"],
         )
-
         zlp = np.array(
             [
                 0.506859,
@@ -309,9 +226,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.603895,
             ]
         )
-
         clq = np.array([1, 1, 1, 1, 1, 1, 0, 0, 1, 1])
-
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
 
@@ -322,10 +237,10 @@ class test_liquefaction_cali_small(unittest.TestCase):
             cti=self.sites["cti"],
             vs30=self.sites["vs30"],
         )
-
-        zlp = np.array([1, 1, 0.999999, 1, 1, 0.999999, 0.999989, 0.999922, 1, 1])
+        zlp = np.array(
+            [1, 1, 0.999999, 1, 1, 0.999999, 0.999989, 0.999922, 1, 1]
+        )
         clq = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
 
@@ -337,7 +252,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
             dc=self.sites["dc"],
             precip=self.sites["precip"],
         )
-
         zlp = np.array(
             [
                 0.147724296,
@@ -352,9 +266,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.13528652,
             ]
         )
-
         clq = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-
         lse = np.array(
             [
                 0.266467348,
@@ -369,7 +281,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.204819111,
             ]
         )
-
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
         np.testing.assert_array_almost_equal(LSE, lse)
@@ -382,7 +293,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
             wtd=self.sites["gwd"],
             precip=self.sites["precip"],
         )
-
         zlp = np.array(
             [
                 0.238647776,
@@ -397,9 +307,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.252791617,
             ]
         )
-
         clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
-
         lse = np.array(
             [
                 1.482171022,
@@ -414,7 +322,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 1.831734979,
             ]
         )
-
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
         np.testing.assert_array_almost_equal(LSE, lse)
@@ -428,7 +335,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
             wtd=self.sites["gwd"],
             precip=self.sites["precip"],
         )
-
         zlp = np.array(
             [
                 0.238647776,
@@ -443,9 +349,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.252791617,
             ]
         )
-
         clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
-
         lse = np.array(
             [
                 1.482171022,
@@ -460,7 +364,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 1.831734979,
             ]
         )
-
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
         np.testing.assert_array_almost_equal(LSE, lse)
@@ -475,7 +378,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
             wtd=self.sites["gwd"],
             precip=self.sites["precip"],
         )
-
         zlp = np.array(
             [
                 0.235711715,
@@ -490,9 +392,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.249738624,
             ]
         )
-
         clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
-
         lse = np.array(
             [
                 1.417553345,
@@ -507,7 +407,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 1.750645015,
             ]
         )
-
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
         np.testing.assert_array_almost_equal(LSE, lse)
@@ -520,7 +419,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
             dr=self.sites["dr"],
             zwb=self.sites["zwb"],
         )
-
         zlp = np.array(
             [
                 0.949740,
@@ -535,9 +433,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.908844,
             ]
         )
-
         clq = np.array([1, 1, 1, 1, 1, 1, 0, 1, 1, 1])
-
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
 
@@ -549,7 +445,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
             dr=self.sites["dr"],
             zwb=self.sites["zwb"],
         )
-
         zlp = np.array(
             [
                 0.973289,
@@ -564,9 +459,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.990591,
             ]
         )
-
         clq = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
 
@@ -582,7 +475,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
             precip=self.sites["precip"],
             session=inference_session,
         )
-
         clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 1, 1])
         zlp = np.array(
             [
@@ -598,7 +490,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 0.607842,
             ]
         )
-
         np.testing.assert_array_almost_equal(out_class, clq)
         np.testing.assert_array_almost_equal(out_prob, zlp)
 
@@ -606,7 +497,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
         self.sites["hazus_lat_disp"] = hazus_lateral_spreading_displacement(
             mag=self.mag, pga=self.pga, liq_susc_cat=self.sites["liq_susc_cat"]
         )
-
         disps = np.array(
             [
                 0.53306034,
@@ -621,5 +511,4 @@ class test_liquefaction_cali_small(unittest.TestCase):
                 1.3722039,
             ]
         )
-
         np.testing.assert_array_almost_equal(self.sites.hazus_lat_disp, disps)

@@ -26,11 +26,14 @@ from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
+
+from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
+
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
-from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
+from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 
 from openquake.hazardlib.gsim.nga_east import (
@@ -111,11 +114,18 @@ def ceus2020_site_term(ctx, imt, me, si, ta, ph, wimp, ref_vs30, ref_pga):
 
 def cy14_site_term(ctx, imt, me, si, ta, phi):
     """
-    This function adds the CY14 site term to GMMs requiring it
+    This function adds the CY14 site term to GMMs requiring it.
     """
     C = ChiouYoungs2014.COEFFS[imt]
     fa = _get_cy14_site_term(C, ctx.vs30, me)  # Ref mean must be in nat log
     me[:] += fa
+
+
+def ba08_site_term(ctx, imt, me, si, ta, phi):
+    """
+    This function adds the BA08 site term to GMMs requiring it.
+    """
+    me[:] += _get_ba08_site_term(imt, ctx)
 
 
 def cb14_basin_term(ctx, imt, me, si, ta, phi):
@@ -277,7 +287,9 @@ class ModifiableGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
+
     def __init__(self, **kwargs):
+
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
@@ -303,11 +315,20 @@ class ModifiableGMPE(GMPE):
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
 
-        if ('cb14_basin_term' in self.params or 'm9_basin_term' in self.params
-            ) and ( 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
-            tmp = list(self.gmpe.REQUIRES_SITES_PARAMETERS)
-            tmp.append('z2pt5')
-            self.gmpe.REQUIRES_SITES_PARAMETERS = frozenset(tmp)
+        if ('ba08_site_term' in self.params and
+                'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS):
+            # hazardlib/gsim/utils/get_fault_type_dummy_variables is called
+            # from AB06 and requires the rake parameter so add here if missing
+            self.REQUIRES_RUPTURE_PARAMETERS |= {"rake"}
+
+        if ('ba08_site_term' in self.params and
+                'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
+            self.REQUIRES_SITES_PARAMETERS |= {"vs30"}
+
+        if ((('cb14_basin_term' in self.params) or
+             ('m9_basin_term' in self.params)) and
+                ('z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS)):
+            self.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
 
         # This is required by the `sigma_model_alatik2015` function
         key = 'sigma_model_alatik2015'
@@ -364,12 +385,15 @@ class ModifiableGMPE(GMPE):
         """
         # Set reference Vs30 if required
         if ('nrcan15_site_term' in self.params or
-                'cy14_site_term' in self.params):
+                'cy14_site_term' in self.params or
+                'ba08_site_term' in self.params):
             ctx_copy = ctx.copy()
             if 'nrcan15_site_term' in self.params:
                 rock_vs30 = 760.
             elif 'cy14_site_term' in self.params:
                 rock_vs30 = 1130.
+            elif 'ba08_site_term' in self.params:
+                rock_vs30 = 760.
             ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
         else:
             ctx_copy = ctx

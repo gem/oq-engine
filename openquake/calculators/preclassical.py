@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,8 +45,11 @@ TWO32 = 2 ** 32
 
 def source_data(sources):
     """
-    Set the source .id attribute to the index in the source_info table
-    :returns: a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
+    Set the source .id attribute to the index in the source_info table.
+    :param sources:
+        a list of source objects
+    :returns:
+        a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
     """
     data = AccumDict(accum=[])
     for src in sources:
@@ -59,7 +62,9 @@ def source_data(sources):
 
 
 def check_maxmag(pointlike):
-    """Check for pointlike sources with high magnitudes"""
+    """
+    Check for pointlike sources with high magnitudes
+    """
     for src in pointlike:
         maxmag = src.get_annual_occurrence_rates()[-1][0]
         if maxmag >= 9.:
@@ -101,28 +106,33 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
-    spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if sites:
         N = len(sites)
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
     else:
-        N = 1
+        N = 0
         multiplier = 1
-        sf = None
+        sf = SourceFilter(None)
     splits = []
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
+    maxdist = cmaker.maximum_distance.y[-1]
     for src in srcs:
         if src.code == b'F':
-            if N <= cmaker.max_sites_disagg:
+            if N and N <= cmaker.max_sites_disagg:
                 mask = sf.get_close(secparams) > 0  # shape S
             else:
                 mask = None
             src.set_msparams(secparams, mask, ry0, mon1, mon2)
-        if sites:
+        elif src.code in b'pP' and sites:
+            # special case, compute distances
+            distances = sites.get_cdist(src.location)
+            radius = src._get_max_rupture_projection_radius()
+            src.nsites = (distances <= maxdist + radius).sum()
+        elif sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
             # print(f'{src.source_id=}, {src.nsites=}')
@@ -130,33 +140,17 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        if cmaker.split_sources and src.nsites:
+        if cmaker.split_sources and src.nsites and src.code != b'F':
+            # multifault source have been already split in save_and_split
             splits.extend(split_source(src))
         else:
             splits.append(src)
+    splits = _filter(splits, cmaker.oq.minimum_magnitude)
     if splits:
-        splits = _filter(splits, cmaker.oq.minimum_magnitude)
         mon = monitor('weighting sources', measuremem=False)
-        if sites is None or spacing == 0:
-            if sites is None:
-                for src in splits:
-                    src.weight = .01
-            else:
-                cmaker.set_weight(splits, sf, multiplier, mon)
-            dic = {grp_id: splits}
-            dic['before'] = len(srcs)
-            dic['after'] = len(splits)
-            yield dic
-        elif splits:
-            dic = grid_point_sources(splits, spacing, monitor)
-            for src in dic[grp_id]:
-                src.num_ruptures = src.count_ruptures()
-            # this is also prefiltering the split sources
-            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
-            # print(f'{mon.task_no=}, {mon.duration=}')
-            dic['before'] = len(splits)
-            dic['after'] = len(dic[grp_id])
-            yield dic
+        with mon:
+            cmaker.set_weight(splits, sf, multiplier)
+        yield {grp_id: splits}
 
 
 def store_tiles(dstore, csm, sitecol, cmakers):
@@ -164,7 +158,10 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     Store a `tiles` array if the calculation is large enough.
     :returns: a triple (max_weight, trt_rlzs, gids)
     """
-    N = len(sitecol)
+    if sitecol is None:
+        N = 0
+    else:
+        N = len(sitecol)
     oq = cmakers[0].oq
     fac = oq.imtls.size * N * 4 / 1024**3
     max_weight = csm.get_max_weight(oq)
@@ -181,11 +178,13 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # determine light groups and tiling
     light, = numpy.where(data['blocks'] == 1)
-    logging.info('There are %d light groups out of %d', len(light), len(data))
     req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
     mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
     if len(light):
-        logging.info('mem_gb = %.2f', mem_gb)
+        logging.info('mem_gb = %.2f with %d light groups out of %d',
+                     mem_gb, len(light), len(data))
+    else:
+        logging.info('Required mem_gb = %.2f', req_gb)
     max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores/8)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
@@ -249,10 +248,11 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         Gt = len(gweights)
         extra = f'<{Gfull}' if Gt < Gfull else ''
-        nbytes = 4 * len(self.sitecol) * L * Gt
-        # Gt is known before starting the preclassical
-        logging.warning(f'The global pmap would require %s ({Gt=}%s)',
-                        general.humansize(nbytes), extra)
+        if sites is not None:
+            nbytes = 4 * len(self.sitecol) * L * Gt
+            # Gt is known before starting the preclassical
+            logging.warning(f'The global pmap would require %s ({Gt=}%s)',
+                            general.humansize(nbytes), extra)
 
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
@@ -272,7 +272,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
-                self.cmakers[grp_id].set_weight(sg, sites)
+                self.cmakers[grp_id].set_weight(
+                    sg, SourceFilter(sites, oq.maximum_distance))
                 atomic_sources.extend(sg)
             else:
                 normal_sources.extend(sg)
@@ -296,6 +297,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         if sys.platform != 'darwin':
             # avoid a segfault in macOS
             self.datastore.swmr_on()
+        before_after = numpy.zeros(2, dtype=int)
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             cmaker = self.cmakers[grp_id]
@@ -312,31 +314,31 @@ class PreClassicalCalculator(base.HazardCalculator):
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
-                if self.oqparam.ps_grid_spacing:
-                    # do not split the pointsources
-                    smap.submit((pointsources + pointlike,
-                                 sites, cmaker, secparams))
+                spacing = self.oqparam.ps_grid_spacing
+                if spacing:
+                    logging.info(f'Splitting/gridding point sources {grp_id=}')
+                    for plike in pointlike:
+                        pointsources.extend(split_source(plike))  # slow
+                    cpsources = grid_point_sources(pointsources, spacing)
+                    before_after += [len(pointsources), len(cpsources)]
+                    for block in block_splitter(cpsources, 200):
+                        smap.submit((block, sites, cmaker, secparams))
                 else:
                     for block in block_splitter(pointsources, 2000):
                         smap.submit((block, sites, cmaker, secparams))
                     others.extend(pointlike)
             for block in block_splitter(others, 40):
                 smap.submit((block, sites, cmaker, secparams))
-        normal = smap.reduce()
-        if atomic_sources:  # case_35
-            n = len(atomic_sources)
-            atomic = AccumDict({'before': n, 'after': n})
+        res = smap.reduce()
+        atomic = set(src.grp_id for src in atomic_sources)
+        if atomic:  # case_35
             for grp_id, srcs in groupby(
                     atomic_sources, lambda src: src.grp_id).items():
-                atomic[grp_id] = srcs
-        else:
-            atomic = AccumDict()
-        res = normal + atomic
-        if ('before' in res and 'after' in res and
-                res['before'] != res['after']):
+                res[grp_id] = srcs
+        if before_after[0] != before_after[1]:
             logging.info(
                 'Reduced the number of point sources from {:_d} -> {:_d}'.
-                format(res['before'], res['after']))
+                format(before_after[0], before_after[1]))
         acc = AccumDict(accum=0)
         code2cls = get_code2cls()
         for grp_id, srcs in res.items():
@@ -349,7 +351,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 newsg.sources = srcs
                 self.csm.src_groups[grp_id] = newsg
                 for src in srcs:
-                    assert src.weight, src
+                    if src.code not in b'pP':
+                        assert src.weight, src
                     assert src.num_ruptures, src
                     acc[src.code] += int(src.num_ruptures)
         self.csm.fix_src_offset()
@@ -410,8 +413,10 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.hdf5.save_vlen('delta_rates', deltas)
 
         # save 'source_groups'
-        self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-            store_tiles(self.datastore, self.csm, self.sitecol, self.cmakers))
+        if self.sitecol is not None:
+            self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
+                store_tiles(self.datastore, self.csm,
+                            self.sitecol, self.cmakers))
 
         # save gsims
         toml = []

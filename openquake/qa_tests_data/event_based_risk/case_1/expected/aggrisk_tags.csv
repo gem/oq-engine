@@ -1,0 +1,11 @@
+policy,taxonomy,loss_type,value,lossmea
+A,RC,nonstructural,1.00000E+03,2.73602E+01
+A,RC,structural,2.00000E+03,6.16284E+01
+A,RM,nonstructural,1.50000E+03,2.12580E+01
+A,RM,structural,3.00000E+03,1.43613E+02
+B,RM,nonstructural,2.50000E+03,9.44013E+01
+B,RM,structural,5.00000E+03,3.55602E+02
+B,W,nonstructural,5.00000E+02,2.60544E+01
+B,W,structural,1.00000E+03,2.52457E+02
+total,total,nonstructural,5.50000E+03,1.69074E+02
+total,total,structural,1.10000E+04,8.13301E+02

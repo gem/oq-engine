@@ -4,14 +4,14 @@
 		<description>Road Network</description>
 		<limitStates>slight moderate extreme complete</limitStates>
 		<fragilityFunction id="Wood" format="discrete">
-			<imls imt="DispProb" noDamageLimit="0">0 0.3 0.6 1</imls>
+			<imls imt="Disp" noDamageLimit="0">0 0.3 0.6 1</imls>
 			<poes ls="slight">0 0 0 1</poes>
 			<poes ls="moderate">0 0 0 1</poes>
 			<poes ls="extreme">0 0 0 1</poes>
 			<poes ls="complete">0 0 0 1</poes>
 		</fragilityFunction>
 		<fragilityFunction id="Concrete" format="discrete">
-			<imls imt="DispProb" noDamageLimit="0">0 0.3 0.6 1</imls>
+			<imls imt="Disp" noDamageLimit="0">0 0.3 0.6 1</imls>
 			<poes ls="slight">0 1 1 1</poes>
 			<poes ls="moderate">0 1 1 1</poes>
 			<poes ls="extreme">0 1 1 1</poes>

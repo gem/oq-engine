@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,18 +24,20 @@ import logging
 import numpy
 import pandas
 from shapely import geometry
-from openquake.baselib import config, hdf5, parallel, python3compat
-from openquake.baselib.general import AccumDict, humansize, block_splitter
+from openquake.baselib import (
+    config, hdf5, parallel, python3compat, performance)
+from openquake.baselib.general import (
+    AccumDict, humansize, block_splitter, group_array)
+from openquake.hazardlib import valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import (
-    magstr, nofilter, getdefault, get_distances, SourceFilter)
+    close_ruptures, magstr, nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
-from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
@@ -62,7 +64,6 @@ TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
-mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
 
 
 def rup_weight(rup):
@@ -75,83 +76,86 @@ def rup_weight(rup):
 # ######################## hcurves_from_gmfs ############################ #
 
 
-def build_hcurves(calc):
+# can be used as a postprocessor
+def build_hcurves(dstore):
     """
     Build the hazard curves from each realization starting from
     the stored GMFs. Works only for few sites.
     """
-    oq = calc.oqparam
+    oq = dstore['oqparam']
     # compute and save statistics; this is done in process and can
     # be very slow if there are thousands of realizations
-    weights = calc.datastore['weights'][:]
+    weights = dstore['weights'][:]
+    sitecol = dstore['sitecol']
     # NB: in the future we may want to save to individual hazard
     # curves if oq.individual_rlzs is set; for the moment we
     # save the statistical curves only
     hstats = oq.hazard_stats()
     S = len(hstats)
     R = len(weights)
-    N = calc.N
+    N = len(sitecol)
     M = len(oq.imtls)
+    C = M + len(oq.sec_imts)
     L1 = oq.imtls.size // M
-    gmf_df = calc.datastore.read_df('gmf_data', 'eid')
-    ev_df = calc.datastore.read_df('events', 'id')[['rlz_id']]
-    gmf_df = gmf_df.join(ev_df)
-    hc_mon = calc._monitor('building hazard curves', measuremem=False)
+    gmf_df = dstore.read_df('gmf_data', 'eid').join(
+        dstore.read_df('events', 'id')[['rlz_id']])
+    imtls = {imt: imls for imt, imls in oq.imtls.items()}
+    for sec_imt in oq.sec_imts:
+        min_ = gmf_df[sec_imt].min() + 1E-10  # to ensure min_ > 0
+        max_ = gmf_df[sec_imt].max() + 2E-10  # to ensure max_ > min_
+        imtls[sec_imt] = valid.logscale(min_, max_, L1)
+    dstore['all_imtls'] = imtls
+    dstore['all_imtls'].attrs['imts'] = ' '.join(imtls)
+    hc_mon = performance.Monitor('building hazard curves', measuremem=False,
+                                 h5=dstore)
     hcurves = {}
     for (sid, rlz), df in gmf_df.groupby(['sid', 'rlz_id']):
         with hc_mon:
-            poes = gmvs_to_poes(df, oq.imtls, oq.ses_per_logic_tree_path)
-            for m, imt in enumerate(oq.imtls):
+            poes = gmvs_to_poes(df, imtls, oq.ses_per_logic_tree_path)
+            for m, imt in enumerate(imtls):
                 hcurves[rsi2str(rlz, sid, imt)] = poes[m]
-    pmaps = {r: MapArray(calc.sitecol.sids, L1*M, 1).fill(0)
+    pmaps = {r: MapArray(sitecol.sids, L1*C, 1).fill(0)
              for r in range(R)}
+    slc = {imt: slice(m * L1, m * L1 + L1) for m, imt in enumerate(imtls)}
     for key, poes in hcurves.items():
         r, sid, imt = str2rsi(key)
-        array = pmaps[r].array[sid, oq.imtls(imt), 0]
+        array = pmaps[r].array[sid, slc[imt], 0]
         array[:] = 1. - (1. - array) * (1. - poes)
-    pmaps = [p.reshape(N, M, L1) for p in pmaps.values()]
+    pmaps = [p.reshape(N, C, L1) for p in pmaps.values()]
     if oq.individual_rlzs:
         logging.info('Saving individual hazard curves')
-        calc.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
-        calc.datastore.set_shape_descr(
-            'hcurves-rlzs', site_id=N, rlz_id=R,
-            imt=list(oq.imtls), lvl=numpy.arange(L1))
+        dstore.create_dset('hcurves-rlzs', F32, (N, R, C, L1))
+        dstore.set_shape_descr('hcurves-rlzs', site_id=N, rlz_id=R,
+                               imt=list(imtls), lvl=numpy.arange(L1))
         if oq.poes:
             P = len(oq.poes)
-            M = len(oq.imtls)
-            ds = calc.datastore.create_dset(
-                'hmaps-rlzs', F32, (N, R, M, P))
-            calc.datastore.set_shape_descr(
-                'hmaps-rlzs', site_id=N, rlz_id=R,
-                imt=list(oq.imtls), poe=oq.poes)
+            ds = dstore.create_dset(
+                'hmaps-rlzs', F32, (N, R, C, P))
+            dstore.set_shape_descr('hmaps-rlzs', site_id=N, rlz_id=R,
+                                   imt=list(imtls), poe=oq.poes)
         for r in range(R):
-            calc.datastore['hcurves-rlzs'][:, r] = pmaps[r].array
+            dstore['hcurves-rlzs'][:, r] = pmaps[r].array
             if oq.poes:
                 [hmap] = make_hmaps([pmaps[r]], oq.imtls, oq.poes)
                 ds[:, r] = hmap.array
-
     if S:
         logging.info('Computing statistical hazard curves')
-        calc.datastore.create_dset('hcurves-stats', F32, (N, S, M, L1))
-        calc.datastore.set_shape_descr(
-            'hcurves-stats', site_id=N, stat=list(hstats),
-            imt=list(oq.imtls), lvl=numpy.arange(L1))
+        dstore.create_dset('hcurves-stats', F32, (N, S, C, L1))
+        dstore.set_shape_descr('hcurves-stats', site_id=N, stat=list(hstats),
+                               imt=list(imtls), lvl=numpy.arange(L1))
         if oq.poes:
             P = len(oq.poes)
-            M = len(oq.imtls)
-            ds = calc.datastore.create_dset(
-                'hmaps-stats', F32, (N, S, M, P))
-            calc.datastore.set_shape_descr(
-                'hmaps-stats', site_id=N, stat=list(hstats),
-                imt=list(oq.imtls), poes=oq.poes)
+            ds = dstore.create_dset('hmaps-stats', F32, (N, S, C, P))
+            dstore.set_shape_descr('hmaps-stats', site_id=N, stat=list(hstats),
+                                   imt=list(imtls), poes=oq.poes)
         for s, stat in enumerate(hstats):
-            smap = MapArray(calc.sitecol.sids, L1, M)
+            smap = MapArray(sitecol.sids, L1, C)
             [smap.array] = compute_stats(
                 numpy.array([p.array for p in pmaps]),
                 [hstats[stat]], weights)
-            calc.datastore['hcurves-stats'][:, s] = smap.array
+            dstore['hcurves-stats'][:, s] = smap.array
             if oq.poes:
-                [hmap] = make_hmaps([smap], oq.imtls, oq.poes)
+                [hmap] = make_hmaps([smap], imtls, oq.poes)
                 ds[:, s] = hmap.array
 
 
@@ -297,28 +301,6 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def get_nsites(rups, trt_smr, trt, srcfilter):
-    model = rups[0]['model'].decode('ascii')
-    return {(model, trt_smr, trt): srcfilter.get_nsites(rups, trt)}
-
-
-def get_rups_dic(ruptures_hdf5, sitecol, maximum_distance, trts):
-    dic = {}
-    smap = parallel.Starmap(get_nsites)
-    with hdf5.File(ruptures_hdf5) as f:
-        for trt_smr, start, stop in f['trt_smr_start_stop']:
-            slc = slice(start, stop)
-            rups = f['ruptures'][slc]
-            model = rups[0]['model'].decode('ascii')
-            trt = trts[model][trt_smr // TWO24]
-            srcfilter = SourceFilter(sitecol, maximum_distance(trt))
-            dic[model, trt_smr, trt] = rups
-            smap.submit((rups, trt_smr, trt, srcfilter))
-    for key, nsites in smap.reduce().items():
-        dic[key]['nsites'] = nsites
-    return dic
-
-
 def starmap_from_rups_hdf5(oq, sitecol, dstore):
     """
     :returns: a Starmap instance sending event_based tasks
@@ -335,15 +317,21 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
                 rlzs_by_gsim[model, trt_smr] = rbg
         dstore['full_lt'] = full_lt  # saving the last lt (hackish)
         r.copy('events', dstore.hdf5) # saving the events
+        logging.info('Selecting the ruptures close to the sites')
+        rups = close_ruptures(r['ruptures'][:], sitecol)
+        dstore['ruptures'] = rups
         R = full_lt.num_samples
         dstore['weights'] = numpy.ones(R) / R
-    rups_dic = get_rups_dic(ruptures_hdf5, sitecol, oq.maximum_distance, trts)
+    rups_dic = group_array(rups, 'model', 'trt_smr')
     totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
     extra = sitecol.array.dtype.names
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    for (model, trt_smr, trt), rups in rups_dic.items():
+    logging.info('Computing the GMFs')
+    for (model, trt_smr), rups in rups_dic.items():
+        model = model.decode('ascii')
+        trt = trts[model][trt_smr // TWO24]
         proxies = get_proxies(ruptures_hdf5, rups)
         mags = numpy.unique(numpy.round(rups['mag'], 2))
         oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
@@ -474,18 +462,20 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
     """
     dic = {}
     E = len(weights)
-    M = len(min_iml)
+    C = len(min_iml)
     for sid, df in gmf_df.groupby(gmf_df.index):
         eid = df.pop('eid')
-        gmvs = numpy.ones((E, M), F32) * min_iml
+        gmvs = numpy.zeros((E, C), F32)
         gmvs[eid.to_numpy()] = df.to_numpy()
+        for c, mini in enumerate(min_iml):
+            gmvs[gmvs[:, c] < mini, c] = mini
         dic[sid] = geom_avg_std(gmvs, weights)
     return dic
 
 
 def read_gsim_lt(oq):
-    # in aristotle mode the gsim_lt is read from the exposure.hdf5 file
-    if oq.aristotle:
+    # in impact mode the gsim_lt is read from the exposure.hdf5 file
+    if oq.impact and not oq.shakemap_uri:
         if not oq.mosaic_model:
             if oq.rupture_dict:
                 lon, lat = [oq.rupture_dict['lon'], oq.rupture_dict['lat']]
@@ -510,14 +500,13 @@ def read_gsim_lt(oq):
             raise ValueError(
                 'The tectonic_region_type parameter must be specified')
         gsim_lt = logictree.GsimLogicTree.from_hdf5(
-            expo_hdf5, oq.mosaic_model,
-            oq.tectonic_region_type.encode('utf8'))
+            expo_hdf5, oq.mosaic_model, oq.tectonic_region_type.encode('utf8'))
     else:
         gsim_lt = readinput.get_gsim_lt(oq)
     return gsim_lt
 
 
-@base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
+@base.calculators.add('event_based', 'scenario')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
@@ -583,7 +572,9 @@ class EventBasedCalculator(base.HazardCalculator):
             with fiona.open(fname) as f:
                 model_geom = geometry.shape(f[0].geometry)
         elif oq.mosaic_model:  # 3-letter mosaic model
-            model_geom = mosaic_df.loc[oq.mosaic_model].geom
+            mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
+            mmodel = 'CAN' if oq.mosaic_model == 'CND' else oq.mosaic_model
+            model_geom = mosaic_df.loc[mmodel].geom
         logging.info('Building ruptures')
         g_index = 0
         for sg_id, sg in enumerate(self.csm.src_groups):
@@ -663,12 +654,12 @@ class EventBasedCalculator(base.HazardCalculator):
                     hdf5.extend(self.datastore['gmf_data/slice_by_event'], sbe)
                 hdf5.extend(dset, df.sid.to_numpy())
                 hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
-                for m in range(len(primary)):
-                    hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
-                                df[f'gmv_{m}'])
+                for imt in primary:
+                    hdf5.extend(self.datastore[f'gmf_data/{imt}'],
+                                df[imt].to_numpy())
                 for sec_imt in sec_imts:
                     hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
-                                df[sec_imt])
+                                df[sec_imt].to_numpy())
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
                 self.offset += len(df)
@@ -745,6 +736,10 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
+        if oq.impact and oq.shakemap_uri:
+            # this is creating gmf_data
+            base.store_gmfs_from_shakemap(self, self.sitecol, self.assetcol)
+            return {}
         dstore = self.datastore
         E = None
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
@@ -821,8 +816,6 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs = self.datastore['events'][:]['rlz_id']
         self.weights = self.datastore['weights'][:][rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
-        for sec_imt in self.oqparam.sec_imts:  # ignore secondary perils
-            del gmf_df[sec_imt]
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)
         if e == 0:
@@ -834,10 +827,13 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.info('Stored {:_d} relevant event IDs'.format(e))
 
         # really compute and store the avg_gmf
-        M = len(self.oqparam.min_iml)
-        avg_gmf = numpy.zeros((2, len(self.sitecol.complete), M), F32)
+        M = len(self.oqparam.imtls)
+        C = len(self.oqparam.all_imts())
+        avg_gmf = numpy.zeros((2, len(self.sitecol.complete), C), F32)
+        min_iml = numpy.ones(C) * 1E-10
+        min_iml[:M] = self.oqparam.min_iml
         for sid, avgstd in compute_avg_gmf(
-                gmf_df, self.weights, self.oqparam.min_iml).items():
+                gmf_df, self.weights, min_iml).items():
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
         # make avg_gmf plots only if running via the webui
@@ -857,7 +853,8 @@ class EventBasedCalculator(base.HazardCalculator):
         if not oq.ground_motion_fields or 'gmf_data' not in self.datastore:
             return
         # check seed dependency unless the number of GMFs is huge
-        size = self.datastore.getsize('gmf_data/gmv_0')
+        imt0 = list(oq.imtls)[0]
+        size = self.datastore.getsize(f'gmf_data/{imt0}')
         if 'gmf_data' in self.datastore and size < 4E9 and not oq.ruptures_hdf5:
             # TODO: check why there is an error for ruptures_hdf5
             logging.info('Checking stored GMFs')
@@ -866,10 +863,12 @@ class EventBasedCalculator(base.HazardCalculator):
         if self.datastore.parent:
             self.datastore.parent.open('r')
         if oq.hazard_curves_from_gmfs:
-            if size > 4E6:
-                msg = 'gmf_data has {:_d} rows'.format(size)
+            maxsize = int(config.memory.gmf_data_rows)
+            if size > maxsize:
+                msg = 'gmf_data has {:_d} rows > {:_d}'.format(size, maxsize)
                 raise RuntimeError(f'{msg}: too big to compute the hcurves')
-            build_hcurves(self)
+            logging.info('Building hazard curves and possibly maps')
+            build_hcurves(self.datastore)
             if oq.compare_with_classical:  # compute classical curves
                 export_dir = os.path.join(oq.export_dir, 'cl')
                 if not os.path.exists(export_dir):

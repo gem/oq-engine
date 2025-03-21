@@ -9,7 +9,13 @@ oq info venv
 oq info cfg
 
 # create .tmp.ini files with oqparam.to_ini()
-python -m openquake.calculators.checkers "$1"
+python -c"import os
+from openquake.calculators.checkers import check_ini
+for cwd, dirs, files in os.walk('$1'):
+     for f in files:
+         if f.endswith('.ini') and not f.endswith('.tmp.ini'):
+             path = os.path.join(cwd, f)
+             check_ini(path, hc='risk' in f)"
 # run the demos with the generated file
 for demo_dir in $(find "$1" -type d | sort); do
    if [ -f $demo_dir/job_hazard.ini ]; then
@@ -62,8 +68,11 @@ oq engine --list-outputs -1
 # sensitivity to the strike angle
 oq shell $1/risk/ScenarioRisk/sensitivity.py
 
-#echo "Testing csm2rup"
+echo "Testing csm2rup"
 OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
+
+echo "Testing oq info usgs_rupture"
+oq info usgs_rupture:us70006sj8
 
 # display the calculations
 oq db find %

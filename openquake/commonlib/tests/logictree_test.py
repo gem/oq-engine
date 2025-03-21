@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -303,8 +303,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error(
             'lo', {'lo': lt, 'sm1': sm, 'sm2': sm}, logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 4)
-        self.assertEqual(exc.message, "branchset weights don't sum up to 1.0",
-                         "wrong exception message: %s" % exc.message)
+        self.assertEqual(
+            exc.message, "branchset weights sum up to 1.1, not 1",
+            "wrong exception message: %s" % exc.message)
 
     def test_apply_to_nonexistent_branch(self):
         lt = _make_nrml("""\
@@ -2159,7 +2160,7 @@ taxo3,taxo3,1
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
             inp = dict(taxonomy_mapping=gettemp(xml))
             oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
-                                    aristotle=False)
+                                    impact=False)
             readinput.taxonomy_mapping(oq, self.taxidx)
         self.assertIn("{'taxo4'} are in the exposure but not in",
                       str(ctx.exception))
@@ -2175,7 +2176,7 @@ taxo4,taxo2,.4
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
             inp = dict(taxonomy_mapping=gettemp(xml))
             oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
-                                    aristotle=False)
+                                    impact=False)
             readinput.taxonomy_mapping(oq, self.taxidx)
         self.assertIn("the weights do not sum up to 1 for taxo4",
                       str(ctx.exception))
@@ -2190,7 +2191,7 @@ taxo4,taxo1,.5
 '''
         inp = dict(taxonomy_mapping=gettemp(xml))
         oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
-                                aristotle=False)
+                                impact=False)
         got = readinput.taxonomy_mapping(oq, self.taxidx)
         exp = pandas.DataFrame(
             dict(risk_id='taxo1 taxo2 taxo2 taxo3 taxo1'.split(),

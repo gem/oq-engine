@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,8 +21,8 @@ import copy
 import numpy as np
 from typing import Union
 
-from openquake.baselib import hdf5, performance, general
-from openquake.baselib.general import gen_slices, idxs_by_tag
+from openquake.baselib import hdf5, performance, general, config
+from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import (
@@ -42,7 +42,7 @@ U16 = np.uint16
 U32 = np.uint32
 F32 = np.float32
 F64 = np.float64
-BLOCKSIZE = 5000
+BLOCKSIZE = int(config.memory.max_multi_fault_ruptures)
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 # NB: if too large, very few sources will be generated and a lot of
@@ -81,7 +81,7 @@ class MultiFaultSource(BaseSeismicSource):
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
-                 magnitudes: list, rakes: list, investigation_time=0,
+                 magnitudes: list, rakes: list, faults: dict=(), investigation_time=0,
                  infer_occur_rates=False):
         nrups = len(magnitudes)
         assert len(occurrence_probs) == len(rakes) == nrups
@@ -92,9 +92,10 @@ class MultiFaultSource(BaseSeismicSource):
         self.probs_occur = F64(occurrence_probs)  # 64 bit!
         self.mags = F32(magnitudes)
         self.rakes = F32(rakes)
+        self.faults = faults
         self.infer_occur_rates = infer_occur_rates
         self.investigation_time = investigation_time
-        self.source_id =source_id
+        self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
 
@@ -148,7 +149,8 @@ class MultiFaultSource(BaseSeismicSource):
             ridxs.append(' '.join(map(str, rupture_idxs)))
         # each pmf has the form [(prob0, 0), (prob1, 1), ...]
         return dict(mag=self.mags, rake=self.rakes,
-                    probs_occur=self.probs_occur, rupture_idxs=ridxs)
+                    probs_occur=self.probs_occur,
+                    rupture_idxs=np.array(ridxs, dtype=hdf5.vstr))
 
     def get_unique_idxs(self):
         """
@@ -266,22 +268,53 @@ class MultiFaultSource(BaseSeismicSource):
         return west - a2, south - a1, east + a2, north + a1
 
 
-def _set_tags(mfsources, allsections, sitecol1, s2i):
-    # set attribute .tags for each source in the mfsources
-    dists = np.array([sec.get_min_distance(sitecol1)[0]
-                         for sec in allsections])
-    for src_id, src in enumerate(mfsources):
-        src.tags = []
-        for idxs in src._rupture_idxs:
-            rids = U32([s2i[idx] for idx in idxs])
-            src.tags.append(rids[np.argmin(dists[rids])])
+def _set_rupids_by_tag(src, allrids, dists, s2i):
+
+    # compute distances so that in the next step
+    # the tags are ordered by closest section to the site
+    closest = []  # (dist, ftag, fids)
+    for tag, idxs in src.faults.items():
+        fids = U32([s2i[idx] for idx in idxs])
+        rid = np.argmin(dists[fids])
+        closest.append((dists[fids][rid], tag, fids))
+
+    # build dictionary src.rupids_by_tag with the indices of
+    # ruptures belonging to each fault source; care is taken
+    # so that the indices are disjoint
+    off_rupids = []
+    used_rupids = []
+    src.rupids_by_tag = {}
+    for _dist, tag, fids in sorted(closest):
+        # instantiate rupture id list
+        rids_by_tag = []
+
+        # loop through all ruptures in the source 
+        for rupid, rids in enumerate(allrids):
+            # overlap between the section ids of the rupture and the fault?
+            if len(np.intersect1d(rids, fids, assume_unique=True)):
+                if rupid not in used_rupids:
+                    rids_by_tag.append(rupid)
+                    used_rupids.append(rupid)
+        # only create the new key for that fault tag if there are ruptures
+        if len(rids_by_tag) > 0:
+            src.rupids_by_tag[tag] = rids_by_tag
+
+    # put the rest in another tag
+    off_rupids = np.setdiff1d(np.arange(len(allrids)), used_rupids,
+                            assume_unique=True)
+    if len(off_rupids):
+        src.rupids_by_tag['off_rupids'] = off_rupids
 
 
-# NB: as side effect delete _rupture_idxs and add .hdf5path and possibly .tags
+
+# NB: as side effect delete _rupture_idxs,
+# add .hdf5path and possibly .rupids_by_tag
 def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                    del_rupture_idxs=True):
     """
     Serialize MultiFaultSources
+ 
+    :returns: (split_dic, secparams)
     """
     assert mfsources
     assert len(sectiondict) < TWO32, len(sectiondict)
@@ -297,9 +330,13 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
         all_rids.append(rids)
         src.hdf5path = hdf5path
 
-    # add tags
+    # add rupids_by_tag
     if site1 is not None:
-         _set_tags(mfsources, sectiondict.values(), site1, s2i)
+        dists = np.array([sec.get_min_distance(site1)[0]
+                          for sec in sectiondict.values()])
+        for mfsource, rids in zip(mfsources, all_rids):
+            if mfsource.faults:
+                _set_rupids_by_tag(mfsource, rids, dists, s2i)
 
     # save memory
     for src in mfsources:
@@ -311,20 +348,20 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
 
     with hdf5.File(hdf5path, 'w') as h5:
         for src, rids in zip(mfsources, all_rids):
-            if hasattr(src, 'tags'):
+            if hasattr(src, 'rupids_by_tag'):
                 items = [(f'{src.source_id}@{tag}', idxs)
-                         for tag, idxs in idxs_by_tag(src.tags).items()]
+                         for tag, idxs in src.rupids_by_tag.items()]
             else:
                 items = [(tag, np.arange(slc.start, slc.stop))
                          for tag, slc in src.gen_slices()]
-            for source_id, slc in items:
+            for source_id, rupids in items:
                 split = copy.copy(src)
                 split.source_id = source_id
-                split.probs_occur = src.probs_occur[slc]
-                split.mags = src.mags[slc]
-                split.rakes = src.rakes[slc]
+                split.probs_occur = src.probs_occur[rupids]
+                split.mags = src.mags[rupids]
+                split.rakes = src.rakes[rupids]
                 h5.save_vlen(f'{source_id}/rupture_idxs',
-                             [rids[rupid] for rupid in slc])
+                             [rids[rupid] for rupid in rupids])
                 h5[f'{source_id}/probs_occur'] = split.probs_occur
                 h5[f'{source_id}/mags'] = split.mags
                 h5[f'{source_id}/rakes'] = split.rakes
@@ -338,9 +375,9 @@ def save_and_split(mfsources, sectiondict, hdf5path, site1=None,
                 split_dic[src.source_id].append(split)
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sectiondict.values()])
-        h5['secparams'] = build_secparams(src.get_sections())
+        h5['secparams'] = secparams = build_secparams(sectiondict.values())
 
-    return split_dic
+    return split_dic, secparams
 
 
 def load(hdf5path):

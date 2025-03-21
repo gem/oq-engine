@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,6 +37,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, vstr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
+from openquake.hazardlib.valid import basename
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
@@ -248,28 +249,6 @@ def view_high_hazard(token, dstore):
     max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
     high = (max_hazard > max_poe).all(axis=1)
     return max_hazard[high]
-
-
-@view.add('worst_sources')
-def view_worst_sources(token, dstore):
-    """
-    Returns the sources with worst weights
-    """
-    if ':' in token:
-        step = int(token.split(':')[1])
-    else:
-        step = 1
-    data = dstore.read_df('source_data', 'src_id')
-    del data['impact']
-    ser = data.groupby('taskno').ctimes.sum().sort_values().tail(1)
-    [[taskno, maxtime]] = ser.to_dict().items()
-    data = data[data.taskno == taskno]
-    print('Sources in the slowest task (%d seconds, weight=%d, taskno=%d)'
-          % (maxtime, data['weight'].sum(), taskno))
-    data['slow_rate'] = data.ctimes / data.weight
-    del data['taskno']
-    df = data.sort_values('ctimes', ascending=False)
-    return df[slice(None, None, step)]
 
 
 @view.add('slow_sources')
@@ -804,13 +783,21 @@ def view_task_hazard(token, dstore):
     rec = data[int(index)]
     taskno = rec['task_no']
     if len(dstore['source_data/src_id']):
-        sdata = dstore.read_df('source_data', 'taskno').loc[taskno]
-        num_ruptures = sdata.nrupts.sum()
-        eff_sites = sdata.nsites.sum()
-        msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-               'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
-                     taskno, len(sdata), num_ruptures, eff_sites,
-                     rec['weight'], rec['duration'])
+        sdata = dstore.read_df('source_data')
+        sd = sdata[sdata.taskno == taskno]
+        acc = AccumDict(accum=numpy.zeros(5))
+        for src_id, nsites, esites, nrupts, weight, ctimes in zip(
+                sd.src_id, sd.nsites, sd.esites, sd.nrupts, sd.weight, sd.ctimes):
+            acc[basename(src_id, ';:.')] += numpy.array(
+                [nsites, esites, nrupts, weight, ctimes])
+        df = pandas.DataFrame(dict(src_id=list(acc)))
+        for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
+            df[name] = [arr[i] for arr in acc.values()]
+        df = df.sort_values('ctimes').set_index('src_id')
+        time = df.ctimes.sum()
+        weight = df.weight.sum()
+        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df
+        return msg
     else:
         msg = ''
     return msg
@@ -898,8 +885,7 @@ def view_global_gmfs(token, dstore):
     Display GMFs on the first IMT averaged on everything for debugging purposes
     """
     imtls = dstore['oqparam'].imtls
-    row = [dstore[f'gmf_data/gmv_{m}'][:].mean(axis=0)
-           for m in range(len(imtls))]
+    row = [dstore[f'gmf_data/{imt}'][:].mean(axis=0) for imt in imtls]
     return text_table([row], header=imtls)
 
 
@@ -945,16 +931,15 @@ class GmpeExtractor(object):
 @view.add('extreme_gmvs')
 def view_extreme_gmvs(token, dstore):
     """
-    Display table of extreme GMVs with fields (eid, gmv_0, sid, rlz. rup)
+    Display table of extreme GMVs with fields (eid, imt, sid, rlz. rup)
     """
     if ':' in token:
         maxgmv = float(token.split(':')[1])
     else:
         maxgmv = 5  # PGA=5g is default value defining extreme GMVs
     imt0 = list(dstore['oqparam'].imtls)[0]
-
     eids = dstore['gmf_data/eid'][:]
-    gmvs = dstore['gmf_data/gmv_0'][:]
+    gmvs = dstore[f'gmf_data/{imt0}'][:]
     sids = dstore['gmf_data/sid'][:]
     msg = ''
     err = binning_error(gmvs, eids)
@@ -965,8 +950,8 @@ def view_extreme_gmvs(token, dstore):
         rups = dstore['ruptures'][:]
         rupdict = dict(zip(rups['id'], rups))
         gmpe = GmpeExtractor(dstore)
-        df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
-        extreme_df = df[df.gmv_0 > maxgmv].rename(columns={'gmv_0': imt0})
+        df = pandas.DataFrame({'imt': gmvs, 'sid': sids}, eids)
+        extreme_df = df[df.imt > maxgmv].rename(columns={'imt': imt0})
         if len(extreme_df) == 0:
             return 'No PGAs over %s g found' % maxgmv
         ev = dstore['events'][()][extreme_df.index]
@@ -1078,8 +1063,8 @@ def view_gmvs_to_hazard(token, dstore):
     num_ses = oq.ses_per_logic_tree_path
     data = dstore.read_df('gmf_data', 'sid').loc[sid]
     tbl = []
-    for imti, (imt, imls) in enumerate(oq.imtls.items()):
-        gmv = data['gmv_%d' % imti].to_numpy()
+    for imt, imls in oq.imtls.items():
+        gmv = data[imt].to_numpy()
         for iml in imls:
             # same algorithm as in _gmvs_to_haz_curve
             exceeding = numpy.sum(gmv >= iml)
@@ -1211,8 +1196,7 @@ def view_calc_risk(token, dstore):
     gmf_df = gmf_df[gmf_df.eid == int(event_id)]
     ws = dstore['weights']
     rlz_id = dstore['events']['rlz_id']
-    aggids, _ = assetcol.build_aggids(
-        oq.aggregate_by, oq.max_aggregations)
+    aggids, _ = assetcol.build_aggids(oq.aggregate_by)
     agg_keys = numpy.concatenate(
         [dstore['agg_keys'][:], numpy.array([b'total'])])
     ARK = (oq.A, len(ws), oq.K)
@@ -1452,7 +1436,7 @@ def view_rlz(token, dstore):
     tbl = []
     for bset, brid in zip(smlt.branchsets, rlz.sm_lt_path):
         tbl.append((bset.uncertainty_type, smlt.branches[brid].value))
-    for trt, value in zip(sorted(gslt.bsetdict), rlz.gsim_rlz.value):
+    for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
     return numpy.array(tbl, dt('uncertainty_type uvalue'))
 
@@ -1524,7 +1508,7 @@ def view_agg_id(token, dstore):
     Show the available aggregations
     """
     [aggby] = dstore['oqparam'].aggregate_by
-    keys = [key.decode('utf8').split(',') for key in dstore['agg_keys'][:]]
+    keys = [key.decode('utf8').split('\t') for key in dstore['agg_keys'][:]]
     keys = numpy.array(keys)  # shape (N, A)
     dic = {aggkey: keys[:, a] for a, aggkey in enumerate(aggby)}
     df = pandas.DataFrame(dic)
@@ -1539,6 +1523,7 @@ def view_mean_perils(token, dstore):
     """
     oq = dstore['oqparam']
     pdcols = dstore.get_attr('gmf_data', '__pdcolumns__').split()
+    # FIXME
     perils = [col for col in pdcols[2:] if not col.startswith('gmv_')]
     N = len(dstore['sitecol/sids'])
     sid = dstore['gmf_data/sid'][:]
@@ -1606,14 +1591,23 @@ def view_event_based_mfd(token, dstore):
 def view_relevant_sources(token, dstore):
     """
     Returns a table with the sources contributing more than 10%
-    of the highest source.
+    of the highest source. Requires disagg_by_src and a single site.
     """
+    oq = dstore['oqparam']
+    assert oq.disagg_by_src
     imt = token.split(':')[1]
-    kw = dstore['oqparam'].postproc_args
-    [iml] = kw['imls_by_sid']['0']
-    aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
-    rates = aw.array['rate']  # for each source in decreasing order
-    return aw.array[rates > .1 * rates[0]]
+    if 'imls_by_sid' in oq.postproc_args:
+        [iml] = oq.postproc_args['imls_by_sid']['0']
+        aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
+        rates = aw.array['rate']  # for each source in decreasing order
+        return aw.array[rates > .1 * rates[0]]
+    else:
+        m = list(oq.imtls).index(imt)
+        assert list(oq.hazard_stats())[0] == 'mean', oq.hazard_stats()
+        iml = dstore['hmaps-stats'][0, 0, m, 0]  # the first site and poe
+        aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
+        rates = aw.array['rate']  # for each source in decreasing order
+        return aw.array[rates > .1 * rates[0]]
 
 
 def asce_fix(asce, siteid):
@@ -1771,6 +1765,8 @@ def view_aggrisk(token, dstore):
         arr[AVG][lt] += loss * rlz.weight[-1]
     arr[AVG]['gsim'] = 'Average'
     arr[AVG]['weight'] = 1
+    if len(arr) == 2:  # only one gsim, equal to the average
+        arr = numpy.delete(arr, 1, axis=0)
     return arr
 
 

@@ -51,3 +51,4 @@
 | case_77 | Tests Modifiable GMPE with Tabular GMM                                                                 |
 | case_82 | tests two mps, only one with reqv that should collapse points
 | case_83 | Tests non-ergodic path effect modifications for Zhao et al. 2016 GMM                                          |
+| case_87 | Tests execution of NGAEastUSGSGMPE with Chapman and Guo (2021) coastal plains site amp model    

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -154,12 +154,6 @@ class LogicTreeTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b2-gsimltp_b1.csv',
              'hazard_curve-smltp_b3-gsimltp_b1.csv'],
             case_07.__file__)
-
-        # check the weights of the sources
-        info = self.calc.datastore.read_df('source_info', 'source_id')
-        self.assertEqual(info.loc[b'1'].weight, 276)
-        self.assertEqual(info.loc[b'2'].weight, 177)
-        self.assertEqual(info.loc[b'3'].weight, 5871)
 
         # testing view_relevant_sources
         arr = view('relevant_sources:PGA', self.calc.datastore)

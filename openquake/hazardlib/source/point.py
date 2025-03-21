@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,7 +20,6 @@ import math
 import copy
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
-from openquake.baselib.performance import Monitor
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
@@ -86,33 +85,35 @@ def calc_average(pointsources):
         a dict with average strike, dip, rake, lon, lat, dep,
         upper_seismogenic_depth, lower_seismogenic_depth
     """
-    acc = dict(lon=[], lat=[], dep=[], strike=[], dip=[], rake=[],
+    node_w, dep_w, rate_w = [], [], []
+    acc = dict(lon=[], lat=[], strike=[], dip=[], rake=[], dep=[],
                upper_seismogenic_depth=[], lower_seismogenic_depth=[],
                rupture_aspect_ratio=[])
-    rates = []
     trt = pointsources[0].tectonic_region_type
     for src in pointsources:
         assert src.tectonic_region_type == trt
-        rates.append(sum(r for m, r in src.get_annual_occurrence_rates()))
         ws, ds = zip(*src.nodal_plane_distribution.data)
-        strike = numpy.average([np.strike for np in ds], weights=ws)
-        dip = numpy.average([np.dip for np in ds], weights=ws)
-        rake = numpy.average([np.rake for np in ds], weights=ws)
+        acc['strike'].extend([np.strike for np in ds])
+        acc['dip'].extend([np.dip for np in ds])
+        acc['rake'].extend([np.rake for np in ds])
+        node_w.extend(ws)
         ws, deps = zip(*src.hypocenter_distribution.data)
-        dep = numpy.average(deps, weights=ws)
+        acc['dep'].extend(deps)
+        dep_w.extend(ws)
         acc['lon'].append(src.location.x)
         acc['lat'].append(src.location.y)
-        acc['dep'].append(dep)
-        acc['strike'].append(strike)
-        acc['dip'].append(dip)
-        acc['rake'].append(rake)
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
-    dic = {key: numpy.average(acc[key], weights=rates) for key in acc}
-    dic['lon'] = numpy.round(dic['lon'], 6)
-    dic['lat'] = numpy.round(dic['lat'], 6)
-    return dic
+        rate_w.append(sum(r for m, r in src.get_annual_occurrence_rates()))
+    for key in acc:
+        if key in ('dip', 'strike', 'rake'):
+            acc[key] = numpy.average(acc[key], weights=node_w)
+        elif key == 'dep':
+            acc[key] = numpy.average(acc[key], weights=dep_w)
+        else:
+            acc[key] = numpy.average(acc[key], weights=rate_w)
+    return acc
 
 
 class PointSource(ParametricSeismicSource):
@@ -300,9 +301,9 @@ class PointSource(ParametricSeismicSource):
             magd_ = list(enumerate(magd))
             npd_ = list(enumerate(npd))
             hdd_ = list(enumerate(hdd))
-            for m, (mrate, mag) in magd_[::step]:
-                for n, (nrate, np) in npd_[::step]:
-                    for d, (drate, cdep) in hdd_[::step]:
+            for m, (mrate, mag) in magd_[-1:]:
+                for n, (nrate, np) in npd_:
+                    for d, (drate, cdep) in hdd_:
                         rate = mrate * nrate * drate
                         yield PointRupture(
                             mag, self.tectonic_region_type,
@@ -478,7 +479,7 @@ class CollapsedPointSource(PointSource):
         :returns: an iterator over the underlying ruptures
         """
         step = kwargs.get('step', 1)
-        for src in self.pointsources[::step]:
+        for src in self.pointsources[::-step]:
             yield from src.iter_ruptures(**kwargs)
 
     # CollapsedPointSource
@@ -498,7 +499,7 @@ class CollapsedPointSource(PointSource):
                    for src in pdata_to_psources(self.pdata))
 
 
-def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
+def grid_point_sources(sources, ps_grid_spacing):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
@@ -511,11 +512,11 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     for src in sources[1:]:
         assert src.grp_id == grp_id, (src.grp_id, grp_id)
     if not ps_grid_spacing:
-        return {grp_id: sources}
+        return sources
     out = [src for src in sources if not hasattr(src, 'location')]
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse
-        return {grp_id: out + list(ps)}
+        return out + list(ps)
     coords = numpy.zeros((len(ps), 3))
     for p, psource in enumerate(ps):
         coords[p, 0] = psource.location.x
@@ -524,24 +525,23 @@ def grid_point_sources(sources, ps_grid_spacing, monitor=Monitor()):
     if (len(numpy.unique(coords[:, 0])) == 1 or
             len(numpy.unique(coords[:, 1])) == 1):
         # degenerated rectangle, there is no grid, do not collapse
-        return {grp_id: out + list(ps)}
+        return out + list(ps)
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
-    task_no = getattr(monitor, 'task_no', 0)
     cnt = 0
     for idxs in grid.values():
         if len(idxs) > 1:
             cnt += 1
-            name = 'cps-%03d-%04d' % (task_no, cnt)
-            cps = CollapsedPointSource(name, ps[idxs])
+            name = 'cps-%03d-%04d' % (grp_id, cnt)
+            cps = CollapsedPointSource(name, ps[idxs])  # slow part
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
             cps.ps_grid_spacing = ps_grid_spacing
             out.append(cps)
         else:  # there is a single source
             out.append(ps[idxs[0]])
-    return {grp_id: out}
+    return out
 
 
 def get_rup_maxlen(src):

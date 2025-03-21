@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -56,8 +56,8 @@ from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
+from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import (
     spherical_to_cartesian, geohash3, get_dist)
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_rupture
@@ -179,6 +179,9 @@ def _normalize(key, fnames, base_path):
                 name = 'exposure.xml'
             elif key == 'source_model_logic_tree_file':
                 name = 'ssmLT.xml'
+            elif key == 'mmi_file':
+                filenames.append(os.path.join(base_path, val))
+                continue
             else:
                 raise KeyError('Unknown key %s' % key)
             val = unzip_rename(zpath, name)
@@ -205,7 +208,7 @@ def update(params, items, base_path):
     for key, value in items:
         if key in ('hazard_curves_csv', 'hazard_curves_file',
                    'gmfs_csv', 'gmfs_file',
-                   'site_model_csv', 'site_model_file',
+                   'site_model_csv', 'site_model_file', 'source_model_file',
                    'exposure_csv', 'exposure_file'):
             input_type, fnames = _normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
@@ -344,6 +347,7 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
+
     re = os.environ.get('OQ_REDUCE')  # debugging facility
     if is_fraction(re):
         # reduce the imtls to the first imt
@@ -392,7 +396,7 @@ def get_mesh_exp(oqparam, h5=None):
         a pair (mesh, exposure) both of which can be None
     """
     exposure = get_exposure(oqparam, h5)
-    if oqparam.aristotle:
+    if oqparam.impact:
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
         return mesh, exposure
@@ -538,8 +542,9 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
         try:
             z[name] = sm[name]
         except ValueError:  # missing, use the global parameter
-            # exercised in the test classical/case_28_bis
-            z[name] = check_site_param(oqparam, name)
+            if name != 'backarc':  # backarc has default zero
+                # exercised in the test classical/case_28_bis
+                z[name] = check_site_param(oqparam, name)
     arrays.append(z)
 
 
@@ -571,7 +576,7 @@ def get_site_model(oqparam, h5=None):
     if h5 and 'site_model' in h5:
         return h5['site_model'][:]
 
-    if oqparam.aristotle:
+    if oqparam.impact:
         # read the site model close to the rupture
         rup = get_rupture(oqparam)
         dist = oqparam.maximum_distance('*')(rup.mag)
@@ -661,6 +666,13 @@ def debug_site(oqparam, haz_sitecol):
         oqparam.concurrent_tasks = 0
 
 
+def _vs30(dic):
+    # dic is a dictionary key -> pathnames
+    if 'site_model' in dic:
+        files = hdf5.sniff(dic['site_model'])
+        return any('vs30' in csv.fields for csv in files)
+
+
 def get_site_collection(oqparam, h5=None):
     """
     Returns a SiteCollection instance by looking at the points and the
@@ -669,15 +681,17 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
+    if h5 and 'sitecol' in h5:
+        return h5['sitecol']
     if oqparam.ruptures_hdf5:
         with hdf5.File(oqparam.ruptures_hdf5) as r:
             rup_sitecol = r['sitecol']
-    elif h5 and 'sitecol' in h5:
-        return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
-        raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
-                          % oqparam.inputs['job_ini'])
+        if oqparam.calculation_mode != 'preclassical':
+            raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
+                              % oqparam.inputs['job_ini'])
+        return None
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
         return None
@@ -687,7 +701,7 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if oqparam.ruptures_hdf5:
+        if oqparam.ruptures_hdf5 and not _vs30(oqparam.inputs):
             assoc_dist = (oqparam.region_grid_spacing * 1.414
                           if oqparam.region_grid_spacing else 10)
             # 10 km is around the grid spacing used in the mosaic
@@ -700,7 +714,7 @@ def get_site_collection(oqparam, h5=None):
             return _get_sitecol(sitecol, exp, oqparam, h5)
         elif h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
-        elif oqparam.aristotle and (
+        elif oqparam.impact and (
                     not oqparam.infrastructure_connectivity_analysis):
             # filter the far away sites
             rup = get_rupture(oqparam)
@@ -787,7 +801,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
         tectonic region types.
     """
     if 'gsim_logic_tree' not in oqparam.inputs:
-        return logictree.GsimLogicTree.from_(oqparam.gsim)
+        return logictree.GsimLogicTree.from_(
+            oqparam.gsim, oqparam.inputs['job_ini'])
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
@@ -837,13 +852,11 @@ def get_rupture(oqparam):
     elif rupture_model and rupture_model.endswith('.json'):
         with open(rupture_model) as f:
             rup_data = json.load(f)
-        rup = convert_to_oq_rupture(rup_data)
+        rup, err_msg = convert_to_oq_rupture(rup_data)
+        if err_msg:
+            logging.warning(err_msg)
     if rup is None:  # assume rupture_dict
-        r = oqparam.rupture_dict
-        hypo = Point(r['lon'], r['lat'], r['dep'])
-        rup = source.rupture.build_planar(
-            hypo, r['mag'], r.get('rake'),
-            r.get('strike', 0), r.get('dip', 90), r.get('trt', '*'))
+        rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
 
 
@@ -979,7 +992,10 @@ def get_composite_source_model(oqparam, dstore=None):
     :param dstore:
          an open datastore where to save the source info
     """
-    logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
+    if 'source_model_logic_tree' in oqparam.inputs:
+        logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
+    elif 'source_model' in oqparam.inputs:
+        logging.info('Reading %s', oqparam.inputs['source_model'])
     h5 = dstore.hdf5 if dstore else None
     with Monitor('building full_lt', measuremem=True, h5=h5):
         full_lt = get_full_lt(oqparam)  # builds the weights
@@ -1012,7 +1028,8 @@ def _cons_coeffs(df, perils, loss_dt, limit_states):
             if len(the_df) == 1:
                 coeffs[peril][loss_type] = the_df[limit_states].to_numpy()[0]
             elif len(the_df) > 1:
-                raise ValueError(f'Multiple consequences for {loss_type=}, {peril=}\n%s' % the_df)
+                raise ValueError(
+                    f'Multiple consequences for {loss_type=}, {peril=}\n%s' % the_df)
     return coeffs
 
 
@@ -1023,7 +1040,7 @@ def get_crmodel(oqparam):
    :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.aristotle:
+    if oqparam.impact:
         with hdf5.File(oqparam.inputs['exposure'][0], 'r') as exp:
             try:
                 crm = riskmodels.CompositeRiskModel.read(exp, oqparam)
@@ -1051,10 +1068,11 @@ def get_crmodel(oqparam):
             # i.e. files collapsed.csv, fatalities.csv, ... with headers like
             # taxonomy,consequence,slight,moderate,extensive
             df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
+            # NB: consequence files depend on loss_type, unlike fragility files
             if 'loss_type' not in df.columns:
                 df['loss_type'] = 'structural'
             if 'peril' not in df.columns:
-                df['peril'] = 'earthquake'
+                df['peril'] = 'groundshaking'
             for consequence, group in df.groupby('consequence'):
                 if consequence not in scientific.KNOWN_CONSEQUENCES:
                     raise InvalidFile('Unknown consequence %s in %s' %
@@ -1084,7 +1102,7 @@ def get_exposure(oqparam, h5=None):
         return
     fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
-        if oqparam.aristotle:
+        if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = asset.Exposure.read_around(fnames[0], gh3)
@@ -1167,8 +1185,8 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
-    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
-                 duplicates_strategy=duplicates_strategy)
+    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE',
+                 'STATION_ID', duplicates_strategy=duplicates_strategy)
     lons = df['LONGITUDE'].to_numpy()
     lats = df['LATITUDE'].to_numpy()
     nsites = len(sitecol.complete)
@@ -1204,11 +1222,11 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     return station_data, imts
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
+def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     """
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
-    :param exp_types: the expected loss types
+    :param inp_types: the input loss types
     :returns: (site collection, asset collection, discarded, exposure)
     """
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
@@ -1249,7 +1267,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
 
     # check on missing fields in the exposure
     if 'risk' in oqparam.calculation_mode:
-        for exp_type in exp_types:
+        for exp_type in inp_types:
             if not any(exp_type in name
                        for name in assetcol.array.dtype.names):
                 raise InvalidFile('The exposure %s is missing %s' %
@@ -1274,7 +1292,7 @@ def levels_from(header):
     return levels
 
 
-def aristotle_tmap(oqparam, taxidx):
+def impact_tmap(oqparam, taxidx):
     """
     :returns: a taxonomy mapping dframe
     """
@@ -1283,10 +1301,11 @@ def aristotle_tmap(oqparam, taxidx):
         for key in exp['tmap']:
             # tmap has fields conversion, taxonomy, weight
             df = exp.read_df('tmap/' + key)
-            for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
+            for taxo, risk_id, weight in zip(
+                    df.taxonomy, df.conversion, df.weight):
                 if taxo in taxidx:
                     acc['country'].append(key)
-                    acc['peril'].append('earthquake')
+                    acc['peril'].append('groundshaking')
                     acc['taxi'].append(taxidx[taxo])
                     acc['risk_id'].append(risk_id)
                     acc['weight'].append(weight)
@@ -1300,8 +1319,8 @@ def taxonomy_mapping(oqparam, taxidx):
     :param taxidx: dictionary taxo:str -> taxi:int
     :returns: a dictionary loss_type -> [[(riskid, weight), ...], ...]
     """
-    if oqparam.aristotle:
-        return aristotle_tmap(oqparam, taxidx)
+    if oqparam.impact:
+        return impact_tmap(oqparam, taxidx)
     elif 'taxonomy_mapping' not in oqparam.inputs:  # trivial mapping
         nt = len(taxidx)  # number of taxonomies
         df = pandas.DataFrame(dict(weight=numpy.ones(nt),
@@ -1328,7 +1347,8 @@ def _taxonomy_mapping(filename, taxidx):
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
-    assert set(tmap_df) == {'country', 'peril', 'taxonomy', 'risk_id', 'weight'}, set(tmap_df)
+    assert set(tmap_df) == {'country', 'peril', 'taxonomy',
+                            'risk_id', 'weight'}, set(tmap_df)
     taxos = set()
     for (taxo, per), df in tmap_df.groupby(['taxonomy', 'peril']):
         taxos.add(taxo)
@@ -1571,7 +1591,7 @@ def get_input_files(oqparam):
     fnames = set()  # files entering in the checksum
     uri = oqparam.shakemap_uri
     if isinstance(uri, dict) and uri:
-        # local files
+        # local files, like .npy arrays
         for key, val in uri.items():
             if key == 'fname' or key.endswith('_url'):
                 val = val.replace('file://', '')
@@ -1579,6 +1599,7 @@ def get_input_files(oqparam):
                 if os.path.exists(fname):
                     uri[key] = fname
                     fnames.add(fname)
+
         # additional separate shapefiles
         if uri['kind'] == 'shapefile' and not uri['fname'].endswith('.zip'):
             fnames.update(get_shapefiles(os.path.dirname(fname)))
@@ -1714,14 +1735,15 @@ def read_mosaic_df(buffer):
         return read_geometries(fname, 'name', buffer)
     '''
     fname = os.path.join(os.path.dirname(mosaic.__file__),
-                         'ModelBoundaries.shp')
-    return read_geometries(fname, 'code', buffer)
+                         'mosaic.geojson')
+    return read_geometries(fname, 'name', buffer)
 
 
 def read_countries_df(buffer=0.1):
     """
     :returns: a DataFrame of geometries for the world countries
     """
+    logging.info('Reading geoBoundariesCGAZ_ADM0.sh')  # slow
     fname = os.path.join(os.path.dirname(global_risk.__file__),
                          'geoBoundariesCGAZ_ADM0.shp')
     return read_geometries(fname, 'shapeGroup', buffer)

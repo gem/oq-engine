@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,13 +19,14 @@ import operator
 import itertools
 import logging
 import time
-import csv
 import os
 
 import numpy
 import pandas
+import fiona
+from shapely import geometry, prepare, contains_xy
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5, general, config
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
@@ -44,6 +45,18 @@ OCC_FIELDS = ('day', 'night', 'transit')
 ANR_FIELDS = {'area', 'number', 'residents'}
 VAL_FIELDS = {'structural', 'nonstructural', 'contents',
               'business_interruption'}
+
+
+def to_mmi(value):
+    """
+    :param value: float in the range 1..10
+    :returns: an MMI value in the range 1..10
+    """
+    if value >= 10.5:
+        raise ValueError(f'{value} is too large to be an MMI')
+    elif value < 0.5:
+        raise ValueError(f'{value} is too small to be an MMI')
+    return round(value) - 1
 
 
 def add_dupl_fields(df, oqfields):
@@ -220,7 +233,7 @@ class TagCollection(object):
                        for tagidx, tagname in zip(tagidxs, tagnames))
         return values
 
-    def get_aggkey(self, alltagnames, max_aggregations):
+    def get_aggkey(self, alltagnames):
         """
         :param alltagnames: array of (Ag, T) tag names
         :returns: a dictionary tuple of indices -> tagvalues
@@ -228,6 +241,7 @@ class TagCollection(object):
         aggkey = {}
         if not alltagnames:
             return aggkey
+        max_aggs = int(config.memory.max_aggregations)
         for ag, tagnames in enumerate(alltagnames):
             alltags = [getattr(self, tagname) for tagname in tagnames]
             ranges = [range(1, len(tags)) for tags in alltags]
@@ -237,11 +251,11 @@ class TagCollection(object):
             if len(aggkey) >= TWO16:
                 logging.warning('Performing {:_d} aggregations!'.
                                 format(len(aggkey)))
-            if len(aggkey) >= max_aggregations:
+            if len(aggkey) >= max_aggs:
                 # forbid too many aggregations
                 raise ValueError(
                     'Too many aggregation tags: %d >= max_aggregations=%d' %
-                    (len(aggkey), max_aggregations))
+                    (len(aggkey), max_aggs))
         return aggkey
 
     def gen_tags(self, tagname):
@@ -336,6 +350,14 @@ class AssetCollection(object):
             self.tagcol.add_tagname('site_id')
             self.tagcol.site_id.extend(range(self.tot_sites))
 
+    def get_taxidx(self):
+        """
+        :returns: dictionary taxonomy string -> taxonomy index starting from 1
+        """
+        taxonomies = self.tagcol.taxonomy[1:]
+        return {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
+                if taxi in numpy.unique(self['taxonomy'])}
+
     @property
     def tagnames(self):
         """
@@ -423,22 +445,29 @@ class AssetCollection(object):
         """
         return [f for f in self.array.dtype.names if f.startswith('value-')]
 
-    def get_agg_values(self, aggregate_by, max_aggregations):
+    def get_agg_values(self, aggregate_by, geometry=None):
         """
         :param aggregate_by:
-            a list of Ag lists of tag names
+            a list of lists of tag names (i.e. [['NAME_1']])
+        :param geometry:
+            if given, restrict the assets to the ones inside it
         :returns:
             a structured array of length K+1 with the value fields
         """
         allnames = tagset(aggregate_by)
         aggkey = {key: k for k, key in enumerate(
-            self.tagcol.get_aggkey(aggregate_by, max_aggregations))}
+            self.tagcol.get_aggkey(aggregate_by))}
         K = len(aggkey)
-        dic = {tagname: self[tagname] for tagname in allnames}
+        if geometry:
+            array = self.array[contains_xy(geometry, self['lon'], self['lat'])]
+        else:
+            array = self.array
+        
+        dic = {tagname: array[tagname] for tagname in allnames}
         for field in self.fields:
-            dic[field] = self['value-' + field]
+            dic[field] = array['value-' + field]
         for field in self.occfields:
-            dic[field] = self[field]
+            dic[field] = array[field]
         vfields = self.fields + self.occfields
         value_dt = [(f, F32) for f in vfields]
         agg_values = numpy.zeros(K+1, value_dt)
@@ -457,12 +486,61 @@ class AssetCollection(object):
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
 
-    def build_aggids(self, aggregate_by, max_aggregations):
+    def get_mmi_values(self, aggregate_by, mmi_file):
+        """
+        :param aggregate_by:
+            a list of lists of tag names (i.e. [['NAME_1']])
+        :param mmi_file:
+            shapefile containing MMI geometries and values
+        :returns:
+            a DataFrame with columns number, structural, ..., mmi
+        """
+        out = {}
+        with fiona.open(f'zip://{mmi_file}!mi.shp') as f:
+            for feat in f:
+                geom = geometry.shape(feat.geometry)
+                prepare(geom)  # MANDATORY: gives an incredible speedup!
+                mmi = to_mmi(feat.properties['PARAMVALUE'])
+                values = self.get_agg_values(aggregate_by, geom)
+                if values['number'].any():
+                    if mmi not in out:
+                        out[mmi] = values[:-1]  # discard total
+                    else:
+                        for lt in values.dtype.names:
+                            out[mmi][lt] += values[lt][:-1]
+        _aggids, aggtags = self.build_aggids(aggregate_by)
+        aggtags = numpy.array(aggtags)  # shape (K+1, T)
+        dfs = []
+        for mmi in out:
+            dic = {key: aggtags[:, k] for k, key in enumerate(aggregate_by[0])}
+            dic.update({col: out[mmi][col] for col in out[mmi].dtype.names})
+            df = pandas.DataFrame(dic)
+            df['mmi'] = mmi
+            dfs.append(df)
+        if not dfs:
+            return ()
+        df = pandas.concat(dfs)
+        return df[df.number > 0]
+
+    # not used yet
+    def agg_by_site(self):
+        """
+        :returns: an array of aggregated values indexed by site ID
+        """
+        N = self['site_id'].max() + 1
+        vfields = self.fields + self.occfields
+        agg_values = numpy.zeros(N, [(f, F32) for f in vfields])
+        for vf in vfields:
+            arr = self['value-' + vf if vf in self.fields else vf]
+            agg_values[vf] = general.fast_agg(self['site_id'], arr)
+        return agg_values
+
+    def build_aggids(self, aggregate_by):
         """
         :param aggregate_by: list of Ag lists of strings
         :returns: (array of (Ag, A) integers, list of K strings)
         """
-        aggkey = self.tagcol.get_aggkey(aggregate_by, max_aggregations)
+        aggkey = self.tagcol.get_aggkey(aggregate_by)
         aggids = numpy.zeros((len(aggregate_by), len(self)), U32)
         key2i = {key: i for i, key in enumerate(aggkey)}
         for ag, aggby in enumerate(aggregate_by):
@@ -658,6 +736,7 @@ def _get_exposure(fname, stop=None):
         exp.datafiles = [os.path.join(dirname, f) for f in assets_text.split()]
     else:
         exp.datafiles = []
+    exp.fname = fname
     return exp, xml.assets
 
 
@@ -836,8 +915,8 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     return exposure, assets_df
 
 
-# used in aristotle calculations
-def aristotle_read_assets(h5, start, stop):
+# used in impact calculations
+def impact_read_assets(h5, start, stop):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
@@ -920,7 +999,7 @@ class Exposure(object):
                 raise SiteAssociationError(
                     'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
-                aristotle_read_assets(f, start, stop)
+                impact_read_assets(f, start, stop)
                 for gh3, start, stop in slices)
             tagcol = f['tagcol']
             # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
@@ -1075,31 +1154,26 @@ class Exposure(object):
             oqfields[csvfield].add(oqfield)
         other_fields = get_other_fields(self.fieldmap)
         for fname in self.datafiles:
-            with open(fname, encoding='utf-8-sig', errors=errors) as f:
-                try:
-                    fields = next(csv.reader(f))
-                except UnicodeDecodeError:
-                    msg = ("%s is not encoded as UTF-8\ntry oq shell "
-                           "and then o.fix_latin1('%s')\nor set "
-                           "ignore_encoding_errors=true" % (fname, fname))
-                    raise RuntimeError(msg)
-                for inp in other_fields:
-                    if inp not in fields:
-                        raise InvalidFile('%s: missing field %s, declared in '
-                                          'the XML file' % (fname, inp))
-                header = set()
-                for f in fields:
-                    header.update(oqfields.get(f, [f]))
-                for field in fields:
-                    if field not in strfields:
-                        floatfields.add(field)
-                missing = expected_header - header - {'exposure'}
-                if len(header) < len(fields):
-                    raise InvalidFile(
-                        '%s: expected %d fields in %s, got %d' %
-                        (fname, len(fields), header, len(header)))
-                elif missing:
-                    raise InvalidFile('%s: missing %s' % (fname, missing))
+            # read only the header
+            fields = pandas.read_csv(
+                fname, nrows=1, encoding='utf-8-sig').columns
+            for inp in other_fields:
+                if inp not in fields:
+                    raise InvalidFile('%s: missing field %s, declared in '
+                                      'the XML file' % (fname, inp))
+            header = set()
+            for f in fields:
+                header.update(oqfields.get(f, [f]))
+            for field in fields:
+                if field not in strfields:
+                    floatfields.add(field)
+            missing = expected_header - header - {'exposure'}
+            if len(header) < len(fields):
+                raise InvalidFile(
+                    '%s: expected %d fields in %s, got %d' %
+                    (fname, len(fields), header, len(header)))
+            elif missing:
+                raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
                 'residents': float, 'retrofitted': float, 'ideductible': float,
                 'occupants_day': float, 'occupants_night': float,

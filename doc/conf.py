@@ -17,7 +17,7 @@ from openquake import engine
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "OpenQuake Engine"
-copyright = "2023-2024, GEM Foundation"
+copyright = "2023-2025, GEM Foundation"
 author = "GEM Foundation"
 release = "v1.0.0"
 
@@ -121,12 +121,6 @@ html_theme_options = {
             "name": "Linkedin",
             "url": "https://linkedin.com/company/gem-foundation",
             "icon": "fa-brands fa-linkedin",
-            "type": "fontawesome",
-        },
-        {
-            "name": "X/Twitter",
-            "url": "https://x.com/GEMwrld",
-            "icon": "fa-brands fa-square-x-twitter",
             "type": "fontawesome",
         },
         {

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -326,8 +326,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
-                # FIXME: this part can be called up to 3 times, for instance for
-                # EventBasedCalculator,EventBasedRiskCalculator,PostRiskCalculator
+                # FIXME: this part can be called multiple times, for instance for
+                # EventBasedCalculator,EventBasedRiskCalculator
                 self.post_process()
                 self.export(kw.get('exports', ''))
             except Exception as exc:
@@ -602,8 +602,8 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'Please set max_sites_disagg=%d in %s' % (
                     len(self.sitecol), oq.inputs['job_ini']))
-        if ('source_model_logic_tree' in oq.inputs and
-                oq.hazard_calculation_id is None):
+        if ('source_model_logic_tree' in oq.inputs or
+            'source_model' in oq.inputs) and oq.hazard_calculation_id is None:
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)
@@ -655,7 +655,7 @@ class HazardCalculator(BaseCalculator):
                 logging.warning('No sites were affected by %s' % name)
             data[name] = peril
             names.append(name)
-        self.datastore['events'] = numpy.zeros(1, rupture.events_dt)     
+        self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
         create_gmf_data(self.datastore, [], names, data, N)
 
     def pre_execute(self):
@@ -719,8 +719,9 @@ class HazardCalculator(BaseCalculator):
             calc.run(remove=False)
             calc.datastore.close()
             for name in (
-                'csm param sitecol assetcol crmodel realizations max_gb max_weight '
-                'amplifier policy_df treaty_df full_lt exported trt_rlzs gids'
+                'csm param sitecol assetcol crmodel realizations max_gb '
+                'max_weight amplifier policy_df treaty_df full_lt exported '
+                'trt_rlzs gids'
             ).split():
                 if hasattr(calc, name):
                     setattr(self, name, getattr(calc, name))
@@ -728,6 +729,12 @@ class HazardCalculator(BaseCalculator):
             with self.monitor('importing inputs', measuremem=True):
                 self.read_inputs()
                 self.save_crmodel()
+            if oq.impact and 'mmi' in oq.inputs:
+                logging.info('Computing MMI-aggregated values')
+                mmi_df = self.assetcol.get_mmi_values(
+                    oq.aggregate_by, oq.inputs['mmi'])
+                if len(mmi_df):
+                    self.datastore.hdf5.create_df('mmi_tags', mmi_df)
 
     def pre_execute_from_parent(self):
         """
@@ -814,9 +821,10 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
+        inp_types = set(self.crmodel.loss_types) - {'injured', 'affectedpop'}
         self.sitecol, self.assetcol, discarded, exposure = \
             readinput.get_sitecol_assetcol(
-                oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
+                oq, haz_sitecol, inp_types, self.datastore)
 
         # this is overriding the sitecol in test_case_miriam
         self.datastore['sitecol'] = self.sitecol
@@ -824,10 +832,11 @@ class HazardCalculator(BaseCalculator):
             self.datastore['discarded'] = discarded
             if 'scenario' in oq.calculation_mode:
                 # this is normal for the case of scenario from rupture
-                logging.info('%d assets were discarded because too far '
-                             'from the rupture; use `oq show discarded` '
-                             'to show them and `oq plot_assets` to plot '
-                             'them' % len(discarded))
+                if not oq.calculation_mode.startswith('scenario'):
+                    logging.info('%d assets were discarded because too far '
+                                 'from the rupture; use `oq show discarded` '
+                                 'to show them and `oq plot_assets` to plot '
+                                 'them' % len(discarded))
             elif not oq.discard_assets:  # raise an error
                 self.datastore['assetcol'] = self.assetcol
                 raise RuntimeError(
@@ -905,11 +914,6 @@ class HazardCalculator(BaseCalculator):
         Save the risk models in the datastore
         """
         if len(self.crmodel):
-            # NB: the alias dict must be filled after import_gmf
-            alias = {imt: 'gmv_%d' % i for i, imt in enumerate(
-                self.oqparam.get_primary_imtls())}
-            for rm in self.crmodel._riskmodels.values():
-                rm.alias = alias
             logging.info('Storing risk model')
             attrs = self.crmodel.get_attrs()
             self.datastore.create_df('crm', self.crmodel.to_dframe(),
@@ -928,8 +932,8 @@ class HazardCalculator(BaseCalculator):
         self.datastore[fig_path] = Image.open(bio)
 
     def _read_risk1(self):
-        # read the risk model (if any), the exposure (if any) and then the
-        # site collection, possibly extracted from the exposure.
+        # read the risk model (if any) and then the site collection,
+        # possibly extracted from the exposure
         oq = self.oqparam
         self.load_crmodel()  # must be called first
         if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
@@ -968,7 +972,7 @@ class HazardCalculator(BaseCalculator):
                 region = wkt.loads(oq.region)
                 self.sitecol = haz_sitecol.within(region)
             if oq.shakemap_id or 'shakemap' in oq.inputs or oq.shakemap_uri:
-                self.sitecol, self.assetcol = read_shakemap(
+                self.sitecol, self.assetcol = store_gmfs_from_shakemap(
                     self, haz_sitecol, assetcol)
                 self.datastore['sitecol'] = self.sitecol
                 self.datastore['assetcol'] = self.assetcol
@@ -1023,16 +1027,15 @@ class HazardCalculator(BaseCalculator):
             if not hasattr(self, 'assetcol'):
                 oq.raise_invalid('missing exposure')
 
-            taxonomies = self.assetcol.tagcol.taxonomy[1:]
-            taxidx = {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
-                      if taxi in numpy.unique(self.assetcol['taxonomy'])}
+            taxidx = self.assetcol.get_taxidx()
+            # i.e. {'Concrete1': 1, 'Wood1': 2}
             tmap_df = readinput.taxonomy_mapping(oq, taxidx)
-            self.crmodel.set_tmap(tmap_df)
+            self.crmodel.set_tmap(tmap_df, taxidx)
             risk_ids = set(tmap_df.risk_id)
 
             # check that we are covering all the taxonomies in the exposure
             # (exercised in EventBasedRiskTestCase::test_missing_taxonomy)
-            missing = risk_ids - set(self.crmodel.taxonomies)
+            missing = risk_ids - set(self.crmodel.riskids)
             if self.crmodel and missing:
                 # in scenario_damage/case_14 the fragility model contains
                 # 'CR+PC/LDUAL/HBET:8.19/m ' with a trailing space while
@@ -1041,10 +1044,10 @@ class HazardCalculator(BaseCalculator):
                     'The tmap.risk_id %s are not in the CompositeRiskModel' % missing)
             self.crmodel.check_risk_ids(oq.inputs)
 
-            if len(self.crmodel.taxonomies) > len(risk_ids):
+            if len(self.crmodel.riskids) > len(risk_ids):
                 logging.info(
-                    'Reducing risk model from %d to %d taxonomy strings',
-                    len(self.crmodel.taxonomies), len(risk_ids))
+                    'Reducing risk model from %d to %d risk functions',
+                    len(self.crmodel.riskids), len(risk_ids))
                 self.crmodel = self.crmodel.reduce(risk_ids)
                 self.crmodel.tmap_df = tmap_df
 
@@ -1062,7 +1065,7 @@ class HazardCalculator(BaseCalculator):
             oq.observed_imts = self.observed_imts
 
         if hasattr(self, 'sitecol') and self.sitecol and not oq.ruptures_hdf5:
-            if 'site_model' in oq.inputs or oq.aristotle:
+            if 'site_model' in oq.inputs or oq.impact:
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
@@ -1116,8 +1119,7 @@ class HazardCalculator(BaseCalculator):
         # compute exposure stats
         if hasattr(self, 'assetcol'):
             save_agg_values(
-                self.datastore, self.assetcol, oq.loss_types,
-                oq.aggregate_by, oq.max_aggregations)
+                self.datastore, self.assetcol, oq.loss_types, oq.aggregate_by)
 
         if 'post_loss_amplification' in oq.inputs:
             df = pandas.read_csv(oq.inputs['post_loss_amplification']
@@ -1177,6 +1179,12 @@ class HazardCalculator(BaseCalculator):
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)
+
+        # sanity check on the total weight
+        totw = sum(src.weight for src in self.csm.get_sources())
+        saved = sum(row[source_reader.WEIGHT]
+                    for row in self.csm.source_info.values())
+        numpy.testing.assert_allclose(totw, saved, atol=1E-3)
 
     def post_process(self):
         """
@@ -1298,25 +1306,17 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
     names = [n for n in names if n != 'custom_site_id']
-    imts = [name.lstrip('gmv_')
+    # strip prefix `gmv_` from the column name
+    imts = [name[4:] if name.startswith('gmv_') else name
             for name in names if name not in ('sid', 'eid')]
     oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:
         raise ValueError('The calculation needs %s which is missing from %s' %
                          (', '.join(missing), fname))
-    imt2idx = {imt: i for i, imt in enumerate(oqparam.imtls)}
     arr = numpy.zeros(len(array), oqparam.gmf_data_dt())
     for name in names:
-        if name.startswith('gmv_'):
-            try:
-                m = imt2idx[name[4:]]
-            except KeyError:  # the file contains more than enough IMTs
-                pass
-            else:
-                arr[f'gmv_{m}'][:] = array[name]
-        else:
-            arr[name] = array[name]
+        arr[name[4:] if name.startswith('gmv_') else name] = array[name]
 
     if 'sid' not in names:
         # there is a custom_site_id instead
@@ -1380,7 +1380,7 @@ def import_sites_hdf5(dstore, fnames):
     """
     Import site collections by merging them.
 
-    :returns: a list of dictionaries local_sid->global_sid for each sitecol   
+    :returns: a list of dictionaries local_sid->global_sid for each sitecol
     """
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
@@ -1432,12 +1432,12 @@ def import_ruptures_hdf5(h5, fnames):
         'trt_smr_start_stop', data=idx_start_stop(ruptures['trt_smr']))
 
 
-def import_gmfs_hdf5(dstore, oqparam):
+def import_gmfs_hdf5(dstore, oq):
     """
     Import in the datastore a ground motion field HDF5 file.
 
     :param dstore: the datastore
-    :param oqparam: an OqParam instance
+    :param oq: an OqParam instance
     :returns: event_ids
     """
     # NB: once we tried to use ExternalLinks to avoid copying the GMFs,
@@ -1450,22 +1450,38 @@ def import_gmfs_hdf5(dstore, oqparam):
     # even if bloated (also because of SURA issues having the external
     # file under NFS and calc_XXX.hdf5 in the local filesystem)
     if 'oqparam' not in dstore:
-        dstore['oqparam'] = oqparam
-    fnames = oqparam.inputs['gmfs']
+        dstore['oqparam'] = oq
+    fnames = oq.inputs['gmfs']
     size = sum(os.path.getsize(f) for f in fnames)
     logging.warning('Importing %d files, %s',
                     len(fnames), general.humansize(size))
-    attrs = _getset_attrs(oqparam)
+    attrs = _getset_attrs(oq)
     E = sum(attrs['num_events'])
     rups = []
     if len(fnames) == 1:
         with hdf5.File(fnames[0], 'r') as f:
             dstore['sitecol'] = f['sitecol']  # complete by construction
-            f.copy('gmf_data', dstore.hdf5)
+            if 'gmv_0' in f['gmf_data']:  # old format <= v3.23
+                imts = f['gmf_data'].attrs['imts']
+                imtlist = imts.split()
+                grp = dstore.hdf5.create_group('gmf_data')
+                for nam, val in f['gmf_data'].attrs.items():
+                    if nam == '__pdcolumns__':
+                        grp.attrs['__pdcolumns__'] = 'eid sid ' + imts
+                    else:
+                        grp.attrs[nam] = val
+                for col in f['gmf_data']:
+                    if col.startswith('gmv_'):  # before v3.24
+                        name = imtlist[int(col[4:])]
+                    else:
+                        name = col
+                    f.copy(f'gmf_data/{col}', grp, name)
+            else:
+                f.copy('gmf_data', dstore.hdf5)
     else:  # merge the sites and the gmfs, tested in scenario/case_33
         convs = import_sites_hdf5(dstore, fnames)
-        create_gmf_data(dstore, oqparam.get_primary_imtls(), E=E,
-                        R=oqparam.number_of_logic_tree_samples)
+        create_gmf_data(dstore, oq.all_imts(), E=E,
+                        R=oq.number_of_logic_tree_samples)
         num_ev_rup_site = []
         fileno = 0
         nE = 0
@@ -1473,6 +1489,7 @@ def import_gmfs_hdf5(dstore, oqparam):
             logging.warning('Importing %s', fname)
             with hdf5.File(fname, 'r') as f:
                 fileno += 1
+                imtlist = f['gmf_data'].attrs['imts'].split()
                 size = len(f['gmf_data/sid'])
                 logging.info('Reading {:_d} rows from {}'.format(size, fname))
                 sids = numpy.array(list(conv))
@@ -1483,10 +1500,14 @@ def import_gmfs_hdf5(dstore, oqparam):
                         df.loc[df.sid == sid, 'sid'] = idx
                     df['eid'] += nE  # add an offset to the event IDs
                     for col in df.columns:
-                        hdf5.extend(dstore[f'gmf_data/{col}'], df[col])
+                        if col.startswith('gmv_'):  # before v3.24
+                            name = imtlist[int(col[4:])]
+                        else:
+                            name = col
+                        hdf5.extend(dstore[f'gmf_data/{name}'], df[col])
             nE += ne
             num_ev_rup_site.append((nE, len(rups), len(conv)))
-        oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
+        oq.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
     events = numpy.zeros(E, rupture.events_dt)
@@ -1496,7 +1517,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
     logging.info('Storing %d events, %d relevant', E, e)
     dstore['events'] = events
-    n = oqparam.number_of_logic_tree_samples
+    n = oq.number_of_logic_tree_samples
     if n:
         dstore['weights'] = numpy.full(n, 1/n)
     else:
@@ -1517,8 +1538,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R
         assert N is not None  # pass len(complete) here
     items = [('sid', U32 if N == 0 else data['sid']),
              ('eid', U32 if N == 0 else data['eid'])]
-    for m in range(M):
-        col = f'gmv_{m}'
+    for col in map(str, prim_imts):
         items.append((col, F32 if data is None else data[col]))
     for imt in sec_imts:
         items.append((str(imt), F32 if N == 0 else data[imt]))
@@ -1545,23 +1565,23 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R
         dstore['avg_gmf'] = avg_gmf
 
 
-def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
+def save_agg_values(dstore, assetcol, lossnames, aggby):
     """
     Store agg_keys, agg_values.
     :returns: the aggkey dictionary key -> tags
     """
     if aggby:
-        aggids, aggtags = assetcol.build_aggids(aggby, maxagg)
+        aggids, aggtags = assetcol.build_aggids(aggby)
         logging.info('Storing %d aggregation keys', len(aggids))
-        agg_keys = [','.join(tags) for tags in aggtags]
+        agg_keys = ['\t'.join(tags) for tags in aggtags]
         dstore['agg_keys'] = numpy.array(agg_keys, hdf5.vstr)
         if 'assetcol' not in set(dstore):
             dstore['assetcol'] = assetcol
     if assetcol.get_value_fields():
-        dstore['agg_values'] = assetcol.get_agg_values(aggby, maxagg)
+        dstore['agg_values'] = assetcol.get_agg_values(aggby)
 
 
-def store_shakemap(calc, sitecol, shakemap, gmf_dict):
+def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
     """
@@ -1589,12 +1609,14 @@ def store_shakemap(calc, sitecol, shakemap, gmf_dict):
         oq.hazard_imtls = {str(imt): [0] for imt in imts}
         data = numpy.array(lst, oq.gmf_data_dt())
         create_gmf_data(
-            calc.datastore, imts, data=data, N=len(sitecol.complete))
+            calc.datastore, imts, data=data, N=len(sitecol.complete), R=1)
+        calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
+        calc.datastore['weights'] = numpy.ones(1)
 
 
-def read_shakemap(calc, haz_sitecol, assetcol):
+def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     """
-    Enabled only if there is a shakemap_id parameter in the job.ini.
+    Enabled only if there is a shakemap parameter in the job.ini.
     Download, unzip, parse USGS shakemap files and build a corresponding
     set of GMFs which are then filtered with the hazard site collection
     and stored in the datastore.
@@ -1621,6 +1643,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         if len(discarded):
             calc.datastore['discarded'] = discarded
         assetcol.reduce_also(sitecol)
+        calc.datastore['assetcol'] = assetcol
         logging.info('Extracted %d assets', len(assetcol))
 
     # assemble dictionary to decide on the calculation method for the gmfs
@@ -1642,7 +1665,9 @@ def read_shakemap(calc, haz_sitecol, assetcol):
                 % ', '.join(oq.imtls))
     else:
         # no MMI intensities, calculation with or without correlation
-        if oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
+        if oq.impact:
+            gmf_dict = {'kind': 'basic'}  # possibly add correlation
+        elif oq.spatial_correlation != 'no' or oq.cross_correlation != 'no':
             # cross correlation and/or spatial correlation after S&H
             gmf_dict = {'kind': 'Silva&Horspool',
                         'spatialcorr': oq.spatial_correlation,
@@ -1651,7 +1676,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-    store_shakemap(calc, sitecol, shakemap, gmf_dict)
+    store_gmfs(calc, sitecol, shakemap, gmf_dict)
     return sitecol, assetcol
 
 
@@ -1722,12 +1747,12 @@ def expose_outputs(dstore, owner=USER, status='complete'):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    if 'avg_gmf' in dskeys:
-        dskeys.remove('avg_gmf')  # hide
     rlzs = dstore['full_lt'].rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5
+    if 'mmi_tags' in hdf5:
+        dskeys.add('mmi_tags')
     if 'hcurves-stats' in hdf5 or 'hcurves-rlzs' in hdf5:
         if oq.hazard_stats() or oq.individual_rlzs or len(rlzs) == 1:
             dskeys.add('hcurves')

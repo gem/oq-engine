@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2024, GEM Foundation
-# 
+#
+# Copyright (C) 2024-2025, GEM Foundation
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -25,7 +25,7 @@ import h5py
 from openquake.baselib import hdf5, sap, general
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
-from openquake.commonlib.datastore import build_dstore_log
+from openquake.commonlib.datastore import create_job_dstore
 from openquake.risklib.asset import _get_exposure
 
 U16 = numpy.uint16
@@ -38,10 +38,10 @@ OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = (numpy.bytes_, 24)
-for f in (None, 'ID_1'):
+for f in (None, 'ID_1', 'ID_2'):
     CONV[f] = str
-TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'OCCUPANCY': []}
-IGNORE = set('NAME_0 NAME_1 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
+TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [], 'OCCUPANCY': []}
+IGNORE = set('NAME_0 NAME_1 NAME_2 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
              .split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
@@ -49,7 +49,7 @@ FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'OCCUPANTS_PER_ASSET_DAY', 'OCCUPANTS_PER_ASSET_NIGHT',
           'OCCUPANTS_PER_ASSET_TRANSIT', 'TOTAL_AREA_SQM',
           'BUILDINGS', 'COST_STRUCTURAL_USD',
-          'LATITUDE', 'ID_0', 'ID_1'}
+          'LATITUDE', 'ID_0', 'ID_1', 'ID_2'}
 
 
 def add_geohash3(array):
@@ -125,9 +125,10 @@ def gen_tasks(files, sample_assets, monitor):
     """
     for file in files:
         # read CSV in chunks
+        usecols = file.fields | {'ID_2'} if file.admin2 else {}
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
-            usecols=file.fields, skiprows=1, chunksize=1_000_000)
+            usecols=usecols, skiprows=1, chunksize=1_000_000)
         for i, df in enumerate(dfs):
             if sample_assets:
                 df = general.random_filter(df, float(sample_assets))
@@ -135,6 +136,8 @@ def gen_tasks(files, sample_assets, monitor):
                 continue
             if 'ID_1' not in df.columns:  # happens for many islands
                 df['ID_1'] = '???'
+            if 'ID_2' not in df.columns:  # happens for many contries in Africa
+                df['ID_2'] = '???'
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
             array = numpy.zeros(len(df), dt)
             for col in df.columns:
@@ -203,12 +206,12 @@ def main(exposures_xml):
     NB: works only for the exposures of the global risk model, having
     field names like LONGITUDE, LATITUDE, etc
     """
-    dstore, log = build_dstore_log()
+    log, dstore = create_job_dstore()
     with dstore, log:
         store(exposures_xml, dstore)
     return dstore.filename
 
-main.exposure_xml = dict(help='Exposure pathnames', nargs='+')
+main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
 
 
 if __name__ == '__main__':

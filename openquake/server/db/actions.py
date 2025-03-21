@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2023 GEM Foundation
+# Copyright (C) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 import os
 import getpass
 import operator
-from datetime import datetime
+from datetime import datetime, timezone
 
 from openquake.baselib import general
 from openquake.hazardlib import valid
@@ -28,6 +28,7 @@ from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
 from openquake.calculators.export import DISPLAY_NAME
 
+UTC = timezone.utc
 JOB_TYPE = '''CASE
 WHEN calculation_mode LIKE '%risk'
 OR calculation_mode LIKE '%bcr'
@@ -293,7 +294,7 @@ def finish(db, job_id, status):
         a string such as 'successful' or 'failed'
     """
     db('UPDATE job SET ?D WHERE id=?x',
-       dict(is_running=False, status=status, stop_time=datetime.utcnow()),
+       dict(is_running=False, status=status, stop_time=datetime.now(UTC)),
        job_id)
 
 
@@ -529,8 +530,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s '
-              "AND status != 'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
+    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s AND status != '
+              "'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,

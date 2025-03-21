@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,10 +37,15 @@ from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
+from openquake.sep import classes
+
+RENAMED_SEPS = {
+    'NewmarkDisplacement': "Jibson2007BLandslides",
+    'GrantEtAl2016RockSlopeFailure': "Jibson2007ALandslides"}
 
 PRECISION = pmf.PRECISION
 
-SCALEREL = scalerel.get_available_magnitude_scalerel()
+SCALEREL = scalerel._get_available_class(scalerel.BaseMSR)
 
 GSIM = gsim.get_available_gsims()
 
@@ -105,15 +110,14 @@ class FromFile(object):
     Fake GSIM to be used when the GMFs are imported from an
     external file and not computed with a GSIM.
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     DEFINED_FOR_REFERENCE_VELOCITY = None
+    _toml = '[FromFile]'
     kwargs = {}
-
-    def init(self):
-        pass
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         pass
@@ -195,8 +199,11 @@ def modified_gsim(gmpe, **kwargs):
 
     mgs = modified_gsim(gsim, add_between_within_stds={'with_betw_ratio':1.5})
     """
-    text = gmpe._toml.replace('[', '[ModifiableGMPE.gmpe.') + '\n'
-    text += toml.dumps({'ModifiableGMPE': kwargs})
+    name, *args = gmpe._toml.split('\n')
+    text = name.replace('[', '[ModifiableGMPE.gmpe.')
+    for arg in args:
+        text += '\n' + arg
+    text += '\n' + toml.dumps({'ModifiableGMPE': kwargs})
     return gsim(text)
 
 
@@ -1170,6 +1177,14 @@ def positiveints(value):
     return ints
 
 
+def indexes(value):
+    """
+    >>> indexes("1,2,A")
+    ('1', '2', 'A')
+    """
+    return tuple(value.split(','))
+
+
 def tile_spec(value):
     """
     Specify a tile with a string of format "no:nt"
@@ -1249,6 +1264,35 @@ def site_param(dic):
         else:
             new[name] = val
     return new
+
+
+def version(value: str):
+    """
+    >>> version('3.22')
+    (3, 22, 0)
+    >>> version('3.22.0-gitXXX')
+    (3, 22, 0)
+    """
+    vers = [0, 0, 0]
+    for i, number in enumerate(value.split('.')):
+        if 'git' not in number:
+            vers[i] = int(number)
+    return tuple(vers)
+
+
+def secondary_perils(value: str):
+    """
+    >>> secondary_perils("Jibson2007ALandslides, AllstadtEtAl2022Liquefaction")
+    ['Jibson2007ALandslides', 'AllstadtEtAl2022Liquefaction']
+    """
+    clsnames = namelist(value)
+    out = []
+    for name in clsnames:
+        if name in RENAMED_SEPS:
+            raise ValueError(
+                f'{name} has been replaced with {RENAMED_SEPS[name]}')
+        out.append(getattr(classes, name).__name__)
+    return out
 
 
 ###########################################################################
@@ -1494,4 +1538,3 @@ def fragmentno(src):
         return -1
     fragment = fragments[1].split('!')[0]  # strip !b16
     return int(fragment)
-
