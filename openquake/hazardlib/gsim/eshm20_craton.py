@@ -27,23 +27,23 @@ from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
     PHI_SETUP, get_phi_ss, _get_f760, get_nonlinear_stddev,
     get_linear_stddev, _get_fv, get_fnl, COEFFS_LINEAR, COEFFS_NONLINEAR,
-    COEFFS_F760, CONSTANTS)
+    COEFFS_F760)
 from openquake.hazardlib.gsim.nga_east import CONSTANTS as C_NGAE
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
 
-CONSTANTS = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
+CONST = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
 
 
 def get_distance_term(C, mag, rrup):
     """
     Returns the distance attenuation factor
     """
-    rval = np.sqrt(rrup ** 2. + CONSTANTS["h"] ** 2.)
-    rref_val = np.sqrt(CONSTANTS["Rref"] ** 2. +
-                       CONSTANTS["h"] ** 2.)
+    rval = np.sqrt(rrup ** 2. + CONST["h"] ** 2.)
+    rref_val = np.sqrt(CONST["Rref"] ** 2. +
+                       CONST["h"] ** 2.)
 
-    f_r = (C["c1"] + C["c2"] * (mag - CONSTANTS["Mref"])) *\
+    f_r = (C["c1"] + C["c2"] * (mag - CONST["Mref"])) *\
         np.log(rval / rref_val) + (C["c3"] * (rval - rref_val) / 100.)
     return f_r
 
@@ -61,8 +61,8 @@ def get_magnitude_scaling(C, mag):
     """
     Returns the magnitude scaling term
     """
-    d_m = mag - CONSTANTS["Mh"]
-    return np.where(mag <= CONSTANTS["Mh"],
+    d_m = mag - CONST["Mh"]
+    return np.where(mag <= CONST["Mh"],
                     C["e1"] + C["b1"] * d_m + C["b2"] * d_m ** 2.0,
                     C["e1"] + C["b3"] * d_m)
 
