@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Improved the task distribution
   * Exposed the output `avg_gmf`
   * Internal: enhanced `build_global_exposure` to work at admin level 2
   * Do not store the `backarc` parameter when not needed
