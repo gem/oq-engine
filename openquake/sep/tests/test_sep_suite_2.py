@@ -14,6 +14,7 @@ from openquake.sep.landslide.displacement import (
 
 from openquake.sep.landslide.probability import (
     nowicki_jessee_2018,
+    allstadt_etal_2022_b,
 )
 
 from openquake.sep.classes import (
@@ -95,16 +96,16 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
     def test_critical_accel(self):
         ca = np.array(
             [
-                5.53795977,
-                6.45917414,
+                5.537960,
+                6.459174,
                 5.791588,
                 0.0001,
-                14.81513269,
-                5.26990181,
-                4.20417316,
-                135.89284561,
-                6.40149393,
-                6.28627584,
+                14.815133,
+                5.269902,
+                4.204173,
+                135.892846,
+                6.401494,
+                6.286276,
             ]
         )
         np.testing.assert_array_almost_equal(self.sites["crit_accel"], ca)
@@ -143,9 +144,50 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
         )
         cls = np.array(
             [
-                0.0,
+                0.071987,
                 0.172675,
-                0.0,
+                0.189806,
+                20.709538,
+                0.953252,
+                0.946616,
+                6.037904,
+                8.884508,
+                1.104123,
+                0.839227,
+            ]
+        )
+        np.testing.assert_array_almost_equal(prob_ls, zlp)
+        np.testing.assert_array_almost_equal(coverage, cls)
+
+
+    def test_allstadt_etal_2022_b(self):
+        prob_ls, coverage = allstadt_etal_2022_b(
+            pga=self.pga,
+            pgv=self.pgv,
+            slope=self.sites["slope"],
+            lithology=self.sites["lithology"],
+            landcover=self.sites["landcover"],
+            cti=self.sites["cti"],
+        )
+        zlp = np.array(
+            [
+                0.070513,
+                0.260801,
+                0.281926,
+                0.980824,
+                0.603409,
+                0.602239,
+                0.856018,
+                0.897942,
+                0.62758,
+                0.581753,
+            ]
+        )
+        cls = np.array(
+            [
+                0,
+                0.172675,
+                0,
                 20.709538,
                 0.953252,
                 0.946616,

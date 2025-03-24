@@ -1,8 +1,6 @@
 from typing import Union
 import numpy as np
 
-
-
 g: float = 9.81
 
 
@@ -56,7 +54,8 @@ def sigmoid(x):
 
 
 def _landslide_spatial_extent(p: float):
-    """Calculates the landslide spatial extent (LSE) as per formulae 9
+    """
+    Calculates the landslide spatial extent (LSE) as per formulae 9
     from the Reference. LSE after an earthquake can be interpreted as the
     portion of each cell that is expected to have landslide occurrence.
 
@@ -71,6 +70,9 @@ def _landslide_spatial_extent(p: float):
     b = 5.237
     c = -3.042
     d = 4.035
+    
+    p = np.asarray(p, dtype=float)
+    
     LSE = 100 *     np.exp(a + b * p + c * p**2 + d * p**3)
     return LSE
 
@@ -147,9 +149,48 @@ def nowicki_jessee_2018(
     prob_ls = sigmoid(Xg)
     LSE = _landslide_spatial_extent(prob_ls)
 
-    # Slope cutoff proposed by Allstadt et al. (2022), minimum pga threshold proposed by Jibson and Harp (2016)
+    return prob_ls, LSE
+    
+    
+def allstadt_etal_2022_b(
+    pga: Union[float, np.ndarray],
+    pgv: Union[float, np.ndarray],
+    slope: Union[float, np.ndarray],
+    lithology: str,
+    landcover: Union[int, np.ndarray],
+    cti: Union[float, np.ndarray],
+) -> Union[float, np.ndarray]:
+    """
+    Includes the slope cutoff proposed by Allstadt et al. (2022)in the Nowicki Jessee et al. (2018) model. 
+    The minimum pga threshold was proposed by Jibson and Harp (2016).
+    
+    Reference:Allstadt, K. E., Thompson, E. M., Jibson, R. W., Wald, D. J., Hearne, M., Hunter, 
+    E. J., Fee, J., Schovanec, H., Slosky, D., & Haynie, K. L. (2022). The US Geological Survey 
+    ground failure product: Near-real-time estimates of earthquake-triggered landslides and liquefaction. 
+    Earthquake Spectra, 38(1), 5–36. https://doi.org/10.1177/87552930211032685.
+    
+    :param pga:
+        Peak Ground Acceleration, measured in g
+    :param slope:
+        Topographic slope expressed in degrees
+    :param prob_ls:
+        Probability of landslide
+        
+    :returns:
+        LSE from Nowicki Jessee et al. (2018) corrected according to Allstadt et al. (2022)
+        prob_ls: Probability of landslide according to Nowicki Jessee et al. (2018)
+    """
+    prob_ls, LSE = nowicki_jessee_2018 (
+        pga = pga,
+        pgv = pgv,
+        slope = slope,
+        lithology = lithology,
+        landcover = landcover,
+        cti = cti,
+    )
+    
     LSE = np.where((slope < 2) | (pga < 0.02), 0, LSE)
-
+    
     return prob_ls, LSE
     
     
@@ -161,8 +202,8 @@ def jibson_etal_2000_probability(
 ) -> Union[float, np.ndarray]:
     """
     Computes the probability of ground failure using a Weibull
-    model based on the predicted Newmark displacements, exclusively based on
-    data from the Northridge earthquake, from Jibson et al. (2000), eq.5.
+    model based on the predicted Newmark displacements (eq. 5 from Jibson et al. (2000)). 
+    Exclusively based on data from the Northridge earthquake.
 
     Reference: Jibson, R.W., Harp, E.L., & Michael, J.A. (2000). A method for 
     producing digital probabilistic seismic landslide hazard maps. Engineering 
