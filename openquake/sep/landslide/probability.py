@@ -28,6 +28,23 @@ landcover_values={
 }
 
 
+lithology_values_NJ={
+    "mt": -1.87,
+    "nd": -0.66,
+    "pa": -0.78,
+    "pb": -1.88,
+    "vi": -1.61,
+    "py": -1.05,
+    "sc": -0.95,
+    "sm": -1.36,
+    "ss": -1.92,
+    "su": -3.22,
+    "va": -1.54,
+    "vb": -1.50,
+    "pi": -0.81
+}
+
+
 lithology_values={
     "mt": -1.87,
     "nd": -0.66,
@@ -44,8 +61,8 @@ lithology_values={
     "pi": -0.81
 }
 
-
 LANDCOVER_TABLE = {**landcover_values, **{bytes(k, 'utf-8'): v for k, v in landcover_values.items()}}
+LITHOLOGY_TABLE_NJ = {**lithology_values_NJ, **{bytes(k, 'utf-8'): v for k, v in lithology_values_NJ.items()}}
 LITHOLOGY_TABLE = {**lithology_values, **{bytes(k, 'utf-8'): v for k, v in lithology_values.items()}}
 
 
@@ -73,7 +90,7 @@ def _landslide_spatial_extent(p: float):
     
     p = np.asarray(p, dtype=float)
     
-    LSE = 100 *     np.exp(a + b * p + c * p**2 + d * p**3)
+    LSE = 100 * np.exp(a + b * p + c * p**2 + d * p**3)
     return LSE
 
     
@@ -87,7 +104,7 @@ def nowicki_jessee_2018(
     intercept: float = -6.30,
     pgv_coeff: float = 1.65,
     slope_coeff: float = 0.06,
-    coeff_table_lith=LITHOLOGY_TABLE,
+    coeff_table_lith=LITHOLOGY_TABLE_NJ,
     coeff_table_cov=LANDCOVER_TABLE,
     cti_coeff: float = 0.03,
     interaction_term: float = 0.01
@@ -133,9 +150,6 @@ def nowicki_jessee_2018(
     else:
         landcover_coeff = np.array([coeff_table_cov.get(str(lc), -1.08) for lc in landcover])
 
-    cti = np.clip(cti, 0, 19)
-    pgv = np.clip(pgv, 1e-5, 211)
-
     Xg = (
         pgv_coeff * np.log(pgv) +
         slope_coeff * slope +
@@ -161,7 +175,7 @@ def allstadt_etal_2022_b(
     cti: Union[float, np.ndarray],
 ) -> Union[float, np.ndarray]:
     """
-    Includes the slope cutoff proposed by Allstadt et al. (2022)in the Nowicki Jessee et al. (2018) model. 
+    Includes the updates proposed by Allstadt et al. (2022) in the Nowicki Jessee et al. (2018) model. 
     The minimum pga threshold was proposed by Jibson and Harp (2016).
     
     Reference:Allstadt, K. E., Thompson, E. M., Jibson, R. W., Wald, D. J., Hearne, M., Hunter, 
@@ -178,8 +192,12 @@ def allstadt_etal_2022_b(
         
     :returns:
         LSE from Nowicki Jessee et al. (2018) corrected according to Allstadt et al. (2022)
-        prob_ls: Probability of landslide according to Nowicki Jessee et al. (2018)
+        prob_ls: Probability of landslide according to Nowicki Jessee et al. (2018) corrected according to Allstadt et al. (2022)
     """
+    
+    cti = np.clip(cti, 0, 19)
+    pgv = np.clip(pgv, 1e-5, 211)
+    
     prob_ls, LSE = nowicki_jessee_2018 (
         pga = pga,
         pgv = pgv,
@@ -187,6 +205,7 @@ def allstadt_etal_2022_b(
         lithology = lithology,
         landcover = landcover,
         cti = cti,
+        coeff_table_lith=LITHOLOGY_TABLE,
     )
     
     LSE = np.where((slope < 2) | (pga < 0.02), 0, LSE)
