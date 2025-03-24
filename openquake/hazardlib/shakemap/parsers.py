@@ -36,8 +36,9 @@ from dataclasses import dataclass
 import pandas as pd
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from shapely.geometry import Polygon
+from shapely.geometry import shape
 import numpy
+import fiona
 
 from openquake.baselib import performance
 from openquake.baselib.general import gettemp
@@ -136,53 +137,23 @@ def get_array(**kw):
 def get_array_shapefile(kind, fname):
     """
     Download and parse data saved as a shapefile.
+
     :param fname: url or filepath for the shapefiles,
     either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
-    import shapefile  # optional dependency
     fname = path2url(fname)
-
-    extensions = ['shp', 'dbf', 'prj', 'shx']
-    f_dict = {}
-
-    if fname.endswith('.zip'):
-        # files are saved in a zip
-        for ext in extensions:
-            try:
-                f_dict[ext] = urlextract(fname, '.' + ext)
-            except FileNotFoundError:
-                f_dict[ext] = None
-                logging.warning(NOT_FOUND, ext)
-    else:
-        # files are saved as plain files
-        fname = os.path.splitext(fname)[0]
-        for ext in extensions:
-            try:
-                f_dict[ext] = urlopen(fname + '.' + ext)
-            except URLError:
-                f_dict[ext] = None
-                logging.warning(NOT_FOUND, ext)
-
+    if fname.startswith('file:'):
+        fname = fname[5:]
     polygons = []
     data = defaultdict(list)
-
-    try:
-        sf = shapefile.Reader(**f_dict)
-        fieldnames = [f[0].upper() for f in sf.fields[1:]]
-
-        for rec in sf.shapeRecords():
-            # save shapes as polygons
-            polygons.append(Polygon(rec.shape.points))
-            # create dict of lists from data
-            for k, v in zip(fieldnames, rec.record):
-                data[k].append(v)
+    with fiona.open(fname) as f:
+        for feature in f:
+            polygons.append(shape(feature.geometry))
+            for k, v in feature.properties.items():
+                data[k.upper()].append(v)
             # append bounding box for later use
             data['bbox'].append(polygons[-1].bounds)
-    except shapefile.ShapefileException as e:
-        raise shapefile.ShapefileException(
-            'Necessary *.shp and/or *.dbf file not found.') from e
-
     return get_shapefile_arrays(polygons, data)
 
 
