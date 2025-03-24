@@ -1726,7 +1726,7 @@ def get_dists(ctx):
 
 
 # used to produce a RuptureContext suitable for legacy code, i.e. for calls
-# to .get_mean_and_stddevs, like for instance in the SMT
+# to .get_mean_and_stddevs, like for instance in the SMT module of the OQ-MBTK
 def full_context(sites, rup, dctx=None):
     """
     :returns: a full RuptureContext with all the relevant attributes
