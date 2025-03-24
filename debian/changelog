@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the dependency from pyshp
   * Improved the task distribution
   * Exposed the output `avg_gmf`
   * Internal: enhanced `build_global_exposure` to work at admin level 2
