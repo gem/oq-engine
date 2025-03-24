@@ -143,8 +143,10 @@ def get_array_shapefile(kind, fname):
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
     fname = path2url(fname)
-    if fname.startswith('file:'):
-        fname = fname[5:]
+    if fname.endswith('.zip'):
+        fname = 'zip://' + fname[5:]
+    else:
+        fname = fname[5:]  # strip file:
     polygons = []
     data = defaultdict(list)
     with fiona.open(fname) as f:
