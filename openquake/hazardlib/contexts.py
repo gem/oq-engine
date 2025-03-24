@@ -1667,7 +1667,7 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock of a site collection used in the tests and in the SMT
+# mock of a site collection used in the tests and in the SMT module of the OQ-MBTK
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
@@ -1726,7 +1726,7 @@ def get_dists(ctx):
 
 
 # used to produce a RuptureContext suitable for legacy code, i.e. for calls
-# to .get_mean_and_stddevs, like for instance in the SMT
+# to .get_mean_and_stddevs, like for instance in the SMT module of the OQ-MBTK
 def full_context(sites, rup, dctx=None):
     """
     :returns: a full RuptureContext with all the relevant attributes
@@ -1766,7 +1766,7 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     return out[:, 0] if single else out
 
 
-# mock of a rupture used in the tests and in the SMT
+# mock of a rupture used in the tests and in the module of the OQ-MBTK
 class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
