@@ -1151,8 +1151,13 @@ class ContextMaker(object):
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
 
-        # making plenty of slices so that the array `poes` is small
-        for slc in split_in_slices(len(ctx), 2*L1):
+        if len(ctx) < 1000:
+            # do not split in slices to make debugging easier
+            slices = [slice(0, len(ctx))]
+        else:
+            # making plenty of slices so that the array `poes` is small
+            slices = split_in_slices(len(ctx), 2*L1)
+        for slc in slices:
             with self.poe_mon:
                 # this is allocating at most a few MB of RAM
                 poes = numpy.zeros((slc.stop-slc.start, M*L1, G), F32)
@@ -1165,7 +1170,7 @@ class ContextMaker(object):
                     else:  # regular case
                         set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
             yield poes, mean_stdt[0, :, :, slc], mean_stdt[1, :, :, slc], slc
-        #cs, ms, ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
+        #cs,ms,ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
         #print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' % (cs, ms, ps, G))
 
     def gen_poes(self, ctx):
@@ -1179,7 +1184,7 @@ class ContextMaker(object):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), 1]
             for poes, mea, sig, slc in self._gen_poes(ctxt):
-                yield poes, mea, sig, ctxt[slc]
+                yield poes.astype(F64), mea, sig, ctxt[slc]
 
     # documented but not used in the engine
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
