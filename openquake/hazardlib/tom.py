@@ -232,6 +232,11 @@ def get_pnes(rate, probs, poes, time_span):
         return pnes.clip(0., 1.)  # avoid numeric issues
 
 
+@compile("(float64, float64[:], float32[:], float64)")
+def get_log_pnes(rate, probs, poes, time_span):
+    return numpy.log(get_pnes(rate, probs, poes, time_span))
+
+
 class NegativeBinomialTOM(BaseTOM):
     """
     Negative Binomial temporal occurrence model.
