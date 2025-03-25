@@ -1,4 +1,5 @@
 from typing import Union
+import scipy
 import numpy as np
 
 g: float = 9.81
@@ -66,10 +67,6 @@ LITHOLOGY_TABLE_NJ = {**lithology_values_NJ, **{bytes(k, 'utf-8'): v for k, v in
 LITHOLOGY_TABLE = {**lithology_values, **{bytes(k, 'utf-8'): v for k, v in lithology_values.items()}}
 
 
-def sigmoid(x):
-    return 1.0 / (1.0 + np.exp(-x))
-
-
 def _landslide_spatial_extent(p: float):
     """
     Calculates the landslide spatial extent (LSE) as per formulae 9
@@ -95,7 +92,6 @@ def _landslide_spatial_extent(p: float):
 
     
 def nowicki_jessee_2018(
-    pga: Union[float, np.ndarray],
     pgv: Union[float, np.ndarray],
     slope: Union[float, np.ndarray],
     lithology: str,
@@ -160,7 +156,7 @@ def nowicki_jessee_2018(
         intercept
     )
 
-    prob_ls = sigmoid(Xg)
+    prob_ls = scipy.special.expit(Xg)
     LSE = _landslide_spatial_extent(prob_ls)
 
     return prob_ls, LSE
@@ -199,7 +195,6 @@ def allstadt_etal_2022_b(
     pgv = np.clip(pgv, 1e-5, 211)
     
     prob_ls, LSE = nowicki_jessee_2018 (
-        pga = pga,
         pgv = pgv,
         slope = slope,
         lithology = lithology,
