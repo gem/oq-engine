@@ -18,8 +18,10 @@
     parameter
 
   [Marco Pagani]
-  * Added a module in the modifiable GMPE to compute site response according
+  * Added a module to the modifiable GMPE computing site response according
     to Stewart et al. (2020) and Hashash et al. (2020). 
+  * Added a model for AUS23 that replaces the fixed Vs30 ones currently in 
+    the engine
 
   [Marco Pagani, Valeria Cascone]
   * Added an get_width and get_length methods to Strasser et al. (2010) MSR
