@@ -904,6 +904,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
         rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
     if approach == 'use_shakemap_from_usgs':
         rupdic['shakemap_array'] = shakemap
+    rupdic['title'] = properties['title']
     if not rup_data:  # in parsers_test
         if approach == 'use_pnt_rup_from_usgs':
             rupdic['msr'] = 'PointMSR'

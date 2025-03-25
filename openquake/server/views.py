@@ -702,7 +702,7 @@ def impact_callback(
         exclude_from_print = [
             'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
             'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type', 'gsim',
-            'shakemap_uri', 'rupture_file', 'rupture_from_usgs']
+            'shakemap_uri', 'rupture_file', 'rupture_from_usgs', 'title', 'mmi_file']
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
