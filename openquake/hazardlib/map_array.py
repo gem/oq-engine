@@ -195,14 +195,14 @@ def get_lvl(hcurve, imls, poe):
 
 t = numba.types
 sig_i = t.void(t.float32[:, :, :],                     # pmap
-               t.float32[:, :, :],                     # poes
+               t.float64[:, :, :],                     # poes
                t.float64[:],                           # rates
                t.float64[:, :],                        # probs_occur
                t.uint32[:],                            # sids
                t.float64)                              # itime
 
 sig_m = t.void(t.float32[:, :, :],                     # pmap
-               t.float32[:, :, :],                     # poes
+               t.float64[:, :, :],                     # poes
                t.float64[:],                           # rates
                t.float64[:, :],                        # probs_occur
                t.float64[:],                           # weights

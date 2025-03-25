@@ -1184,7 +1184,7 @@ class ContextMaker(object):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), 1]
             for poes, mea, sig, slc in self._gen_poes(ctxt):
-                yield poes, mea, sig, ctxt[slc]
+                yield poes.astype(F64), mea, sig, ctxt[slc]
 
     # documented but not used in the engine
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
