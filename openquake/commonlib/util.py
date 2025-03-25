@@ -190,9 +190,11 @@ def get_assets(dstore):
         dtlist.append((tagname, '<S100'))
     dtlist.extend([('lon', F32), ('lat', F32)])
     asset_data = []
-    for a in assetcol.array:
+    lons = numpy.round(assetcol['lon'], 5)
+    lats = numpy.round(assetcol['lat'], 5)
+    for a, lon, lat in zip(assetcol.array, lons, lats):
         tup = tuple(python3compat.encode(tag[t][a[t]]) for t in tagnames)
-        asset_data.append((a['id'],) + tup + (a['lon'], a['lat']))
+        asset_data.append((a['id'],) + tup + (lon, lat))
     return numpy.array(asset_data, dtlist)
 
 

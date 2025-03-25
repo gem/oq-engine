@@ -106,9 +106,12 @@ class AristotleParam:
         if not tmap_keys:
             raise LookupError(f'No taxonomy mapping was found for {countries}')
         logging.root.handlers = []  # avoid breaking the logs
-        params['description'] = (
-            f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
-            f' M{rupdic["mag"]}')
+        if 'title' in rupdic:
+            params['description'] = f'{rupdic["usgs_id"]}: {rupdic["title"]}'
+        else:
+            params['description'] = (
+                f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
+                f' M{rupdic["mag"]}')
         return params
 
 

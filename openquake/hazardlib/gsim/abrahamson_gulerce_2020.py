@@ -684,7 +684,7 @@ class AbrahamsonGulerce2020SInter(GMPE):
                                        self.ergodic)
             tau[m] = tau_m
             phi[m] = phi_m
-        sig += np.sqrt(tau ** 2.0 + phi ** 2.0)
+        sig[:] = np.sqrt(tau ** 2.0 + phi ** 2.0)
 
     # Coefficients taken from digital files supplied by Norm Abrahamson
     COEFFS = CoeffsTable(sa_damping=5, table="""\
