@@ -1151,7 +1151,7 @@ class ContextMaker(object):
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
 
-        if numpy.isnan(ctx.occurrence_rate).all():
+        if len(ctx) < 1000:
             # do not split in slices to improve the performance
             slices = [slice(0, len(ctx))]
         else:
