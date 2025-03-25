@@ -1092,7 +1092,6 @@ class NowickiJessee2018Landslides(SecondaryPeril):
             )
         
         prob_ls, lse = nowicki_jessee_2018(
-            pga = pga,
             pgv = pgv,
             slope=sites.slope,
             lithology=sites.lithology,
