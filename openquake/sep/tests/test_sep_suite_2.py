@@ -121,7 +121,6 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
 
     def test_nowicki_jessee_18(self):
         prob_ls, coverage = nowicki_jessee_2018(
-            pga=self.pga,
             pgv=self.pgv,
             slope=self.sites["slope"],
             lithology=self.sites["lithology"],
@@ -130,30 +129,30 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
         )
         zlp = np.array(
             [
-                0.070513,
-                0.260801,
-                0.281926,
-                0.980824,
-                0.603409,
-                0.602239,
-                0.856018,
+                0.011672,
+                0.052064,
+                0.057599,
+                0.888425,
+                0.191497,
+                0.190742,
+                0.48066,
                 0.897942,
-                0.62758,
-                0.581753,
+                0.207814,
+                0.17799,
             ]
         )
         cls = np.array(
             [
-                0.071987,
-                0.172675,
-                0.189806,
-                20.709538,
-                0.953252,
-                0.946616,
-                6.037904,
+                0.053605,
+                0.065753,
+                0.067576,
+                8.119564,
+                0.126543,
+                0.126111,
+                0.484645,
                 8.884508,
-                1.104123,
-                0.839227,
+                0.136195,
+                0.119038,
             ]
         )
         np.testing.assert_array_almost_equal(prob_ls, zlp)
