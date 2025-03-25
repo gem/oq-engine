@@ -132,7 +132,13 @@ def stewart2020_linear_scaling(imt, vs30, wimp=None, usgs=False):
     :param vs30:
         A vector with values of Vs30
     :param wimp:
-        Weight for the impedance model
+        Weight for the impedance model (see eq. 5 of Stewart et al., 2020)
+    :param usgs:
+        Flag determining the use of the default coefficients or the ones
+        proposed by the USGS
+    :returns:
+        The natual logaritm of the ground-motion scaling due to the linear
+        component of amplification
     """
 
     # Check the Vs30 provided

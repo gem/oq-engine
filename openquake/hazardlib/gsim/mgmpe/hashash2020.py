@@ -31,12 +31,20 @@ def hashash2020_non_linear_scaling(imt, vs30, ref_pga, ref_vs30):
     Implements the non-linear scaling model of Hashash et al. (2020; EQS).
 
     :param imt:
+        The intensity measure type consided
     :param vs30:
-    :param wimp:
-    :param wgr:
+        The value of vs30 at each site
+    :param ref_pga:
+        The reference PGA at each site computed considering a vs30 value of
+        `ref_vs30`
+    :param ref_vs30:
+        Reference vs30. It can be either 3000 or 760 m/s
+    :returns:
+        The natural logarithm of the non-linear scaling factor
     """
 
-    assert len(vs30) == len(ref_pga)
+    msg = 'Size of `ref_pga` does not match the one of `vs30`'
+    assert len(vs30) == len(ref_pga), msg
     C = COEFFS[imt]
 
     if np.abs(ref_vs30 - 3000) < 1e-1:
@@ -44,7 +52,7 @@ def hashash2020_non_linear_scaling(imt, vs30, ref_pga, ref_vs30):
     elif np.abs(ref_vs30 - 760) < 1e-1:
         ref_pga = ref_pga / C760OVER3000
     else:
-        msg = 'The supported reference Vs30 is either 760 or 3000m/s'
+        msg = "The supported reference Vs30 is either 760 or 3000m/s"
         raise ValueError(msg)
 
     # Fixing reference (see text at the bottom of page 71)
@@ -58,7 +66,7 @@ def hashash2020_non_linear_scaling(imt, vs30, ref_pga, ref_vs30):
         coeff = np.array([coeff])
 
     # Initialize the output
-    fnl = np.zeros_like(vs30)
+    fnl = np.zeros(vs30.shape)
 
     # Compute eq.3
     idx = vs30 < C['vc']
@@ -68,7 +76,8 @@ def hashash2020_non_linear_scaling(imt, vs30, ref_pga, ref_vs30):
     f2 = C['f4'] * (exp1 - exp2)
 
     # Compute the median nonlinear amplification term using eq.2
-    assert np.all(coeff[idx] > 0.0)
+    msg = "Logarithm's argument lower than 0"
+    assert np.all(coeff[idx] > 0.0), msg
     fnl[idx] = f2 * np.log(coeff[idx])
 
     return fnl
