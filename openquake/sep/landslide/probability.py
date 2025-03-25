@@ -29,7 +29,7 @@ landcover_values={
 }
 
 
-lithology_values_NJ={
+lithology_values={
     "mt": -1.87,
     "nd": -0.66,
     "pa": -0.78,
@@ -46,24 +46,7 @@ lithology_values_NJ={
 }
 
 
-lithology_values={
-    "mt": -1.87,
-    "nd": -0.66,
-    "pa": -0.78,
-    "pb": -1.88,
-    "vi": -1.61,
-    "py": -1.05,
-    "sc": -0.95,
-    "sm": -1.36,
-    "ss": -1.92,
-    "su": -1.36,
-    "va": -1.54,
-    "vb": -1.50,
-    "pi": -0.81
-}
-
 LANDCOVER_TABLE = {**landcover_values, **{bytes(k, 'utf-8'): v for k, v in landcover_values.items()}}
-LITHOLOGY_TABLE_NJ = {**lithology_values_NJ, **{bytes(k, 'utf-8'): v for k, v in lithology_values_NJ.items()}}
 LITHOLOGY_TABLE = {**lithology_values, **{bytes(k, 'utf-8'): v for k, v in lithology_values.items()}}
 
 
@@ -100,7 +83,7 @@ def nowicki_jessee_2018(
     intercept: float = -6.30,
     pgv_coeff: float = 1.65,
     slope_coeff: float = 0.06,
-    coeff_table_lith=LITHOLOGY_TABLE_NJ,
+    coeff_table_lith=LITHOLOGY_TABLE,
     coeff_table_cov=LANDCOVER_TABLE,
     cti_coeff: float = 0.03,
     interaction_term: float = 0.01
@@ -193,6 +176,9 @@ def allstadt_etal_2022_b(
     
     cti = np.clip(cti, 0, 19)
     pgv = np.clip(pgv, 1e-5, 211)
+
+    coeff_table_lith = LITHOLOGY_TABLE.copy()
+    coeff_table_lith["su"] = -1.36
     
     prob_ls, LSE = nowicki_jessee_2018 (
         pgv = pgv,
@@ -200,7 +186,7 @@ def allstadt_etal_2022_b(
         lithology = lithology,
         landcover = landcover,
         cti = cti,
-        coeff_table_lith=LITHOLOGY_TABLE,
+        coeff_table_lith=coeff_table_lith,
     )
     
     LSE = np.where((slope < 2) | (pga < 0.02), 0, LSE)
