@@ -1152,7 +1152,7 @@ class ContextMaker(object):
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
 
         if len(ctx) < 1000:
-            # do not split in slices to improve the performance
+            # do not split in slices to make debugging easier
             slices = [slice(0, len(ctx))]
         else:
             # making plenty of slices so that the array `poes` is small

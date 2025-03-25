@@ -24,7 +24,7 @@ import pandas
 import numba
 from openquake.baselib.general import cached_property, humansize
 from openquake.baselib.performance import compile
-from openquake.hazardlib.tom import get_pnes, get_log_pnes
+from openquake.hazardlib.tom import get_pnes
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -231,7 +231,8 @@ def update_pmap_r(arr, poes, rates, probs_occur, sidxs, itime):
                 arr[sidx, :, g] += rate * poe[:, g] * itime
         else:  # nonparametric rupture
             for g in range(G):
-                arr[sidx, :, g] += -get_log_pnes(rate, probs, poe[:, g], itime)
+                arr[sidx, :, g] += - numpy.log(
+                    get_pnes(rate, probs, poe[:, g], itime))
 
 
 @compile(sig_m)
