@@ -317,9 +317,9 @@ and the probability of liquefaction is calculated using equation (3). Zero proba
 
 The proposed probability threshold to convert to class outcome is 0.4.
 
-#######################
-Allstadt et al. (2022)
-#######################
+#######################################
+Allstadt et al. (2022) for liquefaction
+#######################################
 
 The model proposed by `Allstadth et al. (2022) <https://journals.sagepub.com/doi/10.1177/87552930211032685>`_ uses the 
 model proposed by `Rashidian et al. (2020) <https://www.sciencedirect.com/science/article/abs/pii/S0013795219312979>`_
@@ -649,9 +649,9 @@ These probabilities are converted to areal percentages to unbias the predictions
 	LSE(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (36)
 
 
-**********************
-Allstadt et al. (2022)
-**********************
+*************************************
+Allstadt et al. (2022) for landslides
+*************************************
 
 `Allstadth et al. (2022) <https://journals.sagepub.com/doi/10.1177/87552930211032685>`_ introduces modifications to the `Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_ model, by capping the peak ground velocity at :math:`PGV = 211 \, \text{cm/s}`, 
 and compound topographic index at :math:`CTI = 19`. To exclude high probabilities of landsliding in nearly flat areas due to 
