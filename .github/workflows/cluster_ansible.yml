@@ -1,4 +1,4 @@
-name: cluster_ansible
+name: Cluster ZMQ
 on:
   workflow_dispatch:
     inputs:
