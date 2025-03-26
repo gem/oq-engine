@@ -36,6 +36,7 @@ jobs:
         run: |
           pip3 install molecule[ansible,lint]
           pip3 install molecule-plugins[docker]
+          pip3 install docker
 
       - name: Run Molecule tests.
         run: molecule test --destroy=never -- -vv
