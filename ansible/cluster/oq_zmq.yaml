@@ -1,5 +1,5 @@
 ---
-# run with ansible-playbook -v -i host.linux  oqengine/oq_work.yaml --limit 
+# run with ansible-playbook -v -i host.linux  oqengine/oq_work.yaml --limit
 #
 - hosts: all
   order: sorted
@@ -27,7 +27,7 @@
 
   - name: Echo my_env_var again
     shell: "echo $HDF5_USE_FILE_LOCKING"
-  
+
 #
   - block:
 #
@@ -35,12 +35,12 @@
       stat:
        path: "{{workdir_services}}"
       register: servicedir
- 
+
     - name: "echo if directory already existed"
       debug:
         msg: "Shared  {{workdir_services}}  folder  is already existed"
-      when: servicedir.stat.exists 
- 
+      when: servicedir.stat.exists
+
     - name: "Ansible Create directory {{workdir_services}} if not exists"
       file:
         path: "{{workdir_services}}"
@@ -48,18 +48,18 @@
         mode: "2770"
         group: openquake
         owner: openquake
-      when: servicedir.stat.exists == false 
+      when: servicedir.stat.exists == false
 
     - name: Check "{{webuidir_services}}"  folder exists
       stat:
        path: "{{webuidir_services}}"
       register: servicedir
- 
+
     - name: "echo if directory already existed"
       debug:
         msg: "Shared  {{webuidir_services}}  folder  is already existed"
-      when: servicedir.stat.exists 
- 
+      when: servicedir.stat.exists
+
     - name: "Ansible Create directory {{webuidir_services}} if not exists"
       file:
         path: "{{webuidir_services}}"
@@ -67,9 +67,9 @@
         mode: "2770"
         group: openquake
         owner: openquake
-      when: servicedir.stat.exists == false 
+      when: servicedir.stat.exists == false
 
-#### OpenQuake configuration files 
+#### OpenQuake configuration files
     - name: Set openquake.cfg files on master node
       template:
         src: templates/openquake.zmq.cfg.j2
@@ -79,7 +79,7 @@
         mode: 0644
         validate: ls -l %s
       register: set_openquake_cfg
-    
+
     - name: Set workers IP on cfg files
       lineinfile:
         #path: /etc/openquake/openquake.cfg
@@ -120,8 +120,8 @@
 
     - name: execute ssh for first time with openquake user
       shell: |
-        echo " ssh  -o "StrictHostKeyChecking no" "{{hostvars[item]['ansible_default_ipv4']['address']}}" "
-        ssh  -o "StrictHostKeyChecking no" "{{hostvars[item]['ansible_default_ipv4']['address']}}"
+        echo " ssh -tt -o "StrictHostKeyChecking no" "{{hostvars[item]['ansible_default_ipv4']['address']}}" "
+        ssh -tt -o "StrictHostKeyChecking no" "{{hostvars[item]['ansible_default_ipv4']['address']}}"
       become: true
       become_user: openquake
       loop: "{{ groups['worker'] }}"
