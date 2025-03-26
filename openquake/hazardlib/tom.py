@@ -197,7 +197,7 @@ class ClusterPoissonTOM(PoissonTOM):
         self.occurrence_rate = occurrence_rate
 
 
-@compile(["(float64, float64[:], float32[:], float64)",
+@compile(["(float64, float64[:], float64[:], float64)",
           "(float64, float64[:], float64[:,:,:], float64)"])
 def get_pnes(rate, probs, poes, time_span):
     """
@@ -211,9 +211,9 @@ def get_pnes(rate, probs, poes, time_span):
     """
     # NB: the NegativeBinomialTOM creates probs_occur with a rate not NaN
     if time_span == 0.:  # FatedTOM
-        return numpy.float32(1) - poes
+        return 1. - poes
     elif len(probs) == 0:  # poissonian
-        return numpy.exp(- numpy.float32(rate * time_span) * poes)
+        return numpy.exp(- rate * time_span * poes)
     else:
         # Uses the formula
         #
@@ -226,7 +226,7 @@ def get_pnes(rate, probs, poes, time_span):
         #
         # `p(k|T)` is given by the attribute probs_occur and
         # `p(X<x|rup)` is computed as ``1 - poes``.
-        pnes = numpy.full_like(poes, probs[0])
+        pnes = numpy.full(poes.shape, probs[0])
         for p, prob in enumerate(probs[1:], 1):
             pnes[:] += prob * (1 - poes) ** p
         return pnes.clip(0., 1.)  # avoid numeric issues
