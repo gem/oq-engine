@@ -67,7 +67,7 @@ def ssh_args(zworkers):
     """
     user = getpass.getuser()
     if zworkers.host_cores.strip():
-        for hostcores in zworkers.host_cores.split(','):
+        for hostcores in zworkers['host_cores'].split(','):
             host, cores = hostcores.split()
             if host == '127.0.0.1':  # localhost
                 yield host, cores, [sys.executable]
@@ -86,10 +86,10 @@ class WorkerMaster(object):
         else:  # passed dictionary of strings
             self.zworkers = zworkers
         # NB: receiver_ports is not used but needed for compliance
-        self.ctrl_port = int(self.zworkers.ctrl_port)
+        self.ctrl_port = int(self.zworkers['ctrl_port'])
         self.host_cores = (
-            [hc.split() for hc in self.zworkers.host_cores.split(',')]
-            if self.zworkers.host_cores else [])
+            [hc.split() for hc in self.zworkers['host_cores'].split(',')]
+            if self.zworkers['host_cores'] else [])
         self.popens = []
 
     def start(self):
@@ -175,7 +175,7 @@ class WorkerMaster(object):
         """
         Wait until all workers are active
         """
-        num_hosts = len(self.zworkers.host_cores.split(','))
+        num_hosts = len(self.zworkers['host_cores'].split(','))
         for _ in range(seconds):
             time.sleep(1)
             status = self.status()
