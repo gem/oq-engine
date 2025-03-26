@@ -75,9 +75,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['usgs_id'], 'us6000f65h')
         self.assertEqual(dic['rupture_file'], None)
         self.assertIsNotNone(dic['mmi_file'])
-        station_data_file, station_err = get_stations_from_usgs(
+        station_data_file, n_stations, station_err = get_stations_from_usgs(
             usgs_id, user=user)
         self.assertIsNone(station_data_file)
+        self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'], 'No stations were found')
 
     def test_3b(self):
@@ -100,9 +101,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
             user=user, use_shakemap=True)
         self.assertIn('Unable to convert the rupture from the USGS format',
                       dic['rupture_issue'])
-        station_data_file, station_err = get_stations_from_usgs(
+        station_data_file, n_stations, station_err = get_stations_from_usgs(
             usgs_id, user=user)
         self.assertIn('stations', station_data_file)
+        self.assertEqual(n_stations, 1)
         self.assertEqual(station_err, {})
 
     def test_4(self):
@@ -131,9 +133,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
             {'usgs_id': usgs_id, 'approach': 'use_pnt_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertEqual(dic['mag'], 6.7)
-        station_data_file, station_err = get_stations_from_usgs(
+        station_data_file, n_stations, station_err = get_stations_from_usgs(
             usgs_id, user=user)
         self.assertIsNone(station_data_file)
+        self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'],
                          '3 stations were found, but none of them are seismic')
 
@@ -224,9 +227,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_13(self):
         usgs_id = 'us7000n7n8'
-        station_data_file, station_err = get_stations_from_usgs(
+        station_data_file, n_stations, station_err = get_stations_from_usgs(
             usgs_id, user=user)
         self.assertIsNone(station_data_file)
+        self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'],
                          'stationlist.json was downloaded, but it contains no features')
 
