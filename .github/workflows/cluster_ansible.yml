@@ -32,6 +32,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: modprobe on NFS and create FS
+        run: |
+          sudo modprobe {nfs,nfsd,rpcsec_gss_krb5}
+          df -h
+          mkdir -p /mnt/nfs
+
       - name: Install test dependencies.
         run: |
           pip3 install molecule[ansible,lint]
