@@ -1151,8 +1151,13 @@ class ContextMaker(object):
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
 
-        # making plenty of slices so that the array `poes` is small
-        for slc in split_in_slices(len(ctx), 2*L1):
+        if len(ctx) < 1000:
+            # do not split in slices to make debugging easier
+            slices = [slice(0, len(ctx))]
+        else:
+            # making plenty of slices so that the array `poes` is small
+            slices = split_in_slices(len(ctx), 2*L1)
+        for slc in slices:
             with self.poe_mon:
                 # this is allocating at most a few MB of RAM
                 poes = numpy.zeros((slc.stop-slc.start, M*L1, G), F32)
@@ -1165,7 +1170,7 @@ class ContextMaker(object):
                     else:  # regular case
                         set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
             yield poes, mean_stdt[0, :, :, slc], mean_stdt[1, :, :, slc], slc
-        #cs, ms, ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
+        #cs,ms,ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
         #print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' % (cs, ms, ps, G))
 
     def gen_poes(self, ctx):
@@ -1179,7 +1184,9 @@ class ContextMaker(object):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), 1]
             for poes, mea, sig, slc in self._gen_poes(ctxt):
-                yield poes, mea, sig, ctxt[slc]
+                # NB: using directly 64 bit poes would be slower without reason
+                # since with astype(F64) the numbers are identical
+                yield poes.astype(F64), mea, sig, ctxt[slc]
 
     # documented but not used in the engine
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
@@ -1233,7 +1240,6 @@ class ContextMaker(object):
         N = sum(len(ctx) for ctx in ctxs)
         M = len(self.imts)
         G = len(self.gsims)
-        out = numpy.zeros((4, G, M, N))
         if all(isinstance(ctx, numpy.recarray) for ctx in ctxs):
             # contexts already vectorized
             recarrays = ctxs
@@ -1243,6 +1249,7 @@ class ContextMaker(object):
             recarr = numpy.concatenate(
                 recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
             recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
+        out = numpy.empty((4, G, M, N))
         for g, gsim in enumerate(self.gsims):
             out[:, g] = self.get_4MN(recarrays, gsim)
         return out
@@ -1313,13 +1320,11 @@ class ContextMaker(object):
         lenctx = sum(len(ctx) for ctx in ctxs)
         esites = lenctx * src.num_ruptures / self.num_rups * multiplier
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * src.num_ruptures / self.num_rups
-        if src.code == b'p' and lenctx <= 20:
-            weight *= .2
-        elif src.code == b'S':  # improves EUR and USA
-            weight *= 2
-        elif src.code == b'N':  # increase weight in MEX and SAM
+        weight = src.dt * src.num_ruptures / self.num_rups * src.nsites ** .5
+        if src.code in b'NX':  # increase weight
             weight *= 5.
+        elif src.code == b'S':  # increase for USA, decrease for EUR
+            weight *= 3
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1):
@@ -1379,7 +1384,7 @@ def print_finite_size(rups):
 def _get_poes(mean_std, loglevels, phi_b):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
-    out = numpy.zeros((loglevels.size, N), F32)  # shape (L, N)
+    out = numpy.empty((loglevels.size, N), F32)  # shape (L, N)
     _set_poes(mean_std, loglevels, phi_b, out)
     return out.T
 
@@ -1669,7 +1674,7 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock of a site collection used in the tests and in the SMT
+# mock of a site collection used in the tests and in the SMT module of the OQ-MBTK
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
@@ -1728,7 +1733,7 @@ def get_dists(ctx):
 
 
 # used to produce a RuptureContext suitable for legacy code, i.e. for calls
-# to .get_mean_and_stddevs, like for instance in the SMT
+# to .get_mean_and_stddevs, like for instance in the SMT module of the OQ-MBTK
 def full_context(sites, rup, dctx=None):
     """
     :returns: a full RuptureContext with all the relevant attributes
@@ -1768,7 +1773,7 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     return out[:, 0] if single else out
 
 
-# mock of a rupture used in the tests and in the SMT
+# mock of a rupture used in the tests and in the module of the OQ-MBTK
 class RuptureContext(BaseContext):
     """
     Rupture calculation context for ground shaking intensity models.
