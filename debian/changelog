@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Backported fix to 64 bit poes critical for multifault sources
+  * Backported fix to workerpool critical for zmq clusters
+
 python3-oq-engine (3.23.1-1~xenial01) xenial; urgency=low
 
   [Marco Pagani]
