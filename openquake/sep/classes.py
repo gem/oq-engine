@@ -1123,7 +1123,9 @@ class AllstadtEtAl2022Landslides(SecondaryPeril):
         self.intercept = intercept
         self.pgv_coeff = pgv_coeff
         self.slope_coeff = slope_coeff
-        self.coeff_table_lith = coeff_table_lith
+        self.coeff_table_lith = coeff_table_lith.copy()
+        self.coeff_table_lith["su"] = -1.36
+        self.coeff_table_lith[b"su"] = -1.36 
         self.coeff_table_cov = coeff_table_cov
         self.cti_coeff = cti_coeff
         self.interaction_term = interaction_term
