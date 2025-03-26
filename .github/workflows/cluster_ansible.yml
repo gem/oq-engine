@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         distro:
-          - ubuntu2404
+          - debian12
     env:
       working-directory: ./ansible/cluster
 
