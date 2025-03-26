@@ -21,15 +21,12 @@ ergodic amplification model of Stewart et al. (2020)
 """
 
 import numpy as np
+import openquake.hazardlib.gsim.nga_east as ngae
 from openquake.hazardlib.gsim.base import CoeffsTable
 
 CONSTS = {"vref": 760.0,
           "vl": 200.0,
           "vu": 2000.0}
-
-
-def _get_sigma(vs30):
-    pass
 
 
 def _get_f760_imp_weights(vs30, vw1=600., vw2=400., w1=0.767, w2=0.1):
@@ -149,7 +146,6 @@ def stewart2020_linear_scaling(imt, vs30, wimp=None, usgs=False):
 
     # Get f760
     if usgs:
-        import openquake.hazardlib.gsim.nga_east as ngae
         C = ngae.COEFFS_F760[imt]
     else:
         C = COEFFS_F760[imt]

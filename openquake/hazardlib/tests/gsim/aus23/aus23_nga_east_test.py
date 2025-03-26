@@ -22,6 +22,7 @@ import pathlib
 import unittest
 import numpy as np
 
+from openquake.hazardlib import valid
 from openquake.hazardlib import contexts
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.contexts import RuptureContext
@@ -56,14 +57,12 @@ class NGAEastAUS23Test(unittest.TestCase):
         ref_vs30 = 3000
         wimp = 0.8
 
-        # Modifiable GMM
-        mgmm = ModifiableGMPE(
-            gmpe={'GMPETable': {'gmpe_table': fname}},
-            ceus2020_site_term={'ref_vs30': 3000.0, 'wimp': wimp}
-        )
-
         # Table GMM
-        tgmm = GMPETable(gmpe_table=fname)
+        tgmm = valid.gsim(f'[GMPETable]\ngmpe_table="{fname}"')
+
+        # Modifiable GMM
+        param = {'ref_vs30': ref_vs30, 'wimp': wimp, 'usgs': False}
+        mgmm = valid.modified_gsim(tgmm, ceus2020_site_term=param)
 
         # Compute values on rock for PGA
         ctx.rjb = ctx.rrup = [20, 30, 40, 50, 60, 20, 30, 40, 50, 60]
@@ -118,15 +117,12 @@ class NGAEastAUS23Test(unittest.TestCase):
         ref_vs30 = 3000
         wimp = 0.8
 
-        # Modifiable GMM
-        param = {'ref_vs30': 3000.0, 'wimp': wimp, 'usgs': True}
-        mgmm = ModifiableGMPE(
-            gmpe={'GMPETable': {'gmpe_table': fname}},
-            ceus2020_site_term=param
-        )
-
         # Table GMM
-        tgmm = GMPETable(gmpe_table=fname)
+        tgmm = valid.gsim(f'[GMPETable]\ngmpe_table="{fname}"')
+
+        # Modifiable GMM
+        param = {'ref_vs30': ref_vs30, 'wimp': wimp, 'usgs': True}
+        mgmm = valid.modified_gsim(tgmm, ceus2020_site_term=param)
 
         # Compute values on rock for PGA
         ctx.rjb = ctx.rrup = [20, 30, 40, 50, 60, 20, 30, 40, 50, 60]

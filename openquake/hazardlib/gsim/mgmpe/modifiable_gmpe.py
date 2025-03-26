@@ -40,6 +40,11 @@ from openquake.hazardlib.gsim.nga_east import (
     get_phi_ss_at_quantile)
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 
+from openquake.hazardlib.gsim.mgmpe.stewart2020 import (
+    stewart2020_linear_scaling)
+from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
+    hashash2020_non_linear_scaling)
+
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
@@ -87,11 +92,6 @@ def ceus2020_site_term(
     :param ref_pga:
         The reference PGA value computed for a vs30 corresponding to `ref_vs30`
     """
-
-    from openquake.hazardlib.gsim.mgmpe.stewart2020 import (
-        stewart2020_linear_scaling)
-    from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
-        hashash2020_non_linear_scaling)
 
     assert len(ref_pga) == len(ctx.vs30)
 
