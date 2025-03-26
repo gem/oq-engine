@@ -56,7 +56,7 @@ def get_zworkers(job_id):
                 hostcores = f.read()
         except FileNotFoundError:
             hostcores = ''
-        return DotDict(ctrl_port=config.zworkers.ctrl_port,
+        return DotDict(ctrl_port=config.zworkers['ctrl_port'],
                        host_cores=hostcores.replace('\n', ',').rstrip(','))
     return {}
 
@@ -66,7 +66,7 @@ def ssh_args(zworkers):
     :yields: triples (hostIP, num_cores, [ssh remote python command])
     """
     user = getpass.getuser()
-    if zworkers.host_cores.strip():
+    if zworkers['host_cores'].strip():
         for hostcores in zworkers['host_cores'].split(','):
             host, cores = hostcores.split()
             if host == '127.0.0.1':  # localhost
@@ -361,7 +361,7 @@ def workerpool(num_workers: int=-1, job_id: int=0):
     Start a workerpool with the given number of workers.
     """
     # NB: unexpected errors will appear in the DbServer log
-    wpool = WorkerPool(int(config.zworkers.ctrl_port), num_workers, job_id)
+    wpool = WorkerPool(int(config.zworkers['ctrl_port']), num_workers, job_id)
     try:
         wpool.start()
     finally:
