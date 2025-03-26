@@ -204,7 +204,8 @@ class WorkerMaster(object):
         """
         self.start()
         try:
-            mon = performance.Monitor('zmq-debug')
+            mon = performance.Monitor(
+                'zmq-debug', dbserver_host=config.dbserver.host)
             mon.inject = True
             rec_host = config.dbserver.receiver_host or '127.0.0.1'
             receiver = 'tcp://%s:%s' % (
