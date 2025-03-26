@@ -282,7 +282,6 @@ class ModifiableGMPE(GMPE):
 
 
     def __init__(self, **kwargs):
-
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters

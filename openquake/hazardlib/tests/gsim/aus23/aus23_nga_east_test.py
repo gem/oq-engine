@@ -22,11 +22,9 @@ import pathlib
 import unittest
 import numpy as np
 
-from openquake.hazardlib import contexts
+from openquake.hazardlib import contexts, valid
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.contexts import RuptureContext
-from openquake.hazardlib.gsim.gmpe_table import GMPETable
-from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
 from openquake.hazardlib.gsim.mgmpe.stewart2020 import (
     stewart2020_linear_scaling)
 from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
@@ -56,26 +54,24 @@ class NGAEastAUS23Test(unittest.TestCase):
         ref_vs30 = 3000
         wimp = 0.8
 
-        # Modifiable GMM
-        mgmm = ModifiableGMPE(
-            gmpe={'GMPETable': {'gmpe_table': fname}},
-            ceus2020_site_term={'ref_vs30': 3000.0, 'wimp': wimp}
-        )
-
         # Table GMM
-        tgmm = GMPETable(gmpe_table=fname)
+        tgmm = valid.gsim(f'[GMPETable]\ngmpe_table="{fname}"')
+
+        # Modifiable GMM
+        mgmm = valid.modified_gsim(
+            tgmm, ceus2020_site_term={'ref_vs30': 3000.0, 'wimp': wimp})
 
         # Compute values on rock for PGA
         ctx.rjb = ctx.rrup = [20, 30, 40, 50, 60, 20, 30, 40, 50, 60]
         ctx.vs30 = np.ones_like(ctx.rjb) * ref_vs30
         ctx.sids = np.arange(len(ctx.vs30))
         imts = [PGA()]
-        [mean_r], [sigma_r], _, _ = contexts.get_mean_stds(
+        [mean_r], [_sigma_r], _, _ = contexts.get_mean_stds(
             tgmm, ctx, [imts[0]], mags=mags)
 
         # Compute values on rock for SA
         imts = [SA(0.2)]
-        [mean_sa], [sigma_sa], _, _ = contexts.get_mean_stds(
+        [mean_sa], [_sigma_sa], _, _ = contexts.get_mean_stds(
             tgmm, ctx, [imts[0]], mags=mags)
 
         # Compute linear term
@@ -91,7 +87,7 @@ class NGAEastAUS23Test(unittest.TestCase):
         expected = mean_sa + slin + snlin
 
         # Computed values
-        [mean_comp], [sigma_comp], _, _ = contexts.get_mean_stds(
+        [mean_comp], [_sigma_comp], _, _ = contexts.get_mean_stds(
             mgmm, ctx, [imts[0]], mags=mags)
 
         # Compute values on soil
@@ -118,27 +114,24 @@ class NGAEastAUS23Test(unittest.TestCase):
         ref_vs30 = 3000
         wimp = 0.8
 
+        # Table GMM
+        tgmm = valid.gsim(f'[GMPETable]\ngmpe_table="{fname}"')
+
         # Modifiable GMM
         param = {'ref_vs30': 3000.0, 'wimp': wimp, 'usgs': True}
-        mgmm = ModifiableGMPE(
-            gmpe={'GMPETable': {'gmpe_table': fname}},
-            ceus2020_site_term=param
-        )
-
-        # Table GMM
-        tgmm = GMPETable(gmpe_table=fname)
+        mgmm = valid.modified_gsim(tgmm, ceus2020_site_term=param)
 
         # Compute values on rock for PGA
         ctx.rjb = ctx.rrup = [20, 30, 40, 50, 60, 20, 30, 40, 50, 60]
         ctx.vs30 = np.ones_like(ctx.rjb) * ref_vs30
         ctx.sids = np.arange(len(ctx.vs30))
         imts = [PGA()]
-        [mean_r], [sigma_r], _, _ = contexts.get_mean_stds(
+        [mean_r], [_sigma_r], _, _ = contexts.get_mean_stds(
             tgmm, ctx, [imts[0]], mags=mags)
 
         # Compute values on rock for SA
         imts = [SA(0.1)]
-        [mean_sa], [sigma_sa], _, _ = contexts.get_mean_stds(
+        [mean_sa], [_sigma_sa], _, _ = contexts.get_mean_stds(
             tgmm, ctx, [imts[0]], mags=mags)
 
         # Compute linear term
@@ -155,7 +148,7 @@ class NGAEastAUS23Test(unittest.TestCase):
         expected = mean_sa + slin + snlin
 
         # Computed values
-        [mean_comp], [sigma_comp], _, _ = contexts.get_mean_stds(
+        [mean_comp], [_sigma_comp], _, _ = contexts.get_mean_stds(
             mgmm, ctx, [imts[0]], mags=mags)
 
         # Compute values on soil
