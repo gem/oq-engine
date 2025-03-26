@@ -56,7 +56,7 @@ def get_zworkers(job_id):
                 hostcores = f.read()
         except FileNotFoundError:
             hostcores = ''
-        return DotDict(ctrl_port=config.zworkers.ctrl_port,
+        return DotDict(ctrl_port=config.zworkers['ctrl_port'],
                        host_cores=hostcores.replace('\n', ',').rstrip(','))
     return {}
 
@@ -66,8 +66,8 @@ def ssh_args(zworkers):
     :yields: triples (hostIP, num_cores, [ssh remote python command])
     """
     user = getpass.getuser()
-    if zworkers.host_cores.strip():
-        for hostcores in zworkers.host_cores.split(','):
+    if zworkers['host_cores'].strip():
+        for hostcores in zworkers['host_cores'].split(','):
             host, cores = hostcores.split()
             if host == '127.0.0.1':  # localhost
                 yield host, cores, [sys.executable]
@@ -86,10 +86,10 @@ class WorkerMaster(object):
         else:  # passed dictionary of strings
             self.zworkers = zworkers
         # NB: receiver_ports is not used but needed for compliance
-        self.ctrl_port = int(self.zworkers.ctrl_port)
+        self.ctrl_port = int(self.zworkers['ctrl_port'])
         self.host_cores = (
-            [hc.split() for hc in self.zworkers.host_cores.split(',')]
-            if self.zworkers.host_cores else [])
+            [hc.split() for hc in self.zworkers['host_cores'].split(',')]
+            if self.zworkers['host_cores'] else [])
         self.popens = []
 
     def start(self):
@@ -175,7 +175,7 @@ class WorkerMaster(object):
         """
         Wait until all workers are active
         """
-        num_hosts = len(self.zworkers.host_cores.split(','))
+        num_hosts = len(self.zworkers['host_cores'].split(','))
         for _ in range(seconds):
             time.sleep(1)
             status = self.status()
@@ -204,7 +204,8 @@ class WorkerMaster(object):
         """
         self.start()
         try:
-            mon = performance.Monitor('zmq-debug')
+            mon = performance.Monitor(
+                'zmq-debug', dbserver_host=config.dbserver.host)
             mon.inject = True
             rec_host = config.dbserver.receiver_host or '127.0.0.1'
             receiver = 'tcp://%s:%s' % (
@@ -360,7 +361,7 @@ def workerpool(num_workers: int=-1, job_id: int=0):
     Start a workerpool with the given number of workers.
     """
     # NB: unexpected errors will appear in the DbServer log
-    wpool = WorkerPool(int(config.zworkers.ctrl_port), num_workers, job_id)
+    wpool = WorkerPool(int(config.zworkers['ctrl_port']), num_workers, job_id)
     try:
         wpool.start()
     finally:
