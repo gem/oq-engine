@@ -30,7 +30,7 @@ from openquake.calculators.postproc.plots import (
 def main(calc_id: int = -1, site_model=False,
          save_to=None, *, show=True, assets_only=False):
     """
-    Plot the sites and the assets
+    Plot the sites, the assets and also rupture and stations if available
     """
 
     # NB: matplotlib is imported inside since it is a costly import
@@ -75,6 +75,19 @@ def main(calc_id: int = -1, site_model=False,
             disc = numpy.unique(dstore['discarded']['lon', 'lat'])
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded', s=markersize_discarded)
+    if 'station_data' in dstore:
+        try:
+            complete = dstore['complete']
+        except KeyError:
+            if dstore.parent:
+                complete = dstore.parent['sitecol'].complete
+            else:
+                complete = dstore['sitecol'].complete
+        station_ids = dstore['station_data/site_id'][:]
+        station_sites = numpy.isin(complete.sids, station_ids)
+        stations = complete[station_sites]
+        p.scatter(stations['lon'], stations['lat'], marker='D', c='brown',
+                  label='stations', s=markersize_site_model)
     min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     if oq.rupture_xml or oq.rupture_dict:
         use_shakemap = dstore['oqparam'].shakemap_uri
