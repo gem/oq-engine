@@ -1,7 +1,5 @@
 ---
 #
-- import_playbook: check_py_ver.yaml
-
 - hosts: all
   #
   serial: 1
