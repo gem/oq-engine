@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         distro:
-          - ubuntu2004
+          - ubuntu2404
     env:
       working-directory: ./ansible/cluster
 
@@ -33,7 +33,9 @@ jobs:
           python-version: '3.11'
 
       - name: Install test dependencies.
-        run: pip3 install molecule[docker,ansible,lint]
+        run: |
+          pip3 install molecule[ansible,lint]
+          pip3 install molecule-plugins[docker]
 
       - name: Run Molecule tests.
         run: molecule test --destroy=never -- -vv
