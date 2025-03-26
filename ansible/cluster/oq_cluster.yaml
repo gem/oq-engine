@@ -40,7 +40,20 @@
          - python3
          - python3-venv
          - openssh-client
+         - openssh-server
          - git
+
+    - name: Config and Start SSHD
+      shell: |
+        # Config SSH
+	    sed -ri "s|^#PermitRootLogin|PermitRootLogin|" /etc/ssh/sshd_config \
+	    sed -i "s|PermitRootLogin without-password|PermitRootLogin yes|" /etc/ssh/sshd_config \
+	    sed -i "s|PermitRootLogin prohibit-password|PermitRootLogin yes|" /etc/ssh/sshd_config \
+	    sed -ri "s|^#?PermitRootLogin\s+.*|PermitRootLogin yes|" /etc/ssh/sshd_config \
+	    sed -ri "s|^#PasswordAuthentication|PasswordAuthentication|" /etc/ssh/sshd_config \
+	    sed -ri "s|^PasswordAuthentication no|PasswordAuthentication yes|" /etc/ssh/sshd_config \
+	    sed -ri "s|UsePAM yes|#UsePAM yes|g" /etc/ssh/sshd_config
+        /usr/sbin/sshd -D
 
     - name: Ensure user openquake exist and generate ssh key
       user:
@@ -51,6 +64,8 @@
         generate_ssh_key: yes
         ssh_key_bits: 2048
         ssh_key_file: .ssh/id_rsa
+
+
 
   tasks:
 
