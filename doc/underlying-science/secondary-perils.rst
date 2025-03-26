@@ -53,10 +53,13 @@ the data, so that important variability between sites is lost.
 Liquefaction models
 -------------------
 
-Several liquefaction models are implemented in the OpenQuake engine. One of them is the method developed for the HAZUS 
+Several liquefaction models are implemented in the OpenQuake-engine, as detailed in the table under 
+`Input models for Secondary Perils <https://docs.openquake.org/oq-engine/master/manual/user-guide/inputs/secondary-perils-inputs.html>`_
+
+One of them models is the method developed for the HAZUS 
 software by the US Federal Emergency Management Agency. This model involves categorization of sites into liquefaction 
-susceptibility classes based on geotechnical characteristics, and a quanitative probability model for each 
-susceptibility class. The remaining models are the academic geospatial models, i.e., statistical models that uses 
+susceptibility classes based on geotechnical characteristics, and a quantitative probability model for each 
+susceptibility class. The remaining models are the academic geospatial models, i.e., statistical models that use 
 globally available input variables as first-order proxies to characterise saturation and density properties of the 
 soil. The shaking component is expressed either in terms of Peak Ground Acceleration , :math:`PGA`, or Peak Ground 
 Velocity , :math:`PGV`. These methods are simplified from older, more comprehensive liquefaction evaluations 
@@ -448,6 +451,9 @@ A variety of regression equations can be used to estimate the earthquake-induced
 some of the equations below may return displacements in cm (:math:`Disp_{cm}`); however, OQ  always converts them to m (:math:`Disp`).
 Finally, it is important to emphasize that the computed displacements do not necessarily correspond directly to measurable slope movements in the field, 
 but rather serve as an index of slope performance.
+
+The table under `Input models for Secondary Perils <https://docs.openquake.org/oq-engine/master/manual/user-guide/inputs/secondary-perils-inputs.html>`_
+provides a detailed list of the landslide models implemented in the OpenQuake-engine.
 
 
 **************
