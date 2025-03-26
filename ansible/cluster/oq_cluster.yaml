@@ -42,17 +42,10 @@
          - openssh-client
          - git
 
-    - name: Check for user and other
-      shell: |
-        id openquake
-        hostname
-        python3 -V
-        ls -lrt /home*
-
     - name: Ensure user openquake exist and generate ssh key
       user:
         name: openquake
-        home: /home.dev/openquake
+        home: /home/openquake
         shell: /bin/bash
         state: present
         generate_ssh_key: yes
@@ -70,7 +63,7 @@
 
     - name: Run install script from github repo only on master node
       shell: |
-        cd /home.dev/openquake
+        cd /home/openquake
         git clone https://github.com/gem/oq-engine.git
         cd oq-engine
         python3.11 ./install.py server --version={{ oq_version }}
