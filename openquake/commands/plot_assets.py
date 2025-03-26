@@ -87,7 +87,7 @@ def main(calc_id: int = -1, site_model=False,
         station_sites = numpy.isin(complete.sids, station_ids)
         stations = complete[station_sites]
         p.scatter(stations['lon'], stations['lat'], marker='v',
-                  edgecolors='black', label='stations', s=30)
+                  edgecolors='black', label='stations', s=markersize_site_model)
     min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     if oq.rupture_xml or oq.rupture_dict:
         use_shakemap = dstore['oqparam'].shakemap_uri
