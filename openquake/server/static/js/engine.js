@@ -890,7 +890,7 @@ function capitalizeFirstLetter(val) {
                         $('#station_data_file_loaded').val('N.A. (conversion issue)');
                         diaerror.show(false, "Note", '<p>' + data.station_data_issue + '</p>');
                     } else {
-                        $('#station_data_file_loaded').val(data.station_data_file ? 'Loaded' : 'N.A.');
+                        $('#station_data_file_loaded').val(data.station_data_file ? data.n_stations + ' stations were loaded' : 'N.A.');
                     }
                 }).error(function (data) {
                     $('#station_data_file_loaded').val('');
