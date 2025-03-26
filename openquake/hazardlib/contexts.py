@@ -1184,6 +1184,8 @@ class ContextMaker(object):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), 1]
             for poes, mea, sig, slc in self._gen_poes(ctxt):
+                # NB: using directly 64 bit poes would be slower without reason
+                # since with astype(F64) the numbers are identical
                 yield poes.astype(F64), mea, sig, ctxt[slc]
 
     # documented but not used in the engine
@@ -1382,7 +1384,7 @@ def print_finite_size(rups):
 def _get_poes(mean_std, loglevels, phi_b):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
-    out = numpy.zeros((loglevels.size, N), F32)  # shape (L, N)
+    out = numpy.empty((loglevels.size, N), F32)  # shape (L, N)
     _set_poes(mean_std, loglevels, phi_b, out)
     return out.T
 
