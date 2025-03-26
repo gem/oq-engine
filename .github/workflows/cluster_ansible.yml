@@ -36,7 +36,7 @@ jobs:
         run: |
           sudo modprobe {nfs,nfsd,rpcsec_gss_krb5}
           df -h
-          mkdir -p /mnt/nfs
+          sudo mkdir -p /mnt/nfs
 
       - name: Install test dependencies.
         run: |
