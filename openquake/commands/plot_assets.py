@@ -28,7 +28,7 @@ from openquake.calculators.postproc.plots import (
 
 
 def main(calc_id: int = -1, site_model=False,
-         save_to=None, *, show=True, assets_only=False):
+         save_to=None, *, show=True, assets_only=False, show_stations=True):
     """
     Plot the sites, the assets and also rupture and stations if available
     """
@@ -75,7 +75,7 @@ def main(calc_id: int = -1, site_model=False,
             disc = numpy.unique(dstore['discarded']['lon', 'lat'])
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded', s=markersize_discarded)
-    if 'station_data' in dstore:
+    if show_stations and 'station_data' in dstore:
         try:
             complete = dstore['complete']
         except KeyError:
