@@ -554,7 +554,6 @@ class ContextMaker(object):
     deltagetter = None
     fewsites = False
     tom = None
-    cluster = None  # set in PmapMaker
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
