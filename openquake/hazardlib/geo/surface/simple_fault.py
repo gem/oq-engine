@@ -31,6 +31,22 @@ from openquake.hazardlib.geo import Point, Line, utils as geo_utils
 from openquake.hazardlib.near_fault import get_plane_equation
 
 
+def compute_adjusted_spacing(tlen, rupture_mesh_spacing):
+    """
+    Computes a new mesh spacing with which the original trace length is
+    retained
+
+    :param tlen:
+    :param rupture_mesh_spacing:
+    """
+    spcn = rupture_mesh_spacing
+    num_intervals = numpy.floor(tlen / spcn)
+    delta_spcn = (tlen - num_intervals * spcn)
+    new_spcn = rupture_mesh_spacing + delta_spcn / num_intervals
+    assert numpy.abs(tlen - new_spcn * num_intervals) < 1e-1
+    return new_spcn
+
+
 def simple_fault_node(fault_trace, dip, upper_depth, lower_depth):
     """
     :param fault_trace: an object with an attribute .points
@@ -169,8 +185,15 @@ class SimpleFaultSurface(BaseSurface):
 
         Uses :meth:`check_fault_data` for checking parameters.
         """
+
+        # Compute the adjusted mesh spacing
+        tlen = fault_trace.get_length()
+        mesh_spacing = compute_adjusted_spacing(tlen, mesh_spacing)
+
+        # Check the input parameters
         cls.check_fault_data(fault_trace, upper_seismogenic_depth,
                              lower_seismogenic_depth, dip, mesh_spacing)
+
         # Loops over points in the top edge, for each point
         # on the top edge compute corresponding point on the bottom edge, then
         # computes equally spaced points between top and bottom points.

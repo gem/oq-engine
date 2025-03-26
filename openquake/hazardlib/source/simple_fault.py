@@ -19,10 +19,13 @@ Module :mod:`openquake.hazardlib.source.simple_fault` defines
 """
 import copy
 import math
+import numpy as np
+
 from openquake.baselib.python3compat import round
 from openquake.hazardlib import mfd
 from openquake.hazardlib.source.base import ParametricSeismicSource
-from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
+from openquake.hazardlib.geo.surface.simple_fault import (
+    SimpleFaultSurface, compute_adjusted_spacing)
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
 
@@ -108,6 +111,11 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.dip = dip
         self.rake = rake
+
+        # Compute the adjusted mesh spacing
+        tlen = fault_trace.get_length()
+        rupture_mesh_spacing = compute_adjusted_spacing(
+            tlen, rupture_mesh_spacing)
 
         min_mag, _max_mag = self.mfd.get_min_max_mag()
         cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
