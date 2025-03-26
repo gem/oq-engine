@@ -8,8 +8,8 @@ on:
         required: true
   schedule:
     - cron: "0 12 * * *"
-  #push:
-    #branches: [ macos11 ]
+  push:
+    branches: [ ae_cluster_ansible ]
 
 jobs:
 
