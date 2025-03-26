@@ -1384,7 +1384,7 @@ def print_finite_size(rups):
 def _get_poes(mean_std, loglevels, phi_b):
     # returns a matrix of shape (N, L)
     N = mean_std.shape[2]  # shape (2, M, N)
-    out = numpy.zeros((loglevels.size, N), F32)  # shape (L, N)
+    out = numpy.empty((loglevels.size, N), F32)  # shape (L, N)
     _set_poes(mean_std, loglevels, phi_b, out)
     return out.T
 
