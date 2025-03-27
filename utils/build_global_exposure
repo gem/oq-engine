@@ -108,6 +108,16 @@ def get_gsim_lt(cwd):
     return gsim_lt.GsimLogicTree(f2)
 
 
+def discard_dupl(records):
+    # discard duplicate sites
+    acc = {}
+    for rec in records:
+        lonlat = rec['lon'], rec['lat']
+        if lonlat not in acc:
+            acc[lonlat] = rec
+    return numpy.array(list(acc.values()), dtype=rec.dtype)
+
+    
 def build_site_model(grm_dir):
     """
     Build the global site model starting from the CSV files in the
@@ -136,9 +146,13 @@ def build_site_model(grm_dir):
         n = len(df)
         recs = sm[row:row + n]
         for col in df.columns:
-            recs[col] = df[col]
+            val = df[col].to_numpy()
+            if col in ('lon', 'lat'):
+                recs[col] = numpy.round(val, 5)
+            else:
+                recs[col] = val
         row += n
-    return sm
+    return discard_dupl(sm)
 
 
 def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
