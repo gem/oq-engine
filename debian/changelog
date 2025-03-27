@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * OQImpact: now aggregating by ID_2 and not ID_1
   * Removed the --config-file option from the oq engine command
   * Fixed numeric error in high intensity hazard curves produced by
     multifault source by using 64 bit PoEs
