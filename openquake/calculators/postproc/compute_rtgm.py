@@ -587,7 +587,6 @@ def main(dstore, csm):
     N = len(dstore['sitecol/sids'])
     asce07 = {}
     asce41 = {}
-    design_param = {}
     warnings = {}
     rtgm_dfs = []
     mce_dfs = []
