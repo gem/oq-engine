@@ -11,8 +11,8 @@
   - name: Run  OQ commands to check Installation
     shell: |
       /usr/bin/oq info cfg
-      /usr/bin/oq worker status
-      cat /op/openquake/venv/openquake.cfg
+      cat /opt/openquake/venv/openquake.cfg
+      /usr/bin/oq workers status
 
   - name: Run a Demo calc for EventBasedRisk using https
     command: /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
