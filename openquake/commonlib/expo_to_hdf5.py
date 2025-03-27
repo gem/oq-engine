@@ -104,7 +104,7 @@ def store_tagcol(dstore):
         size = len(uvals) + 1
         tagsizes.append(size)
         logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices start from 1
+        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
         dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
         if name == 'ID_0':
             dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
@@ -119,6 +119,7 @@ def store_tagcol(dstore):
     dstore.getitem('tagcol').attrs.update(dic)
 
 
+# in parallel
 def gen_tasks(files, sample_assets, monitor):
     """
     Generate tasks of kind exposure_by_geohash for large files
@@ -129,11 +130,13 @@ def gen_tasks(files, sample_assets, monitor):
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=usecols, skiprows=1, chunksize=1_000_000)
+        nrows = 0
         for i, df in enumerate(dfs):
             if sample_assets:
                 df = general.random_filter(df, float(sample_assets))
             if len(df) == 0:
                 continue
+            nrows += len(df)
             if 'ID_1' not in df.columns:  # happens for many islands
                 df['ID_1'] = '???'
             if 'ID_2' not in df.columns:  # happens for many contries in Africa
@@ -145,8 +148,8 @@ def gen_tasks(files, sample_assets, monitor):
             if i == 0:
                 yield from exposure_by_geohash(array, monitor)
             else:
-                print(file.fname)
                 yield exposure_by_geohash, array
+        print(os.path.basename(file.fname), nrows)
 
 
 def store(exposures_xml, dstore):
