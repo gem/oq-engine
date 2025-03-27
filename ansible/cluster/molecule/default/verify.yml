@@ -8,6 +8,12 @@
   gather_facts: false
 
   tasks:
+  - name: Run  OQ commands to check Installation
+    shell: |
+      /usr/bin/oq info cfg
+      /usr/bin/oq worker status
+      cat /op/openquake/venv/openquake.cfg
+
   - name: Run a Demo calc for EventBasedRisk using https
     command: /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
     args:
