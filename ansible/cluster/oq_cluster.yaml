@@ -48,7 +48,7 @@
         if [ ! -d "/var/run/sshd" ]; then
            sudo mkdir -p /var/run/sshd
         fi
-        sudo /usr/sbin/sshd -E /var/log/ssh/sshd.log
+        sudo systemctl start sshd
 
     - name: Ensure user openquake exist and generate ssh key
       user:
