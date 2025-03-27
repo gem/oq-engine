@@ -12,7 +12,6 @@
     shell: |
       /usr/bin/oq info cfg
       cat /opt/openquake/venv/openquake.cfg
-      /usr/bin/oq workers stop
 
   - name: Run a Demo calc for EventBasedRisk using https
     command: /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
@@ -20,7 +19,7 @@
       chdir: /home/openquake
 
   - name: Run a Demo calc for EventBasedRisk using https
-    command: /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+    command: OQ_WORKERPOOL_ERROR=1 /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
     args:
       chdir: /home/openquake
 
