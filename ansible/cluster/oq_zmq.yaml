@@ -11,7 +11,7 @@
     workdir_services: /var/lib/openquake
     webuidir_services: /var/lib/openquake/webui
     venv_dir: /opt/openquake
-    venv_bin: "{{ venv_dir }}/bin"
+    venv_bin: "{{ venv_dir }}/venv"
     server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
     worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(' -1,') }} -1"
   environment:
