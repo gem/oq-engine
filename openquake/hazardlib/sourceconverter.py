@@ -1255,6 +1255,9 @@ class SourceConverter(RuptureConverter):
         if sg and sg.src_interdep == 'mutex':
             # sg can be empty if source_id is specified and it is different
             # from any source in sg
+            if srcs_weights is None:
+                raise ValueError(
+                    'Please make sure that `srcs_weights` is defined')
             if len(node) and len(srcs_weights) != len(node):
                 raise ValueError(
                     'There are %d srcs_weights but %d source(s) in %s'
@@ -1264,7 +1267,7 @@ class SourceConverter(RuptureConverter):
                 for src, sw in zip(sg, srcs_weights):
                     if ':' not in src.source_id:
                         raise NameError('You must use the colon convention '
-                                        'with mutex sources')
+                                        'with mutex sources e.g. src:01')
                     src.mutex_weight = sw
                     tot += sw
                 numpy.testing.assert_allclose(

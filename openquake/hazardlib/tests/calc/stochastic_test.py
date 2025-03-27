@@ -16,20 +16,29 @@
 import os
 import unittest
 import numpy
+import pathlib
+
 from openquake.hazardlib import nrml, contexts
-from openquake.hazardlib.calc.stochastic import sample_ruptures
+from openquake.hazardlib.calc.stochastic import (
+    sample_ruptures, sample_cluster)
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 
 aae = numpy.testing.assert_almost_equal
+
+HERE = pathlib.Path(__file__).parent
 
 
 class StochasticEventSetTestCase(unittest.TestCase):
 
     def test_nankai(self):
         # source model for the Nankai region provided by M. Pagani
-        source_model = os.path.join(os.path.dirname(__file__), 'nankai.xml')
-        # it has a single group containing 15 mutex sources
-        [group] = nrml.to_python(source_model)
+
+        # Source model file name
+        # ssm_fname = os.path.join(os.path.dirname(__file__), 'nankai.xml')
+        ssm_fname = HERE / 'data' / 'nankai' / 'nankai.xml'
+
+        # It has a single group containing 15 mutex sources
+        [group] = nrml.to_python(ssm_fname)
         for i, src in enumerate(group):
             src.id = i
             src.grp_id = 0
@@ -46,3 +55,29 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # test no filtering
         ruptures = sum(sample_ruptures(group, cmaker), {})['rup_array']
         self.assertEqual(len(ruptures), 7)
+
+
+class ClusterTestCase(unittest.TestCase):
+
+    def test_src_indep(self):
+        # Sources are independent and ruptures mutex
+
+        # Source model file name
+        ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm01.xml')
+
+        from openquake.hazardlib.sourceconverter import SourceConverter
+        sconv = SourceConverter(
+            investigation_time=100.0,
+            rupture_mesh_spacing=5.0,
+            width_of_mfd_bin=0.1
+        )
+
+        # Reading
+        ssm = nrml.to_python(ssm_fname, sconv)
+
+        # Generating SESs
+        for rups, source_data, eff_ruptures in sample_cluster(ssm[0], 100, 1):
+            print('------------> aa')
+            pass
+
+        breakpoint()
