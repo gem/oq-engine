@@ -63,13 +63,6 @@
 
   tasks:
 
-    - name: Download installation scripts only on master node
-      get_url:
-        url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-        dest: /tmp/install.py
-        mode: '0644'
-      when: "'master' in group_names"
-
     - name: Run install script from github repo only on master node
       shell: |
         cd /home/openquake
