@@ -58,7 +58,7 @@ def read_world_vulnerability(grm_dir, dstore):
     Store the world CompositeRiskModel
     """
     kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
-             'fatalities', 'residents']
+             'fatalities', 'residents', 'affectedpop', 'injured']
     vfuncs = RiskFuncList()
     for kind in kinds:
         name = f'Vulnerability/vulnerability/vulnerability_{kind}.xml'
