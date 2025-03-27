@@ -11,7 +11,7 @@ following command::
 The result is the following::
 
 	usage: oq engine [-h] [--log-file LOG_FILE] [--no-distribute] [-y]
-	                 [-c CONFIG_FILE] [--make-html-report YYYY-MM-DD|today] [-u]
+	                 [--make-html-report YYYY-MM-DD|today] [-u]
 	                 [-d] [-w] [--run JOB_INI [JOB_INI ...]]
 	                 [--list-hazard-calculations] [--list-risk-calculations]
 	                 [--delete-calculation CALCULATION_ID]
@@ -37,9 +37,6 @@ The result is the following::
 	                        use in debugging and profiling.
 	  -y, --yes             Automatically answer "yes" when asked to confirm an
 	                        action
-	  -c CONFIG_FILE, --config-file CONFIG_FILE
-	                        Custom openquake.cfg file, to override default
-	                        configurations
 	  --make-html-report YYYY-MM-DD|today, --r YYYY-MM-DD|today
 	                        Build an HTML report of the computation at the given
 	                        date
