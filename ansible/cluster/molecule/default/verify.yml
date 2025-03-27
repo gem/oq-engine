@@ -12,7 +12,7 @@
     shell: |
       /usr/bin/oq info cfg
       cat /opt/openquake/venv/openquake.cfg
-      /usr/bin/oq workers debug
+      /usr/bin/oq workers stop
 
   - name: Run a Demo calc for EventBasedRisk using https
     command: /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
