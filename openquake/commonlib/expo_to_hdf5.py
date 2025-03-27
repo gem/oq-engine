@@ -126,7 +126,7 @@ def gen_tasks(files, sample_assets, monitor):
     """
     for file in files:
         # read CSV in chunks
-        usecols = file.fields | ({'ID_2'} if file.admin2 else {})
+        usecols = file.fields | ({'ID_2'} if file.admin2 else set())
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=usecols, skiprows=1, chunksize=1_000_000)
