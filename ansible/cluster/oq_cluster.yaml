@@ -73,8 +73,9 @@
     - name: Run install script from github repo only on master node
       shell: |
         cd /home/openquake
-        git clone -b {{ oq_version }} https://github.com/gem/oq-engine.git
+        git clone  https://github.com/gem/oq-engine.git
         cd oq-engine
+        git checkout {{ oq_version }}
         git log -1
         python3.11 ./install.py server
       register: oq_install
