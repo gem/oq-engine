@@ -702,7 +702,8 @@ def impact_callback(
         exclude_from_print = [
             'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
             'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type', 'gsim',
-            'shakemap_uri', 'rupture_file', 'rupture_from_usgs']
+            'shakemap_uri', 'rupture_file', 'rupture_from_usgs', 'title', 'mmi_file',
+            'rake']
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
@@ -776,11 +777,13 @@ def impact_get_stations_from_usgs(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
-    station_data_file, err = get_stations_from_usgs(usgs_id, user=request.user)
+    station_data_file, n_stations, err = get_stations_from_usgs(
+        usgs_id, user=request.user)
     station_data_issue = None
     if err:
         station_data_issue = err['error_msg']
     response_data = dict(station_data_file=station_data_file,
+                         n_stations=n_stations,
                          station_data_issue=station_data_issue)
     return JsonResponse(response_data)
 

@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * OQImpact: now aggregating by ID_2 and not ID_1
+  * Removed the --config-file option from the oq engine command
+  * Fixed numeric error in high intensity hazard curves produced by
+    multifault source by using 64 bit PoEs
   * Removed the dependency from pyshp
   * Improved the task distribution
   * Exposed the output `avg_gmf`
@@ -18,6 +22,12 @@
     `source_model_logic_tree_file`
   * Extended `source_model.serialise_to_nrml` to accept a `mesh_spacing`
     parameter
+
+  [Marco Pagani]
+  * Added a module to the modifiable GMPE computing site response according
+    to Stewart et al. (2020) and Hashash et al. (2020).
+  * Added a model for AUS23 that replaces the fixed Vs30 ones currently in
+    the engine
 
   [Marco Pagani, Valeria Cascone]
   * Added an get_width and get_length methods to Strasser et al. (2010) MSR

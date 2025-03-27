@@ -24,13 +24,14 @@ from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl, get_bbox
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
-    add_borders, get_assetcol, get_country_iso_codes, add_rupture, adjust_limits)
+    add_borders, get_assetcol, get_country_iso_codes, add_rupture,
+    adjust_limits)
 
 
 def main(calc_id: int = -1, site_model=False,
          save_to=None, *, show=True, assets_only=False):
     """
-    Plot the sites and the assets
+    Plot the sites, the assets and also rupture and stations if available
     """
 
     # NB: matplotlib is imported inside since it is a costly import
@@ -75,6 +76,19 @@ def main(calc_id: int = -1, site_model=False,
             disc = numpy.unique(dstore['discarded']['lon', 'lat'])
             p.scatter(disc['lon'], disc['lat'], marker='x', color='red',
                       label='discarded', s=markersize_discarded)
+    if 'station_data' in dstore:
+        try:
+            complete = dstore['complete']
+        except KeyError:
+            if dstore.parent:
+                complete = dstore.parent['sitecol'].complete
+            else:
+                complete = dstore['sitecol'].complete
+        station_ids = dstore['station_data/site_id'][:]
+        station_sites = numpy.isin(complete.sids, station_ids)
+        stations = complete[station_sites]
+        p.scatter(stations['lon'], stations['lat'], marker='D', c='brown',
+                  label='stations', s=markersize_site_model)
     min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     if oq.rupture_xml or oq.rupture_dict:
         use_shakemap = dstore['oqparam'].shakemap_uri
@@ -86,7 +100,8 @@ def main(calc_id: int = -1, site_model=False,
             dist = sitecol.get_cdist(rec)
             print('rupture(%s, %s), dist=%s' % (lon, lat, dist))
         xlon, xlat = [lon], [lat]
-        if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE' and not use_shakemap:
+        if (os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE'
+                and not use_shakemap):
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_ebrupture(dstore, rup_id=0).rupture
             ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)

@@ -422,7 +422,7 @@ def download_station_data_file(usgs_id, contents, user):
         if len(stations) == 0:
             msg = 'stationlist.json was downloaded, but it contains no features'
             err = {"status": "failed", "error_msg": msg}
-            return None, err
+            return None, 0, err
         original_len = len(stations)
         try:
             seismic_len = len(
@@ -432,7 +432,7 @@ def download_station_data_file(usgs_id, contents, user):
                    f' "station_type" is not specified, so we can not'
                    f' identify the "seismic" stations.')
             err = {"status": "failed", "error_msg": msg}
-            return None, err
+            return None, 0, err
         df = usgs_stations_to_oq_format(
             stations, exclude_imts=('SA(3.0)',), seismic_only=True)
         if len(df) < 1:
@@ -442,21 +442,22 @@ def download_station_data_file(usgs_id, contents, user):
                            f' {seismic_len} seismic stations were all'
                            f' discarded')
                     err = {"status": "failed", "error_msg": msg}
-                    return None, err
+                    return None, 0, err
                 else:
                     msg = (f'{original_len} stations were found, but none'
                            f' of them are seismic')
                     err = {"status": "failed", "error_msg": msg}
-                    return None, err
+                    return None, 0, err
             else:
                 msg = 'No stations were found'
                 err = {"status": "failed", "error_msg": msg}
-                return None, err
+                return None, 0, err
         else:
             station_data_file = gettemp(
                 prefix='stations', suffix='.csv', remove=False)
             df.to_csv(station_data_file, encoding='utf8', index=False)
-            return station_data_file, err
+            n_stations = len(df)
+            return station_data_file, n_stations, err
 
 
 def load_rupdic_from_finite_fault(usgs_id, mag, products):
@@ -782,19 +783,20 @@ def _get_rup_from_json(usgs_id, rupture_file):
 
 def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
     err = {}
+    n_stations = 0
     try:
         usgs_id = valid.simple_id(usgs_id)
     except ValueError as exc:
         err = {'status': 'failed', 'error_msg': str(exc)}
-        return None, err
+        return None, n_stations, err
     contents, _properties, _shakemap, err = _contents_properties_shakemap(
         usgs_id, user, False, monitor)
     if err:
-        return None, err
+        return None, n_stations, err
     with monitor('Downloading stations'):
-        station_data_file, err = download_station_data_file(
+        station_data_file, n_stations, err = download_station_data_file(
             usgs_id, contents, user)
-    return station_data_file, err
+    return station_data_file, n_stations, err
 
 
 def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
@@ -877,6 +879,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
         rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
     if approach == 'use_shakemap_from_usgs':
         rupdic['shakemap_array'] = shakemap
+    rupdic['title'] = properties['title']
     if not rup_data:  # in parsers_test
         if approach == 'use_pnt_rup_from_usgs':
             rupdic['msr'] = 'PointMSR'
