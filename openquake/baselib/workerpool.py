@@ -66,7 +66,7 @@ def ssh_args(zworkers):
     :yields: triples (hostIP, num_cores, [ssh remote python command])
     """
     user = getpass.getuser()
-    if os.environ('OQ_WORKERPOOL_ERROR'):
+    if os.environ.get('OQ_WORKERPOOL_ERROR'):
         # can be set in CI to emulate a bug in ssh_args
         raise RuntimeError('Testing a bug in ssh_args')
     if zworkers['host_cores'].strip():
