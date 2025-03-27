@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Removed the --config-file option from the oq engine command
+  * Fixed numeric error in high intensity hazard curves produced by
+    multifault source by using 64 bit PoEs
   * Removed the dependency from pyshp
   * Improved the task distribution
   * Exposed the output `avg_gmf`
@@ -21,8 +24,8 @@
 
   [Marco Pagani]
   * Added a module to the modifiable GMPE computing site response according
-    to Stewart et al. (2020) and Hashash et al. (2020). 
-  * Added a model for AUS23 that replaces the fixed Vs30 ones currently in 
+    to Stewart et al. (2020) and Hashash et al. (2020).
+  * Added a model for AUS23 that replaces the fixed Vs30 ones currently in
     the engine
 
   [Marco Pagani, Valeria Cascone]
