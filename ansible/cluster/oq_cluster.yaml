@@ -75,12 +75,6 @@
       register: oq_install
       when: "'master' in group_names"
 
-    - name: Create user to run calculation on verify step
-      user:
-        name: ci_user
-        home: /home/ci_user
-        shell: /bin/bash
-        state: present
       when: "'master' in group_names"
 
 - import_playbook: inst_nfs.yaml

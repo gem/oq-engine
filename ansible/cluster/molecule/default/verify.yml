@@ -11,12 +11,16 @@
   - name: Run  OQ commands to check Installation
     shell: |
       ls -lrt /usr/bin/oq
+      ls -lrt /opt/openquake/venv/bin/
+      ls -lrt /opt/
+      ls -lrt /opt/shared/
+      cat /opt/openquake/venv/openquake.cfg
       oq info cfg
 
   - name: Run a Demo calc for EventBasedRisk using https
     command: oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
     args:
-      chdir: /home/ci_user
+      chdir: /opt/ci_user
 
   - name: Run a Demo calc for EventBasedRisk using https and set OQ_WORKERPOOL_ERROR
     shell: |
