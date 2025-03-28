@@ -186,7 +186,7 @@ def gsim(value, basedir=''):
     try:
         gsim_class = registry[gsim_name]
     except KeyError:
-        raise ValueError('Unknown GSIM: %s' % gsim_name)
+        raise NameError('Unknown GSIM: %s' % gsim_name)
     gs = gsim_class(**kwargs)
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs

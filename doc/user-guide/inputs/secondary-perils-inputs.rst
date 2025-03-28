@@ -4,13 +4,74 @@ Secondary perils
 ================
 
 Several methodologies exist for calculating probabilities and displacements from secondary perils, such as landslides
-and liquefaction. We have implemented multiple models in OpenQuake, each requiring different input datasets with global
-coverage. These inputs are incorporated by adjusting the site model. Performing secondary perils calculations requires 
+and liquefaction. We have implemented multiple models in OpenQuake, each requiring different input datasets, which 
+are incorporated in the site model. Performing secondary perils calculations requires 
 the adjusted `site_model.csv` in addition to the required files for running event-based or scenario analyses. 
 Futhermore, user is asked to define in `job.ini` file which model should be used to perform the analysis using the
 parameter ``secondary_perils``. For example, if one wants to use the HAZUS methodology, they should type::
     
     secondary_perils = HazusLiquefaction
+
+The tables below provide a comprehensive list of the liquefaction and landslide models implemented in the OpenQuake engine. 
+They detail the Intensity Measure Types (IMTs) utilized by each model, the outputs calculated and the additional site 
+model parameters required. 
+
+
++---------------------------------+------------------------+----------+-----------------------------------------+
+| Model                           | Output                 | IMTs     | Additional parameters in the site model |
++=================================+========================+==========+=========================================+
+| HazusLiquefaction               | LiqProb                | PGA, M   | liq_susc_cat, gwd                       |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| ZhuEtAl2015LiquefactionGeneral  | LiqProb/LSE, LiqOccur  | PGA, M   | cti, vs30                               |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| ZhuEtAl2017LiquefactionCoastal  | LiqProb, LiqOccur, LSE | PGV      | vs30, dr, dc, precip                    |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| ZhuEtAl2017LiquefactionGeneral  | LiqProb, LiqOccur, LSE | PGV      | vs30, dw, gwd, precip                   |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| RashidianBaise2020Liquefaction  | LiqProb, LiqOccur, LSE | PGV, PGA | vs30, dw, gwd, precip                   |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| AllstadtEtAl2022Liquefaction    | LiqProb, LiqOccur, LSE | PGV, PGA | vs30, dw, gwd, precip                   |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| AkhlagiEtAl2021LiquefactionA    | LiqProb, LiqOccur      | PGV      | tri, dc, dr, zwb                        |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| AkhlagiEtAl2021LiquefactionB    | LiqProb, LiqOccur      | PGV      | vs30, dc, dr, zwb                       |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| Bozzoni2021LiquefactionEurope   | LiqProb, LiqOccur      | PGA, M   | cti, vs30                               |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| TodorovicSilva2022NonParametric | LiqProb, LiqOccur      | PGV      | vs30, dw, gwd, precip                   |
++---------------------------------+------------------------+----------+-----------------------------------------+
+| HazusDeformation                | PGDMax                 | PGA, M   | liq_susc_cat                            |
++---------------------------------+------------------------+----------+-----------------------------------------+
+
+
+
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| Model                              | Output          | IMTs     | Additional parameters in the site model                                                    |
++====================================+=================+==========+============================================================================================+
+| Jibson2007ALandslides              | Disp            | PGA      | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness                 |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| Jibson2007BLandslides              | Disp            | PGA, M   | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness                 |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| ChoRathje2022Landslides            | Disp            | PGV      | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness, tslope, hratio |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| FotopoulouPitilakis2015ALandslides | Disp            | PGV, M   | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness                 |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| FotopoulouPitilakis2015BLandslides | Disp            | PGA, M   | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness                 |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| FotopoulouPitilakis2015CLandslides | Disp            | PGA, M   | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness                 |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| FotopoulouPitilakis2015DLandslides | Disp            | PGV, PGA | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness                 |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| SaygiliRathje2008Landslides        | Disp            | PGV, PGA | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness                 |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| RathjeSaygili2009Landslides        | Disp            | PGA, M   | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness                 |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| JibsonEtAl2000Landslides           | Disp, Disp Prob | IA       | slope, cohesion_mid, friction_mid, saturation, dry_density, slab_thickness                 |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| NowickiJessee2018Landslides        | LSProb, LSE     | PGV      | slope, lithology, landcover                                                                |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+| AllstadtEtAl2022Landslides         | LSProb, LSE     | PGV, PGA | slope, lithology, landcover                                                                |
++------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
 
 Before demonstrating an example of a site model, we first discuss the implemented functions that are useful for 
 retrieving relevant inputs for sites.
