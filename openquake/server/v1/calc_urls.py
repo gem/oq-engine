@@ -50,6 +50,7 @@ elif settings.APPLICATION_MODE == 'ARISTOTLE':
         re_path(r'^impact_get_rupture_data$',
                 views.impact_get_rupture_data),
         re_path(r'^impact_run$', views.impact_run),
+        re_path(r'^impact_run_with_shakemap$', views.impact_run_with_shakemap),
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
         re_path(r'^(\d+)/download_aggrisk$', views.download_aggrisk),
