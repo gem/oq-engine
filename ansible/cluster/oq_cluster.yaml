@@ -43,12 +43,13 @@
          - openssh-server
          - git
 
-    - name: Config and Start SSHD
+    - name: Config and Start SSHD and print $PATH
       shell: |
         if [ ! -d "/var/run/sshd" ]; then
            sudo mkdir -p /var/run/sshd
         fi
         sudo systemctl start sshd
+        echo $PATH
 
     - name: Ensure user openquake exist and generate ssh key
       user:

@@ -10,20 +10,21 @@
   tasks:
   - name: Run  OQ commands to check Installation
     shell: |
-      /usr/bin/oq info cfg
+      ls -lrt /usr/bin/oq
+      oq info cfg
 
   - name: Run a Demo calc for EventBasedRisk using https
-    command: /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+    command: oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
     args:
       chdir: /home/ci_user
 
   - name: Run a Demo calc for EventBasedRisk using https and set OQ_WORKERPOOL_ERROR
     shell: |
       export OQ_WORKERPOOL_ERROR=1
-      /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+      oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
 
   - name: Display outputs of last calculcation
-    command: /usr/bin/oq engine --list-outputs -1
+    command: oq engine --list-outputs -1
     args:
       chdir: /home/ci_user
     register: calc
