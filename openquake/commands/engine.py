@@ -119,12 +119,13 @@ def main(
         os.makedirs(datadir)
 
     fname = os.path.expanduser(config.dbserver.file)
-    if (os.environ.get('OQ_DATABASE', config.dbserver.host) == '127.0.0.1'
-            and getpass.getuser() != 'openquake'):  # no DbServer
+    host = os.environ.get('OQ_DATABASE', config.dbserver.host)
+    if host == '127.0.0.1' and getpass.getuser() != 'openquake':  # no DbServer
         if not os.path.exists(fname):
             upgrade_db = True  # automatically creates the db
             yes = True
     else:  # DbServer yes
+        print(f'Using the DbServer on {host}')
         dbserver.ensure_on()
         # check that we are talking to the right server
         err = dbserver.check_foreign()

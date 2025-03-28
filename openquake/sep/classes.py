@@ -36,6 +36,7 @@ from openquake.sep.landslide.probability import(
     nowicki_jessee_2018,
     LANDCOVER_TABLE,
     LITHOLOGY_TABLE,
+    allstadt_etal_2022_b,
     jibson_etal_2000_probability,
 )
 from openquake.sep.liquefaction.liquefaction import (
@@ -1091,6 +1092,66 @@ class NowickiJessee2018Landslides(SecondaryPeril):
             )
         
         prob_ls, lse = nowicki_jessee_2018(
+            pgv = pgv,
+            slope=sites.slope,
+            lithology=sites.lithology,
+            landcover=sites.landcover,
+            cti=sites.cti,
+        )
+        out.append(prob_ls)
+        out.append(lse)
+            
+        return out
+        
+class AllstadtEtAl2022Landslides(SecondaryPeril):
+    """
+    Corrects LSE according to Allstadt et al. (2022).
+    """
+
+    outputs = ["LsProb", "LSE"]
+
+    def __init__(
+        self,
+        intercept: float = -6.30,
+        pgv_coeff: float = 1.65,
+        slope_coeff: float = 0.06,
+        coeff_table_lith = LITHOLOGY_TABLE,
+        coeff_table_cov = LANDCOVER_TABLE,
+        cti_coeff: float = 0.03,
+        interaction_term: float = 0.01,
+    ):
+        self.intercept = intercept
+        self.pgv_coeff = pgv_coeff
+        self.slope_coeff = slope_coeff
+        self.coeff_table_lith = coeff_table_lith.copy()
+        self.coeff_table_lith["su"] = -1.36
+        self.coeff_table_lith[b"su"] = -1.36 
+        self.coeff_table_cov = coeff_table_cov
+        self.cti_coeff = cti_coeff
+        self.interaction_term = interaction_term
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        pga = None
+        pgv = None
+        for im, gmf in imt_gmf:
+            if im.string == "PGV":
+                pgv = gmf
+            elif im.string == "PGA":
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError(
+                "Both PGA and PGV are required to compute landslide "
+                "probability using the AllstadtEtAl2022Landslides model"
+            )
+        
+        prob_ls, lse = allstadt_etal_2022_b(
             pga = pga,
             pgv = pgv,
             slope=sites.slope,
@@ -1098,6 +1159,8 @@ class NowickiJessee2018Landslides(SecondaryPeril):
             landcover=sites.landcover,
             cti=sites.cti,
         )
+        
+        
         out.append(prob_ls)
         out.append(lse)
             

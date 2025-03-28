@@ -1890,7 +1890,7 @@ class OqParam(valid.ParamSet):
                 self.quantiles = [0.05, 0.95]
             if not self.aggregate_by:
                 # self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
-                self.aggregate_by = [['ID_1']]
+                self.aggregate_by = [['ID_2']]
         return yes
 
     @property
