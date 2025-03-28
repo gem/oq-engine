@@ -125,7 +125,7 @@ def main(
             upgrade_db = True  # automatically creates the db
             yes = True
     else:  # DbServer yes
-        logging.info(f'Using the DbServer on {host}')
+        print(f'Using the DbServer on {host}')
         dbserver.ensure_on()
         # check that we are talking to the right server
         err = dbserver.check_foreign()
