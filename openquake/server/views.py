@@ -1369,6 +1369,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
+            site = 'site.png' in ds['png']
         else:
             hmaps = assets = hcurves = governing_mce = False
             avg_gmf = []
@@ -1384,6 +1385,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
+                       site=site,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
                   )
 

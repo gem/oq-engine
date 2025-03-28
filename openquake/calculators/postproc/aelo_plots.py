@@ -20,9 +20,11 @@ import os
 import numpy
 import matplotlib as mpl
 from scipy import interpolate
+from openquake.commonlib import readinput
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
+from openquake.calculators.postproc.plots import add_borders, adjust_limits
 from PIL import Image
 
 ASCE_version = 'ASCE7-22'
@@ -425,5 +427,25 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         bio = io.BytesIO()
         fig.savefig(bio, format='png', bbox_inches='tight')
         dstore['png/disagg_by_src-All-IMTs.png'] = Image.open(bio)
+    fig.tight_layout()
+    return plt
+
+
+def plot_site(dstore, site_idx=0, update_dstore=False):
+    plt = import_plt()
+    site = dstore['sitecol'][site_idx]
+    lon, lat = site['lon'], site['lat']
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.grid(True)
+    markersize = 30
+    plt.scatter(lon, lat, c='black', marker='x', s=markersize)
+    add_borders(ax, readinput.read_countries_df, buffer=0.)
+    xlim, ylim = adjust_limits(lon, lon, lat, lat, padding=20)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    if update_dstore:
+        bio = io.BytesIO()
+        fig.savefig(bio, format='png', bbox_inches='tight')
+        dstore['png/site.png'] = Image.open(bio)
     fig.tight_layout()
     return plt

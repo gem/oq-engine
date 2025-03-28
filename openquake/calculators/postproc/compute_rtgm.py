@@ -49,7 +49,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce,
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_site,
     _find_fact_maxC)
 
 DLL_df = pd.read_csv(io.StringIO('''\
@@ -83,7 +83,7 @@ MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 
 def get_DLLs(job_imts, vs30):
-    
+
     if vs30 > 1524:
         soil_class_asce = 'A'
     elif vs30 > 914:
@@ -93,15 +93,15 @@ def get_DLLs(job_imts, vs30):
     elif vs30 > 442:
         soil_class_asce = 'C'
     elif vs30 > 305:
-        soil_class_asce = 'CD'    
+        soil_class_asce = 'CD'
     elif vs30 > 213:
         soil_class_asce = 'D'
     elif vs30 > 152:
         soil_class_asce = 'DE'
     else:
         soil_class_asce = 'E'
-        
-    D = DLL_df[soil_class_asce]    
+
+    D = DLL_df[soil_class_asce]
     imt_table = DLL_df.imt
 
     T_table = np.array([from_string(imt).period for imt in DLL_df.imt])
@@ -523,7 +523,7 @@ def main(dstore, csm):
     ASCE_version = oq.asce_version
     job_imts = list(oq.imtls)
     DLLs = {site.id: get_DLLs(job_imts, site.vs30) for site in dstore['sitecol']}
-   
+
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
@@ -588,6 +588,7 @@ def main(dstore, csm):
 
     if rtgm_dfs and N == 1:  # and not warnings[sid]:
         sid = 0
+        plot_site(dstore, sid, update_dstore=True)
         if not warnings[sid].startswith(('Zero hazard', 'Very low hazard')):
             plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
             plot_governing_mce(dstore, sid, update_dstore=True)
