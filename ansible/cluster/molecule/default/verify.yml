@@ -8,12 +8,16 @@
   gather_facts: false
 
   tasks:
-  - name: Run  OQ commands to check Installation
+  - name: Run commands to check Installation
     shell: |
+      pwd
       ls -lrt /usr/bin/oq
       ls -lrt /opt/openquake/venv/bin/
       ls -lrt /opt/
       ls -lrt /opt/shared/
+
+  - name: Run OQ commands to check cfg
+    shell: |
       cat /opt/openquake/venv/openquake.cfg
       oq info cfg
 
