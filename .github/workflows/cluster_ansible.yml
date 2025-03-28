@@ -13,31 +13,8 @@ on:
 
 jobs:
 
-  build-on-openbsd:
-    name: BSD-MacOS
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: leleliu008/github-actions-vagrant@v1
-        with:
-          mem: 2048
-          box: generic/openbsd6
-          run: |
-            export AUTOCONF_VERSION=2.69
-            export AUTOMAKE_VERSION=1.16
-            export CFLAGS='-I/usr/local/include -L/usr/local/lib'
-            if [ ! -f /usr/local/lib/libiconv.so ] ; then
-                sudo ln -s /usr/local/lib/libiconv.so.* /usr/local/lib/libiconv.so
-            fi
-            run sudo pkg_add automake-1.16.2
-            run ./autogen.sh
-            run ./configure --prefix=/usr
-            run make
-            run sudo make install
-            run file /usr/bin/ctags
-            run ctags --version
   zmq_cluster:
-    name: Molecule
+    name: OQ cluster with ansible and molecule
     runs-on: ubuntu-latest
     strategy:
       matrix:
