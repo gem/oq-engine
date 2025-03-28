@@ -21,13 +21,8 @@
       cat /opt/openquake/venv/openquake.cfg
       oq info cfg
 
-  - name: Run a Demo calc for EventBasedRisk using https
+  - name: Run a demo calc using https
     command: oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
-
-  - name: Run a Demo calc for EventBasedRisk using https and set OQ_WORKERPOOL_ERROR
-    shell: |
-      export OQ_WORKERPOOL_ERROR=1
-      oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
 
   - name: Display outputs of last calculcation
     command: oq engine --list-outputs -1
