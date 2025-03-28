@@ -797,6 +797,43 @@ def get_uploaded_file_path(request, filename):
         return gettemp(open(file.temporary_file_path()).read(), suffix='.xml')
 
 
+def create_impact_job(request, params):
+    [jobctx] = engine.create_jobs(
+        [params], config.distribution.log_level, user_name=utils.get_user(request))
+
+    job_owner_email = request.user.email
+    response_data = dict()
+
+    job_id = jobctx.calc_id
+    outputs_uri_web = request.build_absolute_uri(
+        reverse('outputs_impact', args=[job_id]))
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+    response_data[job_id] = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+    if not job_owner_email:
+        response_data[job_id]['WARNING'] = (
+            'No email address is speficied for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the'
+            ' following link: %s. If the job fails, the error traceback'
+            ' will be accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+
+    # spawn the Aristotle main process
+    proc = mp.Process(
+        target=impact.main_web,
+        args=([params], [jobctx], job_owner_email, outputs_uri_web,
+              impact_callback))
+    proc.start()
+    return response_data
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -831,40 +868,38 @@ def impact_run(request):
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, user_name=utils.get_user(request))
+    response_data = create_impact_job(request, params)
+    return JsonResponse(response_data, status=200)
 
-    job_owner_email = request.user.email
-    response_data = dict()
 
-    job_id = jobctx.calc_id
-    outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs_impact', args=[job_id]))
-    outputs_uri_api = request.build_absolute_uri(
-        reverse('results', args=[job_id]))
-    log_uri = request.build_absolute_uri(
-        reverse('log', args=[job_id, '0', '']))
-    traceback_uri = request.build_absolute_uri(
-        reverse('traceback', args=[job_id]))
-    response_data[job_id] = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-    if not job_owner_email:
-        response_data[job_id]['WARNING'] = (
-            'No email address is speficied for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the'
-            ' following link: %s. If the job fails, the error traceback'
-            ' will be accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_run_with_shakemap(request):
+    """
+    Run an impact calculation.
 
-    # spawn the Aristotle main process
-    proc = mp.Process(
-        target=impact.main_web,
-        args=([params], [jobctx], job_owner_email, outputs_uri_web,
-              impact_callback))
-    proc.start()
-
+    :param request:
+        a `django.http.HttpRequest` object containing a usgs_id
+    """
+    # NOTE: this is called via AJAX so the context processor isn't automatically
+    # applied, since AJAX calls often do not render templates
+    if request.user.level == 0:
+        return HttpResponseForbidden()
+    post = dict(usgs_id=request.POST['usgs_id'],
+                use_shakemap=True, approach='use_shakemap_from_usgs')
+    _rup, rupdic, _params, err = impact_validate(post, request.user)
+    if err:
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    for key in ['dip', 'strike']:
+        if key in rupdic and rupdic[key] is None:
+            del rupdic[key]
+    post = {key: str(val) for key, val in rupdic.items()}
+    for field in IMPACT_FORM_DEFAULTS:
+        if field not in post:
+            post[field] = IMPACT_FORM_DEFAULTS[field]
+    _rup, rupdic, params, err = impact_validate(post, request.user)
+    response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
 
