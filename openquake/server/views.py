@@ -1002,7 +1002,7 @@ def aelo_run(request):
     job_owner_email = request.user.email
     if not job_owner_email:
         response_data['WARNING'] = (
-            'No email address is speficied for your user account,'
+            'No email address is specified for your user account,'
             ' therefore email notifications will be disabled. As soon as'
             ' the job completes, you can access its outputs at the following'
             ' link: %s. If the job fails, the error traceback will be'
