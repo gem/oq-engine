@@ -19,8 +19,6 @@
 
   - name: Run a Demo calc for EventBasedRisk using https
     command: oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
-    args:
-      chdir: /opt/ci_user
 
   - name: Run a Demo calc for EventBasedRisk using https and set OQ_WORKERPOOL_ERROR
     shell: |
@@ -29,7 +27,5 @@
 
   - name: Display outputs of last calculcation
     command: oq engine --list-outputs -1
-    args:
-      chdir: /home/ci_user
     register: calc
   - debug: msg="{{ calc.stdout }}"
