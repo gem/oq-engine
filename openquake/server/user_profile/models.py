@@ -22,6 +22,7 @@ from django.contrib.auth.models import User
 
 # NOTE: User exists only when authentication is enabled
 User.level = property(lambda self: getattr(self.profile, 'level', 0))
+User.testdir = property(lambda self: getattr(self.profile, 'testdir', None))
 
 
 class UserProfile(models.Model):

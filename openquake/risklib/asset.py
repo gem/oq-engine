@@ -19,7 +19,6 @@ import operator
 import itertools
 import logging
 import time
-import csv
 import os
 
 import numpy
@@ -1155,31 +1154,26 @@ class Exposure(object):
             oqfields[csvfield].add(oqfield)
         other_fields = get_other_fields(self.fieldmap)
         for fname in self.datafiles:
-            with open(fname, encoding='utf-8-sig', errors=errors) as f:
-                try:
-                    fields = next(csv.reader(f))
-                except UnicodeDecodeError:
-                    msg = ("%s is not encoded as UTF-8\ntry oq shell "
-                           "and then o.fix_latin1('%s')\nor set "
-                           "ignore_encoding_errors=true" % (fname, fname))
-                    raise RuntimeError(msg)
-                for inp in other_fields:
-                    if inp not in fields:
-                        raise InvalidFile('%s: missing field %s, declared in '
-                                          'the XML file' % (fname, inp))
-                header = set()
-                for f in fields:
-                    header.update(oqfields.get(f, [f]))
-                for field in fields:
-                    if field not in strfields:
-                        floatfields.add(field)
-                missing = expected_header - header - {'exposure'}
-                if len(header) < len(fields):
-                    raise InvalidFile(
-                        '%s: expected %d fields in %s, got %d' %
-                        (fname, len(fields), header, len(header)))
-                elif missing:
-                    raise InvalidFile('%s: missing %s' % (fname, missing))
+            # read only the header
+            fields = pandas.read_csv(
+                fname, nrows=1, encoding='utf-8-sig').columns
+            for inp in other_fields:
+                if inp not in fields:
+                    raise InvalidFile('%s: missing field %s, declared in '
+                                      'the XML file' % (fname, inp))
+            header = set()
+            for f in fields:
+                header.update(oqfields.get(f, [f]))
+            for field in fields:
+                if field not in strfields:
+                    floatfields.add(field)
+            missing = expected_header - header - {'exposure'}
+            if len(header) < len(fields):
+                raise InvalidFile(
+                    '%s: expected %d fields in %s, got %d' %
+                    (fname, len(fields), header, len(header)))
+            elif missing:
+                raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
                 'residents': float, 'retrofitted': float, 'ideductible': float,
                 'occupants_day': float, 'occupants_night': float,

@@ -58,10 +58,16 @@ class CSVFile:
     fields: list[str]
     size: int
     skip: int
+    admin2: bool
 
     def read_df(self):
         return pandas.read_csv(
-            self.fname, skiprows=self.skip, usecols=self.fields)
+            self.fname, skiprows=self.skip, usecols=self.fields,
+            encoding='utf-8-sig')
+
+    def countlines(self):
+        n = sum(1 for line in open(self.fname))
+        return n - self.skip
 
 
 def sanitize(value):
@@ -359,7 +365,7 @@ class File(h5py.File):
         :param key:
             name of the dataset
         :param nametypes:
-            pairs (name, dtype) or (name, array) or structured array or DataFrame
+            pairs (name, dtype)|(name, array)|structured array|DataFrame
         :param compression:
             the kind of HDF5 compression to use
         :param kw:
@@ -897,7 +903,7 @@ def check_length(field, size):
     return check
 
 
-def _read_csv(fileobj, compositedt, usecols=None):
+def _read_csv(fname, compositedt, usecols=None, skip=0):
     dic = {}
     conv = {}
     for name in compositedt.names:
@@ -908,9 +914,10 @@ def _read_csv(fileobj, compositedt, usecols=None):
             conv[name] = check_length(name, dt.itemsize)
         else:
             dic[name] = dt
-    df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
-                         dtype=dic, usecols=usecols,
-                         keep_default_na=False, na_filter=False)
+    df = pandas.read_csv(fname, names=compositedt.names, converters=conv,
+                         dtype=dic, usecols=usecols, skiprows=skip,
+                         keep_default_na=False, na_filter=False,
+                         encoding='utf-8-sig')
     return df
 
 
@@ -937,6 +944,7 @@ def find_error(fname, errors, dtype):
             return exc
 
 
+# called in `oq info file.csv`, used expecially for the exposures
 def sniff(fnames, sep=',', ignore=set()):
     """
     Read the first line of a set of CSV files by stripping the pre-headers.
@@ -946,21 +954,20 @@ def sniff(fnames, sep=',', ignore=set()):
     common = None
     files = []
     for fname in fnames:
-        with open(fname, encoding='utf-8-sig', errors='ignore') as f:
-            skip = 0
-            while True:
-                first = next(f)
-                if first.startswith('#'):
-                    skip += 1
-                    continue
-                break
-            header = first.strip().split(sep)
-            if common is None:
-                common = set(header)
-            else:
-                common &= set(header)
-            files.append(
-                CSVFile(fname, header, common, os.path.getsize(fname), skip))
+        df = pandas.read_csv(fname, encoding='utf-8-sig', nrows=1)
+        if df.columns[0] == '#':
+            [row] = df.itertuples()
+            header = row[1:]
+            skip = 2  # comment+header
+        else:
+            header = df.columns
+            skip = 1  # only header
+        if common is None:
+            common = set(header)
+        else:
+            common &= set(header)
+        files.append(CSVFile(fname, header, common, os.path.getsize(fname),
+                             skip, 'ID_2' in header))
     common -= ignore
     assert common, 'There is no common header subset among %s' % fnames
     return files
@@ -982,17 +989,20 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
-    with open(fname, encoding='utf-8-sig', errors=errors) as f:
-        while True:
-            first = next(f)
-            if first.startswith('#'):
-                attrs = dict(parse_comment(first.strip('#,\n ')))
-                continue
-            break
-        header = first.strip().split(sep)
-        dt = build_dt(dtypedict, header, fname)
+    if fname.endswith('.csv'):
+        with open(fname, encoding='utf-8-sig', errors='ignore') as f:
+            skip = 0
+            while True:
+                first = next(f)
+                skip += 1
+                if first.startswith('#'):
+                    attrs = dict(parse_comment(first.strip('#,\n ')))
+                    continue
+                break
+            header = first.strip().split(sep)
+            dt = build_dt(dtypedict, header, fname)
         try:
-            df = _read_csv(f, dt, usecols)
+            df = _read_csv(fname, dt, usecols, skip)
         except Exception as exc:
             err = find_error(fname, errors, dt)
             if err:
@@ -1000,6 +1010,10 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                                   (fname, err, err.lineno, err.line))
             else:
                 raise InvalidFile('%s: %s' % (fname, exc))
+    else:  # .csv.gz, assume no attributes on the top comment
+        [csvfile] = sniff([fname])
+        dt = build_dt(dtypedict, csvfile.header, fname)
+        df = _read_csv(fname, dt, usecols, csvfile.skip)
     arr = numpy.zeros(len(df), dt)
     for col in df.columns:
         arr[col] = df[col].to_numpy()

@@ -32,8 +32,8 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
-    case_01, case_02, case_03, case_04, case_12, case_18, case_22, case_23,
-    case_24, case_25, case_26, case_27, case_29, case_32, case_33,
+    case_01, case_02, case_03, case_04, case_05, case_12, case_18, case_22,
+    case_23, case_24, case_25, case_26, case_27, case_29, case_32, case_33,
     case_34, case_35, case_37, case_38, case_40, case_41,
     case_42, case_43, case_44, case_47, case_48, case_49,
     case_50, case_51, case_53, case_54, case_55, case_57,
@@ -116,6 +116,18 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_04.__file__, 'job.ini')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs.csv', fname)
+
+    def test_case_05(self):
+        # make sure `oq show rlz` works
+        self.run_calc(case_05.__file__, 'job.ini')
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs.csv', fname)
+        trt, gsim = view('rlz:0', self.calc.datastore)[1]
+        self.assertEqual(trt, 'Volcanic Shallow')
+        self.assertEqual(gsim.__class__.__name__, 'TusaLanger2016RepiSP87SE')
+        trt, gsim = view('rlz:1', self.calc.datastore)[1]
+        self.assertEqual(trt, 'Volcanic Shallow')
+        self.assertEqual(gsim.__class__.__name__, 'FaccioliEtAl2010')
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -283,7 +295,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       ses_per_logic_tree_path='10')
         csv = extract(self.calc.datastore, 'ruptures').array
-        rups = get_ruptures(general.gettemp(csv))
+        rups = get_ruptures(general.gettemp(csv, suffix='.csv'))
         self.assertEqual(len(rups), 1)
 
         # check what QGIS will be seeing

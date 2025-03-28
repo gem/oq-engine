@@ -50,7 +50,7 @@ def test_impact(n):
         raise unittest.SkipTest(f'Missing {expo}')
     calc = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
-        check_export_job(calc.datastore)        
+        check_export_job(calc.datastore)
 
 
 def test_impact5():

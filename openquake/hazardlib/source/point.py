@@ -85,33 +85,35 @@ def calc_average(pointsources):
         a dict with average strike, dip, rake, lon, lat, dep,
         upper_seismogenic_depth, lower_seismogenic_depth
     """
-    acc = dict(lon=[], lat=[], dep=[], strike=[], dip=[], rake=[],
+    node_w, dep_w, rate_w = [], [], []
+    acc = dict(lon=[], lat=[], strike=[], dip=[], rake=[], dep=[],
                upper_seismogenic_depth=[], lower_seismogenic_depth=[],
                rupture_aspect_ratio=[])
-    rates = []
     trt = pointsources[0].tectonic_region_type
     for src in pointsources:
         assert src.tectonic_region_type == trt
-        rates.append(sum(r for m, r in src.get_annual_occurrence_rates()))
         ws, ds = zip(*src.nodal_plane_distribution.data)
-        strike = numpy.average([np.strike for np in ds], weights=ws)
-        dip = numpy.average([np.dip for np in ds], weights=ws)
-        rake = numpy.average([np.rake for np in ds], weights=ws)
+        acc['strike'].extend([np.strike for np in ds])
+        acc['dip'].extend([np.dip for np in ds])
+        acc['rake'].extend([np.rake for np in ds])
+        node_w.extend(ws)
         ws, deps = zip(*src.hypocenter_distribution.data)
-        dep = numpy.average(deps, weights=ws)
+        acc['dep'].extend(deps)
+        dep_w.extend(ws)
         acc['lon'].append(src.location.x)
         acc['lat'].append(src.location.y)
-        acc['dep'].append(dep)
-        acc['strike'].append(strike)
-        acc['dip'].append(dip)
-        acc['rake'].append(rake)
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
-    dic = {key: numpy.average(acc[key], weights=rates) for key in acc}
-    dic['lon'] = numpy.round(dic['lon'], 6)
-    dic['lat'] = numpy.round(dic['lat'], 6)
-    return dic
+        rate_w.append(sum(r for m, r in src.get_annual_occurrence_rates()))
+    for key in acc:
+        if key in ('dip', 'strike', 'rake'):
+            acc[key] = numpy.average(acc[key], weights=node_w)
+        elif key == 'dep':
+            acc[key] = numpy.average(acc[key], weights=dep_w)
+        else:
+            acc[key] = numpy.average(acc[key], weights=rate_w)
+    return acc
 
 
 class PointSource(ParametricSeismicSource):
@@ -532,7 +534,7 @@ def grid_point_sources(sources, ps_grid_spacing):
         if len(idxs) > 1:
             cnt += 1
             name = 'cps-%03d-%04d' % (grp_id, cnt)
-            cps = CollapsedPointSource(name, ps[idxs])
+            cps = CollapsedPointSource(name, ps[idxs])  # slow part
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
             cps.ps_grid_spacing = ps_grid_spacing

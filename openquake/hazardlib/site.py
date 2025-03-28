@@ -39,7 +39,6 @@ param = dict(
     vs30='reference_vs30_value',
     z1pt0='reference_depth_to_1pt0km_per_sec',
     z2pt5='reference_depth_to_2pt5km_per_sec',
-    backarc='reference_backarc',
     region='region',
     xvf='xvf')
 
@@ -444,11 +443,10 @@ class SiteCollection(object):
 
     xyz = Mesh.xyz
 
-    def set_global_params(
-            self, oq, req_site_params=('z1pt0', 'z2pt5', 'backarc')):
+    def set_global_params(self, oq, req_site_params=('z1pt0', 'z2pt5')):
         """
         Set the global site parameters
-        (vs30, vs30measured, z1pt0, z2pt5, backarc)
+        (vs30, vs30measured, z1pt0, z2pt5)
         """
         self._set('vs30', oq.reference_vs30_value)
         self._set('vs30measured',
@@ -457,8 +455,6 @@ class SiteCollection(object):
             self._set('z1pt0', oq.reference_depth_to_1pt0km_per_sec)
         if 'z2pt5' in req_site_params:
             self._set('z2pt5', oq.reference_depth_to_2pt5km_per_sec)
-        if 'backarc' in req_site_params:
-            self._set('backarc', oq.reference_backarc)
 
     def filtered(self, indices):
         """
