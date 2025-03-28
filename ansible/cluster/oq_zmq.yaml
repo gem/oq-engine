@@ -99,6 +99,7 @@
     - name: Create user to run calculation on verify step
       user:
         name: ci_user
+        groups: openquake
         home: "{{ shared_nfs }}/ci_user"
         shell: /bin/bash
         state: present
