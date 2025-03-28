@@ -49,7 +49,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_site,
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites,
     _find_fact_maxC)
 
 DLL_df = pd.read_csv(io.StringIO('''\
@@ -588,7 +588,7 @@ def main(dstore, csm):
 
     if rtgm_dfs and N == 1:  # and not warnings[sid]:
         sid = 0
-        plot_site(dstore, sid, update_dstore=True)
+        plot_sites(dstore, update_dstore=True)
         if not warnings[sid].startswith(('Zero hazard', 'Very low hazard')):
             plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
             plot_governing_mce(dstore, sid, update_dstore=True)

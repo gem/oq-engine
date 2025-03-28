@@ -431,16 +431,16 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     return plt
 
 
-def plot_site(dstore, site_idx=0, update_dstore=False):
+def plot_sites(dstore, update_dstore=False):
     plt = import_plt()
-    site = dstore['sitecol'][site_idx]
-    lon, lat = site['lon'], site['lat']
+    sites = dstore['sitecol']
+    lons, lats = sites['lon'], sites['lat']
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.grid(True)
     markersize = 30
-    plt.scatter(lon, lat, c='black', marker='x', s=markersize)
+    plt.scatter(lons, lats, c='black', marker='x', s=markersize)
     add_borders(ax, readinput.read_countries_df, buffer=0.)
-    xlim, ylim = adjust_limits(lon, lon, lat, lat, padding=20)
+    xlim, ylim = adjust_limits(min(lons), max(lons), min(lats), max(lats), padding=20)
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     if update_dstore:
