@@ -1,7 +1,5 @@
 ---
 #
-- import_playbook: check_py_ver.yaml
-
 - hosts: all
   #
   serial: 1
@@ -27,38 +25,62 @@
     - name: check workers host_cores
       debug: msg={{ worker_nodes_zmq }}
 
+    - name: Update apt repo and cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required extra system packages for Debian based
+      apt:
+        state: present
+        cache_valid_time: 3600
+        pkg:
+         - man
+         - nfs-common
+         - python3
+         - python3-venv
+         - openssh-client
+         - openssh-server
+         - git
+
+    - name: Config and Start SSHD and print $PATH
+      shell: |
+        if [ ! -d "/var/run/sshd" ]; then
+           sudo mkdir -p /var/run/sshd
+        fi
+        sudo systemctl start sshd
+        echo $PATH
+
     - name: Ensure user openquake exist and generate ssh key
       user:
         name: openquake
-        home: /home.dev/openquake
+        home: /home/openquake
         shell: /bin/bash
         state: present
         generate_ssh_key: yes
         ssh_key_bits: 2048
         ssh_key_file: .ssh/id_rsa
 
-  tasks:
 
-    - name: Download installation scripts only on master node
-      get_url:
-        url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-        dest: /tmp/install.py
-        mode: '0644'
-      when: "'master' in group_names" 
+  tasks:
 
     - name: Run install script from github repo only on master node
       shell: |
-        cd /home.dev/openquake 
-        git clone https://github.com/gem/oq-engine.git 
-        cd oq-engine 
-        python3.8 ./install.py server --version={{ oq_version }}
+        cd /home/openquake
+        git clone  https://github.com/gem/oq-engine.git
+        cd oq-engine
+        git checkout {{ oq_version }}
+        git log -1
+        python3.11 ./install.py server
       register: oq_install
-      when: "'master' in group_names" 
-   
-- import_playbook: inst_nfs.yaml
-  when: "'master' in group_names" 
+      when: "'master' in group_names"
+
+      when: "'master' in group_names"
 
 - import_playbook: inst_nfs.yaml
-  when: "'worker' in group_names" 
+  when: "'master' in group_names"
+
+- import_playbook: inst_nfs.yaml
+  when: "'worker' in group_names"
 
 - import_playbook: oq_zmq.yaml

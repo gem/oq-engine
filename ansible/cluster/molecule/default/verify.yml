@@ -4,18 +4,27 @@
 - name: Verify
   hosts: master
   become: yes
-  become_user: openquake
+  become_user: ci_user
   gather_facts: false
 
   tasks:
-  - name: Run a Demo calc for EventBasedRisk using https
-    command: /usr/bin/oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
-    args:
-      chdir: /home.dev/openquake
-  
-  - name: Display outputs of last calculcation 
-    command: /usr/bin/oq engine --list-outputs -1
-    args:
-      chdir: /home.dev/openquake
+  - name: Run commands to check Installation
+    shell: |
+      pwd
+      ls -lrt /usr/bin/oq
+      ls -lrt /opt/openquake/venv/bin/
+      ls -lrt /opt/
+      ls -lrt /opt/shared/
+
+  - name: Run OQ commands to check cfg
+    shell: |
+      cat /opt/openquake/venv/openquake.cfg
+      oq info cfg
+
+  - name: Run a demo calc using https
+    command: oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+
+  - name: Display outputs of last calculcation
+    command: oq engine --list-outputs -1
     register: calc
   - debug: msg="{{ calc.stdout }}"
