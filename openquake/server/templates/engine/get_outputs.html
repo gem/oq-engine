@@ -54,6 +54,12 @@
                   Show hazard curves</a>
               </div>
               {% endif %}
+              {% if site %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/site.png" class="btn btn-sm">
+                  Show site</a>
+              </div>
+              {% endif %}
               {% for img in disagg_by_src %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
