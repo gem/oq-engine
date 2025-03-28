@@ -56,8 +56,8 @@
         template:
           src: templates/nfs-kernel-server.j2
           dest: /etc/default/nfs-kernel-server
-          owner: root
-          group: root
+          owner: openquake
+          group: openquake
           mode: 0644
           validate: ls -l %s
         notify: reload nfs
@@ -100,8 +100,8 @@
       path: "{{ shared_nfs }}"
       state: directory
       mode: "2770"
-      group: root
-      owner: root
+      group: openquake
+      owner: openquake
     when: workdir.stat.exists == false
 
   - name: "echo if directory already existed"
@@ -114,8 +114,8 @@
       path: "{{ inst_nfs }}"
       state: directory
       mode: "2770"
-      group: root
-      owner: root
+      group: openquake
+      owner: openquake
 
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     command: mount.nfs4 "{{ server_host }}:" "{{ top_nfs }}"
