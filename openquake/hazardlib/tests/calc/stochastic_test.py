@@ -59,15 +59,19 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
 class ClusterTestCase(unittest.TestCase):
 
-    def test_src_indep(self):
-        # Sources are independent and ruptures mutex
+    def test_src_mutex(self):
+        # The rate of occurrence of the cluster is 1/1000, the sources are
+        # mutually exclusive (equally weighted) and ruptures independent. In
+        # case of 100_000 samples of 1 year each, we expect on average 100
+        # occurences of the cluster either with 1 or 2 ruptures. So the
+        # total number of ruptures should the in the order of 150.
 
         # Source model file name
         ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm01.xml')
 
         from openquake.hazardlib.sourceconverter import SourceConverter
         sconv = SourceConverter(
-            investigation_time=100.0,
+            investigation_time=1.0,
             rupture_mesh_spacing=5.0,
             width_of_mfd_bin=0.1
         )
@@ -75,9 +79,20 @@ class ClusterTestCase(unittest.TestCase):
         # Reading
         ssm = nrml.to_python(ssm_fname, sconv)
 
-        # Generating SESs
-        for rups, source_data, eff_ruptures in sample_cluster(ssm[0], 100, 1):
-            print('------------> aa')
-            pass
+        # Generating the SESs
+        ebrups = sample_cluster(ssm[0], 1000000, 1)
+
+        # Computing the total number of occurrences
+        tot_occ = 0
+        for ebrup in ebrups:
+            tot_occ += ebrup.n_occ
+        print(tot_occ)
 
         breakpoint()
+
+    def test_src_indep(self):
+        # Sources are mutually exclusive and ruptures independent. The rate of
+        # occurrence of the cluster is 1/1000, the sources are mutually exclusive (equally
+        # weighted) and ruptures independent.
+
+        pass

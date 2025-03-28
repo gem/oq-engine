@@ -148,35 +148,23 @@ def sample_cluster(group, num_ses, ses_seed):
     seed = group[0].serial(ses_seed)
     rng = numpy.random.default_rng(seed)
     [trt_smr] = set(src.trt_smr for src in group)
-
-    # Set the parameters required to compute the number of occurrences for the
-    # cluster
+    # Set the parameters required to compute the number of occurrences
+    # of the group of group
     samples = getattr(group[0], 'samples', 1)
-    # grp_probability = getattr(group, 'grp_probability', 1.)
+    grp_probability = getattr(group, 'grp_probability', 1.)
     tom = group.temporal_occurrence_model
     rate = getattr(tom, 'occurrence_rate', None)
-
-    # Compute the number of occurrences of the cluster
     if rate is None:  # time dependent sources
-        # tot_num_occ = rng.poisson(grp_probability * samples * num_ses)
-        raise ValueError('We need a rate')
-    else:  # Poissonian sources with ClusterPoissonTOM
+        tot_num_occ = rng.poisson(grp_probability * samples * num_ses)
+    else:  # poissonian sources with ClusterPoissonTOM
         tot_num_occ = rng.poisson(rate * tom.time_span * samples * num_ses)
 
     # Now we process the sources included in the group. Possible cases:
     # * The group contains nonparametric sources with mutex ruptures, while
-    #   the sources are indepedent. (CASE 1)
+    #   the sources are indepedent.
     # * The group contains mutually exclusive sources. In this case we
     #   choose the source first and then some ruptures from the source.
-    #   (CASE 2)
     if group.rup_interdep == 'mutex' and group.src_interdep == 'indep':
-
-        # In this case, we need a conditional probability of occurrence for
-        # each independent source
-
-        pass
-
-        """
         allrups = []
         weights = []
         rupids = []
@@ -194,22 +182,11 @@ def sample_cluster(group, num_ses, ses_seed):
                 ebr = EBRupture(rup, rup.src_id, trt_smr, n_occ, rupid)
                 ebr.seed = ebr.id + ses_seed
                 eb_ruptures.append(ebr)
-        """
 
-    elif group.rup_interdep == 'indep' and group.src_interdep == 'mutex':
-
-        # Find the index of the source sampled in each realization of the
-        # cluster
-        idxs = numpy.random.choice(numpy.arange(0, len(group)), tot_num_occ)
-
-        # For each realization of the cluster
-        for isrc in idxs:
-            wei = group.sources[0].rup_weights
-            irup = numpy.random.choice(numpy.arange(0, len(wei)), p=wei)
-            breakpoint()
-
-        """
-        # random distribute in bins according to the srcs_weights
+    elif group.src_interdep == 'mutex' and group.rup_interdep == 'indep':
+        # random distribute in bins according to the srcs_weights. `src_occs`
+        # contains the number of occurrences of each mutually exclusive rupture
+        # in the cluster
         ws = [src.mutex_weight for src in group]
         src_occs = random_histogram(tot_num_occ, ws, seed)
         # NB: in event_based/src_mutex num_ses=2000, samples=1
@@ -219,10 +196,9 @@ def sample_cluster(group, num_ses, ses_seed):
         for src, src_occ in zip(group, src_occs):
             src_seed = src.serial(ses_seed)
             # random distribute in bins equally
-
-            if src.num_ruptures < 1:
-                continue
-
+            # `random_histogram` requires: counts, nbins_or_binweights, seed.
+            # It produces an histogram where for each rupture we get the number
+            # of total number of occurrences.
             n_occs = random_histogram(src_occ, src.num_ruptures, src_seed)
             rseeds = src_seed + numpy.arange(src.num_ruptures)
             rupids = src.offset + numpy.arange(src.num_ruptures)
@@ -232,8 +208,6 @@ def sample_cluster(group, num_ses, ses_seed):
                     ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
                     ebr.seed = ebr.id + ses_seed
                     eb_ruptures.append(ebr)
-        """
-
     else:
         raise NotImplementedError(
             f'{group.src_interdep=}, {group.rup_interdep=}')
