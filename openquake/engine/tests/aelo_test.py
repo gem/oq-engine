@@ -58,9 +58,11 @@ ASCE07_22 = ['0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.35', '0.9
           '1.60616', '0.96048', '0.85274', '1.50000', 'Very High', '0.60000', 
           '0.60000', '0.40000', '0.94254', '0.94621', '0.45569', '0.60000', 
           'Very High']
-ASCE41 = [1.5, 1.28283, 1.28283, 1, 0.75094, 0.75094, 0.6,
+ASCE41_17 = [1.5, 1.28283, 1.28283, 1, 0.75094, 0.75094, 0.6,
        0.6, 0.7519 , 0.4, 0.4, 0.42582]
- 
+
+ASCE41_23 = [1.5, 1.39946, 1.39946, 1, 0.81921, 0.81921, 0.6,
+       0.6, 0.72299 , 0.4, 0.4, 0.40944]
 
 
 def test_PAC():
@@ -149,7 +151,7 @@ def test_CCA():
         # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        aac(df.value, ASCE41, atol=1.5E-4)
+        aac(df.value, ASCE41_17, atol=1.5E-4)
 
         # test no close ruptures
         dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
@@ -171,7 +173,7 @@ def test_CCA():
 def test_CCA_asce7_22():
     # RTGM under and over the deterministic limit for the CCA model
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
-    for (site, lon, lat), expected in zip(SITES, EXPECTED):
+    for (site, lon, lat), expected in zip(SITES, EXPECTED_asce7_22):
         dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760', asce_version = 'ASCE7-22')
         with logs.init(job_ini) as log:
             log.params.update(get_params_from(
@@ -196,7 +198,7 @@ def test_CCA_asce7_22():
         # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        aac(df.value, ASCE41, atol=1.5E-4)
+        aac(df.value, ASCE41_23, atol=1.5E-4)
 
         # check no plots created
         assert 'png/governing_mce.png' not in calc.datastore
