@@ -281,7 +281,7 @@ def get_zero_hazard_asce41():
     return asce41
 
 
-def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, low_haz=False):
+def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, ASCE_version, low_haz=False):
     """
     :param job_imts: the IMTs run in the job
     :param det_imt: deterministic ground motion for each IMT
@@ -349,8 +349,11 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, low_haz=False):
         S1_seismicity = "n.a."
 
     period_mce = [from_string(imt).period for imt in job_imts]
-        
-    design = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
+    
+    if ASCE_version == 'ASCE7-16':    
+        design = [mce['SA(0.2)']*2/3, mce['SA(1.0)']*2/3, mce['SA(0.2)'], mce['SA(1.0)']]
+    else:
+        design = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
     
     asce07 = {
              'PGA': mce['PGA'],
@@ -366,8 +369,6 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, low_haz=False):
              'Ss_84th': det_imt['SA(0.2)'],
              'Ss_det': det_mce['SA(0.2)'],
              'Ss_seismicity': Ss_seismicity,
-             
-        
 
              'S1': mce['SA(1.0)'],
              'Sm1': design[3],
@@ -377,8 +378,8 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, low_haz=False):
              'S1_84th': det_imt['SA(1.0)'],
              'S1_det': det_mce['SA(1.0)'],
              'S1_seismicity': S1_seismicity
-             
              }
+    
     for key in asce07:
         if not isinstance(asce07[key], str):
             asce07[key] = (
@@ -534,10 +535,12 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
 
     return design
 
-def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
+def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     """
     :yields: (sid, asce07, asce41)
     """
+    oq = dstore['oqparam']
+    ASCE_version = oq.asce_version
     imls_by_sid = {}
     for sid, rtgm_df in rtgm.items():
         imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
@@ -553,7 +556,7 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         _prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
-            job_imts, det_imt, DLLs[sid], rtgm_df, sid, vs30)
+            job_imts, det_imt, DLLs[sid], rtgm_df, sid, vs30, ASCE_version)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
@@ -612,7 +615,7 @@ def main(dstore, csm):
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
             _prob_mce_out, mce, _det_mce, a07, mce_df = get_mce_asce07(
-                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
+                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, vs30, ASCE_version, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
             mce_dfs.append(mce_df)
@@ -629,7 +632,7 @@ def main(dstore, csm):
 
     
     for sid, mdes, a07, a41, mce_df in calc_asce(dstore, csm, job_imts, DLLs,
-                                                 rtgm):
+                                                 rtgm,ASCE_version):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
         #design_param[sid] = hdf5.dumps(design)
