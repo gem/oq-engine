@@ -43,9 +43,14 @@ EXPECTED = [[0.265135, 0.27359, 0.275818, 0.309555, 0.345968, 0.383228,
              0.992091, 1.19921, 1.33304,1.54596 , 1.60608, 1.61089, 1.59132, 
              1.5155 , 1.40371, 1.13523, 0.942545, 0.702772, 0.523629, 
              0.415233, 0.401782, 0.437616, 0.402476, 0.305595]]
-ASCE07 = ['0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.35', '0.9',
+ASCE07_16 = ['0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.5', '1.0',
           '1.60616', '0.96048', '0.85274', '1.50000', 'Very High', '0.60000', 
-          '0.60000', '0.40000', '0.94254', '0.94621', '0.45569', '0.60000', 'Very High']
+          '0.60000', '0.40000', '0.94254', '0.94621', '0.45569', '0.60000', 
+          'Very High']
+ASCE07_22 = ['0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.35', '0.9',
+          '1.60616', '0.96048', '0.85274', '1.50000', 'Very High', '0.60000', 
+          '0.60000', '0.40000', '0.94254', '0.94621', '0.45569', '0.60000', 
+          'Very High']
 ASCE41 = [1.5, 1.28283, 1.28283, 1, 0.75094, 0.75094, 0.6,
        0.6, 0.7519 , 0.4, 0.4, 0.42582]
  
@@ -128,7 +133,7 @@ def test_CCA():
         # check asce07 exporter
         [fname] = export(('asce07', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        for got, exp in zip(df.value.to_numpy(), ASCE07):
+        for got, exp in zip(df.value.to_numpy(), ASCE07_16):
             try:
                 aac(float(got), float(exp), rtol=1E-2)
             except ValueError:
@@ -156,6 +161,40 @@ def test_CCA():
         assert 'png/hcurves.png' not in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
+def test_CCA_asce7_22():
+    # RTGM under and over the deterministic limit for the CCA model
+    job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
+    for (site, lon, lat), expected in zip(SITES, EXPECTED):
+        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760', asce_version = 'ASCE7-22')
+        with logs.init(job_ini) as log:
+            log.params.update(get_params_from(
+                dic, MOSAIC_DIR, exclude=['USA']))
+            calc = base.calculators(log.get_oqparam(), log.calc_id)
+            calc.run()
+        if rtgmpy:
+            [fname] = export(('rtgm', 'csv'), calc.datastore)
+            df = pandas.read_csv(fname, skiprows=1)
+            aac(df.RTGM, expected, atol=1.5E-4)
+
+    if rtgmpy:
+        # check asce07 exporter
+        [fname] = export(('asce07', 'csv'), calc.datastore)
+        df = pandas.read_csv(fname, skiprows=1)
+        for got, exp in zip(df.value.to_numpy(), ASCE07_22):
+            try:
+                aac(float(got), float(exp), rtol=1E-2)
+            except ValueError:
+                numpy.testing.assert_equal(got, exp)
+
+        # check asce41 exporter
+        [fname] = export(('asce41', 'csv'), calc.datastore)
+        df = pandas.read_csv(fname, skiprows=1)
+        aac(df.value, ASCE41, atol=1.5E-4)
+
+        # check no plots created
+        assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/hcurves.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
 def test_WAF():
     # test of site with very low hazard
