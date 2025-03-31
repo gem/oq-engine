@@ -450,7 +450,7 @@ def plot_sites(dstore, update_dstore=False):
         marker = 'o'
         padding = 5
     else:
-        markersize = 0.01
+        markersize = 0.05
         marker = 'o'
         padding = 0
     plt.scatter(lons, lats, c='black', marker=marker, s=markersize)
