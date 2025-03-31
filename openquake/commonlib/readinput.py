@@ -1073,6 +1073,9 @@ def get_crmodel(oqparam):
             # taxonomy,consequence,slight,moderate,extensive
             df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
             # NB: consequence files depend on loss_type, unlike fragility files
+            if 'taxonomy' in df.columns:  # obsolete name
+                df['risk_id'] = df['taxonomy']
+                del df['taxonomy']
             if 'loss_type' not in df.columns:
                 df['loss_type'] = 'structural'
             if 'peril' not in df.columns:
