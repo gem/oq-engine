@@ -145,6 +145,8 @@ def get_array_shapefile(kind, fname):
     either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
+    if fname.startswith('file:'):
+        fname = fname[5:]  # strip file:
     if fname.endswith('.zip'):
         if sys.platform == 'win32':
             # fiona cannot automatically unzip, so unzip manually
@@ -155,9 +157,7 @@ def get_array_shapefile(kind, fname):
             [fname] = [os.path.join(targetdir, f)
                        for f in os.listdir(targetdir) if f.endswith('.shp')] 
         else:
-            fname = 'zip://' + fname[5:]
-    elif fname.startswith('file:'):
-        fname = fname[5:]  # strip file:
+            fname = 'zip://' + fname
     polygons = []
     data = defaultdict(list)
     with fiona.open(fname) as f:
