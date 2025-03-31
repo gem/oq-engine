@@ -441,14 +441,18 @@ def plot_sites(dstore, update_dstore=False):
         markersize = 30
         marker = 'x'
         padding = 20
-    elif len(sites) < 20:
-        markersize = 3
-        marker = 'o'
-        padding = 10
-    else:
+    elif len(sites) < 50:
         markersize = 1
         marker = 'o'
+        padding = 10
+    elif len(sites) < 500:
+        markersize = 0.1
+        marker = 'o'
         padding = 5
+    else:
+        markersize = 0.01
+        marker = 'o'
+        padding = 0
     plt.scatter(lons, lats, c='black', marker=marker, s=markersize)
     add_borders(ax, readinput.read_countries_df, buffer=0.)
     xlim, ylim = adjust_limits(
