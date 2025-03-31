@@ -882,8 +882,6 @@ def impact_run_with_shakemap(request):
     :param request:
         a `django.http.HttpRequest` object containing a usgs_id
     """
-    # NOTE: this is called via AJAX so the context processor isn't automatically
-    # applied, since AJAX calls often do not render templates
     if request.user.level == 0:
         return HttpResponseForbidden()
     post = dict(usgs_id=request.POST['usgs_id'],
@@ -891,14 +889,15 @@ def impact_run_with_shakemap(request):
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
-    for key in ['dip', 'strike']:
-        if key in rupdic and rupdic[key] is None:
-            del rupdic[key]
-    post = {key: str(val) for key, val in rupdic.items()}
+    post = {key: str(val) for key, val in rupdic.items()
+            if key != 'shakemap_array'}
+    post['approach'] = 'use_shakemap_from_usgs'
+    post['use_shakemap'] = True
     for field in IMPACT_FORM_DEFAULTS:
-        if field not in post:
+        if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
-    _rup, rupdic, params, err = impact_validate(post, request.user)
+    _rup, rupdic, params, err = impact_validate(
+        post, request.user, post['rupture_file'])
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
