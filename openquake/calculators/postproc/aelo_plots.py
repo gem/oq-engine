@@ -437,10 +437,18 @@ def plot_sites(dstore, update_dstore=False):
     lons, lats = sites['lon'], sites['lat']
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.grid(True)
-    markersize = 30
-    plt.scatter(lons, lats, c='black', marker='x', s=markersize)
+    if len(sites) == 1:
+        markersize = 30
+        marker = 'x'
+        padding = 20
+    else:
+        markersize = 3
+        marker = 'o'
+        padding = 10
+    plt.scatter(lons, lats, c='black', marker=marker, s=markersize)
     add_borders(ax, readinput.read_countries_df, buffer=0.)
-    xlim, ylim = adjust_limits(min(lons), max(lons), min(lats), max(lats), padding=20)
+    xlim, ylim = adjust_limits(
+        lons.min(), lons.max(), lats.min(), lats.max(), padding=padding)
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     if update_dstore:
