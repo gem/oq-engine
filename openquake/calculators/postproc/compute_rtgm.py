@@ -356,26 +356,18 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, ASCE_version, low_h
         design = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
     
     asce07 = {
-             'PGA': mce['PGA'],
-             'PGA_2_50': prob_mce_out['PGA'],
-             'PGA_84th': det_imt['PGA'],
-             'PGA_det': det_mce['PGA'],
+             'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
+             'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
 
-             'Ss': mce['SA(0.2)'],
-             'Sms': design[2],
-             'Sds': design[0],
-             'Ss_RT': prob_mce_out['SA(0.2)'],
-             'CRs': crs,
-             'Ss_84th': det_imt['SA(0.2)'],
+             'Ss': mce['SA(0.2)'], 'Sms': design[2],
+             'Sds': design[0],'Ss_RT': prob_mce_out['SA(0.2)'],
+             'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
              'Ss_det': det_mce['SA(0.2)'],
              'Ss_seismicity': Ss_seismicity,
 
-             'S1': mce['SA(1.0)'],
-             'Sm1': design[3],
-             'Sd1': design[1],
-             'S1_RT': prob_mce_out['SA(1.0)'],
-             'CR1': cr1,
-             'S1_84th': det_imt['SA(1.0)'],
+             'S1': mce['SA(1.0)'], 'Sm1': design[3],
+             'Sd1': design[1], 'S1_RT': prob_mce_out['SA(1.0)'],
+             'CR1': cr1,'S1_84th': det_imt['SA(1.0)'],
              'S1_det': det_mce['SA(1.0)'],
              'S1_seismicity': S1_seismicity
              }
