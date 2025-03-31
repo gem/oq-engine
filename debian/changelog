@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Added `oq plot "sites?"` and added to the AELO advanced outputs page a
+    button to visualize the site of interest
+
   [Michele Simionato]
   * OQImpact: now aggregating by ID_2 and not ID_1
   * Removed the --config-file option from the oq engine command
