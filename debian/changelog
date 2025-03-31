@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Forced the consequence files to contain risk IDs and not taxonomies
   * OQImpact: now aggregating by ID_2 and not ID_1
   * Removed the --config-file option from the oq engine command
   * Fixed numeric error in high intensity hazard curves produced by

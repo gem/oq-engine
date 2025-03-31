@@ -1,4 +1,4 @@
-taxonomy,consequence,peril,slight,moderate,extensive,complete
+risk_id,consequence,peril,slight,moderate,extensive,complete
 CR+PC/LDUAL/HBET:4.7/l,losses,groundshaking,1.000000E-01,3.000000E-01,6.000000E-01,1.000000E+00
 CR+PC/LDUAL/HBET:4.7/m,losses,groundshaking,1.000000E-01,3.000000E-01,6.000000E-01,1.000000E+00
 CR+PC/LDUAL/HBET:4.7/p,losses,groundshaking,1.000000E-01,3.000000E-01,6.000000E-01,1.000000E+00
