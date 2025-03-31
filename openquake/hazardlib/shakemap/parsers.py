@@ -112,7 +112,7 @@ def path2url(url):
     if not url.startswith('file:') and not url.startswith('http'):
         file = pathlib.Path(url)
         if file.is_file():
-            return 'file:{}'.format(pathname2url(str(file.absolute())))
+            return f'file:{pathname2url(str(file.absolute()))}'
         raise FileNotFoundError(
             'The following path could not be found: %s' % url)
     return url
@@ -145,7 +145,6 @@ def get_array_shapefile(kind, fname):
     either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
-    fname = path2url(fname)
     if fname.endswith('.zip'):
         if sys.platform == 'win32':
             # fiona cannot automatically unzip, so unzip manually
@@ -157,7 +156,7 @@ def get_array_shapefile(kind, fname):
                        for f in os.listdir(targetdir) if f.endswith('.shp')] 
         else:
             fname = 'zip://' + fname[5:]
-    else:
+    elif fname.startswith('file:'):
         fname = fname[5:]  # strip file:
     polygons = []
     data = defaultdict(list)
