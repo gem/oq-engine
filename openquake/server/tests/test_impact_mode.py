@@ -239,6 +239,7 @@ class EngineServerTestCase(django.test.TestCase):
                                       email_content)
         for job_id in js:
             ret = self.get('%s/aggrisk_tags' % job_id)
+            ret = self.get('%s/extract/losses_by_site' % job_id)
             # NOTE: the get utility decodes the json and returns a dict
             ret = self.post('%s/remove' % job_id)
             if ret.status_code != 200:
