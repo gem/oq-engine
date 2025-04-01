@@ -1045,7 +1045,11 @@ def extract_losses_by_site(dstore, what):
     sitecol = dstore['sitecol']
     dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
-    grp = dstore.getitem('avg_losses-stats')
+    try:
+        grp = dstore.getitem('avg_losses-stats')
+    except KeyError:
+        # there is only one realization
+        grp = dstore.getitem('avg_losses-rlzs')
     for loss_type in grp:
         losses = grp[loss_type][:, 0]
         dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))
