@@ -94,6 +94,7 @@
           name: "{{ item }}"
           enabled: no
           masked: yes
+          state: stopped
         loop:  [firewalld.service]
 
       - name: Ensure NFS utilities are installed on Rocky

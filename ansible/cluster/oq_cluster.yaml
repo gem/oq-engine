@@ -9,8 +9,6 @@
   vars:
     venv_dir: /opt/openquake
     venv_bin: "{{ venv_dir }}/bin"
-    #worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | join(' -1,') }} -1"
-    #server_host: "{{hostvars['server']['ansible_ssh_host]['address']}}"
     server_host: "{{hostvars['server']['ansible_host']}}"
     worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_host']) | join(' -1,') }} -1"
     oq_version: master
