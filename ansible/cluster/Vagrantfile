@@ -29,7 +29,6 @@ Vagrant.configure(2) do | config |
     f.write "[worker]\n"
   end
 
-
   (1..N).each do | machine_id |
     config.vm.define "machine#{machine_id}" do | machine |
       machine.vm.box  = "generic/rocky9"

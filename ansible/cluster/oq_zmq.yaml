@@ -12,8 +12,9 @@
     webuidir_services: /var/lib/openquake/webui
     venv_dir: /opt/openquake/venv
     venv_bin: "{{ venv_dir }}/bin"
-    server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
-    worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(' -1,') }} -1"
+    server_host: "{{hostvars['server']['ansible_eth1_ipv4']['address']}}"
+    worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_eth1_ipv4', 'address']) | join(' -1,') }} -1"
+
   environment:
     HDF5_USE_FILE_LOCKING: FALSE
 

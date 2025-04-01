@@ -1,5 +1,5 @@
 ---
-# run with ansible-playbook -v -i host.linux  oqengine/oq_work.yaml --limit
+# run with ansible-playbook -v -i host.linux  oqengine/oq_work.yaml --limit 
 #
 - hosts: all
   order: sorted
@@ -12,7 +12,8 @@
     shared_nfs: /opt/shared
     nfs_mount_opts: "ro,proto=tcp,soft,intr,noauto"
     nfs_serv_opts: "(ro,fsid=0,crossmnt,insecure,no_subtree_check,async)"
-    server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
+    server_host: "{{hostvars['server']['ansible_eth1_ipv4']['address']}}"
+
 
   tasks:
   ##### Check OS for update system
@@ -21,22 +22,20 @@
 
   - name: check OS and get variable
     debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_host}}-{{inventory_hostname}}-{{group_names}}
-
-  - name: check IP
-    debug: msg={{ ansible_default_ipv4.network }}-{{ansible_default_ipv4.netmask}}-{{ansible_default_ipv4.address}}
+  
 
 #### Setup NFS server on master and worker
 #
-  - when: "'master' in group_names"
+  - when: "'master' in group_names and ansible_distribution == 'Debian' "
     block:
 
-      - name: Ensure NFS utilities are installed on master
+      - name: Ensure NFS utilities are installed on Debian master
         apt:
           name: "{{ item }}"
           state: latest
         loop:  [nfs-kernel-server, netbase, net-tools, vim]
-
-      - name: Enable NFS server service on master
+  
+      - name: Enable NFS server service on Ubuntu master
         systemd:
           name: "{{ item }}"
           enabled: yes
@@ -45,7 +44,7 @@
         with_items:
            - nfs-kernel-server
 
-      - name: Disable rpcbind service on master
+      - name: Disable rpcbind service on Ubuntu master
         systemd:
           name: "{{ item }}"
           enabled: no
@@ -55,12 +54,12 @@
       - name: Set nfs-kernel-server files on master node
         template:
           src: templates/nfs-kernel-server.j2
-          dest: /etc/default/nfs-kernel-server
-          owner: openquake
-          group: openquake
+          dest: /etc/default/nfs-kernel-server 
+          owner: root
+          group: root
           mode: 0644
           validate: ls -l %s
-        notify: reload nfs
+        notify: reload nfs   
         register: set_nfs_server
 
       - name: "Add export line for NFS server for shared folder"
@@ -68,20 +67,38 @@
           path: /etc/exports
           line: "{{ top_nfs }}     {{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}{{ nfs_serv_opts }}"
 
-  - name: Ensure NFS utilities are installed on worker
+  - name: Ensure NFS utilities are installed on Debian worker
     apt:
       name: "{{ item }}"
       state: latest
     loop:  [nfs-common, netbase, net-tools, vim]
-    when: "'worker' in group_names "
+    when: "'worker' in group_names and ansible_distribution == 'Debian' "
 
-  - name: Disable rpcbind service on worker
+  - name: Disable rpcbind service on Ubuntu worker
     systemd:
       name: "{{ item }}"
       enabled: no
       masked: yes
     loop:  [rpcbind.service, rpcbind.socket]
-    when: "'worker' in group_names "
+    when: "'worker' in group_names and ansible_distribution == 'Debian' "
+
+### Rocky
+  - name: Ensure NFS utilities are installed on Rocky
+    yum:
+      name: nfs-utils
+      update_cache: yes
+      state: latest
+    when: ansible_distribution == "Rocky"
+
+  - name: Enable NFS server service on Rocky  Master
+    systemd:
+      name: "{{ item }}"
+      state: started
+      enabled: yes
+    with_items:
+       - rpcbind
+       - nfs-server
+    when: "'master' in group_names and ansible_distribution == 'Rocky' "
 
 # Create Shared for NFS
 #
@@ -89,12 +106,12 @@
     stat:
      path: "{{ shared_nfs }}"
     register: workdir
-
+ 
   - name: "echo if directory already existed"
     debug:
       msg: "Shared  {{ shared_nfs }}  folder  is already existed"
     when: workdir.stat.exists
-
+ 
   - name: "Ansible Create directory {{ shared_nfs }} if not exists"
     file:
       path: "{{ shared_nfs }}"
@@ -102,13 +119,13 @@
       mode: "2770"
       group: openquake
       owner: openquake
-    when: workdir.stat.exists == false
+    when: workdir.stat.exists == false 
 
   - name: "echo if directory already existed"
     debug:
       msg: "Shared  {{ inst_nfs }}  folder  is already existed"
     when: workdir.stat.exists
-
+ 
   - name: "Ansible Create directory {{ inst_nfs }} if not exists"
     file:
       path: "{{ inst_nfs }}"
@@ -120,6 +137,12 @@
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     command: mount.nfs4 "{{ server_host }}:" "{{ top_nfs }}"
     register: mount_share_nfsv4
+    #mount:
+    #  path: "{{ top_nfs }}"
+    #  src: "{{ server_host }}:/"
+    #  fstype: nfs4
+    #  opts: "{{ nfs_mount_opts }}"
+    #  state: mounted
     when: "'worker' in group_names"
 
   handlers:
