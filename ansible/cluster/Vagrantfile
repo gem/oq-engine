@@ -27,18 +27,14 @@ Vagrant.configure(2) do | config |
   # dynamically create the Ansible inventory file
   File.open("#{ANSIBLE_INVENTORY_DIR}/hosts" ,'w') do | f |
     f.write "[worker]\n"
-    (1..N-1).each do | machine_id |
-      f.write "192.168.2.#{10+machine_id-1}\n"
-    end
-    f.write "\n"
   end
 
 
   (1..N).each do | machine_id |
     config.vm.define "machine#{machine_id}" do | machine |
-      machine.vm.box  = "generic/rocky8"
+      machine.vm.box  = "generic/rocky9"
       if machine_id == N
-      machine.vm.hostname = "master"
+      machine.vm.hostname = "server"
       else
       machine.vm.hostname = "worker#{machine_id}"
       end
@@ -48,13 +44,11 @@ Vagrant.configure(2) do | config |
         # dynamically create individual Ansible entries
         File.open("#{ANSIBLE_INVENTORY_DIR}/hosts" ,'a') do | f |
           if machine_id == N
-          f.write "[master]\n"
-          f.write "192.168.2.#{10+machine_id-1}\n"
           f.write "\n"
+          f.write "[master]\n"
+          f.write "#{machine.vm.hostname} ansible_host=192.168.2.#{10+machine_id-1}\n"
           else
-      #    f.write "[worker]\n"
-      #    f.write "192.168.2.#{10+machine_id-1}\n"
-      #    f.write "\n"
+          f.write "#{machine.vm.hostname} ansible_host=192.168.2.#{10+machine_id-1}\n"
           end
         end
 
