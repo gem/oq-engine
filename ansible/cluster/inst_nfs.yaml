@@ -12,7 +12,7 @@
     shared_nfs: /opt/shared
     nfs_mount_opts: "ro,proto=tcp,soft,intr,noauto"
     nfs_serv_opts: "(ro,fsid=0,crossmnt,insecure,no_subtree_check,async)"
-    server_host: "{{hostvars['server']['ansible_eth1_ipv4']['address']}}"
+    server_host: "{{hostvars['server']['ansible_host']}}"
 
 
   tasks:
@@ -22,6 +22,9 @@
 
   - name: check OS and get variable
     debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_host}}-{{inventory_hostname}}-{{group_names}}
+
+  - name: check OS and get eth1 information
+    debug: msg={{ top_nfs }}_{{ ansible_eth1.ipv4.address }}/{{ ansible_eth1.ipv4.netmask }}{{ nfs_serv_opts }}
   
 
 #### Setup NFS server on master and worker
@@ -74,31 +77,56 @@
     loop:  [nfs-common, netbase, net-tools, vim]
     when: "'worker' in group_names and ansible_distribution == 'Debian' "
 
-  - name: Disable rpcbind service on Ubuntu worker
+  - name: Disable rpcbind service on Debian worker
     systemd:
       name: "{{ item }}"
       enabled: no
       masked: yes
     loop:  [rpcbind.service, rpcbind.socket]
     when: "'worker' in group_names and ansible_distribution == 'Debian' "
-
+    
 ### Rocky
-  - name: Ensure NFS utilities are installed on Rocky
-    yum:
-      name: nfs-utils
-      update_cache: yes
-      state: latest
-    when: ansible_distribution == "Rocky"
+  - when: "'master' in group_names and ansible_distribution == 'Rocky' "
+    block:
+    
+      - name: Disable firewalld service on Rocky NFS Server
+        systemd:
+          name: "{{ item }}"
+          enabled: no
+          masked: yes
+        loop:  [firewalld.service]
 
-  - name: Enable NFS server service on Rocky  Master
-    systemd:
-      name: "{{ item }}"
-      state: started
-      enabled: yes
-    with_items:
-       - rpcbind
-       - nfs-server
-    when: "'master' in group_names and ansible_distribution == 'Rocky' "
+      - name: Ensure NFS utilities are installed on Rocky
+        dnf:
+          name: nfs-utils
+          update_cache: yes
+          state: latest  
+
+      - name: Enable NFS server service on Rocky master
+        systemd:
+          name: "{{ item }}"
+          enabled: yes
+          state: started
+          masked: no
+        with_items:
+           - nfs-server
+           - rpcbind
+
+      - name: Set nfs-kernel-server files on master node
+        template:
+          src: templates/nfs-kernel-server.j2
+          dest: /etc/default/nfs-kernel-server 
+          owner: root
+          group: root
+          mode: 0644
+          validate: ls -l %s
+        notify: reload nfs   
+        register: set_nfs_server
+
+      - name: "Add export line for NFS server for shared folder"
+        lineinfile:
+          path: /etc/exports
+          line: "{{ top_nfs }}  {{ ansible_eth1.ipv4.network }}/{{ ansible_eth1.ipv4.netmask }}{{ nfs_serv_opts }}"
 
 # Create Shared for NFS
 #

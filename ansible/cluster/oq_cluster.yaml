@@ -11,17 +11,13 @@
     venv_bin: "{{ venv_dir }}/bin"
     #worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_eth1', 'ipv4', 'address']) | join(' -1,') }} -1"
     #server_host: "{{hostvars['server']['ansible_ssh_host]['address']}}"
-    server_host: "{{hostvars['server']['ansible_eth1_ipv4']['address']}}"
-    worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_eth1_ipv4', 'address']) | join(' -1,') }} -1"
+    server_host: "{{hostvars['server']['ansible_host']}}"
+    worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_host']) | join(' -1,') }} -1"
     oq_version: master
 
   pre_tasks:
     - name: ping hosts
       ping:
-
-    - name: "Ansible | List all known variables and facts"
-      debug:
-        var: hostvars[inventory_hostname]
 
     - name: Update apt repo and cache on Debian
       apt:
@@ -115,9 +111,9 @@
       when: "'master' in group_names"
 
 - import_playbook: inst_nfs.yaml
-#  when: "'master' in group_names"
-#
-#- import_playbook: inst_nfs.yaml
-#  when: "'worker' in group_names"
+  when: "'master' in group_names"
+
+- import_playbook: inst_nfs.yaml
+  when: "'worker' in group_names"
 
 - import_playbook: oq_zmq.yaml
