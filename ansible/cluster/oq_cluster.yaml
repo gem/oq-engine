@@ -110,16 +110,14 @@
         cd oq-engine
         git checkout {{ oq_version }}
         git log -1
-        python3.11 ./install.py server
+        python3.11 ./install.py devel_server
       register: oq_install
       when: "'master' in group_names"
 
-      when: "'master' in group_names"
-
 - import_playbook: inst_nfs.yaml
-  when: "'master' in group_names"
-
-- import_playbook: inst_nfs.yaml
-  when: "'worker' in group_names"
+#  when: "'master' in group_names"
+#
+#- import_playbook: inst_nfs.yaml
+#  when: "'worker' in group_names"
 
 - import_playbook: oq_zmq.yaml
