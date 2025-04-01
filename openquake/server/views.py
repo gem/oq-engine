@@ -742,7 +742,8 @@ def impact_get_rupture_data(request):
     Retrieve rupture parameters corresponding to a given usgs id
 
     :param request:
-        a `django.http.HttpRequest` object containing usgs_id
+        a `django.http.HttpRequest` object containing usgs_id, approach, rupture_file,
+        use_shakemap
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     rup, rupdic, _oqparams, err = impact_validate(
@@ -882,7 +883,7 @@ def impact_run_with_shakemap(request):
     if request.user.level == 0:
         return HttpResponseForbidden()
     post = dict(usgs_id=request.POST['usgs_id'],
-                use_shakemap=True, approach='use_shakemap_from_usgs')
+                use_shakemap='true', approach='use_shakemap_from_usgs')
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
