@@ -889,7 +889,7 @@ def impact_run_with_shakemap(request):
     post = {key: str(val) for key, val in rupdic.items()
             if key != 'shakemap_array'}
     post['approach'] = 'use_shakemap_from_usgs'
-    post['use_shakemap'] = True
+    post['use_shakemap'] = 'true'
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
