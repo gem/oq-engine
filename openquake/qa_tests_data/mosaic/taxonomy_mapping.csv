@@ -125,8 +125,7 @@ RUS,NEA,taxonomy_mapping_Russia.csv
 NZL,NZL,taxonomy_mapping_New_Zealand.csv
 COK,PAC,taxonomy_mapping_Cook_Islands.csv
 ASM,PAC,taxonomy_mapping_American_Samoa.csv
-COK,PAC,taxonomy_mapping_Oceania.csv
-FJI,PAC,taxonomy_mapping_Oceania.csv
+FJI,PAC,taxonomy_mapping_Fiji.csv
 KIR,PAC,taxonomy_mapping_Oceania.csv
 NRU,PAC,taxonomy_mapping_Oceania.csv
 NIU,PAC,taxonomy_mapping_Oceania.csv
