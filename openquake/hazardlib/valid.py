@@ -190,7 +190,7 @@ def gsim(value, basedir=''):
         raise NameError('Unknown GSIM: %s' % gsim_name)
     if inspect.isclass(gsim_class):
         gs = gsim_class(**kwargs)
-    else:  # is an alias, i.e. has no arguments
+    else:  # is an alias, i.e. a thunk
         gs = gsim_class()
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
