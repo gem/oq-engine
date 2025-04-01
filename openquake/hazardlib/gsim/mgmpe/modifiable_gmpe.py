@@ -402,6 +402,9 @@ class ModifiableGMPE(GMPE):
             ref = np.zeros_like(mean)
             tmp = np.zeros_like(sig)
 
+            ref = np.zeros((1, len(sig[0, :])))
+            tmp = np.zeros((1, len(sig[0, :])))
+
             # Update context
             tctx = ctx.copy()
             ref_vs30 = self.params['ceus2020_site_term']['ref_vs30']

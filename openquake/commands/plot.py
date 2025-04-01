@@ -38,7 +38,7 @@ from openquake.calculators.extract import (
 from openquake.calculators.postproc.plots import (
     plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d)
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites)
 
 
 ZOOM_MARGIN = 8
@@ -1081,7 +1081,7 @@ def make_figure_rupture(extractors, what):
     $ oq plot "rupture?"
 
     extracts the rupture from an already performed scenario calculation;
-    
+
     $ oq plot "rupture?mag=6&lon=10&lat=45&dep=10&rake=45&msr=WC1994"
 
     builds a new planar rupture.
@@ -1104,6 +1104,16 @@ def make_figure_rupture_3d(extractors, what):
     dstore = ex.dstore
     ebr = get_ebrupture(dstore, rup_id=0)
     return plot_rupture_3d(ebr.rupture)
+
+
+def make_figure_sites(extractors, what):
+    """
+    $ oq plot "sites?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_sites(dstore)
+    return plt
 
 
 def plot_wkt(wkt_string):

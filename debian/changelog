@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Added `oq plot "sites?"` and added to the AELO advanced outputs page a
+    button to visualize the site of interest
+
   [Michele Simionato]
   * Implemented `gsim_aliases` as thunks
   * Forced the consequence files to contain risk IDs and not taxonomies
