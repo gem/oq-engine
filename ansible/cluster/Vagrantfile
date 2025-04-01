@@ -11,7 +11,7 @@ Vagrant.configure(2) do | config |
     libvirt.cpus = 2
     libvirt.memory = 2048
   end
-  
+
   N = 3
   ANSIBLE_RAW_SSH_ARGS  = []
   ANSIBLE_INVENTORY_DIR = "inventory"
@@ -51,7 +51,7 @@ Vagrant.configure(2) do | config |
           f.write "[master]\n"
           f.write "192.168.2.#{10+machine_id-1}\n"
           f.write "\n"
-          else 
+          else
       #    f.write "[worker]\n"
       #    f.write "192.168.2.#{10+machine_id-1}\n"
       #    f.write "\n"
@@ -65,7 +65,7 @@ Vagrant.configure(2) do | config |
 
           # Disable default limit to connect to all the machines
           ansible.limit           = "all"
-          ansible.playbook        = "provisioner/test.yml"
+          ansible.playbook        = "oq_cluster.yaml"
           ansible.inventory_path  = "#{ANSIBLE_INVENTORY_DIR}/hosts"
           ansible.verbose         = "-v"
           ansible.raw_ssh_args    = ANSIBLE_RAW_SSH_ARGS
