@@ -861,13 +861,10 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    _rup, rupdic, params, err = impact_validate(
+    _rup, _rupdic, params, err = impact_validate(
         request.POST, request.user, rupture_path, station_data_file)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
-    for key in ['dip', 'strike']:
-        if key in rupdic and rupdic[key] is None:
-            del rupdic[key]
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
