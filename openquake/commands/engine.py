@@ -21,7 +21,6 @@ import getpass
 import logging
 from openquake.baselib import config
 from openquake.baselib.general import safeprint
-from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
@@ -94,7 +93,6 @@ def main(
         export_output=None,
         export_outputs=None,
         param='',
-        config_file=None,
         exports='',
         log_level='info',
         sample_sources=False,
@@ -107,12 +105,6 @@ def main(
     if not run:
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
-
-    if config_file:
-        config.read(os.path.abspath(os.path.expanduser(config_file)),
-                    limit=int, soft_mem_limit=int, hard_mem_limit=int,
-                    port=int, serialize_jobs=valid.boolean,
-                    strict=valid.boolean, code=exec)
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
@@ -127,12 +119,13 @@ def main(
         os.makedirs(datadir)
 
     fname = os.path.expanduser(config.dbserver.file)
-    if (os.environ.get('OQ_DATABASE', config.dbserver.host) == '127.0.0.1'
-            and getpass.getuser() != 'openquake'):  # no DbServer
+    host = os.environ.get('OQ_DATABASE', config.dbserver.host)
+    if host == '127.0.0.1' and getpass.getuser() != 'openquake':  # no DbServer
         if not os.path.exists(fname):
             upgrade_db = True  # automatically creates the db
             yes = True
     else:  # DbServer yes
+        print(f'Using the DbServer on {host}')
         dbserver.ensure_on()
         # check that we are talking to the right server
         err = dbserver.check_foreign()
@@ -278,8 +271,6 @@ main.export_outputs = dict(
 main.param = dict(
     abbrev='-p', help='Override parameters specified with the syntax '
     'NAME1=VALUE1,NAME2=VALUE2,...')
-main.config_file = ('Custom openquake.cfg file, to override default '
-                    'configurations')
 main.exports = ('Comma-separated string specifing the export formats, '
                 'in order of priority')
 main.log_level = dict(help='Defaults to "info"',

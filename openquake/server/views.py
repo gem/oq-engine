@@ -51,10 +51,12 @@ from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
     IMPACT_FORM_DEFAULTS)
+from openquake.hazardlib.shakemap.parsers import get_stations_from_usgs
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
-from openquake.calculators.export import export, FIELD_DESCRIPTION
+from openquake.calculators.export import (
+    export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
@@ -422,12 +424,14 @@ def calc_list(request, id=None):
 
     Responses are in JSON.
     """
+    # with pytest openquake/server/tests/test_public_mode.py -k classical
+    # request.GET is <QueryDict: {'is_running': ['true']}>
     base_url = _get_base_url(request)
     # always filter calculation list unless user is a superuser
-    calc_data = logs.dbcmd('get_calcs', request.GET,
-                           utils.get_valid_users(request),
-                           not utils.is_superuser(request), id)
-
+    calc_data = logs.dbcmd(
+        'get_calcs', dict(request.GET.items()),
+        utils.get_valid_users(request),
+        not utils.is_superuser(request), id)
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
@@ -698,7 +702,8 @@ def impact_callback(
         exclude_from_print = [
             'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
             'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type', 'gsim',
-            'shakemap_uri', 'rupture_file', 'rupture_from_usgs']
+            'shakemap_uri', 'rupture_file', 'rupture_from_usgs', 'title', 'mmi_file',
+            'rake']
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
@@ -740,13 +745,8 @@ def impact_get_rupture_data(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_file = None
-    user = request.user
-    user.testdir = None
-    # NOTE: at this stage, attempt to download station data from USGS
     rup, rupdic, _oqparams, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file,
-        download_usgs_stations=True)
+        request.POST, request.user, rupture_path)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
@@ -766,6 +766,28 @@ def impact_get_rupture_data(request):
     return JsonResponse(rupdic, status=200)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_get_stations_from_usgs(request):
+    """
+    Retrieve station data corresponding to a given usgs id
+
+    :param request:
+        a `django.http.HttpRequest` object containing usgs_id
+    """
+    usgs_id = request.POST.get('usgs_id')
+    station_data_file, n_stations, err = get_stations_from_usgs(
+        usgs_id, user=request.user)
+    station_data_issue = None
+    if err:
+        station_data_issue = err['error_msg']
+    response_data = dict(station_data_file=station_data_file,
+                         n_stations=n_stations,
+                         station_data_issue=station_data_issue)
+    return JsonResponse(response_data)
+
+
 def get_uploaded_file_path(request, filename):
     file = request.FILES.get(filename)
     if file:
@@ -773,6 +795,43 @@ def get_uploaded_file_path(request, filename):
         # uploaded file right after the request is consumed, therefore we need
         # to store a copy of it
         return gettemp(open(file.temporary_file_path()).read(), suffix='.xml')
+
+
+def create_impact_job(request, params):
+    [jobctx] = engine.create_jobs(
+        [params], config.distribution.log_level, user_name=utils.get_user(request))
+
+    job_owner_email = request.user.email
+    response_data = dict()
+
+    job_id = jobctx.calc_id
+    outputs_uri_web = request.build_absolute_uri(
+        reverse('outputs_impact', args=[job_id]))
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+    response_data[job_id] = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+    if not job_owner_email:
+        response_data[job_id]['WARNING'] = (
+            'No email address is specified for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the'
+            ' following link: %s. If the job fails, the error traceback'
+            ' will be accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+
+    # spawn the Aristotle main process
+    proc = mp.Process(
+        target=impact.main_web,
+        args=([params], [jobctx], job_owner_email, outputs_uri_web,
+              impact_callback))
+    proc.start()
+    return response_data
 
 
 @csrf_exempt
@@ -802,52 +861,45 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    user = request.user
-    user.testdir = None
-    # at this stage, do not attempt to re-load station data from the USGS if they are
-    # missing or if the user explicitly decided to ignore them
     _rup, rupdic, params, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file,
-        download_usgs_stations=False)
+        request.POST, request.user, rupture_path, station_data_file)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     for key in ['dip', 'strike']:
         if key in rupdic and rupdic[key] is None:
             del rupdic[key]
-    [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, user_name=utils.get_user(request))
+    response_data = create_impact_job(request, params)
+    return JsonResponse(response_data, status=200)
 
-    job_owner_email = request.user.email
-    response_data = dict()
 
-    job_id = jobctx.calc_id
-    outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs_impact', args=[job_id]))
-    outputs_uri_api = request.build_absolute_uri(
-        reverse('results', args=[job_id]))
-    log_uri = request.build_absolute_uri(
-        reverse('log', args=[job_id, '0', '']))
-    traceback_uri = request.build_absolute_uri(
-        reverse('traceback', args=[job_id]))
-    response_data[job_id] = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-    if not job_owner_email:
-        response_data[job_id]['WARNING'] = (
-            'No email address is speficied for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the'
-            ' following link: %s. If the job fails, the error traceback'
-            ' will be accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_run_with_shakemap(request):
+    """
+    Run an impact calculation.
 
-    # spawn the Aristotle main process
-    proc = mp.Process(
-        target=impact.main_web,
-        args=([params], [jobctx], job_owner_email, outputs_uri_web,
-              impact_callback))
-    proc.start()
-
+    :param request:
+        a `django.http.HttpRequest` object containing a usgs_id
+    """
+    # NOTE: this is called via AJAX so the context processor isn't automatically
+    # applied, since AJAX calls often do not render templates
+    if request.user.level == 0:
+        return HttpResponseForbidden()
+    post = dict(usgs_id=request.POST['usgs_id'],
+                use_shakemap=True, approach='use_shakemap_from_usgs')
+    _rup, rupdic, _params, err = impact_validate(post, request.user)
+    if err:
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    for key in ['dip', 'strike']:
+        if key in rupdic and rupdic[key] is None:
+            del rupdic[key]
+    post = {key: str(val) for key, val in rupdic.items()}
+    for field in IMPACT_FORM_DEFAULTS:
+        if field not in post:
+            post[field] = IMPACT_FORM_DEFAULTS[field]
+    _rup, rupdic, params, err = impact_validate(post, request.user)
+    response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
 
@@ -950,7 +1002,7 @@ def aelo_run(request):
     job_owner_email = request.user.email
     if not job_owner_email:
         response_data['WARNING'] = (
-            'No email address is speficied for your user account,'
+            'No email address is specified for your user account,'
             ' therefore email notifications will be disabled. As soon as'
             ' the job completes, you can access its outputs at the following'
             ' link: %s. If the job fails, the error traceback will be'
@@ -1172,9 +1224,9 @@ def calc_result(request, result_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def aggrisk_tags(request, calc_id):
+def impact_results(request, calc_id):
     """
-    Return aggrisk_tags, by ``calc_id``, as JSON.
+    Return impact results (aggrisk_tags), by ``calc_id``, as JSON.
 
     :param request:
         `django.http.HttpRequest` object.
@@ -1197,14 +1249,17 @@ def aggrisk_tags(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
-    return HttpResponse(content=df.to_json(), content_type=JSON, status=200)
+    response_data = {'loss_type_descriptions': AGGRISK_FIELD_DESCRIPTION,
+                     'impact': df.to_dict()}
+    return JsonResponse(response_data)
 
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def mmi_tags(request, calc_id):
+def exposure_by_mmi(request, calc_id):
     """
-    Return mmi_tags, by ``calc_id``, as JSON.
+    Return exposure aggregated by MMI regions and tags (mmi_tags),
+    by ``calc_id``, as JSON.
 
     :param request:
         `django.http.HttpRequest` object.
@@ -1227,7 +1282,9 @@ def mmi_tags(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'mmi_tags', tb),
             content_type='text/plain', status=400)
-    return HttpResponse(content=df.to_json(), content_type=JSON, status=200)
+    response_data = {'column_descriptions': EXPOSURE_FIELD_DESCRIPTION,
+                     'exposure_by_mmi': df.to_dict()}
+    return JsonResponse(response_data)
 
 
 @cross_domain_ajax
@@ -1508,8 +1565,8 @@ def web_engine_get_outputs_impact(request, calc_id):
             weights_precision = None
         else:
             losses_header = [
-                f'{field}<br><i>{FIELD_DESCRIPTION[field]}</i>'
-                if field in FIELD_DESCRIPTION
+                f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
+                if field in AGGRISK_FIELD_DESCRIPTION
                 else field.capitalize()
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
@@ -1592,8 +1649,11 @@ def extract_html_table(request, calc_id, name):
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
     table_html = table.to_html(classes="table table-striped", index=False)
+    display_names = {'aggrisk_tags': 'Impact',
+                     'mmi_tags': 'Exposure by MMI'}
+    table_name = display_names[name] if name in display_names else name
     return render(request, 'engine/show_table.html',
-                  {'table_name': name, 'table_html': table_html})
+                  {'table_name': table_name, 'table_html': table_html})
 
 
 @csrf_exempt

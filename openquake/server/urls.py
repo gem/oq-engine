@@ -58,6 +58,9 @@ if settings.WEBUI:
                     name="outputs_impact"),
             re_path(r'^v1/get_impact_form_defaults$', views.get_impact_form_defaults,
                     name="impact_form_defaults"),
+            re_path(r'^v1/impact_get_stations_from_usgs$',
+                    views.impact_get_stations_from_usgs,
+                    name="impact_get_stations_from_usgs"),
         ]
 
     for app in settings.STANDALONE_APPS:

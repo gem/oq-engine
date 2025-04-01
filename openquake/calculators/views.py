@@ -1436,7 +1436,7 @@ def view_rlz(token, dstore):
     tbl = []
     for bset, brid in zip(smlt.branchsets, rlz.sm_lt_path):
         tbl.append((bset.uncertainty_type, smlt.branches[brid].value))
-    for trt, value in zip(sorted(gslt.bsetdict), rlz.gsim_rlz.value):
+    for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
     return numpy.array(tbl, dt('uncertainty_type uvalue'))
 

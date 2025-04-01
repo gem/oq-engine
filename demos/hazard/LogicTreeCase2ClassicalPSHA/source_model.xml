@@ -11,7 +11,7 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Active Shallow Crust"
         >
             <simpleFaultSource
-            id="2"
+            id="second"
             name="Simple Fault Source"
             tectonicRegion="Active Shallow Crust"
             >
@@ -48,7 +48,7 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Stable Continental Crust"
         >
             <areaSource
-            id="1"
+            id="first"
             name="Area Source"
             tectonicRegion="Stable Continental Crust"
             >
