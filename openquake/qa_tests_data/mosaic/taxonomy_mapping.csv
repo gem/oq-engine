@@ -86,7 +86,7 @@ SVN,esrm20,taxonomy_mapping_Europe.csv
 ESP,esrm20,taxonomy_mapping_Europe.csv
 SWE,esrm20,taxonomy_mapping_Europe.csv
 CHE,esrm20,taxonomy_mapping_Europe.csv
-TUR,esrm20,taxonomy_mapping_Turkey.csv
+TUR,esrm20,taxonomy_mapping_Turkiye.csv
 UKR,esrm20,taxonomy_mapping_Europe.csv
 GBR,esrm20,taxonomy_mapping_Europe.csv
 BRN,IDN,taxonomy_mapping_Southeast_Asia.csv
@@ -123,6 +123,7 @@ TUN,NAF,taxonomy_mapping_Tunisia.csv
 MNG,NEA,taxonomy_mapping_Mongolia.csv
 RUS,NEA,taxonomy_mapping_Russia.csv
 NZL,NZL,taxonomy_mapping_New_Zealand.csv
+COK,PAC,taxonomy_mapping_Cook_Islands.csv
 ASM,PAC,taxonomy_mapping_American_Samoa.csv
 COK,PAC,taxonomy_mapping_Oceania.csv
 FJI,PAC,taxonomy_mapping_Oceania.csv
