@@ -1403,7 +1403,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             governing_mce = 'governing_mce.png' in ds['png']
             site = 'site.png' in ds['png']
         else:
-            hmaps = assets = hcurves = governing_mce = False
+            hmaps = assets = hcurves = governing_mce = site = False
             avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
