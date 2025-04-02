@@ -91,9 +91,14 @@
         generate_ssh_key: yes
         ssh_key_bits: 2048
         ssh_key_file: .ssh/id_rsa
+   - name: "Build hosts file"
+     lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_host }} {{item}}" state=present
+     when: hostvars[item].ansible_host is defined
+     with_items: groups['all']
 
 
   tasks:
+
 
 - import_playbook: inst_nfs.yaml
   when: "'master' in group_names"
