@@ -245,6 +245,7 @@ class EngineServerTestCase(django.test.TestCase):
                         self.assertIn(f'engine/{job_id}/outputs_impact',
                                       email_content)
         for job_id in js:
+            # NOTE: the get_json utility decodes the json and returns a dict
             ret = self.get_json('%s/impact' % job_id)
             self.assertEqual(list(ret.keys()),
                              ['loss_type_descriptions', 'impact'])
@@ -255,7 +256,6 @@ class EngineServerTestCase(django.test.TestCase):
             ret = self.get('%s/extract_html_table/aggrisk_tags' % job_id)
             ret = self.get('%s/extract_html_table/mmi_tags' % job_id)
             ret = self.get('%s/extract/losses_by_site' % job_id)
-            # NOTE: the get utility decodes the json and returns a dict
             ret = self.post('%s/remove' % job_id)
             if ret.status_code != 200:
                 raise RuntimeError(
