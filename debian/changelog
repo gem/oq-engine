@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Too many post_classical tasks were generated with an artificially large
+    parameter `max_sites_disagg`
   * Internal: added a flag --wfp to the script `utils/build_global_exposure`
 
   [Paolo Tormene]
