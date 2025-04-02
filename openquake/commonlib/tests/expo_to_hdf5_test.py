@@ -16,20 +16,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import unittest
-from openquake.baselib import hdf5
-from openquake.commonlib.expo_to_hdf5 import main
+from openquake.commonlib.expo_to_hdf5 import store
+from openquake.commonlib.datastore import create_job_dstore
 
 
-def test_main():
-    raise unittest.SkipTest('Avoid error MRD01TestCase: There is a pre-existing file')
-    # only tests that it runs
+def test_expo_to_hdf5():
     expo_xml = os.path.join(os.path.dirname(__file__),
                             'data', 'grm_exposure.xml')
-    out = main([expo_xml])
-    with hdf5.File(out) as dstore:
+    job, dstore = create_job_dstore()
+    with job, dstore:
+        store([expo_xml], True, dstore)
         assets = list(dstore['assets/ASSET_ID'])
         assert assets == [b'TWNRes_0', b'TWNRes_1', b'TWNRes_2', b'TWNRes_3',
                           b'TWNRes_4', b'TWNRes_5', b'TWNRes_6', b'TWNRes_7',
                           b'TWNRes_8', b'TWNRes_9']
+        id1s = list(dstore['assets/ID_1'])
+        assert id1s == [1, 1, 1, 1, 2, 2, 2, 2, 2, 2]
+
 

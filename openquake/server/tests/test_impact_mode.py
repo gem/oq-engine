@@ -100,6 +100,13 @@ class EngineServerTestCase(django.test.TestCase):
     @classmethod
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
+        if not resp.status_code == 200:
+            raise RuntimeError(resp.reason_phrase)
+        return resp
+
+    @classmethod
+    def get_json(cls, path, **data):
+        resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
         if 'list' not in path:
             print(resp.wsgi_request.META)
             print(resp)
@@ -127,7 +134,7 @@ class EngineServerTestCase(django.test.TestCase):
             time.sleep(1)  # sec
             # NOTE: is_running is True both for 'submitted' and 'executing'
             #       job status
-            running_calcs = cls.get('list', is_running='true')
+            running_calcs = cls.get_json('list', is_running='true')
             if not running_calcs:
                 # NOTE: some more time is needed in order to wait for the
                 # callback to finish and produce the email notification
@@ -178,7 +185,7 @@ class EngineServerTestCase(django.test.TestCase):
                     'app-messages')
                 for job_id in js:
                     if failure_reason:
-                        tb = self.get('%s/traceback' % job_id)
+                        tb = self.get_json('%s/traceback' % job_id)
                         if not tb:
                             sys.stderr.write(
                                 'Empty traceback, please check!\n')
@@ -189,7 +196,7 @@ class EngineServerTestCase(django.test.TestCase):
                     #       the test
                     for i in range(CALC_RUN_TIMEOUT):
                         try:
-                            results = self.get('%s/result/list' % job_id)
+                            results = self.get_json('%s/result/list' % job_id)
                         except AssertionError as exc:
                             print(f'Results for job {job_id} not found yet:')
                             print(exc)
@@ -238,8 +245,17 @@ class EngineServerTestCase(django.test.TestCase):
                         self.assertIn(f'engine/{job_id}/outputs_impact',
                                       email_content)
         for job_id in js:
-            ret = self.get('%s/aggrisk_tags' % job_id)
-            # NOTE: the get utility decodes the json and returns a dict
+            # NOTE: the get_json utility decodes the json and returns a dict
+            ret = self.get_json('%s/impact' % job_id)
+            self.assertEqual(list(ret.keys()),
+                             ['loss_type_descriptions', 'impact'])
+            ret = self.get_json('%s/exposure_by_mmi' % job_id)
+            self.assertEqual(list(ret.keys()),
+                             ['column_descriptions', 'exposure_by_mmi'])
+            ret = self.get('%s/download_aggrisk' % job_id)
+            ret = self.get('%s/extract_html_table/aggrisk_tags' % job_id)
+            ret = self.get('%s/extract_html_table/mmi_tags' % job_id)
+            ret = self.get('%s/extract/losses_by_site' % job_id)
             ret = self.post('%s/remove' % job_id)
             if ret.status_code != 200:
                 raise RuntimeError(

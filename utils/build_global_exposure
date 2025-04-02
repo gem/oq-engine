@@ -58,7 +58,7 @@ def read_world_vulnerability(grm_dir, dstore):
     Store the world CompositeRiskModel
     """
     kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
-             'fatalities', 'residents']
+             'fatalities', 'residents', 'affectedpop', 'injured']
     vfuncs = RiskFuncList()
     for kind in kinds:
         name = f'Vulnerability/vulnerability/vulnerability_{kind}.xml'
@@ -79,8 +79,8 @@ def read_world_tmap(grm_dir, dstore):
     Store the world taxonomy mapping
     """
     # get the names of the files to read
-    tmap_df = pandas.read_csv(os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv'),
-                              index_col=['country'])
+    summary = os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv')
+    tmap_df = pandas.read_csv(summary, index_col=['country'])
     dic = {}
     for fname, df in tmap_df.groupby('fname'):
         dic[fname] = '_'.join(sorted(df.index))
@@ -94,6 +94,8 @@ def read_world_tmap(grm_dir, dstore):
                     dstore.create_df('tmap/' + dic[f], df)
                 except ValueError:  # exists already
                     print('Repeated %s' % dic[f])
+            elif f.startswith('taxonomy_mapping'):
+                raise NameError(f'{f} is not listed in {summary}')
     return n
 
 
@@ -108,6 +110,16 @@ def get_gsim_lt(cwd):
     return gsim_lt.GsimLogicTree(f2)
 
 
+def discard_dupl(records):
+    # discard duplicate sites
+    acc = {}
+    for rec in records:
+        lonlat = rec['lon'], rec['lat']
+        if lonlat not in acc:
+            acc[lonlat] = rec
+    return numpy.array(list(acc.values()), dtype=rec.dtype)
+
+    
 def build_site_model(grm_dir):
     """
     Build the global site model starting from the CSV files in the
@@ -136,9 +148,13 @@ def build_site_model(grm_dir):
         n = len(df)
         recs = sm[row:row + n]
         for col in df.columns:
-            recs[col] = df[col]
+            val = df[col].to_numpy()
+            if col in ('lon', 'lat'):
+                recs[col] = numpy.round(val, 5)
+            else:
+                recs[col] = val
         row += n
-    return sm
+    return discard_dupl(sm)
 
 
 def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
@@ -161,7 +177,7 @@ def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
     return len(smodel)
 
 
-def main(mosaic_dir, grm_dir):
+def main(mosaic_dir, grm_dir, wfp=False):
     """
     Storing global exposure
     """
@@ -176,7 +192,7 @@ def main(mosaic_dir, grm_dir):
             n = read_world_tmap(grm_dir, dstore)
             logging.info('Read %d taxonomy mappings', n)
             fnames = collect_exposures(grm_dir)
-            expo_to_hdf5.store(fnames, dstore)
+            expo_to_hdf5.store(fnames, wfp, dstore)
         logging.info(mon)
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'

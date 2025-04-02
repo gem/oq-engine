@@ -21,25 +21,29 @@ https://earthquake.usgs.gov/scenario/product/shakemap-scenario/sclegacyshakeout2
 to numpy composite arrays.
 """
 
+import io
+import os
+import sys
+import pathlib
+import logging
+import json
+import base64
+import zipfile
+import tempfile
+from dataclasses import dataclass
 from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
 from xml.parsers.expat import ExpatError
-import io
-import os
-import pathlib
-import logging
-import json
-import zipfile
-import base64
-from dataclasses import dataclass
-import pandas as pd
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from shapely.geometry import Polygon
-import numpy
 
-from openquake.baselib import performance
+from shapely.geometry import shape
+import pandas as pd
+import numpy
+import fiona
+
+from openquake.baselib import performance, config
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter, valid
@@ -108,7 +112,7 @@ def path2url(url):
     if not url.startswith('file:') and not url.startswith('http'):
         file = pathlib.Path(url)
         if file.is_file():
-            return 'file:{}'.format(pathname2url(str(file.absolute())))
+            return f'file:{pathname2url(str(file.absolute()))}'
         raise FileNotFoundError(
             'The following path could not be found: %s' % url)
     return url
@@ -136,53 +140,33 @@ def get_array(**kw):
 def get_array_shapefile(kind, fname):
     """
     Download and parse data saved as a shapefile.
+
     :param fname: url or filepath for the shapefiles,
     either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
-    import shapefile  # optional dependency
-    fname = path2url(fname)
-
-    extensions = ['shp', 'dbf', 'prj', 'shx']
-    f_dict = {}
-
+    if fname.startswith('file:'):
+        fname = fname[5:]  # strip file:
     if fname.endswith('.zip'):
-        # files are saved in a zip
-        for ext in extensions:
-            try:
-                f_dict[ext] = urlextract(fname, '.' + ext)
-            except FileNotFoundError:
-                f_dict[ext] = None
-                logging.warning(NOT_FOUND, ext)
-    else:
-        # files are saved as plain files
-        fname = os.path.splitext(fname)[0]
-        for ext in extensions:
-            try:
-                f_dict[ext] = urlopen(fname + '.' + ext)
-            except URLError:
-                f_dict[ext] = None
-                logging.warning(NOT_FOUND, ext)
-
+        if sys.platform == 'win32':
+            # fiona cannot automatically unzip, so unzip manually
+            targetdir = tempfile.mkdtemp(
+                dir=config.directory.custom_tmp or None)
+            with zipfile.ZipFile(fname) as archive:
+                archive.extractall(targetdir)
+            [fname] = [os.path.join(targetdir, f)
+                       for f in os.listdir(targetdir) if f.endswith('.shp')] 
+        else:
+            fname = 'zip://' + fname
     polygons = []
     data = defaultdict(list)
-
-    try:
-        sf = shapefile.Reader(**f_dict)
-        fieldnames = [f[0].upper() for f in sf.fields[1:]]
-
-        for rec in sf.shapeRecords():
-            # save shapes as polygons
-            polygons.append(Polygon(rec.shape.points))
-            # create dict of lists from data
-            for k, v in zip(fieldnames, rec.record):
-                data[k].append(v)
+    with fiona.open(fname) as f:
+        for feature in f:
+            polygons.append(shape(feature.geometry))
+            for k, v in feature.properties.items():
+                data[k.upper()].append(v)
             # append bounding box for later use
             data['bbox'].append(polygons[-1].bounds)
-    except shapefile.ShapefileException as e:
-        raise shapefile.ShapefileException(
-            'Necessary *.shp and/or *.dbf file not found.') from e
-
     return get_shapefile_arrays(polygons, data)
 
 
@@ -449,7 +433,7 @@ def download_station_data_file(usgs_id, contents, user):
         if len(stations) == 0:
             msg = 'stationlist.json was downloaded, but it contains no features'
             err = {"status": "failed", "error_msg": msg}
-            return None, err
+            return None, 0, err
         original_len = len(stations)
         try:
             seismic_len = len(
@@ -459,7 +443,7 @@ def download_station_data_file(usgs_id, contents, user):
                    f' "station_type" is not specified, so we can not'
                    f' identify the "seismic" stations.')
             err = {"status": "failed", "error_msg": msg}
-            return None, err
+            return None, 0, err
         df = usgs_stations_to_oq_format(
             stations, exclude_imts=('SA(3.0)',), seismic_only=True)
         if len(df) < 1:
@@ -469,21 +453,22 @@ def download_station_data_file(usgs_id, contents, user):
                            f' {seismic_len} seismic stations were all'
                            f' discarded')
                     err = {"status": "failed", "error_msg": msg}
-                    return None, err
+                    return None, 0, err
                 else:
                     msg = (f'{original_len} stations were found, but none'
                            f' of them are seismic')
                     err = {"status": "failed", "error_msg": msg}
-                    return None, err
+                    return None, 0, err
             else:
                 msg = 'No stations were found'
                 err = {"status": "failed", "error_msg": msg}
-                return None, err
+                return None, 0, err
         else:
             station_data_file = gettemp(
                 prefix='stations', suffix='.csv', remove=False)
             df.to_csv(station_data_file, encoding='utf8', index=False)
-            return station_data_file, err
+            n_stations = len(df)
+            return station_data_file, n_stations, err
 
 
 def load_rupdic_from_finite_fault(usgs_id, mag, products):
@@ -809,19 +794,20 @@ def _get_rup_from_json(usgs_id, rupture_file):
 
 def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
     err = {}
+    n_stations = 0
     try:
         usgs_id = valid.simple_id(usgs_id)
     except ValueError as exc:
         err = {'status': 'failed', 'error_msg': str(exc)}
-        return None, err
+        return None, n_stations, err
     contents, _properties, _shakemap, err = _contents_properties_shakemap(
         usgs_id, user, False, monitor)
     if err:
-        return None, err
+        return None, n_stations, err
     with monitor('Downloading stations'):
-        station_data_file, err = download_station_data_file(
+        station_data_file, n_stations, err = download_station_data_file(
             usgs_id, contents, user)
-    return station_data_file, err
+    return station_data_file, n_stations, err
 
 
 def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
@@ -904,6 +890,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
         rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
     if approach == 'use_shakemap_from_usgs':
         rupdic['shakemap_array'] = shakemap
+    rupdic['title'] = properties['title']
     if not rup_data:  # in parsers_test
         if approach == 'use_pnt_rup_from_usgs':
             rupdic['msr'] = 'PointMSR'

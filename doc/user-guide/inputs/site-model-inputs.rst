@@ -24,14 +24,15 @@ is provided below::
 If the list of sites is too long the user can specify the name of a csv file as shown below::
 
 	[geometry]
-	sites_csv = <name_of_the_csv_file>
+	site_model_csv = <name_of_the_csv_file>
 
 The format of the csv file containing the list of sites is a sequence of points (one per row) specified in terms of the 
 longitude, latitude tuple. Depth values are again optional. An example is provided below::
 
-	179.0,90.0
-	178.0,89.0
-	177.0,88.0
+     site_id,lon,lat
+	0,179.0,90.0
+	1,178.0,89.0
+	2,177.0,88.0
 
 The complete list of valid site parameters that can go into a site model .csv file are listed here. Currently, the work
 in documentation to describe this input parameters more explicitly, and to provide short descriptions of each valid site 

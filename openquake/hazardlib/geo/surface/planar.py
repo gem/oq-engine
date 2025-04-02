@@ -900,14 +900,14 @@ class PlanarSurface(BaseSurface):
         return Point(self.corner_lons[3], self.corner_lats[3],
                      self.corner_depths[3])
 
-    @property  # used in the SMTK
+    @property  # used in the SMT module of the OQ-MBTK
     def length(self):
         """
         Return length of the rupture
         """
         return self.array.wlr[1]
 
-    @property  # used in the SMTK
+    @property  # used in the SMT module of the OQ-MBTK
     def width(self):
         """
         Return length of the rupture

@@ -38,8 +38,6 @@ class AristotleParam:
     rupture_dict: dict
     time_event: str
     maximum_distance: float
-    mosaic_model: str
-    trt: str
     truncation_level: float
     number_of_ground_motion_fields: int
     asset_hazard_distance: float
@@ -49,6 +47,8 @@ class AristotleParam:
     station_data_file: str = None
     mmi_file: str = None
     maximum_distance_stations: float = None
+    mosaic_model: str = None
+    trt: str = None
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
@@ -106,9 +106,12 @@ class AristotleParam:
         if not tmap_keys:
             raise LookupError(f'No taxonomy mapping was found for {countries}')
         logging.root.handlers = []  # avoid breaking the logs
-        params['description'] = (
-            f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
-            f' M{rupdic["mag"]}')
+        if 'title' in rupdic:
+            params['description'] = f'{rupdic["usgs_id"]}: {rupdic["title"]}'
+        else:
+            params['description'] = (
+                f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
+                f' M{rupdic["mag"]}')
         return params
 
 
