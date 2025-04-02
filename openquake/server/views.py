@@ -742,7 +742,8 @@ def impact_get_rupture_data(request):
     Retrieve rupture parameters corresponding to a given usgs id
 
     :param request:
-        a `django.http.HttpRequest` object containing usgs_id
+        a `django.http.HttpRequest` object containing usgs_id, approach, rupture_file,
+        use_shakemap
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     rup, rupdic, _oqparams, err = impact_validate(
@@ -861,13 +862,10 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    _rup, rupdic, params, err = impact_validate(
+    _rup, _rupdic, params, err = impact_validate(
         request.POST, request.user, rupture_path, station_data_file)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
-    for key in ['dip', 'strike']:
-        if key in rupdic and rupdic[key] is None:
-            del rupdic[key]
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
@@ -882,23 +880,22 @@ def impact_run_with_shakemap(request):
     :param request:
         a `django.http.HttpRequest` object containing a usgs_id
     """
-    # NOTE: this is called via AJAX so the context processor isn't automatically
-    # applied, since AJAX calls often do not render templates
     if request.user.level == 0:
         return HttpResponseForbidden()
     post = dict(usgs_id=request.POST['usgs_id'],
-                use_shakemap=True, approach='use_shakemap_from_usgs')
+                use_shakemap='true', approach='use_shakemap_from_usgs')
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
-    for key in ['dip', 'strike']:
-        if key in rupdic and rupdic[key] is None:
-            del rupdic[key]
-    post = {key: str(val) for key, val in rupdic.items()}
+    post = {key: str(val) for key, val in rupdic.items()
+            if key != 'shakemap_array'}
+    post['approach'] = 'use_shakemap_from_usgs'
+    post['use_shakemap'] = 'true'
     for field in IMPACT_FORM_DEFAULTS:
-        if field not in post:
+        if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
-    _rup, rupdic, params, err = impact_validate(post, request.user)
+    _rup, rupdic, params, err = impact_validate(
+        post, request.user, post['rupture_file'])
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
