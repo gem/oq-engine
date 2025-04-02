@@ -131,7 +131,7 @@
 
 # Create Shared for NFS
 #
-  - when: "'master' in group_names and ansible_distribution == 'Rocky' "
+  - when: "'master' in group_names"
     block:
     
       - name: Check "{{ shared_nfs }}"  folder exists
@@ -165,6 +165,16 @@
           mode: '0755'
           group: openquake
           owner: openquake
+
+      - name: Run install script from github repo only on master node
+        shell: |
+          cd "{{ inst_nfs }}"
+          git clone  https://github.com/gem/oq-engine.git
+          cd oq-engine
+          git checkout {{ oq_version }}
+          git log -1
+          python3.11 ./install.py devel_server
+        register: oq_install
 
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     command: mount.nfs4 "{{ server_host }}:" "{{ top_nfs }}"

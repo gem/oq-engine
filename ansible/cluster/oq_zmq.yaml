@@ -97,7 +97,7 @@
       with_items:
          - openquake-dbserver.service
 
-    - name: Create user to run calculation on verify step
+    - name: Create user to run calculation 
       user:
         name: ci_user
         groups: openquake
@@ -128,7 +128,13 @@
         - "{{groups['worker']}}"
 
     - name: execute ssh for first time with openquake user
-      shell: ssh -v -i ~openquake/.ssh/id_rsa -o "StrictHostKeyChecking=no" "{{hostvars[item]['ansible_host']}}"
+      shell: |
+        cd ~openquake
+        ssh -v -i ~openquake/.ssh/id_rsa -o "StrictHostKeyChecking=no" "{{hostvars[item]['ansible_host']}}"
       become: true
       become_user: openquake
       loop: "{{ groups['worker'] }}"
+      register: ssh_connection
+
+    - debug:
+	msg: "{{ssh_connection.stdout_lines}}"
