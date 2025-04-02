@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Internal: added a flag --wfp to the script `utils/build_global_exposure`
+
   [Paolo Tormene]
   * Added `oq plot "sites?"` and added to the AELO advanced outputs page a
     button to visualize the site of interest

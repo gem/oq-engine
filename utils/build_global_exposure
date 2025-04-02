@@ -177,7 +177,7 @@ def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
     return len(smodel)
 
 
-def main(mosaic_dir, grm_dir):
+def main(mosaic_dir, grm_dir, wfp=False):
     """
     Storing global exposure
     """
@@ -192,7 +192,7 @@ def main(mosaic_dir, grm_dir):
             n = read_world_tmap(grm_dir, dstore)
             logging.info('Read %d taxonomy mappings', n)
             fnames = collect_exposures(grm_dir)
-            expo_to_hdf5.store(fnames, dstore)
+            expo_to_hdf5.store(fnames, wfp, dstore)
         logging.info(mon)
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
