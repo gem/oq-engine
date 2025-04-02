@@ -6,10 +6,6 @@ on:
         description: Git Ref
         default: master
         required: true
-  schedule:
-    - cron: "0 12 * * *"
-  push:
-    branches: [ ae_cluster_ansible ]
 
 jobs:
 
