@@ -35,6 +35,9 @@
          - openssh-server
          - git
          - acl
+         - strace
+         - htop
+         - lsof
       when: ansible_os_family == 'Debian'
 
 
@@ -71,6 +74,9 @@
           - rsync
           - openssh-server
           - python311
+          - strace
+          - htop
+          - lsof
         state: latest
         update_cache: yes
       when:
@@ -92,14 +98,14 @@
         ssh_key_bits: 2048
         ssh_key_file: .ssh/id_rsa
 
-   - name: Add IP address of all hosts to all hosts
-     lineinfile:
-       dest: /etc/hosts
-       regexp: '.*{{ item }}$'
-       line: "{{ hostvars[item].ansible_host }} {{item}}"
-       state: present
-     when: hostvars[item].ansible_host is defined
-     with_items: "{{ groups.all }}"
+    - name: Add IP address of all hosts to all hosts
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '.*{{ item }}$'
+        line: "{{ hostvars[item].ansible_host }} {{item}}"
+        state: present
+      when: hostvars[item].ansible_host is defined
+      with_items: "{{ groups.all }}"
 
   tasks:
 
