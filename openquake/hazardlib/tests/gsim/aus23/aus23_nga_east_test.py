@@ -173,11 +173,11 @@ class NGAEastAUS23Test(unittest.TestCase):
         ctx.vs30 = np.ones_like(ctx.rjb) * ref_vs30
         ctx.sids = np.arange(len(ctx.vs30))
         imts = [PGA()]
-        [mean_r], [_sigma_r], _, _ = contexts.get_mean_stds(
+        [_mean_r], [_sigma_r], _, _ = contexts.get_mean_stds(
             tgmm, ctx, [imts[0]], mags=mags)
 
         # Computed values
-        [mean_comp], [_sigma_comp], _, _ = contexts.get_mean_stds(
+        [_mean_comp], [_sigma_comp], _, _ = contexts.get_mean_stds(
             mgmm, ctx, [imts[0]], mags=mags)
 
         # Compute values on soil
