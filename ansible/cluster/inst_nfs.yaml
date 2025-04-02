@@ -131,37 +131,40 @@
 
 # Create Shared for NFS
 #
-  - name: Check "{{ shared_nfs }}"  folder exists
-    stat:
-     path: "{{ shared_nfs }}"
-    register: workdir
+  - when: "'master' in group_names and ansible_distribution == 'Rocky' "
+    block:
+    
+      - name: Check "{{ shared_nfs }}"  folder exists
+        stat:
+         path: "{{ shared_nfs }}"
+        register: workdir
  
-  - name: "echo if directory already existed"
-    debug:
-      msg: "Shared  {{ shared_nfs }}  folder  is already existed"
-    when: workdir.stat.exists
+      - name: "echo if directory already existed"
+        debug:
+          msg: "Shared  {{ shared_nfs }}  folder  is already existed"
+        when: workdir.stat.exists
  
-  - name: "Ansible Create directory {{ shared_nfs }} if not exists"
-    file:
-      path: "{{ shared_nfs }}"
-      state: directory
-      mode: "2770"
-      group: openquake
-      owner: openquake
-    when: workdir.stat.exists == false 
+      - name: "Ansible Create directory {{ shared_nfs }} if not exists"
+        file:
+          path: "{{ shared_nfs }}"
+          state: directory
+          mode: '0755'
+          group: openquake
+          owner: openquake
+        when: workdir.stat.exists == false 
 
-  - name: "echo if directory already existed"
-    debug:
-      msg: "Shared  {{ inst_nfs }}  folder  is already existed"
-    when: workdir.stat.exists
+      - name: "echo if directory already existed"
+        debug:
+          msg: "Shared  {{ inst_nfs }}  folder  is already existed"
+        when: workdir.stat.exists
  
-  - name: "Ansible Create directory {{ inst_nfs }} if not exists"
-    file:
-      path: "{{ inst_nfs }}"
-      state: directory
-      mode: "2770"
-      group: openquake
-      owner: openquake
+      - name: "Ansible Create directory {{ inst_nfs }} if not exists"
+        file:
+          path: "{{ inst_nfs }}"
+          state: directory
+          mode: '0755'
+          group: openquake
+          owner: openquake
 
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     command: mount.nfs4 "{{ server_host }}:" "{{ top_nfs }}"
