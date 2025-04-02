@@ -76,13 +76,11 @@
       when:
         - ansible_distribution == 'Rocky'
   
-    - name: Config and Start SSHD and print $PATH
-      shell: |
-        if [ ! -d "/var/run/sshd" ]; then
-           sudo mkdir -p /var/run/sshd
-        fi
-        sudo systemctl start sshd
-        echo $PATH
+    - name: Config and Start sshd
+      systemd:
+        name: sshd
+        enabled: yes
+        state: restarted
 
     - name: Ensure user openquake exist and generate ssh key
       user:

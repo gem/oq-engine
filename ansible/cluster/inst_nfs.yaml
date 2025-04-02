@@ -38,7 +38,7 @@
           state: latest
         loop:  [nfs-kernel-server, netbase, net-tools, vim]
   
-      - name: Enable NFS server service on Ubuntu master
+      - name: Enable NFS server service on Debian master
         systemd:
           name: "{{ item }}"
           enabled: yes
@@ -47,7 +47,7 @@
         with_items:
            - nfs-kernel-server
 
-      - name: Disable rpcbind service on Ubuntu master
+      - name: Disable rpcbind service on Debian master
         systemd:
           name: "{{ item }}"
           enabled: no
@@ -68,7 +68,7 @@
       - name: "Add export line for NFS server for shared folder"
         lineinfile:
           path: /etc/exports
-          line: "{{ top_nfs }}     {{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}{{ nfs_serv_opts }}"
+          line: "{{ top_nfs }}   {{ ansible_eth1.ipv4.network }}/{{ ansible_eth1.ipv4.netmask }}{{ nfs_serv_opts }}"
 
   - name: Ensure NFS utilities are installed on Debian worker
     apt:
