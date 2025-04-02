@@ -130,11 +130,8 @@
     - name: execute ssh for first time with openquake user
       shell: |
         cd ~openquake
-        ssh -t -v -i ~openquake/.ssh/id_rsa -o "StrictHostKeyChecking=no" "{{hostvars[item]['ansible_host']}}"
+        ssh -v -l openquake -i ~openquake/.ssh/id_rsa -o StrictHostKeyChecking=no "{{hostvars[item]['ansible_host']}}" "hostname && echo 'Welcome!!!'"
       become: true
       become_user: openquake
       loop: "{{ groups['worker'] }}"
       register: ssh_connection
-
-    - name: check ssh connection std out
-      debug: msg="{{ssh_connection.stdout_lines}}"
