@@ -11,7 +11,6 @@
     venv_bin: "{{ venv_dir }}/bin"
     server_host: "{{hostvars['server']['ansible_host']}}"
     worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_host']) | join(' -1,') }} -1"
-    oq_version: master
 
   pre_tasks:
     - name: ping hosts

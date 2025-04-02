@@ -13,6 +13,7 @@
     nfs_mount_opts: "ro,proto=tcp,soft,intr,noauto"
     nfs_serv_opts: "(ro,fsid=0,crossmnt,insecure,no_subtree_check,async)"
     server_host: "{{hostvars['server']['ansible_host']}}"
+    oq_version: master
 
 
   tasks:
@@ -26,6 +27,42 @@
   - name: check OS and get eth1 information
     debug: msg={{ top_nfs }}_{{ ansible_eth1.ipv4.address }}/{{ ansible_eth1.ipv4.netmask }}{{ nfs_serv_opts }}
   
+# Create Shared for NFS
+#
+  - when: "'master' in group_names"
+    block:
+    
+      - name: Check "{{ shared_nfs }}"  folder exists
+        stat:
+         path: "{{ shared_nfs }}"
+        register: workdir
+ 
+      - name: "echo if directory already existed"
+        debug:
+          msg: "Shared  {{ shared_nfs }}  folder  is already existed"
+        when: workdir.stat.exists
+ 
+      - name: "Ansible Create directory {{ shared_nfs }} if not exists"
+        file:
+          path: "{{ shared_nfs }}"
+          state: directory
+          mode: '0755'
+          group: openquake
+          owner: openquake
+        when: workdir.stat.exists == false 
+
+      - name: "echo if directory already existed"
+        debug:
+          msg: "Shared  {{ inst_nfs }}  folder  is already existed"
+        when: workdir.stat.exists
+ 
+      - name: "Ansible Create directory {{ inst_nfs }} if not exists"
+        file:
+          path: "{{ inst_nfs }}"
+          state: directory
+          mode: '0755'
+          group: openquake
+          owner: openquake
 
 #### Setup NFS server on master and worker
 #
@@ -129,52 +166,7 @@
           path: /etc/exports
           line: "{{ top_nfs }}  {{ ansible_eth1.ipv4.network }}/{{ ansible_eth1.ipv4.netmask }}{{ nfs_serv_opts }}"
 
-# Create Shared for NFS
-#
-  - when: "'master' in group_names"
-    block:
-    
-      - name: Check "{{ shared_nfs }}"  folder exists
-        stat:
-         path: "{{ shared_nfs }}"
-        register: workdir
- 
-      - name: "echo if directory already existed"
-        debug:
-          msg: "Shared  {{ shared_nfs }}  folder  is already existed"
-        when: workdir.stat.exists
- 
-      - name: "Ansible Create directory {{ shared_nfs }} if not exists"
-        file:
-          path: "{{ shared_nfs }}"
-          state: directory
-          mode: '0755'
-          group: openquake
-          owner: openquake
-        when: workdir.stat.exists == false 
 
-      - name: "echo if directory already existed"
-        debug:
-          msg: "Shared  {{ inst_nfs }}  folder  is already existed"
-        when: workdir.stat.exists
- 
-      - name: "Ansible Create directory {{ inst_nfs }} if not exists"
-        file:
-          path: "{{ inst_nfs }}"
-          state: directory
-          mode: '0755'
-          group: openquake
-          owner: openquake
-
-      - name: Run install script from github repo only on master node
-        shell: |
-          cd "{{ inst_nfs }}"
-          git clone  https://github.com/gem/oq-engine.git
-          cd oq-engine
-          git checkout {{ oq_version }}
-          git log -1
-          python3.11 ./install.py devel_server
-        register: oq_install
 
   - name: Set Mountpoints "{{ shared_nfs }}" for Openquake on Worker Cluster
     command: mount.nfs4 "{{ server_host }}:" "{{ top_nfs }}"
@@ -186,6 +178,17 @@
     #  opts: "{{ nfs_mount_opts }}"
     #  state: mounted
     when: "'worker' in group_names"
+
+  - name: Run install script from github repo only on master node
+    shell: |
+      cd "{{ inst_nfs }}"
+      git clone  https://github.com/gem/oq-engine.git
+      cd oq-engine
+      git checkout {{ oq_version }}
+      git log -1
+      python3.11 ./install.py devel_server
+    register: oq_install
+    when: "'master' in group_names"
 
   handlers:
     - name: reload nfs
