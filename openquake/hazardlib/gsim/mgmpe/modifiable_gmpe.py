@@ -93,6 +93,8 @@ def ceus2020_site_term(
         The reference PGA value computed for a vs30 corresponding to `ref_vs30`
     """
 
+    if not hasattr(ref_pga, '__len__'):
+        ref_pga = np.array([ref_pga])
     assert len(ref_pga) == len(ctx.vs30)
 
     # Compute the linear term
@@ -401,6 +403,9 @@ class ModifiableGMPE(GMPE):
             # Arrays for storing results
             ref = np.zeros_like(mean)
             tmp = np.zeros_like(sig)
+
+            ref = np.zeros((1, len(sig[0, :])))
+            tmp = np.zeros((1, len(sig[0, :])))
 
             # Update context
             tctx = ctx.copy()

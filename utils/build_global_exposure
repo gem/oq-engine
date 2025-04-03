@@ -79,8 +79,8 @@ def read_world_tmap(grm_dir, dstore):
     Store the world taxonomy mapping
     """
     # get the names of the files to read
-    tmap_df = pandas.read_csv(os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv'),
-                              index_col=['country'])
+    summary = os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv')
+    tmap_df = pandas.read_csv(summary, index_col=['country'])
     dic = {}
     for fname, df in tmap_df.groupby('fname'):
         dic[fname] = '_'.join(sorted(df.index))
@@ -94,6 +94,8 @@ def read_world_tmap(grm_dir, dstore):
                     dstore.create_df('tmap/' + dic[f], df)
                 except ValueError:  # exists already
                     print('Repeated %s' % dic[f])
+            elif f.startswith('taxonomy_mapping'):
+                raise NameError(f'{f} is not listed in {summary}')
     return n
 
 
@@ -175,7 +177,7 @@ def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
     return len(smodel)
 
 
-def main(mosaic_dir, grm_dir):
+def main(mosaic_dir, grm_dir, wfp=False):
     """
     Storing global exposure
     """
@@ -190,7 +192,7 @@ def main(mosaic_dir, grm_dir):
             n = read_world_tmap(grm_dir, dstore)
             logging.info('Read %d taxonomy mappings', n)
             fnames = collect_exposures(grm_dir)
-            expo_to_hdf5.store(fnames, dstore)
+            expo_to_hdf5.store(fnames, wfp, dstore)
         logging.info(mon)
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'

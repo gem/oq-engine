@@ -1,4 +1,17 @@
   [Michele Simionato]
+  * Internal: restored the view portfolio_damage
+  * Too many post_classical tasks were generated with an artificially large
+    parameter `max_sites_disagg`
+  * Internal: added a flag --wfp to the script `utils/build_global_exposure`
+
+  [Paolo Tormene]
+  * Added `oq plot "sites?"` and added to the AELO advanced outputs page a
+    button to visualize the site of interest
+
+  [Michele Simionato]
+  * Implemented `gsim_aliases` as thunks
+  * Forced the consequence files to contain risk IDs and removed
+    utils/fix_consequences, now useless
   * OQImpact: now aggregating by ID_2 and not ID_1
   * Removed the --config-file option from the oq engine command
   * Fixed numeric error in high intensity hazard curves produced by

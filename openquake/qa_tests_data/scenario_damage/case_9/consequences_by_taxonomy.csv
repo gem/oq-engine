@@ -1,4 +1,4 @@
-taxonomy,consequence,peril,slight,moderate,extensive,complete
+risk_id,consequence,peril,slight,moderate,extensive,complete
 CR_LFINF-DUH_H2,losses,groundshaking,0.05,0.25,0.6,1
 CR_LFINF-DUH_H4,losses,groundshaking,0.05,0.25,0.6,1
 MCF_LWAL-DNO_H3,losses,groundshaking,0.05,0.25,0.6,1

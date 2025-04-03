@@ -887,10 +887,16 @@ def extract_aggrisk_tags(dstore, what):
     acc = general.AccumDict(accum=[])
     for (agg_id, loss_id), loss in sorted(lossdic.items()):
         lt = LOSSTYPE[loss_id]
-        if lt in values.dtype.names:
+        if lt in oq.loss_types:
+            if lt == 'occupants':
+                continue  # replaced by injured
             for agg_key, key in zip(aggby, keys[agg_id]):
                 acc[agg_key].append(key)
             acc['loss_type'].append(lt)
+            if lt == 'affectedpop':
+                lt = 'residents'
+            elif lt == 'injured':
+                lt = 'occupants_' + oq.time_event
             acc['value'].append(values[agg_id][lt])
             acc['lossmea'].append(loss)
             if len(qdf):
@@ -1039,7 +1045,11 @@ def extract_losses_by_site(dstore, what):
     sitecol = dstore['sitecol']
     dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
-    grp = dstore.getitem('avg_losses-stats')
+    try:
+        grp = dstore.getitem('avg_losses-stats')
+    except KeyError:
+        # there is only one realization
+        grp = dstore.getitem('avg_losses-rlzs')
     for loss_type in grp:
         losses = grp[loss_type][:, 0]
         dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))

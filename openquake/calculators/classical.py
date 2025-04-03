@@ -488,7 +488,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         # create empty dataframes
-        self.num_chunks = getters.get_num_chunks(self.datastore)
+        self.num_chunks, _N = getters.get_num_chunks_sites(self.datastore)
         # create empty dataframes
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names])
