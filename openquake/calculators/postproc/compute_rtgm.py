@@ -280,7 +280,7 @@ def get_zero_hazard_asce41():
               }
     return asce41
 
-def get_seismicity_class(mce, Vs30):
+def get_seismicity_class(mce, vs30):
     
     if vs30 == 760:
         if mce['SA(0.2)'] < 0.25:
