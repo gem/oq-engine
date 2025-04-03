@@ -10,7 +10,8 @@
 
   [Michele Simionato]
   * Implemented `gsim_aliases` as thunks
-  * Forced the consequence files to contain risk IDs and not taxonomies
+  * Forced the consequence files to contain risk IDs and removed
+    utils/fix_consequences, now useless
   * OQImpact: now aggregating by ID_2 and not ID_1
   * Removed the --config-file option from the oq engine command
   * Fixed numeric error in high intensity hazard curves produced by
