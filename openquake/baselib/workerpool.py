@@ -210,7 +210,8 @@ class WorkerMaster(object):
             mon = performance.Monitor(
                 'zmq-debug', dbserver_host=config.dbserver.host)
             mon.inject = True
-            rec_host = config.dbserver.receiver_host or '127.0.0.1'
+            rec_host = (config.dbserver.receiver_host or config.dbserver.host
+                        or '127.0.0.1')
             receiver = 'tcp://%s:%s' % (
                 rec_host, config.dbserver.receiver_ports)
             ntasks = len(self.host_cores) * 2
