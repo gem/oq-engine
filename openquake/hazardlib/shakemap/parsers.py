@@ -852,7 +852,7 @@ def get_shakemap_versions(usgs_id, monitor=performance.Monitor()):
     return shakemap_versions, err
 
 
-def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version=None,
+def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='latest',
                 rupture_file=None, monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
@@ -864,6 +864,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version=None,
     :param dic: dictionary with ShakeMap ID and other parameters
     :param user: User instance
     :param use_shakemap: download the ShakeMap only if True
+    :param shakemap_version: id of the ShakeMap to be used (if the ShakeMap is used)
     :param rupture_file: None
     :returns: (rupture object or None, rupture dictionary, error dictionary or {})
     """
