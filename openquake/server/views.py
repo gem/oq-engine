@@ -51,7 +51,8 @@ from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
     IMPACT_FORM_DEFAULTS)
-from openquake.hazardlib.shakemap.parsers import get_stations_from_usgs
+from openquake.hazardlib.shakemap.parsers import (
+    get_stations_from_usgs, get_shakemap_versions)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -786,6 +787,27 @@ def impact_get_stations_from_usgs(request):
     response_data = dict(station_data_file=station_data_file,
                          n_stations=n_stations,
                          station_data_issue=station_data_issue)
+    return JsonResponse(response_data)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_get_shakemap_versions(request):
+    """
+    Return a list of ShakeMap versions for the given usgs_id
+
+    :param request:
+        a `django.http.HttpRequest` object containing usgs_id
+    """
+    usgs_id = request.POST.get('usgs_id')
+    shakemap_versions, err = get_shakemap_versions(usgs_id)
+    if err:
+        shakemap_versions_issue = err['error_msg']
+    else:
+        shakemap_versions_issue = None
+    response_data = dict(shakemap_versions=shakemap_versions,
+                         shakemap_versions_issue=shakemap_versions_issue)
     return JsonResponse(response_data)
 
 

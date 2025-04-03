@@ -52,7 +52,8 @@ from openquake.hazardlib.source.rupture import (
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
-SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
+QUERY_PARAMS = '?eventid={}&format=geojson&includesuperseded=True'
+SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query' + QUERY_PARAMS
 F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
     'LON LAT SVEL MMI PGA PSA03 PSA06 PSA10 PSA30 '
@@ -155,7 +156,7 @@ def get_array_shapefile(kind, fname):
             with zipfile.ZipFile(fname) as archive:
                 archive.extractall(targetdir)
             [fname] = [os.path.join(targetdir, f)
-                       for f in os.listdir(targetdir) if f.endswith('.shp')] 
+                       for f in os.listdir(targetdir) if f.endswith('.shp')]
         else:
             fname = 'zip://' + fname
     polygons = []
@@ -682,7 +683,8 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     return rupdic
 
 
-def _contents_properties_shakemap(usgs_id, user, get_grid, monitor):
+def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
+                                  shakemap_version='latest'):
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
     #     url = SHAKEMAP_URL.format(usgs_id)
     #     f.write(urlopen(url).read())
@@ -706,7 +708,11 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor):
     properties = js['properties']
 
     # NB: currently we cannot find a case with missing shakemap
-    shakemap = _get_preferred_item(properties['products']['shakemap'])
+    shakemaps = properties['products']['shakemap']
+    if shakemap_version == 'latest':
+        shakemap = _get_preferred_item(shakemaps)
+    else:
+        [shakemap] = [shm for shm in shakemaps if shm['id'] == shakemap_version]
     contents = shakemap['contents']
 
     if get_grid and 'download/grid.xml' in contents:
@@ -800,6 +806,7 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
     except ValueError as exc:
         err = {'status': 'failed', 'error_msg': str(exc)}
         return None, n_stations, err
+    # NOTE: getting stations from the latest (preferred) ShakeMap
     contents, _properties, _shakemap, err = _contents_properties_shakemap(
         usgs_id, user, False, monitor)
     if err:
@@ -810,8 +817,43 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
     return station_data_file, n_stations, err
 
 
-def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
-                monitor=performance.Monitor()):
+def ms_to_utc_date_time(ms):
+    # convert from milliseconds to utc date time
+    dt = datetime.utcfromtimestamp(ms / 1000)  # convert to seconds
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_shakemap_versions(usgs_id, monitor=performance.Monitor()):
+    err = {}
+    try:
+        usgs_id = valid.simple_id(usgs_id)
+    except ValueError as exc:
+        err = {'status': 'failed', 'error_msg': str(exc)}
+        return None, err
+    url = SHAKEMAP_URL.format(usgs_id)
+    logging.info('Downloading %s' % url)
+    try:
+        with monitor('Downloading USGS json'):
+            text = urlopen(url).read()
+    except URLError as exc:
+        # in parsers_test
+        err_msg = f'Unable to download from {url}: {exc}'
+        err = {"status": "failed", "error_msg": err_msg}
+        return None, err
+    js = json.loads(text)
+    properties = js['properties']
+    shakemaps = properties['products']['shakemap']
+    sorted_shakemaps = sorted(
+        shakemaps, key=lambda x: x["updateTime"], reverse=True)
+    shakemap_versions = [
+        {'id': shakemap['id'],
+         'utc_date_time': ms_to_utc_date_time(shakemap['updateTime'])}
+        for shakemap in sorted_shakemaps]
+    return shakemap_versions, err
+
+
+def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version=None,
+                rupture_file=None, monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
     the ShakeMap ID, else build the rupture locally with the given usgs_id.
@@ -851,7 +893,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
     assert usgs_id
     get_grid = user.level == 1 or use_shakemap
     contents, properties, shakemap, err = _contents_properties_shakemap(
-        usgs_id, user, get_grid, monitor)
+        usgs_id, user, get_grid, monitor, shakemap_version)
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:

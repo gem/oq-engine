@@ -516,6 +516,47 @@ function capitalizeFirstLetter(val) {
         $('#rupture-map').hide();
     }
 
+    function set_shakemap_version_selector() {
+        $('#submit_impact_get_rupture').prop('disabled', true);
+        $('input[name="impact_approach"]').prop('disabled', true);
+        var formData = new FormData();
+        const usgs_id = $.trim($("#usgs_id").val());
+        formData.append('usgs_id', usgs_id);
+        $.ajax({
+            type: "POST",
+            url: gem_oq_server_url + "/v1/impact_get_shakemap_versions",
+            data: formData,
+            processData: false,
+            contentType: false,
+            encode: true,
+        }).done(function (data) {
+            let $select = $("#shakemap_version");
+            $select.empty();
+            if (data.shakemap_versions_issue) {
+                $select.append(`<option value="error">${data.shakemap_versions_issue}</option>`);
+            } else {
+                $select.append('<option value="latest">Use latest</option>');
+                if (data.shakemap_versions.length > 0) {
+                    data.shakemap_versions.forEach(function (shakemap_version) {
+                        $select.append(`<option value="${shakemap_version.id}">${shakemap_version.utc_date_time}</option>`);
+                    });
+                } else {
+                    $select.append('<option value="">No versions available</option>');
+                }
+            }
+            $('#submit_impact_get_rupture').prop('disabled', false);
+        }).error(function (data) {
+            let $select = $("#shakemap_version");
+            $select.empty();
+            $select.append('<option value="error">Unable to retrieve data</option>');
+            var resp = JSON.parse(data.responseText);
+            var err_msg = resp.error_msg;
+            diaerror.show(false, "Error", err_msg);
+        }).always(function (data) {
+            $('input[name="impact_approach"]').prop('disabled', false);
+        });
+    }
+
     function reset_impact_forms() {
         for (field in impact_form_defaults) {
             var input = $('input#' + field);
@@ -637,6 +678,8 @@ function capitalizeFirstLetter(val) {
 
             // IMPACT
 
+            set_shakemap_version_selector();
+
             $.ajax({
                 url:  "/v1/get_impact_form_defaults",
                 method: "GET",
@@ -660,6 +703,7 @@ function capitalizeFirstLetter(val) {
 
             $('input[name="usgs_id"]').on('input', function() {
                 reset_rupture_form_inputs();
+                set_shakemap_version_selector();
             });
 
             $('input[name="impact_approach"]').change(function () {
@@ -727,6 +771,7 @@ function capitalizeFirstLetter(val) {
                 if (require_usgs_id() || get_selected_approach() == 'provide_rup_params') {
                     // when providing rupture parameters, usgs_id is set to 'UserProvided'
                     formData.append('usgs_id', usgs_id);
+                    formData.append('shakemap_version', $("#shakemap_version").val());
                 }
                 formData.append('use_shakemap', use_shakemap());
                 if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
@@ -930,6 +975,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('shakemap_version', $("#shakemap_version").val());
                 formData.append('use_shakemap', use_shakemap());
                 formData.append('lon', $("#lon").val());
                 formData.append('lat', $("#lat").val());
