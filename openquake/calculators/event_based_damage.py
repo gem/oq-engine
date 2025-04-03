@@ -261,7 +261,7 @@ class DamageCalculator(EventBasedRiskCalculator):
             self.datastore.hdf5.create_dataset(
                 'damages-stats', data=compute_stats2(arr, statfuncs, weights))
             self.datastore.set_shape_descr(
-                'damages-stats', asset_id=len(arr), stat=['mean'])
+                'damages-stats', asset_id=len(arr), stat=list(s))
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')
             results = connectivity.analysis(self.datastore)
