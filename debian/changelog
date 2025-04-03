@@ -1,3 +1,6 @@
+  [Manuela VIllani]
+  * Implementation of ASCE design parameters Sd, Sm in the AELO engine
+
   [Michele Simionato]
   * Extended `avg_gmf` to the secondary perils
 
