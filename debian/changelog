@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Added to oq-impact the possibility to choose between different ShakeMap
+    versions for the given USGS identifier
+
   [Michele Simionato]
   * Internal: restored the view portfolio_damage
   * Too many post_classical tasks were generated with an artificially large
