@@ -280,7 +280,35 @@ def get_zero_hazard_asce41():
               }
     return asce41
 
+def get_seismicity_class(mce, Vs30):
+    
+    if vs30 == 760:
+        if mce['SA(0.2)'] < 0.25:
+            Ss_seismicity = "Low"
+        elif mce['SA(0.2)'] < 0.5:
+            Ss_seismicity = "Moderate"
+        elif mce['SA(0.2)'] < 1:
+            Ss_seismicity = "Moderately High"
+        elif mce['SA(0.2)'] < 1.5:
+            Ss_seismicity = "High"
+        else:
+            Ss_seismicity = "Very High"
 
+        if mce['SA(1.0)'] < 0.1:
+            S1_seismicity = "Low"
+        elif mce['SA(1.0)'] < 0.2:
+            S1_seismicity = "Moderate"
+        elif mce['SA(1.0)'] < 0.4:
+            S1_seismicity = "Moderately High"
+        elif mce['SA(1.0)'] < 0.6:
+            S1_seismicity = "High"
+        else:
+            S1_seismicity = "Very High"
+    else:
+        Ss_seismicity = "n.a."
+        S1_seismicity = "n.a."
+    return Ss_seismicity, S1_seismicity
+    
 def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, ASCE_version, low_haz=False):
     """
     :param job_imts: the IMTs run in the job
@@ -322,31 +350,8 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, ASCE_version, low_h
                'MCE': mce.values(),
                'sid': [sid]*len(job_imts)}
     mce_df = pd.DataFrame(dic_mce)
-    if vs30 == 760:
-        if mce['SA(0.2)'] < 0.25:
-            Ss_seismicity = "Low"
-        elif mce['SA(0.2)'] < 0.5:
-            Ss_seismicity = "Moderate"
-        elif mce['SA(0.2)'] < 1:
-            Ss_seismicity = "Moderately High"
-        elif mce['SA(0.2)'] < 1.5:
-            Ss_seismicity = "High"
-        else:
-            Ss_seismicity = "Very High"
-
-        if mce['SA(1.0)'] < 0.1:
-            S1_seismicity = "Low"
-        elif mce['SA(1.0)'] < 0.2:
-            S1_seismicity = "Moderate"
-        elif mce['SA(1.0)'] < 0.4:
-            S1_seismicity = "Moderately High"
-        elif mce['SA(1.0)'] < 0.6:
-            S1_seismicity = "High"
-        else:
-            S1_seismicity = "Very High"
-    else:
-        Ss_seismicity = "n.a."
-        S1_seismicity = "n.a."
+ 
+    Ss_seismicity, S1_seismicity= get_seismicity_class(mce, Vs30)
 
     period_mce = [from_string(imt).period for imt in job_imts]
     
