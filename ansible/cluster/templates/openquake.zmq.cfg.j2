@@ -18,18 +18,13 @@ oq_distribute = zmq
 # make sure workers are terminated when tasks are revoked
 terminate_workers_on_revoke = true
 serialize_jobs = 1
-# change this on a cluster if using oq_distribute = dask
-dask_scheduler = 127.0.0.1:1921
 
 [memory]
 # above this quantity (in %) of memory used a warning will be printed
-soft_mem_limit = 90 
+soft_mem_limit = 90
 # above this quantity (in %) of memory used the job will be stopped
 # use a lower value to protect against loss of control when OOM occurs
 hard_mem_limit = 98
-
-[amqp]
-# RabbitMQ server address
 
 [dbserver]
 file = {{ workdir_services }}/oqdata/db.sqlite3
