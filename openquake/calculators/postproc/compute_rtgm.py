@@ -351,7 +351,7 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, ASCE_version, low_h
                'sid': [sid]*len(job_imts)}
     mce_df = pd.DataFrame(dic_mce)
  
-    Ss_seismicity, S1_seismicity= get_seismicity_class(mce, Vs30)
+    Ss_seismicity, S1_seismicity= get_seismicity_class(mce, vs30)
 
     period_mce = [from_string(imt).period for imt in job_imts]
     
