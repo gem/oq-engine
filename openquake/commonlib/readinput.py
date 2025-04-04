@@ -1053,6 +1053,8 @@ def get_crmodel(oqparam):
         # build consdict of the form consequence_by_tagname -> tag -> array
         loss_dt = oqparam.loss_dt()
         for by, fnames in oqparam.inputs['consequence'].items():
+            if by == 'risk_id':
+                by = 'taxonomy'
             if isinstance(fnames, str):  # single file
                 fnames = [fnames]
             # i.e. files collapsed.csv, fatalities.csv, ... with headers like

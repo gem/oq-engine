@@ -18,7 +18,6 @@
 import re
 import json
 import copy
-import logging
 import functools
 import collections
 import numpy
@@ -140,7 +139,7 @@ class RiskFuncList(list):
         ddic = AccumDict(accum=AccumDict(accum=[]))
         dic = AccumDict(accum=[])
         for rf in self:
-            dic[rf.id, rf.peril].append(rf)
+            dic[rf.id, getattr(rf, 'peril', 'groundshaking')].append(rf)
         for (riskid, peril), rfs in dic.items():
             ddic[riskid][peril] = group_by_lt(rfs)
         num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
@@ -525,33 +524,6 @@ class ValidationError(Exception):
     pass
 
 
-# TODO: if the consequence tag is different from "taxonomy", pass
-# the values of the exposure for that tag
-def check_consequences(fname, taxonomies, perils):
-    """
-    Check that the taxonomy field (if any) and the peril field (if any)
-    in the consequence file are consistent with the expected taxonomies
-    and perils
-    """
-    df = pandas.read_csv(fname)
-    if 'taxonomy' in df.columns:
-        csq_taxonomies = set(df['taxonomy'])
-        extra = csq_taxonomies - taxonomies
-        missing = taxonomies - csq_taxonomies
-        if not csq_taxonomies & taxonomies:
-            raise InvalidFile(f'{fname}: no matching taxonomies')
-        elif missing:
-            raise InvalidFile(f'{fname}: missing taxonomies {missing}')
-        elif extra:
-            # tested in event_based_damage/case_15
-            logging.warning(f'In {fname} there are extra taxonomies missing '
-                            f'in the exposure: {extra}')
-    if 'peril' in df.columns:
-        for line, peril in enumerate(df['peril'], 1):
-            if peril not in perils:
-                raise InvalidFile(f'{fname}: unknown {peril=} at {line=}')
-
-
 class CompositeRiskModel(collections.abc.Mapping):
     """
     A container (riskid, kind) -> riskmodel
@@ -624,12 +596,27 @@ class CompositeRiskModel(collections.abc.Mapping):
             else:
                 csq_files.append(fnames)
         for fname in csq_files:
-            check_consequences(fname, set(taxidx), self.perils)
-        for byname, coeffs in self.consdict.items():
-            # reduce the consdict to the taxonomies in the exposure
-            self.consdict[byname] = {taxidx[taxo]: arr
-                                     for taxo, arr in coeffs.items()
-                                     if taxo in taxidx}
+            df = pandas.read_csv(fname)
+            if 'peril' in df.columns:
+                for line, peril in enumerate(df['peril'], 1):
+                    if peril not in self.perils:
+                        raise InvalidFile(
+                            f'{fname}: unknown {peril=} at {line=}')
+
+        cfs = '\n'.join(csq_files)
+        df = self.tmap_df
+        for peril in self.perils:
+            for byname, coeffs in self.consdict.items():
+                # ex. byname = "losses_by_taxonomy"
+                if len(coeffs):
+                    for per, risk_id, weight in zip(
+                            df.peril, df.risk_id, df.weight):
+                        if (per == '*' or per == peril) and risk_id != '?':
+                            try:
+                                coeffs[risk_id][peril]
+                            except KeyError:
+                                raise InvalidFile(
+                                    f'Missing {risk_id=}, {peril=} in\n{cfs}')
 
     def check_risk_ids(self, inputs):
         """
@@ -639,7 +626,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         for riskfunc in self.risklist:
             ids_by_kind[riskfunc.kind].add(riskfunc.id)
         kinds = tuple(ids_by_kind)  # vulnerability, fragility, ...
-        fnames = [fname for kind, fname in inputs.items() if kind.endswith(kinds)]
+        fnames = [fname for kind, fname in inputs.items()
+                  if kind.endswith(kinds)]
         if len(ids_by_kind) > 1:
             k = next(iter(ids_by_kind))
             base_ids = set(ids_by_kind.pop(k))
@@ -687,7 +675,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dict consequence_name, loss_type -> array[P, A, E]
         """
         # by construction all assets have the same taxonomy
-        taxi = assets[0]['taxonomy']
         P, A, E, _L, _D = dd5.shape
         csq = AccumDict(accum=numpy.zeros((P, A, E)))
         for byname, coeffs in self.consdict.items():
@@ -703,7 +690,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                             else:  # assume one weigth per peril
                                 [w] = df[df.peril == peril].weight
                             coeff = (dd5[pi, :, :, li, 1:] @
-                                     coeffs[taxi][peril][lt] * w)
+                                     coeffs[risk_id][peril][lt] * w)
                             cAE = scientific.consequence(
                                 consequence, assets, coeff, lt, oq.time_event)
                             csq[consequence, li][pi] += cAE
