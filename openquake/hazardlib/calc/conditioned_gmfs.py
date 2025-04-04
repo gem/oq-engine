@@ -288,7 +288,8 @@ def _create_result(g, m, target_imt, observed_imts, station_data_filtered):
 
 def create_result(g, m, target_imt, target_imts, observed_imts,
                   station_data, sitecol, station_sitecol,
-                  spatial_correl, cross_correl_within, cross_correl_between):
+                  spatial_correl, cross_correl_within,
+                  cross_correl_between, DD):
     """
     :returns: a TempResult
     """
@@ -335,7 +336,6 @@ def create_result(g, m, target_imt, target_imts, observed_imts,
     t.zeta_D = yD - mu_yD
     t.phi_D_diag = numpy.diag(phi_D.flatten())
 
-    DD = compute_distance_matrix(station_sitecol, station_sitecol)
     cov_WD_WD = compute_spatial_cross_covariance_matrix(
         spatial_correl, cross_correl_within, DD,
         t.conditioning_imts, t.conditioning_imts, t.phi_D_diag, t.phi_D_diag)
@@ -441,14 +441,15 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     # Compute the within-event covariance matrices for the
     # target sites and observation sites; the shapes are 
     # (nsites, nstations) and (nstations, nsites) respectively
-    YD = compute_distance_matrix(target_sitecol, station_sitecol)
-    cov_WY_WD = compute_spatial_cross_covariance_matrix(
-        spatial_correl, cross_correl_within, YD,
-        [target_imt], r.conditioning_imts, phi_Y_diag, r.phi_D_diag)
-    DY = compute_distance_matrix(station_sitecol, target_sitecol)
-    cov_WD_WY = compute_spatial_cross_covariance_matrix(
-        spatial_correl, cross_correl_within, DY,
-        r.conditioning_imts, [target_imt], r.phi_D_diag, phi_Y_diag)
+    with monitor.shared['YD'] as YD:
+        cov_WY_WD = compute_spatial_cross_covariance_matrix(
+            spatial_correl, cross_correl_within, YD,
+            [target_imt], r.conditioning_imts, phi_Y_diag, r.phi_D_diag)
+
+    with monitor.shared['DY'] as DY:
+        cov_WD_WY = compute_spatial_cross_covariance_matrix(
+            spatial_correl, cross_correl_within, DY,
+            r.conditioning_imts, [target_imt], r.phi_D_diag, phi_Y_diag)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
     RC = cov_WY_WD @ r.cov_WD_WD_inv  # shape (nsites, nstations)
@@ -465,10 +466,10 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     # Compute the within-event covariance matrix for the
     # target sites (apriori) (nsites, nsites)
     
-    YY = compute_distance_matrix(target_sitecol, target_sitecol)
-    cov_WY_WY = compute_spatial_cross_covariance_matrix(
-        spatial_correl, cross_correl_within, YY,
-        [target_imt], [target_imt], phi_Y_diag, phi_Y_diag)
+    with monitor.shared['YY'] as YY:
+        cov_WY_WY = compute_spatial_cross_covariance_matrix(
+            spatial_correl, cross_correl_within, YY,
+            [target_imt], [target_imt], phi_Y_diag, phi_Y_diag)
 
     # Both conditioned covariance matrices can contain extremely
     # small negative values due to limitations of floating point
@@ -502,6 +503,11 @@ def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
     ta = numpy.zeros((G, M, N, N))
     ph = numpy.zeros((G, M, N, N))
     smap = parallel.Starmap(get_mu_tau_phi, h5=h5)
+    smap.share(YY=compute_distance_matrix(target, target),
+               YD=compute_distance_matrix(target, station_filtered),
+               DY=compute_distance_matrix(station_filtered, target))
+    DD = compute_distance_matrix(station_filtered, station_filtered)
+
     for g, gsim in enumerate(cmaker.gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -521,7 +527,8 @@ def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
             result = create_result(
                 g, m, target_imt, target_imts, observed_imts,
                 sdata, target, station_filtered,
-                spatial_correl, cross_correl_within, cross_correl_between)
+                spatial_correl, cross_correl_within, cross_correl_between,
+                DD)
             smap.submit(
                 (target_imt, gsim, mean_stds_Y[:, g], target_imts,
                  observed_imts, sdata, target, station_filtered,
