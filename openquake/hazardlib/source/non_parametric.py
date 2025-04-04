@@ -67,6 +67,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 rup.weight = weight
 
     @property
+    def num_ruptures(self):
+        return len(self.data)
+
+    @property
     def rup_weights(self):
         return [rup.weight for rup, pmf in self.data]
 
