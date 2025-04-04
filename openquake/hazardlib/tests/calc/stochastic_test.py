@@ -69,7 +69,7 @@ class ClusterTestCase(unittest.TestCase):
 
     def test_cluster(self):
         # In this case we use the source also used to test the calculation of
-        # hazard using the classical approach and a traditional cluster source
+        # hazard using the classical approach and a simple cluster source
 
         # Source model file name
         ssm_fname = str(
