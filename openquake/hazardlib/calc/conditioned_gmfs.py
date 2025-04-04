@@ -107,7 +107,6 @@ cov_Y_Y_yD:
 """
 
 import logging
-from functools import partial
 from dataclasses import dataclass
 
 import numpy
@@ -288,7 +287,7 @@ def _create_result(g, m, target_imt, observed_imts, station_data_filtered):
 
 def create_result(g, m, target_imt, target_imts, observed_imts,
                   station_data, sitecol, station_sitecol,
-                  compute_cov, cross_correl_between):
+                  spatial_correl, cross_correl_within, cross_correl_between):
     """
     :returns: a TempResult
     """
@@ -335,8 +334,9 @@ def create_result(g, m, target_imt, target_imts, observed_imts,
     t.zeta_D = yD - mu_yD
     t.phi_D_diag = numpy.diag(phi_D.flatten())
 
-    cov_WD_WD = compute_cov(station_sitecol, station_sitecol,
-                            t.conditioning_imts, t.conditioning_imts, t.phi_D_diag, t.phi_D_diag)
+    cov_WD_WD = compute_spatial_cross_covariance_matrix(
+        spatial_correl, cross_correl_within, station_sitecol, station_sitecol,
+        t.conditioning_imts, t.conditioning_imts, t.phi_D_diag, t.phi_D_diag)
 
     # Add on the additional variance of the residuals
     # for the cases where the station data is uncertain
@@ -395,7 +395,8 @@ def compute_spatial_cross_covariance_matrix(
 # NB: this is run in parallel
 def get_mu_tau_phi(target_imt, gsim, mean_stds,
                    target_imts, observed_imts, station_data,
-                   target_sitecol, station_sitecol, compute_cov, r, monitor):
+                   target_sitecol, station_sitecol, spatial_correl,
+                   cross_correl_within, r, monitor):
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
@@ -417,9 +418,10 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     nominal_bias_mean = numpy.mean(mu_BD_yD)
     nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
 
-    msg = ("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f"
-           % (gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
-              target_imt, nominal_bias_mean, nominal_bias_stddev))
+    msg = (
+        "GSIM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f"
+        % (gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
+           target_imt, nominal_bias_mean, nominal_bias_stddev))
 
     # Predicted mean at the target sites, from GSIM
     mu_Y = mean_stds[0, 0][:, None]
@@ -431,10 +433,12 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     # Compute the within-event covariance matrices for the
     # target sites and observation sites; the shapes are 
     # (nsites, nstations) and (nstations, nsites) respectively
-    cov_WY_WD = compute_cov(target_sitecol, station_sitecol,
-                            [target_imt], r.conditioning_imts, phi_Y_diag, r.phi_D_diag)
-    cov_WD_WY = compute_cov(station_sitecol, target_sitecol,
-                            r.conditioning_imts, [target_imt], r.phi_D_diag, phi_Y_diag)
+    cov_WY_WD = compute_spatial_cross_covariance_matrix(
+        spatial_correl, cross_correl_within, target_sitecol, station_sitecol,
+        [target_imt], r.conditioning_imts, phi_Y_diag, r.phi_D_diag)
+    cov_WD_WY = compute_spatial_cross_covariance_matrix(
+        spatial_correl, cross_correl_within, station_sitecol, target_sitecol,
+        r.conditioning_imts, [target_imt], r.phi_D_diag, phi_Y_diag)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
     RC = cov_WY_WD @ r.cov_WD_WD_inv  # shape (nsites, nstations)
@@ -450,8 +454,9 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
 
     # Compute the within-event covariance matrix for the
     # target sites (apriori) (nsites, nsites)
-    cov_WY_WY = compute_cov(target_sitecol, target_sitecol,
-                            [target_imt], [target_imt], phi_Y_diag, phi_Y_diag)
+    cov_WY_WY = compute_spatial_cross_covariance_matrix(
+        spatial_correl, cross_correl_within, target_sitecol, target_sitecol,
+        [target_imt], [target_imt], phi_Y_diag, phi_Y_diag)
 
     # Both conditioned covariance matrices can contain extremely
     # small negative values due to limitations of floating point
@@ -477,7 +482,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
 
 def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
                  mean_stds_D, mean_stds_Y, target, station_filtered,
-                 compute_cov, cross_correl_between, h5):
+                 spatial_correl, cross_correl_within, cross_correl_between, h5):
     G = len(cmaker.gsims)
     M = len(target_imts)
     N = mean_stds_Y.shape[-1]
@@ -504,10 +509,11 @@ def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
             result = create_result(
                 g, m, target_imt, target_imts, observed_imts,
                 sdata, target, station_filtered,
-                compute_cov, cross_correl_between)
+                spatial_correl, cross_correl_within, cross_correl_between)
             smap.submit(
-                (target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
-                 sdata, target, station_filtered, compute_cov, result))
+                (target_imt, gsim, mean_stds_Y[:, g], target_imts,
+                 observed_imts, sdata, target, station_filtered,
+                 spatial_correl, cross_correl_within, result))
     for (g, m), (mu, tau, phi, msg) in smap.reduce().items():
         me[g, m] = mu
         ta[g, m] = tau
@@ -555,13 +561,10 @@ def get_mean_covs(
         numpy.isin(target_sitecol.sids, ctx_Y.sids))
     mask = numpy.isin(station_sitecol.sids, ctx_D.sids)
     station_filtered = station_sitecol.filter(mask)
-
-    compute_cov = partial(compute_spatial_cross_covariance_matrix,
-                          spatial_correl, cross_correl_within)
     me, ta, ph = get_me_ta_ph(
         cmaker, station_data[mask].copy(), observed_imts, target_imts,
         mean_stds_D, mean_stds_Y, target, station_filtered,
-        compute_cov, cross_correl_between, h5)
+        spatial_correl, cross_correl_within, cross_correl_between, h5)
     if sigma:
         return [me, ta + ph, ta, ph]
     else:
