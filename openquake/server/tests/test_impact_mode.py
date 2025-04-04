@@ -94,8 +94,8 @@ class EngineServerTestCase(django.test.TestCase):
     # general utilities
 
     @classmethod
-    def post(cls, path, data=None):
-        return cls.c.post('/v1/calc/%s' % path, data)
+    def post(cls, path, prefix='/v1/calc/', data=None):
+        return cls.c.post(f'{prefix}{path}', data)
 
     @classmethod
     def get(cls, path, **data):
@@ -165,7 +165,7 @@ class EngineServerTestCase(django.test.TestCase):
             self, data, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
             with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
-                resp = self.post('impact_run', data)
+                resp = self.post('impact_run', data=data)
                 if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
                     content = json.loads(resp.content)
@@ -276,16 +276,28 @@ class EngineServerTestCase(django.test.TestCase):
                     maximum_distance_stations='')
         self.impact_run_then_remove(data)
 
+    def test_get_shakemap_versions(self):
+        data = dict(usgs_id='us6000phrk')
+        # NOTE: it takes ~0.2 seconds
+        ret = self.post('impact_get_shakemap_versions', prefix='/v1/', data=data)
+        js = ret.content.decode('utf8')
+        dic = json.loads(js)
+        self.assertIn('shakemap_versions', dic)
+        first = dic['shakemap_versions'][0]
+        self.assertIn('id', first)
+        self.assertIn('utc_date_time', first)
+        self.assertIsNone(dic['shakemap_versions_issue'])
+
     # check that the URL 'run' cannot be accessed in ARISTOTLE mode
     def test_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
-            resp = self.post('run', dict(archive=a))
+            resp = self.post('run', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
 
     # check that the URL 'validate_zip' cannot be accessed in ARISTOTLE mode
     def test_can_not_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
-            resp = self.post('validate_zip', dict(archive=a))
+            resp = self.post('validate_zip', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
 
 
