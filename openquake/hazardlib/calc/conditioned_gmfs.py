@@ -109,8 +109,9 @@ cov_Y_Y_yD:
 import logging
 from dataclasses import dataclass
 
+import psutil
 import numpy
-from openquake.baselib import parallel, performance
+from openquake.baselib import parallel
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -367,14 +368,23 @@ def create_result(g, m, target_imt, target_imts, observed_imts,
 
 
 def compute_distance_matrix(sites1, sites2):
-    with performance.Monitor('distance_matrix', measuremem=True) as mon:
-        distance_matrix = geodetic_distance(
-            sites1.lons.reshape(sites1.lons.shape + (1,)),
-            sites1.lats.reshape(sites1.lats.shape + (1,)),
-            sites2.lons,
-            sites2.lats)
-    print(mon, distance_matrix.shape)
-    return distance_matrix
+    """
+    :param sites1: N1 sites
+    :param sites2: N2 sites
+    :returns:
+       a matrix of shape N1 x N2 of float32 distances (~37 GB for 100k sites)
+    """
+    avail_gb = psutil.virtual_memory().available / 1024**3
+    req_gb = len(sites1) * len(sites2) * 8 / 1024**3
+    if req_gb > avail_gb:
+        raise MemoryError('The distance_matrix of shape (%d, %d) is too large!'
+                          % (len(sites1), len(sites2)))
+    distance_matrix = geodetic_distance(
+        sites1.lons.reshape(sites1.lons.shape + (1,)),
+        sites1.lats.reshape(sites1.lats.shape + (1,)),
+        sites2.lons,
+        sites2.lats)
+    return distance_matrix.astype(F32)
 
 
 def compute_spatial_cross_covariance_matrix(
