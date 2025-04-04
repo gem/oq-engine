@@ -823,23 +823,28 @@ def ms_to_utc_date_time(ms):
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def get_shakemap_versions(usgs_id, monitor=performance.Monitor()):
+def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
     err = {}
     try:
         usgs_id = valid.simple_id(usgs_id)
     except ValueError as exc:
         err = {'status': 'failed', 'error_msg': str(exc)}
         return None, err
-    url = SHAKEMAP_URL.format(usgs_id)
-    logging.info('Downloading %s' % url)
-    try:
-        with monitor('Downloading USGS json'):
-            text = urlopen(url).read()
-    except URLError as exc:
-        # in parsers_test
-        err_msg = f'Unable to download from {url}: {exc}'
-        err = {"status": "failed", "error_msg": err_msg}
-        return None, err
+    if user.testdir:  # in parsers_test
+        fname = os.path.join(user.testdir, usgs_id + '.json')
+        text = open(fname).read()
+    else:
+        url = SHAKEMAP_URL.format(usgs_id)
+        logging.info('Downloading %s' % url)
+        try:
+            with monitor('Downloading USGS json'):
+                text = urlopen(url).read()
+        except URLError as exc:
+            # in parsers_test
+            err_msg = f'Unable to download from {url}: {exc}'
+            err = {"status": "failed", "error_msg": err_msg}
+            return None, err
+
     js = json.loads(text)
     properties = js['properties']
     shakemaps = properties['products']['shakemap']

@@ -276,18 +276,6 @@ class EngineServerTestCase(django.test.TestCase):
                     maximum_distance_stations='')
         self.impact_run_then_remove(data)
 
-    def test_get_shakemap_versions(self):
-        data = dict(usgs_id='us6000phrk')
-        # NOTE: it takes ~0.2 seconds
-        ret = self.post('impact_get_shakemap_versions', prefix='/v1/', data=data)
-        js = ret.content.decode('utf8')
-        dic = json.loads(js)
-        self.assertIn('shakemap_versions', dic)
-        first = dic['shakemap_versions'][0]
-        self.assertIn('id', first)
-        self.assertIn('utc_date_time', first)
-        self.assertIsNone(dic['shakemap_versions_issue'])
-
     # check that the URL 'run' cannot be accessed in ARISTOTLE mode
     def test_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:

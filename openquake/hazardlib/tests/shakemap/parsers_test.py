@@ -19,7 +19,7 @@
 import os
 import unittest
 from openquake.hazardlib.shakemap.parsers import (
-    get_rup_dic, User, utc_to_local_time, get_stations_from_usgs)
+    get_rup_dic, User, utc_to_local_time, get_stations_from_usgs, get_shakemap_versions)
 from openquake.hazardlib.source.rupture import BaseRupture
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
@@ -233,6 +233,18 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'],
                          'stationlist.json was downloaded, but it contains no features')
+
+    def test_14(self):
+        usgs_id = 'us7000n7n8'
+        shakemap_versions, err = get_shakemap_versions(usgs_id, user=user)
+        self.assertEqual(err, {})
+        first_version = shakemap_versions[0]
+        self.assertIn('id', first_version)
+        self.assertIn('utc_date_time', first_version)
+        usgs_id = 'does_not_exist'
+        shakemap_versions, err = get_shakemap_versions(usgs_id)
+        self.assertIsNone(shakemap_versions)
+        self.assertIn('Unable to download', err['error_msg'])
 
 
 """
