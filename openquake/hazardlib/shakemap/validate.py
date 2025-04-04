@@ -120,6 +120,7 @@ IMPACT_FORM_LABELS = {
     'rupture_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
     'use_shakemap': 'Use the ShakeMap',
+    'shakemap_version': 'ShakeMap version',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
     'dep': 'Depth (km)',
@@ -320,8 +321,13 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
+    if 'shakemap_version' in POST:
+        shakemap_version = POST['shakemap_version']
+    else:
+        shakemap_version = 'latest'
 
-    rup, rupdic, err = get_rup_dic(dic, user, use_shakemap, rupture_file, monitor)
+    rup, rupdic, err = get_rup_dic(dic, user, use_shakemap, shakemap_version,
+                                   rupture_file, monitor)
     if err:
         return None, None, None, err
     # round floats
