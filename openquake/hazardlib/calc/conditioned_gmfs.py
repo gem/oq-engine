@@ -110,7 +110,7 @@ import logging
 from dataclasses import dataclass
 
 import numpy
-from openquake.baselib import parallel
+from openquake.baselib import parallel, performance
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -281,7 +281,8 @@ def _create_result(g, m, target_imt, observed_imts, station_data_filtered):
                 f"The station data contains {num_null_values}"
                 f" null values for {target_imt.string}."
                 " Please fill or discard these rows.")
-    t = TempResult(g, m, bracketed_imts, conditioning_imts, native_data_available)
+    t = TempResult(g, m, bracketed_imts, conditioning_imts,
+                   native_data_available)
     return t
 
 
@@ -334,8 +335,9 @@ def create_result(g, m, target_imt, target_imts, observed_imts,
     t.zeta_D = yD - mu_yD
     t.phi_D_diag = numpy.diag(phi_D.flatten())
 
+    DD = compute_distance_matrix(station_sitecol, station_sitecol)
     cov_WD_WD = compute_spatial_cross_covariance_matrix(
-        spatial_correl, cross_correl_within, station_sitecol, station_sitecol,
+        spatial_correl, cross_correl_within, DD,
         t.conditioning_imts, t.conditioning_imts, t.phi_D_diag, t.phi_D_diag)
 
     # Add on the additional variance of the residuals
@@ -364,8 +366,19 @@ def create_result(g, m, target_imt, target_imts, observed_imts,
     return t
 
 
+def compute_distance_matrix(sites1, sites2):
+    with performance.Monitor('distance_matrix', measuremem=True) as mon:
+        distance_matrix = geodetic_distance(
+            sites1.lons.reshape(sites1.lons.shape + (1,)),
+            sites1.lats.reshape(sites1.lats.shape + (1,)),
+            sites2.lons,
+            sites2.lats)
+    print(mon, distance_matrix.shape)
+    return distance_matrix
+
+
 def compute_spatial_cross_covariance_matrix(
-        spatial_correl, cross_correl_within, sites1, sites2,
+        spatial_correl, cross_correl_within, distance_matrix,
         imts1, imts2, diag1, diag2):
     # The correlation structure for IMs of differing types at differing
     # locations can be reasonably assumed as Markovian in nature, and we
@@ -374,14 +387,9 @@ def compute_spatial_cross_covariance_matrix(
     # at the same location and the spatial correlation due to the distance
     # between sites m and n. Can be refactored down the line to support direct
     # spatial cross-correlation models
-    distance_matrix = geodetic_distance(
-        sites1.lons.reshape(sites1.lons.shape + (1,)),
-        sites1.lats.reshape(sites1.lats.shape + (1,)),
-        sites2.lons,
-        sites2.lats)
     rho = numpy.block([[
         _compute_spatial_cross_correlation_matrix(
-            distance_matrix, imt_1, imt_2, spatial_correl, cross_correl_within)
+            imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix)
         for imt_2 in imts2] for imt_1 in imts1])
     return numpy.linalg.multi_dot([diag1, rho, diag2])
 
@@ -433,11 +441,13 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     # Compute the within-event covariance matrices for the
     # target sites and observation sites; the shapes are 
     # (nsites, nstations) and (nstations, nsites) respectively
+    YD = compute_distance_matrix(target_sitecol, station_sitecol)
     cov_WY_WD = compute_spatial_cross_covariance_matrix(
-        spatial_correl, cross_correl_within, target_sitecol, station_sitecol,
+        spatial_correl, cross_correl_within, YD,
         [target_imt], r.conditioning_imts, phi_Y_diag, r.phi_D_diag)
+    DY = compute_distance_matrix(station_sitecol, target_sitecol)
     cov_WD_WY = compute_spatial_cross_covariance_matrix(
-        spatial_correl, cross_correl_within, station_sitecol, target_sitecol,
+        spatial_correl, cross_correl_within, DY,
         r.conditioning_imts, [target_imt], r.phi_D_diag, phi_Y_diag)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
@@ -454,8 +464,10 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
 
     # Compute the within-event covariance matrix for the
     # target sites (apriori) (nsites, nsites)
+    
+    YY = compute_distance_matrix(target_sitecol, target_sitecol)
     cov_WY_WY = compute_spatial_cross_covariance_matrix(
-        spatial_correl, cross_correl_within, target_sitecol, target_sitecol,
+        spatial_correl, cross_correl_within, YY,
         [target_imt], [target_imt], phi_Y_diag, phi_Y_diag)
 
     # Both conditioned covariance matrices can contain extremely
@@ -573,12 +585,10 @@ def get_mean_covs(
 
 
 def _compute_spatial_cross_correlation_matrix(
-        distance_matrix, imt_1, imt_2, spatial_correl, cross_correl_within):
+        imt_1, imt_2, spatial_correl, cross_correl_within, distance_matrix):
     if imt_1 == imt_2:
         # since we have a single IMT, there are no cross-correlation terms
-        spatial_correlation_matrix = spatial_correl._get_correlation_matrix(
-            distance_matrix, imt_1)
-        return spatial_correlation_matrix
+        return spatial_correl._get_correlation_matrix(distance_matrix, imt_1)
     matrix1 = spatial_correl._get_correlation_matrix(distance_matrix, imt_1)
     matrix2 = spatial_correl._get_correlation_matrix(distance_matrix, imt_2)
     spatial_correlation_matrix = numpy.maximum(matrix1, matrix2)
