@@ -717,6 +717,13 @@ def impact_callback(
                         params_to_print += f'{rupkey}: {rupval}\n'
             elif key not in exclude_from_print:
                 params_to_print += f'{key}: {val}\n'
+    if 'station_data' in params['inputs']:
+        with open(params['inputs']['station_data'], 'r', encoding='utf-8') as file:
+            n_stations = sum(1 for line in file) - 1  # excluding the header
+        params_to_print += (f'{n_stations} seismic stations were loaded (please see'
+                            f'in the calculation log if any of them were discarded)\n')
+    else:
+        params_to_print += 'No seismic stations were considered\n'
 
     from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
