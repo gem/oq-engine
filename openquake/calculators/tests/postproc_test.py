@@ -205,8 +205,9 @@ class PostProcTestCase(CalculatorTestCase):
         lk.remove('Ss_seismicity')
         lk.remove('S1_seismicity')
         dic07_float = [dic07[k] for k in lk]
-        dic07_float_ref = [0.5, 0.5191, 0.383, 0.5, 1.5, 1.5109, 0.973,
-                           1.2636, 1.5, 0.4297, 0.4297, 0.9326, 0.2555, 0.6]
+        dic07_float_ref = [0.5, 0.5191, 0.383, 0.5, 1.5, 1.35, 0.9, 
+                           1.5109, 0.973, 1.2636, 1.5, 0.4297, 0.4297, 
+                           0.2864, 0.4297, 0.9326, 0.2555, 0.6]
 
         aae(dic07_float, dic07_float_ref, decimal=4)
 
