@@ -21,6 +21,7 @@ import pathlib
 from openquake.hazardlib import nrml, contexts
 from openquake.hazardlib.calc.stochastic import (
     sample_ruptures, sample_cluster)
+from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 
 aae = numpy.testing.assert_almost_equal
@@ -59,6 +60,39 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
 class ClusterTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.sconv = SourceConverter(
+            investigation_time=1.0,
+            rupture_mesh_spacing=5.0,
+            width_of_mfd_bin=0.1
+        )
+
+    def test_cluster(self):
+        # In this case we use the source also used to test the calculation of
+        # hazard using the classical approach and a traditional cluster source
+
+        # Source model file name
+        ssm_fname = str(
+            HERE / '..' / 'source_model' / 'source_group_cluster.xml')
+
+        # Reading the SSM
+        ssm = nrml.to_python(ssm_fname, self.sconv)
+
+        # Generating the SESs
+        ebrups = sample_cluster(ssm[0], 100000000, 1)
+
+        # Computing the total number of occurrences
+        tot_occ = 0
+        for ebrup in ebrups:
+            tot_occ += ebrup.n_occ
+
+        # The rate of occurrence of the cluster is 1e-3 events per year and the
+        # temporal occurrence model is Poissonian. This means that in a
+        # simulation of 1M years we should have on average 1000 occurrences of
+        # the cluster (and twice as many ruptures)
+        ratio = 200000 / tot_occ
+        numpy.testing.assert_almost_equal(ratio, 1.0, decimal=2)
+
     def test_src_mutex(self):
         # The rate of occurrence of the cluster is 1/1000, the sources are
         # mutually exclusive (equally weighted) and ruptures independent. In
@@ -69,15 +103,8 @@ class ClusterTestCase(unittest.TestCase):
         # Source model file name
         ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm01.xml')
 
-        from openquake.hazardlib.sourceconverter import SourceConverter
-        sconv = SourceConverter(
-            investigation_time=1.0,
-            rupture_mesh_spacing=5.0,
-            width_of_mfd_bin=0.1
-        )
-
         # Reading
-        ssm = nrml.to_python(ssm_fname, sconv)
+        ssm = nrml.to_python(ssm_fname, self.sconv)
 
         # Generating the SESs
         ebrups = sample_cluster(ssm[0], 1000000, 1)
@@ -87,8 +114,6 @@ class ClusterTestCase(unittest.TestCase):
         for ebrup in ebrups:
             tot_occ += ebrup.n_occ
         print(tot_occ)
-
-        breakpoint()
 
     def test_src_indep(self):
         # Sources are mutually exclusive and ruptures independent. The rate of

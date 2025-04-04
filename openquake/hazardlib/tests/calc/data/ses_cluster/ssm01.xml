@@ -20,7 +20,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <!-- Source 1                                                   -->
             <nonParametricSeismicSource
                 id="src:01"
-                name="Source 1 - Ruptures mutex"
+                name="Source 1 - Ruptures indep"
                 rup_weights="0.1 0.9">
 
                 <simpleFaultRupture probs_occur="0.0 1.0">
@@ -61,7 +61,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <!-- Source 2                                                   -->
             <nonParametricSeismicSource
                 id="src:02"
-                name="Source 2 - Ruptures mutex"
+                name="Source 2 - Ruptures inde"
                 rup_weights="0.8 0.2">
 
                 <simpleFaultRupture probs_occur="0.0 1.0">

@@ -1217,12 +1217,15 @@ class SourceConverter(RuptureConverter):
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
         sg.temporal_occurrence_model = self.get_tom(node)
         sg.name = node.attrib.get('name')
-        # Set attributes related to occurrence
-        sg.src_interdep = node.attrib.get('src_interdep', 'indep')
-        sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
-        sg.grp_probability = node.attrib.get('grp_probability', 1)
         # Set the cluster attribute
         sg.cluster = node.attrib.get('cluster') == 'true'
+        # Set attributes related to occurrence
+        sg.src_interdep = node.attrib.get('src_interdep', None)
+        sg.rup_interdep = node.attrib.get('rup_interdep', None)
+        if sg.cluster is False:
+            sg.src_interdep = node.attrib.get('src_interdep', 'indep')
+            sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
+        sg.grp_probability = node.attrib.get('grp_probability', 1)
         # Filter admitted cases
         # 1. The source group is a cluster. In this case the cluster must have
         #    the attributes required to define its occurrence in time.
