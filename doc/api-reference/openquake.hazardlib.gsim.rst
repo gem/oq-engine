@@ -552,6 +552,14 @@ coeffs_table
     :undoc-members:
     :show-inheritance:
 
+conditional_gmpe
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.conditional_gmpe
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 convertito_2012
 -----------------------------------------------
 
@@ -892,6 +900,14 @@ manea_2021
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.manea_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+macedo_2019
+----------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.macedo_2019
     :members:
     :undoc-members:
     :show-inheritance:
