@@ -425,7 +425,12 @@ class RiskModel(object):
         and D the number of damage states.
         """
         imt = self.imt_by_lt[loss_type]
-        gmvs = gmf_df[imt].to_numpy()
+        for col in gmf_df.columns:
+            if col.endswith(imt):
+                gmvs = gmf_df[col].to_numpy()
+                break
+        else:
+            raise NameError(f'Missing {imt} in gmf_data')
         ffs = self.risk_functions[peril][loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))

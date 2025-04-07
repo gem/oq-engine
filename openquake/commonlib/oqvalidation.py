@@ -1681,7 +1681,7 @@ class OqParam(valid.ParamSet):
 
         # check secondary imts
         for imt in self.get_primary_imtls():
-            if imt in sec_imts:
+            if any(sec_imt.endswith(imt) for sec_imt in sec_imts):
                 self.raise_invalid('you forgot to set secondary_perils =')
 
         risk_perils = sorted(set(getattr(rf, 'peril', 'groundshaking')
@@ -1692,8 +1692,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: IMTs and levels which are not secondary
         """
-        return {imt: imls for imt, imls in self.imtls.items()
-                if imt not in self.sec_imts}
+        return {imt: imls for imt, imls in self.imtls.items() if '_' not in imt}
 
     def hmap_dt(self):  # used for CSV export
         """
@@ -1832,7 +1831,8 @@ class OqParam(valid.ParamSet):
             return list(mp)  # ASH, PYRO, etc
         outs = []
         for sp in self.get_sec_perils():
-            outs.extend(sp.outputs)
+            for out in sp.outputs:
+                outs.append(f'{sp.__class__.__name__}_{out}')
         return outs
 
     def no_imls(self):

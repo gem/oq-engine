@@ -776,7 +776,7 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'The parent calculation had stats %s != %s' %
                 (hstats, rstats))
-        sec_imts = set(oq.sec_imts)
+        sec_imts = {sec_imt.split('_')[1] for sec_imt in oq.sec_imts}
         missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
         if oqp.imtls and missing_imts:
             raise ValueError(
