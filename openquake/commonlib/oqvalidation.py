@@ -1671,9 +1671,10 @@ class OqParam(valid.ParamSet):
         if not self.hazard_imtls:
             if (self.calculation_mode.startswith('classical') or
                     self.hazard_curves_from_gmfs):
-                self.raise_invalid('You must provide the '
-                                   'intensity measure levels explicitly. Suggestion:' +
-                                   '\n  '.join(suggested))
+                self.raise_invalid(
+                    'You must provide the '
+                    'intensity measure levels explicitly. Suggestion:' +
+                    '\n  '.join(suggested))
         if (len(self.imtls) == 0 and 'event_based' in self.calculation_mode and
                 'gmfs' not in self.inputs and not self.hazard_calculation_id
                 and self.ground_motion_fields):

@@ -1239,7 +1239,8 @@ class Volcanic(SecondaryPeril):
         names = []
         for name, fname in self.fname_by_peril.items():
             fname = os.path.join(self.oq.base_path, fname)
-            tofloat = valid.positivefloat if name == 'ASH' else valid.probability
+            tofloat = (valid.positivefloat if name == 'ASH'
+                       else valid.probability)
             with open(fname) as f:
                 header = next(f)
             if 'geom' in header:
@@ -1249,7 +1250,7 @@ class Volcanic(SecondaryPeril):
                                   self.oq.asset_hazard_distance)
             if peril.sum() == 0:
                 logging.warning('No sites were affected by %s' % name)
-            self.data[name] = peril
+            self.data[f'{self.__class__.__name__}_{name}'] = peril
             names.append(name)
 
     def compute(self, mag, imt_gmf, sites):

@@ -592,8 +592,9 @@ class HazardCalculator(BaseCalculator):
         [sp] = oq.get_sec_perils()
         sp.prepare(self.sitecol)
         self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
-        create_gmf_data(self.datastore, [], sp.outputs, sp.data,
-                        len(self.sitecol))        
+        cols = [col for col in sp.data if col not in ('sid', 'eid')]
+        create_gmf_data(self.datastore, [],
+                        cols, sp.data, len(self.sitecol))
 
     def pre_execute(self):
         """
@@ -1473,7 +1474,8 @@ def import_gmfs_hdf5(dstore, oq):
     return events['id']
 
 
-def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R=None):
+def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
+                    N=None, E=None, R=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
@@ -1494,8 +1496,8 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     else:
         eff_time = 0
-    # not gzipping for speed
-    dstore.create_df('gmf_data', items, num_events=E or len(dstore['events']),
+    dstore.create_df('gmf_data', items,
+                     num_events=E or len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
                      investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
