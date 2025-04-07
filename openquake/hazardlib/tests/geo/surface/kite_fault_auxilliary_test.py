@@ -17,8 +17,7 @@
 import numpy as np
 import unittest
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.surface.kite_fault import (
-    _angles_diff, _get_resampled_profs)
+from openquake.hazardlib.geo.surface.kite_fault import _get_resampled_profs
 
 
 class AngleDifferenceTest(unittest.TestCase):
@@ -28,7 +27,7 @@ class AngleDifferenceTest(unittest.TestCase):
         # Simple test
         angle_a = 30
         angle_b = 60
-        computed = _angles_diff(angle_a, angle_b)
+        computed = geo_utils._angles_diff(angle_a, angle_b)
         expected = -30
         np.testing.assert_allclose(computed, expected)
 
