@@ -310,6 +310,8 @@ def JMA():
 sec_imts = '''ASH LAVA LAHAR PYRO
 Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb
 '''.split()
+for sec in sec_imts:
+    assert '_' not in sec, sec
 
 
 # Volcanic IMTs
