@@ -1643,7 +1643,8 @@ class OqParam(valid.ParamSet):
         :returns:
             a list of ordered unique perils
 
-        Set the attribute .risk_imtls as a side effect
+        Set the attribute .risk_imtls as a side effect, with the imts extracted
+        from the risk functions, i.e. without secondary peril prefixes.
         """
         risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
@@ -1670,9 +1671,10 @@ class OqParam(valid.ParamSet):
         if not self.hazard_imtls:
             if (self.calculation_mode.startswith('classical') or
                     self.hazard_curves_from_gmfs):
-                self.raise_invalid('You must provide the '
-                                   'intensity measure levels explicitly. Suggestion:' +
-                                   '\n  '.join(suggested))
+                self.raise_invalid(
+                    'You must provide the '
+                    'intensity measure levels explicitly. Suggestion:' +
+                    '\n  '.join(suggested))
         if (len(self.imtls) == 0 and 'event_based' in self.calculation_mode and
                 'gmfs' not in self.inputs and not self.hazard_calculation_id
                 and self.ground_motion_fields):
@@ -1681,7 +1683,7 @@ class OqParam(valid.ParamSet):
 
         # check secondary imts
         for imt in self.get_primary_imtls():
-            if imt in sec_imts:
+            if any(sec_imt.endswith(imt) for sec_imt in sec_imts):
                 self.raise_invalid('you forgot to set secondary_perils =')
 
         risk_perils = sorted(set(getattr(rf, 'peril', 'groundshaking')
@@ -1693,7 +1695,7 @@ class OqParam(valid.ParamSet):
         :returns: IMTs and levels which are not secondary
         """
         return {imt: imls for imt, imls in self.imtls.items()
-                if imt not in self.sec_imts}
+                if '_' not in imt and imt not in sec_imts}
 
     def hmap_dt(self):  # used for CSV export
         """
@@ -1829,7 +1831,8 @@ class OqParam(valid.ParamSet):
         """
         outs = []
         for sp in self.get_sec_perils():
-            outs.extend(sp.outputs)
+            for out in sp.outputs:
+                outs.append(f'{sp.__class__.__name__}_{out}')
         return outs
 
     def no_imls(self):

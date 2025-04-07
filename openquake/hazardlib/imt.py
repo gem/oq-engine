@@ -306,6 +306,13 @@ def JMA():
     """
     return IMT('JMA')
 
+# secondary IMTs
+sec_imts = '''ASH LAVA LAHAR PYRO
+Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb
+'''.split()
+for sec in sec_imts:
+    assert '_' not in sec, sec
+
 
 # Volcanic IMTs
 
@@ -337,9 +344,7 @@ def PYRO():
     return IMT('PYRO')
 
 
-# secondary IMTs
-sec_imts = 'Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb'.split()
-
+# Liquefaction IMTs
 
 def Disp():
     """

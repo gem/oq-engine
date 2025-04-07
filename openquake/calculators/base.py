@@ -592,8 +592,9 @@ class HazardCalculator(BaseCalculator):
         [sp] = oq.get_sec_perils()
         sp.prepare(self.sitecol)
         self.datastore['events'] = numpy.zeros(1, rupture.events_dt)
-        create_gmf_data(self.datastore, [], sp.outputs, sp.data,
-                        len(self.sitecol))        
+        cols = [col for col in sp.data if col not in ('sid', 'eid')]
+        create_gmf_data(self.datastore, [],
+                        cols, sp.data, len(self.sitecol))
 
     def pre_execute(self):
         """
@@ -713,7 +714,7 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'The parent calculation had stats %s != %s' %
                 (hstats, rstats))
-        sec_imts = set(oq.sec_imts)
+        sec_imts = {sec_imt.split('_')[1] for sec_imt in oq.sec_imts}
         missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
         if oqp.imtls and missing_imts:
             raise ValueError(
@@ -1220,6 +1221,16 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
+def longname(name, columns):
+    """Add the secondary peril prefix to the name"""
+    for col in columns:
+        if col.endswith(name):
+            return col
+            break
+    else:
+        return name
+
+
 # NB: changes oq.imtls by side effect!
 def import_gmfs_csv(dstore, oqparam, sitecol):
     """
@@ -1253,7 +1264,8 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
                          (', '.join(missing), fname))
     arr = numpy.zeros(len(array), oqparam.gmf_data_dt())
     for name in names:
-        arr[name[4:] if name.startswith('gmv_') else name] = array[name]
+        lname = longname(name, arr.dtype.names)
+        arr[name[4:] if name.startswith('gmv_') else lname] = array[name]
 
     if 'sid' not in names:
         # there is a custom_site_id instead
@@ -1462,7 +1474,8 @@ def import_gmfs_hdf5(dstore, oq):
     return events['id']
 
 
-def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R=None):
+def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
+                    N=None, E=None, R=None):
     """
     Create and possibly populate the datasets in the gmf_data group
     """
@@ -1483,8 +1496,8 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None, N=None, E=None, R
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     else:
         eff_time = 0
-    # not gzipping for speed
-    dstore.create_df('gmf_data', items, num_events=E or len(dstore['events']),
+    dstore.create_df('gmf_data', items,
+                     num_events=E or len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
                      investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
