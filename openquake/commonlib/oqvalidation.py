@@ -1643,7 +1643,8 @@ class OqParam(valid.ParamSet):
         :returns:
             a list of ordered unique perils
 
-        Set the attribute .risk_imtls as a side effect
+        Set the attribute .risk_imtls as a side effect, with the imts extracted
+        from the risk functions, i.e. without secondary peril prefixes.
         """
         risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
@@ -1692,7 +1693,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: IMTs and levels which are not secondary
         """
-        return {imt: imls for imt, imls in self.imtls.items() if '_' not in imt}
+        return {imt: imls for imt, imls in self.imtls.items()
+                if '_' not in imt and imt not in sec_imts}
 
     def hmap_dt(self):  # used for CSV export
         """

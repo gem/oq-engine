@@ -1283,6 +1283,16 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
+def longname(name, columns):
+    """Add the secondary peril prefix to the name"""
+    for col in columns:
+        if col.endswith(name):
+            return col
+            break
+    else:
+        return name
+
+
 # NB: changes oq.imtls by side effect!
 def import_gmfs_csv(dstore, oqparam, sitecol):
     """
@@ -1316,7 +1326,8 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
                          (', '.join(missing), fname))
     arr = numpy.zeros(len(array), oqparam.gmf_data_dt())
     for name in names:
-        arr[name[4:] if name.startswith('gmv_') else name] = array[name]
+        lname = longname(name, arr.dtype.names)
+        arr[name[4:] if name.startswith('gmv_') else lname] = array[name]
 
     if 'sid' not in names:
         # there is a custom_site_id instead
