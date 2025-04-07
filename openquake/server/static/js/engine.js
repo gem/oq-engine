@@ -518,6 +518,7 @@ function capitalizeFirstLetter(val) {
 
     function set_shakemap_version_selector() {
         $('#submit_impact_get_rupture').prop('disabled', true);
+        $('#submit_impact_get_rupture').text('Retrieving ShakeMap versions...');
         $('input[name="impact_approach"]').prop('disabled', true);
         var formData = new FormData();
         const usgs_id = $.trim($("#usgs_id").val());
@@ -545,6 +546,7 @@ function capitalizeFirstLetter(val) {
                 }
             }
             $('#submit_impact_get_rupture').prop('disabled', false);
+            set_retrieve_data_btn_txt('initial');
         }).error(function (data) {
             let $select = $("#shakemap_version");
             $select.empty();
@@ -554,6 +556,7 @@ function capitalizeFirstLetter(val) {
             diaerror.show(false, "Error", err_msg);
         }).always(function (data) {
             $('input[name="impact_approach"]').prop('disabled', false);
+            set_retrieve_data_btn_txt('initial');
         });
     }
 
