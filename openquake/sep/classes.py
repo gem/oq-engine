@@ -909,8 +909,8 @@ class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
         # Raise error if either PGA or PGV is missing
         if pga is None or pgv is None:
             raise ValueError(
-                "Both PGA and PGV are required to compute landslide disp according to Fotopoulou_Pitilakis_2015_PGV_PGA"
-            )
+                "Both PGA and PGV are required to compute landslide disp "
+                "according to Fotopoulou_Pitilakis_2015_PGV_PGA")
 
         Disp = fotopoulou_pitilakis_2015_model_d(
             pgv,
@@ -940,8 +940,7 @@ class SaygiliRathje2008Landslides(SecondaryPeril):
             ),
         )
         sites.add_col(
-            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
-        )
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope))
         
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -957,14 +956,10 @@ class SaygiliRathje2008Landslides(SecondaryPeril):
         # Raise error if either PGA or PGV is missing
         if pga is None or pgv is None:
             raise ValueError(
-                "Both PGA and PGV are required to compute landslide disp according to Saygili_Rathje_2008"
-            )
+                "Both PGA and PGV are required to compute landslide "
+                "disp according to Saygili_Rathje_2008")
 
-        Disp = saygili_rathje_2008(
-            pga,
-            pgv,
-            sites.crit_accel,
-            )
+        Disp = saygili_rathje_2008(pga, pgv, sites.crit_accel)
         out.append(Disp)
         return out  
   
@@ -992,8 +987,7 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
             ),
         )
         sites.add_col(
-            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
-        )
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope))
         
         print(sites)
 
@@ -1001,13 +995,10 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGA":
-                Disp = rathje_saygili_2009(
-                          gmf,
-                          mag,
-                          sites.crit_accel,
-                          )
+                Disp = rathje_saygili_2009(gmf, mag, sites.crit_accel)
             out.append(Disp)
         return out  
+
 
 class JibsonEtAl2000Landslides(SecondaryPeril):
     '''
@@ -1044,7 +1035,8 @@ class JibsonEtAl2000Landslides(SecondaryPeril):
             out.append(Disp)
             out.append(jibson_etal_2000_probability(Disp))
         return out        
-        
+
+
 class NowickiJessee2018Landslides(SecondaryPeril):
     """
     Computes the landslide probability from PGV and areal coverage.
@@ -1102,7 +1094,8 @@ class NowickiJessee2018Landslides(SecondaryPeril):
         out.append(lse)
             
         return out
-        
+
+
 class AllstadtEtAl2022Landslides(SecondaryPeril):
     """
     Corrects LSE according to Allstadt et al. (2022).
