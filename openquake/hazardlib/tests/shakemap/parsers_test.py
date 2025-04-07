@@ -235,9 +235,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
                          'stationlist.json was downloaded, but it contains no features')
 
     def test_14(self):
-        usgs_id = 'us7000n7n8'
+        usgs_id = 'us20002926'
         shakemap_versions, err = get_shakemap_versions(usgs_id, user=user)
         self.assertEqual(err, {})
+        self.assertEqual(len(shakemap_versions), 3)
         first_version = shakemap_versions[0]
         self.assertIn('id', first_version)
         self.assertIn('utc_date_time', first_version)
