@@ -567,6 +567,12 @@ function capitalizeFirstLetter(val) {
                 input.val(impact_form_defaults[field]);
             }
         }
+        const selectors = ['#shakemap_version', '#mosaic_model', '#trt'];
+        for (select_id of selectors) {
+            let $select = $(select_id);
+            $select.empty();
+        }
+        $('#time_event').val(impact_form_defaults['time_event']);
         $('#rupture-map').hide();
         $('#shakemap-image-row').hide();
     }
@@ -714,9 +720,9 @@ function capitalizeFirstLetter(val) {
                 set_retrieve_data_btn_txt('initial');
                 reset_impact_forms();
                 if (approaches_requiring_usgs_id.includes(selected_approach)) {
-                    $('#usgs_id_grp').removeClass('hidden');
+                    $('.usgs_id_grp').removeClass('hidden');
                 } else {
-                    $('#usgs_id_grp').addClass('hidden');
+                    $('.usgs_id_grp').addClass('hidden');
                 }
                 if (selected_approach == 'use_finite_rup_from_usgs') {
                     $('#rupture_from_usgs_grp').removeClass('hidden');
