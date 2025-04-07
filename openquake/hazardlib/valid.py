@@ -999,6 +999,16 @@ def dictionary(value):
     return dic
 
 
+def list_of_dict(value):
+    """
+    :param value:
+        input string corresponding to a list of literal Python dictionaries
+    :returns:
+        the list
+    """
+    return json.loads(value)
+
+
 # ########################### SOURCES/RUPTURES ############################# #
 
 def mag_scale_rel(value):
