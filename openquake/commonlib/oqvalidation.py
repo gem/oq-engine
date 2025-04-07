@@ -946,7 +946,7 @@ class OqParam(valid.ParamSet):
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
         'source_model_logic_tree', 'geometry', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
-        'job_ini', 'multi_peril', 'taxonomy_mapping',
+        'job_ini', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
         'reqv_ignore_sources', 'amplification', 'station_data', 'mmi',
         'nonstructural_fragility',
@@ -1116,7 +1116,7 @@ class OqParam(valid.ParamSet):
                      'early_latin', 'late_latin'), 'early_weights')
     mea_tau_phi = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.secondary_perils, [])
-    sec_peril_params = valid.Param(valid.dictionary, {})
+    sec_peril_params = valid.Param(valid.list_of_dict, [])
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -1342,11 +1342,11 @@ class OqParam(valid.ParamSet):
         if self.job_type == 'risk':
             self.check_aggregate_by()
         if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
-                and 'multi_peril' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
                 and self.hazard_calculation_id is None):
-            if not hasattr(self, 'truncation_level'):
+            if self.calculation_mode != 'multi_risk' and not hasattr(
+                    self, 'truncation_level'):
                 self.raise_invalid("Missing truncation_level")
 
         if 'reinsurance' in self.inputs:
@@ -1820,17 +1820,14 @@ class OqParam(valid.ParamSet):
         """
         :returns: a list of secondary perils
         """
-        return SecondaryPeril.instantiate(self.secondary_perils,
-                                          self.sec_peril_params)
+        return SecondaryPeril.instantiate(
+            self.secondary_perils, self.sec_peril_params, self)
 
     @cached_property
     def sec_imts(self):
         """
         :returns: a list of secondary outputs
         """
-        mp = self.inputs.get('multi_peril', ())
-        if mp:
-            return list(mp)  # ASH, PYRO, etc
         outs = []
         for sp in self.get_sec_perils():
             for out in sp.outputs:
@@ -2245,13 +2242,14 @@ class OqParam(valid.ParamSet):
                 'contain a single point')
 
     def check_source_model(self):
-        if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-                'multi_peril' in self.inputs or 'rupture_model' in self.inputs
+        if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs
+                or 'rupture_model' in self.inputs
                 or 'scenario' in self.calculation_mode
                 or 'ins_loss' in self.inputs):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 'source_model' not in self.inputs and
+                self.calculation_mode != 'multi_risk' and
                 self.inputs['job_ini'] != '<in-memory>' and
                 self.hazard_calculation_id is None):
             raise ValueError('Missing source_model_logic_tree in %s '

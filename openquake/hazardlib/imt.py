@@ -316,6 +316,27 @@ def ASH():
     return IMT('ASH')
 
 
+def LAVA():
+    """
+    Lava Intensity
+    """
+    return IMT('LAVA')
+
+
+def LAHAR():
+    """
+    Lahar Intensity
+    """
+    return IMT('LAHAR')
+
+
+def PYRO():
+    """
+    Pyroclastic Flow Intensity
+    """
+    return IMT('PYRO')
+
+
 # secondary IMTs
 sec_imts = 'Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb'.split()
 

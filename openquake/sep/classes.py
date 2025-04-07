@@ -15,9 +15,16 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import abc
-import inspect
-from openquake.hazardlib import imt
+import csv
+import logging
+
+import numpy
+from shapely import geometry, wkt
+
+from openquake.hazardlib import geo, imt, valid, InvalidFile
 from openquake.sep.landslide.static_safety_factor import infinite_slope_fs
 from openquake.sep.landslide.displacement import (
     critical_accel,
@@ -93,16 +100,21 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
             imt.from_string(out)
 
     @classmethod
-    def instantiate(cls, secondary_perils, sec_peril_params):
-        inst = []
-        for clsname in secondary_perils:
-            c = globals()[clsname]
-            kw = {}
-            for param in inspect.signature(c).parameters:
-                if param in sec_peril_params:
-                    kw[param] = sec_peril_params[param]
-            inst.append(c(**kw))
-        return inst
+    def instantiate(cls, secondary_perils, sec_peril_params, oq):
+        """
+        :param secondary_perils: a list of class names
+        :param sec_peril_params: a list of dicts with instantiation params
+        :param oq: OqParam object to be attached to the instances
+        :returns: a list of instances of the secondary peril classes
+        """
+        if not sec_peril_params:
+            sec_peril_params = [{}] * len(secondary_perils)
+        instances = []
+        for clsname, params in zip(secondary_perils, sec_peril_params):
+            obj = globals()[clsname](**params)
+            obj.oq = oq
+            instances.append(obj)
+        return instances
 
     @abc.abstractmethod
     def prepare(self, sites):
@@ -139,9 +151,7 @@ class HazusLiquefaction(SecondaryPeril):
                         mag=mag,
                         liq_susc_cat=sites.liq_susc_cat,
                         groundwater_depth=sites.gwd,
-                        do_map_proportion_correction=self.map_proportion_flag,
-                    )
-                )
+                        do_map_proportion_correction=self.map_proportion_flag))
         return out
 
 
@@ -1158,5 +1168,92 @@ class AllstadtEtAl2022Landslides(SecondaryPeril):
         out.append(lse)
             
         return out
+
+
+def csv2peril(fname, name, sitecol, tofloat, asset_hazard_distance):
+    """
+    Converts a CSV file into a peril array of length N
+    """
+    data = []
+    with open(fname) as f:
+        for row in csv.DictReader(f):
+            intensity = tofloat(row['intensity'])
+            if intensity > 0:
+                data.append((valid.longitude(row['lon']),
+                             valid.latitude(row['lat']),
+                             intensity))
+    data = numpy.array(data, [('lon', float), ('lat', float),
+                              ('number', float)])
+    logging.info('Read %s with %d rows' % (fname, len(data)))
+    if len(data) != len(numpy.unique(data[['lon', 'lat']])):
+        raise InvalidFile('There are duplicated points in %s' % fname)
+    try:
+        distance = asset_hazard_distance[name]
+    except KeyError:
+        distance = asset_hazard_distance['default']
+    sites, filtdata, _discarded = geo.utils.assoc(
+        data, sitecol, distance, 'filter')
+    peril = numpy.zeros(len(sitecol), float)
+    peril[sites.sids] = filtdata['number']
+    return peril
+
+
+def wkt2peril(fname, name, sitecol):
+    """
+    Converts a WKT file into a peril array of length N
+    """
+    with open(fname) as f:
+        header = next(f)  # skip header
+        if header != 'geom\n':
+            raise ValueError('%s has header %r, should be geom instead' %
+                             (fname, header))
+        text = f.read()
+        if not text.startswith('"'):
+            raise ValueError('The geometry must be quoted in %s : "%s..."' %
+                             (fname, text.split('(')[0]))
+        geom = wkt.loads(text.strip('"'))  # strip quotes
+    peril = numpy.zeros(len(sitecol), float)
+    for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
+        peril[sid] = geometry.Point(lon, lat).within(geom)
+    return peril
+
+
+
+class Volcanic(SecondaryPeril):
+    """
+    Import ASH, LAVA, LAHAR, PYRO from CSV files
+    """
+    outputs = ["ASH", "LAVA", "LAHAR", "PYRO"]
+
+    def __init__(self, **fname_by_peril):
+        for peril in fname_by_peril:
+            assert peril in self.outputs, peril
+        self.fname_by_peril = fname_by_peril
+
+    def prepare(self, sites):
+        """
+        Import the CSV files for the volcanic subperils
+        """
+        N = len(sites)
+        self.data = {'sid': sites.sids, 'eid': numpy.zeros(N, numpy.uint32)}
+        names = []
+        for name, fname in self.fname_by_peril.items():
+            fname = os.path.join(self.oq.base_path, fname)
+            tofloat = valid.positivefloat if name == 'ASH' else valid.probability
+            with open(fname) as f:
+                header = next(f)
+            if 'geom' in header:
+                peril = wkt2peril(fname, name, sites)
+            else:
+                peril = csv2peril(fname, name, sites, tofloat,
+                                  self.oq.asset_hazard_distance)
+            if peril.sum() == 0:
+                logging.warning('No sites were affected by %s' % name)
+            self.data[name] = peril
+            names.append(name)
+
+    def compute(self, mag, imt_gmf, sites):
+        # doing nothing, since all the work is in the `prepare` method
+        return []
         
 
