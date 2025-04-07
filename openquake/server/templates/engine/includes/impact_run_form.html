@@ -58,6 +58,10 @@
                 <input class="impact-input" type="text" id="maximum_distance_stations" name="maximum_distance_stations" placeholder="{{ impact_form_placeholders.maximum_distance_stations }}" value="{{ impact_form_defaults.maximum_distance_stations }}" />
               </div>
               <div class="impact_form_row">
+                <label for"job_description">{{ impact_form_labels.job_description }}</label>
+                <input class="impact-input impact-double-width" type="text" id="job_description" name="job_description" placeholder="{{ impact_form_placeholders.job_description }}" value="{{ impact_form_defaults.job_description }}" {% if user_level != 2 %}disabled{% endif %}/>
+              </div>
+              <div class="impact_form_row">
                 <button id="submit_impact_calc" type="submit" class="btn" disabled>Launch impact calculation</button>
                 <!-- <input type="submit"> -->
               </div>

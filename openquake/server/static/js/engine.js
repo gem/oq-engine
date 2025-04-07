@@ -900,6 +900,14 @@ function capitalizeFirstLetter(val) {
                             $('#rupture-map').html('<p>No rupture image available</p>');
                         }
                     }
+                    var desc = $('#usgs_id').val() + ': ';
+                    if (data.title) {
+                        desc += data.title;
+                    }
+                    else {
+                        desc += 'M ' + data.mag + ' (' + data.lon + ', ' + data.lat + ')';
+                    }
+                    $('#job_description').val(desc);
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -1011,6 +1019,7 @@ function capitalizeFirstLetter(val) {
                 if ($msr_selector.length && $msr_selector.is(":has(option)")) {
                     formData.append('msr', $msr_selector.find(':selected').val());
                 }
+                formData.append('job_description', $('#job_description').val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/impact_run",
@@ -1020,7 +1029,6 @@ function capitalizeFirstLetter(val) {
                     encode: true
                 }).done(function (data) {
                     console.log(data);
-                }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
                         for (var i = 0; i < resp.invalid_inputs.length; i++) {
@@ -1028,6 +1036,10 @@ function capitalizeFirstLetter(val) {
                             $("#impact_run_form > input#" + input_id).css("background-color", "#F2DEDE");
                         }
                     }
+                    var err_msg = resp.error_msg;
+                    diaerror.show(false, "Error", err_msg);
+                }).error(function (data) {
+                    var resp = JSON.parse(data.responseText);
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
