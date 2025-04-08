@@ -195,8 +195,9 @@ def sample_cluster(group, num_ses, ses_seed):
 
     elif group.src_interdep == 'indep':
 
+
         # Find the number of occurrences per source
-        occ_per_src = _get_occs_indep_sources(tot_num_occ, group)
+        occ_per_src = _get_occs_indep_sources(tot_num_occ, group, seed)
 
         # Find the IDs of the ruptures
         if group.rup_interdep == 'mutex':
@@ -232,6 +233,11 @@ def sample_cluster(group, num_ses, ses_seed):
 
     elif group.src_interdep == 'mutex':
 
+        # Check that ruptures are independent
+        if not group.rup_interdep == 'indep':
+            raise NotImplementedError(
+                f'{group.src_interdep=}, {group.rup_interdep=}')
+
         # Compute the number of occurrences of each (mutex) source
         ws = [src.mutex_weight for src in group]
         src_occs = random_histogram(tot_num_occ, ws, seed)
@@ -240,10 +246,8 @@ def sample_cluster(group, num_ses, ses_seed):
         for src, src_occ in zip(group, src_occs):
 
             # Find the number of ruptures generated for each realization
-            rids = np.arange(src.num_ruptures)
+            rids = numpy.arange(src.num_ruptures)
             numrups = numpy.random.choice(rids, src_occ, replace=False)
-
-
 
         # Compute the number of ruptures for each realization of each source
         # composing the cluster
@@ -267,10 +271,6 @@ def sample_cluster(group, num_ses, ses_seed):
                     ebr.seed = ebr.id + ses_seed
                     eb_ruptures.append(ebr)
 
-       else:
-            raise NotImplementedError(
-                f'{group.src_interdep=}, {group.rup_interdep=}')
-
     else:
         raise NotImplementedError(
             f'{group.src_interdep=}, {group.rup_interdep=}')
@@ -278,7 +278,7 @@ def sample_cluster(group, num_ses, ses_seed):
     return eb_ruptures
 
 
-def _get_occs_indep_sources(tot_num_occ, group):
+def _get_occs_indep_sources(tot_num_occ, group, seed):
     # Compute the number of occurrences for each source given a number of
     # occurrences of the cluster 'tot_num_occ' and the whole 'group' object
 
@@ -289,7 +289,7 @@ def _get_occs_indep_sources(tot_num_occ, group):
     ids = numpy.empty((tot_num_occ, len(group)))
     ids[:] = numpy.nan
     n_srcs_rlz = numpy.random.choice(range(1, len(group) + 1), tot_num_occ)
-    _set_ids(n_srcs_rlz, ids, None)
+    _set_ids(n_srcs_rlz, ids, seed, None)
 
     # Find the number of occurrences per source
     occ_per_src = numpy.zeros((ids.shape[1]), dtype=int)
@@ -299,18 +299,19 @@ def _get_occs_indep_sources(tot_num_occ, group):
     return occ_per_src
 
 
-@njit
-def _set_ids(n_srcs, ids, weights=None):
+# @njit
+def _set_ids(n_srcs, ids, seed, weights=None):
     # Set the indexes of the sources (or ruptures) in each realization.
     # 'n_srcs' is a 1D array with a length corresponding to the number of
     # rlzs and 'ids' is also a 1D array with the number of sources/ruptures
     #
+    rng = numpy.random.default_rng(seed)
     if weights is None:
         weights = numpy.ones((ids.shape[1])) * 1.0 / ids.shape[1]
     src_idxs = numpy.arange(0, ids.shape[1], 1)
     for irlz, n_src in enumerate(n_srcs):
         ids[irlz, 0:n_src] = sorted(
-            numpy.random.choice(src_idxs, n_src, replace=False))
+            rng.choice(src_idxs, n_src, replace=False))
 
 
 def sample_cluster_old(group, num_ses, ses_seed):
