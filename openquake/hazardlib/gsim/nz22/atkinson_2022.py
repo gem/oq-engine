@@ -166,11 +166,11 @@ def _get_pga_on_rock(suffix, C, ctx):
 
 
 def get_stddevs(suffix, C):
-    """
+    r"""
     Standard deviations given in COEFFS with suffix
-    Between event standard deviations as Be_.
-    Within event stdvs as We_.
-    Total as sigma_.
+    between event standard deviations as Be\_
+    within event stdvs as We\_
+    total as sigma\_
     """
     intra_e_sigma = np.sqrt(C["We_" + suffix] ** 2 + C["phiS2S"] ** 2)
     return [C["sigma_" + suffix], C["Be_" + suffix], intra_e_sigma]
