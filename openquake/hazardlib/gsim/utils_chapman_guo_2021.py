@@ -102,9 +102,6 @@ def get_fcpa(ctx, imt, z_scale, psa_df):
     This function returns both f_cpa and z_scale within a dictionary which is
     passed into the nga_east functions for computation of mean ground-motions.
     """
-    # Set default f_cpa of zero for each site
-    f_cpa = np.full(len(ctx.vs30), 0.)
-
     # Recompute f_cpa parameter as required
     f_cpa = get_psa_ratio(ctx, imt, psa_df)
         
