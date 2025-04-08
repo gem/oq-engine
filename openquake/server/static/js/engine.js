@@ -1028,18 +1028,15 @@ function capitalizeFirstLetter(val) {
                     contentType: false,
                     encode: true
                 }).done(function (data) {
-                    console.log(data);
+                    // console.log(data);
+                }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
                         for (var i = 0; i < resp.invalid_inputs.length; i++) {
                             var input_id = resp.invalid_inputs[i];
-                            $("#impact_run_form > input#" + input_id).css("background-color", "#F2DEDE");
+                            $("input#" + input_id).css("background-color", "#F2DEDE");
                         }
                     }
-                    var err_msg = resp.error_msg;
-                    diaerror.show(false, "Error", err_msg);
-                }).error(function (data) {
-                    var resp = JSON.parse(data.responseText);
                     var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
