@@ -105,12 +105,8 @@ def get_fcpa(ctx, imt, z_scale, psa_df):
     # Set default f_cpa of zero for each site
     f_cpa = np.full(len(ctx.vs30), 0.)
 
-    # Get sites with sed. depth scaling greater than 0
-    mask_z = z_scale > 0.
-
-    # For these sites recompute f_cpa parameter
-    if np.any(mask_z):
-        f_cpa[mask_z] = get_psa_ratio(ctx, imt, psa_df)
+    # Recompute f_cpa parameter as required
+    f_cpa = get_psa_ratio(ctx, imt, psa_df)
         
     # Put Coastal Plain params into a dict for passing into nga_east functions
     coastal = {'f_cpa': f_cpa, 'z_scale': z_scale}
@@ -139,7 +135,7 @@ def get_data(psa_df, imt):
     # Align the df with multi-idx to match the rows
     psa_df_aligned = psa_df.reindex(idx)
 
-    # Get PSA ratios into ndarrays
+    # Get PSA ratios into ndarray
     data = psa_df_aligned[
         f'psa_ratio_{imt}'].values.reshape(len(Z), len(M), len(R))
 
