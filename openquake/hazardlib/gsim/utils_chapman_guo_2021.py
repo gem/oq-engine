@@ -128,13 +128,10 @@ def get_fraction(lo, hi, value):
 def get_data(psa_df, imt):
     """
     Get the z_sed for each z_sed, mag and rrup combination within an ndarray.
-    """
-    # Append columns with given imt
-    cols = ['zsed', 'magnitude', 'distance']
-    
+    """    
     # Make multi-idx
-    idx = pd.MultiIndex.from_product(
-        [Z, M, R], names=cols)
+    cols = ['zsed', 'magnitude', 'distance']
+    idx = pd.MultiIndex.from_product([Z, M, R], names=cols)
 
     # Set df idx to match multi-idx
     psa_df.set_index(cols, inplace=True)
@@ -142,9 +139,9 @@ def get_data(psa_df, imt):
     # Align the df with multi-idx to match the rows
     psa_df_aligned = psa_df.reindex(idx)
 
-    # Get PSA ratios into ndarray
-    data = psa_df_aligned[f'psa_ratio_{imt}'].values.reshape(
-        len(Z), len(M), len(R))
+    # Get PSA ratios into ndarrays
+    data = psa_df_aligned[
+        f'psa_ratio_{imt}'].values.reshape(len(Z), len(M), len(R))
 
     return data
 
@@ -164,10 +161,11 @@ def get_psa_ratio(ctx, imt, psa_df):
     # Get psa data into ndarray
     data = get_data(psa_df, imt)
 
-    # Get z_sed, mag and rrup dists
-    z = ctx.z_sed
-    m = ctx.mag
-    r = ctx.rrup
+    # Get z_sed, mag and rrup dists clipped to
+    # the psa ratio explanatory variable bins
+    z = np.clip(ctx.z_sed, np.min(Z), np.max(Z))
+    m = np.clip(ctx.mag, np.min(M), np.max(M))
+    r = np.clip(ctx.rrup, np.min(R), np.max(R))
 
     # Index search per ctx value
     i = np.searchsorted(Z, z) - 1
