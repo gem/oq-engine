@@ -23,6 +23,8 @@
 import time
 import numpy
 import shapely
+
+from numba import njit
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, random_histogram
 from openquake.baselib.performance import Monitor
@@ -160,19 +162,23 @@ def sample_cluster(group, num_ses, ses_seed):
         msg = 'Rate not defined. Currently, we support only a Poisson TOM'
         raise ValueError(msg)
     else:  # poissonian sources with ClusterPoissonTOM
-        tot_num_occ = rng.poisson(rate * tom.time_span * samples * num_ses)
+        tmp = rng.poisson(rate * tom.time_span * samples, num_ses)
+        tot_num_occ = numpy.sum(tmp)
 
     # Check number of occurrences of the cluster
     if tot_num_occ < 1:
         return eb_ruptures
 
     # Now process the sources included in the cluster. Possible cases:
-    # * Traditional cluster = all the sources occurr
+    # * Traditional cluster = all the sources occur
     # * Sources are indepedent
     # * Sources are mutually exclusive.
-    if group.src_interdep == None:
+    if group.src_interdep is None:
+
         allrups = []
         rupids = []
+
+        # Loop over the sources in the cluster and add them to 'allrups'
         for src in group:
             cnt = 0
             for i, rup in enumerate(src.iter_ruptures()):
@@ -180,35 +186,64 @@ def sample_cluster(group, num_ses, ses_seed):
                 allrups.append(rup)
                 cnt += 1
             rupids.extend(src.offset + numpy.arange(cnt))
+
+        # Create the EB ruptures
         for rup, rupid in zip(allrups, rupids):
             ebr = EBRupture(rup, rup.src_id, trt_smr, tot_num_occ, rupid)
             ebr.seed = ebr.id + ses_seed
             eb_ruptures.append(ebr)
+
     elif group.src_interdep == 'indep':
-        allrups = []
-        weights = []
-        rupids = []
-        for src in group:
-            rupids.extend(src.offset + numpy.arange(src.num_ruptures))
-            weights.extend(src.rup_weights)
-            src_seed = src.serial(ses_seed)
-            for i, rup in enumerate(src.iter_ruptures()):
-                rup.src_id = src.id
-                allrups.append(rup)
-        # random distribute in bins according to the rup_weights
-        n_occs = random_histogram(tot_num_occ, weights, seed)
-        # process the bins
-        for rup, rupid, n_occ in zip(allrups, rupids, n_occs):
-            if n_occ:
-                ebr = EBRupture(rup, rup.src_id, trt_smr, n_occ, rupid)
-                ebr.seed = ebr.id + ses_seed
-                eb_ruptures.append(ebr)
+
+        # Find the number of occurrences per source
+        occ_per_src = _get_occs_indep_sources(tot_num_occ, group)
+
+        # Find the IDs of the ruptures
+        if group.rup_interdep == 'mutex':
+            for i_src, (nocc, src) in enumerate(zip(occ_per_src, group)):
+
+                if nocc < 1:
+                    continue
+
+                # Rupture weights are in src.rup_weights
+                rwei = src.rup_weights
+                if not hasattr(src, 'rup_weights'):
+                    rwei = 1.0 / src.num_ruptures
+
+                # Get rupture index for each realization
+                tmp_rup_ids = numpy.arange(src.num_ruptures)
+                ridx = numpy.random.choice(tmp_rup_ids, nocc, p=rwei)
+
+                # Rupture IDs
+                rupids = src.offset + numpy.arange(src.num_ruptures)
+
+                # Create EBruptures
+                tmp = zip(rupids, src.iter_ruptures())
+                for i_rup, (rupid, rup) in enumerate(tmp):
+                    n_occ = sum(ridx == i_rup)
+                    rup.src_id = src.id
+                    ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
+                    ebr.seed = ebr.id + ses_seed
+                    eb_ruptures.append(ebr)
+
+        else:
+            raise NotImplementedError(
+                f'{group.src_interdep=}, {group.rup_interdep=}')
 
     elif group.src_interdep == 'mutex':
 
         # Compute the number of occurrences of each (mutex) source
         ws = [src.mutex_weight for src in group]
         src_occs = random_histogram(tot_num_occ, ws, seed)
+
+        # Find for each rlz of each source the ruptures produced
+        for src, src_occ in zip(group, src_occs):
+
+            # Find the number of ruptures generated for each realization
+            rids = np.arange(src.num_ruptures)
+            numrups = numpy.random.choice(rids, src_occ, replace=False)
+
+
 
         # Compute the number of ruptures for each realization of each source
         # composing the cluster
@@ -231,10 +266,51 @@ def sample_cluster(group, num_ses, ses_seed):
                     ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
                     ebr.seed = ebr.id + ses_seed
                     eb_ruptures.append(ebr)
+
+       else:
+            raise NotImplementedError(
+                f'{group.src_interdep=}, {group.rup_interdep=}')
+
     else:
         raise NotImplementedError(
             f'{group.src_interdep=}, {group.rup_interdep=}')
+
     return eb_ruptures
+
+
+def _get_occs_indep_sources(tot_num_occ, group):
+    # Compute the number of occurrences for each source given a number of
+    # occurrences of the cluster 'tot_num_occ' and the whole 'group' object
+
+    # Get the number of sources included in each cluster and find the
+    # IDs of the sources for each realization. 'ids' is a numpy.ndarray
+    # with shape number_of_cluster_rlz x number_of_sources that provides
+    # the indexes of the sources activated in each cluster realization
+    ids = numpy.empty((tot_num_occ, len(group)))
+    ids[:] = numpy.nan
+    n_srcs_rlz = numpy.random.choice(range(1, len(group) + 1), tot_num_occ)
+    _set_ids(n_srcs_rlz, ids, None)
+
+    # Find the number of occurrences per source
+    occ_per_src = numpy.zeros((ids.shape[1]), dtype=int)
+    for i_src in range(ids.shape[1]):
+        occ_per_src[i_src] = int(numpy.sum(ids == i_src))
+
+    return occ_per_src
+
+
+@njit
+def _set_ids(n_srcs, ids, weights=None):
+    # Set the indexes of the sources (or ruptures) in each realization.
+    # 'n_srcs' is a 1D array with a length corresponding to the number of
+    # rlzs and 'ids' is also a 1D array with the number of sources/ruptures
+    #
+    if weights is None:
+        weights = numpy.ones((ids.shape[1])) * 1.0 / ids.shape[1]
+    src_idxs = numpy.arange(0, ids.shape[1], 1)
+    for irlz, n_src in enumerate(n_srcs):
+        ids[irlz, 0:n_src] = sorted(
+            numpy.random.choice(src_idxs, n_src, replace=False))
 
 
 def sample_cluster_old(group, num_ses, ses_seed):

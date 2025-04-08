@@ -101,7 +101,7 @@ class ClusterTestCase(unittest.TestCase):
         # total number of ruptures should the in the order of 150.
 
         # Source model file name
-        ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm01.xml')
+        ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm_mutes.xml')
 
         # Reading
         ssm = nrml.to_python(ssm_fname, self.sconv)
@@ -116,8 +116,24 @@ class ClusterTestCase(unittest.TestCase):
         print(tot_occ)
 
     def test_src_indep(self):
-        # Sources are mutually exclusive and ruptures independent. The rate of
-        # occurrence of the cluster is 1/1000, the sources are mutually exclusive (equally
-        # weighted) and ruptures independent.
+        # Sources are independent and ruptures mutex. The rate of
+        # occurrence of the cluster is 1/10.
 
-        pass
+        # Source model file name
+        ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm_indep_mutex.xml')
+
+        # Reading
+        ssm = nrml.to_python(ssm_fname, self.sconv)
+
+        # Generating the SESs
+        tot_occ = 0
+        nrlz = 10
+        for i in range(nrlz):
+            ebrups = sample_cluster(ssm[0], 1000000, 1)
+
+            # Computing the total number of occurrences
+            tot_occ += numpy.sum([e.n_occ for e in ebrups])
+
+        # Checking the number of ruptures generated
+        msg = 'The ratio between computed and expected ruptures exceeds 1%'
+        self.assertTrue(numpy.abs(tot_occ / nrlz / 150000 - 1.0) < 0.01, msg)

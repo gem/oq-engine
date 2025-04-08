@@ -10,9 +10,9 @@ xmlns:gml="http://www.opengis.net/gml"
             cluster="true"
             name="test_src-indep_rup-mutex"
             occurrence_rate="1e-3"
+            src_interdep="mutex"
             rup_interdep="indep"
             srcs_weights="0.5 0.5"
-            src_interdep="mutex"
             tectonicRegion="Stable Shallow Crust"
             tom="PoissonTOM">
 
