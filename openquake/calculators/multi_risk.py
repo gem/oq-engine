@@ -131,15 +131,15 @@ class MultiRiskCalculator(base.RiskCalculator):
         """
         dstates = self.crmodel.damage_states
         ltypes = self.crmodel.loss_types
-        [multi_peril] = self.oqparam.get_sec_perils()
-        P = len(multi_peril.fname_by_peril) + 1
+        multi_risk = self.oqparam.inputs['multi_risk']
+        P = len(multi_risk) + 1
         L = len(ltypes)
         D = len(dstates)
         A = len(self.assetcol)
         ampl = self.oqparam.ash_wet_amplification_factor
         dmg_csq = numpy.zeros((P, A, L, D + 1), F32)
         perils = []
-        if 'ASH' in multi_peril.fname_by_peril:
+        if 'ASH' in multi_risk:
             assets = general.group_array(self.assetcol, 'site_id')
             gmf = self.datastore['gmf_data/Volcanic_ASH'][:]
             dmg_csq[0] = get_dmg_csq(self.crmodel, assets, gmf,
@@ -150,7 +150,7 @@ class MultiRiskCalculator(base.RiskCalculator):
             perils.append('ASH_WET')
         hazard = self.datastore.read_df('gmf_data', 'sid')
         binary_perils = []
-        for peril in multi_peril.fname_by_peril:
+        for peril in multi_risk:
             if peril != 'ASH':
                 binary_perils.append(peril)
         self.datastore['asset_risk'] = arr = build_asset_risk(

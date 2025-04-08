@@ -946,7 +946,7 @@ class OqParam(valid.ParamSet):
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
         'source_model_logic_tree', 'geometry', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
-        'job_ini', 'taxonomy_mapping',
+        'job_ini', 'multi_risk', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
         'reqv_ignore_sources', 'amplification', 'station_data', 'mmi',
         'nonstructural_fragility',
@@ -1329,7 +1329,7 @@ class OqParam(valid.ParamSet):
                 if not ok:
                     self.raise_invalid('Missing fragility files')
             elif ('risk' in self.calculation_mode and
-                  self.calculation_mode != 'multi_risk' and not hc):
+                  'multi_risk' not in self.inputs and not hc):
                 ok = any('vulnerability' in key for key in self._risk_files)
                 if not ok:
                     self.raise_invalid('missing vulnerability files')
@@ -1345,7 +1345,7 @@ class OqParam(valid.ParamSet):
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
                 and self.hazard_calculation_id is None):
-            if self.calculation_mode != 'multi_risk' and not hasattr(
+            if 'multi_risk' not in self.inputs and not hasattr(
                     self, 'truncation_level'):
                 self.raise_invalid("Missing truncation_level")
 
@@ -2250,7 +2250,7 @@ class OqParam(valid.ParamSet):
             return
         if ('source_model_logic_tree' not in self.inputs and
                 'source_model' not in self.inputs and
-                self.calculation_mode != 'multi_risk' and
+                'multi_risk' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and
                 self.hazard_calculation_id is None):
             raise ValueError('Missing source_model_logic_tree in %s '
