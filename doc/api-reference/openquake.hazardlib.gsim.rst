@@ -994,6 +994,55 @@ nshmp_2014
     :undoc-members:
     :show-inheritance:
 
+nz22.atkinson_2022
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.atkinson_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nz22.nz_nshm2022_kuehn_2020
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.nz_nshm2022_kuehn_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ 
+nz22.nz_nshm2022_parker
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.nz_nshm2022_parker
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nz22.nz_nshm2022_abrahamson_gulerce_2020
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.nz_nshm2022_abrahamson_gulerce_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nz22.stafford_2022
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.stafford_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nz22.const
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.const
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pankow_pechmann_2004
 ---------------------------------------------
 

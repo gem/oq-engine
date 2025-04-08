@@ -1,5 +1,5 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.24.0-gita62b6f45ca', start_date='2025-02-27T07:11:44', checksum=2906976062"
-custom_site_id,lon,lat,gmv_PGA,gsd_PGA,gmv_LiqProb,gsd_LiqProb,gmv_PGDGeomMean,gsd_PGDGeomMean
+#,,,,,,,,"generated_by='OpenQuake engine 3.24.0-gita4587c65e9', start_date='2025-04-07T04:21:09', checksum=295365513"
+custom_site_id,lon,lat,gmv_PGA,gsd_PGA,gmv_HazusLiquefaction_LiqProb,gsd_HazusLiquefaction_LiqProb,gmv_HazusDeformation_PGDGeomMean,gsd_HazusDeformation_PGDGeomMean
 d29e420k,-7.65412E+01,3.34054E+00,5.59777E-02,1.73634E+00,9.99998E-11,1.00000E+00,9.99998E-11,1.00000E+00
 d29ed54w,-7.65493E+01,3.44536E+00,5.64612E-02,1.73376E+00,2.54906E-10,5.42899E+01,2.80197E-10,8.13001E+01
 d29e9kz9,-7.65752E+01,3.45413E+00,5.71870E-02,1.75658E+00,2.58440E-10,5.75764E+01,2.81993E-10,8.35488E+01
