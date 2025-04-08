@@ -1225,15 +1225,13 @@ class Volcanic(SecondaryPeril):
     """
     outputs = ["ASH", "LAVA", "LAHAR", "PYRO"]
 
-    def __init__(self, **fname_by_peril):
-        for peril in fname_by_peril:
-            assert peril in self.outputs, peril
-        self.fname_by_peril = fname_by_peril
-
     def prepare(self, sites):
         """
         Import the CSV files for the volcanic subperils
         """
+        for peril in self.oq.inputs['multi_risk']:
+            assert peril in self.outputs, peril
+        self.fname_by_peril = self.oq.inputs['multi_risk']
         N = len(sites)
         self.data = {'sid': sites.sids, 'eid': numpy.zeros(N, numpy.uint32)}
         names = []

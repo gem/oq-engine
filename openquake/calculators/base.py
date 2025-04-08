@@ -573,7 +573,7 @@ class HazardCalculator(BaseCalculator):
                         logging.info('max_dist %s: %s', trt, md)
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
-        if oq.calculation_mode == 'multi_risk':
+        if 'multi_risk' in oq.inputs:
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
@@ -604,7 +604,7 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.t0 = time.time()
-        if 'gmfs' in oq.inputs or oq.calculation_mode == 'multi_risk':
+        if 'gmfs' in oq.inputs or 'multi_risk' in oq.inputs:
             # read hazard from files
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
