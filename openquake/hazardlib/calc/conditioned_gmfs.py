@@ -527,9 +527,9 @@ def get_mean_covs(
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
 
-    observed_imtls = {imt_str: [0] for imt_str in observed_imt_strs
-                      if imt_str not in ["MMI", "PGV"]}
-    observed_imts = sorted(from_string(imt_str) for imt_str in observed_imtls)
+    observed_imts = sorted(
+          from_string(imt_str) for imt_str in observed_imt_strs 
+          if imt_str not in ["MMI", "PGV"])
 
     # Target IMT is not PGA or SA: Currently not supported
     target_imts = [imt for imt in target_imts
@@ -537,7 +537,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and
     # standard deviations at the *station* sites ("_D")
-    cmaker_D = cmaker.copy(imtls=observed_imtls)
+    cmaker_D = cmaker.copy(imtls={o_imt.string: [0] for o_imt in observed_imts})
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
     mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
@@ -545,7 +545,7 @@ def get_mean_covs(
 
     # Generate the contexts and calculate the means and 
     # standard deviations at the *target* sites ("_Y")
-    cmaker_Y = cmaker.copy(imtls={target_imts[0].string: [0]})
+    cmaker_Y = cmaker.copy(imtls={t_imt.string: [0] for t_imt in target_imts})
 
     [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
     mean_stds_Y = cmaker_Y.get_mean_stds([ctx_Y])
