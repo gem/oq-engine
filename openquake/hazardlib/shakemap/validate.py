@@ -29,6 +29,7 @@ from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
+from openquake.hazardlib.nrml import validators as nrml_validators
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -146,7 +147,7 @@ IMPACT_FORM_LABELS = {
     'maximum_distance_stations': 'Maximum distance of stations (km)',
     'nodal_plane': 'Nodal plane',
     'msr': 'Magnitude scaling relationship',
-    'job_description': 'Description',
+    'description': 'Description',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
@@ -175,7 +176,7 @@ IMPACT_FORM_PLACEHOLDERS = {
     'maximum_distance_stations': 'float ≥ 0',
     'nodal_plane': '',
     'msr': '',
-    'job_description': 'Leave blank to set automatically',
+    'description': 'Leave blank to set automatically',
 }
 
 IMPACT_FORM_DEFAULTS = {
@@ -205,7 +206,7 @@ IMPACT_FORM_DEFAULTS = {
     'rupture_file_input': '',
     'station_data_file_input': '',
     'station_data_file_loaded': '',
-    'job_description': '',
+    'description': '',
 }
 
 
@@ -219,15 +220,15 @@ validators = {
                              'provide_rup',
                              'provide_rup_params'),
     'usgs_id': valid.simple_id,
-    'lon': valid.longitude,
-    'lat': valid.latitude,
-    'dep': valid.positivefloat,
-    'mag': valid.positivefloat,
+    'lon': nrml_validators['lon'],
+    'lat': nrml_validators['lat'],
+    'dep': nrml_validators['depth'],
+    'mag': nrml_validators['magnitude'],
     'msr': valid.Choice(*msr_choices),
-    'aspect_ratio': valid.positivefloat,
-    'rake': valid.rake_range,
-    'dip': valid.dip_range,
-    'strike': valid.strike_range,
+    'aspect_ratio': nrml_validators['ruptAspectRatio'],
+    'rake': nrml_validators['rake'],
+    'dip': nrml_validators['dip'],
+    'strike': nrml_validators['strike'],
     'local_timestamp': valid.local_timestamp,
     # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
     'time_event': valid.Choice('day', 'night', 'transit'),
@@ -239,7 +240,7 @@ validators = {
     'asset_hazard_distance': valid.positivefloat,
     'ses_seed': valid.positiveint,
     'maximum_distance_stations': valid.positivefloat,
-    'job_description': valid.utf8,
+    'description': valid.utf8,  # if empty, it will be set automatically
 }
 
 
@@ -249,7 +250,7 @@ def _validate(POST):
     params = {}
     dic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
                mag=None, msr=None, aspect_ratio=None, rake=None, dip=None, strike=None,
-               job_description=None)
+               description=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
@@ -353,8 +354,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
-    if 'job_description' in dic and dic['job_description']:
-        params['description'] = dic['job_description']
+    if 'description' in dic and dic['description']:
+        params['description'] = dic['description']
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = station_data_file

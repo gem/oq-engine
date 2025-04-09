@@ -907,7 +907,7 @@ function capitalizeFirstLetter(val) {
                     else {
                         desc += 'M ' + data.mag + ' (' + data.lon + ', ' + data.lat + ')';
                     }
-                    $('#job_description').val(desc);
+                    $('#description').val(desc);
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -1019,7 +1019,7 @@ function capitalizeFirstLetter(val) {
                 if ($msr_selector.length && $msr_selector.is(":has(option)")) {
                     formData.append('msr', $msr_selector.find(':selected').val());
                 }
-                formData.append('job_description', $('#job_description').val());
+                formData.append('description', $('#description').val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/impact_run",
