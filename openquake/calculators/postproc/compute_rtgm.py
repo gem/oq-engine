@@ -449,22 +449,23 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
         site = list(dstore['sitecol'])[sid]
         loc = site.location
-        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
-        logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
-
         if mrs.sum() == 0:
             warning = (
                 'Zero hazard: there are no ruptures close to the site.'
                 ' ASCE 7 and ASCE 41 parameters cannot be computed.'
                 ' See User Guide.')
             yield site, None, warning
-
-        elif mean_rates.max() < MIN_AFE:
+            continue
+        elif mean_rates.max() < MIN_AFE or hcurves[0, 0] < min(oq.poes):
+            # is the PGA curve too low?
             warning = ('Very low hazard: ASCE 7 and ASCE 41'
                        ' parameters cannot be computed. See User Guide.')
             yield site, None, warning
+            continue
+        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
+        logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
 
-        elif (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
+        if (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
                 (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
             warning = (
                 'The MCE at the site is very low. Users may need to'
@@ -473,7 +474,8 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 ' S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
 
-        elif (rtgm_df.ProbMCE < DLLs[site.id]).all():  # do not disagg by rel sources
+        elif (rtgm_df.ProbMCE < DLLs[site.id]).all():
+            # do not disagg by rel sources
             yield site, rtgm_df, 'Only probabilistic MCE'
 
         else:

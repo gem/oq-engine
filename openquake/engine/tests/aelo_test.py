@@ -84,7 +84,7 @@ def test_PAC():
             warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
             assert sum([len(w) for w in warnings]) == 0
 
-            # check all plots created
+            # check no plots created
             assert 'png/governing_mce.png' not in calc.datastore
             assert 'png/hcurves.png' not in calc.datastore
             assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
@@ -187,11 +187,11 @@ def test_WAF():
         # check that warning indicates very low hazard
         warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
         assert len(warnings) == 1
-        assert warnings[0].startswith('The MCE at the site is very low')
+        assert warnings[0].startswith('The MCE at the site is very low.')
 
-        # check that 2/3 plots created
-        assert 'png/governing_mce.png' in calc.datastore
+        # check that 2 of 3 plots have been created
         assert 'png/hcurves.png' in calc.datastore
+        assert 'png/governing_mce.png' in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
 
@@ -232,9 +232,9 @@ def test_JPN():
 
     if rtgmpy:
         # check all plots created
-        assert 'png/governing_mce.png' in calc.datastore
-        assert 'png/hcurves.png' in calc.datastore
-        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
+        assert 'png/governing_mce.png' in calc.datastore, 'governing'
+        assert 'png/hcurves.png' in calc.datastore, 'hcurves'
+        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore, 'disagg'
 
 
 def test_MFK():
