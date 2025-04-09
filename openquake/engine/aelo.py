@@ -43,7 +43,8 @@ def get_mosaic_df(buffer):
     """
     fname = os.path.join(config.directory.mosaic_dir, 'ModelBoundaries.shp')
     if not os.path.exists(fname):
-        fname = os.path.join(os.path.dirname(mosaic.__file__), 'ModelBoundaries.shp')
+        fname = os.path.join(os.path.dirname(mosaic.__file__),
+                             'ModelBoundaries.shp')
     df = readinput.read_geometries(fname, 'code', buffer)
     return df
 
@@ -69,9 +70,10 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['mosaic_model'] = models[0]
-    if 'siteid' in inputs:
+    if 'siteid' in inputs:  #  during the tests
         params['description'] = 'AELO for ' + inputs['siteid']
-    else:
+        # params['maximumum_distance'] = 'magdist'
+    else:  # production
         params['description'] += f' ({lon}, {lat})'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'

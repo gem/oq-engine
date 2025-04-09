@@ -241,7 +241,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_14.__file__, 'job_wrong.ini')
         self.assertIn(
-            "{'CR+PC/LDUAL/HBET:8.19/m'} are not in the CompositeRiskModel",
+            "{'CR+PC/LDUAL/HBET:8.19/m'} not in the CompositeRiskModel",
             str(ctx.exception))
 
     def test_case_16(self):
