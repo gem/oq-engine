@@ -291,17 +291,17 @@ def read_usgs_stations_json(js: bytes):
     # ==========================================
     # The "channels/amplitudes" dictionary contains the values recorded at
     # the seismic stations. The values could report the 3 components, in such
-    # cases, take the componet with maximum PGA (and in absence of PGA, the
+    # cases, take the component with maximum PGA (and in absence of PGA, the
     # first IM reported).
     channels = pd.DataFrame(stations.channels.to_list())
     vals = pd.Series([], dtype='object')
     for row, rec_station in channels.iterrows():
         rec_station.dropna(inplace=True)
-        # Iterate over different columns. Each colum can be a component
+        # Iterate over different columns. Each column can be a component
         data = []
         pgas = []
         for _, chan in rec_station.items():
-            if chan["name"].endswith("Z") or chan["name"].endswith("U"):
+            if chan["name"].endswith(("z", "Z", "u", "U")):
                 continue
             # logging.info(chan["name"])
             df = pd.DataFrame(chan["amplitudes"])
@@ -317,8 +317,8 @@ def read_usgs_stations_json(js: bytes):
             data.append(chan["amplitudes"])
         # get values for maximum component
         if pgas:
-            max_componet = pgas.index(max(pgas))
-            vals[row] = data[max_componet]
+            max_component = pgas.index(max(pgas))
+            vals[row] = data[max_component]
         else:
             vals[row] = None
     # The "pgm_from_mmi" dictionary contains the values estimated from MMI.
@@ -343,7 +343,7 @@ def read_usgs_stations_json(js: bytes):
         df.columns = [col[1]+'_'+col[0] for col in df.columns.values]
         for col in df.columns:
             if col in values:
-                # Colum already exist. Combine values in unique column
+                # Column already exist. Combine values in unique column
                 values[col] = values[col].combine_first(df[col])
             else:
                 values = pd.concat([values, df[col]], axis=1)
