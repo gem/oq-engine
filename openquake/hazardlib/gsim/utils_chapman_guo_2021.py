@@ -102,15 +102,8 @@ def get_fcpa(ctx, imt, z_scale, psa_df):
     This function returns both f_cpa and z_scale within a dictionary which is
     passed into the nga_east functions for computation of mean ground-motions.
     """
-    # Set default f_cpa of zero for each site
-    f_cpa = np.full(len(ctx.vs30), 0.)
-
-    # Get sites with sed. depth scaling greater than 0
-    mask_z = z_scale > 0.
-
-    # For these sites recompute f_cpa parameter
-    if np.any(mask_z):
-        f_cpa[mask_z] = get_psa_ratio(ctx, imt, psa_df)
+    # Compute f_cpa parameter
+    f_cpa = get_psa_ratio(ctx, imt, psa_df)
         
     # Put Coastal Plain params into a dict for passing into nga_east functions
     coastal = {'f_cpa': f_cpa, 'z_scale': z_scale}
@@ -128,13 +121,10 @@ def get_fraction(lo, hi, value):
 def get_data(psa_df, imt):
     """
     Get the z_sed for each z_sed, mag and rrup combination within an ndarray.
-    """
-    # Append columns with given imt
-    cols = ['zsed', 'magnitude', 'distance']
-    
+    """    
     # Make multi-idx
-    idx = pd.MultiIndex.from_product(
-        [Z, M, R], names=cols)
+    cols = ['zsed', 'magnitude', 'distance']
+    idx = pd.MultiIndex.from_product([Z, M, R], names=cols)
 
     # Set df idx to match multi-idx
     psa_df.set_index(cols, inplace=True)
@@ -143,8 +133,8 @@ def get_data(psa_df, imt):
     psa_df_aligned = psa_df.reindex(idx)
 
     # Get PSA ratios into ndarray
-    data = psa_df_aligned[f'psa_ratio_{imt}'].values.reshape(
-        len(Z), len(M), len(R))
+    data = psa_df_aligned[
+        f'psa_ratio_{imt}'].values.reshape(len(Z), len(M), len(R))
 
     return data
 
@@ -164,10 +154,11 @@ def get_psa_ratio(ctx, imt, psa_df):
     # Get psa data into ndarray
     data = get_data(psa_df, imt)
 
-    # Get z_sed, mag and rrup dists
-    z = ctx.z_sed
-    m = ctx.mag
-    r = ctx.rrup
+    # Get z_sed, mag and rrup dists clipped to
+    # the psa ratio explanatory variable bins
+    z = np.clip(ctx.z_sed, np.min(Z), np.max(Z))
+    m = np.clip(ctx.mag, np.min(M), np.max(M))
+    r = np.clip(ctx.rrup, np.min(R), np.max(R))
 
     # Index search per ctx value
     i = np.searchsorted(Z, z) - 1
