@@ -456,7 +456,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 ' See User Guide.')
             yield site, None, warning
             continue
-        elif mean_rates.max() < MIN_AFE or hcurves[0].max() < max(oq.poes):
+        elif mean_rates.max() < MIN_AFE or hcurves[0, 0] < min(oq.poes):
             # is the PGA curve too low?
             warning = ('Very low hazard: ASCE 7 and ASCE 41'
                        ' parameters cannot be computed. See User Guide.')
