@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Managed better the low hazard case in AELO calculations
+  * Optimized get_taxidx, thus making reading the USA exposure 10x faster
   * Internal: restored the view portfolio_damage
   * Too many post_classical tasks were generated with an artificially large
     parameter `max_sites_disagg`

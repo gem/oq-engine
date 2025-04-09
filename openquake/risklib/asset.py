@@ -355,8 +355,9 @@ class AssetCollection(object):
         :returns: dictionary taxonomy string -> taxonomy index starting from 1
         """
         taxonomies = self.tagcol.taxonomy[1:]
+        tuniq = numpy.unique(self['taxonomy'])
         return {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
-                if taxi in numpy.unique(self['taxonomy'])}
+                if len(numpy.where(tuniq == taxi)[0])}
 
     @property
     def tagnames(self):
