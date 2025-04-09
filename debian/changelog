@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Managed better the low hazard case in AELO calculations
   * Internal: restored the view portfolio_damage
   * Too many post_classical tasks were generated with an artificially large
     parameter `max_sites_disagg`
