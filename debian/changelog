@@ -1,4 +1,10 @@
-  [Michele Simionato]
+ [Anirudh Rao]
+  * Sort observed imtls and imts and ensure all of the target imts go 
+    into the context maker for the target sites in the conditioned gmfs
+    calculator - helps in debugging mode to prevent accidental 
+    reordering of the imts
+
+ [Michele Simionato]
   * Managed better the low hazard case in AELO calculations
   * Optimized get_taxidx, thus making reading the USA exposure 10x faster
   * Internal: restored the view portfolio_damage
