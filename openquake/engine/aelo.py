@@ -72,7 +72,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     params['mosaic_model'] = models[0]
     if 'siteid' in inputs:  #  during the tests
         params['description'] = 'AELO for ' + inputs['siteid']
-        # params['maximumum_distance'] = 'magdist'
+        params['maximumum_distance'] = 'magdist'
     else:  # production
         params['description'] += f' ({lon}, {lat})'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
