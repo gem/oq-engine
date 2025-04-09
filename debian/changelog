@@ -1,7 +1,10 @@
- [Anirudh Rao]
-  * Sort observed imtls and imts and ensure all of the target imts go 
+  [Michele Simionato]
+  * Optimized memory consumption in conditioned GMFs calculations
+
+  [Anirudh Rao]
+  * Sort observed imtls and imts and ensure all of the target imts go
     into the context maker for the target sites in the conditioned gmfs
-    calculator - helps in debugging mode to prevent accidental 
+    calculator - helps in debugging mode to prevent accidental
     reordering of the imts
 
  [Michele Simionato]
