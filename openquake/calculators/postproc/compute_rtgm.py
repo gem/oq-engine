@@ -449,6 +449,12 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
         site = list(dstore['sitecol'])[sid]
         loc = site.location
+        print('------------------', hcurves.max(), min(oq.poes), max(oq.poes))
+        if hcurves[0].max() < max(oq.poes):  # is the PGA curve too low?
+            warning = ('Very low hazard for (%.1f,%.1f): ASCE 7 and ASCE 41'
+                       ' parameters cannot be computed.') % (loc.x, loc.y)
+            yield site, None, warning
+            continue
         rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
         logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
 
@@ -473,7 +479,8 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 ' S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
 
-        elif (rtgm_df.ProbMCE < DLLs[site.id]).all():  # do not disagg by rel sources
+        elif (rtgm_df.ProbMCE < DLLs[site.id]).all():
+            # do not disagg by rel sources
             yield site, rtgm_df, 'Only probabilistic MCE'
 
         else:
