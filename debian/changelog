@@ -1,4 +1,6 @@
  [Anirudh Rao]
+  * In the stations parser, make sure to skip all "vertical" ('z' or 'Z') or
+    "up" ('u' or 'U') components when extracting the max horizontal component
   * Sort observed imtls and imts and ensure all of the target imts go 
     into the context maker for the target sites in the conditioned gmfs
     calculator - helps in debugging mode to prevent accidental 
