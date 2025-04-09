@@ -573,7 +573,7 @@ class HazardCalculator(BaseCalculator):
                         logging.info('max_dist %s: %s', trt, md)
         self.init()  # do this at the end of pre-execute
         self.pre_checks()
-        if 'multi_risk' in oq.inputs:
+        if 'multi_peril' in oq.inputs:
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
@@ -604,7 +604,7 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         self.t0 = time.time()
-        if 'gmfs' in oq.inputs or 'multi_risk' in oq.inputs:
+        if 'gmfs' in oq.inputs or 'multi_peril' in oq.inputs:
             # read hazard from files
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with gmfs_file')
@@ -974,12 +974,13 @@ class HazardCalculator(BaseCalculator):
             # check that we are covering all the taxonomies in the exposure
             # (exercised in EventBasedRiskTestCase::test_missing_taxonomy)
             missing = risk_ids - set(self.crmodel.riskids)
+            msg = f'tmap.risk_id {missing} not in the CompositeRiskModel'
             if self.crmodel and missing:
                 # in scenario_damage/case_14 the fragility model contains
                 # 'CR+PC/LDUAL/HBET:8.19/m ' with a trailing space while
                 # tmap.risk_id is extracted from the exposure and has no space
-                raise RuntimeError(
-                    'The tmap.risk_id %s are not in the CompositeRiskModel' % missing)
+                raise RuntimeError(msg)
+
             self.crmodel.check_risk_ids(oq.inputs)
 
             if len(self.crmodel.riskids) > len(risk_ids):

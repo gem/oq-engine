@@ -1229,9 +1229,9 @@ class Volcanic(SecondaryPeril):
         """
         Import the CSV files for the volcanic subperils
         """
-        for peril in self.oq.inputs['multi_risk']:
+        for peril in self.oq.inputs['multi_peril']:
             assert peril in self.outputs, peril
-        self.fname_by_peril = self.oq.inputs['multi_risk']
+        self.fname_by_peril = self.oq.inputs['multi_peril']
         N = len(sites)
         self.data = {'sid': sites.sids, 'eid': numpy.zeros(N, numpy.uint32)}
         names = []

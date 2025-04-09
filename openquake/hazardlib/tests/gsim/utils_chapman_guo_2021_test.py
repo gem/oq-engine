@@ -30,9 +30,9 @@ PSAS = os.path.join(os.path.dirname(__file__), '..', '..',
                   'gsim', 'chapman_guo_2021_psa_ratios.csv')
 
 # PSA ratios to be retrieved from Chapman and Guo (2021) tables
-exp = [np.array([-0.34285433, -0.53569485, -1.40974221]), # SA(0.2)
-       np.array([ 0.42077671,  0.35287453, -0.02273007]), # SA(1.0)
-       np.array([0.75953187, 0.76129675, 0.72093083])]    # SA(2.0)
+exp = [np.array([-0.34285433, -0.53569485, -1.75992894]), # SA(0.2)
+       np.array([ 0.42077671,  0.35287453, -0.25338147]), # SA(1.0)
+       np.array([0.75953187, 0.76129675, 0.69775816])]    # SA(2.0)
 
 
 class ChapmanGuo2021TestCase(unittest.TestCase):
@@ -59,7 +59,7 @@ class ChapmanGuo2021TestCase(unittest.TestCase):
         ctx = new_ctx(cmaker, 3)
         ctx.dip = 90.
         ctx.rake = 0.
-        ctx.z_sed = np.array([1.5, 2.50, 8.50])
+        ctx.z_sed = np.array([1.5, 2.50, 14.50])
         ctx.rrup = np.array([50., 100., 200.])
         ctx.vs30 = np.array([800., 400., 200.])
 
