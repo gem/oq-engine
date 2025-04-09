@@ -900,6 +900,14 @@ function capitalizeFirstLetter(val) {
                             $('#rupture-map').html('<p>No rupture image available</p>');
                         }
                     }
+                    var desc = $('#usgs_id').val() + ': ';
+                    if (data.title) {
+                        desc += data.title;
+                    }
+                    else {
+                        desc += 'M ' + data.mag + ' (' + data.lon + ', ' + data.lat + ')';
+                    }
+                    $('#description').val(desc);
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
@@ -1011,6 +1019,7 @@ function capitalizeFirstLetter(val) {
                 if ($msr_selector.length && $msr_selector.is(":has(option)")) {
                     formData.append('msr', $msr_selector.find(':selected').val());
                 }
+                formData.append('description', $('#description').val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/impact_run",
@@ -1019,13 +1028,13 @@ function capitalizeFirstLetter(val) {
                     contentType: false,
                     encode: true
                 }).done(function (data) {
-                    console.log(data);
+                    // console.log(data);
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
                         for (var i = 0; i < resp.invalid_inputs.length; i++) {
                             var input_id = resp.invalid_inputs[i];
-                            $("#impact_run_form > input#" + input_id).css("background-color", "#F2DEDE");
+                            $("input#" + input_id).css("background-color", "#F2DEDE");
                         }
                     }
                     var err_msg = resp.error_msg;
