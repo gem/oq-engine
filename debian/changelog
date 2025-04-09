@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Using magdist in AELO calculations
   * Managed better the low hazard case in AELO calculations
   * Optimized get_taxidx, thus making reading the USA exposure 10x faster
   * Internal: restored the view portfolio_damage
