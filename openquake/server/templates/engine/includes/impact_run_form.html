@@ -41,7 +41,7 @@
                 <label for"ses_seed">{{ impact_form_labels.ses_seed }}</label>
                 <input class="impact-input" type="text" id="ses_seed" name="ses_seed" placeholder="{{ impact_form_placeholders.ses_seed }}" value="{{ impact_form_defaults.ses_seed }}" {% if user_level != 2 %}disabled{% endif %}/>
               </div>
-              <div class="impact_form_row hidden-for-shakemap hidden">
+              <div class="impact_form_row usgs_id_grp hidden-for-shakemap hidden">
                 <label for"station_data_file_from_usgs">{{ impact_form_labels.station_data_file_from_usgs }}</label>
                 <input class="impact-input" type="hidden" id="station_data_file_from_usgs" name="station_data_file_from_usgs" placeholder="{{ impact_form_placeholders.station_data_file_from_usgs }}" disabled />
                 <input class="impact-input" type="text" id="station_data_file_loaded" name="station_data_file_loaded" disabled />
