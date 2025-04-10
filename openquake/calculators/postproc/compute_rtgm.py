@@ -36,6 +36,7 @@ Useful abbreviations:
 - PGA: PGA for Maximum Component
 """
 import io
+import sys
 import logging
 import numpy as np
 import pandas as pd
@@ -449,6 +450,8 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
         site = list(dstore['sitecol'])[sid]
         loc = site.location
+        low_haz = ('Very low hazard: ASCE 7 and ASCE 41'
+                   ' parameters cannot be computed. See User Guide.')
         if mrs.sum() == 0:
             warning = (
                 'Zero hazard: there are no ruptures close to the site.'
@@ -456,16 +459,19 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 ' See User Guide.')
             yield site, None, warning
             continue
-        elif mean_rates.max() < MIN_AFE or hcurves[0, 0] < min(oq.poes):
-            # is the PGA curve too low?
-            warning = ('Very low hazard: ASCE 7 and ASCE 41'
-                       ' parameters cannot be computed. See User Guide.')
-            yield site, None, warning
+        elif mean_rates.max() < MIN_AFE:
+            yield site, None, low_haz
             continue
         try:
             rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
-        except Exception as exc:
-            raise exc.__class__(f'({loc.x}, {loc.y}): {exc}') from exc
+        except ValueError as err:
+            # happens for site (24.96, 60.16) in EUR, the curve is too low
+            if 'below the interpolation range' in str(err):
+                yield site, None, low_haz
+                continue
+            else:
+                print(f'on site({loc.x}, {loc.y}): {err}', file=sys.stderr)
+                raise
         logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
 
         if (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
