@@ -225,6 +225,23 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['usgs_id'], 'FromFile')
         self.assertIn('.xml', dic['rupture_file'])
 
+    def test_12b(self):
+        current_dir = os.path.dirname(__file__)
+        rupture_file_path = os.path.join(current_dir, 'data', 'fault_rupture.csv')
+        dic_in = {'usgs_id': 'FromFile', 'approach': 'provide_rup'}
+        rup, dic, _err = get_rup_dic(
+            dic_in, user=user, use_shakemap=False, rupture_file=rupture_file_path)
+        self.assertIsInstance(rup, BaseRupture)
+        self.assertEqual(dic['lon'], -55.938899993896484)
+        self.assertEqual(dic['lat'], 44.51041030883789)
+        self.assertEqual(dic['dep'], 10.5)
+        self.assertEqual(dic['mag'], 7.050000190734863)
+        self.assertEqual(dic['rake'], 0.0)
+        self.assertAlmostEqual(dic['strike'], 0.0)
+        self.assertAlmostEqual(dic['dip'], 90.0)
+        self.assertEqual(dic['usgs_id'], 'FromFile')
+        self.assertIn('.csv', dic['rupture_file'])
+
     def test_13(self):
         usgs_id = 'us7000n7n8'
         station_data_file, n_stations, station_err = get_stations_from_usgs(
