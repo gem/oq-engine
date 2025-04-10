@@ -459,7 +459,8 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 ' See User Guide.')
             yield site, None, warning
             continue
-        elif mean_rates.max() < MIN_AFE:
+        elif mean_rates.max() < MIN_AFE or hcurves[0, 0] < min(oq.poes):
+            # PGA curve too low
             yield site, None, low_haz
             continue
         try:
