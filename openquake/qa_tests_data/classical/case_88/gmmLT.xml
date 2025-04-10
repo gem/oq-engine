@@ -1,0 +1,778 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+
+    <logicTree logicTreeID="US_2023_NSHM">
+
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Stable Shallow Crust"
+            branchSetID="CEUS_Default"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="f-bca10d">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_B_bca10d.hdf5'
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.011045</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-ab95_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_B_ab95.hdf5'  
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.00368</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-bs11_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_B_bs11.hdf5' 
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.00368</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-2CCSP_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_2CCSP.hdf5' 
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009205</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-2CVSP_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_2CVSP.hdf5'
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009205</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-Graizer16_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_Graizer16.hdf5'
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009065</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-Graizer17_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_Graizer17.hdf5'
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009065</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-PZCT15_M1SS_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_PZCT15_M1SS.hdf5'
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009065</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-PZCT15_M2ES_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_PZCT15_M2ES.hdf5'
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009065</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-SP15_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_SP15.hdf5' 
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.01813</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-YA15_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_YA15.hdf5' 
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.01868</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-HA15_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_HA15.hdf5'
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.01868</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-Frankel_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_Frankel.hdf5'
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.018685</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-PEER_GP_unadjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_PEER_GP.hdf5'
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.01925</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs1_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_1.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0246</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs2_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_2.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.03315</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs3_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_3.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.02975</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs4_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_4.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.02305</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs5_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_5.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0152</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs6_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_6.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.03655</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs7_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_7.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.03405</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs8_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_8.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0292</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs9_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_9.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.02865</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs10_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_10.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.00935</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs11_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_11.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.00715</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs12_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_12.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.00975</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs13_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_13.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.00585</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs14_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_14.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0122</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs15_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_15.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.01225</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs16_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_16.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.01095</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs17_unadjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_17.hdf5'
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0118</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-bca10d_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_B_bca10d.hdf5'
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.011045</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-ab95_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_B_ab95.hdf5'  
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.00368</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-bs11_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_B_bs11.hdf5' 
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.00368</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-2CCSP_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_2CCSP.hdf5' 
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009205</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-2CVSP_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_2CVSP.hdf5'
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009205</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-Graizer16_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_Graizer16.hdf5'
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009065</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-Graizer17_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_Graizer17.hdf5'
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009065</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-PZCT15_M1SS_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_PZCT15_M1SS.hdf5'
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009065</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-PZCT15_M2ES_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_PZCT15_M2ES.hdf5'
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.009065</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-SP15_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_SP15.hdf5' 
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.01813</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-YA15_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_YA15.hdf5' 
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.01868</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-HA15_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_HA15.hdf5'
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.01868</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-Frankel_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_Frankel.hdf5'
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.018685</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-PEER_GP_adjusted">
+                    <uncertaintyModel>
+                    [NGAEastUSGSGMPE]
+                        gmpe_table = 'nga_east_PEER_GP.hdf5'
+                        usgs_2023_bias_adj = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.01925</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs1_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_1.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0246</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs2_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_2.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.03315</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs3_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_3.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.02975</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs4_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_4.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.02305</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs5_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_5.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0152</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs6_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_6.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.03655</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs7_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_7.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.03405</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs8_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_8.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0292</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs9_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_9.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.02865</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs10_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_10.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.00935</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs11_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_11.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.00715</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs12_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_12.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.00975</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs13_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_13.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.00585</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs14_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_14.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0122</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs15_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_15.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.01225</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs16_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_16.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.01095</uncertaintyWeight>
+                    </logicTreeBranch>
+                <logicTreeBranch branchID="f-usgs17_adjusted">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_17.hdf5'
+                            usgs_2023_bias_adj = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>0.0118</uncertaintyWeight>
+                </logicTreeBranch>
+        </logicTreeBranchSet>
+
+         <logicTreeBranchSet
+            applyToTectonicRegionType="Active Shallow Crust"
+            branchSetID="WUS_Active_Shallow_Crust_San_Francisco_Bay_Area"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="ASK14_MEAN">
+                    <uncertaintyModel>
+                    [NSHMP2014]
+                        gmpe_name = "AbrahamsonEtAl2014"
+                        sgn = 0
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.125</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="BSSA14_MEAN">
+                    <uncertaintyModel>
+                    [NSHMP2014]
+                        gmpe_name = "BooreEtAl2014"
+                        sgn = 0
+                        region = "CAL"
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.125</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CB14_MEAN">
+                    <uncertaintyModel>
+                    [NSHMP2014]
+                        gmpe_name = "CampbellBozorgnia2014"
+                        sgn = 0
+                        </uncertaintyModel>
+                    <uncertaintyWeight>0.125</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CY14_MEAN">
+                    <uncertaintyModel>
+                    [NSHMP2014]
+                        gmpe_name = "ChiouYoungs2014"
+                        sgn = 0
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.125</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="ASK14_MEAN_BASIN">
+                    <uncertaintyModel>
+                    [NSHMP2014]
+                        gmpe_name = "AbrahamsonEtAl2014"
+                        sgn = 0
+                        usgs_basin_scaling = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.125</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="BSSA14_MEAN_BASIN">
+                    <uncertaintyModel>
+                    [NSHMP2014]
+                        gmpe_name = "BooreEtAl2014"
+                        sgn = 0
+                        region = "CAL"
+                        usgs_basin_scaling = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.125</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CB14_MEAN_BASIN">
+                    <uncertaintyModel>
+                    [NSHMP2014]
+                        gmpe_name = "CampbellBozorgnia2014"
+                        sgn = 0
+                        usgs_basin_scaling = true
+                        </uncertaintyModel>
+                    <uncertaintyWeight>0.125</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="CY14_MEAN_BASIN">
+                    <uncertaintyModel>
+                    [NSHMP2014]
+                        gmpe_name = "ChiouYoungs2014"
+                        sgn = 0
+                        usgs_basin_scaling = true
+                    </uncertaintyModel>
+                    <uncertaintyWeight>0.125</uncertaintyWeight>
+                </logicTreeBranch>
+        </logicTreeBranchSet>
+        
+        <logicTreeBranchSet
+            applyToTectonicRegionType="Subduction Interface"
+            branchSetID="Cascadia_Interface"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="Zhao06-BASIN">
+                    <uncertaintyModel>
+                        [ZhaoEtAl2006SInter]
+                            cb14_basin_term=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.125 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AM09-BASIN">
+                    <uncertaintyModel>
+                        [AtkinsonMacias2009]
+                            ba08_site_term=true
+                            cb14_basin_term=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.125 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AG20-CAS-ADJ-BASIN_LOWER">
+                    <uncertaintyModel>
+                        [AbrahamsonGulerce2020SInter]
+                            region="CAS"
+                            apply_usa_adjustment=true
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=-1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AG20-CAS-ADJ-BASIN_CENTRAL">
+                    <uncertaintyModel>
+                        [AbrahamsonGulerce2020SInter]
+                            region="CAS"
+                            apply_usa_adjustment=true
+                            usgs_basin_scaling=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.158 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AG20-CAS-ADJ-BASIN_UPPER">
+                    <uncertaintyModel>
+                        [AbrahamsonGulerce2020SInter]
+                            region="CAS"
+                            apply_usa_adjustment=true
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="KBCG20-CAS-BASIN_LOWER" >
+                    <uncertaintyModel>
+                        [KuehnEtAl2020SInter]
+                            region="CAS"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=-1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="KBCG20-CAS-BASIN_CENTRAL" >
+                    <uncertaintyModel>
+                        [KuehnEtAl2020SInter]
+                            region="CAS"
+                            usgs_basin_scaling=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.158 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="KBCG20-CAS-BASIN_UPPER" >
+                    <uncertaintyModel>
+                        [KuehnEtAl2020SInter]
+                            region="CAS"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="PSBAH20-CAS-BASIN_LOWER" >
+                    <uncertaintyModel> 
+                        [ParkerEtAl2020SInterB]
+                            region="Cascadia"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=-1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="PSBAH20-CAS-BASIN_CENTRAL" >
+                    <uncertaintyModel>
+                        [ParkerEtAl2020SInterB]
+                            region="Cascadia"
+                            usgs_basin_scaling=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.158 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="PSBAH20-CAS-BASIN_UPPER" >
+                    <uncertaintyModel>
+                        [ParkerEtAl2020SInterB]
+                            region="Cascadia"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=1.645   
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+            </logicTreeBranchSet>
+
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Subduction Intraslab"
+            branchSetID="Cascadia_IntraSlab"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="Zhao06-BASIN">
+                    <uncertaintyModel>
+                        [ZhaoEtAl2006SSlabNSHMP2014]
+                            cb14_basin_term=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.25 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AG20-CAS-ADJ-BASIN_LOWER">
+                    <uncertaintyModel>
+                        [AbrahamsonGulerce2020SSlab]
+                            region="CAS"
+                            apply_usa_adjustment=true
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=-1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.031 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AG20-CAS-ADJ-BASIN_CENTRAL">
+                    <uncertaintyModel>
+                        [AbrahamsonGulerce2020SSlab]
+                            region="CAS"
+                            apply_usa_adjustment=true
+                            usgs_basin_scaling=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.106 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AG20-CAS-ADJ-BASIN_UPPER">
+                    <uncertaintyModel>
+                        [AbrahamsonGulerce2020SSlab]
+                            region="CAS"
+                            apply_usa_adjustment=true
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.031 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AG20-CAS-BASIN_LOWER">
+                    <uncertaintyModel>
+                        [AbrahamsonGulerce2020SSlab]
+                            region="CAS"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=-1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.015 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AG20-CAS-BASIN_CENTRAL">
+                    <uncertaintyModel>
+                        [AbrahamsonGulerce2020SSlab]
+                            region="CAS"
+                            usgs_basin_scaling=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.052 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="AG20-CAS-BASIN_UPPER">
+                    <uncertaintyModel>
+                        [AbrahamsonGulerce2020SSlab]
+                            region="CAS"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.015 </uncertaintyWeight>
+                </logicTreeBranch>                
+                <logicTreeBranch branchID="KBCG20-CAS-BASIN_LOWER" >
+                    <uncertaintyModel>
+                        [KuehnEtAl2020SSlab]
+                            region="CAS"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=-1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="KBCG20-CAS-BASIN_CENTRAL" >
+                    <uncertaintyModel>
+                        [KuehnEtAl2020SSlab]
+                            region="CAS"
+                            usgs_basin_scaling=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.158 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="KBCG20-CAS-BASIN_UPPER" >
+                    <uncertaintyModel>
+                        [KuehnEtAl2020SSlab]
+                            region="CAS"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="PSBAH20-CAS-BASIN_LOWER" >
+                    <uncertaintyModel> 
+                        [ParkerEtAl2020SSlabB]
+                            region="Cascadia"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=-1.645
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="PSBAH20-CAS-BASIN_CENTRAL" >
+                    <uncertaintyModel>
+                        [ParkerEtAl2020SSlabB]
+                            region="Cascadia"
+                            usgs_basin_scaling=true
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.158 </uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="PSBAH20-CAS-BASIN_UPPER" >
+                    <uncertaintyModel>
+                        [ParkerEtAl2020SSlabB]
+                            region="Cascadia"
+                            usgs_basin_scaling=true
+                            sigma_mu_epsilon=1.645   
+                    </uncertaintyModel>
+                    <uncertaintyWeight> 0.046 </uncertaintyWeight>
+                </logicTreeBranch>
+        </logicTreeBranchSet>
+
+
+    </logicTree>
+</nrml>
