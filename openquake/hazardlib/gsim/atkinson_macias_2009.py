@@ -87,6 +87,8 @@ class AtkinsonMacias2009(GMPE):
             self.REQUIRES_SITES_PARAMETERS |= {'vs30'}
             self.REQUIRES_RUPTURE_PARAMETERS |= {'rake'}
         self.ba08_site_term = ba08_site_term
+        if self.ba08_site_term:
+            self.REQUIRES_DISTANCES |= {"rjb"}
         self.cb14_basin_term = cb14_basin_term
         self.m9_basin_term = m9_basin_term
         
