@@ -462,7 +462,10 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                        ' parameters cannot be computed. See User Guide.')
             yield site, None, warning
             continue
-        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
+        try:
+            rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
+        except Exception as exc:
+            raise exc.__class__(f'({loc.x}, {loc.y}): {exc}') from exc
         logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
 
         if (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
