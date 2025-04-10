@@ -1,3 +1,7 @@
+ [Anirudh Rao]
+  * In the stations parser, make sure to skip all "vertical" ('z' or 'Z') or
+    "up" ('u' or 'U') components when extracting the max horizontal component
+
   [Manuela Villani]
   * Implementation of ASCE design parameters Sd, Sm in the AELO engine
 
