@@ -18,6 +18,7 @@
 
 import os
 import unittest
+import csv
 from openquake.hazardlib.shakemap.parsers import (
     get_rup_dic, User, utc_to_local_time, get_stations_from_usgs, get_shakemap_versions)
 from openquake.hazardlib.source.rupture import BaseRupture
@@ -114,6 +115,12 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIn('stations', station_data_file)
         self.assertEqual(n_stations, 1)
         self.assertEqual(station_err, {})
+        with open(station_data_file, newline='') as csvfile:
+            reader = csv.DictReader(csvfile)
+            row = next(reader)
+            pga_value = float(row['PGA_VALUE'])
+            self.assertEqual(pga_value, 0.62308)
+
 
     def test_4(self):
         # point_rup
