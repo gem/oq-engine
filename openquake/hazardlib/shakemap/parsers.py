@@ -48,7 +48,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter, valid
 from openquake.hazardlib.source.rupture import (
-    get_multiplanar, is_matrix, build_planar_rupture_from_dict)
+    get_multiplanar, is_matrix, build_planar_rupture_from_dict, get_ruptures)
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -785,6 +785,24 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
     return rup, rupdic, err
 
 
+def _get_rup_dic_from_csv(usgs_id, user, rupture_file):
+    err = {}
+    try:
+        [rup] = get_ruptures(os.path.join(user.testdir, rupture_file)
+                             if user.testdir else rupture_file)
+    except Exception as exc:
+        err = {"status": "failed", "error_msg": str(exc)}
+        return None, {}, err
+    hp = rup.hypocenter
+    rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
+                  mag=float(rup.mag), rake=float(rup.rake),
+                  strike=rup.surface.get_strike(),
+                  dip=rup.surface.get_dip(),
+                  usgs_id=usgs_id,
+                  rupture_file=rupture_file)
+    return rup, rupdic, err
+
+
 def _get_rup_from_json(usgs_id, rupture_file):
     rup = None
     rupdic = {}
@@ -890,6 +908,8 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='latest',
     if rupture_file:
         if rupture_file.endswith('.xml'):
             rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
+        elif rupture_file.endswith('.csv'):
+            rup, rupdic, err = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
         elif rupture_file.endswith('.json'):
             rup, rupdic, rup_data, err_msg = _get_rup_from_json(usgs_id, rupture_file)
             if err_msg:

@@ -757,6 +757,9 @@ function capitalizeFirstLetter(val) {
                     $('div.hidden-for-shakemap').addClass('hidden');
                 } else {
                     $('div.hidden-for-shakemap').removeClass('hidden');
+                    if (!approaches_requiring_usgs_id.includes(selected_approach)) {
+                        $('.usgs_id_grp').addClass('hidden');
+                    }
                 }
             });
 
