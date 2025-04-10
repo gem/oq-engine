@@ -24,7 +24,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.writers import CsvWriter, FIVEDIGITS
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.source.rupture import get_ruptures
+from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.commonlib import logs, readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -552,7 +552,7 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures').array
         nrups = text.count('\n') - 2
         self.assertEqual(nrups, 4)
-        rups = get_ruptures(gettemp(text, suffix='.csv'))
+        rups = get_ruptures_aw(gettemp(text, suffix='.csv'))
         aac(rups['n_occ'], [1, 1, 1, 1])
 
         # test extract?threshold for ruptures
