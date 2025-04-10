@@ -107,6 +107,14 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(n_stations, 1)
         self.assertEqual(station_err, {})
 
+    def test_3e(self):
+        usgs_id = 'us7000pn9s'
+        station_data_file, n_stations, station_err = get_stations_from_usgs(
+            usgs_id, user=user)
+        self.assertIn('stations', station_data_file)
+        self.assertEqual(n_stations, 1)
+        self.assertEqual(station_err, {})
+
     def test_4(self):
         # point_rup
         _rup, dic, _err = get_rup_dic(
