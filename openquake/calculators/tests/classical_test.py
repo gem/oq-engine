@@ -25,7 +25,7 @@ from unittest import mock
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml, calc
-from openquake.hazardlib.source.rupture import get_ruptures
+from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -296,7 +296,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       ses_per_logic_tree_path='10')
         csv = extract(self.calc.datastore, 'ruptures').array
-        rups = get_ruptures(general.gettemp(csv, suffix='.csv'))
+        rups = get_ruptures_aw(general.gettemp(csv, suffix='.csv'))
         self.assertEqual(len(rups), 1)
 
         # check what QGIS will be seeing
