@@ -281,8 +281,36 @@ def get_zero_hazard_asce41():
               }
     return asce41
 
+def get_seismicity_class(mce, vs30):
+    
+    if vs30 == 760:
+        if mce['SA(0.2)'] < 0.25:
+            Ss_seismicity = "Low"
+        elif mce['SA(0.2)'] < 0.5:
+            Ss_seismicity = "Moderate"
+        elif mce['SA(0.2)'] < 1:
+            Ss_seismicity = "Moderately High"
+        elif mce['SA(0.2)'] < 1.5:
+            Ss_seismicity = "High"
+        else:
+            Ss_seismicity = "Very High"
 
-def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, low_haz=False):
+        if mce['SA(1.0)'] < 0.1:
+            S1_seismicity = "Low"
+        elif mce['SA(1.0)'] < 0.2:
+            S1_seismicity = "Moderate"
+        elif mce['SA(1.0)'] < 0.4:
+            S1_seismicity = "Moderately High"
+        elif mce['SA(1.0)'] < 0.6:
+            S1_seismicity = "High"
+        else:
+            S1_seismicity = "Very High"
+    else:
+        Ss_seismicity = "n.a."
+        S1_seismicity = "n.a."
+    return Ss_seismicity, S1_seismicity
+    
+def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, ASCE_version, low_haz=False):
     """
     :param job_imts: the IMTs run in the job
     :param det_imt: deterministic ground motion for each IMT
@@ -323,52 +351,46 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, low_haz=False):
                'MCE': mce.values(),
                'sid': [sid]*len(job_imts)}
     mce_df = pd.DataFrame(dic_mce)
-    if vs30 == 760:
-        if mce['SA(0.2)'] < 0.25:
-            Ss_seismicity = "Low"
-        elif mce['SA(0.2)'] < 0.5:
-            Ss_seismicity = "Moderate"
-        elif mce['SA(0.2)'] < 1:
-            Ss_seismicity = "Moderately High"
-        elif mce['SA(0.2)'] < 1.5:
-            Ss_seismicity = "High"
-        else:
-            Ss_seismicity = "Very High"
+ 
+    Ss_seismicity, S1_seismicity= get_seismicity_class(mce, vs30)
 
-        if mce['SA(1.0)'] < 0.1:
-            S1_seismicity = "Low"
-        elif mce['SA(1.0)'] < 0.2:
-            S1_seismicity = "Moderate"
-        elif mce['SA(1.0)'] < 0.4:
-            S1_seismicity = "Moderately High"
-        elif mce['SA(1.0)'] < 0.6:
-            S1_seismicity = "High"
-        else:
-            S1_seismicity = "Very High"
-    else:
-        Ss_seismicity = "n.a."
-        S1_seismicity = "n.a."
+    period_mce = [from_string(imt).period for imt in job_imts]
+    
+    if ASCE_version == 'ASCE7-16':    
+        asce07 = {
+             'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
+             'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
 
-    asce07 = {
-             'PGA': mce['PGA'],
-             'PGA_2_50': prob_mce_out['PGA'],
-             'PGA_84th': det_imt['PGA'],
-             'PGA_det': det_mce['PGA'],
-
-             'Ss': mce['SA(0.2)'],
-             'Ss_RT': prob_mce_out['SA(0.2)'],
-             'CRs': crs,
-             'Ss_84th': det_imt['SA(0.2)'],
+             'Ss': mce['SA(0.2)'],'Ss_RT': prob_mce_out['SA(0.2)'],
+             'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
              'Ss_det': det_mce['SA(0.2)'],
              'Ss_seismicity': Ss_seismicity,
 
-             'S1': mce['SA(1.0)'],
-             'S1_RT': prob_mce_out['SA(1.0)'],
-             'CR1': cr1,
-             'S1_84th': det_imt['SA(1.0)'],
+             'S1': mce['SA(1.0)'], 'S1_RT': prob_mce_out['SA(1.0)'],
+             'CR1': cr1,'S1_84th': det_imt['SA(1.0)'],
              'S1_det': det_mce['SA(1.0)'],
-             'S1_seismicity': S1_seismicity,
+             'S1_seismicity': S1_seismicity
              }
+    else:
+        design = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
+    
+        asce07 = {
+             'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
+             'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
+
+             'Ss': mce['SA(0.2)'], 'Sms': design[2],
+             'Sds': design[0],'Ss_RT': prob_mce_out['SA(0.2)'],
+             'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
+             'Ss_det': det_mce['SA(0.2)'],
+             'Ss_seismicity': Ss_seismicity,
+
+             'S1': mce['SA(1.0)'], 'Sm1': design[3],
+             'Sd1': design[1], 'S1_RT': prob_mce_out['SA(1.0)'],
+             'CR1': cr1,'S1_84th': det_imt['SA(1.0)'],
+             'S1_det': det_mce['SA(1.0)'],
+             'S1_seismicity': S1_seismicity
+             }
+    
     for key in asce07:
         if not isinstance(asce07[key], str):
             asce07[key] = (
@@ -491,11 +513,56 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         else:
             yield site, rtgm_df, ''
 
+def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
+    
+    """Calculates sds and sd1 from multiperiod response spectrum according 
+    to section 21.4 in ASCE7-22
 
-def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
+    Args:
+        periods: A list of periods for the multiperiod response spectrum.
+        ordinates: A list of ordinates (accelerations) for the multiperiod 
+        response spectrum multiplied by 2/3 as shown in eq. 21.3-1 in ASCE7-22
+        vs30: A float representing the vs30 in m/s
+
+    Returns:
+        A tuple (sds, sd1) where sds is the spectral response acceleration for short 
+        periods, and sd1 is the
+        spectral response acceleration for 1 second.
+    """
+
+    #For sds, find periods from 0.2-5.0s, inclusive
+    sds_indices = [index for index, period in enumerate(periods) if 0.2 <= period <= 5]
+
+    #sds is 90% of the maximum from 0.2-5.0s
+    sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
+
+    #For sd1, depending on vs30, take periods from 1-2s or 1-5s
+    #vs30 in m/s
+    if vs30 > 442:
+        sd1_indices = [index for index, period in enumerate(periods) if 1 <= period <= 2]
+    else:
+        sd1_indices = [index for index, period in enumerate(periods) if 1 <= period <= 5]
+
+    sd1_periods = [periods[i]  for i in sd1_indices]
+    sd1_ordinates = [ordinates[i]  * 2/3 for i in sd1_indices]
+
+    #sd1 is 90% of the maximum of T * Sa across the period range, but not less than 100% of the value of Sa at 1.0s
+    sd1 = max(
+        90 / 100 * max([period * sd1_ordinates[i] for i, period in enumerate(sd1_periods)]), 100 / 100 * sd1_ordinates[0]
+    )
+    sms = 1.5 * sds
+    sm1 = 1.5 * sd1
+    
+    design = [sds,sd1,sms,sm1]
+
+    return design
+
+def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     """
     :yields: (sid, asce07, asce41)
     """
+    oq = dstore['oqparam']
+    ASCE_version = oq.asce_version
     imls_by_sid = {}
     for sid, rtgm_df in rtgm.items():
         imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
@@ -511,19 +578,22 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm):
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         _prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
-            job_imts, det_imt, DLLs[sid], rtgm_df, sid, vs30)
+            job_imts, det_imt, DLLs[sid], rtgm_df, sid, vs30, ASCE_version)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
         logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
+        
         logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
         logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
+        
         yield sid, mag_dst_eps_sig, asce07, asce41, mce_df
 
 
 def to_array(dic):
     return np.array([dic[sid] for sid in sorted(dic)])
+
 
 
 def main(dstore, csm):
@@ -567,7 +637,7 @@ def main(dstore, csm):
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
             _prob_mce_out, mce, _det_mce, a07, mce_df = get_mce_asce07(
-                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
+                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, vs30, ASCE_version, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
             mce_dfs.append(mce_df)
@@ -582,15 +652,21 @@ def main(dstore, csm):
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
 
+    
     for sid, mdes, a07, a41, mce_df in calc_asce(dstore, csm, job_imts, DLLs,
-                                                 rtgm):
+                                                 rtgm,ASCE_version):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
+        #design_param[sid] = hdf5.dumps(design)
+        
         dstore[f'mag_dst_eps_sig/{sid}'] = mdes
         mce_dfs.append(mce_df)
 
+       
+        
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)
+    #dstore['Sds_Sd1'] = to_array(design_param)
 
     if mce_dfs:
         dstore.create_df('mce', pd.concat(mce_dfs))
