@@ -75,7 +75,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     else:  # production
         params['description'] += f' ({lon}, {lat})'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
-    params['maximumum_distance'] = 'magdist'
+    params['maximum_distance'] = 'magdist'
     params['pointsource_distance'] = '100.'
     params['truncation_level'] = '3.'
     params['disagg_by_src'] = 'true'
