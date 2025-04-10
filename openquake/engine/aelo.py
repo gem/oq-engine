@@ -70,12 +70,13 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['mosaic_model'] = models[0]
-    if 'siteid' in inputs:  #  during the tests
+    if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
-        # params['maximumum_distance'] = 'magdist'
-    else:  # production
+    else:
+        # in aelo_test.py
         params['description'] += f' ({lon}, {lat})'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
+    params['maximum_distance'] = 'magdist'
     params['pointsource_distance'] = '100.'
     params['truncation_level'] = '3.'
     params['disagg_by_src'] = 'true'
