@@ -5,7 +5,7 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
     investigation_time="1.0"
-    name="interface_float"
+    name="interface"
     >
         <sourceGroup
         rup_interdep="indep"
