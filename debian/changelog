@@ -1,6 +1,7 @@
   [Paolo Tormene]
   * Added to oq-impact the possibility to choose between different ShakeMap
     versions for the given USGS identifier
+  * Added to oq-impact the possibility to edit the preset job description
 
   [Michele Simionato]
   * Internal: added utility `get_ruptures(file_csv)`
