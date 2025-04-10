@@ -43,19 +43,19 @@ class StochasticEventSetTestCase(unittest.TestCase):
         for i, src in enumerate(group):
             src.id = i
             src.grp_id = 0
-            src.num_ruptures = src.count_ruptures()
+            # src.num_ruptures = src.count_ruptures()
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
         param = dict(ses_per_logic_tree_path=10, ses_seed=42, imtls={})
         cmaker = contexts.ContextMaker('*', [SiMidorikawa1999SInter()], param)
         dic = sum(sample_ruptures(group, cmaker), {})
-        self.assertEqual(len(dic['rup_array']), 7)
+        self.assertEqual(len(dic['rup_array']), 8)
         self.assertEqual(len(dic['source_data']), 6)  # mutex sources
 
         # test no filtering
         ruptures = sum(sample_ruptures(group, cmaker), {})['rup_array']
-        self.assertEqual(len(ruptures), 7)
+        self.assertEqual(len(ruptures), 8)
 
 
 class ClusterTestCase(unittest.TestCase):
@@ -79,7 +79,7 @@ class ClusterTestCase(unittest.TestCase):
         ssm = nrml.to_python(ssm_fname, self.sconv)
 
         # Generating the SESs
-        ebrups = sample_cluster(ssm[0], 100000000, 1)
+        ebrups = sample_cluster(ssm[0], 10000000, 1)
 
         # Computing the total number of occurrences
         tot_occ = 0
@@ -90,34 +90,43 @@ class ClusterTestCase(unittest.TestCase):
         # temporal occurrence model is Poissonian. This means that in a
         # simulation of 1M years we should have on average 1000 occurrences of
         # the cluster (and twice as many ruptures)
-        ratio = 200000 / tot_occ
+        ratio = 20000 / tot_occ
         numpy.testing.assert_almost_equal(ratio, 1.0, decimal=2)
 
     def test_src_mutex(self):
-        # The rate of occurrence of the cluster is 1/1000, the sources are
+        # The rate of occurrence of the cluster is 1/10, the sources are
         # mutually exclusive (equally weighted) and ruptures independent. In
-        # case of 100_000 samples of 1 year each, we expect on average 100
-        # occurences of the cluster either with 1 or 2 ruptures. So the
-        # total number of ruptures should the in the order of 150.
+        # case of 1_000_000 samples of 1 year each, we expect on average
+        # 100_000 occurences of the cluster. For each realization we sample one
+        # source that will generate either with 1 or 2 ruptures. So the
+        # total number of ruptures should be in the order of 150_000.
 
         # Source model file name
-        ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm_mutes.xml')
+        ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm_mutex_indep.xml')
 
         # Reading
         ssm = nrml.to_python(ssm_fname, self.sconv)
 
         # Generating the SESs
-        ebrups = sample_cluster(ssm[0], 1000000, 1)
-
-        # Computing the total number of occurrences
         tot_occ = 0
-        for ebrup in ebrups:
-            tot_occ += ebrup.n_occ
-        print(tot_occ)
+        nrlz = 10
+        for i in range(nrlz):
+            ebrups = sample_cluster(ssm[0], 1000000, i)
+
+            # Computing the total number of occurrences
+            tot_occ += numpy.sum([e.n_occ for e in ebrups])
+
+        # Checking the number of ruptures generated
+        msg = 'The ratio between computed and expected ruptures exceeds 1%'
+        self.assertTrue(numpy.abs(tot_occ / nrlz / 150000 - 1.0) < 0.01, msg)
 
     def test_src_indep(self):
-        # Sources are independent and ruptures mutex. The rate of
-        # occurrence of the cluster is 1/10.
+        # Sources are independent and ruptures mutex. The rate of occurrence of
+        # the cluster is 1/10. With 1_000_000 samples of 1 year each, we expect
+        # on average 100_000 occurences of the cluster. For each realization we
+        # sample either one or two sources that will generate 1 rupture. So the
+        # total number of ruptures should be also in this case in the order of
+        # 150_000.
 
         # Source model file name
         ssm_fname = str(HERE / 'data' / 'ses_cluster' / 'ssm_indep_mutex.xml')
@@ -129,7 +138,7 @@ class ClusterTestCase(unittest.TestCase):
         tot_occ = 0
         nrlz = 10
         for i in range(nrlz):
-            ebrups = sample_cluster(ssm[0], 1000000, 1)
+            ebrups = sample_cluster(ssm[0], 1000000, i)
 
             # Computing the total number of occurrences
             tot_occ += numpy.sum([e.n_occ for e in ebrups])

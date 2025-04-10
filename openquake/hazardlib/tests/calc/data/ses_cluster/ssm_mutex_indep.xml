@@ -9,7 +9,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <sourceGroup
             cluster="true"
             name="test_src-indep_rup-mutex"
-            occurrence_rate="1e-3"
+            occurrence_rate="1e-1"
             src_interdep="mutex"
             rup_interdep="indep"
             srcs_weights="0.5 0.5"
