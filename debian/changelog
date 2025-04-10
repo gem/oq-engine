@@ -1,9 +1,20 @@
  [Anirudh Rao]
   * In the stations parser, make sure to skip all "vertical" ('z' or 'Z') or
     "up" ('u' or 'U') components when extracting the max horizontal component
-  * Sort observed imtls and imts and ensure all of the target imts go 
+
+  [Paolo Tormene]
+  * Added to oq-impact the possibility to choose between different ShakeMap
+    versions for the given USGS identifier
+  * Added to oq-impact the possibility to edit the preset job description
+
+  [Michele Simionato]
+  * Internal: added utility `get_ruptures(file_csv)`
+  * Optimized memory consumption in conditioned GMFs calculations
+
+  [Anirudh Rao]
+  * Sort observed imtls and imts and ensure all of the target imts go
     into the context maker for the target sites in the conditioned gmfs
-    calculator - helps in debugging mode to prevent accidental 
+    calculator - helps in debugging mode to prevent accidental
     reordering of the imts
 
  [Michele Simionato]

@@ -346,6 +346,10 @@ tr.asce_output {
     width: 206px;
 }
 
+.impact-double-width {
+    width: 412px;
+}
+
 
 /* customization of bootstrap button hover, to avoid turning to black */
 .btn:hover, .btn:focus {

@@ -29,6 +29,7 @@ from openquake.hazardlib.shakemap.parsers import get_rup_dic
 from openquake.qa_tests_data import mosaic
 from openquake.hazardlib.geo.utils import SiteAssociationError
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
+from openquake.hazardlib.nrml import validators as nrml_validators
 
 MOSAIC_DIR = config.directory.mosaic_dir or os.path.dirname(mosaic.__file__)
 
@@ -49,6 +50,7 @@ class AristotleParam:
     maximum_distance_stations: float = None
     mosaic_model: str = None
     trt: str = None
+    description: str = None
 
     def get_oqparams(self, usgs_id, mosaic_models, trts, use_shakemap):
         """
@@ -76,6 +78,7 @@ class AristotleParam:
             self.trt = next(iter(trts[self.mosaic_model]))
         shakemap_array = rupdic.pop('shakemap_array', ())
         params = dict(
+            description=self.description,
             calculation_mode='scenario_risk',
             rupture_dict=str(rupdic),
             time_event=self.time_event,
@@ -96,6 +99,13 @@ class AristotleParam:
             params['local_timestamp'] = self.local_timestamp
         if self.maximum_distance_stations is not None:
             params['maximum_distance_stations'] = str(self.maximum_distance_stations)
+        if not params['description']:
+            if 'title' in rupdic:
+                params['description'] = f'{rupdic["usgs_id"]}: {rupdic["title"]}'
+            else:
+                params['description'] = (
+                    f'{rupdic["usgs_id"]}: M {rupdic["mag"]}'
+                    f' ({rupdic["lat"]}, {rupdic["lon"]})')
         oq = readinput.get_oqparam(params)
         # NB: fake h5 to cache `get_site_model` and avoid multiple associations
         _sitecol, assetcol, _discarded, _exp = readinput.get_sitecol_assetcol(
@@ -106,12 +116,6 @@ class AristotleParam:
         if not tmap_keys:
             raise LookupError(f'No taxonomy mapping was found for {countries}')
         logging.root.handlers = []  # avoid breaking the logs
-        if 'title' in rupdic:
-            params['description'] = f'{rupdic["usgs_id"]}: {rupdic["title"]}'
-        else:
-            params['description'] = (
-                f'{rupdic["usgs_id"]} ({rupdic["lat"]}, {rupdic["lon"]})'
-                f' M{rupdic["mag"]}')
         return params
 
 
@@ -120,6 +124,7 @@ IMPACT_FORM_LABELS = {
     'rupture_from_usgs': 'Rupture from USGS',
     'rupture_file': 'Rupture model XML',
     'use_shakemap': 'Use the ShakeMap',
+    'shakemap_version': 'ShakeMap version',
     'lon': 'Longitude (degrees)',
     'lat': 'Latitude (degrees)',
     'dep': 'Depth (km)',
@@ -142,6 +147,7 @@ IMPACT_FORM_LABELS = {
     'maximum_distance_stations': 'Maximum distance of stations (km)',
     'nodal_plane': 'Nodal plane',
     'msr': 'Magnitude scaling relationship',
+    'description': 'Description',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
@@ -170,6 +176,7 @@ IMPACT_FORM_PLACEHOLDERS = {
     'maximum_distance_stations': 'float ≥ 0',
     'nodal_plane': '',
     'msr': '',
+    'description': 'Leave blank to set automatically',
 }
 
 IMPACT_FORM_DEFAULTS = {
@@ -199,6 +206,7 @@ IMPACT_FORM_DEFAULTS = {
     'rupture_file_input': '',
     'station_data_file_input': '',
     'station_data_file_loaded': '',
+    'description': '',
 }
 
 
@@ -212,15 +220,15 @@ validators = {
                              'provide_rup',
                              'provide_rup_params'),
     'usgs_id': valid.simple_id,
-    'lon': valid.longitude,
-    'lat': valid.latitude,
-    'dep': valid.positivefloat,
-    'mag': valid.positivefloat,
+    'lon': nrml_validators['lon'],
+    'lat': nrml_validators['lat'],
+    'dep': nrml_validators['depth'],
+    'mag': nrml_validators['magnitude'],
     'msr': valid.Choice(*msr_choices),
-    'aspect_ratio': valid.positivefloat,
-    'rake': valid.rake_range,
-    'dip': valid.dip_range,
-    'strike': valid.strike_range,
+    'aspect_ratio': nrml_validators['ruptAspectRatio'],
+    'rake': nrml_validators['rake'],
+    'dip': nrml_validators['dip'],
+    'strike': nrml_validators['strike'],
     'local_timestamp': valid.local_timestamp,
     # NOTE: 'avg' is used for probabilistic seismic risk, not for scenarios
     'time_event': valid.Choice('day', 'night', 'transit'),
@@ -232,6 +240,7 @@ validators = {
     'asset_hazard_distance': valid.positivefloat,
     'ses_seed': valid.positiveint,
     'maximum_distance_stations': valid.positivefloat,
+    'description': valid.utf8,  # if empty, it will be set automatically
 }
 
 
@@ -240,7 +249,8 @@ def _validate(POST):
     invalid_inputs = []
     params = {}
     dic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
-               mag=None, msr=None, aspect_ratio=None, rake=None, dip=None, strike=None)
+               mag=None, msr=None, aspect_ratio=None, rake=None, dip=None, strike=None,
+               description=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
@@ -320,8 +330,13 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
+    if 'shakemap_version' in POST:
+        shakemap_version = POST['shakemap_version']
+    else:
+        shakemap_version = 'latest'
 
-    rup, rupdic, err = get_rup_dic(dic, user, use_shakemap, rupture_file, monitor)
+    rup, rupdic, err = get_rup_dic(dic, user, use_shakemap, shakemap_version,
+                                   rupture_file, monitor)
     if err:
         return None, None, None, err
     # round floats
@@ -339,6 +354,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rup is not None
+    if 'description' in dic and dic['description']:
+        params['description'] = dic['description']
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = station_data_file
