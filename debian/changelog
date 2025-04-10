@@ -1,4 +1,22 @@
+  [Paolo Tormene]
+  * Added to oq-impact the possibility to choose between different ShakeMap
+    versions for the given USGS identifier
+  * Added to oq-impact the possibility to edit the preset job description
+
   [Michele Simionato]
+  * Internal: added utility `get_ruptures(file_csv)`
+  * Optimized memory consumption in conditioned GMFs calculations
+
+  [Anirudh Rao]
+  * Sort observed imtls and imts and ensure all of the target imts go
+    into the context maker for the target sites in the conditioned gmfs
+    calculator - helps in debugging mode to prevent accidental
+    reordering of the imts
+
+ [Michele Simionato]
+  * Managed better the low hazard case in AELO calculations
+  * Optimized get_taxidx, thus making reading the USA exposure 10x faster
+  * Internal: restored the view portfolio_damage
   * Too many post_classical tasks were generated with an artificially large
     parameter `max_sites_disagg`
   * Internal: added a flag --wfp to the script `utils/build_global_exposure`
@@ -9,7 +27,8 @@
 
   [Michele Simionato]
   * Implemented `gsim_aliases` as thunks
-  * Forced the consequence files to contain risk IDs and not taxonomies
+  * Forced the consequence files to contain risk IDs and removed
+    utils/fix_consequences, now useless
   * OQImpact: now aggregating by ID_2 and not ID_1
   * Removed the --config-file option from the oq engine command
   * Fixed numeric error in high intensity hazard curves produced by

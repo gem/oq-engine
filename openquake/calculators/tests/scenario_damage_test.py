@@ -96,6 +96,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
         self.assertEqual(gmf_data['rlz-000'].shape, (2,))  # 2 assets
 
+        pd = view('portfolio_damage', self.calc.datastore)
+        self.assertEqual(pd.dtype.names, (
+            'structural-no_damage', 'structural-slight', 'structural-moderate',
+            'structural-extreme', 'structural-complete'))
+
+
     def test_case_2(self):
         self.assert_ok(case_2, 'job_risk.ini')
 
@@ -235,7 +241,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_14.__file__, 'job_wrong.ini')
         self.assertIn(
-            "{'CR+PC/LDUAL/HBET:8.19/m'} are not in the CompositeRiskModel",
+            "{'CR+PC/LDUAL/HBET:8.19/m'} not in the CompositeRiskModel",
             str(ctx.exception))
 
     def test_case_16(self):
