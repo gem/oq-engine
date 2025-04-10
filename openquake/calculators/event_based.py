@@ -440,7 +440,7 @@ def set_mags(oq, dstore):
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
     elif oq.ruptures_hdf5:
-        pass                
+        pass
     elif 'ruptures' in dstore:
         # scenario
         trts = dstore['full_lt'].trts
