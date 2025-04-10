@@ -16,13 +16,14 @@
 import unittest
 import numpy
 import os
+from openquake.baselib.general import gettemp
 from openquake.hazardlib import const
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import BaseRupture, \
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture, \
-    get_multiplanar
+    get_multiplanar, get_ruptures
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
@@ -249,3 +250,11 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
         self.assertAlmostEqual(p_occs_0, 0.7, places=2)
         self.assertAlmostEqual(p_occs_1, 0.2, places=2)
         self.assertAlmostEqual(p_occs_2, 0.1, places=2)
+
+
+class RuptureFromCsvTestCase(unittest.TestCase):
+    def test(self):
+        csv = gettemp('''#,,,,,,,,,,"trts=['Stable Shallow Crust'], ses_seed=42"
+seed,mag,rake,lon,lat,dep,multiplicity,trt,kind,mesh,extra
+0,7.050000E+00,0.000000E+00,-55.93890,44.51041,1.050000E+01,1,Stable Shallow Crust,ParametricProbabilisticRupture PlanarSurface,"[[[[-55.9389, -55.9389, -55.9389, -55.9389]], [[44.37064, 44.65017, 44.37064, 44.65017]], [[2.72939, 2.72939, 18.27061, 18.27061]]]]","{""occurrence_rate"": 1.4580851940711274e-06}"''', suffix='.csv')
+        get_ruptures(csv)
