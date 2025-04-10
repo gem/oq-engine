@@ -36,19 +36,38 @@ aac = numpy.testing.assert_allclose
 
 # values for the CCA model
 SITES = ['far -90.071 16.60'.split(), 'close -85.071 10.606'.split()]
-EXPECTED = [[0.265314, 0.273735, 0.275943, 0.309681, 0.346075, 0.383423,
-             0.486398, 0.519964, 0.568014, 0.60647 , 0.650083, 0.650722,
-             0.563917, 0.475211, 0.362233, 0.268729, 0.205666, 0.194352,
-             0.207831, 0.194923, 0.149143],
-            [0.708552, 0.766141, 0.819514,
-             0.992218, 1.19921, 1.33306, 1.54593, 1.60616, 1.61089, 1.59131,
-             1.51552, 1.40373, 1.13522, 0.942543, 0.702805, 0.523597,
-             0.415245, 0.401764, 0.43762, 0.402472, 0.305589]]
-ASCE07 = ['0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.60616',
-          '0.96048', '0.85274', '1.50000', 'Very High', '0.60000', '0.94254',
-          '0.94621', '0.45569', '0.60000', 'Very High']
-ASCE41 = [1.5, 1.28284, 1.28284, 1., 0.75094, 0.75094, 0.6,
-          0.6, 0.75192, 0.4, 0.4, 0.42582]
+EXPECTED_asce7_16 = [
+    [0.265314, 0.273735, 0.275943, 0.309681, 0.346075, 0.383423,
+     0.486398, 0.519964, 0.568014, 0.60647 , 0.650083, 0.650722,
+     0.563917, 0.475211, 0.362233, 0.268729, 0.205666, 0.194352,
+     0.207831, 0.194923, 0.149143],
+    [0.708552, 0.766141, 0.819514, 
+     0.992218, 1.19921, 1.33306, 1.54593, 1.60616, 1.61089, 1.59131,
+     1.51552 , 1.40373 ,1.13522 , 0.942543, 0.702805, 0.523597, 
+     0.415245, 0.401764, 0.43762 , 0.402472, 0.305589]]
+EXPECTED_asce7_22 = [
+    [0.265314, 0.29862 , 0.301028, 0.337834, 0.377537, 0.41828 ,
+     0.530616, 0.567234, 0.614497, 0.650135, 0.685131, 0.67509 ,
+     0.562095, 0.456934, 0.342549, 0.250018, 0.185246, 0.169823,
+     0.176241, 0.167114, 0.129257],
+    [0.708552, 0.83579 , 0.894015, 
+     1.08242 , 1.30823 , 1.45425 , 1.68647 , 1.75218 , 1.74271 , 
+     1.70589 , 1.59723 , 1.4563  ,
+     1.13155 , 0.906292, 0.664615, 0.487139, 0.374017, 0.351059,
+     0.371102, 0.345053, 0.264844]]
+ASCE07_16 = [
+    '0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.60616', 
+    '0.96048', '0.85274', '1.50000', 'Very High', '0.60000', '0.94254', 
+    '0.94621', '0.45569', '0.60000', 'Very High']
+ASCE07_22 = [
+    '0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.35', '0.9',
+    '1.75218', '0.96048', '0.93027', '1.50000', 'Very High', '0.60000', 
+    '0.60000', '0.40000', '0.90629', '0.94621', '0.43816', '0.60000', 
+    'Very High']
+ASCE41_17 = [1.5, 1.28283, 1.28283, 1, 0.75094, 0.75094, 0.6,
+             0.6, 0.7519 , 0.4, 0.4, 0.42582]
+ASCE41_23 = [1.5, 1.39946, 1.39946, 1, 0.81921, 0.81921, 0.6,
+             0.6, 0.72299 , 0.4, 0.4, 0.40944]
 
 
 def test_PAC():
@@ -112,7 +131,7 @@ def test_KOR():
 def test_CCA():
     # RTGM under and over the deterministic limit for the CCA model
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
-    for (site, lon, lat), expected in zip(SITES, EXPECTED):
+    for (site, lon, lat), expected in zip(SITES, EXPECTED_asce7_16):
         dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760')
         with logs.init(job_ini) as log:
             log.params.update(get_params_from(
@@ -128,7 +147,7 @@ def test_CCA():
         # check asce07 exporter
         [fname] = export(('asce07', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        for got, exp in zip(df.value.to_numpy(), ASCE07):
+        for got, exp in zip(df.value.to_numpy(), ASCE07_16):
             try:
                 aac(float(got), float(exp), rtol=1E-2)
             except ValueError:
@@ -137,20 +156,56 @@ def test_CCA():
         # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        aac(df.value, ASCE41, atol=1.5E-4)
+        aac(df.value, ASCE41_17, atol=1.5E-4)
 
         # test no close ruptures
         dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
         with logs.init(job_ini) as log:
-            log.params.update(get_params_from(
-                    dic, MOSAIC_DIR, exclude=['USA']))
+            params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
+            params['maximum_distance'] = '300'
+            log.params.update(params)
             calc = base.calculators(log.get_oqparam(), log.calc_id)
             calc.run()
+        # check that the warning announces no close ruptures
+        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        assert len(warnings) == 1
+        assert warnings[0].startswith('Zero hazard')
 
-        # check all plots created
-        assert 'png/governing_mce.png' in calc.datastore
-        assert 'png/hcurves.png' in calc.datastore
-        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
+        # check no plots created
+        assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/hcurves.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+
+def test_CCA_asce7_22():
+    # RTGM under and over the deterministic limit for the CCA model
+    job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
+    for (site, lon, lat), expected in zip(SITES, EXPECTED_asce7_22):
+        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760',
+                   asce_version = 'ASCE7-22')
+        with logs.init(job_ini) as log:
+            log.params.update(get_params_from(
+                dic, MOSAIC_DIR, exclude=['USA']))
+            calc = base.calculators(log.get_oqparam(), log.calc_id)
+            calc.run()
+        if rtgmpy:
+            [fname] = export(('rtgm', 'csv'), calc.datastore)
+            df = pandas.read_csv(fname, skiprows=1)
+            aac(df.RTGM, expected, atol=1.5E-4)
+
+    if rtgmpy:
+        # check asce07 exporter
+        [fname] = export(('asce07', 'csv'), calc.datastore)
+        df = pandas.read_csv(fname, skiprows=1)
+        for got, exp in zip(df.value.to_numpy(), ASCE07_22):
+            try:
+                aac(float(got), float(exp), rtol=1E-2)
+            except ValueError:
+                numpy.testing.assert_equal(got, exp)
+
+        # check asce41 exporter
+        [fname] = export(('asce41', 'csv'), calc.datastore)
+        df = pandas.read_csv(fname, skiprows=1)
+        aac(df.value, ASCE41_23, atol=1.5E-4)
 
 
 def test_WAF():
@@ -191,6 +246,7 @@ def test_WAF():
         # check that 2 of 3 plots have been created
         assert 'png/hcurves.png' in calc.datastore
         assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/hcurves.png' in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
 
