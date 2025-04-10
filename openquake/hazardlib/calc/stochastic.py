@@ -199,6 +199,7 @@ def sample_cluster(group, num_ses, ses_seed):
             eb_ruptures.append(ebr)
 
     elif group.src_interdep == 'indep':
+
         eb_ruptures = _get_src_indep_rups(
             group, tot_num_occ, trt_smr, seed, ses_seed)
 
@@ -209,51 +210,59 @@ def sample_cluster(group, num_ses, ses_seed):
             raise NotImplementedError(
                 f'{group.src_interdep=}, {group.rup_interdep=}')
 
-        # Compute the number of occurrences of each (mutex) source. One source
-        # is selected every time we have a realization of a cluster. In other
-        # words, the array 'src_noccs' must have a number of elements equal to
-        # 'tot_num_occ'
-        ws = [src.mutex_weight for src in group]
-        src_noccs = random_histogram(tot_num_occ, ws, seed)
-
-        # Find the index of the ruptures generated at each occurrence of
-        # a source and create the EBRuptures
-        for i_src, (src, src_nocc) in enumerate(zip(group, src_noccs)):
-
-            # Source seed
-            src_seed = src.serial(ses_seed)
-            rng = numpy.random.default_rng(src_seed)
-
-            # For each rlz, find the number ruptures produced by each source.
-            # For each realization this is a number comprised between 1 and the
-            # number of ruptures admitted by that source.
-            idxs = numpy.arange(1, src.num_ruptures + 1)
-            n_rups_rlz = rng.choice(idxs, src_nocc)
-            ids = numpy.empty((src_nocc, src.num_ruptures))
-            ids[:] = numpy.nan
-            _set_ids(n_rups_rlz, ids, src_seed, weights=None)
-
-            # Ruptures IDs
-            rupids = src.offset + numpy.arange(src.num_ruptures)
-
-            # Generate ruptures
-            idxs = numpy.arange(src.num_ruptures)
-            for i_rup, rup, rupid in zip(idxs, src.iter_ruptures(), rupids):
-
-                # Find the number of occurrences per rupture
-                n_occ = int(numpy.sum(ids == i_rup))
-
-                # Update the list with the ruptures per LT branch
-                if n_occ:
-                    ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
-                    ebr.seed = ebr.id + ses_seed
-                    eb_ruptures.append(ebr)
+        eb_ruptures = _get_src_mutex_rups(
+            group, tot_num_occ, trt_smr, seed, ses_seed)
 
     else:
         raise NotImplementedError(
             f'{group.src_interdep=}, {group.rup_interdep=}')
 
     return eb_ruptures
+
+
+def _get_src_mutex_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
+
+    eb_ruptures = []
+
+    # Compute the number of occurrences of each (mutex) source. One source
+    # is selected every time we have a realization of a cluster. In other
+    # words, the array 'src_noccs' must have a number of elements equal to
+    # 'tot_num_occ'
+    ws = [src.mutex_weight for src in group]
+    src_noccs = random_histogram(tot_num_occ, ws, seed)
+
+    # Find the index of the ruptures generated at each occurrence of
+    # a source and create the EBRuptures
+    for i_src, (src, src_nocc) in enumerate(zip(group, src_noccs)):
+
+        # Source seed
+        src_seed = src.serial(ses_seed)
+        rng = numpy.random.default_rng(src_seed)
+
+        # For each rlz, find the number ruptures produced by each source.
+        # For each realization this is a number comprised between 1 and the
+        # number of ruptures admitted by that source.
+        idxs = numpy.arange(1, src.num_ruptures + 1)
+        n_rups_rlz = rng.choice(idxs, src_nocc)
+        ids = numpy.empty((src_nocc, src.num_ruptures))
+        ids[:] = numpy.nan
+        _set_ids(n_rups_rlz, ids, src_seed, weights=None)
+
+        # Ruptures IDs
+        rupids = src.offset + numpy.arange(src.num_ruptures)
+
+        # Generate ruptures
+        idxs = numpy.arange(src.num_ruptures)
+        for i_rup, rup, rupid in zip(idxs, src.iter_ruptures(), rupids):
+
+            # Find the number of occurrences per rupture
+            n_occ = int(numpy.sum(ids == i_rup))
+
+            # Update the list with the ruptures per LT branch
+            if n_occ:
+                ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
+                ebr.seed = ebr.id + ses_seed
+                eb_ruptures.append(ebr)
 
 
 def _get_src_indep_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
