@@ -1,4 +1,4 @@
-﻿taxonomy,consequence,loss_type,slight,moderate,extensive,complete
+﻿risk_id,consequence,loss_type,slight,moderate,extensive,complete
 demand,non_operational,structural,0,0,1,1
 pumping_station1,non_operational,structural,0,0,1,1
 pumping_station2,non_operational,structural,0,0,1,1

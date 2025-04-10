@@ -622,7 +622,10 @@ def import_all(module_or_package):
                 # works at any level of nesting
                 modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
                            '.' + os.path.basename(f[:-3]))
-                importlib.import_module(modname)
+                try:
+                    importlib.import_module(modname)
+                except ModuleNotFoundError:
+                    raise ModuleNotFoundError(modname)
     return set(sys.modules) - already_imported
 
 

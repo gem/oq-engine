@@ -54,6 +54,7 @@ DISPLAY_NAME = {
     'cs-stats': 'Mean Conditional Spectra',
     'median_spectra': 'Median Spectra per Site and PoE',
     'median_spectrum_disagg': 'Median Spectrum Disaggregation',
+    'mmi_tags': 'Exposure grouped by Admin1 and MMI',
     'reinsurance-avg_policy': 'Average Reinsurance By Policy',
     'reinsurance-avg_portfolio': 'Average Reinsurance',
     'reinsurance-risk_by_event': 'Reinsurance By Event',
@@ -81,7 +82,7 @@ DISPLAY_NAME = {
 }
 
 
-FIELD_DESCRIPTION = {
+AGGRISK_FIELD_DESCRIPTION = {
     'contents': 'Contents loss (USD)',
     'nonstructural': 'Nonstructural loss (USD)',
     'structural': 'Structural loss (USD)',
@@ -89,6 +90,24 @@ FIELD_DESCRIPTION = {
     'area': 'Floor area lost (m2)',
     'number': 'Buildings beyond repair',
     'residents': 'Rendered homeless',
+    'injured': 'Number of injured people',
+    'affectedpop': 'Number of people living in buildings with moderate or higher damage'
+
+}
+
+EXPOSURE_FIELD_DESCRIPTION = {
+    'number': 'Buildings',
+    'contents': 'Contents value (USD)',
+    'nonstructural': 'Nonstructural value (USD)',
+    'structural': 'Structural value (USD)',
+    'residents': 'Residents',
+    'area': 'Floor area (m2)',
+    'occupants_day': 'Occupants day',
+    'occupants_night': 'Occupants night',
+    'occupants_transit': 'Occupants transit hours',
+    'occupants_avg': 'Average number of occupants',
+    'mmi': ('Macroseismic intensity (MMI) to which the given group'
+            ' of assets is subjected')
 }
 
 

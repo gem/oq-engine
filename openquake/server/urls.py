@@ -52,10 +52,19 @@ if settings.WEBUI:
                     name="aelo_changelog"),
         ]
     elif settings.APPLICATION_MODE == 'ARISTOTLE':
-        urlpatterns.append(
+        urlpatterns += [
             re_path(r'^engine/(\d+)/outputs_impact$',
                     views.web_engine_get_outputs_impact,
-                    name="outputs_impact"))
+                    name="outputs_impact"),
+            re_path(r'^v1/get_impact_form_defaults$', views.get_impact_form_defaults,
+                    name="impact_form_defaults"),
+            re_path(r'^v1/impact_get_stations_from_usgs$',
+                    views.impact_get_stations_from_usgs,
+                    name="impact_get_stations_from_usgs"),
+            re_path(r'^v1/impact_get_shakemap_versions$',
+                    views.impact_get_shakemap_versions,
+                    name="impact_get_shakemap_versions"),
+        ]
 
     for app in settings.STANDALONE_APPS:
         app_name = app.split('_')[1]

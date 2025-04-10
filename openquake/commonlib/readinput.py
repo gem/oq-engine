@@ -179,6 +179,9 @@ def _normalize(key, fnames, base_path):
                 name = 'exposure.xml'
             elif key == 'source_model_logic_tree_file':
                 name = 'ssmLT.xml'
+            elif key == 'mmi_file':
+                filenames.append(os.path.join(base_path, val))
+                continue
             else:
                 raise KeyError('Unknown key %s' % key)
             val = unzip_rename(zpath, name)
@@ -205,7 +208,7 @@ def update(params, items, base_path):
     for key, value in items:
         if key in ('hazard_curves_csv', 'hazard_curves_file',
                    'gmfs_csv', 'gmfs_file',
-                   'site_model_csv', 'site_model_file',
+                   'site_model_csv', 'site_model_file', 'source_model_file',
                    'exposure_csv', 'exposure_file'):
             input_type, fnames = _normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
@@ -539,8 +542,9 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
         try:
             z[name] = sm[name]
         except ValueError:  # missing, use the global parameter
-            # exercised in the test classical/case_28_bis
-            z[name] = check_site_param(oqparam, name)
+            if name != 'backarc':  # backarc has default zero
+                # exercised in the test classical/case_28_bis
+                z[name] = check_site_param(oqparam, name)
     arrays.append(z)
 
 
@@ -848,7 +852,9 @@ def get_rupture(oqparam):
     elif rupture_model and rupture_model.endswith('.json'):
         with open(rupture_model) as f:
             rup_data = json.load(f)
-        rup = convert_to_oq_rupture(rup_data)
+        rup, err_msg = convert_to_oq_rupture(rup_data)
+        if err_msg:
+            logging.warning(err_msg)
     if rup is None:  # assume rupture_dict
         rup = build_planar_rupture_from_dict(oqparam.rupture_dict)
     return rup
@@ -986,7 +992,10 @@ def get_composite_source_model(oqparam, dstore=None):
     :param dstore:
          an open datastore where to save the source info
     """
-    logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
+    if 'source_model_logic_tree' in oqparam.inputs:
+        logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
+    elif 'source_model' in oqparam.inputs:
+        logging.info('Reading %s', oqparam.inputs['source_model'])
     h5 = dstore.hdf5 if dstore else None
     with Monitor('building full_lt', measuremem=True, h5=h5):
         full_lt = get_full_lt(oqparam)  # builds the weights
@@ -1019,7 +1028,9 @@ def _cons_coeffs(df, perils, loss_dt, limit_states):
             if len(the_df) == 1:
                 coeffs[peril][loss_type] = the_df[limit_states].to_numpy()[0]
             elif len(the_df) > 1:
-                raise ValueError(f'Multiple consequences for {loss_type=}, {peril=}\n%s' % the_df)
+                raise ValueError(
+                    f'Multiple consequences for {loss_type=}, {peril=}\n%s' %
+                    the_df)
     return coeffs
 
 
@@ -1040,25 +1051,31 @@ def get_crmodel(oqparam):
                 return crm
 
     risklist = get_risk_functions(oqparam)
+    limit_states = risklist.limit_states
     perils = numpy.array(sorted(set(rf.peril for rf in risklist)))
-    if not oqparam.limit_states and risklist.limit_states:
-        oqparam.limit_states = risklist.limit_states
-    elif 'damage' in oqparam.calculation_mode and risklist.limit_states:
-        assert oqparam.limit_states == risklist.limit_states
+    if not oqparam.limit_states and limit_states:
+        oqparam.limit_states = limit_states
+    elif 'damage' in oqparam.calculation_mode and limit_states:
+        assert oqparam.limit_states == limit_states
     consdict = {}
     if 'consequence' in oqparam.inputs:
-        if not risklist.limit_states:
+        if not limit_states:
             raise InvalidFile('Missing fragility functions in %s' %
                               oqparam.inputs['job_ini'])
         # build consdict of the form consequence_by_tagname -> tag -> array
         loss_dt = oqparam.loss_dt()
         for by, fnames in oqparam.inputs['consequence'].items():
+            if by == 'taxonomy':  # obsolete name
+                by = 'risk_id'
             if isinstance(fnames, str):  # single file
                 fnames = [fnames]
             # i.e. files collapsed.csv, fatalities.csv, ... with headers like
             # taxonomy,consequence,slight,moderate,extensive
             df = pandas.concat([pandas.read_csv(fname) for fname in fnames])
             # NB: consequence files depend on loss_type, unlike fragility files
+            if 'taxonomy' in df.columns:  # obsolete name
+                df['risk_id'] = df['taxonomy']
+                del df['taxonomy']
             if 'loss_type' not in df.columns:
                 df['loss_type'] = 'structural'
             if 'peril' not in df.columns:
@@ -1068,7 +1085,7 @@ def get_crmodel(oqparam):
                     raise InvalidFile('Unknown consequence %s in %s' %
                                       (consequence, fnames))
                 bytag = {
-                    tag: _cons_coeffs(grp, perils, loss_dt, risklist.limit_states)
+                    tag: _cons_coeffs(grp, perils, loss_dt, limit_states)
                     for tag, grp in group.groupby(by)}
                 consdict['%s_by_%s' % (consequence, by)] = bytag
     # for instance consdict['collapsed_by_taxonomy']['W_LFM-DUM_H3']
@@ -1131,7 +1148,7 @@ def read_df(fname, lon, lat, id, duplicates_strategy='error'):
     """
     assert duplicates_strategy in (
         'error', 'keep_first', 'keep_last', 'avg'), duplicates_strategy
-    # NOTE: the id field has to be treated as a string even if it contains numbers
+    # NOTE: the id field has to be treated as a string even if contains numbers
     dframe = pandas.read_csv(fname, dtype={id: str})
     dframe[lon] = numpy.round(dframe[lon].to_numpy(), 5)
     dframe[lat] = numpy.round(dframe[lat].to_numpy(), 5)
@@ -1149,12 +1166,11 @@ def read_df(fname, lon, lat, id, duplicates_strategy='error'):
         elif duplicates_strategy == 'avg':
             string_columns = dframe.select_dtypes(include='object').columns
             numeric_columns = dframe.select_dtypes(include='number').columns
-            # Group by lon and lat, averaging numeric columns and concatenating by "|"
+            # group by lon-lat, averaging columns and concatenating by "|"
             # the different contents of string columns
             dframe = dframe.groupby([lon, lat], as_index=False).agg(
                 {**{col: concat_if_different for col in string_columns},
-                 **{col: 'mean' for col in numeric_columns}}
-            )
+                 **{col: 'mean' for col in numeric_columns}})
     return dframe
 
 
@@ -1175,8 +1191,8 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
         logging.error('Conditioned scenarios are not meant to be run '
                       ' on a cluster')
     # Read the station data and associate the site ID from longitude, latitude
-    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
-                 duplicates_strategy=duplicates_strategy)
+    df = read_df(oqparam.inputs['station_data'], 'LONGITUDE', 'LATITUDE',
+                 'STATION_ID', duplicates_strategy=duplicates_strategy)
     lons = df['LONGITUDE'].to_numpy()
     lats = df['LATITUDE'].to_numpy()
     nsites = len(sitecol.complete)
@@ -1291,7 +1307,8 @@ def impact_tmap(oqparam, taxidx):
         for key in exp['tmap']:
             # tmap has fields conversion, taxonomy, weight
             df = exp.read_df('tmap/' + key)
-            for taxo, risk_id, weight in zip(df.taxonomy, df.conversion, df.weight):
+            for taxo, risk_id, weight in zip(
+                    df.taxonomy, df.conversion, df.weight):
                 if taxo in taxidx:
                     acc['country'].append(key)
                     acc['peril'].append('groundshaking')
@@ -1336,7 +1353,8 @@ def _taxonomy_mapping(filename, taxidx):
     if 'conversion' in tmap_df.columns:
         # conversion was the old name in the header for engine <= 3.12
         tmap_df = tmap_df.rename(columns={'conversion': 'risk_id'})
-    assert set(tmap_df) == {'country', 'peril', 'taxonomy', 'risk_id', 'weight'}, set(tmap_df)
+    assert set(tmap_df) == {'country', 'peril', 'taxonomy',
+                            'risk_id', 'weight'}, set(tmap_df)
     taxos = set()
     for (taxo, per), df in tmap_df.groupby(['taxonomy', 'peril']):
         taxos.add(taxo)
@@ -1709,7 +1727,8 @@ def read_cities(fname, lon_name, lat_name, label_name):
     data = pandas.read_csv(fname)
     expected_colnames_set = {lon_name, lat_name, label_name}
     if not expected_colnames_set.issubset(data.columns):
-        raise ValueError(f"CSV file must contain {expected_colnames_set} columns.")
+        raise ValueError(
+            f"CSV file must contain {expected_colnames_set} columns.")
     return data
 
 

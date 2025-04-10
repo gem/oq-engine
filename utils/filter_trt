@@ -8,34 +8,30 @@
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import pandas
 from openquake.baselib import sap
+from openquake.hazardlib import nrml
 
-
-# fix old consequence functions before engine version 3.23
-def main(taxonomy_mapping: str, consequences: str):
+def main(trt, source_model_files):
     """
-    Use the taxonomy mapping to upgrade risk_id-based consequence functions
-    to taxonomy-based consequence functions
+    Reduce the source models to the specified tectonic region type
     """
-    tmap = pandas.read_csv(taxonomy_mapping).set_index('conversion')
-    cons = pandas.read_csv(consequences).set_index('taxonomy')
-    cols = ['taxonomy'] + list(cons.columns)
-    df = cons.join(tmap, how='inner')[cols]
-    df.index.names = ['risk_id']
-    dfs = []
-    for _, grp in df.groupby(['taxonomy', 'consequence', 'loss_type']):
-        dfs.append(grp[0:1])  # take the first row
-    pandas.concat(dfs).to_csv(consequences)
+    for fname in source_model_files:
+        root = nrml.read(fname)
+        with open(fname + '~', 'wb') as out:
+            root.sourceModel.nodes = [
+                n for n in root.sourceModel if n['tectonicRegion']==trt]
+            nrml.write(root.nodes, out)
+main.trt = 'tectonic region type'
+main.source_model_files = dict(help='paths to source model files', nargs='+')
 
 
 if __name__ == '__main__':

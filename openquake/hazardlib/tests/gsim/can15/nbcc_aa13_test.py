@@ -23,7 +23,7 @@ import pandas
 from openquake.hazardlib import read_input, IntegrationDistance, contexts
 from openquake.hazardlib.calc import gmf
 
-OVERWRITE = False
+OVERWRITE = os.environ.get('OQ_OVERWRITE')
 U32 = numpy.uint32
 CWD = os.path.dirname(os.path.dirname(__file__))  # hazardlib/tests/gsim
 # rupture around Vancouver (-123, 49)

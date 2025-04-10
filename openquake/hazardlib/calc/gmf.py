@@ -233,7 +233,7 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
         self.mea_tau_phi = []
-        self.gmv_fields = [f'gmv_{m}' for m in range(len(cmaker.imts))]
+        self.gmv_fields = [str(imt) for imt in cmaker.imts]
         self.mmi_index = -1
         for m, imt in enumerate(cmaker.imtls):
             if imt == 'MMI':
@@ -289,7 +289,8 @@ class GmfComputer(object):
                     for sp in self.sec_perils:
                         o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
-                            data[outkey].append(outarr)
+                            key = f'{sp.__class__.__name__}_{outkey}'
+                            data[key].append(outarr)
                 n += E
 
     def strip_zeros(self, data):
@@ -492,6 +493,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     res = {}
     for m, imt in enumerate(gc.imts):
         res[imt] = arr = numpy.zeros((N, E), F32)
-        for sid, eid, gmv in zip(df.sid, df.eid, df[f'gmv_{m}']):
+        for sid, eid, gmv in zip(df.sid, df.eid, df[str(imt)]):
             arr[sid, eid] = gmv
     return res

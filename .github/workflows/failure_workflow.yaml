@@ -14,6 +14,7 @@ on:
       - "Windows amd64 full tests of OpenQuake Engine"
       - "Test WebUI on RH based OS"
       - "Weekly Engine tests"
+      - "Cluster ZMQ"
     types:
       - completed
 

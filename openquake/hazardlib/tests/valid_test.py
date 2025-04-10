@@ -174,3 +174,14 @@ class ValidationTestCase(unittest.TestCase):
         gmpe = valid.modified_gsim(
             gsim, add_between_within_stds={'with_betw_ratio':1.5})
         valid.gsim(gmpe._toml)  # make sure the generated _toml is valid
+
+    def test_gsim_alias(self):
+        # fixes https://github.com/gem/oq-engine/issues/10489
+        ag20_alaska = valid.gsim("AbrahamsonGulerce2020SInterAlaska")
+        self.assertEqual(ag20_alaska.region, 'USA-AK')
+        self.assertEqual(ag20_alaska._toml,
+                         '[AbrahamsonGulerce2020SInter]\nregion = "USA-AK"')
+        ag20_alaska = valid.gsim("[AbrahamsonGulerce2020SInterAlaska]")
+        self.assertEqual(ag20_alaska.region, 'USA-AK')
+        self.assertEqual(ag20_alaska._toml,
+                         '[AbrahamsonGulerce2020SInterAlaska]')

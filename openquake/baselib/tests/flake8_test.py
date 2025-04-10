@@ -50,8 +50,13 @@ def _long_funcs(module, maxlen):
                 raise SyntaxError('%s has more than 15 arguments: %s'
                                   % (dotname, [a.arg for a in args]))
             doc = ast.get_docstring(node)
-            doclines = 0 if doc is None else doc.count('\n') + 1
-            numlines = node.end_lineno - node.lineno - doclines
+            # Adjust start line to skip the docstring if present
+            if (doc and isinstance(node.body[0], ast.Expr)
+                    and isinstance(node.body[0].value, ast.Constant)):
+                start_line = node.body[0].end_lineno + 1  # First line after docstring
+            else:
+                start_line = node.lineno + 1  # First line after function definition
+            numlines = node.end_lineno - start_line
             if numlines > maxlen:
                 out.append((dotname, numlines))
     return out
@@ -204,4 +209,3 @@ def test_get_basin_term():
             if args != ['C', 'ctx', 'region']:
                 msg = f'{mod.__name__}._get_basin_term has a wrong signature '
                 raise RuntimeError(msg + str(args))
-                    

@@ -22,7 +22,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
 from openquake.calculators.tests import (
     CalculatorTestCase, ignore_gsd_fields, strip_calc_id)
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.scenario_risk import (
@@ -184,6 +184,11 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
         # sensitive to shapely version
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-3)
+
+        # losses_by_site
+        df = extract(self.calc.datastore, 'losses_by_site')
+        fname = gettemp(text_table(df, ext='org'))
+        self.assertEqualFiles('expected/losses_by_site.org', fname, delta=1E-3)
 
     def test_collapse_gsim_logic_tree(self):
         self.run_calc(case_master.__file__, 'job.ini',

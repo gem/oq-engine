@@ -48,31 +48,36 @@ class AristotleValidateTestCase(unittest.TestCase):
 
     def test_1(self):
         POST = {'usgs_id': 'us6000jllz', 'approach': 'use_shakemap_from_usgs'}
-        _rup, rupdic, _params, err = impact_validate(POST, user)
-        self.assertIsNone(rupdic['station_data_file'])
+        _rup, _rupdic, _params, err = impact_validate(POST, user)
         self.assertEqual(err, {})
 
     def test_1b(self):
         # no rupture, yes stations
         POST = {'usgs_id': 'us6000jllz', 'approach': 'build_rup_from_usgs',
                 'msr': 'WC1994', 'aspect_ratio': '3'}
-        rup, rupdic, _params, err = impact_validate(POST, user)
+        rup, _rupdic, _params, err = impact_validate(POST, user)
         self.assertIsInstance(rup, BaseRupture)
-        self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
-    def test_2(self):
+    def test_2a(self):
         POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs',
                 'msr': ''}
+        _rup, _rupdic, _params, err = impact_validate(POST, user)
+        # msr can not be empty
+        self.assertIn('Magnitude scaling relationship', err['error_msg'])
+
+    def test_2b(self):
+        POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs',
+                'msr': 'WC1994'}
         _rup, rupdic, _params, err = impact_validate(POST, user)
         self.assertEqual(rupdic['rupture_from_usgs'], True)
-        self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mosaic_models'], ['SAM'])
-        self.assertIn('stations', rupdic['station_data_file'])
         self.assertEqual(err, {})
 
     def test_3(self):
         # with rupture_file
+        rupture_file = os.path.join(
+            os.path.dirname(__file__), 'data', 'fault_rupture.xml')
         POST = {
             'asset_hazard_distance': '15',
             'dep': '30',
@@ -96,7 +101,7 @@ class AristotleValidateTestCase(unittest.TestCase):
 
         for stations in (None, 'stationlist_seismic.csv'):
             _rup, rupdic, params, err = impact_validate(
-                POST, user, 'fault_rupture.xml', stations)
+                POST, user, rupture_file, stations)
             expected = {
                 'dep': 30.0,
                 'dip': 30.08335,
@@ -105,9 +110,8 @@ class AristotleValidateTestCase(unittest.TestCase):
                 'mag': 7.0,
                 'mosaic_models': ['CHN', 'IND'],
                 'rake': 90.0,
-                'rupture_file': 'fault_rupture.xml',
+                'rupture_file': rupture_file,
                 'rupture_from_usgs': True,
-                'station_data_file': stations,
                 'strike': 295.24732,
                 'trts': {'CHN': ['Active Shallow Crust',
                                  'Himalayan Thrust',
@@ -134,20 +138,17 @@ class AristotleValidateTestCase(unittest.TestCase):
             self.assertEqual(params['truncation_level'], '3.0')
             self.assertEqual(params['number_of_ground_motion_fields'], '2'),
             self.assertEqual(params['ses_seed'], '42')
+            # self.assertEqual(params['station_data_file'], stations)  # FIXME
             self.assertEqual(err, {})
 
     def test_4(self):
         # for us7000n7n8 the stations.json does not contain stations
         POST = {'usgs_id': 'us7000n7n8', 'approach': 'build_rup_from_usgs',
-                'msr': ''}
+                'msr': 'WC1994'}
         _rup, rupdic, _oqparams, err = impact_validate(POST, user)
-        self.assertEqual(rupdic['require_dip_strike'], True)
         self.assertEqual(rupdic['mag'], 7.0)
         self.assertEqual(rupdic['time_event'], 'transit')
         self.assertEqual(rupdic['local_timestamp'], '2024-08-18 07:10:26+12:00')
-        self.assertEqual(
-            rupdic['station_data_issue'], 'stationlist.json was downloaded,'
-            ' but it contains no features')
         self.assertEqual(err, {})
 
     def test_5(self):

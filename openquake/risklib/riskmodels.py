@@ -18,7 +18,6 @@
 import re
 import json
 import copy
-import logging
 import functools
 import collections
 import numpy
@@ -140,7 +139,7 @@ class RiskFuncList(list):
         ddic = AccumDict(accum=AccumDict(accum=[]))
         dic = AccumDict(accum=[])
         for rf in self:
-            dic[rf.id, rf.peril].append(rf)
+            dic[rf.id, getattr(rf, 'peril', 'groundshaking')].append(rf)
         for (riskid, peril), rfs in dic.items():
             ddic[riskid][peril] = group_by_lt(rfs)
         num_perils = {riskid: len(ddic[riskid]) for riskid in ddic}
@@ -250,7 +249,6 @@ class RiskModel(object):
     """
     time_event = None  # used in scenario_risk
     compositemodel = None  # set by get_crmodel
-    alias = None  # set in save_crmodel
 
     def __init__(self, calcmode, taxonomy, risk_functions, **kw):
         self.calcmode = calcmode
@@ -401,7 +399,6 @@ class RiskModel(object):
         :returns: a DataFrame with columns eid, eid, loss
         """
         imt = self.imt_by_lt[loss_type]
-        col = self.alias.get(imt, imt)
         sid = assets['site_id']
         if loss_type in 'occupants injured':
             val = assets['occupants_%s' % self.time_event].to_numpy()
@@ -411,7 +408,7 @@ class RiskModel(object):
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[peril][loss_type]
-        return vf(asset_df, gmf_df, col, rndgen,
+        return vf(asset_df, gmf_df, imt, rndgen,
                   self.minimum_asset_loss.get(loss_type, 0.))
 
     scenario = ebrisk = scenario_risk = event_based_risk
@@ -428,8 +425,12 @@ class RiskModel(object):
         and D the number of damage states.
         """
         imt = self.imt_by_lt[loss_type]
-        col = self.alias.get(imt, imt)
-        gmvs = gmf_df[col].to_numpy()
+        for col in gmf_df.columns:
+            if col.endswith(imt):
+                gmvs = gmf_df[col].to_numpy()
+                break
+        else:
+            raise NameError(f'Missing {imt} in gmf_data')
         ffs = self.risk_functions[peril][loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
@@ -468,7 +469,7 @@ def get_riskmodel(taxonomy, oqparam, risk_functions):
 
 
 # used only in riskmodels_test
-def get_riskcomputer(dic, alias, limit_states=()):
+def get_riskcomputer(dic, limit_states=()):
     # builds a RiskComputer instance from a suitable dictionary
     rc = scientific.RiskComputer.__new__(scientific.RiskComputer)
     rc.D = len(limit_states) + 1
@@ -505,7 +506,6 @@ def get_riskcomputer(dic, alias, limit_states=()):
                        {peril: group_by_lt(by_peril[peril]) for peril in by_peril},
                        lrem_steps_per_interval=steps,
                        minimum_asset_loss=mal)
-        rm.alias = alias
         rc[riskid] = rm
     if 'wdic' in dic:
         for rlt, weight in dic['wdic'].items():
@@ -525,33 +525,6 @@ def get_riskcomputer(dic, alias, limit_states=()):
 
 class ValidationError(Exception):
     pass
-
-
-# TODO: if the consequence tag is different from "taxonomy", pass
-# the values of the exposure for that tag
-def check_consequences(fname, taxonomies, perils):
-    """
-    Check that the taxonomy field (if any) and the peril field (if any)
-    in the consequence file are consistent with the expected taxonomies
-    and perils
-    """
-    df = pandas.read_csv(fname)
-    if 'taxonomy' in df.columns:
-        csq_taxonomies = set(df['taxonomy'])
-        extra = csq_taxonomies - taxonomies
-        missing = taxonomies - csq_taxonomies
-        if not csq_taxonomies & taxonomies:
-            raise InvalidFile(f'{fname}: no matching taxonomies')
-        elif missing:
-            raise InvalidFile(f'{fname}: missing taxonomies {missing}')
-        elif extra:
-            # tested in event_based_damage/case_15
-            logging.warning(f'In {fname} there are extra taxonomies missing '
-                            f'in the exposure: {extra}')
-    if 'peril' in df.columns:
-        for line, peril in enumerate(df['peril'], 1):
-            if peril not in perils:
-                raise InvalidFile(f'{fname}: unknown {peril=} at {line=}')
 
 
 class CompositeRiskModel(collections.abc.Mapping):
@@ -626,12 +599,27 @@ class CompositeRiskModel(collections.abc.Mapping):
             else:
                 csq_files.append(fnames)
         for fname in csq_files:
-            check_consequences(fname, set(taxidx), self.perils)
-        for byname, coeffs in self.consdict.items():
-            # reduce the consdict to the taxonomies in the exposure
-            self.consdict[byname] = {taxidx[taxo]: arr
-                                     for taxo, arr in coeffs.items()
-                                     if taxo in taxidx}
+            df = pandas.read_csv(fname)
+            if 'peril' in df.columns:
+                for line, peril in enumerate(df['peril'], 1):
+                    if peril not in self.perils:
+                        raise InvalidFile(
+                            f'{fname}: unknown {peril=} at {line=}')
+
+        cfs = '\n'.join(csq_files)
+        df = self.tmap_df
+        for peril in self.perils:
+            for byname, coeffs in self.consdict.items():
+                # ex. byname = "losses_by_taxonomy"
+                if len(coeffs):
+                    for per, risk_id, weight in zip(
+                            df.peril, df.risk_id, df.weight):
+                        if (per == '*' or per == peril) and risk_id != '?':
+                            try:
+                                coeffs[risk_id][peril]
+                            except KeyError:
+                                raise InvalidFile(
+                                    f'Missing {risk_id=}, {peril=} in\n{cfs}')
 
     def check_risk_ids(self, inputs):
         """
@@ -690,7 +678,6 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: a dict consequence_name, loss_type -> array[P, A, E]
         """
         # by construction all assets have the same taxonomy
-        taxi = assets[0]['taxonomy']
         P, A, E, _L, _D = dd5.shape
         csq = AccumDict(accum=numpy.zeros((P, A, E)))
         for byname, coeffs in self.consdict.items():
@@ -706,7 +693,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                             else:  # assume one weigth per peril
                                 [w] = df[df.peril == peril].weight
                             coeff = (dd5[pi, :, :, li, 1:] @
-                                     coeffs[taxi][peril][lt] * w)
+                                     coeffs[risk_id][peril][lt] * w)
                             cAE = scientific.consequence(
                                 consequence, assets, coeff, lt, oq.time_event)
                             csq[consequence, li][pi] += cAE
@@ -721,7 +708,8 @@ class CompositeRiskModel(collections.abc.Mapping):
         if oq.calculation_mode.endswith('_bcr'):
             # classical_bcr calculator
             for riskid, risk_functions in self.risklist.groupby_id().items():
-                self._riskmodels[riskid] = get_riskmodel(riskid, oq, risk_functions)
+                self._riskmodels[riskid] = get_riskmodel(
+                    riskid, oq, risk_functions)
         elif (any(rf.kind == 'fragility' for rf in self.risklist) or
               'damage' in oq.calculation_mode):
             # classical_damage/scenario_damage calculator
@@ -827,15 +815,15 @@ class CompositeRiskModel(collections.abc.Mapping):
         :returns: composite datatype with fields peril-loss_type-damage_state
         """
         dcs = self.damage_states + self.get_consequences()
-        if len(self.perils) == 1:
-            lst = [(f'{ltype}-{dc}', F32)
-                   for ltype in self.oqparam.loss_types for dc in dcs]
-            return numpy.dtype(lst)
         lst = []
         for peril in self.perils:
             for ltype in self.oqparam.loss_types:
                 for dc in dcs:
-                    lst.append((f'{peril}-{ltype}-{dc}', F32))
+                    if peril == 'groundshaking':
+                        col = f'{ltype}-{dc}'
+                    else:
+                        col = f'{peril}-{ltype}-{dc}'
+                    lst.append((col, F32))
         return numpy.dtype(lst)
 
     def to_multi_damage(self, array5d):
@@ -907,10 +895,13 @@ class CompositeRiskModel(collections.abc.Mapping):
     def __getitem__(self, taxo):
         return self._riskmodels[taxo]
 
-    def get_outputs(self, asset_df, haz, sec_losses=(), rndgen=None, country='?'):
+    def get_outputs(
+            self, asset_df, haz, sec_losses=(), rndgen=None, country='?'):
         """
-        :param asset_df: a DataFrame of assets with the same taxonomy and country
-        :param haz: a DataFrame of GMVs on the sites of the assets
+        :param asset_df:
+            a DataFrame of assets with the same taxonomy and country
+        :param haz:
+            a DataFrame of GMVs on the sites of the assets
         :param sec_losses: a list of functions
         :param rndgen: a MultiEventRNG instance
         :returns: a list of dictionaries loss_type-> output

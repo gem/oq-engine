@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-from openquake.baselib import performance, hdf5
+from openquake.baselib import general, performance, hdf5
 from openquake.commonlib import logs
 from openquake.calculators.extract import Extractor, WebExtractor
 
@@ -49,7 +49,7 @@ def main(what,
         else:  # save as npz
             fname = os.path.join(extract_dir, '%s_%d.npz' % (w, calc_id))
             hdf5.save_npz(aw, fname)
-        print('Saved', fname)
+        print(f'Saved {general.humansize(os.path.getsize(fname))} in {fname}')
     if mon.duration > 1:
         print(mon)
 

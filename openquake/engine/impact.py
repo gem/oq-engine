@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
-Master script for running an ARISTOTLE analysis
+Master script for running an impact analysis
 """
 import sys
 import os
@@ -64,7 +64,7 @@ def main_cmd(usgs_id, rupture_file=None,
              ses_seed='42', local_timestamp='',
              exposure_hdf5=None, station_data_file=None,
              maximum_distance_stations='',
-             msr='', approach='use_shakemap_from_usgs',
+             msr='WC1994', approach='use_shakemap_from_usgs',
              loglevel='warn',
              userlevel=2):
     """
@@ -73,7 +73,8 @@ def main_cmd(usgs_id, rupture_file=None,
     # NB: ugly hack to pass exposure_hdf5 to impact_validate
     if exposure_hdf5 is None:
         assert config.directory.mosaic_dir
-        exposure_hdf5 = os.path.join(config.directory.mosaic_dir, 'exposure.hdf5')
+        exposure_hdf5 = os.path.join(config.directory.mosaic_dir,
+                                     'exposure.hdf5')
     AristotleParam.exposure_hdf5 = exposure_hdf5
 
     loc = locals().copy()

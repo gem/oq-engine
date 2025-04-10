@@ -470,11 +470,6 @@ max:
   Example: *max = true*.
   Default: False
 
-max_aggregations:
-  Maximum number of aggregation keys.
-  Example: *max_aggregations = 200_000*
-  Default: 100_000
-
 max_blocks:
   INTERNAL. Used in classical calculations
 
@@ -634,12 +629,6 @@ random_seed:
   Seed used in the sampling of the logic tree.
   Example: *random_seed = 1234*.
   Default: 42
-
-reference_backarc:
-  Used when there is no site model to specify a global backarc parameter,
-  used in some GMPEs. Can be True or False
-  Example: *reference_backarc = true*.
-  Default: False
 
 reference_depth_to_1pt0km_per_sec:
   Used when there is no site model to specify a global z1pt0 parameter,
@@ -959,7 +948,7 @@ class OqParam(valid.ParamSet):
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
-        'reqv_ignore_sources', 'amplification', 'station_data',
+        'reqv_ignore_sources', 'amplification', 'station_data', 'mmi',
         'nonstructural_fragility',
         'nonstructural_consequence',
         'structural_fragility',
@@ -1074,7 +1063,6 @@ class OqParam(valid.ParamSet):
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_aggregations = valid.Param(valid.positivefloat, 1E5)
     max_blocks = valid.Param(valid.positiveint, 100)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_gmvs_chunk = valid.Param(valid.positiveint, 100_000)  # for 2GB limit
@@ -1112,7 +1100,6 @@ class OqParam(valid.ParamSet):
         valid.Choice('measured', 'inferred'), 'inferred')
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
-    reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
     reqv_ignore_sources = valid.Param(valid.namelist, [])
@@ -1129,7 +1116,7 @@ class OqParam(valid.ParamSet):
                      'early_latin', 'late_latin'), 'early_weights')
     mea_tau_phi = valid.Param(valid.boolean, False)
     secondary_perils = valid.Param(valid.secondary_perils, [])
-    sec_peril_params = valid.Param(valid.dictionary, {})
+    sec_peril_params = valid.Param(valid.list_of_dict, [])
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
@@ -1342,7 +1329,7 @@ class OqParam(valid.ParamSet):
                 if not ok:
                     self.raise_invalid('Missing fragility files')
             elif ('risk' in self.calculation_mode and
-                  self.calculation_mode != 'multi_risk' and not hc):
+                  'multi_peril' not in self.inputs and not hc):
                 ok = any('vulnerability' in key for key in self._risk_files)
                 if not ok:
                     self.raise_invalid('missing vulnerability files')
@@ -1355,11 +1342,11 @@ class OqParam(valid.ParamSet):
         if self.job_type == 'risk':
             self.check_aggregate_by()
         if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
-                and 'multi_peril' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
                 and self.hazard_calculation_id is None):
-            if not hasattr(self, 'truncation_level'):
+            if 'multi_peril' not in self.inputs and not hasattr(
+                    self, 'truncation_level'):
                 self.raise_invalid("Missing truncation_level")
 
         if 'reinsurance' in self.inputs:
@@ -1656,7 +1643,8 @@ class OqParam(valid.ParamSet):
         :returns:
             a list of ordered unique perils
 
-        Set the attribute .risk_imtls as a side effect
+        Set the attribute .risk_imtls as a side effect, with the imts extracted
+        from the risk functions, i.e. without secondary peril prefixes.
         """
         risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
@@ -1683,9 +1671,10 @@ class OqParam(valid.ParamSet):
         if not self.hazard_imtls:
             if (self.calculation_mode.startswith('classical') or
                     self.hazard_curves_from_gmfs):
-                self.raise_invalid('You must provide the '
-                                   'intensity measure levels explicitly. Suggestion:' +
-                                   '\n  '.join(suggested))
+                self.raise_invalid(
+                    'You must provide the '
+                    'intensity measure levels explicitly. Suggestion:' +
+                    '\n  '.join(suggested))
         if (len(self.imtls) == 0 and 'event_based' in self.calculation_mode and
                 'gmfs' not in self.inputs and not self.hazard_calculation_id
                 and self.ground_motion_fields):
@@ -1694,10 +1683,11 @@ class OqParam(valid.ParamSet):
 
         # check secondary imts
         for imt in self.get_primary_imtls():
-            if imt in sec_imts:
+            if any(sec_imt.endswith(imt) for sec_imt in sec_imts):
                 self.raise_invalid('you forgot to set secondary_perils =')
 
-        risk_perils = sorted(set(rf.peril for rf in risklist))
+        risk_perils = sorted(set(getattr(rf, 'peril', 'groundshaking')
+                                 for rf in risklist))
         return risk_perils
 
     def get_primary_imtls(self):
@@ -1705,7 +1695,7 @@ class OqParam(valid.ParamSet):
         :returns: IMTs and levels which are not secondary
         """
         return {imt: imls for imt, imls in self.imtls.items()
-                if imt not in self.sec_imts}
+                if '_' not in imt and imt not in sec_imts}
 
     def hmap_dt(self):  # used for CSV export
         """
@@ -1817,41 +1807,32 @@ class OqParam(valid.ParamSet):
         :returns: a composite data type for the GMFs
         """
         lst = [('sid', U32), ('eid', U32)]
-        for m, imt in enumerate(self.get_primary_imtls()):
-            lst.append((f'gmv_{m}', F32))
-        for out in self.sec_imts:
-            lst.append((out, F32))
+        for imt in self.all_imts():
+            lst.append((imt, F32))
         return numpy.dtype(lst)
 
     def all_imts(self):
         """
-        :returns: gmv_0, ... gmv_M, sec_imt...
+        :returns: imt..., sec_imt...
         """
-        lst = []
-        for m, imt in enumerate(self.get_primary_imtls()):
-            lst.append(f'gmv_{m}')
-        for out in self.sec_imts:
-            lst.append(out)
-        return lst
+        return list(self.get_primary_imtls()) + self.sec_imts
 
     def get_sec_perils(self):
         """
         :returns: a list of secondary perils
         """
-        return SecondaryPeril.instantiate(self.secondary_perils,
-                                          self.sec_peril_params)
+        return SecondaryPeril.instantiate(
+            self.secondary_perils, self.sec_peril_params, self)
 
     @cached_property
     def sec_imts(self):
         """
         :returns: a list of secondary outputs
         """
-        mp = self.inputs.get('multi_peril', ())
-        if mp:
-            return list(mp)  # ASH, PYRO, etc
         outs = []
         for sp in self.get_sec_perils():
-            outs.extend(sp.outputs)
+            for out in sp.outputs:
+                outs.append(f'{sp.__class__.__name__}_{out}')
         return outs
 
     def no_imls(self):
@@ -1899,7 +1880,7 @@ class OqParam(valid.ParamSet):
     @property
     def impact(self):
         """
-        Return True if we are in Aristotle mode, i.e. there is an HDF5
+        Return True if we are in OQImpact mode, i.e. there is an HDF5
         exposure with a known structure
         """
         exposures = self.inputs.get('exposure', [])
@@ -1908,7 +1889,8 @@ class OqParam(valid.ParamSet):
             if not self.quantiles:
                 self.quantiles = [0.05, 0.95]
             if not self.aggregate_by:
-                self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
+                # self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
+                self.aggregate_by = [['ID_2']]
         return yes
 
     @property
@@ -2261,12 +2243,14 @@ class OqParam(valid.ParamSet):
                 'contain a single point')
 
     def check_source_model(self):
-        if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-                'multi_peril' in self.inputs or 'rupture_model' in self.inputs
+        if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs
+                or 'rupture_model' in self.inputs
                 or 'scenario' in self.calculation_mode
                 or 'ins_loss' in self.inputs):
             return
         if ('source_model_logic_tree' not in self.inputs and
+                'source_model' not in self.inputs and
+                'multi_peril' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and
                 self.hazard_calculation_id is None):
             raise ValueError('Missing source_model_logic_tree in %s '

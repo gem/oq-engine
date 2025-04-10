@@ -134,10 +134,8 @@ def export_aggrisk(ekey, dstore):
 
     aggrisk = dstore.read_df('aggrisk')
     dest = dstore.build_fname('aggrisk-{}', '', 'csv')
-    agg_values = assetcol.get_agg_values(
-        oq.aggregate_by, oq.max_aggregations)
-    aggids, aggtags = assetcol.build_aggids(
-        oq.aggregate_by, oq.max_aggregations)
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
+    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     return _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest)
 
 
@@ -153,11 +151,9 @@ def export_aggrisk_stats(ekey, dstore):
     dest = dstore.build_fname(key + '-stats-{}', '', 'csv')
     dataf = extract(dstore, 'risk_stats/' + key)
     assetcol = dstore['assetcol']
-    agg_values = assetcol.get_agg_values(
-        oq.aggregate_by, oq.max_aggregations)
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
     K = len(agg_values) - 1
-    aggids, aggtags = assetcol.build_aggids(
-        oq.aggregate_by, oq.max_aggregations)
+    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     pairs = [([], dataf.agg_id == K)]  # full aggregation
     for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
         pairs.append((tagnames, numpy.isin(dataf.agg_id, agg_ids)))
@@ -173,6 +169,19 @@ def export_aggrisk_stats(ekey, dstore):
         writer.save(df, fname, df.columns, comment=dstore.metadata)
         fnames.append(fname)
     return fnames
+
+
+@export.add(('mmi_tags', 'csv'))
+def export_mmi_tags(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    dest = dstore.build_fname('mmi_tags', '', 'csv')
+    df = extract(dstore, 'mmi_tags')
+    writer.save(df, dest, df.columns, comment=dstore.metadata)
+    return [dest]
 
 
 def _get_data(dstore, dskey, loss_types, stats):
@@ -615,10 +624,8 @@ def export_aggcurves_csv(ekey, dstore):
     """
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    agg_values = assetcol.get_agg_values(
-        oq.aggregate_by, oq.max_aggregations)
-    aggids, aggtags = assetcol.build_aggids(
-        oq.aggregate_by, oq.max_aggregations)
+    agg_values = assetcol.get_agg_values(oq.aggregate_by)
+    aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     E = len(dstore['events'])
     R = len(dstore['weights'])
     K = len(dstore['agg_values']) - 1

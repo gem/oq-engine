@@ -22,7 +22,7 @@ xmlns:gml="http://www.opengis.net/gml"
             night
         </occupancyPeriods>
         <assets>
-            exposure_model.csv
+            exposure_model.csv.gz
         </assets>
     </exposureModel>
 </nrml>

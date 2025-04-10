@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import ast
 import csv
 import shutil
 import json
@@ -36,7 +37,7 @@ from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
-    HttpResponseForbidden)
+    HttpResponseForbidden, JsonResponse)
 from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -48,11 +49,15 @@ from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
-    impact_validate, ARISTOTLE_FORM_LABELS, ARISTOTLE_FORM_PLACEHOLDERS)
+    impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
+    IMPACT_FORM_DEFAULTS)
+from openquake.hazardlib.shakemap.parsers import (
+    get_stations_from_usgs, get_shakemap_versions)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
-from openquake.calculators.export import export, FIELD_DESCRIPTION
+from openquake.calculators.export import (
+    export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
 from openquake.calculators.extract import extract as _extract
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
@@ -263,15 +268,23 @@ def get_ini_defaults(request):
                 pass
             else:
                 ini_defs[name] = obj.default
-    return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)
+    return JsonResponse(ini_defs)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_impact_form_defaults(request):
+    """
+    Return a json string with a dictionary of oq-impact form field names and defaults
+    """
+    return JsonResponse(IMPACT_FORM_DEFAULTS)
 
 
 def _make_response(error_msg, error_line, valid):
     response_data = dict(error_msg=error_msg,
                          error_line=error_line,
                          valid=valid)
-    return HttpResponse(
-        content=json.dumps(response_data), content_type=JSON)
+    return JsonResponse(response_data)
 
 
 @csrf_exempt
@@ -398,7 +411,7 @@ def calc(request, calc_id):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps(info), content_type=JSON)
+    return JsonResponse(info)
 
 
 @require_http_methods(['GET'])
@@ -412,12 +425,14 @@ def calc_list(request, id=None):
 
     Responses are in JSON.
     """
+    # with pytest openquake/server/tests/test_public_mode.py -k classical
+    # request.GET is <QueryDict: {'is_running': ['true']}>
     base_url = _get_base_url(request)
     # always filter calculation list unless user is a superuser
-    calc_data = logs.dbcmd('get_calcs', request.GET,
-                           utils.get_valid_users(request),
-                           not utils.is_superuser(request), id)
-
+    calc_data = logs.dbcmd(
+        'get_calcs', dict(request.GET.items()),
+        utils.get_valid_users(request),
+        not utils.is_superuser(request), id)
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
@@ -449,8 +464,7 @@ def calc_list(request, id=None):
             return HttpResponseNotFound()
         [response_data] = response_data
 
-    return HttpResponse(content=json.dumps(response_data),
-                        content_type=JSON)
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @csrf_exempt
@@ -463,19 +477,18 @@ def calc_abort(request, calc_id):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         message = {'error': 'Unknown job %s' % calc_id}
-        return HttpResponse(content=json.dumps(message), content_type=JSON)
+        return JsonResponse(message)
 
     if job.status not in ('submitted', 'executing'):
         message = {'error': 'Job %s is not running' % job.id}
-        return HttpResponse(content=json.dumps(message), content_type=JSON)
+        return JsonResponse(message)
 
     # only the owner or superusers can abort a calculation
     if (job.user_name not in utils.get_valid_users(request) and
             not utils.is_superuser(request)):
         message = {'error': ('User %s has no permission to abort job %s' %
                              (request.user, job.id))}
-        return HttpResponse(content=json.dumps(message), content_type=JSON,
-                            status=403)
+        return JsonResponse(message, status=403)
 
     if job.pid:  # is a spawned job
         try:
@@ -486,10 +499,10 @@ def calc_abort(request, calc_id):
             logging.warning('Aborting job %d, pid=%d', job.id, job.pid)
             logs.dbcmd('set_status', job.id, 'aborted')
         message = {'success': 'Killing job %d' % job.id}
-        return HttpResponse(content=json.dumps(message), content_type=JSON)
+        return JsonResponse(message)
 
     message = {'error': 'PID for job %s not found' % job.id}
-    return HttpResponse(content=json.dumps(message), content_type=JSON)
+    return JsonResponse(message)
 
 
 @csrf_exempt
@@ -507,12 +520,10 @@ def calc_remove(request, calc_id):
         return HttpResponseNotFound()
 
     if 'success' in message:
-        return HttpResponse(content=json.dumps(message),
-                            content_type=JSON, status=200)
+        return JsonResponse(message, status=200)
     elif 'error' in message:
         logging.error(message['error'])
-        return HttpResponse(content=json.dumps(message),
-                            content_type=JSON, status=403)
+        return JsonResponse(message, status=403)
     else:
         # This is an untrapped server error
         logging.error(message)
@@ -529,12 +540,10 @@ def share_job(user_level, calc_id, share):
         return HttpResponseNotFound()
 
     if 'success' in message:
-        return HttpResponse(content=json.dumps(message),
-                            content_type=JSON, status=200)
+        return JsonResponse(message, status=200)
     elif 'error' in message:
         logging.error(message['error'])
-        return HttpResponse(content=json.dumps(message),
-                            content_type=JSON, status=403)
+        return JsonResponse(message, status=403)
     else:
         raise AssertionError(
             f"share_job must return 'success' or 'error'!? Returned: {message}")
@@ -605,7 +614,7 @@ def calc_log_size(request, calc_id):
         response_data = logs.dbcmd('get_log_size', calc_id)
     except dbapi.NotFound:
         return HttpResponseNotFound()
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
+    return JsonResponse(response_data)
 
 
 @csrf_exempt
@@ -642,8 +651,7 @@ def calc_run(request):
     else:
         response_data = dict(status='created', job_id=job_id)
         status = 200
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
-                        status=status)
+    return JsonResponse(response_data, status=status)
 
 
 def aelo_callback(
@@ -690,13 +698,32 @@ def impact_callback(
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
     params_to_print = ''
+    exclude_from_print = []
+    if 'shakemap_uri' in params:
+        exclude_from_print = [
+            'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
+            'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type', 'gsim',
+            'shakemap_uri', 'rupture_file', 'rupture_from_usgs', 'title', 'mmi_file',
+            'rake']
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
             if key == 'rupture_dict':
-                params_to_print += params[key] + '\n'
-            else:
+                # NOTE: params['rupture_dict'] is a string representation of a Python
+                # dictionary, not a valid JSON string, so we can't use json.loads
+                rupdic = ast.literal_eval(params['rupture_dict'])
+                for rupkey, rupval in rupdic.items():
+                    if rupkey not in exclude_from_print:
+                        params_to_print += f'{rupkey}: {rupval}\n'
+            elif key not in exclude_from_print:
                 params_to_print += f'{key}: {val}\n'
+    if 'station_data' in params['inputs']:
+        with open(params['inputs']['station_data'], 'r', encoding='utf-8') as file:
+            n_stations = sum(1 for line in file) - 1  # excluding the header
+        params_to_print += (f'{n_stations} seismic stations were loaded (please see'
+                            f'in the calculation log if any of them were discarded)\n')
+    else:
+        params_to_print += 'No seismic stations were considered\n'
 
     from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
@@ -723,19 +750,14 @@ def impact_get_rupture_data(request):
     Retrieve rupture parameters corresponding to a given usgs id
 
     :param request:
-        a `django.http.HttpRequest` object containing usgs_id
+        a `django.http.HttpRequest` object containing usgs_id, approach, rupture_file,
+        use_shakemap
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
-    station_data_file = None
-    user = request.user
-    user.testdir = None
-    # NOTE: at this stage, attempt to download station data from USGS
     rup, rupdic, _oqparams, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file,
-        download_usgs_stations=True)
+        request.POST, request.user, rupture_path)
     if err:
-        return HttpResponse(content=json.dumps(err), content_type=JSON,
-                            status=400 if 'invalid_inputs' in err else 500)
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
         figsize = (6.3, 6.3)  # fitting in a single row in the template without resizing
@@ -750,8 +772,50 @@ def impact_get_rupture_data(request):
         img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
                                   return_base64=True)
         rupdic['rupture_png'] = img_base64
-    return HttpResponse(content=json.dumps(rupdic), content_type=JSON,
-                        status=200)
+    return JsonResponse(rupdic, status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_get_stations_from_usgs(request):
+    """
+    Retrieve station data corresponding to a given usgs id
+
+    :param request:
+        a `django.http.HttpRequest` object containing usgs_id
+    """
+    usgs_id = request.POST.get('usgs_id')
+    station_data_file, n_stations, err = get_stations_from_usgs(
+        usgs_id, user=request.user)
+    station_data_issue = None
+    if err:
+        station_data_issue = err['error_msg']
+    response_data = dict(station_data_file=station_data_file,
+                         n_stations=n_stations,
+                         station_data_issue=station_data_issue)
+    return JsonResponse(response_data)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_get_shakemap_versions(request):
+    """
+    Return a list of ShakeMap versions for the given usgs_id
+
+    :param request:
+        a `django.http.HttpRequest` object containing usgs_id
+    """
+    usgs_id = request.POST.get('usgs_id')
+    shakemap_versions, err = get_shakemap_versions(usgs_id)
+    if err:
+        shakemap_versions_issue = err['error_msg']
+    else:
+        shakemap_versions_issue = None
+    response_data = dict(shakemap_versions=shakemap_versions,
+                         shakemap_versions_issue=shakemap_versions_issue)
+    return JsonResponse(response_data)
 
 
 def get_uploaded_file_path(request, filename):
@@ -763,12 +827,49 @@ def get_uploaded_file_path(request, filename):
         return gettemp(open(file.temporary_file_path()).read(), suffix='.xml')
 
 
+def create_impact_job(request, params):
+    [jobctx] = engine.create_jobs(
+        [params], config.distribution.log_level, user_name=utils.get_user(request))
+
+    job_owner_email = request.user.email
+    response_data = dict()
+
+    job_id = jobctx.calc_id
+    outputs_uri_web = request.build_absolute_uri(
+        reverse('outputs_impact', args=[job_id]))
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+    response_data[job_id] = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+    if not job_owner_email:
+        response_data[job_id]['WARNING'] = (
+            'No email address is specified for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the'
+            ' following link: %s. If the job fails, the error traceback'
+            ' will be accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+
+    # spawn the Aristotle main process
+    proc = mp.Process(
+        target=impact.main_web,
+        args=([params], [jobctx], job_owner_email, outputs_uri_web,
+              impact_callback))
+    proc.start()
+    return response_data
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def impact_run(request):
     """
-    Run an ARISTOTLE calculation.
+    Run an impact calculation.
 
     :param request:
         a `django.http.HttpRequest` object containing
@@ -790,55 +891,42 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    user = request.user
-    user.testdir = None
-    # at this stage, do not attempt to re-load station data from the USGS if they are
-    # missing or if the user explicitly decided to ignore them
-    _rup, rupdic, params, err = impact_validate(
-        request.POST, user, rupture_path, station_data_file,
-        download_usgs_stations=False)
+    _rup, _rupdic, params, err = impact_validate(
+        request.POST, request.user, rupture_path, station_data_file)
     if err:
-        return HttpResponse(content=json.dumps(err), content_type=JSON,
-                            status=400 if 'invalid_inputs' in err else 500)
-    for key in ['dip', 'strike']:
-        if key in rupdic and rupdic[key] is None:
-            del rupdic[key]
-    [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, user_name=utils.get_user(request))
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    response_data = create_impact_job(request, params)
+    return JsonResponse(response_data, status=200)
 
-    job_owner_email = request.user.email
-    response_data = dict()
 
-    job_id = jobctx.calc_id
-    outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs_impact', args=[job_id]))
-    outputs_uri_api = request.build_absolute_uri(
-        reverse('results', args=[job_id]))
-    log_uri = request.build_absolute_uri(
-        reverse('log', args=[job_id, '0', '']))
-    traceback_uri = request.build_absolute_uri(
-        reverse('traceback', args=[job_id]))
-    response_data[job_id] = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-    if not job_owner_email:
-        response_data[job_id]['WARNING'] = (
-            'No email address is speficied for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the'
-            ' following link: %s. If the job fails, the error traceback'
-            ' will be accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_run_with_shakemap(request):
+    """
+    Run an impact calculation.
 
-    # spawn the Aristotle main process
-    proc = mp.Process(
-        target=impact.main_web,
-        args=([params], [jobctx], job_owner_email, outputs_uri_web,
-              impact_callback))
-    proc.start()
-
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
-                        status=200)
+    :param request:
+        a `django.http.HttpRequest` object containing a usgs_id
+    """
+    if request.user.level == 0:
+        return HttpResponseForbidden()
+    post = dict(usgs_id=request.POST['usgs_id'],
+                use_shakemap='true', approach='use_shakemap_from_usgs')
+    _rup, rupdic, _params, err = impact_validate(post, request.user)
+    if err:
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    post = {key: str(val) for key, val in rupdic.items()
+            if key != 'shakemap_array'}
+    post['approach'] = 'use_shakemap_from_usgs'
+    post['use_shakemap'] = 'true'
+    for field in IMPACT_FORM_DEFAULTS:
+        if field not in post and IMPACT_FORM_DEFAULTS[field]:
+            post[field] = IMPACT_FORM_DEFAULTS[field]
+    _rup, rupdic, params, err = impact_validate(
+        post, request.user, post['rupture_file'])
+    response_data = create_impact_job(request, params)
+    return JsonResponse(response_data, status=200)
 
 
 def aelo_validate(request):
@@ -884,8 +972,7 @@ def aelo_validate(request):
         logging.error(err_msg)
         response_data = {"status": "failed", "error_msg": err_msg,
                          "invalid_inputs": invalid_inputs}
-        return HttpResponse(content=json.dumps(response_data),
-                            content_type=JSON, status=400)
+        return JsonResponse(response_data, status=400)
     return lon, lat, vs30, siteid, asce_version
 
 
@@ -916,8 +1003,7 @@ def aelo_run(request):
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': str(exc)}
         logging.error('', exc_info=True)
-        return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=400)
+        return JsonResponse(response_data, status=400)
     [jobctx] = engine.create_jobs(
         [params],
         config.distribution.log_level, None, utils.get_user(request), None)
@@ -942,7 +1028,7 @@ def aelo_run(request):
     job_owner_email = request.user.email
     if not job_owner_email:
         response_data['WARNING'] = (
-            'No email address is speficied for your user account,'
+            'No email address is specified for your user account,'
             ' therefore email notifications will be disabled. As soon as'
             ' the job completes, you can access its outputs at the following'
             ' link: %s. If the job fails, the error traceback will be'
@@ -953,8 +1039,7 @@ def aelo_run(request):
     mp.Process(target=aelo.main, args=(
         lon, lat, vs30, siteid, asce_version, job_owner_email, outputs_uri_web,
         jobctx, aelo_callback)).start()
-    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
-                        status=200)
+    return JsonResponse(response_data, status=200)
 
 
 def submit_job(request_files, ini, username, hc_id):
@@ -1165,9 +1250,9 @@ def calc_result(request, result_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET', 'HEAD'])
-def aggrisk_tags(request, calc_id):
+def impact_results(request, calc_id):
     """
-    Return aggrisk_tags, by ``calc_id``, as JSON.
+    Return impact results (aggrisk_tags), by ``calc_id``, as JSON.
 
     :param request:
         `django.http.HttpRequest` object.
@@ -1190,9 +1275,42 @@ def aggrisk_tags(request, calc_id):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, 'aggrisk_tags', tb),
             content_type='text/plain', status=400)
+    response_data = {'loss_type_descriptions': AGGRISK_FIELD_DESCRIPTION,
+                     'impact': df.to_dict()}
+    return JsonResponse(response_data)
 
-    return HttpResponse(content=df.to_json(),
-                        content_type=JSON, status=200)
+
+@cross_domain_ajax
+@require_http_methods(['GET', 'HEAD'])
+def exposure_by_mmi(request, calc_id):
+    """
+    Return exposure aggregated by MMI regions and tags (mmi_tags),
+    by ``calc_id``, as JSON.
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param calc_id:
+        The id of the requested calculation.
+    :returns:
+        a JSON object as documented in rest-api.rst
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            df = _extract(ds, 'mmi_tags')
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'mmi_tags', tb),
+            content_type='text/plain', status=400)
+    response_data = {'column_descriptions': EXPOSURE_FIELD_DESCRIPTION,
+                     'exposure_by_mmi': df.to_dict()}
+    return JsonResponse(response_data)
 
 
 @cross_domain_ajax
@@ -1280,10 +1398,14 @@ def web_engine(request, **kwargs):
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
-        params['impact_form_labels'] = ARISTOTLE_FORM_LABELS
-        params['impact_form_placeholders'] = ARISTOTLE_FORM_PLACEHOLDERS
+        params['impact_form_labels'] = IMPACT_FORM_LABELS
+        params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
+        params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
+
+        # this is usually '' but it can be set in the local settings for debugging
         params['impact_default_usgs_id'] = \
-            settings.ARISTOTLE_DEFAULT_USGS_ID
+            settings.IMPACT_DEFAULT_USGS_ID
+
         params['msrs'] = [msr.__class__.__name__
                           for msr in get_available_magnitude_scalerel()]
     return render(
@@ -1308,8 +1430,9 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
+            site = 'site.png' in ds['png']
         else:
-            hmaps = assets = hcurves = governing_mce = False
+            hmaps = assets = hcurves = governing_mce = site = False
             avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
@@ -1323,6 +1446,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
+                       site=site,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
                   )
 
@@ -1466,10 +1590,11 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses = (f'The risk can not be computed since the hazard is too low:'
                       f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
             losses_header = None
+            weights_precision = None
         else:
             losses_header = [
-                f'{field}<br><i>{FIELD_DESCRIPTION[field]}</i>'
-                if field in FIELD_DESCRIPTION
+                f'{field}<br><i>{AGGRISK_FIELD_DESCRIPTION[field]}</i>'
+                if field in AGGRISK_FIELD_DESCRIPTION
                 else field.capitalize()
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
@@ -1552,8 +1677,11 @@ def extract_html_table(request, calc_id, name):
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
     table_html = table.to_html(classes="table table-striped", index=False)
+    display_names = {'aggrisk_tags': 'Impact',
+                     'mmi_tags': 'Exposure by MMI'}
+    table_name = display_names[name] if name in display_names else name
     return render(request, 'engine/show_table.html',
-                  {'table_name': name, 'table_html': table_html})
+                  {'table_name': table_name, 'table_html': table_html})
 
 
 @csrf_exempt
@@ -1575,13 +1703,11 @@ def on_same_fs(request):
         data = open(filename, 'rb').read(32)
         checksum = zlib.adler32(data, checksum) & 0xffffffff
         if checksum == int(checksum_in):
-            return HttpResponse(content=json.dumps({'success': True}),
-                                content_type=JSON, status=200)
+            return JsonResponse({'success': True}, status=200)
     except (IOError, ValueError):
         pass
 
-    return HttpResponse(content=json.dumps({'success': False}),
-                        content_type=JSON, status=200)
+    return JsonResponse({'success': False}, status=200)
 
 
 @require_http_methods(['GET'])
