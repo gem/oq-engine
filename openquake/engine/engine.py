@@ -267,7 +267,7 @@ def start_workers(job_id, dist, nodes):
     """
     if dist == 'zmq':
         print('Starting the workers %s' % config.zworkers.host_cores)
-        logs.dbcmd('workers_start', config.zworkers)  # start the workers
+        logs.dbcmd('workers_start', dict(config.zworkers))
     elif dist == 'slurm':
         slurm.start_workers(job_id, nodes)
         slurm.wait_workers(job_id, nodes)

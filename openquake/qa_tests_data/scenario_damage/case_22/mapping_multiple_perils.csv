@@ -1,4 +1,4 @@
-taxonomy,conversion,weight,peril
+taxonomy,risk_id,weight,peril
 Wood1,Wood,1,groundshaking
 Concrete1,Concrete,1,groundshaking
 Wood1,Wood,1,liquefaction

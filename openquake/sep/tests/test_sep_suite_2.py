@@ -14,6 +14,7 @@ from openquake.sep.landslide.displacement import (
 
 from openquake.sep.landslide.probability import (
     nowicki_jessee_2018,
+    allstadt_etal_2022_b,
 )
 
 from openquake.sep.classes import (
@@ -95,16 +96,16 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
     def test_critical_accel(self):
         ca = np.array(
             [
-                5.53795977,
-                6.45917414,
+                5.537960,
+                6.459174,
                 5.791588,
                 0.0001,
-                14.81513269,
-                5.26990181,
-                4.20417316,
-                135.89284561,
-                6.40149393,
-                6.28627584,
+                14.815133,
+                5.269902,
+                4.204173,
+                135.892846,
+                6.401494,
+                6.286276,
             ]
         )
         np.testing.assert_array_almost_equal(self.sites["crit_accel"], ca)
@@ -120,6 +121,46 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
 
     def test_nowicki_jessee_18(self):
         prob_ls, coverage = nowicki_jessee_2018(
+            pgv=self.pgv,
+            slope=self.sites["slope"],
+            lithology=self.sites["lithology"],
+            landcover=self.sites["landcover"],
+            cti=self.sites["cti"],
+        )
+        zlp = np.array(
+            [
+                0.011672,
+                0.052064,
+                0.057599,
+                0.888425,
+                0.191497,
+                0.190742,
+                0.48066,
+                0.897942,
+                0.207814,
+                0.17799,
+            ]
+        )
+        cls = np.array(
+            [
+                0.053605,
+                0.065753,
+                0.067576,
+                8.119564,
+                0.126543,
+                0.126111,
+                0.484645,
+                8.884508,
+                0.136195,
+                0.119038,
+            ]
+        )
+        np.testing.assert_array_almost_equal(prob_ls, zlp)
+        np.testing.assert_array_almost_equal(coverage, cls)
+
+
+    def test_allstadt_etal_2022_b(self):
+        prob_ls, coverage = allstadt_etal_2022_b(
             pga=self.pga,
             pgv=self.pgv,
             slope=self.sites["slope"],
@@ -143,9 +184,9 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
         )
         cls = np.array(
             [
-                0.0,
+                0,
                 0.172675,
-                0.0,
+                0,
                 20.709538,
                 0.953252,
                 0.946616,

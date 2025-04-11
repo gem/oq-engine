@@ -80,13 +80,17 @@ class BA08SiteTerm(GMPE):
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
         
+        # Check if GMM has rake in req rup params + add if missing
+        if 'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
+            self.REQUIRES_RUPTURE_PARAMETERS |= {'rake'}
+
         # Check if GMM has vs30 in req site params + add if missing
         if 'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS:
             self.REQUIRES_SITES_PARAMETERS |= {'vs30'}
 
-        # Check if GMM has rake in req rup params + add if missing
-        if 'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
-            self.REQUIRES_RUPTURE_PARAMETERS |= {'rake'}
+        # Check if GMM has Rjb in req dist params + add if missing
+        if 'rjb' not in self.gmpe.REQUIRES_DISTANCES:
+            self.REQUIRES_DISTANCES |= {'rjb'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

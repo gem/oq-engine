@@ -34,7 +34,8 @@ from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.map_array import RateMap, MapArray, rates_dt, check_hmaps
+from openquake.hazardlib.map_array import (
+    RateMap, MapArray, rates_dt, check_hmaps)
 from openquake.commonlib import calc
 from openquake.calculators import base, getters, preclassical, views
 
@@ -383,7 +384,7 @@ class Hazard:
         return mean_rates_by_src
 
 
-@base.calculators.add('classical', 'ucerf_classical')
+@base.calculators.add('classical')
 class ClassicalCalculator(base.HazardCalculator):
     """
     Classical PSHA calculator
@@ -487,7 +488,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 mean_rates_by_src, dic)
 
         # create empty dataframes
-        self.num_chunks = getters.get_num_chunks(self.datastore)
+        self.num_chunks, _N = getters.get_num_chunks_sites(self.datastore)
         # create empty dataframes
         self.datastore.create_df(
             '_rates', [(n, rates_dt[n]) for n in rates_dt.names])
@@ -579,20 +580,20 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_regular(self, sgs, ds):
         allargs = []
         n_out = []
-        splits = []
+        splits = {}
         for cmaker, tilegetters, blocks, nsplits in self.csm.split(
                 self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
                 for tgetters in block_splitter(tilegetters, nsplits):
                     allargs.append((block, tgetters, cmaker, ds))
                     n_out.append(len(tgetters))
-            splits.append(nsplits)
+            splits[cmaker.grp_id] = nsplits
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
-        srcs = self.csm.get_sources()
+        srcs = [src for src in self.csm.get_sources() if src.weight]
         maxsrc = max(srcs, key=lambda s: s.weight / splits[s.grp_id])
         logging.info('Heaviest: %s', maxsrc)
 
@@ -611,7 +612,8 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         n_out = []
         for cmaker, tilegetters, blocks, splits in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks, True):
+                self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
+                True):
             for block in blocks:
                 for tgetter in tilegetters:
                     allargs.append((tgetter, cmaker, ds))

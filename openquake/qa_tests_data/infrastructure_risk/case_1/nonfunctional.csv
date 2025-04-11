@@ -1,4 +1,4 @@
-﻿taxonomy,consequence,peril,slight,moderate,extensive,complete
+﻿risk_id,consequence,peril,slight,moderate,extensive,complete
 demand,non_operational,groundshaking,0,1,1,1
 pumping_station1,non_operational,groundshaking,0,1,1,1
 pumping_station2,non_operational,groundshaking,0,1,1,1
