@@ -43,7 +43,8 @@ def get_mosaic_df(buffer):
     """
     fname = os.path.join(config.directory.mosaic_dir, 'ModelBoundaries.shp')
     if not os.path.exists(fname):
-        fname = os.path.join(os.path.dirname(mosaic.__file__), 'ModelBoundaries.shp')
+        fname = os.path.join(os.path.dirname(mosaic.__file__),
+                             'ModelBoundaries.shp')
     df = readinput.read_geometries(fname, 'code', buffer)
     return df
 
@@ -72,8 +73,10 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
+        # in aelo_test.py
         params['description'] += f' ({lon}, {lat})'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
+    params['maximum_distance'] = 'magdist'
     params['pointsource_distance'] = '100.'
     params['truncation_level'] = '3.'
     params['disagg_by_src'] = 'true'

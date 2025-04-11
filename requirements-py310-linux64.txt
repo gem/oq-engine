@@ -60,7 +60,6 @@ https://wheelhouse.openquake.org/v3/py/pycodestyle-2.11.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyflakes-3.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-3.1.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyreadline3-3.4.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/pyshp-2.3.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/python_pam-2.0.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pytz-2023.3-py2.py3-none-any.whl

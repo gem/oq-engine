@@ -33,8 +33,10 @@ def check_export_job(dstore):
                       'job.ini',
                       'rupture.csv',
                       'gsim_logic_tree.xml',
+                      'affectedpop_vulnerability.xml',
                       'area_vulnerability.xml',
                       'contents_vulnerability.xml',
+                      'injured_vulnerability.xml',
                       'nonstructural_vulnerability.xml',
                       'number_vulnerability.xml',
                       'occupants_vulnerability.xml',
@@ -50,7 +52,7 @@ def test_impact(n):
         raise unittest.SkipTest(f'Missing {expo}')
     calc = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
-        check_export_job(calc.datastore)        
+        check_export_job(calc.datastore)
 
 
 def test_impact5():

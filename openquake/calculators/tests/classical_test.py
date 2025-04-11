@@ -25,7 +25,7 @@ from unittest import mock
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml, calc
-from openquake.hazardlib.source.rupture import get_ruptures
+from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -39,7 +39,8 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84, case_86, case_87)
+    case_78, case_80, case_81, case_82, case_83, case_84, case_86, case_87,
+    case_88)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -321,14 +322,11 @@ class ClassicalTestCase(CalculatorTestCase):
         check = False
 
         # first test that the exported ruptures can be re-imported
-        self.run_calc(
-            case_29.__file__,
-            "job.ini",
-            calculation_mode="event_based",
-            ses_per_logic_tree_path="10",
-        )
-        csv = extract(self.calc.datastore, "ruptures").array
-        rups = get_ruptures(general.gettemp(csv))
+        self.run_calc(case_29.__file__, 'job.ini',
+                      calculation_mode='event_based',
+                      ses_per_logic_tree_path='10')
+        csv = extract(self.calc.datastore, 'ruptures').array
+        rups = get_ruptures_aw(general.gettemp(csv, suffix='.csv'))
         self.assertEqual(len(rups), 1)
 
         # check what QGIS will be seeing
@@ -948,14 +946,18 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_87(self):
         # Check execution of NGAEastUSGSGMPE with the Coastal Plains
         # site amplification model within a classical PSHA calculation
-        self.assert_curves_ok(
-            [
-                "hazard_curve-mean-SA(0.2).csv",
-                "hazard_curve-mean-SA(1.0).csv",
-                "hazard_curve-mean-SA(2.0).csv",
-            ],
-            case_87.__file__,
-        )
-        self.run_calc(case_85.__file__, "job.ini")
-        [f1] = export(("hcurves/mean", "csv"), self.calc.datastore)
-        self.assertEqualFiles("expected/hazard_curve-mean-IA.csv", f1)
+        self.assert_curves_ok([
+            'hazard_curve-mean-SA(0.2).csv',
+            'hazard_curve-mean-SA(1.0).csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_87.__file__)
+
+    def test_case_88(self):
+        # Check execution of the BA08 site term when specified as
+        # an input argument within the Atkinson and Macias (2009)
+        # GMM as required for the USA 2023 model 
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-SA(1.0).csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_88.__file__)

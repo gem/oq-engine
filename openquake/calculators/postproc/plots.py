@@ -218,7 +218,7 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
-    # Make sure to display also the hypocenter in case it is outside all surfaces
+    # Make sure to display the hypocenter if it is outside all surfaces
     # (it may be useful for debugging purposes)
     min_x = min(min_x, rup.hypocenter.x)
     max_x = max(max_x, rup.hypocenter.x)

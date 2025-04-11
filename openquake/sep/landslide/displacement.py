@@ -130,6 +130,8 @@ def jibson_2007_model_a(
     else:
         Disp[Disp < 1e-10] = 0.0
 
+    Disp = np.where((pga < 1e-5), 0, Disp)
+    
     return Disp
 
 
@@ -231,6 +233,8 @@ def jibson_2007_model_b(
     else:
         Disp[Disp < 1e-10] = 0.0
 
+    Disp = np.where((pga < 1e-5), 0, Disp)
+    
     return Disp
 
 
@@ -284,6 +288,8 @@ def cho_rathje_2022(pgv_, tslope_, crit_accel_, hratio_):
         
     # Small displacements correction
     Disp = [0.0 if value < 1e-10 else value for value in Disp]
+    
+    Disp = np.where((pgv_ < 1e-5), 0, Disp)
 
     return Disp
 
@@ -324,6 +330,8 @@ def fotopoulou_pitilakis_2015_model_a(pgv, mag, crit_accel):
     else:
         Disp = [0.0 if value < 1e-10 else value for value in Disp]
     
+    Disp = np.where((pgv < 1e-5), 0, Disp)
+    
     return Disp
     
     
@@ -362,6 +370,8 @@ def fotopoulou_pitilakis_2015_model_b(pga, mag, crit_accel):
             Disp = 0.0
     else:
         Disp = [0.0 if value < 1e-10 else value for value in Disp]
+    
+    Disp = np.where((pga < 1e-5), 0, Disp)
     
     return Disp
     
@@ -419,6 +429,8 @@ def fotopoulou_pitilakis_2015_model_c(pga, mag, crit_accel):
     else:
         Disp = [0.0 if value < 1e-10 else value for value in Disp]
     
+    Disp = np.where((pga < 1e-5), 0, Disp)
+    
     return Disp
     
     
@@ -450,6 +462,13 @@ def fotopoulou_pitilakis_2015_model_d(pgv, pga, crit_accel):
             pga = 1e-5
     else:
         pga[pga == 0.0] = 1e-5
+        
+    # Corrections of invalid values       
+    if np.isscalar(pga):
+        if pgv == 0.0:
+            pgv = 1e-5
+    else:
+        pgv[pgv == 0.0] = 1e-5
 
     accel_ratio = crit_accel / pga
     
@@ -472,6 +491,8 @@ def fotopoulou_pitilakis_2015_model_d(pgv, pga, crit_accel):
             Disp = 0.0
     else:
         Disp = [0.0 if value < 1e-10 else value for value in Disp]
+    
+    Disp = np.where((pga < 1e-5) | (pgv < 1e-5), 0, Disp)
     
     return Disp
     
@@ -525,6 +546,8 @@ def saygili_rathje_2008(pga, pgv, crit_accel):
             Disp = 0.0
     else:
         Disp = [0.0 if value < 1e-10 else value for value in Disp]
+        
+    Disp = np.where((pga < 1e-5) | (pgv < 1e-5), 0, Disp)
     
     return Disp
     
@@ -579,6 +602,8 @@ def rathje_saygili_2009(pga, mag, crit_accel):
     else:
         Disp = [0.0 if value < 1e-10 else value for value in Disp]
         
+    Disp = np.where((pga < 1e-5), 0, Disp)
+    
     return Disp   
     
     
@@ -620,5 +645,7 @@ def jibson_etal_2000(ia, crit_accel):
             Disp = 0.0
     else:
         Disp[Disp < 1e-10] = 0.0
+    
+    Disp = np.where((ia < 1e-5), 0, Disp)
     
     return Disp

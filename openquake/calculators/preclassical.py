@@ -131,8 +131,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             # special case, compute distances
             distances = sites.get_cdist(src.location)
             radius = src._get_max_rupture_projection_radius()
-            src.nsites = (distances <= maxdist + radius +
-                          src.ps_grid_spacing*.707).sum()
+            src.nsites = (distances <= maxdist + radius).sum()
         elif sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -317,9 +316,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             if pointsources or pointlike:
                 spacing = self.oqparam.ps_grid_spacing
                 if spacing:
+                    logging.info(f'Splitting/gridding point sources {grp_id=}')
                     for plike in pointlike:
-                        pointsources.extend(split_source(plike))
-                    logging.info(f'Gridding point sources for {grp_id=}')
+                        pointsources.extend(split_source(plike))  # slow
                     cpsources = grid_point_sources(pointsources, spacing)
                     before_after += [len(pointsources), len(cpsources)]
                     for block in block_splitter(cpsources, 200):

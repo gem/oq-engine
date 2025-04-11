@@ -514,15 +514,18 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali landslide simplified
         self.run_calc(case_26.__file__, 'job_land.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.DispProb > 0].DispProb.mean()
-        nd_mean = df[df.Disp > 0].Disp.mean()
+        pd_mean = df[df.JibsonEtAl2000Landslides_DispProb > 0
+                     ].JibsonEtAl2000Landslides_DispProb.mean()
+        nd_mean = df[df.JibsonEtAl2000Landslides_Disp > 0
+                     ].JibsonEtAl2000Landslides_Disp.mean()
         self.assertGreater(pd_mean, 0)
         self.assertGreater(nd_mean, 0)
         [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         arr = read_csv(fname, {'custom_site_id': str, None: float})[:2]
         self.assertEqual(arr.dtype.names,
                          ('event_id', 'gmv_IA',
-                          'sep_Disp', 'sep_DispProb', 'custom_site_id'))
+                          'JibsonEtAl2000Landslides_Disp',
+                          'JibsonEtAl2000Landslides_DispProb', 'custom_site_id'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
