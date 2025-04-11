@@ -146,7 +146,8 @@ def sample_cluster(group, num_ses, ses_seed):
         dictionaries with keys rup_array, source_data, eff_ruptures
     """
     eb_ruptures = []
-    # group[0] is a source
+    # group[0] is a source. 'serial' creates a random seed from source_id and
+    # ses_seed
     seed = group[0].serial(ses_seed)
     rng = numpy.random.default_rng(seed)
     [trt_smr] = set(src.trt_smr for src in group)
