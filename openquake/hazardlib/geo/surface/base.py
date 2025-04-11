@@ -136,7 +136,7 @@ def _get_p1_p2(clsname, top_edge, i):
                top_edge.depths[0, i + 1])
     return p1, p2
 
-    
+
 class BaseSurface(metaclass=abc.ABCMeta):
     """
     Base class for a surface in 3D-space.
@@ -326,10 +326,6 @@ class BaseSurface(metaclass=abc.ABCMeta):
         """
         top_edge = self.mesh[0:1]
         return top_edge.get_middle_point()
-
-    @abc.abstractmethod
-    def get_width(self):
-        pass
 
     def get_area(self):
         """
