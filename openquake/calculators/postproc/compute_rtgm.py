@@ -281,6 +281,7 @@ def get_zero_hazard_asce41():
               }
     return asce41
 
+
 def get_seismicity_class(mce, vs30):
     
     if vs30 == 760:
@@ -309,8 +310,10 @@ def get_seismicity_class(mce, vs30):
         Ss_seismicity = "n.a."
         S1_seismicity = "n.a."
     return Ss_seismicity, S1_seismicity
-    
-def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30, ASCE_version, low_haz=False):
+
+
+def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30,
+                   ASCE_version, low_haz=False):
     """
     :param job_imts: the IMTs run in the job
     :param det_imt: deterministic ground motion for each IMT

@@ -1111,7 +1111,7 @@ def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
                 if logfinish:
                     logging.info('Finished %d of %d jobs', n, tot)
                 n += 1
-                
+
     while procs:
         for finished in wait(procs):
             procs[finished].join()
