@@ -513,9 +513,10 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         else:
             yield site, rtgm_df, ''
 
+
 def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
-    
-    """Calculates sds and sd1 from multiperiod response spectrum according 
+    """
+    Calculates sds and sd1 from multiperiod response spectrum according 
     to section 21.4 in ASCE7-22
 
     Args:
@@ -525,37 +526,42 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
         vs30: A float representing the vs30 in m/s
 
     Returns:
-        A tuple (sds, sd1) where sds is the spectral response acceleration for short 
-        periods, and sd1 is the
+        A tuple (sds, sd1) where sds is the spectral response acceleration for
+        short periods, and sd1 is the
         spectral response acceleration for 1 second.
     """
 
-    #For sds, find periods from 0.2-5.0s, inclusive
-    sds_indices = [index for index, period in enumerate(periods) if 0.2 <= period <= 5]
+    # For sds, find periods from 0.2-5.0s, inclusive
+    sds_indices = [
+        index for index, period in enumerate(periods) if 0.2 <= period <= 5]
 
-    #sds is 90% of the maximum from 0.2-5.0s
+    # sds is 90% of the maximum from 0.2-5.0s
     sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
 
-    #For sd1, depending on vs30, take periods from 1-2s or 1-5s
-    #vs30 in m/s
+    # For sd1, depending on vs30, take periods from 1-2s or 1-5s
+    # vs30 in m/s
     if vs30 > 442:
-        sd1_indices = [index for index, period in enumerate(periods) if 1 <= period <= 2]
+        sd1_indices = [
+            index for index, period in enumerate(periods) if 1 <= period <= 2]
     else:
-        sd1_indices = [index for index, period in enumerate(periods) if 1 <= period <= 5]
+        sd1_indices = [
+            index for index, period in enumerate(periods) if 1 <= period <= 5]
 
     sd1_periods = [periods[i]  for i in sd1_indices]
     sd1_ordinates = [ordinates[i]  * 2/3 for i in sd1_indices]
 
-    #sd1 is 90% of the maximum of T * Sa across the period range, but not less than 100% of the value of Sa at 1.0s
-    sd1 = max(
-        90 / 100 * max([period * sd1_ordinates[i] for i, period in enumerate(sd1_periods)]), 100 / 100 * sd1_ordinates[0]
-    )
+    #sd1 is 90% of the maximum of T * Sa across the period range,
+    # but not less than 100% of the value of Sa at 1.0s
+    maxp = max(period * sd1_ordinates[i]
+               for i, period in enumerate(sd1_periods))
+    sd1 = max(90 / 100 * maxp, 100 / 100 * sd1_ordinates[0])
     sms = 1.5 * sds
     sm1 = 1.5 * sd1
     
     design = [sds,sd1,sms,sm1]
 
     return design
+
 
 def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     """
@@ -655,20 +661,15 @@ def main(dstore, csm):
             rtgm_dfs.append(rtgm_df)
 
     
-    for sid, mdes, a07, a41, mce_df in calc_asce(dstore, csm, job_imts, DLLs,
-                                                 rtgm,ASCE_version):
+    for sid, mdes, a07, a41, mce_df in calc_asce(
+            dstore, csm, job_imts, DLLs, rtgm,ASCE_version):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
-        #design_param[sid] = hdf5.dumps(design)
-        
         dstore[f'mag_dst_eps_sig/{sid}'] = mdes
         mce_dfs.append(mce_df)
 
-       
-        
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)
-    #dstore['Sds_Sd1'] = to_array(design_param)
 
     if mce_dfs:
         dstore.create_df('mce', pd.concat(mce_dfs))

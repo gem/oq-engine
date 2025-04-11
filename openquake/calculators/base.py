@@ -277,7 +277,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
-                # FIXME: this part can be called multiple times, for instance for
+                # FIXME: this part can be called multiple times, i.e. by
                 # EventBasedCalculator,EventBasedRiskCalculator
                 self.post_process()
                 self.export(kw.get('exports', ''))
