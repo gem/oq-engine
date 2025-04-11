@@ -134,6 +134,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         except KeyError:
             # AELO results could not be computed due to some error,
             # so the asce data is missing in the datastore
+            # NB: assume the lists are not empty, i.e. the first site is OK
             append_empty(a07s)
             append_empty(a41s)
 

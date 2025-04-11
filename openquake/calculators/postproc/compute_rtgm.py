@@ -563,6 +563,7 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     return design
 
 
+# this is spawning disagg_by_rel_sources
 def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     """
     :yields: (sid, asce07, asce41)
@@ -660,7 +661,6 @@ def main(dstore, csm):
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
 
-    
     for sid, mdes, a07, a41, mce_df in calc_asce(
             dstore, csm, job_imts, DLLs, rtgm,ASCE_version):
         asce07[sid] = hdf5.dumps(a07)
