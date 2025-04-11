@@ -26,6 +26,7 @@ Module exports: :class:`LiuMacedo2022SInter`,
 import numpy as np
 from typing import Dict, List, Tuple
 from openquake.hazardlib import const
+from scipy.constants import g as gravity_acc
 from openquake.hazardlib.imt import IMT, PGA, CAV, SA
 
 from openquake.hazardlib.gsim.conditional_gmpe import ConditionalGMPE
@@ -172,7 +173,7 @@ class LiuMacedo2022SSlab(ConditionalGMPE):
             ctx
         )
         C = self.COEFFS[CAV()]
-        conv_fact = 0
+        conv_fact = np.log(1 / gravity_acc)
         for m, imt in enumerate(imts):
             print(imt)
             median[m] = get_median_conditional_cav(C, ctx, imt, median_gms) + conv_fact
