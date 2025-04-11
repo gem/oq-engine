@@ -508,20 +508,8 @@ class AssetCollection(object):
                         out[mmi] = values[:-1]  # discard total
                     else:
                         for lt in values.dtype.names:
-                            out[mmi][lt] += values[lt][:-1]
-        _aggids, aggtags = self.build_aggids(aggregate_by)
-        aggtags = numpy.array(aggtags)  # shape (K+1, T)
-        dfs = []
-        for mmi in out:
-            dic = {key: aggtags[:, k] for k, key in enumerate(aggregate_by[0])}
-            dic.update({col: out[mmi][col] for col in out[mmi].dtype.names})
-            df = pandas.DataFrame(dic)
-            df['mmi'] = mmi
-            dfs.append(df)
-        if not dfs:
-            return ()
-        df = pandas.concat(dfs)
-        return df[df.number > 0]
+                            out[mmi][lt] += values[lt]
+        return out
 
     # not used yet
     def agg_by_site(self):
