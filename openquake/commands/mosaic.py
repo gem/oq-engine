@@ -123,7 +123,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             a07s.append(views.view('asce:07', dstore))
             a41s.append(views.view('asce:41', dstore))
         except KeyError:
-            # AELO results could not be computed due to some error
+            breakpoint()
+            # AELO results could not be extracted due to some error
             continue
 
     # printing/saving results

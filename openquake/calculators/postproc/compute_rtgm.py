@@ -619,8 +619,8 @@ def main(dstore, csm):
     rtgm = {}
     dummy_det = {imt: '' for imt in job_imts}
 
-    for site, rtgm_df, warning in process_sites(dstore, csm, DLLs,
-                                                ASCE_version):
+    for site, rtgm_df, warning in process_sites(
+            dstore, csm, DLLs, ASCE_version):
         sid = site.id
         vs30 = site.vs30
         loc = site.location
