@@ -1141,7 +1141,8 @@ class HazardCalculator(BaseCalculator):
                     csm = self.datastore.parent['_csm']
                     csm.full_lt = self.datastore.parent['full_lt'].init()
                 oq.postproc_args['csm'] = csm
-            func(self.datastore, **oq.postproc_args)
+            with self._monitor(oq.postproc_func, measuremem=True):
+                func(self.datastore, **oq.postproc_args)
 
 
 class RiskCalculator(HazardCalculator):

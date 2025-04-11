@@ -604,8 +604,9 @@ def main(dstore, csm):
     oq = dstore['oqparam']
     ASCE_version = oq.asce_version
     job_imts = list(oq.imtls)
-    DLLs = {site.id: get_DLLs(job_imts, site.vs30) for site in dstore['sitecol']}
-
+    DLLs = {
+        site.id: get_DLLs(job_imts, site.vs30) for site in dstore['sitecol']
+    }
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
@@ -637,7 +638,8 @@ def main(dstore, csm):
                          loc.y, mce_df)
         elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
             _prob_mce_out, mce, _det_mce, a07, mce_df = get_mce_asce07(
-                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, vs30, ASCE_version, low_haz=True)
+                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, vs30,
+                ASCE_version, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
             mce_dfs.append(mce_df)
