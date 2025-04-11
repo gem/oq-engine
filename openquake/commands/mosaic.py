@@ -49,6 +49,15 @@ def engine_profile(jobctx, nrows):
 
 # ########################## run_site ############################## #
 
+def append_empty(lst):
+    """
+    Append empty result for 
+    """
+    arr = lst[-1]
+    for k in arr.dtype.names:
+        arr[k] = numpy.nan
+    lst.append(arr)
+
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
 def from_file(fname, mosaic_dir, concurrent_jobs):
@@ -123,8 +132,10 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             a07s.append(views.view('asce:07', dstore))
             a41s.append(views.view('asce:41', dstore))
         except KeyError:
-            # AELO results could not be computed due to some error
-            continue
+            # AELO results could not be computed due to some error,
+            # so the asce data is missing in the datastore
+            append_empty(a07s)
+            append_empty(a41s)
 
     # printing/saving results
     print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
