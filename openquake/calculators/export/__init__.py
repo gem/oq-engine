@@ -92,8 +92,8 @@ AGGRISK_FIELD_DESCRIPTION = {
     'number': 'Buildings beyond repair',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
-    'affectedpop': 'Number of people living in buildings with moderate or higher damage'
-
+    'affectedpop': ('Number of people living in buildings '
+                    'with moderate or higher damage'),
 }
 
 EXPOSURE_FIELD_DESCRIPTION = {
@@ -108,7 +108,7 @@ EXPOSURE_FIELD_DESCRIPTION = {
     'occupants_transit': 'Occupants transit hours',
     'occupants_avg': 'Average number of occupants',
     'mmi': ('Macroseismic intensity (MMI) to which the given group'
-            ' of assets is subjected')
+            ' of assets is subjected'),
 }
 
 
