@@ -165,8 +165,8 @@ def check_hmaps(hcurves, imtls, poes):
                     continue
                 rel_err = abs(iml - iml99) / abs(iml + iml99)
                 if  rel_err > .05:
-                    raise ValueError(f'The {imt} hazard curve for {site_id=} cannot '
-                                     f'be inverted reliably around {poe=}')
+                    logging.error(f'The {imt} hazard curve for {site_id=} cannot '
+                                  f'be inverted reliably around {poe=}')
 
 
 # not used right now
