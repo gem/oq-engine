@@ -163,6 +163,17 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(phi[ORIG, 0], 0.6201)
         aae(sig[MODI, 0], 0.5701491121)
 
+    def test_avg_gmpe_mgmpe(self):
+        # Test instantiation of a ModifiableGMPE when spec in AvgGMPE
+        gmm_toml =\
+        """
+        [AvgGMPE]
+        b1.ModifiableGMPE.gmpe.AtkinsonBoore2006Modified2011 = {}
+        b1.ModifiableGMPE.add_between_within_stds.with_betw_ratio = 1.7
+        b1.ModifiableGMPE.weight = 0.6
+        b2.PezeshkEtAl2011NEHRPBC.weight = 0.4
+        """
+        valid.gsim(gmm_toml) # Instantiate using valid.gsim from a toml
 
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """

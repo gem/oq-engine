@@ -445,7 +445,7 @@ function capitalizeFirstLetter(val) {
         'use_shakemap_from_usgs',
         'use_pnt_rup_from_usgs',
         'build_rup_from_usgs',
-        'use_finite_rup_from_usgs',
+        'use_finite_rup_from_usgs'
     ];
 
     const retrieve_data_btn_txt_map = {
@@ -516,6 +516,50 @@ function capitalizeFirstLetter(val) {
         $('#rupture-map').hide();
     }
 
+    function set_shakemap_version_selector() {
+        $('#submit_impact_get_rupture').prop('disabled', true);
+        $('#submit_impact_get_rupture').text('Retrieving ShakeMap versions...');
+        $('input[name="impact_approach"]').prop('disabled', true);
+        var formData = new FormData();
+        const usgs_id = $.trim($("#usgs_id").val());
+        formData.append('usgs_id', usgs_id);
+        $.ajax({
+            type: "POST",
+            url: gem_oq_server_url + "/v1/impact_get_shakemap_versions",
+            data: formData,
+            processData: false,
+            contentType: false,
+            encode: true,
+        }).done(function (data) {
+            let $select = $("#shakemap_version");
+            $select.empty();
+            if (data.shakemap_versions_issue) {
+                $select.append(`<option value="error">${data.shakemap_versions_issue}</option>`);
+            } else {
+                $select.append('<option value="latest">Use latest</option>');
+                if (data.shakemap_versions.length > 0) {
+                    data.shakemap_versions.forEach(function (shakemap_version) {
+                        $select.append(`<option value="${shakemap_version.id}">${shakemap_version.utc_date_time}</option>`);
+                    });
+                } else {
+                    $select.append('<option value="">No versions available</option>');
+                }
+            }
+            $('#submit_impact_get_rupture').prop('disabled', false);
+            set_retrieve_data_btn_txt('initial');
+        }).error(function (data) {
+            let $select = $("#shakemap_version");
+            $select.empty();
+            $select.append('<option value="error">Unable to retrieve data</option>');
+            var resp = JSON.parse(data.responseText);
+            var err_msg = resp.error_msg;
+            diaerror.show(false, "Error", err_msg);
+        }).always(function (data) {
+            $('input[name="impact_approach"]').prop('disabled', false);
+            set_retrieve_data_btn_txt('initial');
+        });
+    }
+
     function reset_impact_forms() {
         for (field in impact_form_defaults) {
             var input = $('input#' + field);
@@ -523,6 +567,12 @@ function capitalizeFirstLetter(val) {
                 input.val(impact_form_defaults[field]);
             }
         }
+        const selectors = ['#shakemap_version', '#mosaic_model', '#trt'];
+        for (select_id of selectors) {
+            let $select = $(select_id);
+            $select.empty();
+        }
+        $('#time_event').val(impact_form_defaults['time_event']);
         $('#rupture-map').hide();
         $('#shakemap-image-row').hide();
     }
@@ -637,6 +687,8 @@ function capitalizeFirstLetter(val) {
 
             // IMPACT
 
+            set_shakemap_version_selector();
+
             $.ajax({
                 url:  "/v1/get_impact_form_defaults",
                 method: "GET",
@@ -660,6 +712,7 @@ function capitalizeFirstLetter(val) {
 
             $('input[name="usgs_id"]').on('input', function() {
                 reset_rupture_form_inputs();
+                set_shakemap_version_selector();
             });
 
             $('input[name="impact_approach"]').change(function () {
@@ -667,11 +720,14 @@ function capitalizeFirstLetter(val) {
                 set_retrieve_data_btn_txt('initial');
                 reset_impact_forms();
                 if (approaches_requiring_usgs_id.includes(selected_approach)) {
+                    $('.usgs_id_grp').removeClass('hidden');
+                } else {
+                    $('.usgs_id_grp').addClass('hidden');
+                }
+                if (selected_approach == 'use_finite_rup_from_usgs') {
                     $('#rupture_from_usgs_grp').removeClass('hidden');
-                    $('#usgs_id_grp').removeClass('hidden');
                 } else {
                     $('#rupture_from_usgs_grp').addClass('hidden');
-                    $('#usgs_id_grp').addClass('hidden');
                 }
                 if (selected_approach == 'provide_rup') {
                     $('#upload_rupture_grp').removeClass('hidden');
@@ -684,12 +740,7 @@ function capitalizeFirstLetter(val) {
                     $('#rup_params').removeClass('hidden');
                     $('div#msr').removeClass('hidden');
                     $('div#aspect_ratio').removeClass('hidden');
-                    $('#rake').prop('disabled', false);
-                    $('#dip').prop('disabled', false);
-                    $('#strike').prop('disabled', false);
-                    if (selected_approach == 'build_rup_from_usgs') {
-                        $('#rupture_from_usgs_grp').addClass('hidden');
-                    } else {  // provide_rup_params
+                    if (selected_approach == 'provide_rup_params') {
                         $('#usgs_id').val('UserProvided');
                     }
                 } else {
@@ -706,6 +757,9 @@ function capitalizeFirstLetter(val) {
                     $('div.hidden-for-shakemap').addClass('hidden');
                 } else {
                     $('div.hidden-for-shakemap').removeClass('hidden');
+                    if (!approaches_requiring_usgs_id.includes(selected_approach)) {
+                        $('.usgs_id_grp').addClass('hidden');
+                    }
                 }
             });
 
@@ -729,6 +783,7 @@ function capitalizeFirstLetter(val) {
                 if (require_usgs_id() || get_selected_approach() == 'provide_rup_params') {
                     // when providing rupture parameters, usgs_id is set to 'UserProvided'
                     formData.append('usgs_id', usgs_id);
+                    formData.append('shakemap_version', $("#shakemap_version").val());
                 }
                 formData.append('use_shakemap', use_shakemap());
                 if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
@@ -776,20 +831,8 @@ function capitalizeFirstLetter(val) {
                         conversion_issues += '<p>' + data.rupture_issue + '</p>';
                         $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
                     }
-                    // NOTE: these are stations downloaded from the USGS and not those uploaded by the user
-                    $('#station_data_file_from_usgs').val(data.station_data_file);
-                    if (data.station_data_issue) {
-                        $('#station_data_file_loaded').val('N.A. (conversion issue)');
-                        conversion_issues += '<p>' + data.station_data_issue + '</p>';
-                    } else {
-                        $('#station_data_file_loaded').val(data.station_data_file ? 'Loaded' : 'N.A.');
-                    }
                     if (conversion_issues != '') {
                         diaerror.show(false, "Note", conversion_issues);
-                    }
-                    if ($('#rupture_file_input')[0].files.length == 1) {
-                        $('#dip').prop('disabled', true);
-                        $('#strike').prop('disabled', true);
                     }
                     if ('nodal_planes' in data) {
                         const nodal_planes = data.nodal_planes;
@@ -804,9 +847,6 @@ function capitalizeFirstLetter(val) {
                             $select.append($option);
                         });
                         const nodal_plane = $select.find(':selected').data('details');
-                        $('#rake').prop('disabled', false);
-                        $('#dip').prop('disabled', false);
-                        $('#strike').prop('disabled', false);
                         $('#rake').val(nodal_plane.rake);
                         $('#dip').val(nodal_plane.dip);
                         $('#strike').val(nodal_plane.strike);
@@ -863,12 +903,20 @@ function capitalizeFirstLetter(val) {
                             $('#rupture-map').html('<p>No rupture image available</p>');
                         }
                     }
+                    var desc = $('#usgs_id').val() + ': ';
+                    if (data.title) {
+                        desc += data.title;
+                    }
+                    else {
+                        desc += 'M ' + data.mag + ' (' + data.lon + ', ' + data.lat + ')';
+                    }
+                    $('#description').val(desc);
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
                         for (var i = 0; i < resp.invalid_inputs.length; i++) {
                             var input_id = resp.invalid_inputs[i];
-                            $("#impact_get_rupture_form > input#" + input_id).css("background-color", "#F2DEDE");
+                            $("input#" + input_id).css("background-color", "#F2DEDE");
                         }
                     }
                     var err_msg = resp.error_msg;
@@ -884,19 +932,48 @@ function capitalizeFirstLetter(val) {
                 });
                 event.preventDefault();
             });
+
+            $("#getStationDataFromUsgs").click(function () {
+                $('#submit_impact_calc').prop('disabled', true);
+                $('#getStationDataFromUsgs').text('Loading...');
+                $('input[name="impact_approach"]').prop('disabled', true);
+                $('#station_data_file_loaded').val('');
+                var formData = new FormData();
+                const usgs_id = $.trim($("#usgs_id").val());
+                formData.append('usgs_id', usgs_id);
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/impact_get_stations_from_usgs",
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    encode: true,
+                }).done(function (data) {
+                    // NOTE: these are stations downloaded from the USGS and not those uploaded by the user
+                    $('#station_data_file_from_usgs').val(data.station_data_file);
+                    if (data.station_data_issue) {
+                        $('#station_data_file_loaded').val('N.A. (conversion issue)');
+                        diaerror.show(false, "Note", '<p>' + data.station_data_issue + '</p>');
+                    } else {
+                        $('#station_data_file_loaded').val(data.station_data_file ? data.n_stations + ' stations were loaded' : 'N.A.');
+                    }
+                }).error(function (data) {
+                    $('#station_data_file_loaded').val('');
+                    var resp = JSON.parse(data.responseText);
+                    var err_msg = resp.error_msg;
+                    diaerror.show(false, "Error", err_msg);
+                }).always(function (data) {
+                    $('#submit_impact_calc').prop('disabled', false);
+                    $('#getStationDataFromUsgs').text('Retrieve from the USGS');
+                    $('input[name="impact_approach"]').prop('disabled', false);
+                });
+            });
+
             $('#mosaic_model').change(function() {
                 populateTrtSelector();
             });
             $('#clearRuptureFile').click(function() {
                 $('#rupture_file_input').val('');
-                $('#dip').prop('disabled', false);
-                $('#strike').prop('disabled', false);
-                $('#dip').val('90');
-                $('#strike').val('0');
-            });
-            $('#rupture_file_input').on('change', function() {
-                $('#dip').prop('disabled', $(this).val() != '');
-                $('#strike').prop('disabled', $(this).val() != '');
             });
             $('#clearStationDataFile').click(function() {
                 $('#station_data_file_input').val('');
@@ -918,6 +995,7 @@ function capitalizeFirstLetter(val) {
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
+                formData.append('shakemap_version', $("#shakemap_version").val());
                 formData.append('use_shakemap', use_shakemap());
                 formData.append('lon', $("#lon").val());
                 formData.append('lat', $("#lat").val());
@@ -944,6 +1022,7 @@ function capitalizeFirstLetter(val) {
                 if ($msr_selector.length && $msr_selector.is(":has(option)")) {
                     formData.append('msr', $msr_selector.find(':selected').val());
                 }
+                formData.append('description', $('#description').val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/calc/impact_run",
@@ -952,13 +1031,13 @@ function capitalizeFirstLetter(val) {
                     contentType: false,
                     encode: true
                 }).done(function (data) {
-                    console.log(data);
+                    // console.log(data);
                 }).error(function (data) {
                     var resp = JSON.parse(data.responseText);
                     if ("invalid_inputs" in resp) {
                         for (var i = 0; i < resp.invalid_inputs.length; i++) {
                             var input_id = resp.invalid_inputs[i];
-                            $("#impact_run_form > input#" + input_id).css("background-color", "#F2DEDE");
+                            $("input#" + input_id).css("background-color", "#F2DEDE");
                         }
                     }
                     var err_msg = resp.error_msg;

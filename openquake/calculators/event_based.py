@@ -40,7 +40,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
-    RuptureProxy, EBRupture, get_ruptures)
+    RuptureProxy, EBRupture, get_ruptures_aw)
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
@@ -506,7 +506,7 @@ def read_gsim_lt(oq):
     return gsim_lt
 
 
-@base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
+@base.calculators.add('event_based', 'scenario')
 class EventBasedCalculator(base.HazardCalculator):
     """
     Event based PSHA calculator generating the ground motion fields and
@@ -710,7 +710,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     'The rupture is too far from the sites! Please check the '
                     'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
-            aw = get_ruptures(oq.inputs['rupture_model'])
+            aw = get_ruptures_aw(oq.inputs['rupture_model'])
             if len(gsim_lt.values) == 1:  # fix for scenario_damage/case_12
                 aw['trt_smr'] = 0  # a single TRT
             if oq.calculation_mode.startswith('scenario'):

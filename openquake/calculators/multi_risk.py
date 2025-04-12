@@ -105,13 +105,15 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
         for loss_type in loss_types:
             value = rec['value-' + loss_type]
             for peril in binary_perils:
-                rec['loss-%s-%s' % (loss_type, peril)] = haz[peril] * value
+                rec['loss-%s-%s' % (loss_type, peril)] = haz[
+                    'Volcanic_' + peril] * value
         for occupant in occupants:
             occ = rec[occupant]
             for peril in binary_perils:
-                rec[occupant + '-' + peril] = haz[peril] * occ
+                rec[occupant + '-' + peril] = haz['Volcanic_' + peril] * occ
         for peril in binary_perils:
-            rec['number-' + peril] = haz[peril] * rec['value-number']
+            rec['number-' + peril] = haz[
+                'Volcanic_' + peril] * rec['value-number']
     return arr
 
 
@@ -139,7 +141,7 @@ class MultiRiskCalculator(base.RiskCalculator):
         perils = []
         if 'ASH' in multi_peril:
             assets = general.group_array(self.assetcol, 'site_id')
-            gmf = self.datastore['gmf_data/ASH'][:]
+            gmf = self.datastore['gmf_data/Volcanic_ASH'][:]
             dmg_csq[0] = get_dmg_csq(self.crmodel, assets, gmf,
                                      self.oqparam.time_event)
             dmg_csq[1] = get_dmg_csq(self.crmodel, assets, gmf * ampl,
@@ -152,7 +154,8 @@ class MultiRiskCalculator(base.RiskCalculator):
             if peril != 'ASH':
                 binary_perils.append(peril)
         self.datastore['asset_risk'] = arr = build_asset_risk(
-            self.assetcol, dmg_csq, hazard, ltypes, dstates, perils, binary_perils)
+            self.assetcol, dmg_csq, hazard, ltypes, dstates, perils,
+            binary_perils)
         self.all_perils = perils + binary_perils
         return arr
 

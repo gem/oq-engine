@@ -1,15 +1,79 @@
+ [Anirudh Rao]
+  * In the stations parser, make sure to skip all "vertical" ('z' or 'Z') or
+    "up" ('u' or 'U') components when extracting the max horizontal component
+
+  [Manuela Villani]
+  * Implementation of ASCE design parameters Sd, Sm in the AELO engine
+
+  [Paolo Tormene]
+  * Added to oq-impact the possibility to upload a rupture in csv format
+  * Added to oq-impact the possibility to choose between different ShakeMap
+    versions for the given USGS identifier
+  * Added to oq-impact the possibility to edit the preset job description
+
   [Michele Simionato]
+  * Internal: added utility `get_ruptures(file_csv)`
+  * Optimized memory consumption in conditioned GMFs calculations
+
+  [Anirudh Rao]
+  * Sort observed imtls and imts and ensure all of the target imts go
+    into the context maker for the target sites in the conditioned gmfs
+    calculator - helps in debugging mode to prevent accidental
+    reordering of the imts
+
+ [Michele Simionato]
+  * Managed better the low hazard case in AELO calculations
+  * Optimized get_taxidx, thus making reading the USA exposure 10x faster
+  * Internal: restored the view portfolio_damage
+  * Too many post_classical tasks were generated with an artificially large
+    parameter `max_sites_disagg`
+  * Internal: added a flag --wfp to the script `utils/build_global_exposure`
+
+  [Paolo Tormene]
+  * Added `oq plot "sites?"` and added to the AELO advanced outputs page a
+    button to visualize the site of interest
+
+  [Michele Simionato]
+  * Implemented `gsim_aliases` as thunks
+  * Forced the consequence files to contain risk IDs and removed
+    utils/fix_consequences, now useless
+  * OQImpact: now aggregating by ID_2 and not ID_1
+  * Removed the --config-file option from the oq engine command
+  * Fixed numeric error in high intensity hazard curves produced by
+    multifault source by using 64 bit PoEs
+  * Removed the dependency from pyshp
+  * Improved the task distribution
+  * Exposed the output `avg_gmf`
+  * Internal: enhanced `build_global_exposure` to work at admin level 2
+  * Do not store the `backarc` parameter when not needed
+  * Fixed call to `v1/calc/list` breaking the DbServer
+  * Extended the exposure reader to accept .csv.gz files
+  * Fixed `oq info calculators` that was still displaying the obsolete and now
+    removed ucerf calculators
+  * Fixed `oq show rlz:` when the gsim logic tree was not properly reduced
+  * Internal: turned multi_fault.BLOCKSIZE into a configurable parameter
+    `config.memory.max_multi_fault_ruptures`
+  * Added command `oq info apply_uncertainty`
+  * Added an extractor `losses_by_site`
+  * Improved `oq info sources` and `oq show relevant_sources:<IMT>`
   * Internal: accepted `source_model_file` in place of
     `source_model_logic_tree_file`
   * Extended `source_model.serialise_to_nrml` to accept a `mesh_spacing`
     parameter
+
+  [Marco Pagani]
+  * Added a module to the modifiable GMPE computing site response according
+    to Stewart et al. (2020) and Hashash et al. (2020).
+  * Added a model for AUS23 that replaces the fixed Vs30 ones currently in
+    the engine
 
   [Marco Pagani, Valeria Cascone]
   * Added an get_width and get_length methods to Strasser et al. (2010) MSR
   * Fixed a bug in the Thingbaijam et al. (2017) MSR
 
   [Michele Simionato]
-  * Added an input `mmi_shapes_file` for use in OQ Impact
+  * Added an input `mmi_shapes_file` for use in OQ Impact and then
+    a JSON output /v1/calc/:ID/mmi_tags
 
   [Christopher Brooks]
   * Added Boore and Atkinson (2008) site term to the ModifiableGMPE

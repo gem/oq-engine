@@ -346,6 +346,10 @@ tr.asce_output {
     width: 206px;
 }
 
+.impact-double-width {
+    width: 412px;
+}
+
 
 /* customization of bootstrap button hover, to avoid turning to black */
 .btn:hover, .btn:focus {
@@ -476,7 +480,7 @@ input[type="radio"] {
   margin-right: 5px; /* Space between radio button and label text */
 }
 
-#clearStationDataFromUsgs {
+.station-btn {
     margin-left: 40px;
     margin-bottom: 8px;
 }

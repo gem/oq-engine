@@ -21,7 +21,7 @@ Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 """
 
 import numpy as np
-
+from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
@@ -39,6 +39,11 @@ from openquake.hazardlib.gsim.nga_east import (
     TAU_EXECUTION, get_phi_ss, TAU_SETUP, PHI_SETUP, get_tau_at_quantile,
     get_phi_ss_at_quantile)
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
+
+from openquake.hazardlib.gsim.mgmpe.stewart2020 import (
+    stewart2020_linear_scaling)
+from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
+    hashash2020_non_linear_scaling)
 
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
@@ -74,12 +79,40 @@ def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     me[:] = np.log(exp_mean * fa)
 
 
+def ceus2020_site_term(
+        ctx, imt, me, si, ta, phi, wimp, ref_vs30, ref_pga, usgs=False):
+    """
+    This function adds the Stewart et al. (2020; EQS) site term that uses as
+    a reference 760 m/s.
+
+    :param wimp:
+        The 'wimp' factor in eq. 5 of Stewart et al. (2020)
+    :param ref_vs30:
+        The reference Vs30 value
+    :param ref_pga:
+        The reference PGA value computed for a vs30 corresponding to `ref_vs30`
+    """
+
+    if not hasattr(ref_pga, '__len__'):
+        ref_pga = np.array([ref_pga])
+    assert len(ref_pga) == len(ctx.vs30)
+
+    # Compute the linear term
+    slin = stewart2020_linear_scaling(imt, ctx.vs30, wimp, usgs)
+
+    # Compute the nonlinear term
+    snlin = hashash2020_non_linear_scaling(imt, ctx.vs30, ref_pga, ref_vs30)
+
+    # Final mean
+    me[:] += (slin + snlin)
+
+
 def cy14_site_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the CY14 site term to GMMs requiring it.
     """
     C = ChiouYoungs2014.COEFFS[imt]
-    fa = _get_cy14_site_term(C, ctx.vs30, me) # Ref mean must be in natural log
+    fa = _get_cy14_site_term(C, ctx.vs30, me)  # Ref mean must be in nat log
     me[:] += fa
 
 
@@ -102,7 +135,7 @@ def m9_basin_term(ctx, imt, me, si, ta, phi):
     This function applies the M9 basin adjustment
     """
     me = _apply_m9_basin_term(ctx, imt, me)
-    
+
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
     """
@@ -249,6 +282,7 @@ class ModifiableGMPE(GMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
+
     def __init__(self, **kwargs):
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
@@ -274,19 +308,20 @@ class ModifiableGMPE(GMPE):
         if 'add_between_within_stds' in self.params:
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
-            
+
         if ('ba08_site_term' in self.params and
-            'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS):
+                'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS):
             # hazardlib/gsim/utils/get_fault_type_dummy_variables is called
             # from AB06 and requires the rake parameter so add here if missing
             self.REQUIRES_RUPTURE_PARAMETERS |= {"rake"}
 
         if ('ba08_site_term' in self.params and
-            'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
+                'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
             self.REQUIRES_SITES_PARAMETERS |= {"vs30"}
 
-        if ('cb14_basin_term' in self.params or 'm9_basin_term' in self.params
-            ) and ( 'z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
+        if ((('cb14_basin_term' in self.params) or
+             ('m9_basin_term' in self.params)) and
+                ('z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS)):
             self.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
 
         # This is required by the `sigma_model_alatik2015` function
@@ -323,7 +358,7 @@ class ModifiableGMPE(GMPE):
                     if isinstance(self.params[key][subkey], dict):
                         self.params[key] = _dict_to_coeffs_table(
                             self.params[key][subkey], subkey)
-                        
+
     # called by the ContextMaker
     def set_tables(self, mags, imts):
         """
@@ -344,8 +379,8 @@ class ModifiableGMPE(GMPE):
         """
         # Set reference Vs30 if required
         if ('nrcan15_site_term' in self.params or
-            'cy14_site_term' in self.params or
-            'ba08_site_term' in self.params):
+                'cy14_site_term' in self.params or
+                'ba08_site_term' in self.params):
             ctx_copy = ctx.copy()
             if 'nrcan15_site_term' in self.params:
                 rock_vs30 = 760.
@@ -353,7 +388,7 @@ class ModifiableGMPE(GMPE):
                 rock_vs30 = 1130.
             elif 'ba08_site_term' in self.params:
                 rock_vs30 = 760.
-            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
+            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
         else:
             ctx_copy = ctx
         g = globals()
@@ -361,8 +396,33 @@ class ModifiableGMPE(GMPE):
         # Compute the original mean and standard deviations
         self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
+        # Here we compute reference ground-motion for PGA when we need to
+        # amplify the motion using the CEUS2020 model
+        if ('ceus2020_site_term' in self.params):
+
+            # Arrays for storing results
+            ref = np.zeros_like(mean)
+            tmp = np.zeros_like(sig)
+
+            ref = np.zeros((1, len(sig[0, :])))
+            tmp = np.zeros((1, len(sig[0, :])))
+
+            # Update context
+            tctx = ctx.copy()
+            ref_vs30 = self.params['ceus2020_site_term']['ref_vs30']
+            tctx.vs30 = np.ones_like(tctx.vs30) * ref_vs30
+            timt = (PGA(),)
+
+            self.gmpe.compute(
+                tctx, timt, ref, tmp, tmp, tmp)
+
+            # 'ref' contains the PGA for the reference Vs30
+            ref = np.squeeze(ref)
+
         # Apply sequentially the modifications
         for methname, kw in self.params.items():
+            if methname in ['ceus2020_site_term']:
+                kw['ref_pga'] = np.exp(ref)
             for m, imt in enumerate(imts):
                 me, si, ta, ph = mean[m], sig[m], tau[m], phi[m]
                 g[methname](ctx, imt, me, si, ta, ph, **kw)

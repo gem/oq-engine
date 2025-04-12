@@ -319,9 +319,9 @@ def get_csm(oq, full_lt, dstore=None):
         if len(sitecol) > 1:
             sitecol = None
     # must be called *after* _fix_dupl_ids
-    fix_geometry_sections(smdict, csm.src_groups,
-                          dstore.tempname if dstore else '',
-                          sitecol if oq.disagg_by_src and oq.use_rates else None)
+    fix_geometry_sections(
+        smdict, csm.src_groups, dstore.tempname if dstore else '',
+        sitecol if oq.disagg_by_src and oq.use_rates else None)
     return csm
 
 
@@ -550,6 +550,13 @@ class CompositeSourceModel:
     """
     def __init__(self, full_lt, src_groups):
         self.src_groups = src_groups
+        trts = {sg.trt for sg in src_groups}
+        gsim_trts = set(full_lt.gsim_lt.bsetdict)
+        if trts < gsim_trts:
+            # the bset must be reduced so that `oq show rlz` works
+            full_lt.gsim_lt.bsetdict = {
+                trt: bset for trt, bset in full_lt.gsim_lt.bsetdict.items()
+                if trt in trts}
         self.init(full_lt)
 
     def init(self, full_lt):
@@ -718,9 +725,13 @@ class CompositeSourceModel:
         # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         for cmaker in cmakers[grp_ids]:
-            G = len(cmaker.gsims)
             grp_id = cmaker.grp_id
             sg = self.src_groups[grp_id]
+            if sg.weight == 0:
+                # happens in LogicTreeTestCase::test_case_08 since the
+                # point sources are far away as determined in preclassical
+                continue
+            G = len(cmaker.gsims)
             splits = G * mb_per_gsim / max_mb
             hint = sg.weight / max_weight
             if sg.atomic or tiling:
