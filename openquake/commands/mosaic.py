@@ -51,9 +51,12 @@ def engine_profile(jobctx, nrows):
 
 def append_empty(lst):
     """
-    Append empty result for 
+    Append empty result to the list, assuming lst is not empty
     """
-    arr = lst[-1]
+    try:
+        arr = lst[-1]
+    except IndexError:
+        return
     for k in arr.dtype.names:
         arr[k] = numpy.nan
     lst.append(arr)

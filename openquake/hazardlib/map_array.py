@@ -155,18 +155,25 @@ def check_hmaps(hcurves, imtls, poes):
         all_poes.extend([poe, poe * .99])
     for m, (imt, imls) in enumerate(imtls.items()):
         hmaps = compute_hazard_maps(hcurves[:, m], imls, all_poes)  # (N, 2*P)
-        for site_id in range(N):
-            for p, poe in enumerate(poes):
-                iml = hmaps[site_id, p*2]
-                iml99 = hmaps[site_id, p*2+1]
+        for p, poe in enumerate(poes):
+            zeros = []
+            lows = []
+            for sid in range(N):
+                iml = hmaps[sid, p*2]
+                iml99 = hmaps[sid, p*2+1]
                 if iml + iml99 == 0:  # zero curve
-                    logging.error(f'The {imt} hazard curve for {site_id=} cannot '
-                                  f'be inverted around {poe=}')
+                    zeros.append(sid)
                     continue
                 rel_err = abs(iml - iml99) / abs(iml + iml99)
                 if  rel_err > .05:
-                    logging.error(f'The {imt} hazard curve for {site_id=} cannot '
-                                  f'be inverted reliably around {poe=}')
+                    lows.append(sid)
+            if zeros:
+                logging.error(
+                    f'There are {imt} zero-curves for sids=%s, {poe=}', zeros)
+            elif lows:
+                logging.error(
+                    f'The {imt} hazard curve for sids=%s cannot '
+                    f'be inverted reliably around {poe=}', lows)
 
 
 # not used right now
