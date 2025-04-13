@@ -569,15 +569,14 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
 # this is spawning disagg_by_rel_sources
 def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     """
-    :yields: (sid, asce07, asce41)
+    :yields: (sid, mag_dst_eps_sig, asce07, asce41, mce_df)
     """
     oq = dstore['oqparam']
     ASCE_version = oq.asce_version
-    imls_by_sid = {}
-    for sid, rtgm_df in rtgm.items():
-        imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
-    out = postproc.disagg_by_rel_sources.main(dstore, csm, job_imts,
-                                              imls_by_sid)
+    imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
+                   for sid, rtgm_df in rtgm.items()}
+    out = postproc.disagg_by_rel_sources.main(
+        dstore, csm, job_imts, imls_by_sid)
     sitecol = dstore['sitecol']
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
         lon = sitecol.lons[sid]
@@ -665,7 +664,7 @@ def main(dstore, csm):
             rtgm_dfs.append(rtgm_df)
 
     for sid, mdes, a07, a41, mce_df in calc_asce(
-            dstore, csm, job_imts, DLLs, rtgm,ASCE_version):
+            dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
         dstore[f'mag_dst_eps_sig/{sid}'] = mdes
