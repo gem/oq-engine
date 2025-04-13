@@ -114,6 +114,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         params = get_params_from(dic, mosaic_dir)
         # del params['postproc_func']
         allparams.append(params)
+    print('Considering %d sites (excluding USA, GLD)' % len(allparams))
 
     logging.root.handlers = []  # avoid too much logging
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
