@@ -39,8 +39,8 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84, case_86, case_87,
-    case_88)
+    case_78, case_80, case_81, case_82, case_83, case_84, case_85,
+    case_86, case_87, case_88)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -818,6 +818,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.run_calc(case_84.__file__, 'job.ini')
         [f] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/rbs.csv', f)
+
+    def test_case_85(self):
+        # Macedo 2019 conditional GMPE based on AbrahamsonEtAl2015SInter
+        self.run_calc(case_85.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-IA.csv', f1)
 
     def test_case_86(self):
         # Comparing the revised indirect GMPE and the direct AvgSA GMPE

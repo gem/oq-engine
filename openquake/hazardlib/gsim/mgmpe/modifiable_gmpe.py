@@ -398,7 +398,7 @@ class ModifiableGMPE(GMPE):
 
         # Here we compute reference ground-motion for PGA when we need to
         # amplify the motion using the CEUS2020 model
-        if ('ceus2020_site_term' in self.params):
+        if 'ceus2020_site_term' in self.params:
 
             # Arrays for storing results
             ref = np.zeros_like(mean)
@@ -413,8 +413,7 @@ class ModifiableGMPE(GMPE):
             tctx.vs30 = np.ones_like(tctx.vs30) * ref_vs30
             timt = (PGA(),)
 
-            self.gmpe.compute(
-                tctx, timt, ref, tmp, tmp, tmp)
+            self.gmpe.compute(tctx, timt, ref, tmp, tmp, tmp)
 
             # 'ref' contains the PGA for the reference Vs30
             ref = np.squeeze(ref)

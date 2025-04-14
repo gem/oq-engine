@@ -1,4 +1,7 @@
- [Anirudh Rao]
+  [Graeme Weatherill, Michele Simionato]
+  * Implemented the MacedoEtAl2019SInter conditional GMM
+
+  [Anirudh Rao]
   * In the stations parser, make sure to skip all "vertical" ('z' or 'Z') or
     "up" ('u' or 'U') components when extracting the max horizontal component
 
