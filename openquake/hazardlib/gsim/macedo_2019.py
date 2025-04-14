@@ -174,7 +174,7 @@ class MacedoEtAl2019SInter(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
     REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
     REQUIRES_RUPTURE_PARAMETERS = {"mag", }
-    REQUIRES_DISTANCES = set()
+    REQUIRES_DISTANCES = {'rrup'}
 
     # Subduction interface
     kind = "sinter"
