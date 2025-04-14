@@ -230,8 +230,8 @@ class DisaggregationTestCase(CalculatorTestCase):
         # check non-invertible hazard curve
         with mock.patch('logging.error') as err:
             self.run_calc(case_14.__file__, 'job.ini')
-        self.assertIn('The PGA hazard curve for site_id=0 cannot be inverted '
-                      'reliably around poe=0.000404', err.call_args[0][0])
+        self.assertIn('cannot be inverted reliably around poe=0.000404',
+                      err.call_args[0][0])
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
     # in particular it has very different values between 2 and 16 cores(!)

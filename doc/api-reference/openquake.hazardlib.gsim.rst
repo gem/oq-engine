@@ -888,6 +888,14 @@ lin_lee_2008
     :undoc-members:
     :show-inheritance:
 
+macedo_2019
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.macedo_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 manea_2021
 -----------------------------------------------
 

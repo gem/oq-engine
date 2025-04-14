@@ -1756,11 +1756,12 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsim, ctx, imts, **kw):
+def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
     """
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N with same magnitude
-    :param imts: a list of M IMTs
+    :param imts: a list of M IMT objects
+    :param return_dicts: if True, returns 4 dictionaries keyed by IMT strings
     :param kw: additional keyword arguments
     :returns:
         an array of shape (4, M, N) obtained by applying the
@@ -1770,7 +1771,12 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     kw['imtls'] = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', [gsim] if single else gsim, kw)
     out = cmaker.get_mean_stds([ctx], split_by_mag=False)  # (4, G, M, N)
-    return out[:, 0] if single else out
+    out = out[:, 0] if single else out
+    if return_dicts:
+        assert single
+        return [{imt.string: out[o, m] for m, imt in enumerate(imts)}
+                for o in range(4)]
+    return out
 
 
 # mock of a rupture used in the tests and in the module of the OQ-MBTK
