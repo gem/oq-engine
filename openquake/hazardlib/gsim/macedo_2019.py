@@ -22,7 +22,7 @@ Module exports: :class:`MacedoEtAl2019SInter`,
 
 import numpy as np
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import IMT, IA, PGA, SA
+from openquake.hazardlib.imt import IA, PGA, SA
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.contexts import get_mean_stds
 
@@ -84,13 +84,11 @@ CONSTANTS = {
 def get_mean_conditional_arias_intensity(
     C: dict,
     ctx: np.recarray,
-    imt: IMT,
     mean_gms: np.recarray
 ) -> np.ndarray:
     """
     Returns the Arias Intensity (Equation 2)
     """
-    assert imt.string == "IA"
     return (C["c1"] + C["c2"] * np.log(ctx.vs30) +
             C["c3"] * ctx.mag + C["c4"] * mean_gms["PGA"] +
             C["c5"] * mean_gms["SA(1.0)"])
@@ -215,16 +213,16 @@ class MacedoEtAl2019SInter(GMPE):
         """
         Calculates the mean Arias Intensity and the standard deviations
         """
+        # NB: there is a single IMT, Arias Intensity, i.e. imts == [IA]
         me, si, ta, ph = get_mean_stds(
             self.gmpe, ctx, self.REQUIRES_IMTS, return_dicts=True)
         C = CONSTANTS[self.kind][self.region]
-        for m, imt in enumerate(imts):
-            mean[m] = get_mean_conditional_arias_intensity(C, ctx, imt, me)
-            sigma_m, tau_m, phi_m = get_standard_deviations(
-                C, self.kind, self.rho_pga_sa1, si, ta, ph)
-            sig[m] += sigma_m
-            tau[m] += tau_m
-            phi[m] += phi_m
+        mean[0] = get_mean_conditional_arias_intensity(C, ctx, me)
+        sigma_m, tau_m, phi_m = get_standard_deviations(
+            C, self.kind, self.rho_pga_sa1, si, ta, ph)
+        sig[0] += sigma_m
+        tau[0] += tau_m
+        phi[0] += phi_m
 
 
 class MacedoEtAl2019SSlab(MacedoEtAl2019SInter):
