@@ -277,17 +277,17 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
-                # FIXME: this part can be called multiple times, for instance for
+                # FIXME: this part can be called multiple times, i.e. by
                 # EventBasedCalculator,EventBasedRiskCalculator
                 self.post_process()
                 self.export(kw.get('exports', ''))
-            except Exception as exc:
+            except Exception:
                 if kw.get('pdb'):  # post-mortem debug
                     tb = sys.exc_info()[2]
                     traceback.print_tb(tb)
                     pdb.post_mortem(tb)
                 else:
-                    raise exc from None
+                    raise
             finally:
                 if shutdown:
                     parallel.Starmap.shutdown()
@@ -1141,7 +1141,8 @@ class HazardCalculator(BaseCalculator):
                     csm = self.datastore.parent['_csm']
                     csm.full_lt = self.datastore.parent['full_lt'].init()
                 oq.postproc_args['csm'] = csm
-            func(self.datastore, **oq.postproc_args)
+            with self._monitor(oq.postproc_func, measuremem=True):
+                func(self.datastore, **oq.postproc_args)
 
 
 class RiskCalculator(HazardCalculator):

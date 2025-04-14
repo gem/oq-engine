@@ -1,4 +1,19 @@
+  [Claudia Mascandola]
+  * Added GMPEs of ambraseys_1996 and sabetta_pugliese_1996
+
+  [Graeme Weatherill, Michele Simionato]
+  * Implemented the MacedoEtAl2019SInter and MacedoEtAl2019SSlab conditional
+    GMMs
+
+  [Anirudh Rao]
+  * In the stations parser, make sure to skip all "vertical" ('z' or 'Z') or
+    "up" ('u' or 'U') components when extracting the max horizontal component
+
+  [Manuela Villani]
+  * Implementation of ASCE design parameters Sd, Sm in the AELO engine
+
   [Paolo Tormene]
+  * Added to oq-impact the possibility to upload a rupture in csv format
   * Added to oq-impact the possibility to choose between different ShakeMap
     versions for the given USGS identifier
   * Added to oq-impact the possibility to edit the preset job description
@@ -184,7 +199,7 @@ python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
   * Extended the ShakeMap parser to read the intensities associated to SA(0.6)
   * Fixed a bug while exporting realizations.csv for scenario calculations
   * Added `webapi.calc_timeout` configuration parameter
-  * Reduced `conditioned_gmf_gb` to 8 GB by default
+  * Reduced `conditioned_gmfs_gb` to 8 GB by default
   * Parallelized `get_mean_covs` when conditioning the GMFs
 
   [Christopher Brooks]

@@ -126,6 +126,14 @@ allen_2022
     :undoc-members:
     :show-inheritance:
 
+ambraseys_1996
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.ambraseys_1996
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ambraseys_2005
 ------------------------------------------
 
@@ -888,6 +896,14 @@ lin_lee_2008
     :undoc-members:
     :show-inheritance:
 
+macedo_2019
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.macedo_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 manea_2021
 -----------------------------------------------
 
@@ -1095,6 +1111,15 @@ rietbrock_edwards_2019
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.rietbrock_edwards_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+sabetta_pugliese_1996
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sabetta_pugliese_1996
+
     :members:
     :undoc-members:
     :show-inheritance:

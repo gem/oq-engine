@@ -1611,6 +1611,9 @@ def view_relevant_sources(token, dstore):
 
 
 def asce_fix(asce, siteid):
+    """
+    Add 'siteid' field to the asce dictionaries and change 'n.a.'-> nan
+    """
     dic = json.loads(asce.decode('ascii'))
     for k, v in dic.items():
         if v == 'n.a.':
@@ -1625,10 +1628,12 @@ def view_asce(token, dstore):
     Returns asce:41 and asce:07 arrays
     """
     key = token.replace(':', '')
-    sitecol = dstore['sitecol']
-    model = dstore['oqparam'].description[9:12]
-    dics = [asce_fix(a, model + str(sid))
-            for sid, a in zip(sitecol.sids, dstore[key])]
+    array = dstore[key][:]
+    # the description is something like 'AELO for EUR[110 111]'
+    siteids = dstore['oqparam'].description[13:-1].split()
+    if len(siteids) != len(array):
+        siteids = [f'SITE{i}' for i in range(len(array))]
+    dics = [asce_fix(a, siteid) for siteid, a in zip(siteids, array)]
     header = dics[0]
     dtlist = []
     for k in header:

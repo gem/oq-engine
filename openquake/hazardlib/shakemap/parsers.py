@@ -48,10 +48,11 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter, valid
 from openquake.hazardlib.source.rupture import (
-    get_multiplanar, is_matrix, build_planar_rupture_from_dict)
+    get_multiplanar, is_matrix, build_planar_rupture_from_dict, get_ruptures)
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
+# NOTE: remove the includesuperseded parameter to download less data for testing
 QUERY_PARAMS = '?eventid={}&format=geojson&includesuperseded=True'
 SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query' + QUERY_PARAMS
 F32 = numpy.float32
@@ -292,17 +293,17 @@ def read_usgs_stations_json(js: bytes):
     # ==========================================
     # The "channels/amplitudes" dictionary contains the values recorded at
     # the seismic stations. The values could report the 3 components, in such
-    # cases, take the componet with maximum PGA (and in absence of PGA, the
+    # cases, take the component with maximum PGA (and in absence of PGA, the
     # first IM reported).
     channels = pd.DataFrame(stations.channels.to_list())
     vals = pd.Series([], dtype='object')
     for row, rec_station in channels.iterrows():
         rec_station.dropna(inplace=True)
-        # Iterate over different columns. Each colum can be a component
+        # Iterate over different columns. Each column can be a component
         data = []
         pgas = []
         for _, chan in rec_station.items():
-            if chan["name"].endswith("Z") or chan["name"].endswith("U"):
+            if chan["name"].endswith(("z", "Z", "u", "U")):
                 continue
             # logging.info(chan["name"])
             df = pd.DataFrame(chan["amplitudes"])
@@ -318,8 +319,8 @@ def read_usgs_stations_json(js: bytes):
             data.append(chan["amplitudes"])
         # get values for maximum component
         if pgas:
-            max_componet = pgas.index(max(pgas))
-            vals[row] = data[max_componet]
+            max_component = pgas.index(max(pgas))
+            vals[row] = data[max_component]
         else:
             vals[row] = None
     # The "pgm_from_mmi" dictionary contains the values estimated from MMI.
@@ -344,7 +345,7 @@ def read_usgs_stations_json(js: bytes):
         df.columns = [col[1]+'_'+col[0] for col in df.columns.values]
         for col in df.columns:
             if col in values:
-                # Colum already exist. Combine values in unique column
+                # Column already exist. Combine values in unique column
                 values[col] = values[col].combine_first(df[col])
             else:
                 values = pd.concat([values, df[col]], axis=1)
@@ -688,6 +689,7 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
     #     url = SHAKEMAP_URL.format(usgs_id)
     #     f.write(urlopen(url).read())
+    #     # NOTE: remove the includesuperseded parameter to download less data for testing
     err = {}
     if user.testdir:  # in parsers_test
         fname = os.path.join(user.testdir, usgs_id + '.json')
@@ -778,6 +780,24 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
     hp = rup.hypocenter
     rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
                   mag=rup.mag, rake=rup.rake,
+                  strike=rup.surface.get_strike(),
+                  dip=rup.surface.get_dip(),
+                  usgs_id=usgs_id,
+                  rupture_file=rupture_file)
+    return rup, rupdic, err
+
+
+def _get_rup_dic_from_csv(usgs_id, user, rupture_file):
+    err = {}
+    try:
+        [rup] = get_ruptures(os.path.join(user.testdir, rupture_file)
+                             if user.testdir else rupture_file)
+    except Exception as exc:
+        err = {"status": "failed", "error_msg": str(exc)}
+        return None, {}, err
+    hp = rup.hypocenter
+    rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
+                  mag=float(rup.mag), rake=float(rup.rake),
                   strike=rup.surface.get_strike(),
                   dip=rup.surface.get_dip(),
                   usgs_id=usgs_id,
@@ -890,6 +910,8 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='latest',
     if rupture_file:
         if rupture_file.endswith('.xml'):
             rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
+        elif rupture_file.endswith('.csv'):
+            rup, rupdic, err = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
         elif rupture_file.endswith('.json'):
             rup, rupdic, rup_data, err_msg = _get_rup_from_json(usgs_id, rupture_file)
             if err_msg:

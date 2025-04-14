@@ -219,7 +219,8 @@ class ConditionedGmfComputer(GmfComputer):
             self.rupture, self.cmaker,
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
-            self.spatial_correl, self.cross_correl_between, self.cross_correl_within,
+            self.spatial_correl, self.cross_correl_between,
+            self.cross_correl_within,
             sigma=False, h5=h5)
 
 
@@ -503,6 +504,7 @@ def get_mu_tau_phi(target_imt, gsim, mean_stds,
     return {(r.g, r.m): (mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, msg)}
 
 
+# calls get_mu_tau_phi in parallel
 def get_me_ta_ph(cmaker, sdata, observed_imts, target_imts,
                  mean_stds_D, mean_stds_Y, target, station_filtered,
                  spatial_correl, cross_correl_within, cross_correl_between, h5):

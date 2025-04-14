@@ -39,7 +39,8 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_83, case_84, case_86, case_87)
+    case_78, case_80, case_81, case_82, case_83, case_84, case_85,
+    case_86, case_87, case_88)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -818,6 +819,12 @@ class ClassicalTestCase(CalculatorTestCase):
         [f] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/rbs.csv', f)
 
+    def test_case_85(self):
+        # Macedo 2019 conditional GMPE based on AbrahamsonEtAl2015SInter
+        self.run_calc(case_85.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-IA.csv', f1)
+
     def test_case_86(self):
         # Comparing the revised indirect GMPE and the direct AvgSA GMPE
         # for AvgSA at multiple spectral periods
@@ -841,3 +848,13 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(1.0).csv',
             'hazard_curve-mean-SA(2.0).csv'],
             case_87.__file__)
+
+    def test_case_88(self):
+        # Check execution of the BA08 site term when specified as
+        # an input argument within the Atkinson and Macias (2009)
+        # GMM as required for the USA 2023 model 
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-SA(1.0).csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_88.__file__)
