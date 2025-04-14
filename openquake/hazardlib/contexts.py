@@ -1760,8 +1760,8 @@ def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
     """
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N with same magnitude
-    :param imts: a list of M IMTs
-    :param return_dicts: if True, returns 4 dictionaries keyed by IMT objects
+    :param imts: a list of M IMT objects
+    :param return_dicts: if True, returns 4 dictionaries keyed by IMT strings
     :param kw: additional keyword arguments
     :returns:
         an array of shape (4, M, N) obtained by applying the

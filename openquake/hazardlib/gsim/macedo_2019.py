@@ -122,7 +122,7 @@ def get_standard_deviations(
     tau_gms: np.recarray,
     phi_gms: np.recarray):
     """
-    Returns sigma, tau and phi
+    Returns sigma, tau and phi arrays for Arias Intensity
     """
     sigma_ia_cond = 0.36 if kind == "sinter" else 0.33
     # Gets the total standard deviation
@@ -133,7 +133,7 @@ def get_standard_deviations(
         # between-event standard deviation
         tau = get_stddev_component(
             C,
-            np.sqrt(C["tau"] ** 2.0 + C["tau_region"] ** 2.0),
+            np.sqrt(C["tau"]**2 + C["tau_region"]**2),
             tau_gms["PGA"],
             tau_gms["SA(1.0)"],
             rho_pga_sa1)
@@ -199,15 +199,16 @@ class MacedoEtAl2019SInter(GMPE):
                          alternative cross-correlation model
             gmpe_dict: dictionary specifying the underlying GMPE
         """
-        [(gmpe_name, kw)] = gmpe_dict.pop('gmpe').items()
-        self.gmpe = registry[gmpe_name](**kw)
-
-        # Check that the region is one of those supported
+        # check that the region is one of those supported
         assert region in ("Global", "Japan", "Taiwan", "South America",
                           "New Zealand"),\
             "Region %s not recognised for Macedo et al (2019) GMPE" % region
         self.region = region
         self.rho_pga_sa1 = rho_pga_sa1
+
+        # instantiate the underlying gmpe
+        [(gmpe_name, kw)] = gmpe_dict.pop('gmpe').items()
+        self.gmpe = registry[gmpe_name](**kw)
 
     def compute(self, ctx: np.recarray, imts: list, mean: np.ndarray,
                 sig: np.ndarray, tau: np.ndarray, phi: np.ndarray):
@@ -227,8 +228,8 @@ class MacedoEtAl2019SInter(GMPE):
 
 
 class MacedoEtAl2019SSlab(MacedoEtAl2019SInter):
-    """Macedo et al. (2019) GMPE for application to
-    subduction in-slab earthquakes
+    """
+    Macedo et al. (2019) GMPE for application to subduction in-slab earthquakes
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
     kind = "sslab"
