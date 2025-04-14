@@ -23,7 +23,7 @@ Module exports: :class:`MacedoEtAl2019SInter`,
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import IMT, IA, PGA, SA
-from openquake.hazardlib.gsim.base import add_alias, GMPE, registry
+from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.contexts import get_mean_stds
 
 
@@ -233,13 +233,3 @@ class MacedoEtAl2019SSlab(MacedoEtAl2019SInter):
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
     kind = "sslab"
-
-
-# Create alias classes for the Macedo et al. (2019) regionalisations
-for region_name in ["Japan", "Taiwan", "South America", "New Zealand"]:
-    sinter_alias = "MacedoEtAl2019SInter{:s}".format(
-        region_name.replace(" ", ""))
-    sslab_alias = "MacedoEtAl2019SSlab{:s}".format(
-        region_name.replace(" ", ""))
-    add_alias(sinter_alias, MacedoEtAl2019SInter, region=region_name)
-    add_alias(sslab_alias, MacedoEtAl2019SSlab, region=region_name)
