@@ -86,7 +86,7 @@ ASCE_DECIMALS = 5
 
 def get_DLLs(job_imts, vs30):
 
-    if vs30 > 1500:
+    if vs30 >= 1500:
         soil_class_asce = 'A'
     elif vs30 > 914:
         soil_class_asce = 'B'
