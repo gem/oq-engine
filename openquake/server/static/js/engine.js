@@ -660,13 +660,13 @@ function capitalizeFirstLetter(val) {
                 } else if (asce_version === 'ASCE7-22') {
                     const items = [
                         {value: 1500, text: 'A: Vs30 >= 1500 m/s'},
-                        {value: 1080, text: 'B: Vs30 >= 1080 m/s' },
-                        {value: 760, text: 'BC: Vs30 >= 760 m/s' },
-                        {value: 530, text: 'C: Vs30 >= 530 m/s' },
-                        {value: 365, text: 'CD: Vs30 >= 365 m/s' },
-                        {value: 260, text: 'D: Vs30 >= 260 m/s' },
-                        {value: 185, text: 'DE: Vs30 >= 185 m/s' },
-                        {value: 150, text: 'E: Vs30 >= 150 m/s' },
+                        {value: 1080, text: 'B: 914 m/s <= Vs30 < 1500 m/s' },
+                        {value: 760, text: 'BC: 640 m/s <= Vs30 < 914 m/s' },
+                        {value: 530, text: 'C: 442 m/s <= Vs30 >= 640 m/s' },
+                        {value: 365, text: 'CD: 305 m/s <= Vs30 >= 442 m/s' },
+                        {value: 260, text: 'D: 213 m/s <= Vs30 >= 305 m/s' },
+                        {value: 185, text: 'DE: 152 m/s <= Vs30 >= 213 m/s' },
+                        {value: 150, text: 'E: vs30 m/s < 152 m/s' },
                         {value: 260, text: 'Unknown (default: class D)' },
                         {value: 'custom', text: 'Custom'},
                     ];
@@ -734,7 +734,6 @@ function capitalizeFirstLetter(val) {
             // IMPACT
 
             set_shakemap_version_selector();
-
             $.ajax({
                 url:  "/v1/get_impact_form_defaults",
                 method: "GET",
