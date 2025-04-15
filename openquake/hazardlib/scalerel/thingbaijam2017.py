@@ -40,7 +40,7 @@ class ThingbaijamInterface(BaseMSRSigma, BaseASRSigma):
         """
         Calculates median fault area from magnitude.
         """
-        return 10**(-3.292+0.949*mag)
+        return 10**(-3.292 + 0.949 * mag)
 
     def get_std_dev_area(self, mag, rake):
         """
@@ -52,7 +52,7 @@ class ThingbaijamInterface(BaseMSRSigma, BaseASRSigma):
         """
         Returns magnitude for a given fault area
         """
-        return (log10(area)+3.292)/0.949
+        return (log10(area) + 3.292) / 0.949
 
     def get_std_dev_mag(self, area, rake):
         """
@@ -61,10 +61,10 @@ class ThingbaijamInterface(BaseMSRSigma, BaseASRSigma):
         return 0.150
 
     def get_median_length(self, mag):
-       """
-       Get median length of the rupture given moment magnitude
-       """
-       return 10.0 ** (-2.412 + 0.583 * mag)
+        """
+        Get median length of the rupture given moment magnitude
+        """
+        return 10.0 ** (-2.412 + 0.583 * mag)
 
     def get_std_dev_length(self, mag):
         """
@@ -74,17 +74,17 @@ class ThingbaijamInterface(BaseMSRSigma, BaseASRSigma):
         return 0.107
 
     def get_median_width(self, mag):
-       """
-       Get median width of the rupture given moment magnitude
-       """
-       return 10.0 ** (-0.880 + 0.366 * mag)
+        """
+        Get median width of the rupture given moment magnitude
+        """
+        return 10.0 ** (-0.880 + 0.366 * mag)
 
     def get_std_dev_width(self, mag):
-       """
+        """
         Get median width standard deviation of the rupture given moment
         magnitude
         """
-       return 0.099
+        return 0.099
 
 
 class ThingbaijamStrikeSlip(BaseMSRSigma, BaseASRSigma):
@@ -100,7 +100,7 @@ class ThingbaijamStrikeSlip(BaseMSRSigma, BaseASRSigma):
         """
         Calculates median fault area from magnitude.
         """
-        return 10**(-3.486+0.942*mag)
+        return 10**(-3.486 + 0.942 * mag)
 
     def get_std_dev_area(self, mag, rake):
         """
@@ -112,7 +112,7 @@ class ThingbaijamStrikeSlip(BaseMSRSigma, BaseASRSigma):
         """
         Returns magnitude for a given fault area
         """
-        return (log10(area)+3.486)/0.942
+        return (log10(area) + 3.486) / 0.942
 
     def get_std_dev_mag(self, area, rake):
         """
@@ -121,7 +121,7 @@ class ThingbaijamStrikeSlip(BaseMSRSigma, BaseASRSigma):
         return 0.184
 
     def get_std_dev_width(self, mag):
-       """
+        """
         Get median width standard deviation of the rupture given moment
         magnitude
         """
@@ -141,7 +141,7 @@ class ThingbaijamNormalFault(BaseMSRSigma, BaseASRSigma):
         """
         Calculates median fault area from magnitude.
         """
-        return 10**(-2.551+0.808*mag)
+        return 10**(-2.551 + 0.808 * mag)
 
     def get_std_dev_area(self, mag, rake):
         """
@@ -153,7 +153,7 @@ class ThingbaijamNormalFault(BaseMSRSigma, BaseASRSigma):
         """
         Returns magnitude for a given fault area
         """
-        return (log10(area)+2.551)/0.808
+        return (log10(area) + 2.551) / 0.808
 
     def get_std_dev_mag(self, area, rake):
         """
@@ -175,7 +175,7 @@ class ThingbaijamReverseFault(BaseMSRSigma, BaseASRSigma):
         """
         Calculates median fault area from magnitude.
         """
-        return 10**(-4.362+1.049*mag)
+        return 10**(-4.362 + 1.049 * mag)
 
     def get_std_dev_area(self, mag, rake):
         """
@@ -187,7 +187,7 @@ class ThingbaijamReverseFault(BaseMSRSigma, BaseASRSigma):
         """
         Returns magnitude for a given fault area
         """
-        return (log10(area)+4.362)/1.049
+        return (log10(area) + 4.362) / 1.049
 
     def get_std_dev_mag(self, area, rake):
         """
