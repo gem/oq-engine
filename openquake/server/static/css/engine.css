@@ -19,25 +19,29 @@ h2 {
 }
 
 @media (min-width: 1070px) and (max-width: 1120px) {
-    .aelo-input,
-    .aelo-select {
+    .aelo-input {
         width: 170px!important;
+    }
+    .aelo-select {
+        width: 184px!important;
     }
 }
 
 @media (min-width: 960px) and (max-width: 1069px) {
-    .aelo-input,
-    .aelo-select {
+    .aelo-input {
         width: 160px!important;
+    }
+    .aelo-select {
+        width: 174px!important;
     }
 }
 
 @media (min-width: 760px) and (max-width: 959px) {
     .aelo-input {
-        width: 80%!important;
+        width: 140px!important;
     }
     .aelo-select {
-        width: 170px!important;
+        width: 154px!important;
     }
 }
 
@@ -313,6 +317,7 @@ tr.asce_output {
 
 .aelo-select {
     height: 33px!important;
+    width: 207px;
 }
 
 .table-aelo-form {
