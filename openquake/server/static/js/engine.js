@@ -637,23 +637,64 @@ function capitalizeFirstLetter(val) {
                                setTimer();
                            });
 
+            $('select#vs30').on('change', function() {
+                const vs30 = $(this).val();
+                if (vs30 === 'custom') {
+                    $('#aelo_form_second_row').show();
+                } else {
+                    $('#aelo_form_second_row').hide();
+                }
+            });
+
             $('#asce_version').on('change', function() {
                 const asce_version = $(this).val();
+                const $vs30_select = $('select#vs30');
+                $vs30_select.empty();
                 if (asce_version === 'ASCE7-16') {
-                    // NOTE: if vs30 is empty, it is read as 760 and the placeholder is displayed (see below)
-                    $('#vs30').prop('readonly', true).attr('placeholder', 'fixed at 760 m/s').val('');
+                    $vs30_select.append(
+                        $('<option>', {
+                            value: 760,
+                            text: '760 m/s'
+                        })
+                    );
                 } else if (asce_version === 'ASCE7-22') {
-                    $('#vs30').prop('readonly', false).attr('placeholder', 'm/s');
+                    const items = [
+                        {value: 1500, text: 'A: Vs30 >= 1500 m/s'},
+                        {value: 1080, text: 'B: Vs30 >= 1080 m/s' },
+                        {value: 760, text: 'BC: Vs30 >= 760 m/s' },
+                        {value: 530, text: 'C: Vs30 >= 530 m/s' },
+                        {value: 365, text: 'CD: Vs30 >= 365 m/s' },
+                        {value: 260, text: 'D: Vs30 >= 260 m/s' },
+                        {value: 185, text: 'DE: Vs30 >= 185 m/s' },
+                        {value: 150, text: 'E: Vs30 >= 150 m/s' },
+                        {value: 260, text: 'Unknown (default: class D)' },
+                        {value: 'custom', text: 'Custom'},
+                    ];
+                    items.forEach(item => {
+                        $vs30_select.append(
+                            $("<option>", {
+                                value: item.value,
+                                text: item.text
+                            })
+                        );
+                    });
                 }
             });
 
             // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
             $("#aelo_run_form").submit(function (event) {
                 $('#submit_aelo_calc').prop('disabled', true);
+                var vs30;
+                const $vs30_select = $('select#vs30');
+                if ($vs30_select.val() === 'custom') {
+                    vs30 = parseFloat($("input#custom_vs30").val());
+                } else {
+                    vs30 = parseFloat($("select#vs30").val());
+                }
                 var formData = {
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
-                    vs30: $("#vs30").val().trim() === '' ? '760' : $("#vs30").val(),
+                    vs30: vs30,
                     siteid: $("#siteid").val(),
                     asce_version: $("#asce_version").val()
                 };

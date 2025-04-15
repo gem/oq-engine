@@ -21,7 +21,7 @@
                   <tr>
                     <td><input class="aelo-input" type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/></td>
                     <td><input class="aelo-input" type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/></td>
-                    <td><input class="aelo-input" type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}" readonly /></td>
+                    <td><select class="aelo-select" name="vs30" id="vs30"><option value="760">760 m/s</option></select></td>
                     <td><input class="aelo-input" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/></td>
                     <td>
                         <select class="aelo-select" name="asce_version" id="asce_version">
@@ -34,6 +34,13 @@
                         {% endfor %}
                         </select>
                     </td>
+                  </tr>
+                  <tr id="aelo_form_second_row" hidden>
+                      <td></td>
+                      <td></td>
+                      <td><input class="aelo-input" type="text" id="custom_vs30" name="custom_vs30" placeholder="{{ aelo_form_placeholders.custom_vs30 }}"/></td>
+                      <td></td>
+                      <td></td>
                   </tr>
                 </tbody>
               </table>
