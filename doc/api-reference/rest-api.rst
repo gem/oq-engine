@@ -523,7 +523,7 @@ If you have a scenario calculation you may want to exact the
 
 >> extractor = WebExtractor(calc_id, server, username, password)
 >> imts = list(extractor.oqparam.imtls)  # list of available IMTs
->> extractor.get('avg_gmf?imt={imts[0]}')
+>> extractor.get(f'avg_gmf?imt={imts[0]}')
 >> aw.lons   # longitudes
 >> aw.lats   # latitudes
 >> aw[imts[0]] # array of values
