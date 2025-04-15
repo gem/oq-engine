@@ -60,14 +60,11 @@ class ThingbaijamInterface(BaseMSRSigma, BaseASRSigma):
         """
         return 0.150
 
-
     def get_median_length(self, mag):
        """
        Get median length of the rupture given moment magnitude
        """
        return 10.0 ** (-2.412 + 0.583 * mag)
-
-
 
     def get_std_dev_length(self, mag):
         """
@@ -76,14 +73,11 @@ class ThingbaijamInterface(BaseMSRSigma, BaseASRSigma):
         """
         return 0.107
 
-
     def get_median_width(self, mag):
        """
        Get median width of the rupture given moment magnitude
        """
        return 10.0 ** (-0.880 + 0.366 * mag)
-
-
 
     def get_std_dev_width(self, mag):
        """
@@ -124,16 +118,14 @@ class ThingbaijamStrikeSlip(BaseMSRSigma, BaseASRSigma):
         """
         Returns std
         """
-       return 0.184
-
+        return 0.184
 
     def get_std_dev_width(self, mag):
        """
         Get median width standard deviation of the rupture given moment
         magnitude
         """
-       return 0.099
-
+        return 0.099
 
 
 class ThingbaijamNormalFault(BaseMSRSigma, BaseASRSigma):
@@ -145,13 +137,11 @@ class ThingbaijamNormalFault(BaseMSRSigma, BaseASRSigma):
     Implements both magnitude-area and area-magnitude scaling relationships.
     """
 
-    
     def get_median_area(self, mag, rake):
         """
         Calculates median fault area from magnitude.
         """
-        return 10**(-2.551+0.808*mag) 
-
+        return 10**(-2.551+0.808*mag)
 
     def get_std_dev_area(self, mag, rake):
         """
@@ -159,19 +149,17 @@ class ThingbaijamNormalFault(BaseMSRSigma, BaseASRSigma):
         """
         return 0.181
 
-
     def get_median_mag(self, area, rake):
         """
         Returns magnitude for a given fault area
         """
         return (log10(area)+2.551)/0.808
 
-
     def get_std_dev_mag(self, area, rake):
         """
         Returns std
         """
-        return 0.181    
+        return 0.181
 
 
 class ThingbaijamReverseFault(BaseMSRSigma, BaseASRSigma):
@@ -183,14 +171,11 @@ class ThingbaijamReverseFault(BaseMSRSigma, BaseASRSigma):
     Implements both magnitude-area and area-magnitude scaling relationships.
     """
 
-
     def get_median_area(self, mag, rake):
         """
         Calculates median fault area from magnitude.
         """
         return 10**(-4.362+1.049*mag)
-
-
 
     def get_std_dev_area(self, mag, rake):
         """
@@ -198,21 +183,14 @@ class ThingbaijamReverseFault(BaseMSRSigma, BaseASRSigma):
         """
         return 0.121
 
-
-
     def get_median_mag(self, area, rake):
         """
         Returns magnitude for a given fault area
         """
         return (log10(area)+4.362)/1.049
 
-
-
     def get_std_dev_mag(self, area, rake):
         """
         Returns std
         """
         return 0.121
-
-
-
