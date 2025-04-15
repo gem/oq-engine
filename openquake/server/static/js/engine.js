@@ -733,18 +733,20 @@ function capitalizeFirstLetter(val) {
 
             // IMPACT
 
-            set_shakemap_version_selector();
-            $.ajax({
-                url:  "/v1/get_impact_form_defaults",
-                method: "GET",
-                dataType: "json",
-                success: function(data) {
-                    impact_form_defaults = data;
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error loading impact_from_defaults:", error);
-                }
-            });
+            if (window.application_mode === 'ARISTOTLE') {
+                set_shakemap_version_selector();
+                $.ajax({
+                    url:  "/v1/get_impact_form_defaults",
+                    method: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        impact_form_defaults = data;
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error loading impact_from_defaults:", error);
+                    }
+                });
+            }
 
             function toggleRunCalcBtnState() {
                 var lonValue = $('#lon').val();
