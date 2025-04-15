@@ -1497,7 +1497,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
             for key, value in asce07.items():
-                if key not in ('PGA', 'Ss', 'S1'):
+                if key not in ('PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value

@@ -83,6 +83,7 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 
+
 def get_DLLs(job_imts, vs30):
 
     if vs30 > 1524:
@@ -112,7 +113,7 @@ def get_DLLs(job_imts, vs30):
     for imt, t in zip(job_imts, T_job):
         if imt in imt_table.values:
             DLLs.append(D[imt_table == imt].values[0])
-        else: # interpolate for any IMT not included in the table
+        else:  # interpolate for any IMT not included in the table
             up = np.where(T_table > t)[0][0]
             low = np.where(T_table < t)[0][-2]
             dll = np.interp(t, [T_table[low], T_table[up]], [D[low], D[up]])
@@ -283,7 +284,7 @@ def get_zero_hazard_asce41():
 
 
 def get_seismicity_class(mce, vs30):
-    
+
     if vs30 == 760:
         if mce['SA(0.2)'] < 0.25:
             Ss_seismicity = "Low"
@@ -354,46 +355,46 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30,
                'MCE': mce.values(),
                'sid': [sid]*len(job_imts)}
     mce_df = pd.DataFrame(dic_mce)
- 
-    Ss_seismicity, S1_seismicity= get_seismicity_class(mce, vs30)
+
+    Ss_seismicity, S1_seismicity = get_seismicity_class(mce, vs30)
 
     period_mce = [from_string(imt).period for imt in job_imts]
-    
-    if ASCE_version == 'ASCE7-16':    
+
+    if ASCE_version == 'ASCE7-16':
         asce07 = {
              'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
              'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
 
-             'Ss': mce['SA(0.2)'],'Ss_RT': prob_mce_out['SA(0.2)'],
+             'Ss': mce['SA(0.2)'], 'Ss_RT': prob_mce_out['SA(0.2)'],
              'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
              'Ss_det': det_mce['SA(0.2)'],
              'Ss_seismicity': Ss_seismicity,
 
              'S1': mce['SA(1.0)'], 'S1_RT': prob_mce_out['SA(1.0)'],
-             'CR1': cr1,'S1_84th': det_imt['SA(1.0)'],
+             'CR1': cr1, 'S1_84th': det_imt['SA(1.0)'],
              'S1_det': det_mce['SA(1.0)'],
              'S1_seismicity': S1_seismicity
              }
     else:
         design = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
-    
+
         asce07 = {
              'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
              'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
 
              'Ss': mce['SA(0.2)'], 'Sms': design[2],
-             'Sds': design[0],'Ss_RT': prob_mce_out['SA(0.2)'],
+             'Sds': design[0], 'Ss_RT': prob_mce_out['SA(0.2)'],
              'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
              'Ss_det': det_mce['SA(0.2)'],
              'Ss_seismicity': Ss_seismicity,
 
              'S1': mce['SA(1.0)'], 'Sm1': design[3],
              'Sd1': design[1], 'S1_RT': prob_mce_out['SA(1.0)'],
-             'CR1': cr1,'S1_84th': det_imt['SA(1.0)'],
+             'CR1': cr1, 'S1_84th': det_imt['SA(1.0)'],
              'S1_det': det_mce['SA(1.0)'],
              'S1_seismicity': S1_seismicity
              }
-    
+
     for key in asce07:
         if not isinstance(asce07[key], str):
             asce07[key] = (
@@ -519,12 +520,12 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
 
 def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     """
-    Calculates sds and sd1 from multiperiod response spectrum according 
+    Calculates sds and sd1 from multiperiod response spectrum according
     to section 21.4 in ASCE7-22
 
     Args:
         periods: A list of periods for the multiperiod response spectrum.
-        ordinates: A list of ordinates (accelerations) for the multiperiod 
+        ordinates: A list of ordinates (accelerations) for the multiperiod
         response spectrum multiplied by 2/3 as shown in eq. 21.3-1 in ASCE7-22
         vs30: A float representing the vs30 in m/s
 
@@ -550,18 +551,18 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
         sd1_indices = [
             index for index, period in enumerate(periods) if 1 <= period <= 5]
 
-    sd1_periods = [periods[i]  for i in sd1_indices]
-    sd1_ordinates = [ordinates[i]  * 2/3 for i in sd1_indices]
+    sd1_periods = [periods[i] for i in sd1_indices]
+    sd1_ordinates = [ordinates[i] * 2/3 for i in sd1_indices]
 
-    #sd1 is 90% of the maximum of T * Sa across the period range,
+    # sd1 is 90% of the maximum of T * Sa across the period range,
     # but not less than 100% of the value of Sa at 1.0s
     maxp = max(period * sd1_ordinates[i]
                for i, period in enumerate(sd1_periods))
     sd1 = max(90 / 100 * maxp, 100 / 100 * sd1_ordinates[0])
     sms = 1.5 * sds
     sm1 = 1.5 * sd1
-    
-    design = [sds,sd1,sms,sm1]
+
+    design = [sds, sd1, sms, sm1]
 
     return design
 
@@ -593,16 +594,15 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
         logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-        
+
         logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
         logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
-        
+
         yield sid, mag_dst_eps_sig, asce07, asce41, mce_df
 
 
 def to_array(dic):
     return np.array([dic[sid] for sid in sorted(dic)])
-
 
 
 def main(dstore, csm):
