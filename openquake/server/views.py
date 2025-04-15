@@ -107,6 +107,7 @@ AELO_FORM_LABELS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
     'vs30': 'Vs30',
+    'custom_vs30': 'Custom Vs30',
     'siteid': 'Site name',
     'asce_version': 'ASCE version',
 }

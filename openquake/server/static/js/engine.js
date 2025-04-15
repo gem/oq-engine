@@ -640,9 +640,9 @@ function capitalizeFirstLetter(val) {
             $('select#vs30').on('change', function() {
                 const vs30 = $(this).val();
                 if (vs30 === 'custom') {
-                    $('#aelo_form_second_row').show();
+                    $('.custom-vs30').fadeIn();
                 } else {
-                    $('#aelo_form_second_row').hide();
+                    $('.custom-vs30').fadeOut();
                 }
             });
 
