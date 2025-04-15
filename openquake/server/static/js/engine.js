@@ -679,6 +679,11 @@ function capitalizeFirstLetter(val) {
                         );
                     });
                 }
+                if ($vs30_select.val() === 'custom') {
+                    $('.custom-vs30').fadeIn();
+                } else {
+                    $('.custom-vs30').fadeOut();
+                }
             });
 
             // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
