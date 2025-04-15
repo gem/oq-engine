@@ -1846,3 +1846,14 @@ def view_log_median_spectrum(token, dstore):
     res['period'] = periods
     res['value'] = dset[:, sid, :, 0].sum(axis=0)
     return res
+
+
+@view.add('excessive_losses')
+def view_excessive_losses(token, dstore):
+    """
+    Displays the assets with loss larger than the value (due to bugs)
+    """
+    losses = dstore['avg_losses-rlzs/structural'][:, 0]
+    array = dstore['assetcol'].array
+    values = array['value-structural']
+    return array[losses > values]
