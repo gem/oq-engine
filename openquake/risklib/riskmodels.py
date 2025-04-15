@@ -408,8 +408,9 @@ class RiskModel(object):
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[peril][loss_type]
-        return vf(asset_df, gmf_df, imt, rndgen,
-                  self.minimum_asset_loss.get(loss_type, 0.))
+        df = vf(asset_df, gmf_df, imt, rndgen,
+                self.minimum_asset_loss.get(loss_type, 0.))
+        return df
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
