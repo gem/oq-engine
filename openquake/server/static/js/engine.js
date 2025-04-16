@@ -659,6 +659,7 @@ function capitalizeFirstLetter(val) {
                     );
                 } else if (asce_version === 'ASCE7-22') {
                     const items = [
+                        {value: 260, text: 'Unknown (default: class D)' },
                         {value: 1500, text: 'A: Vs30 >= 1500 m/s'},
                         {value: 1080, text: 'B: 914 m/s <= Vs30 < 1500 m/s' },
                         {value: 760, text: 'BC: 640 m/s <= Vs30 < 914 m/s' },
@@ -667,7 +668,6 @@ function capitalizeFirstLetter(val) {
                         {value: 260, text: 'D: 213 m/s <= Vs30 >= 305 m/s' },
                         {value: 185, text: 'DE: 152 m/s <= Vs30 >= 213 m/s' },
                         {value: 150, text: 'E: vs30 m/s < 152 m/s' },
-                        {value: 260, text: 'Unknown (default: class D)' },
                         {value: 'custom', text: 'Custom'},
                     ];
                     items.forEach(item => {
