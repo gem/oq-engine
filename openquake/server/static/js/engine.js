@@ -659,16 +659,16 @@ function capitalizeFirstLetter(val) {
                     );
                 } else if (asce_version === 'ASCE7-22') {
                     const items = [
-                        {value: 260, text: 'Unknown (default: class D)' },
-                        {value: 1500, text: 'A: Vs30 >= 1500 m/s'},
-                        {value: 1080, text: 'B: 914 m/s <= Vs30 < 1500 m/s' },
-                        {value: 760, text: 'BC: 640 m/s <= Vs30 < 914 m/s' },
-                        {value: 530, text: 'C: 442 m/s <= Vs30 >= 640 m/s' },
-                        {value: 365, text: 'CD: 305 m/s <= Vs30 >= 442 m/s' },
-                        {value: 260, text: 'D: 213 m/s <= Vs30 >= 305 m/s' },
-                        {value: 185, text: 'DE: 152 m/s <= Vs30 >= 213 m/s' },
-                        {value: 150, text: 'E: vs30 m/s < 152 m/s' },
-                        {value: 'custom', text: 'Custom'},
+                        {value: 260, text: 'Unknown (D: Vs30 260)' },
+                        {value: 1500, text: 'A (Vs30 1500)'},
+                        {value: 1080, text: 'B (Vs30 1080)' },
+                        {value: 760, text: 'BC (Vs30 760)' },
+                        {value: 530, text: 'C (Vs30 530)' },
+                        {value: 365, text: 'CD (Vs30 365)' },
+                        {value: 260, text: 'D (Vs30 260)' },
+                        {value: 185, text: 'DE (Vs30 185)' },
+                        {value: 150, text: 'E (Vs30 150)' },
+                        {value: 'custom', text: 'Custom Vs30'},
                     ];
                     items.forEach(item => {
                         $vs30_select.append(
