@@ -57,8 +57,12 @@ if settings.WEBUI:
                     views.web_engine_get_outputs_impact,
                     name="outputs_impact"))
 
-    for app in settings.STANDALONE_APPS:
-        app_name = app.split('_')[1]
+    for app_full in settings.STANDALONE_APPS:
+        app = app_full.split('.')[0]
+        if app in settings.STANDALONE_APP_NAME_MAP:
+            app_name = settings.STANDALONE_APP_NAME_MAP[app]
+        else:
+            app_name = app.split('_')[1]
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app, namespace='%s' % app_name)))
 

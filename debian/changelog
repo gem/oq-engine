@@ -1,4 +1,26 @@
+  [Matteo Nastasi]
+  * Allow free mapping between standlone apps and their url path prefix
+    (regardless of their name)
+
 python3-oq-engine (3.23.4-1~xenial01) xenial; urgency=low
+  [Michele Simionato]
+  * Exposed the output `avg_gmf`
+  * Internal: enhanced `build_global_exposure` to work at admin level 2
+  * Do not store the `backarc` parameter when not needed
+  * Fixed call to `v1/calc/list` breaking the DbServer
+  * Extended the exposure reader to accept .csv.gz files
+  * Fixed `oq info calculators` that was still displaying the obsolete and now
+    removed ucerf calculators
+  * Fixed `oq show rlz:` when the gsim logic tree was not properly reduced
+  * Internal: turned multi_fault.BLOCKSIZE into a configurable parameter
+    `config.memory.max_multi_fault_ruptures`
+  * Added command `oq info apply_uncertainty`
+  * Added an extractor `losses_by_site`
+  * Improved `oq info sources` and `oq show relevant_sources:<IMT>`
+  * Internal: accepted `source_model_file` in place of
+    `source_model_logic_tree_file`
+  * Extended `source_model.serialise_to_nrml` to accept a `mesh_spacing`
+    parameter
 
   [Paul Henshaw, Paolo Tormene]
   * Force use of utf8 encoding when writing non-binary files.
