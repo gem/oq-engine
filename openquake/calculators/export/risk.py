@@ -18,13 +18,12 @@
 
 import os
 import json
-import tempfile
 import itertools
 import collections
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, writers, general, node, config
+from openquake.baselib import hdf5, writers, general, node
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
@@ -731,7 +730,8 @@ def convert_df_to_vulnerability(loss_type, df):
     descr = N('description', {}, f"{loss_type} vulnerability model")
     root.append(descr)
     for riskfunc in df.riskfunc:
-        rfunc = json.loads(riskfunc)['openquake.risklib.scientific.VulnerabilityFunction']
+        rfunc = json.loads(riskfunc)[
+            'openquake.risklib.scientific.VulnerabilityFunction']
         vfunc = N('vulnerabilityFunction',
                   {'id': rfunc['id'], 'dist': rfunc['distribution_name']})
         imls = N('imls', {'imt': rfunc['imt']}, rfunc['imls'])
@@ -742,16 +742,15 @@ def convert_df_to_vulnerability(loss_type, df):
     return root
 
 
-def export_vulnerability_xml(dstore, edir):
-    fnames = []
+def export_vulnerability_xml(dstore):
+    dic = {}
     for loss_type, df in dstore.read_df('crm').groupby('loss_type'):
         nodeobj = convert_df_to_vulnerability(loss_type, df)
-        dest = os.path.join(edir, '%s_vulnerability.xml' % loss_type)
+        dest = dstore.export_path('%s_vulnerability.xml' % loss_type)
         with open(dest, 'wb') as out:
             nrml.write([nodeobj], out)
-        fnames.append(dest)
-    return fnames
-
+        dic[f'{loss_type}_vulnerability'] = os.path.basename(dest)
+    return dic
 
 
 @export.add(('assetcol', 'csv'))
@@ -815,29 +814,31 @@ def export_job_zip(ekey, dstore):
     - vulnerability functions.xml
     - taxonomy_mapping.csv
     """
+    inputs = {}
     oq = dstore['oqparam']
-    edir = tempfile.mkdtemp(dir=config.directory.custom_tmp or tempfile.gettempdir())
-    fnames = export_exposure(dstore, edir)
-    job_ini = os.path.join(edir, 'job.ini')
-    with open(job_ini, 'w') as out:
-        out.write(oq.to_ini(exposure='exposure.xml'))
-    fnames.append(job_ini)
+    oq.base_path = os.path.abspath('.')
+    job_ini = dstore.export_path('%s.ini' % ekey[0])
+    inputs['job_ini'] = os.path.basename(job_ini)
+    [exposure_xml, _assetcol_csv] = export_exposure(('exposure', 'zip'), dstore)
+    inputs['exposure'] = os.path.basename(exposure_xml)
     csv = extract(dstore, 'ruptures?slice=0&slice=1').array
-    dest = os.path.join(edir, 'rupture.csv')
+    dest = dstore.export_path('rupture.csv')
     with open(dest, 'w') as out:
         out.write(csv)
-    fnames.append(dest)
+    inputs['rupture_model'] = os.path.basename(dest)
     gsim_lt = dstore['full_lt'].gsim_lt
-    dest = os.path.join(edir, 'gsim_logic_tree.xml')
+    dest = dstore.export_path('gsim_logic_tree.xml')
     with open(dest, 'wb') as out:
         nrml.write([gsim_lt.to_node()], out)
-    fnames.append(dest)
-    fnames.extend(export_vulnerability_xml(dstore, edir))
+    inputs['gsim_logic_tree'] = os.path.basename(dest)
+    inputs.update(export_vulnerability_xml(dstore))
 
-    dest = os.path.join(edir, 'taxonomy_mapping.csv')
+    dest = dstore.export_path('taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     del taxmap['taxi']
     writer.save(taxmap, dest)
-    fnames.append(dest)
-    return fnames
+    inputs['taxonomy_mapping'] = os.path.basename(dest)
+    with open(job_ini, 'w') as out:
+        out.write(oq.to_ini(**inputs))
+    return list(inputs.values())
