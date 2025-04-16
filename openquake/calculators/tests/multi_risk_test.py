@@ -36,7 +36,8 @@ class MultiRiskTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'gmf_data?event_id=0')
         ae(len(aw['rlz-000']), 173)
         ae(aw['rlz-000'].dtype.names,
-           ('custom_site_id', 'lon', 'lat', 'ASH', 'LAVA', 'LAHAR', 'PYRO'))
+           ('custom_site_id', 'lon', 'lat', 'Volcanic_ASH', 'Volcanic_LAVA',
+            'Volcanic_LAHAR', 'Volcanic_PYRO'))
 
         # check extract exposure_metadata
         md = json.loads(extract(self.calc.datastore, 'exposure_metadata').json)

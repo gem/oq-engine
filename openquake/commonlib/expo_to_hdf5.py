@@ -104,7 +104,7 @@ def store_tagcol(dstore):
         size = len(uvals) + 1
         tagsizes.append(size)
         logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices start from 1
+        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
         dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
         if name == 'ID_0':
             dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
@@ -119,21 +119,29 @@ def store_tagcol(dstore):
     dstore.getitem('tagcol').attrs.update(dic)
 
 
-def gen_tasks(files, sample_assets, monitor):
+# in parallel
+def gen_tasks(files, wfp, sample_assets, monitor):
     """
     Generate tasks of kind exposure_by_geohash for large files
     """
     for file in files:
         # read CSV in chunks
-        usecols = file.fields | {'ID_2'} if file.admin2 else {}
+        usecols = file.fields | ({'ID_2'} if file.admin2 else set())
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=usecols, skiprows=1, chunksize=1_000_000)
+        nrows = 0
         for i, df in enumerate(dfs):
             if sample_assets:
                 df = general.random_filter(df, float(sample_assets))
             if len(df) == 0:
                 continue
+            if wfp:
+                for col in df.columns:
+                    if col.startswith('WFP_'):
+                        # i.e. overwrite ID_1 with WFP_ID_1
+                        df[col[4:]] = df.pop(col)
+            nrows += len(df)
             if 'ID_1' not in df.columns:  # happens for many islands
                 df['ID_1'] = '???'
             if 'ID_2' not in df.columns:  # happens for many contries in Africa
@@ -145,11 +153,11 @@ def gen_tasks(files, sample_assets, monitor):
             if i == 0:
                 yield from exposure_by_geohash(array, monitor)
             else:
-                print(file.fname)
                 yield exposure_by_geohash, array
+        print(os.path.basename(file.fname), nrows)
 
 
-def store(exposures_xml, dstore):
+def store(exposures_xml, wfp, dstore):
     """
     Store the given exposures in the datastore
     """
@@ -158,6 +166,9 @@ def store(exposures_xml, dstore):
         exposure, _ = _get_exposure(xml)
         csvfiles.extend(exposure.datafiles)
     files = hdf5.sniff(csvfiles, ',', IGNORE)
+    if wfp:
+        files = [f for f in files if any(field.startswith('WFP_')
+                                         for field in f.header)]
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
         [('ASSET_ID', h5py.string_dtype('ascii', 25))]
@@ -169,7 +180,7 @@ def store(exposures_xml, dstore):
     dstore.create_dset('assets/slice_by_gh3', slc_dt, fillvalue=None)
     dstore.swmr_on()
     sa = os.environ.get('OQ_SAMPLE_ASSETS')
-    smap = Starmap.apply(gen_tasks, (files, sa),
+    smap = Starmap.apply(gen_tasks, (files, wfp, sa),
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
     num_assets = 0
     # NB: we need to keep everything in memory to make gzip efficient
@@ -200,7 +211,7 @@ def store(exposures_xml, dstore):
     logging.info('Stored {:_d} assets in {}'.format(n, dstore.filename))
 
 
-def main(exposures_xml):
+def main(exposures_xml, wfp=False):
     """
     An utility to convert an exposure from XML+CSV format into HDF5.
     NB: works only for the exposures of the global risk model, having
@@ -208,7 +219,7 @@ def main(exposures_xml):
     """
     log, dstore = create_job_dstore()
     with dstore, log:
-        store(exposures_xml, dstore)
+        store(exposures_xml, wfp, dstore)
     return dstore.filename
 
 main.exposures_xml = dict(help='Exposure pathnames', nargs='+')

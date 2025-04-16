@@ -51,7 +51,8 @@ from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
     IMPACT_FORM_DEFAULTS)
-from openquake.hazardlib.shakemap.parsers import get_stations_from_usgs
+from openquake.hazardlib.shakemap.parsers import (
+    get_stations_from_usgs, get_shakemap_versions)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -106,6 +107,7 @@ AELO_FORM_LABELS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
     'vs30': 'Vs30',
+    'custom_vs30': 'Custom Vs30',
     'siteid': 'Site name',
     'asce_version': 'ASCE version',
 }
@@ -113,7 +115,7 @@ AELO_FORM_LABELS = {
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': 'fixed at 760 m/s',
+    'custom_vs30': 'positive float',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE version',
 }
@@ -702,7 +704,8 @@ def impact_callback(
         exclude_from_print = [
             'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
             'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type', 'gsim',
-            'shakemap_uri', 'rupture_file', 'rupture_from_usgs']
+            'shakemap_uri', 'rupture_file', 'rupture_from_usgs', 'title', 'mmi_file',
+            'rake']
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
@@ -715,6 +718,13 @@ def impact_callback(
                         params_to_print += f'{rupkey}: {rupval}\n'
             elif key not in exclude_from_print:
                 params_to_print += f'{key}: {val}\n'
+    if 'station_data' in params['inputs']:
+        with open(params['inputs']['station_data'], 'r', encoding='utf-8') as file:
+            n_stations = sum(1 for line in file) - 1  # excluding the header
+        params_to_print += (f'{n_stations} seismic stations were loaded (please see'
+                            f'in the calculation log if any of them were discarded)\n')
+    else:
+        params_to_print += 'No seismic stations were considered\n'
 
     from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
@@ -741,7 +751,8 @@ def impact_get_rupture_data(request):
     Retrieve rupture parameters corresponding to a given usgs id
 
     :param request:
-        a `django.http.HttpRequest` object containing usgs_id
+        a `django.http.HttpRequest` object containing usgs_id, approach, rupture_file,
+        use_shakemap
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     rup, rupdic, _oqparams, err = impact_validate(
@@ -776,12 +787,35 @@ def impact_get_stations_from_usgs(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
-    station_data_file, err = get_stations_from_usgs(usgs_id, user=request.user)
+    station_data_file, n_stations, err = get_stations_from_usgs(
+        usgs_id, user=request.user)
     station_data_issue = None
     if err:
         station_data_issue = err['error_msg']
     response_data = dict(station_data_file=station_data_file,
+                         n_stations=n_stations,
                          station_data_issue=station_data_issue)
+    return JsonResponse(response_data)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_get_shakemap_versions(request):
+    """
+    Return a list of ShakeMap versions for the given usgs_id
+
+    :param request:
+        a `django.http.HttpRequest` object containing usgs_id
+    """
+    usgs_id = request.POST.get('usgs_id')
+    shakemap_versions, err = get_shakemap_versions(usgs_id)
+    if err:
+        shakemap_versions_issue = err['error_msg']
+    else:
+        shakemap_versions_issue = None
+    response_data = dict(shakemap_versions=shakemap_versions,
+                         shakemap_versions_issue=shakemap_versions_issue)
     return JsonResponse(response_data)
 
 
@@ -791,7 +825,45 @@ def get_uploaded_file_path(request, filename):
         # NOTE: we could not find a reliable way to avoid the deletion of the
         # uploaded file right after the request is consumed, therefore we need
         # to store a copy of it
-        return gettemp(open(file.temporary_file_path()).read(), suffix='.xml')
+        suffix = file.name[-4:]
+        return gettemp(open(file.temporary_file_path()).read(), suffix=suffix)
+
+
+def create_impact_job(request, params):
+    [jobctx] = engine.create_jobs(
+        [params], config.distribution.log_level, user_name=utils.get_user(request))
+
+    job_owner_email = request.user.email
+    response_data = dict()
+
+    job_id = jobctx.calc_id
+    outputs_uri_web = request.build_absolute_uri(
+        reverse('outputs_impact', args=[job_id]))
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+    response_data[job_id] = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+    if not job_owner_email:
+        response_data[job_id]['WARNING'] = (
+            'No email address is specified for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the'
+            ' following link: %s. If the job fails, the error traceback'
+            ' will be accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+
+    # spawn the Aristotle main process
+    proc = mp.Process(
+        target=impact.main_web,
+        args=([params], [jobctx], job_owner_email, outputs_uri_web,
+              impact_callback))
+    proc.start()
+    return response_data
 
 
 @csrf_exempt
@@ -821,47 +893,41 @@ def impact_run(request):
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
-    _rup, rupdic, params, err = impact_validate(
+    _rup, _rupdic, params, err = impact_validate(
         request.POST, request.user, rupture_path, station_data_file)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
-    for key in ['dip', 'strike']:
-        if key in rupdic and rupdic[key] is None:
-            del rupdic[key]
-    [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, user_name=utils.get_user(request))
+    response_data = create_impact_job(request, params)
+    return JsonResponse(response_data, status=200)
 
-    job_owner_email = request.user.email
-    response_data = dict()
 
-    job_id = jobctx.calc_id
-    outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs_impact', args=[job_id]))
-    outputs_uri_api = request.build_absolute_uri(
-        reverse('results', args=[job_id]))
-    log_uri = request.build_absolute_uri(
-        reverse('log', args=[job_id, '0', '']))
-    traceback_uri = request.build_absolute_uri(
-        reverse('traceback', args=[job_id]))
-    response_data[job_id] = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        log_uri=log_uri, traceback_uri=traceback_uri)
-    if not job_owner_email:
-        response_data[job_id]['WARNING'] = (
-            'No email address is speficied for your user account,'
-            ' therefore email notifications will be disabled. As soon as'
-            ' the job completes, you can access its outputs at the'
-            ' following link: %s. If the job fails, the error traceback'
-            ' will be accessible at the following link: %s'
-            % (outputs_uri_api, traceback_uri))
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_run_with_shakemap(request):
+    """
+    Run an impact calculation.
 
-    # spawn the Aristotle main process
-    proc = mp.Process(
-        target=impact.main_web,
-        args=([params], [jobctx], job_owner_email, outputs_uri_web,
-              impact_callback))
-    proc.start()
-
+    :param request:
+        a `django.http.HttpRequest` object containing a usgs_id
+    """
+    if request.user.level == 0:
+        return HttpResponseForbidden()
+    post = dict(usgs_id=request.POST['usgs_id'],
+                use_shakemap='true', approach='use_shakemap_from_usgs')
+    _rup, rupdic, _params, err = impact_validate(post, request.user)
+    if err:
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    post = {key: str(val) for key, val in rupdic.items()
+            if key != 'shakemap_array'}
+    post['approach'] = 'use_shakemap_from_usgs'
+    post['use_shakemap'] = 'true'
+    for field in IMPACT_FORM_DEFAULTS:
+        if field not in post and IMPACT_FORM_DEFAULTS[field]:
+            post[field] = IMPACT_FORM_DEFAULTS[field]
+    _rup, rupdic, params, err = impact_validate(
+        post, request.user, post['rupture_file'])
+    response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
 
@@ -964,7 +1030,7 @@ def aelo_run(request):
     job_owner_email = request.user.email
     if not job_owner_email:
         response_data['WARNING'] = (
-            'No email address is speficied for your user account,'
+            'No email address is specified for your user account,'
             ' therefore email notifications will be disabled. As soon as'
             ' the job completes, you can access its outputs at the following'
             ' link: %s. If the job fails, the error traceback will be'
@@ -1366,8 +1432,9 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
+            site = 'site.png' in ds['png']
         else:
-            hmaps = assets = hcurves = governing_mce = False
+            hmaps = assets = hcurves = governing_mce = site = False
             avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
@@ -1381,6 +1448,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
+                       site=site,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
                   )
 
@@ -1430,7 +1498,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
             for key, value in asce07.items():
-                if key not in ('PGA', 'Ss', 'S1'):
+                if key not in ('PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value

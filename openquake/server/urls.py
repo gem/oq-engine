@@ -61,6 +61,9 @@ if settings.WEBUI:
             re_path(r'^v1/impact_get_stations_from_usgs$',
                     views.impact_get_stations_from_usgs,
                     name="impact_get_stations_from_usgs"),
+            re_path(r'^v1/impact_get_shakemap_versions$',
+                    views.impact_get_shakemap_versions,
+                    name="impact_get_shakemap_versions"),
         ]
 
     for app_full in settings.STANDALONE_APPS:

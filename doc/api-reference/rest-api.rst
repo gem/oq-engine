@@ -518,6 +518,16 @@ explicitly to the WebExtractor::
 
 	>> extractor = WebExtractor(calc_id, server, username, password)
 
+If you have a scenario calculation you may want to exact the
+``avg_gmf`` output. This can be done simply with a call like::
+
+>> extractor = WebExtractor(calc_id, server, username, password)
+>> imts = list(extractor.oqparam.imtls)  # list of available IMTs
+>> extractor.get(f'avg_gmf?imt={imts[0]}')
+>> aw.lons   # longitudes
+>> aw.lats   # latitudes
+>> aw[imts[0]] # array of values
+
 ********
 Plotting
 ********

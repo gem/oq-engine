@@ -152,7 +152,8 @@ class Sampler(object):
         means = df['mean'].to_numpy()
         covs = df['cov'].to_numpy()
         eids = df['eid'].to_numpy()
-        return self.rng.lognormal(eids, means, covs)
+        losses = self.rng.lognormal(eids, means, covs)
+        return losses
 
     def sampleBT(self, df):
         means = df['mean'].to_numpy()

@@ -27,7 +27,7 @@ DISPLAY_NAME = {
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
     'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
-    'assetcol': 'Exposure CSV',
+    'exposure': 'Exposure',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
@@ -52,6 +52,7 @@ DISPLAY_NAME = {
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
+    'mce': 'Maximum Considered Earthquake',
     'median_spectra': 'Median Spectra per Site and PoE',
     'median_spectrum_disagg': 'Median Spectrum Disaggregation',
     'mmi_tags': 'Exposure grouped by Admin1 and MMI',
@@ -91,8 +92,8 @@ AGGRISK_FIELD_DESCRIPTION = {
     'number': 'Buildings beyond repair',
     'residents': 'Rendered homeless',
     'injured': 'Number of injured people',
-    'affectedpop': 'Number of people living in buildings with moderate or higher damage'
-
+    'affectedpop': ('Number of people living in buildings '
+                    'with moderate or higher damage'),
 }
 
 EXPOSURE_FIELD_DESCRIPTION = {
@@ -107,7 +108,7 @@ EXPOSURE_FIELD_DESCRIPTION = {
     'occupants_transit': 'Occupants transit hours',
     'occupants_avg': 'Average number of occupants',
     'mmi': ('Macroseismic intensity (MMI) to which the given group'
-            ' of assets is subjected')
+            ' of assets is subjected'),
 }
 
 

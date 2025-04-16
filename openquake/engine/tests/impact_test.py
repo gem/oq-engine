@@ -25,16 +25,21 @@ from openquake.calculators.export import export
 
 cd = pathlib.Path(__file__).parent
 
+def strip(fname):
+    bname = os.path.basename(fname)
+    name, ext = bname.rsplit('_', 1)
+    return name + '.' + ext.rsplit('.')[1]
 
 def check_export_job(dstore):
-    fnames = [os.path.basename(f) for f in export(('job', 'zip'), dstore)]
-    assert fnames == ['exposure.xml',
-                      'assetcol.csv',
-                      'job.ini',
+    fnames = [strip(f) for f in export(('job', 'zip'), dstore)]
+    assert fnames == ['job.ini',
+                      'exposure.xml',
                       'rupture.csv',
                       'gsim_logic_tree.xml',
+                      'affectedpop_vulnerability.xml',
                       'area_vulnerability.xml',
                       'contents_vulnerability.xml',
+                      'injured_vulnerability.xml',
                       'nonstructural_vulnerability.xml',
                       'number_vulnerability.xml',
                       'occupants_vulnerability.xml',
