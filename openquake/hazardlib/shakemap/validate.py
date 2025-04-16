@@ -193,7 +193,7 @@ IMPACT_FORM_DEFAULTS = {
     'time_event': 'day',
     'dip': '90',
     'strike': '0',
-    'maximum_distance': '200',
+    'maximum_distance': '300',
     'truncation_level': '3',
     'number_of_ground_motion_fields': '100',
     'asset_hazard_distance': '15',
