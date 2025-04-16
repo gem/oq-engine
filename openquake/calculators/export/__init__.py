@@ -27,7 +27,7 @@ DISPLAY_NAME = {
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
     'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
-    'assetcol': 'Exposure',
+    'exposure': 'Exposure',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',

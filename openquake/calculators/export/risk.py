@@ -753,7 +753,6 @@ def export_vulnerability_xml(dstore):
     return dic
 
 
-@export.add(('assetcol', 'csv'))
 def export_assetcol_csv(ekey, dstore):
     assetcol = dstore['assetcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -778,7 +777,7 @@ def export_exposure(ekey, dstore):
     """
     :param dstore: datastore object
     """
-    [assetcol_csv] = export(('assetcol', 'csv'), dstore)
+    [assetcol_csv] = export_assetcol_csv(('assetcol', 'csv'), dstore)
     tagnames = dstore['assetcol/tagcol'].tagnames
     cost_types = dstore.getitem('exposure')  # cost_type, area_type, unit
     N = node.Node
