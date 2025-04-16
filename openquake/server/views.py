@@ -909,7 +909,8 @@ def impact_run_with_shakemap(request):
     Run an impact calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing a usgs_id
+        a `django.http.HttpRequest` object containing a usgs_id and optionally the time
+        of the day ('day', 'night' or 'transit')
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
@@ -920,6 +921,8 @@ def impact_run_with_shakemap(request):
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     post = {key: str(val) for key, val in rupdic.items()
             if key != 'shakemap_array'}
+    if 'time_event' in request.POST:
+        post['time_event'] = request.POST['time_event']
     post['approach'] = 'use_shakemap_from_usgs'
     post['use_shakemap'] = 'true'
     for field in IMPACT_FORM_DEFAULTS:
