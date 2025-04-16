@@ -857,6 +857,7 @@ function capitalizeFirstLetter(val) {
                     encode: true,
                 }).done(function (data) {
                     // console.log(data);
+                    $('.impact_time_grp').css('display', 'inline-block');
                     $('#lon').val(data.lon);
                     toggleRunCalcBtnState();
                     $('#lat').val(data.lat);
