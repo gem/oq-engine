@@ -18,7 +18,6 @@
 
 import os
 import json
-import shutil
 import tempfile
 import itertools
 import collections
@@ -757,17 +756,16 @@ def export_vulnerability_xml(dstore, edir):
 
 @export.add(('assetcol', 'csv'))
 def export_assetcol_csv(ekey, dstore):
-    assetcol = dstore['assetcol'].array
+    assetcol = dstore['assetcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    df = pandas.DataFrame(assetcol)
-    tagcol = dstore['assetcol'].tagcol
-    tagnames = sorted(tagcol.tagnames)
+    df = pandas.DataFrame(assetcol.array)
+    tagnames = sorted(assetcol.tagcol.tagnames)
     df = df[[col for col in df.columns if col not in tagnames]]
     for tagname in tagnames:
         tags = []
         for asset_idx in range(len(assetcol)):
             tag_id = assetcol[tagname][asset_idx]
-            tags.append(tagcol.get_tag(tagname, tag_id).split('=')[1])
+            tags.append(assetcol.tagcol.get_tag(tagname, tag_id).split('=')[1])
         df[tagname] = tags
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
     df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
@@ -776,13 +774,12 @@ def export_assetcol_csv(ekey, dstore):
     return [dest_csv]
 
 
-def export_exposure(dstore, edir):
+@export.add(('exposure', 'zip'))
+def export_exposure(ekey, dstore):
     """
     :param dstore: datastore object
     """
-    [dest] = export(('assetcol', 'csv'), dstore)
-    assetcol_csv = os.path.join(edir, 'assetcol.csv')
-    shutil.move(dest, assetcol_csv)
+    [assetcol_csv] = export(('assetcol', 'csv'), dstore)
     tagnames = dstore['assetcol/tagcol'].tagnames
     cost_types = dstore.getitem('exposure')  # cost_type, area_type, unit
     N = node.Node
@@ -800,7 +797,7 @@ def export_exposure(dstore, edir):
     root.append(N('occupancyPeriods', {}, 'night'))
     root.append(N('tagNames', {}, tagnames))
     root.append(N('assets', {}, 'assetcol.csv'))
-    exposure_xml = os.path.join(edir, 'exposure.xml')
+    exposure_xml = dstore.export_path('%s.xml' % ekey[0])
     with open(exposure_xml, 'wb') as out:
         nrml.write([root], out)
     return [exposure_xml, assetcol_csv]
