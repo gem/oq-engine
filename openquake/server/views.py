@@ -107,6 +107,7 @@ AELO_FORM_LABELS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
     'vs30': 'Vs30',
+    'custom_vs30': 'Custom Vs30',
     'siteid': 'Site name',
     'asce_version': 'ASCE version',
 }
@@ -114,7 +115,7 @@ AELO_FORM_LABELS = {
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': 'fixed at 760 m/s',
+    'custom_vs30': 'positive float',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE version',
 }

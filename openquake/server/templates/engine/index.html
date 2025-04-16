@@ -136,5 +136,8 @@
 
   {% block extra_script %}
   {{ block.super }}
+  <script>
+    window.application_mode = "{{ application_mode|escapejs }}";
+  </script>
   <script type="text/javascript" src="{{ STATIC_URL }}js/engine.js"></script>
   {% endblock extra_script %}

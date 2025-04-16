@@ -12,17 +12,27 @@
                   <tr>
                     <th><label class="aelo-label" for"lat">{{ aelo_form_labels.lat }}</label></th>
                     <th><label class="aelo-label" for"lon">{{ aelo_form_labels.lon }}</label></th>
-                    <th><label class="aelo-label" for"vs30">{{ aelo_form_labels.vs30 }}</label></th>
                     <th><label class="aelo-label" for"siteid">{{ aelo_form_labels.siteid }}</label></th>
-                    <th><label class="aelo-label" for="asce_version">{{ aelo_form_labels.asce_version }}</label></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td><input class="aelo-input" type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/></td>
                     <td><input class="aelo-input" type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/></td>
-                    <td><input class="aelo-input" type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}" readonly /></td>
-                    <td><input class="aelo-input" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/></td>
+                    <td><input class="aelo-input aelo-input-siteid" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/></td>
+                  </tr>
+                </tbody>
+              </table>
+              <table class="table-aelo-form-2 table">
+                <thead>
+                  <tr>
+                    <th><label class="aelo-label" for="asce_version">{{ aelo_form_labels.asce_version }}</label></th>
+                    <th><label class="aelo-label" for"vs30">{{ aelo_form_labels.vs30 }}</label></th>
+                    <th><label class="aelo-label custom-vs30" for"custom_vs30">{{ aelo_form_labels.custom_vs30 }}</label></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
                     <td>
                         <select class="aelo-select" name="asce_version" id="asce_version">
                         {% for asce_version in asce_versions %}
@@ -34,6 +44,8 @@
                         {% endfor %}
                         </select>
                     </td>
+                    <td><select class="aelo-select" name="vs30" id="vs30"><option value="760">760 m/s</option></select></td>
+                    <td><span class="custom-vs30"><input class="aelo-input" type="text" id="custom_vs30" name="custom_vs30" placeholder="{{ aelo_form_placeholders.custom_vs30 }}"/></span></td>
                   </tr>
                 </tbody>
               </table>
