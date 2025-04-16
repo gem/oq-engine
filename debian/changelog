@@ -1,3 +1,7 @@
+  [Matteo Nastasi]
+  * Allow free mapping between standlone apps and their url path prefix
+    (regardless of their name)
+
   [Michele Simionato]
   * Exposed the output `avg_gmf`
   * Internal: enhanced `build_global_exposure` to work at admin level 2
