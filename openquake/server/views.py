@@ -106,7 +106,7 @@ ENGINE = "python -m openquake.engine.engine".split()
 AELO_FORM_LABELS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
-    'vs30': 'Vs30',
+    'vs30': 'Site class (m/s)',
     'custom_vs30': 'Custom Vs30',
     'siteid': 'Site name',
     'asce_version': 'ASCE version',
