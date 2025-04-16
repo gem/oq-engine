@@ -794,8 +794,8 @@ def export_exposure(ekey, dstore):
     conversions.append(costtypes)
     root.append(conversions)
     root.append(N('occupancyPeriods', {}, 'night'))
-    root.append(N('tagNames', {}, tagnames))
-    root.append(N('assets', {}, 'assetcol.csv'))
+    root.append(N('tagNames', {}, tagnames[1:]))  # remove 'taxonomy'
+    root.append(N('assets', {}, os.path.basename(assetcol_csv)))
     exposure_xml = dstore.export_path('%s.xml' % ekey[0])
     with open(exposure_xml, 'wb') as out:
         nrml.write([root], out)
@@ -831,11 +831,14 @@ def export_job_zip(ekey, dstore):
     with open(dest, 'wb') as out:
         nrml.write([gsim_lt.to_node()], out)
     inputs['gsim_logic_tree'] = os.path.basename(dest)
+    oq.gsim = '[FromFile]'
     inputs.update(export_vulnerability_xml(dstore))
 
     dest = dstore.export_path('taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    taxonomies = dstore['assetcol/tagcol/taxonomy'][:]
+    taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
     del taxmap['taxi']
     writer.save(taxmap, dest)
     inputs['taxonomy_mapping'] = os.path.basename(dest)
