@@ -654,7 +654,7 @@ function capitalizeFirstLetter(val) {
                     $vs30_select.append(
                         $('<option>', {
                             value: 760,
-                            text: '760 m/s'
+                            text: 'BC (Vs30 760)'
                         })
                     );
                 } else if (asce_version === 'ASCE7-22') {
