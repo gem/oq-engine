@@ -26,7 +26,7 @@ import logging
 from openquake.baselib import config
 from openquake.commonlib import datastore
 
-# optionally overrided in local_settings.py
+# optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
 try:
     from openquakeplatform.settings import STANDALONE, STANDALONE_APPS
