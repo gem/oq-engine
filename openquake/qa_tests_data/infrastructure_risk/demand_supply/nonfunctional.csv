@@ -1,4 +1,4 @@
-﻿taxonomy,consequence,peril,slight,moderate,extensive,complete
+﻿risk_id,consequence,peril,slight,moderate,extensive,complete
 tank,non_operational,groundshaking,0,1,1,1
 tank1,non_operational,groundshaking,0,1,1,1
 pipe,non_operational,groundshaking,0,1,1,1

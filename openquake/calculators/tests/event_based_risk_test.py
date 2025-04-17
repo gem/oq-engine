@@ -24,7 +24,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
 from openquake.baselib.writers import CsvWriter, FIVEDIGITS
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.source.rupture import get_ruptures
+from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.commonlib import logs, readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -286,8 +286,7 @@ agg_id
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
-        self.assertIn("{'RM'} are not in the CompositeRiskModel",
-                      str(ctx.exception))
+        self.assertIn("{'RM'} not in the CompositeRiskModel", str(ctx.exception))
 
     def test_case_3(self):
         # this is a test with statistics
@@ -553,7 +552,7 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures').array
         nrups = text.count('\n') - 2
         self.assertEqual(nrups, 4)
-        rups = get_ruptures(gettemp(text))
+        rups = get_ruptures_aw(gettemp(text, suffix='.csv'))
         aac(rups['n_occ'], [1, 1, 1, 1])
 
         # test extract?threshold for ruptures

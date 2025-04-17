@@ -114,11 +114,11 @@ Response:
 
 A list of error lines extracted from the log. If the calculation was successfull, the list is empty.
 
-**********************************
-GET /v1/calc/:calc_id/aggrisk_tags
-**********************************
+********************************
+GET /v1/calc/:calc_id/impact
+********************************
 
-Get risk results aggregated by tag, together with the corresponding exposure values.
+Get impact results aggregated by tag, together with the corresponding exposure values.
 
 NB: this URL is valid only for risk calculations with an aggregate_by parameter.
 Otherwise it returns a BadRequest error with HTTP code 400.
@@ -127,15 +127,34 @@ Parameters: None
 
 Response:
 
-A JSON object corresponding to a pandas DataFrame. The names of the
-columns are "ID_1", "loss_type", "value", "lossmea", "lossq05",
-"lossq95".
+A JSON object containing:
 
-**********************************
-GET /v1/calc/:calc_id/mmi_tags
-**********************************
+- an 'impact' key containing a pandas DataFrame; the names of the columns are "ID_1", "loss_type",
+  "value", "lossmea", "lossq05", "lossq95".
+- a 'loss_type_description' dictionary containing a description for each loss type.
 
-FIXME
+*****************************************
+GET /v1/calc/:calc_id/exposure_by_mmi
+*****************************************
+
+Get exposure aggregated by MMI regions and tags.
+
+NB: this URL is valid only for ShakeMap based calculations downloading
+the MMI regions from the USGS service.
+
+Otherwise it returns a BadRequest error with HTTP code 400.
+
+Parameters: None
+
+Response:
+
+A JSON object containing:
+
+- an 'exposure_by_mmi' key corresponding to a pandas DataFrame; the names of the
+  columns are "ID_1", "number", "contents", "nonstructural", "structural",
+  "residents", "area",  "occupants_day", "occupants_night", "occupants_transit",
+  "occupants_avg",  "mmi".
+- a 'column_descriptions' dictionary containing a description for each exposure type.
 
 ***********************************
 GET /v1/calc/:calc_id/extract/:spec
@@ -498,6 +517,16 @@ If you do not want to put your credentials in the ``openquake.cfg`` file, you ca
 explicitly to the WebExtractor::
 
 	>> extractor = WebExtractor(calc_id, server, username, password)
+
+If you have a scenario calculation you may want to exact the
+``avg_gmf`` output. This can be done simply with a call like::
+
+>> extractor = WebExtractor(calc_id, server, username, password)
+>> imts = list(extractor.oqparam.imtls)  # list of available IMTs
+>> extractor.get(f'avg_gmf?imt={imts[0]}')
+>> aw.lons   # longitudes
+>> aw.lats   # latitudes
+>> aw[imts[0]] # array of values
 
 ********
 Plotting

@@ -53,10 +53,13 @@ the data, so that important variability between sites is lost.
 Liquefaction models
 -------------------
 
-Several liquefaction models are implemented in the OpenQuake engine. One of them is the method developed for the HAZUS 
+Several liquefaction models are implemented in the OpenQuake-engine, as detailed in the table under 
+`Input models for Secondary Perils <https://docs.openquake.org/oq-engine/master/manual/user-guide/inputs/secondary-perils-inputs.html>`_
+
+One of them models is the method developed for the HAZUS 
 software by the US Federal Emergency Management Agency. This model involves categorization of sites into liquefaction 
-susceptibility classes based on geotechnical characteristics, and a quanitative probability model for each 
-susceptibility class. The remaining models are the academic geospatial models, i.e., statistical models that uses 
+susceptibility classes based on geotechnical characteristics, and a quantitative probability model for each 
+susceptibility class. The remaining models are the academic geospatial models, i.e., statistical models that use 
 globally available input variables as first-order proxies to characterise saturation and density properties of the 
 soil. The shaking component is expressed either in terms of Peak Ground Acceleration , :math:`PGA`, or Peak Ground 
 Velocity , :math:`PGV`. These methods are simplified from older, more comprehensive liquefaction evaluations 
@@ -237,11 +240,11 @@ The proposed probability threshold to convert to class outcome is 0.4.
 Another model's outcome is liquefaction spatial extent, :math:`LSE`. After an earthquake LSE is the spatial area 
 covered by surface manifestations of liquefaction reported as a percentage of liquefied material within that pixel. 
 Logistic regression with the same form was fit for the two models, with only difference in squaring the denominator to 
-improve the fit. The regression coefficients are given in Table 2.:
+improve the fit. The regression coefficients are given in Table 2.
 
 .. math::
 
-	L(P) = \frac{a}{\left( 1 + b\,e^{-c\,P} \right)^2} \\ (9)
+	LSE(P) = \frac{a}{\left( 1 + b\,e^{-c\,P} \right)^2} \\ (9)
 
 .. raw:: latex
 
@@ -317,9 +320,9 @@ and the probability of liquefaction is calculated using equation (3). Zero proba
 
 The proposed probability threshold to convert to class outcome is 0.4.
 
-#######################
-Allstadt et al. (2022)
-#######################
+#######################################
+Allstadt et al. (2022) for liquefaction
+#######################################
 
 The model proposed by `Allstadth et al. (2022) <https://journals.sagepub.com/doi/10.1177/87552930211032685>`_ uses the 
 model proposed by `Rashidian et al. (2020) <https://www.sciencedirect.com/science/article/abs/pii/S0013795219312979>`_
@@ -432,15 +435,12 @@ which is well suited for shallow disrupted slides, one of the most common landsl
 
 .. math::
 
-    F_{s} = \frac{cohesion'}{soildrydensity slabthickness \sin(slope)} + \frac{\tan(frictionangle')}{\tan(slope)} - \frac{saturationcoeff waterdensity \tan(frictionangle')}{soildrydensity \tan(slope)} \\(18)
+    F_{s} = \frac{cohesion'}{sdd\, slabth\, sin(slope)} + \frac{\tan(fricangle')}{\tan(slope)} - \frac{satcoeff\, waterdensity\, tan(fricangle')}{sdd\, tan(slope)} \\(18)
 
 where: :math:`cohesion' \, [\text{Pa}]` is the effective cohesion with typical values ranging from :math:`20 \text{kPa}` for
-soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`slope^\circ` is the slope angle. :math:`frictionangle'^\circ` is 
+soils up to :math:`20 \, {MPa}` for unfaulted rocks. :math:`slope^\circ` is the slope angle. :math:`fricangle'^\circ` is 
 the effective friction angle with typical values ranging from :math:`30^\circ` to :math:`40^\circ`. 
-:math:`\soildrydensity \, [\text{kg/m^3}]` is the dry density of the material. It ranges from :math:`1500 \, \text{kg/m^3}` 
-for soils to :math:`2500 - 3200 \, \text{kg/m^3}`. :math:`slabthickness` is the slope-normal thickness of a failure slab in meters and :math:`saturationcoeff` 
-is the proportion of slab thickness that is saturated. :math:`\waterdensity \, [\text{kg/m^3}]` 
-is the unit weight of water which equals to :math:`1000 \, \text{kg/m^3}`.
+:math:`sdd \, [\text{kg/m^3}]` is the dry density of the material. :math:`slabth` is the slope-normal thickness of a failure slab in meters and :math:`satcoeff` is the proportion of slab thickness that is saturated. :math:`waterdensity \, [\text{kg/m^3}]` is the unit weight of water which equals to :math:`1000 \, \text{kg/m^3}`.
 
 Note that the units of the input parameters reported in this document corresponds to the format required by the Engine 
 to produce correct results. The first and second term of the the equation corresponds to the cohesive and 
@@ -452,10 +452,13 @@ some of the equations below may return displacements in cm (:math:`Disp_{cm}`); 
 Finally, it is important to emphasize that the computed displacements do not necessarily correspond directly to measurable slope movements in the field, 
 but rather serve as an index of slope performance.
 
+The table under `Input models for Secondary Perils <https://docs.openquake.org/oq-engine/master/manual/user-guide/inputs/secondary-perils-inputs.html>`_
+provides a detailed list of the landslide models implemented in the OpenQuake-engine.
 
-*******************
+
+**************
 Jibson (2007)
-*******************
+**************
 
 `Jibson (2007) <https://www.sciencedirect.com/science/article/pii/S0013795207000300?via%3Dihub>`_ has generated regression equations for
 co-seismic displacements of landslides in terms of i) critical acceleration ratio (i.e., the ratio between the landslide critical acceleration and the PGA) and
@@ -466,7 +469,7 @@ Model a
 
 .. math::
 	
-	\log(Disp_{cm}) = 0.215 + \log [\left( 1 - \frac{critaccel}{PGA}} \right)^{2.341} \cdot \left( \frac{critaccel}{PGA} \right)^{-1.438}] \\ (19)
+	\log(Disp_{cm}) = 0.215 + \log [\left( 1 - \frac{critaccel}{PGA} \right)^{2.341} \cdot \left( \frac{critaccel}{PGA} \right)^{-1.438}] \\ (19)
 
 Model b
 
@@ -587,9 +590,9 @@ dependent from the moment magnitude :math:`M` of the earthquake.
 where :math:`Disp_{cm}` is the earthquake-induced displacement in cm (but converted to m by OQ), :math:`PGA` is g units, :math:`critaccel` is the landslide critical acceleration in g and 
 :math:`M` is the moment magnitude of the earthquake.
 
-***********************
+********************
 Jibson et al. (2000)
-***********************
+********************
 
 `Jibson et al. (2000) <https://www.sciencedirect.com/science/article/pii/S0013795200000399?via%3Dihub>`_  have proposed a regression equation
 predicting co-seismic displacements of landslides as function of the landslide critical acceleration and the Arias Intensity. The authors have modified the equation
@@ -639,22 +642,27 @@ Coefficients \alpha and \beta values are estimated for several rock and landcove
 reader is reffered to the original study by `Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_, 
 where the coefficient values are reported in Table 3. 
 
-Probability of landsliding is then evaluated using logistic regression.
+Probability of landsliding is then evaluated using logistic regression:
 
 .. math::
 
 	P(L) = \frac{1}{1+e^X} \\ (35)
 
-These probabilities are converted to areal percentages to unbias the predictions.
+These probabilities are converted to areal percentages to unbias the predictions:
 
 .. math::
 
-	L_{P}(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (36)
+	LSE(P) = e^{-7.592 + 5.237 \cdot P - 3.042 \cdot P^2 + 4.035 \cdot P^3} \\ (36)
 
-Furthermore, we introduced modifications by the USGS, capping the peak ground velocity at :math:`PGV = 211 \, \text{cm/s}`, 
+
+*************************************
+Allstadt et al. (2022) for landslides
+*************************************
+
+`Allstadth et al. (2022) <https://journals.sagepub.com/doi/10.1177/87552930211032685>`_ introduces modifications to the `Nowicki Jessee et al. (2018) <https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2017JF004494>`_ model, by capping the peak ground velocity at :math:`PGV = 211 \, \text{cm/s}`, 
 and compound topographic index at :math:`CTI = 19`. To exclude high probabilities of landsliding in nearly flat areas due to 
 the combination of other predictor variables, areas with slopes less than :math:`2^\circ` are excluded.  Zero probability is 
-heuristically assigned if :math:`PGA = 0.02 \, \text{g}`. Finally, we adopted the USGS recommendation for modifying the 
+heuristically assigned if :math:`PGA < 0.02 \, \text{g}`. The model also adopts the USGS recommendation for modifying the 
 regression coefficient for unconsolidated sediments. The new proposed value is set to :math:`-1.36`. 
 
 

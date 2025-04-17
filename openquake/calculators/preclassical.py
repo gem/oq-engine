@@ -45,8 +45,11 @@ TWO32 = 2 ** 32
 
 def source_data(sources):
     """
-    Set the source .id attribute to the index in the source_info table
-    :returns: a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
+    Set the source .id attribute to the index in the source_info table.
+    :param sources:
+        a list of source objects
+    :returns:
+        a dictionary of lists with keys src_id, nsites, nruptrs, weight, ctimes
     """
     data = AccumDict(accum=[])
     for src in sources:
@@ -59,7 +62,9 @@ def source_data(sources):
 
 
 def check_maxmag(pointlike):
-    """Check for pointlike sources with high magnitudes"""
+    """
+    Check for pointlike sources with high magnitudes
+    """
     for src in pointlike:
         maxmag = src.get_annual_occurrence_rates()[-1][0]
         if maxmag >= 9.:
@@ -114,6 +119,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
     ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
+    maxdist = cmaker.maximum_distance.y[-1]
     for src in srcs:
         if src.code == b'F':
             if N and N <= cmaker.max_sites_disagg:
@@ -121,7 +127,12 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             else:
                 mask = None
             src.set_msparams(secparams, mask, ry0, mon1, mon2)
-        if sites:
+        elif src.code in b'pP' and sites:
+            # special case, compute distances
+            distances = sites.get_cdist(src.location)
+            radius = src._get_max_rupture_projection_radius()
+            src.nsites = (distances <= maxdist + radius).sum()
+        elif sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
             # print(f'{src.source_id=}, {src.nsites=}')
@@ -129,7 +140,8 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        if cmaker.split_sources and src.nsites:
+        if cmaker.split_sources and src.nsites and src.code != b'F':
+            # multifault source have been already split in save_and_split
             splits.extend(split_source(src))
         else:
             splits.append(src)
@@ -304,9 +316,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             if pointsources or pointlike:
                 spacing = self.oqparam.ps_grid_spacing
                 if spacing:
+                    logging.info(f'Splitting/gridding point sources {grp_id=}')
                     for plike in pointlike:
-                        pointsources.extend(split_source(plike))
-                    logging.info(f'Gridding point sources for {grp_id=}')
+                        pointsources.extend(split_source(plike))  # slow
                     cpsources = grid_point_sources(pointsources, spacing)
                     before_after += [len(pointsources), len(cpsources)]
                     for block in block_splitter(cpsources, 200):
@@ -339,7 +351,8 @@ class PreClassicalCalculator(base.HazardCalculator):
                 newsg.sources = srcs
                 self.csm.src_groups[grp_id] = newsg
                 for src in srcs:
-                    assert src.weight, src
+                    if src.code not in b'pP':
+                        assert src.weight, src
                     assert src.num_ruptures, src
                     acc[src.code] += int(src.num_ruptures)
         self.csm.fix_src_offset()
@@ -402,7 +415,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         # save 'source_groups'
         if self.sitecol is not None:
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-                store_tiles(self.datastore, self.csm, self.sitecol, self.cmakers))
+                store_tiles(self.datastore, self.csm,
+                            self.sitecol, self.cmakers))
 
         # save gsims
         toml = []

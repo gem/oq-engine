@@ -289,7 +289,8 @@ class GmfComputer(object):
                     for sp in self.sec_perils:
                         o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
-                            data[outkey].append(outarr)
+                            key = f'{sp.__class__.__name__}_{outkey}'
+                            data[key].append(outarr)
                 n += E
 
     def strip_zeros(self, data):
