@@ -9,13 +9,13 @@
                 <select name="trt" id="trt" class="impact-select" {% if user_level != 2 %}disabled{% endif %}>
                 </select>
               </div>
-              <div class="impact_form_row">
-                <label for"local_timestamp">{{ impact_form_labels.local_timestamp }}</label>
-                <input class="impact-input" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ impact_form_placeholders.local_timestamp }}" disabled />
+              <div class="impact_form_row impact_time_grp">
+                <label class="impact_time_grp" for"local_timestamp">{{ impact_form_labels.local_timestamp }}</label>
+                <input class="impact-input impact_time_grp" type="text" id="local_timestamp" name="local_timestamp" placeholder="{{ impact_form_placeholders.local_timestamp }}" disabled />
               </div>
-              <div class="impact_form_row">
-                <label for"time_event">{{ impact_form_labels.time_event }}</label>
-                <select id="time_event" name="time_event" class="impact-select">
+              <div class="impact_form_row impact_time_grp">
+                <label class="impact_time_grp" for"time_event">{{ impact_form_labels.time_event }}</label>
+                <select id="time_event" name="time_event" class="impact-select impact_time_grp">
                     <option value="day">Day</option>
                     <option value="night">Night</option>
                     <option value="transit">Transit</option>
