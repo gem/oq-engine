@@ -1,7 +1,11 @@
+python3-oq-engine (3.23.2-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Backported fix to taxonomy mapping with consequences
   * Backported fix to 64 bit poes critical for multifault sources
   * Backported fix to workerpool critical for zmq clusters
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 17 Apr 2025 12:18:46 +0000
 
 python3-oq-engine (3.23.1-1~xenial01) xenial; urgency=low
 
