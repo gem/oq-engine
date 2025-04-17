@@ -1480,6 +1480,7 @@ class PmapMaker(object):
         if self.cluster:
             tom = group.temporal_occurrence_model
         else:
+            # NOTE: I think we should raise an error here
             tom = getattr(self.sources[0], 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
         self.cmaker.tom = self.tom = tom
