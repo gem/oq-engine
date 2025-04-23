@@ -206,7 +206,8 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['aspect_ratio'], 3)
 
     def test_10(self):
-        dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256, 'dep': 10.0,
+        dic_in = {'usgs_id': 'us6000jllz',
+                  'lon': 37.0143, 'lat': 37.2256, 'dep': 10.0,
                   'mag': 7.8, 'msr': 'WC1994', 'aspect_ratio': 2.0,
                   'rake': -179.18, 'dip': 88.71, 'strike': 317.63,
                   'approach': 'build_rup_from_usgs'}
@@ -268,16 +269,18 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_14(self):
         usgs_id = 'us20002926'
-        shakemap_versions, err = get_shakemap_versions(usgs_id, user=user)
+        shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(
+            usgs_id, user=user)
         self.assertEqual(err, {})
         self.assertEqual(len(shakemap_versions), 3)
+        self.assertEqual(usgs_preferred_version, '1')
         first_version = shakemap_versions[0]
         self.assertIn('id', first_version)
         self.assertIn('utc_date_time', first_version)
         usgs_id = 'does_not_exist'
-        shakemap_versions, preferred_version, err = get_shakemap_versions(usgs_id)
+        shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(usgs_id)
         self.assertIsNone(shakemap_versions)
-        self.assertIsNone(preferred_version)
+        self.assertIsNone(usgs_preferred_version)
         self.assertIn('Unable to download', err['error_msg'])
 
 

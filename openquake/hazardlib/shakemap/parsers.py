@@ -882,7 +882,7 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
     return shakemap_versions, usgs_preferred_version, err
 
 
-def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='latest',
+def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferred',
                 rupture_file=None, monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
