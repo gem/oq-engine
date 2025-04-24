@@ -283,6 +283,16 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIsNone(usgs_preferred_version)
         self.assertIn('Unable to download', err['error_msg'])
 
+    def test_15(self):
+        usgs_id = 'usp0001ccb'
+        shakemap_versions, _usgs_preferred_version, _err = get_shakemap_versions(
+            usgs_id, user=user)
+        first_version = shakemap_versions[0]
+        _rup, dic, _err = get_rup_dic(
+                {'usgs_id': 'usp0001ccb', 'approach': 'use_shakemap_from_usgs'},
+                user=user, use_shakemap=True, shakemap_version=first_version['id'])
+        self.assertIsNotNone(dic['shakemap_array'])
+
 
 """
 NB: to profile a test you can use
