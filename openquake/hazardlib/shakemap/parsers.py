@@ -397,7 +397,7 @@ def usgs_stations_to_oq_format(stations, exclude_imts=(), seismic_only=False):
     return df
 
 
-def _get_preferred_item(items):
+def _get_usgs_preferred_item(items):
     # items can be for instance shakemaps, moment tensors or finite faults
     preferred_weights = [item['preferredWeight'] for item in items]
     preferred_idxs = [idx for idx, val in enumerate(preferred_weights)
@@ -488,7 +488,7 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
         err = {"status": "failed", "error_msg": err_msg}
         return None, err
     ffs = products['finite-fault']
-    ff = _get_preferred_item(ffs)
+    ff = _get_usgs_preferred_item(ffs)
     p = ff['properties']
     # TODO: we probably need to get the rupture coordinates from shakemap_polygon.txt
     # if 'shakemap_polygon.txt' in ff['contents']:
@@ -535,7 +535,7 @@ def load_rupdic_from_origin(usgs_id, products):
         err = {"status": "failed", "error_msg": err_msg}
         return None, err
     origins = products['origin']
-    origin = _get_preferred_item(origins)
+    origin = _get_usgs_preferred_item(origins)
     p = origin['properties']
     mag = float(p['magnitude'])
     lon = float(p['longitude'])
@@ -685,11 +685,12 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
 
 
 def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
-                                  shakemap_version='latest'):
+                                  shakemap_version='preferred'):
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
     #     url = SHAKEMAP_URL.format(usgs_id)
     #     f.write(urlopen(url).read())
-    #     # NOTE: remove the includesuperseded parameter to download less data for testing
+    #     # NOTE: remove the includesuperseded parameter to download less
+    #             data for testing
     err = {}
     if user.testdir:  # in parsers_test
         fname = os.path.join(user.testdir, usgs_id + '.json')
@@ -711,8 +712,8 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
 
     # NB: currently we cannot find a case with missing shakemap
     shakemaps = properties['products']['shakemap']
-    if shakemap_version == 'latest':
-        shakemap = _get_preferred_item(shakemaps)
+    if shakemap_version == 'preferred':
+        shakemap = _get_usgs_preferred_item(shakemaps)
     else:
         [shakemap] = [shm for shm in shakemaps if shm['id'] == shakemap_version]
     contents = shakemap['contents']
@@ -740,10 +741,10 @@ def _get_nodal_planes(properties):
     # try first reading from the moment tensor, if available. If nodal planes can not be
     # collected from there, fallback attempting to read them from the focal mechanism
     if 'moment-tensor' in properties['products']:
-        moment_tensor = _get_preferred_item(properties['products']['moment-tensor'])
+        moment_tensor = _get_usgs_preferred_item(properties['products']['moment-tensor'])
         nodal_planes = _get_nodal_planes_from_product(moment_tensor)
     if not nodal_planes and 'focal-mechanism' in properties['products']:
-        focal_mechanism = _get_preferred_item(properties['products']['focal-mechanism'])
+        focal_mechanism = _get_usgs_preferred_item(properties['products']['focal-mechanism'])
         nodal_planes = _get_nodal_planes_from_product(focal_mechanism)
     if not nodal_planes:
         err = {'status': 'failed',
@@ -818,7 +819,8 @@ def _get_rup_from_json(usgs_id, rupture_file):
     return rup, rupdic, rup_data, err_msg
 
 
-def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
+def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
+                           shakemap_version='preferred'):
     err = {}
     n_stations = 0
     try:
@@ -826,9 +828,8 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
     except ValueError as exc:
         err = {'status': 'failed', 'error_msg': str(exc)}
         return None, n_stations, err
-    # NOTE: getting stations from the latest (preferred) ShakeMap
     contents, _properties, _shakemap, err = _contents_properties_shakemap(
-        usgs_id, user, False, monitor)
+        usgs_id, user, False, monitor, shakemap_version)
     if err:
         return None, n_stations, err
     with monitor('Downloading stations'):
@@ -845,11 +846,12 @@ def ms_to_utc_date_time(ms):
 
 def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
     err = {}
+    usgs_preferred_version = None
     try:
         usgs_id = valid.simple_id(usgs_id)
     except ValueError as exc:
         err = {'status': 'failed', 'error_msg': str(exc)}
-        return None, err
+        return None, None, err
     if user.testdir:  # in parsers_test
         fname = os.path.join(user.testdir, usgs_id + '.json')
         text = open(fname).read()
@@ -863,21 +865,24 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
             # in parsers_test
             err_msg = f'Unable to download from {url}: {exc}'
             err = {"status": "failed", "error_msg": err_msg}
-            return None, err
+            return None, None, err
 
     js = json.loads(text)
     properties = js['properties']
     shakemaps = properties['products']['shakemap']
+    usgs_preferred_shakemap = _get_usgs_preferred_item(shakemaps)
+    usgs_preferred_version = usgs_preferred_shakemap['properties']['version']
     sorted_shakemaps = sorted(
         shakemaps, key=lambda x: x["updateTime"], reverse=True)
     shakemap_versions = [
         {'id': shakemap['id'],
+         'number': shakemap['properties']['version'],
          'utc_date_time': ms_to_utc_date_time(shakemap['updateTime'])}
         for shakemap in sorted_shakemaps]
-    return shakemap_versions, err
+    return shakemap_versions, usgs_preferred_version, err
 
 
-def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='latest',
+def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferred',
                 rupture_file=None, monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given

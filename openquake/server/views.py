@@ -787,8 +787,9 @@ def impact_get_stations_from_usgs(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
+    shakemap_version = request.POST.get('shakemap_version')
     station_data_file, n_stations, err = get_stations_from_usgs(
-        usgs_id, user=request.user)
+        usgs_id, user=request.user, shakemap_version=shakemap_version)
     station_data_issue = None
     if err:
         station_data_issue = err['error_msg']
@@ -809,12 +810,13 @@ def impact_get_shakemap_versions(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
-    shakemap_versions, err = get_shakemap_versions(usgs_id)
+    shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(usgs_id)
     if err:
         shakemap_versions_issue = err['error_msg']
     else:
         shakemap_versions_issue = None
     response_data = dict(shakemap_versions=shakemap_versions,
+                         usgs_preferred_version=usgs_preferred_version,
                          shakemap_versions_issue=shakemap_versions_issue)
     return JsonResponse(response_data)
 

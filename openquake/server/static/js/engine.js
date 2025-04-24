@@ -536,10 +536,10 @@ function capitalizeFirstLetter(val) {
             if (data.shakemap_versions_issue) {
                 $select.append(`<option value="error">${data.shakemap_versions_issue}</option>`);
             } else {
-                $select.append('<option value="latest">Use latest</option>');
                 if (data.shakemap_versions.length > 0) {
                     data.shakemap_versions.forEach(function (shakemap_version) {
-                        $select.append(`<option value="${shakemap_version.id}">${shakemap_version.utc_date_time}</option>`);
+                        var usgs_preferred = shakemap_version.number == data.usgs_preferred_version ? " (USGS preferred)" : "";
+                        $select.append(`<option value="${shakemap_version.id}">v${shakemap_version.number}: ${shakemap_version.utc_date_time}${usgs_preferred}</option>`);
                     });
                 } else {
                     $select.append('<option value="">No versions available</option>');
@@ -990,6 +990,7 @@ function capitalizeFirstLetter(val) {
                 var formData = new FormData();
                 const usgs_id = $.trim($("#usgs_id").val());
                 formData.append('usgs_id', usgs_id);
+                formData.append('shakemap_version', $("#shakemap_version").val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/impact_get_stations_from_usgs",
