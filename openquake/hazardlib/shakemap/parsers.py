@@ -43,6 +43,10 @@ import pandas as pd
 import numpy
 import fiona
 
+from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.dom import minidom
+import math
+
 from openquake.baselib import performance, config
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
@@ -205,9 +209,237 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
 
+# Calculate strike and dip from the vertices
+def calculate_strike_and_dip(vertices):
+    # Determine the top edge by finding the two vertices with the smallest depth
+    top_vertices = vertices[:2]
+    _bottom_vertices = vertices[2:]  # FIXME: unused?
+
+    # Calculate the top edge vector
+    top_edge = [
+        top_vertices[1][0] - top_vertices[0][0],
+        top_vertices[1][1] - top_vertices[0][1],
+    ]
+
+    # Calculate strike (angle of top edge with respect to north)
+    strike = math.degrees(math.atan2(top_edge[1], top_edge[0]))
+    if strike < 0:
+        strike += 360
+
+    # Calculate dip (angle between top and bottom edges in depth)
+    vertical_diff = abs(vertices[0][2] - vertices[2][2])
+    horizontal_diff = math.sqrt(
+        (vertices[0][0] - vertices[2][0]) ** 2 + (vertices[0][1] - vertices[2][1]) ** 2
+    )
+    dip = math.degrees(math.atan2(vertical_diff, horizontal_diff))
+
+    return strike, dip
+
+
+def convert_to_openquake_xml(input_json_file, output_xml_file):
+    with open(input_json_file, "r") as f:
+        data = json.load(f)
+
+    geometry_type = data["features"][0]["geometry"]["type"]
+    coordinates = data["features"][0]["geometry"]["coordinates"]
+    metadata = data["metadata"]
+    print(metadata["reference"])
+
+    nrml = Element(
+        "nrml",
+        xmlns="http://openquake.org/xmlns/nrml/0.5",
+        attrib={"xmlns:gml": "http://www.opengis.net/gml"},
+    )
+
+    if geometry_type == "Point":
+        rupture = SubElement(nrml, "pointRupture")
+        magnitude = SubElement(rupture, "magnitude")
+        magnitude.text = str(metadata["mag"])
+        _hypocenter = SubElement(  # FIXME: unused?
+            rupture,
+            "hypocenter",
+            {
+                "lon": str(coordinates[0]),
+                "lat": str(coordinates[1]),
+                "depth": str(coordinates[2]),
+            },
+        )
+
+    elif geometry_type == "MultiPolygon":
+        polygons = coordinates[0]
+
+        # Handle Single-plane ruptures and Multi-plane ruptures
+        # in the same if block
+        if all(len(polygon) == 5 for polygon in polygons):
+            rupture = (
+                SubElement(nrml, "singlePlaneRupture")
+                if len(polygons) == 1
+                else SubElement(nrml, "multiPlanesRupture")
+            )
+            magnitude = SubElement(rupture, "magnitude")
+            magnitude.text = str(metadata["mag"])
+
+            rake = SubElement(rupture, "rake")
+            rake.text = str(metadata.get("rake", 0))
+
+            _hypocenter = SubElement(  # FIXME: unused?
+                rupture,
+                "hypocenter",
+                {
+                    "lon": str(metadata["lon"]),
+                    "lat": str(metadata["lat"]),
+                    "depth": str(metadata["depth"]),
+                },
+            )
+
+            for polygon in polygons:
+                # Check if the last vertex is identical to the first
+                # (closing the polygon)
+                if polygon[-1] == polygon[0]:
+                    # Discard the last vertex
+                    vertices = polygon[:-1]
+                else:
+                    vertices = polygon
+
+                # Sort vertices by depth (ascending)
+                sorted_by_depth = sorted(vertices, key=lambda v: v[2])
+
+                # Reorder vertices to topLeft, topRight, bottomRight, bottomLeft
+                top_vertices = sorted(
+                    sorted_by_depth[:2], key=lambda v: v[0]
+                )  # Sort by longitude
+                bottom_vertices = sorted(
+                    sorted_by_depth[2:], key=lambda v: v[0]
+                )  # Sort by longitude
+
+                sorted_vertices = [
+                    top_vertices[0],  # topLeft
+                    top_vertices[1],  # topRight
+                    bottom_vertices[1],  # bottomRight
+                    bottom_vertices[0],  # bottomLeft
+                ]
+
+                strike, dip = calculate_strike_and_dip(sorted_vertices)
+
+                planar_surface = SubElement(
+                    rupture,
+                    "planarSurface",
+                    {
+                        "strike": f"{strike:.2f}",
+                        "dip": f"{dip:.2f}",
+                    },
+                )
+
+                # Assign vertices based on depth
+                _top_left = SubElement(  # FIXME: unused?
+                    planar_surface,
+                    "topLeft",
+                    {
+                        "lon": str(sorted_vertices[0][0]),
+                        "lat": str(sorted_vertices[0][1]),
+                        "depth": str(sorted_vertices[0][2]),
+                    },
+                )
+                _top_right = SubElement(  # FIXME: unused?
+                    planar_surface,
+                    "topRight",
+                    {
+                        "lon": str(sorted_vertices[1][0]),
+                        "lat": str(sorted_vertices[1][1]),
+                        "depth": str(sorted_vertices[1][2]),
+                    },
+                )
+                _bottom_right = SubElement(  # FIXME: unused?
+                    planar_surface,
+                    "bottomRight",
+                    {
+                        "lon": str(sorted_vertices[2][0]),
+                        "lat": str(sorted_vertices[2][1]),
+                        "depth": str(sorted_vertices[2][2]),
+                    },
+                )
+                _bottom_left = SubElement(  # FIXME: unused?
+                    planar_surface,
+                    "bottomLeft",
+                    {
+                        "lon": str(sorted_vertices[3][0]),
+                        "lat": str(sorted_vertices[3][1]),
+                        "depth": str(sorted_vertices[3][2]),
+                    },
+                )
+
+        elif any(len(polygon) > 5 for polygon in polygons):
+            # Complex fault rupture with one or more geometries
+            rupture = SubElement(nrml, "complexFaultRupture")
+            magnitude = SubElement(rupture, "magnitude")
+            magnitude.text = str(metadata["mag"])
+
+            rake = SubElement(rupture, "rake")
+            rake.text = str(metadata.get("rake", 0))
+
+            _hypocenter = SubElement(  # FIXME: unused
+                rupture,
+                "hypocenter",
+                {
+                    "lon": str(metadata["lon"]),
+                    "lat": str(metadata["lat"]),
+                    "depth": str(metadata["depth"]),
+                },
+            )
+
+            for polygon in polygons:
+                geometry = SubElement(rupture, "complexFaultGeometry")
+                # Split the polygon into top and bottom edges based on depth
+                sorted_vertices = sorted(polygon[:-1], key=lambda v: v[2])
+                mid_index = len(sorted_vertices) // 2
+                top_edge_vertices = sorted_vertices[:mid_index]
+                bottom_edge_vertices = sorted_vertices[mid_index:][::-1]
+
+                # Create faultTopEdge
+                indent_str = "\n            "
+                fault_top_edge = SubElement(geometry, "faultTopEdge")
+                top_line_string = SubElement(fault_top_edge, "gml:LineString")
+                top_pos_list = SubElement(top_line_string, "gml:posList")
+                top_pos_list.text = (
+                    indent_str
+                    + indent_str.join(
+                        f"{v[0]:.4f} {v[1]:.4f} {v[2]:.1f}" for v in top_edge_vertices
+                    )
+                    + "\n          "
+                )
+
+                # Create faultBottomEdge
+                fault_bottom_edge = SubElement(geometry, "faultBottomEdge")
+                bottom_line_string = SubElement(fault_bottom_edge, "gml:LineString")
+                bottom_pos_list = SubElement(bottom_line_string, "gml:posList")
+                bottom_pos_list.text = (
+                    indent_str
+                    + indent_str.join(
+                        f"{v[0]:.4f} {v[1]:.4f} {v[2]:.1f}"
+                        for v in bottom_edge_vertices
+                    )
+                    + "\n          "
+                )
+
+    else:
+        raise ValueError(f"Unsupported geometry type: {geometry_type}")
+
+    # Convert the ElementTree to a string
+    rough_string = tostring(nrml, "utf-8")
+    # Use minidom to pretty print the XML
+    reparsed = minidom.parseString(rough_string)
+    pretty_xml = reparsed.toprettyxml(indent="  ")
+
+    # Write the pretty-printed XML to the output file
+    with open(output_xml_file, "w", encoding="utf-8") as f:
+        f.write(pretty_xml)
+    return output_xml_file
+
+
 def convert_to_oq_rupture(rup_json):
     """
-    Convert USGS json (output of download_rupture_data) into an hazardlib rupture
+    Convert USGS json (output of download_shakemap_rupture_data) into
+    a hazardlib rupture
 
     :returns: a openquake.hazardlib.source.rupture.BaseRupture object if convertible and
         an error message if not convertible
@@ -602,7 +834,7 @@ def download_jpg(usgs_id, what):
 
 # NB: this is always available but sometimes the geometry is Point
 # or a MultiPolygon not convertible to an engine rupture geometry
-def download_rupture_data(usgs_id, shakemap_contents, user):
+def download_shakemap_rupture_data(usgs_id, shakemap_contents, user):
     """
     :returns: a JSON dictionary with a format like this:
 
@@ -741,10 +973,12 @@ def _get_nodal_planes(properties):
     # try first reading from the moment tensor, if available. If nodal planes can not be
     # collected from there, fallback attempting to read them from the focal mechanism
     if 'moment-tensor' in properties['products']:
-        moment_tensor = _get_usgs_preferred_item(properties['products']['moment-tensor'])
+        moment_tensor = _get_usgs_preferred_item(
+            properties['products']['moment-tensor'])
         nodal_planes = _get_nodal_planes_from_product(moment_tensor)
     if not nodal_planes and 'focal-mechanism' in properties['products']:
-        focal_mechanism = _get_usgs_preferred_item(properties['products']['focal-mechanism'])
+        focal_mechanism = _get_usgs_preferred_item(
+            properties['products']['focal-mechanism'])
         nodal_planes = _get_nodal_planes_from_product(focal_mechanism)
     if not nodal_planes:
         err = {'status': 'failed',
@@ -804,19 +1038,6 @@ def _get_rup_dic_from_csv(usgs_id, user, rupture_file):
                   usgs_id=usgs_id,
                   rupture_file=rupture_file)
     return rup, rupdic, err
-
-
-def _get_rup_from_json(usgs_id, rupture_file):
-    rup = None
-    rupdic = {}
-    rup_data = None
-    err_msg = None
-    with open(rupture_file) as f:
-        rup_data = json.load(f)
-    if usgs_id == 'FromFile':
-        rupdic = convert_rup_data(rup_data, usgs_id, rupture_file)
-        rup, err_msg = convert_to_oq_rupture(rup_data)
-    return rup, rupdic, rup_data, err_msg
 
 
 def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
@@ -913,14 +1134,18 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
     if rupture_file:
+        if rupture_file.endswith('.json'):
+            rupture_file_xml = gettemp(prefix='rup_', suffix='.xml')
+            try:
+                # replacing the input json file with the output xml
+                rupture_file = convert_to_openquake_xml(rupture_file, rupture_file_xml)
+            except ValueError as exc:
+                err = {"status": "failed", "error_msg": str(exc)}
+                return rup, rupdic, err
         if rupture_file.endswith('.xml'):
             rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
         elif rupture_file.endswith('.csv'):
             rup, rupdic, err = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
-        elif rupture_file.endswith('.json'):
-            rup, rupdic, rup_data, err_msg = _get_rup_from_json(usgs_id, rupture_file)
-            if err_msg:
-                err = {"status": "failed", "error_msg": err_msg}
         if err or usgs_id == 'FromFile':
             return rup, rupdic, err
     assert usgs_id
@@ -953,12 +1178,25 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
             return None, None, err
     if not rup_data and approach not in ['use_pnt_rup_from_usgs',
                                          'build_rup_from_usgs']:
-        with monitor('Downloading rupture json'):
-            rup_data, rupture_file = download_rupture_data(usgs_id, contents, user)
-        if not rupture_file and approach == 'use_finite_rup_from_usgs':
-            err = {"status": "failed",
-                   "error_msg": 'Unable to retrieve rupture geometries'}
-            return None, None, err
+        if approach == 'use_shakemap_fault_rup_from_usgs':
+            with monitor('Downloading rupture json'):
+                # FIXME approach
+                rup_data, rupture_file = download_shakemap_rupture_data(
+                    usgs_id, contents, user)
+                rupture_file_xml = gettemp(prefix='rup_', suffix='.xml')
+                try:
+                    # replacing the input json file with the output xml
+                    rupture_file = convert_to_openquake_xml(
+                        rupture_file, rupture_file_xml)
+                except ValueError as exc:
+                    err = {"status": "failed", "error_msg": str(exc)}
+                    return rup, rupdic, err
+            rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
+            if not rupture_file and approach in ('use_shakemap_fault_rup_from_usgs',
+                                                 'use_finite_fault_model_from_usgs'):
+                err = {"status": "failed",
+                       "error_msg": 'Unable to retrieve rupture geometries'}
+                return None, None, err
     if not rupdic:
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
     if 'mmi_file' not in rupdic:
@@ -974,10 +1212,15 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
-    rup, err_msg = convert_to_oq_rupture(rup_data)
-    if rup is None and user.level > 1:  # in parsers_test for us6000jllz
-        # NOTE: hiding rupture-related issues to level 1 users
-        rupdic['rupture_issue'] = err_msg
+    # ftype = rup_data['features'][0]['geometry']['type']
+    # if ftype == 'Point':
+    #     rupdic['msr'] = 'PointMSR'
+    #     rup = build_planar_rupture_from_dict(rupdic)
+    # else:
+    #     rup, err_msg = convert_to_oq_rupture(rup_data)
+    # if rup is None and user.level > 1:  # in parsers_test for us6000jllz
+    #     # NOTE: hiding rupture-related issues to level 1 users
+    #     rupdic['rupture_issue'] = err_msg
     # in parsers_test for usp0001ccb
     return rup, rupdic, err
 

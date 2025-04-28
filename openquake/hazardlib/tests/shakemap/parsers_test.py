@@ -84,13 +84,13 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_3b(self):
         rup, _dic, _err = get_rup_dic(
-            {'usgs_id': 'usp0001ccb', 'approach': 'use_finite_rup_from_usgs'},
+            {'usgs_id': 'usp0001ccb', 'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIsInstance(rup, BaseRupture)
 
     def test_3c(self):
         _rup, _dic, err = get_rup_dic(
-            {'usgs_id': 'us6000f65h', 'approach': 'use_finite_rup_from_usgs'},
+            {'usgs_id': 'us6000f65h', 'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIn('Unable to retrieve rupture geometries', err['error_msg'])
 
@@ -98,7 +98,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         # TODO: make it possible to convert this kind of geometries
         usgs_id = 'us6000jllz'
         _rup, dic, _err = get_rup_dic(
-            {'usgs_id': usgs_id, 'approach': 'use_finite_rup_from_usgs'},
+            {'usgs_id': usgs_id, 'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIn('Unable to convert the rupture from the USGS format',
                       dic['rupture_issue'])
@@ -132,7 +132,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['dep'], 10.)
 
     def test_5(self):
-        for approach in ['use_finite_rup_from_usgs', 'use_shakemap_from_usgs']:
+        for approach in ['use_shakemap_fault_rup_from_usgs', 'use_shakemap_from_usgs']:
             # 12 vertices instead of 4 in rupture.json
             rup, dic, _err = get_rup_dic(
                 {'usgs_id': 'us20002926', 'approach': approach},

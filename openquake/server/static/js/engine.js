@@ -445,7 +445,8 @@ function capitalizeFirstLetter(val) {
         'use_shakemap_from_usgs',
         'use_pnt_rup_from_usgs',
         'build_rup_from_usgs',
-        'use_finite_rup_from_usgs'
+        'use_shakemap_fault_rup_from_usgs',
+        'use_finite_fault_model_from_usgs'
     ];
 
     const retrieve_data_btn_txt_map = {
@@ -458,9 +459,12 @@ function capitalizeFirstLetter(val) {
         'build_rup_from_usgs': {
             'initial': 'Build rupture',
             'running': 'Building rupture...'},
-        'use_finite_rup_from_usgs': {
-            'initial': 'Retrieve finite rupture',
-            'running': 'Retrieving finite rupture...'},
+        'use_shakemap_fault_rup_from_usgs': {
+            'initial': 'Retrieve ShakeMap fault rupture',
+            'running': 'Retrieving ShakeMap fault rupture...'},
+        'use_finite_fault_model_from_usgs': {
+            'initial': 'Retrieve finite fault model',
+            'running': 'Retrieving finite fault model...'},
         'provide_rup': {
             'initial': 'Retrieve rupture data',
             'running': 'Retrieving rupture data...'},
@@ -771,7 +775,7 @@ function capitalizeFirstLetter(val) {
                 } else {
                     $('.usgs_id_grp').addClass('hidden');
                 }
-                if (selected_approach == 'use_finite_rup_from_usgs') {
+                if (['use_shakemap_fault_rup_from_usgs', 'use_finite_fault_model_from_usgs'].includes(selected_approach)) {
                     $('#rupture_from_usgs_grp').removeClass('hidden');
                 } else {
                     $('#rupture_from_usgs_grp').addClass('hidden');
