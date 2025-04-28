@@ -1437,9 +1437,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
-            site = 'site.png' in ds['png']
         else:
-            hmaps = assets = hcurves = governing_mce = site = False
+            hmaps = assets = hcurves = governing_mce = False
             avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
@@ -1453,7 +1452,6 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
-                       site=site,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
                   )
 
@@ -1488,7 +1486,7 @@ def get_disp_val(val):
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce07 = asce41 = None
+    asce07 = asce41 = site = None
     asce07_with_units = {}
     asce41_with_units = {}
     warnings = None
@@ -1526,6 +1524,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce41_with_units[key] = value
                 else:
                     asce41_with_units[key + ' (g)'] = get_disp_val(value)
+        if 'png' in ds:
+            site = 'site.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
@@ -1547,7 +1547,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name, site=site,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version,
                        warnings=warnings))
