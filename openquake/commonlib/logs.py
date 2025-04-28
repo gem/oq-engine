@@ -22,7 +22,6 @@ import os
 import re
 import getpass
 import logging
-import traceback
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
@@ -33,6 +32,7 @@ LEVELS = {'debug': logging.DEBUG,
           'warn': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
+SIMPLE_TYPES = (str, int, float, bool, datetime, list, tuple, dict, type(None))
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 MODELS = []  # to be populated in get_tag
 
@@ -56,6 +56,11 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
+    # make sure the passed arguments are simple (i.e. not Django
+    # QueryDict that cannot be deserialized without settings.py)
+    for arg in args:
+        if type(arg) not in SIMPLE_TYPES:
+            raise TypeError(f'{arg} is not a simple type')
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
     if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # access the database directly
@@ -263,7 +268,9 @@ class LogContext:
             if etype is SystemExit:
                 dbcmd('finish', self.calc_id, 'aborted')
             else:
-                logging.error(traceback.format_exc())
+                # remove StreamHandler to avoid logging twice
+                logging.root.removeHandler(self.handlers[-1])
+                logging.exception(f'{etype.__name__}: {exc}')
                 dbcmd('finish', self.calc_id, 'failed')
         else:
             dbcmd('finish', self.calc_id, 'complete')

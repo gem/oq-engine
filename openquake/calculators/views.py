@@ -1436,7 +1436,7 @@ def view_rlz(token, dstore):
     tbl = []
     for bset, brid in zip(smlt.branchsets, rlz.sm_lt_path):
         tbl.append((bset.uncertainty_type, smlt.branches[brid].value))
-    for trt, value in zip(sorted(gslt.bsetdict), rlz.gsim_rlz.value):
+    for trt, value in zip(gslt.bsetdict, rlz.gsim_rlz.value):
         tbl.append((trt, value))
     return numpy.array(tbl, dt('uncertainty_type uvalue'))
 
@@ -1591,17 +1591,29 @@ def view_event_based_mfd(token, dstore):
 def view_relevant_sources(token, dstore):
     """
     Returns a table with the sources contributing more than 10%
-    of the highest source.
+    of the highest source. Requires disagg_by_src and a single site.
     """
+    oq = dstore['oqparam']
+    assert oq.disagg_by_src
     imt = token.split(':')[1]
-    kw = dstore['oqparam'].postproc_args
-    [iml] = kw['imls_by_sid']['0']
-    aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
-    rates = aw.array['rate']  # for each source in decreasing order
-    return aw.array[rates > .1 * rates[0]]
+    if 'imls_by_sid' in oq.postproc_args:
+        [iml] = oq.postproc_args['imls_by_sid']['0']
+        aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
+        rates = aw.array['rate']  # for each source in decreasing order
+        return aw.array[rates > .1 * rates[0]]
+    else:
+        m = list(oq.imtls).index(imt)
+        assert list(oq.hazard_stats())[0] == 'mean', oq.hazard_stats()
+        iml = dstore['hmaps-stats'][0, 0, m, 0]  # the first site and poe
+        aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
+        rates = aw.array['rate']  # for each source in decreasing order
+        return aw.array[rates > .1 * rates[0]]
 
 
 def asce_fix(asce, siteid):
+    """
+    Add 'siteid' field to the asce dictionaries and change 'n.a.'-> nan
+    """
     dic = json.loads(asce.decode('ascii'))
     for k, v in dic.items():
         if v == 'n.a.':
@@ -1616,10 +1628,12 @@ def view_asce(token, dstore):
     Returns asce:41 and asce:07 arrays
     """
     key = token.replace(':', '')
-    sitecol = dstore['sitecol']
-    model = dstore['oqparam'].description[9:12]
-    dics = [asce_fix(a, model + str(sid))
-            for sid, a in zip(sitecol.sids, dstore[key])]
+    array = dstore[key][:]
+    # the description is something like 'AELO for EUR[110 111]'
+    siteids = dstore['oqparam'].description[13:-1].split()
+    if len(siteids) != len(array):
+        siteids = [f'SITE{i}' for i in range(len(array))]
+    dics = [asce_fix(a, siteid) for siteid, a in zip(siteids, array)]
     header = dics[0]
     dtlist = []
     for k in header:
@@ -1832,3 +1846,14 @@ def view_log_median_spectrum(token, dstore):
     res['period'] = periods
     res['value'] = dset[:, sid, :, 0].sum(axis=0)
     return res
+
+
+@view.add('excessive_losses')
+def view_excessive_losses(token, dstore):
+    """
+    Displays the assets with loss larger than the value (due to bugs)
+    """
+    losses = dstore['avg_losses-rlzs/structural'][:, 0]
+    array = dstore['assetcol'].array
+    values = array['value-structural']
+    return array[losses > values]

@@ -1,4 +1,4 @@
-﻿taxonomy,consequence,peril,minor,major
+﻿risk_id,consequence,peril,minor,major
 bridge,non_operational,groundshaking,0,1
 road,non_operational,groundshaking,0,1
 connection,non_operational,groundshaking,0,1

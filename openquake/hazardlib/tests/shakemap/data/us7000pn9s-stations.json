@@ -1,0 +1,258 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "GE.NPW",
+      "properties": {
+        "code": "NPW",
+        "name": "DMH/GEOFON Station Naypyitaw, Myanmar",
+        "refid": null,
+        "instrumentType": "UNK",
+        "source": null,
+        "network": "GE",
+        "commType": "UNK",
+        "location": "",
+        "intensity": 9.5,
+        "intensity_flag": "",
+        "intensity_stddev": 0.63,
+        "pga": 62.308,
+        "pgv": 161.42,
+        "distance": 2.751,
+        "elev": 158.0,
+        "vs30": 309.64,
+        "channels": [
+          {
+            "name": "h1",
+            "amplitudes": [
+              {
+                "name": "pga",
+                "value": 57.437,
+                "units": "%g",
+                "flag": "0",
+                "ln_sigma": 0.0
+              },
+              {
+                "name": "pgv",
+                "value": 100.2,
+                "units": "cm/s",
+                "flag": "0",
+                "ln_sigma": 0.0
+              }
+            ]
+          },
+          {
+            "name": "h2",
+            "amplitudes": [
+              {
+                "name": "pga",
+                "value": 62.308,
+                "units": "%g",
+                "flag": "0",
+                "ln_sigma": 0.0
+              },
+              {
+                "name": "pgv",
+                "value": 161.42,
+                "units": "cm/s",
+                "flag": "0",
+                "ln_sigma": 0.0
+              }
+            ]
+          },
+          {
+            "name": "z",
+            "amplitudes": [
+              {
+                "name": "pga",
+                "value": 107.34,
+                "units": "%g",
+                "flag": "0",
+                "ln_sigma": 0.0
+              },
+              {
+                "name": "pgv",
+                "value": 65.729,
+                "units": "cm/s",
+                "flag": "0",
+                "ln_sigma": 0.0
+              }
+            ]
+          }
+        ],
+        "station_type": "seismic",
+        "nresp": "null",
+        "predictions": [
+          {
+            "name": "pga",
+            "value": 58.7437,
+            "value_rock": 55.3975,
+            "value_soil": 46.8004,
+            "units": "%g",
+            "ln_tau": 0.2568,
+            "ln_phi": 0.4571,
+            "ln_sigma": 0.5243,
+            "ln_sigma_rock": 0.5904,
+            "ln_sigma_soil": 0.4581,
+            "ln_bias": 0.1647,
+            "ln_bias_sigma": 0.1059
+          },
+          {
+            "name": "sa(1.0)",
+            "value": 95.5792,
+            "value_rock": 44.809,
+            "value_soil": 107.0311,
+            "units": "%g",
+            "ln_tau": 0.3156,
+            "ln_phi": 0.6046,
+            "ln_sigma": 0.682,
+            "ln_sigma_rock": 0.7002,
+            "ln_sigma_soil": 0.6135,
+            "ln_bias": 0.1858,
+            "ln_bias_sigma": 0.1618
+          },
+          {
+            "name": "pgv",
+            "value": 105.9312,
+            "value_rock": 63.7667,
+            "value_soil": 110.7887,
+            "units": "cm/s",
+            "ln_tau": 0.3026,
+            "ln_phi": 0.497,
+            "ln_sigma": 0.5819,
+            "ln_sigma_rock": 0.5982,
+            "ln_sigma_soil": 0.5345,
+            "ln_bias": 0.1313,
+            "ln_bias_sigma": 0.1269
+          },
+          {
+            "name": "sa(0.6)",
+            "value": 127.71,
+            "value_rock": 69.2418,
+            "value_soil": 116.8941,
+            "units": "%g",
+            "ln_tau": 0.2709,
+            "ln_phi": 0.5785,
+            "ln_sigma": 0.6388,
+            "ln_sigma_rock": 0.674,
+            "ln_sigma_soil": 0.5367,
+            "ln_bias": 0.1536,
+            "ln_bias_sigma": 0.1414
+          },
+          {
+            "name": "sa(0.3)",
+            "value": 142.0982,
+            "value_rock": 107.6666,
+            "value_soil": 104.0151,
+            "units": "%g",
+            "ln_tau": 0.2305,
+            "ln_phi": 0.5112,
+            "ln_sigma": 0.5608,
+            "ln_sigma_rock": 0.6411,
+            "ln_sigma_soil": 0.4672,
+            "ln_bias": 0.1008,
+            "ln_bias_sigma": 0.1223
+          },
+          {
+            "name": "sa(3.0)",
+            "value": 35.4347,
+            "value_rock": 14.326,
+            "value_soil": 60.4353,
+            "units": "%g",
+            "ln_tau": 0.3575,
+            "ln_phi": 0.605,
+            "ln_sigma": 0.7027,
+            "ln_sigma_rock": 0.7044,
+            "ln_sigma_soil": 0.7032,
+            "ln_bias": 0.0349,
+            "ln_bias_sigma": 0.1868
+          },
+          {
+            "name": "mmi",
+            "value": 8.8751,
+            "value_rock": 8.1785,
+            "value_soil": 8.9366,
+            "units": "intensity",
+            "tau": 0.4153,
+            "phi": 0.9285,
+            "sigma": 1.0172,
+            "sigma_rock": 1.0348,
+            "sigma_soil": 0.967,
+            "bias": 0.3029,
+            "bias_sigma": 0.1799
+          }
+        ],
+        "mmi_from_pgm": [
+          {
+            "name": "pga",
+            "value": 7.58,
+            "sigma": 0.66,
+            "flag": "0"
+          },
+          {
+            "name": "sa(1.0)",
+            "value": null,
+            "sigma": null,
+            "flag": "0"
+          },
+          {
+            "name": "pgv",
+            "value": 9.45,
+            "sigma": 0.63,
+            "flag": "0"
+          },
+          {
+            "name": "sa(0.3)",
+            "value": null,
+            "sigma": null,
+            "flag": "0"
+          },
+          {
+            "name": "sa(3.0)",
+            "value": null,
+            "sigma": null,
+            "flag": "0"
+          }
+        ],
+        "distances": {
+          "repi": 248.111,
+          "rhypo": 248.312,
+          "rjb": 2.751,
+          "rrup": 2.751,
+          "rx": 2.648,
+          "ry0": 0.0
+        }
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          96.138,
+          19.779
+        ]
+      }
+    }
+  ],
+  "references": {
+    "1": {
+      "refid": 1,
+      "long_reference": "USGS Did You Feel It? System",
+      "short_reference": "1",
+      "description": ""
+    },
+    "2": {
+      "refid": 2,
+      "long_reference": "USGS Did You Feel It? System",
+      "short_reference": "1",
+      "description": ""
+    },
+    "3": {
+      "refid": 3,
+      "long_reference": "USGS Did You Feel It? System",
+      "short_reference": "",
+      "description": ""
+    }
+  },
+  "metadata": {
+    "eventid": "us7000pn9s"
+  }
+}

@@ -151,19 +151,20 @@ def get_pmaps_gb(dstore, full_lt=None):
     return max_gb, trt_rlzs, gids
 
 
-def get_num_chunks(dstore):
+def get_num_chunks_sites(dstore):
     """
-    :returns: the number of postclassical tasks to generate.
+    :returns: (number of postclassical tasks to generate, number of sites)
 
     It is 5 times the number of GB required to store the rates.
     """
-    msd = dstore['oqparam'].max_sites_disagg
+    N = len(dstore['sitecol/sids'])
+    max_chunks = min(dstore['oqparam'].max_sites_disagg, N)
     try:
         req_gb = dstore['source_groups'].attrs['req_gb']
     except KeyError:
-        return msd
-    chunks = max(int(5 * req_gb), msd)
-    return chunks
+        return max_chunks, N
+    chunks = max(int(5 * req_gb), max_chunks)
+    return chunks, N
 
     
 def map_getters(dstore, full_lt=None, disagg=False):
@@ -172,8 +173,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
     """
     oq = dstore['oqparam']
     # disaggregation is meant for few sites, i.e. no tiling
-    N = len(dstore['sitecol/sids'])
-    chunks = get_num_chunks(dstore)
+    chunks, N = get_num_chunks_sites(dstore)
     if disagg and N > chunks:
         raise ValueError('There are %d sites but only %d chunks' % (N, chunks))
 

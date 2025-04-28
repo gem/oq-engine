@@ -429,8 +429,9 @@ class SourceFilter(object):
             return self.sitecol.sids
         if trt:  # rupture proxy
             if not hasattr(self.integration_distance, 'x'):
-                raise ValueError('The SourceFilter was instantiated with '
-                                 'maximum_distance and not maximum_distance(trt)')
+                raise ValueError(
+                    'The SourceFilter was instantiated with '
+                    'maximum_distance and not maximum_distance(trt)')
             dlon = get_longitudinal_extent(
                 src_or_rec['minlon'], src_or_rec['maxlon']) / 2.
             dlat = (src_or_rec['maxlat'] - src_or_rec['minlat']) / 2.

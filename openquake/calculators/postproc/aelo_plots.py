@@ -20,9 +20,11 @@ import os
 import numpy
 import matplotlib as mpl
 from scipy import interpolate
+from openquake.commonlib import readinput
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
+from openquake.calculators.postproc.plots import add_borders, adjust_limits
 from PIL import Image
 
 ASCE_version = 'ASCE7-22'
@@ -425,5 +427,41 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         bio = io.BytesIO()
         fig.savefig(bio, format='png', bbox_inches='tight')
         dstore['png/disagg_by_src-All-IMTs.png'] = Image.open(bio)
+    fig.tight_layout()
+    return plt
+
+
+def plot_sites(dstore, update_dstore=False):
+    plt = import_plt()
+    sites = dstore['sitecol']
+    lons, lats = sites['lon'], sites['lat']
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.grid(True)
+    if len(sites) == 1:
+        markersize = 30
+        marker = 'x'
+        padding = 20
+    elif len(sites) < 50:
+        markersize = 1
+        marker = 'o'
+        padding = 10
+    elif len(sites) < 500:
+        markersize = 0.1
+        marker = 'o'
+        padding = 5
+    else:
+        markersize = 0.05
+        marker = 'o'
+        padding = 0
+    plt.scatter(lons, lats, c='black', marker=marker, s=markersize)
+    add_borders(ax, readinput.read_countries_df, buffer=0.)
+    xlim, ylim = adjust_limits(
+        lons.min(), lons.max(), lats.min(), lats.max(), padding=padding)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    if update_dstore:
+        bio = io.BytesIO()
+        fig.savefig(bio, format='png', bbox_inches='tight')
+        dstore['png/site.png'] = Image.open(bio)
     fig.tight_layout()
     return plt
