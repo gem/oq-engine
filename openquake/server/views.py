@@ -115,7 +115,7 @@ AELO_FORM_LABELS = {
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': 'positive float',
+    'vs30': 'float (150 - 3000)',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE version',
 }
@@ -939,6 +939,7 @@ def impact_run_with_shakemap(request):
 def aelo_validate(request):
     validation_errs = {}
     invalid_inputs = []
+    validate_vs30 = valid.FloatRange(150, 3000, 'vs30')
     try:
         lon = valid.longitude(request.POST.get('lon'))
     except Exception as exc:
@@ -950,7 +951,7 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
-        vs30 = valid.positivefloat(request.POST.get('vs30'))
+        vs30 = validate_vs30(request.POST.get('vs30'))
     except Exception as exc:
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
