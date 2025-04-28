@@ -106,8 +106,8 @@ ENGINE = "python -m openquake.engine.engine".split()
 AELO_FORM_LABELS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
-    'vs30': 'Site class (m/s)',
-    'custom_vs30': 'Custom Vs30',
+    'site_class': 'Site class',
+    'vs30': 'Vs30 (m/s)',
     'siteid': 'Site name',
     'asce_version': 'ASCE version',
 }
@@ -115,7 +115,7 @@ AELO_FORM_LABELS = {
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'custom_vs30': 'positive float',
+    'vs30': 'positive float',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE version',
 }
