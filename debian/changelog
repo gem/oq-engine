@@ -1,6 +1,10 @@
+  [Kendra Johnson]
+  * Updated the mosaic geometries for AELO year 4
+
   [Matteo Nastasi]
   * Allow free mapping between standlone apps and their url path prefix
     (regardless of their name)
+
   [Claudia Mascandola]
   * Added GMPEs of ambraseys_1996 and sabetta_pugliese_1996
 
