@@ -117,7 +117,9 @@ def _compute_scalefactor(ctx, C_BB):
 
 class EMME24BB(ChiouYoungs2014):
     """
-    EMME24 backbone model for active shallow crustal earthquakes.
+    EMME24 backbone model for active shallow crustal earthquakes. This GSIM
+    class adjusts the Chiou and Youngs (2014) GMPE using the corrections
+    described within:
     """
     experimental = True
 
@@ -157,6 +159,7 @@ class EMME24BB(ChiouYoungs2014):
 
 class EMME24BB_GMM1SGM1(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table=""" 
         IMT    c1      c2      c3      c4      c5       c6       c7      Mref   Rref   hfict Mh
@@ -219,6 +222,7 @@ class EMME24BB_GMM1SGM1(EMME24BB):
 
 class EMME24BB_GMM1SGM2(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""
         IMT     c1      c2      c3      c4      c5       c6      c7      Mref    Rref   hfict  Mh
@@ -281,6 +285,7 @@ class EMME24BB_GMM1SGM2(EMME24BB):
 
 class EMME24BB_GMM1SGM3(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""
         IMT    c1      c2      c3      c4       c5       c6       c7      Mref   Rref   hfict  Mh
@@ -343,6 +348,7 @@ class EMME24BB_GMM1SGM3(EMME24BB):
 
 class EMME24BB_GMM2SGM1(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT      c1       c2      c3      c4       c5       c6       c7      Mref    Rref    hfict   Mh
@@ -405,6 +411,7 @@ class EMME24BB_GMM2SGM1(EMME24BB):
 
 class EMME24BB_GMM2SGM2(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""
         IMT      c1       c2      c3      c4       c5       c6       c7      Mref    Rref    hfict   Mh
@@ -467,6 +474,7 @@ class EMME24BB_GMM2SGM2(EMME24BB):
 
 class EMME24BB_GMM2SGM3(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""
         IMT      c1      c2      c3      c4       c5       c6       c7      Mref    Rref    hfict   Mh
@@ -529,6 +537,7 @@ class EMME24BB_GMM2SGM3(EMME24BB):
 
 class EMME24BB_GMM3SGM1(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT      c1      c2      c3      c4      c5       c6      c7      Mref    Rref    hfict   Mh
@@ -591,6 +600,7 @@ class EMME24BB_GMM3SGM1(EMME24BB):
 
 class EMME24BB_GMM3SGM2(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT      c1       c2       c3      c4      c5       c6       c7      Mref    Rref    hfict   Mh
@@ -653,6 +663,7 @@ class EMME24BB_GMM3SGM2(EMME24BB):
 
 class EMME24BB_GMM3SGM3(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT      c1        c2        c3       c4       c5        c6       c7       Mref   Rref   hfict  Mh
@@ -715,6 +726,7 @@ class EMME24BB_GMM3SGM3(EMME24BB):
 
 class EMME24BB_GMM4SGM1(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT     c1        c2        c3       c4       c5        c6       c7       Mref   Rref   hfict  Mh
@@ -777,6 +789,7 @@ class EMME24BB_GMM4SGM1(EMME24BB):
 
 class EMME24BB_GMM4SGM2(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT     c1        c2        c3       c4       c5        c6       c7       Mref    Rref   hfict   Mh
@@ -839,6 +852,7 @@ class EMME24BB_GMM4SGM2(EMME24BB):
 
 class EMME24BB_GMM4SGM3(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
     IMT    c1        c2        c3       c4       c5        c6       c7       Mref    Rref   hfict   Mh
@@ -901,6 +915,7 @@ class EMME24BB_GMM4SGM3(EMME24BB):
 
 class EMME24BB_GMM5SGM1(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
     IMT   c1      c2      c3      c4      c5      c6      c7      Mref  Rref  hfict  Mh
@@ -963,6 +978,7 @@ class EMME24BB_GMM5SGM1(EMME24BB):
 
 class EMME24BB_GMM5SGM2(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
     IMT    c1      c2      c3      c4      c5      c6       c7      Mref    Rref    hfict   Mh
@@ -1025,6 +1041,7 @@ class EMME24BB_GMM5SGM2(EMME24BB):
 
 class EMME24BB_GMM5SGM3(EMME24BB):
     """
+    PLACEHOLDER
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
     IMT    c1      c2      c3      c4      c5      c6       c7      Mref    Rref    hfict   Mh
