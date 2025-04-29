@@ -659,7 +659,7 @@ edwards_fah_2013f_coeffs
 emme24
 --------------------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.emm24
+.. automodule:: openquake.hazardlib.gsim.emme24
     :members:
     :undoc-members:
     :show-inheritance:
