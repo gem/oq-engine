@@ -1,4 +1,4 @@
-#,,,,,"generated_by='OpenQuake engine 3.24.0-gita30884bc8b', start_date='2025-04-28T09:15:17', checksum=1125341655"
+#,,,,,"generated_by='OpenQuake engine 3.24.0-git57fa466210', start_date='2025-04-29T08:28:49', checksum=2464308581"
 return_period,loss_type,loss_aep,loss_oep,stat,id
 1,business_interruption,0.0,0.0,quantile-0.5,a3
 1,contents,0.0,0.0,quantile-0.5,a3
@@ -41,7 +41,7 @@ return_period,loss_type,loss_aep,loss_oep,stat,id
 10,business_interruption,45.23425734768417,45.23425734768417,quantile-0.5,a2
 10,contents,271.7423084004652,271.7423084004652,quantile-0.5,a2
 10,nonstructural,422.16677686809595,422.16677686809595,quantile-0.5,a2
-10,occupants,0.0009109501114321548,0.0009538048273614826,quantile-0.5,a2
+10,occupants,0.0009109501114321548,0.0009538124633441634,quantile-0.5,a2
 10,structural,106.21152750896425,106.21152750896425,quantile-0.5,a2
 10,structural+nonstructural+contents,781.176354046929,781.176354046929,quantile-0.5,a2
 1,business_interruption,0.0,0.0,quantile-0.5,a5
@@ -62,12 +62,12 @@ return_period,loss_type,loss_aep,loss_oep,stat,id
 5,occupants,0.0,0.0,quantile-0.5,a5
 5,structural,0.0,0.0,quantile-0.5,a5
 5,structural+nonstructural+contents,0.0,0.0,quantile-0.5,a5
-10,business_interruption,27.586191674980874,27.586191674980874,quantile-0.5,a5
-10,contents,143.72565094860255,143.72565094860255,quantile-0.5,a5
-10,nonstructural,216.63347371752965,216.63347371752965,quantile-0.5,a5
-10,occupants,0.0005337149034402015,0.0005337149034402015,quantile-0.5,a5
+10,business_interruption,27.584862888765137,27.584862888765137,quantile-0.5,a5
+10,contents,143.71745810914715,143.71745810914715,quantile-0.5,a5
+10,nonstructural,216.62203810282452,216.62203810282452,quantile-0.5,a5
+10,occupants,0.0005336911870521107,0.0005336911870521107,quantile-0.5,a5
 10,structural,0.0,0.0,quantile-0.5,a5
-10,structural+nonstructural+contents,360.35911392846583,360.35911392846583,quantile-0.5,a5
+10,structural+nonstructural+contents,360.33950694963806,360.33950694963806,quantile-0.5,a5
 1,business_interruption,0.0,0.0,quantile-0.5,a4
 1,contents,0.0,0.0,quantile-0.5,a4
 1,nonstructural,0.0,0.0,quantile-0.5,a4
@@ -86,12 +86,12 @@ return_period,loss_type,loss_aep,loss_oep,stat,id
 5,occupants,0.0,0.0,quantile-0.5,a4
 5,structural,0.0,0.0,quantile-0.5,a4
 5,structural+nonstructural+contents,0.0,0.0,quantile-0.5,a4
-10,business_interruption,55.226031703444306,55.64330755030795,quantile-0.5,a4
-10,contents,133.07037746011358,133.07037746011358,quantile-0.5,a4
-10,nonstructural,313.1904139243436,313.1904139243436,quantile-0.5,a4
-10,occupants,0.0011412038608474677,0.0011922943885095954,quantile-0.5,a4
-10,structural,226.35763377435538,226.35763377435538,quantile-0.5,a4
-10,structural+nonstructural+contents,639.2710822412254,639.2710822412254,quantile-0.5,a4
+10,business_interruption,55.2186737175507,55.63827313895566,quantile-0.5,a4
+10,contents,133.0549479986078,133.0549479986078,quantile-0.5,a4
+10,nonstructural,313.1413947819178,313.1413947819178,quantile-0.5,a4
+10,occupants,0.0011410437035461979,0.001192184807199258,quantile-0.5,a4
+10,structural,226.32715914715462,226.32715914715462,quantile-0.5,a4
+10,structural+nonstructural+contents,639.1806710902234,639.1806710902234,quantile-0.5,a4
 1,business_interruption,0.0,0.0,quantile-0.5,a1
 1,contents,0.0,0.0,quantile-0.5,a1
 1,nonstructural,0.0,0.0,quantile-0.5,a1
@@ -134,12 +134,12 @@ return_period,loss_type,loss_aep,loss_oep,stat,id
 5,occupants,0.0,0.0,quantile-0.5,a6
 5,structural,0.0,0.0,quantile-0.5,a6
 5,structural+nonstructural+contents,0.0,0.0,quantile-0.5,a6
-10,business_interruption,47.5874224918128,45.547895349689796,quantile-0.5,a6
+10,business_interruption,47.591575143297085,45.547895349689796,quantile-0.5,a6
 10,contents,753.9218073027868,622.3543298161222,quantile-0.5,a6
-10,nonstructural,1055.3486800449832,783.6643535267233,quantile-0.5,a6
-10,occupants,0.0009487662219712094,0.0009496668317688376,quantile-0.5,a6
-10,structural,117.4001686483049,114.03963400891834,quantile-0.5,a6
-10,structural+nonstructural+contents,1840.6051047125486,1474.0376525221463,quantile-0.5,a6
+10,nonstructural,1055.3486800449832,783.7313904671223,quantile-0.5,a6
+10,occupants,0.000948861165140489,0.0009496668317688376,quantile-0.5,a6
+10,structural,117.40471802833326,114.03963400891834,quantile-0.5,a6
+10,structural+nonstructural+contents,1840.6051047125486,1474.1033670338472,quantile-0.5,a6
 1,business_interruption,0.0,0.0,quantile-0.5,a7
 1,contents,0.0,0.0,quantile-0.5,a7
 1,nonstructural,0.0,0.0,quantile-0.5,a7
@@ -158,9 +158,9 @@ return_period,loss_type,loss_aep,loss_oep,stat,id
 5,occupants,0.0,0.0,quantile-0.5,a7
 5,structural,0.0,0.0,quantile-0.5,a7
 5,structural+nonstructural+contents,0.0,0.0,quantile-0.5,a7
-10,business_interruption,79.18175995304489,68.78860050192178,quantile-0.5,a7
-10,contents,456.0805695970491,391.59064887693313,quantile-0.5,a7
-10,nonstructural,667.3603622311084,594.1858249245149,quantile-0.5,a7
-10,occupants,0.0014541371082106129,0.0014644303728728574,quantile-0.5,a7
-10,structural,273.5722354072853,256.82625521863554,quantile-0.5,a7
-10,structural+nonstructural+contents,1395.0304517531224,1227.7240831247125,quantile-0.5,a7
+10,business_interruption,79.19573728627762,68.78642697226284,quantile-0.5,a7
+10,contents,456.1889793364353,391.59064887693313,quantile-0.5,a7
+10,nonstructural,667.4378271465387,594.1858249245149,quantile-0.5,a7
+10,occupants,0.0014543414170986844,0.001464251869370523,quantile-0.5,a7
+10,structural,273.53309152513265,256.7871113364829,quantile-0.5,a7
+10,structural+nonstructural+contents,1395.2603191918536,1227.5921658004518,quantile-0.5,a7
