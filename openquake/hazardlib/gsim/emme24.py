@@ -42,10 +42,8 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 def _get_inter_event_tau(C_Sigma, ctx):
     """
-    Returns the inter-event standard deviation (tau), which is dependent
-    on magnitude
+    Returns the inter-event standard deviation (tau), which is dependent on magnitude
     """
-    
     tau = C_Sigma["tau1"] + (C_Sigma["tau2"] - C_Sigma["tau1"]) * (ctx.mag - 5)/1.2
     
     idx = ctx.mag < 5
@@ -59,10 +57,8 @@ def _get_inter_event_tau(C_Sigma, ctx):
     
 def _get_intra_event_phi(C_Sigma, ctx):
     """
-    Returns the intra-event standard deviation (phi), dependent on
-    magnitude
+    Returns the intra-event standard deviation (phi), dependent on magnitude
     """
-    
     phi = C_Sigma["phi1"] + (C_Sigma["phi2"] - C_Sigma["phi1"]) * (ctx.mag - 5)/1.0
     
     idx = ctx.mag < 5
@@ -102,7 +98,7 @@ def _compute_distance_correction(ctx, imt):
     )
 
 
-def _compute_scalefactor(ctx, imt, C_BB):
+def _compute_scalefactor(ctx, C_BB):
     """
     Compute scaling factors in natural logarithm
     """    
@@ -121,7 +117,7 @@ def _compute_scalefactor(ctx, imt, C_BB):
 
 class EMME24BB(ChiouYoungs2014):
     """
-    Central backbone model for implementation
+    EMME24 backbone model for active shallow crustal earthquakes.
     """
     experimental = True
 
@@ -142,7 +138,7 @@ class EMME24BB(ChiouYoungs2014):
             C_Sigma = self.COEFFS_Sigma[imt]
             
             # Get scaling factor and apply
-            scfact = _compute_scalefactor(ctx, imt, C_BB)
+            scfact = _compute_scalefactor(ctx, C_BB)
             mean[m] += scfact
             
             # Get distance correction and apply
@@ -161,7 +157,6 @@ class EMME24BB(ChiouYoungs2014):
 
 class EMME24BB_GMM1SGM1(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table=""" 
         IMT    c1      c2      c3      c4      c5       c6       c7      Mref   Rref   hfict Mh
@@ -222,9 +217,8 @@ class EMME24BB_GMM1SGM1(EMME24BB):
         )
 
 
-class EMME24BB_GMM1SGM2(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM1SGM2(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""
         IMT     c1      c2      c3      c4      c5       c6      c7      Mref    Rref   hfict  Mh
@@ -285,9 +279,8 @@ class EMME24BB_GMM1SGM2(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM1SGM3(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM1SGM3(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""
         IMT    c1      c2      c3      c4       c5       c6       c7      Mref   Rref   hfict  Mh
@@ -348,9 +341,8 @@ class EMME24BB_GMM1SGM3(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM2SGM1(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM2SGM1(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT      c1       c2      c3      c4       c5       c6       c7      Mref    Rref    hfict   Mh
@@ -411,9 +403,8 @@ class EMME24BB_GMM2SGM1(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM2SGM2(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM2SGM2(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""
         IMT      c1       c2      c3      c4       c5       c6       c7      Mref    Rref    hfict   Mh
@@ -474,9 +465,8 @@ class EMME24BB_GMM2SGM2(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM2SGM3(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM2SGM3(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""
         IMT      c1      c2      c3      c4       c5       c6       c7      Mref    Rref    hfict   Mh
@@ -537,9 +527,8 @@ class EMME24BB_GMM2SGM3(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM3SGM1(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM3SGM1(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT      c1      c2      c3      c4      c5       c6      c7      Mref    Rref    hfict   Mh
@@ -600,9 +589,8 @@ class EMME24BB_GMM3SGM1(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM3SGM2(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM3SGM2(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT      c1       c2       c3      c4      c5       c6       c7      Mref    Rref    hfict   Mh
@@ -663,9 +651,8 @@ class EMME24BB_GMM3SGM2(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM3SGM3(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM3SGM3(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT      c1        c2        c3       c4       c5        c6       c7       Mref   Rref   hfict  Mh
@@ -726,9 +713,8 @@ class EMME24BB_GMM3SGM3(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM4SGM1(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM4SGM1(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT     c1        c2        c3       c4       c5        c6       c7       Mref   Rref   hfict  Mh
@@ -789,9 +775,8 @@ class EMME24BB_GMM4SGM1(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM4SGM2(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM4SGM2(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
         IMT     c1        c2        c3       c4       c5        c6       c7       Mref    Rref   hfict   Mh
@@ -852,9 +837,8 @@ class EMME24BB_GMM4SGM2(EMME24BB_GMM1SGM1):
         )
 
 
-class EMME24BB_GMM4SGM3(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM4SGM3(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
     IMT    c1        c2        c3       c4       c5        c6       c7       Mref    Rref   hfict   Mh
@@ -915,9 +899,8 @@ class EMME24BB_GMM4SGM3(EMME24BB_GMM1SGM1):
     )
 
 
-class EMME24BB_GMM5SGM1(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM5SGM1(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
     IMT   c1      c2      c3      c4      c5      c6      c7      Mref  Rref  hfict  Mh
@@ -978,9 +961,8 @@ class EMME24BB_GMM5SGM1(EMME24BB_GMM1SGM1):
     )
 
 
-class EMME24BB_GMM5SGM2(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM5SGM2(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
     IMT    c1      c2      c3      c4      c5      c6       c7      Mref    Rref    hfict   Mh
@@ -1041,9 +1023,8 @@ class EMME24BB_GMM5SGM2(EMME24BB_GMM1SGM1):
     )
 
 
-class EMME24BB_GMM5SGM3(EMME24BB_GMM1SGM1):
+class EMME24BB_GMM5SGM3(EMME24BB):
     """
-    Central backbone model for implementation
     """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table="""\
     IMT    c1      c2      c3      c4      c5      c6       c7      Mref    Rref    hfict   Mh
