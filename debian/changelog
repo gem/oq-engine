@@ -79,6 +79,8 @@
 
   [Marco Pagani, Valeria Cascone]
   * Added an get_width and get_length methods to Strasser et al. (2010) MSR
+  * Added methods get_length and get_width to the Thingbaijam et al. scaling
+    relationship
   * Fixed a bug in the Thingbaijam et al. (2017) MSR
 
   [Michele Simionato]

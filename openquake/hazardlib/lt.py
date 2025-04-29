@@ -658,7 +658,11 @@ class BranchSet(object):
             if branch.bset is not None:  # dummies can be branchpoints
                 yield from branch.bset._enumerate_paths(path_branch)
             else:
+                # here is an example of path_branch[1].value:
+                # [('simpleFaultGeometry', ([(-64.5, -0.38221), (-64.5, 0.38221)],
+                #                             2.0, 15.0, 90.0, 2.0))]
                 yield path_branch
+
 
     def __getitem__(self, branch_id):
         """
