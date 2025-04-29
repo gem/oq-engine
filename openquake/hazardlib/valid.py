@@ -539,7 +539,7 @@ def longitude(value):
     >>> longitude('0.123456')
     0.12346
     """
-    lon = numpy.round(float_(value), 5)
+    lon = round(float_(value), 5)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -557,7 +557,7 @@ def latitude(value):
     >>> latitude('-0.123456')
     -0.12346
     """
-    lat = numpy.round(float_(value), 5)
+    lat = round(float_(value), 5)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:

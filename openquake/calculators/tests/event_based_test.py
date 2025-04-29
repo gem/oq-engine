@@ -571,7 +571,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # check bounding box close to the site
         deltalon = (r['maxlon'] - lon).max()
         deltalat = (r['maxlat'] - lat).max()
-        assert deltalon <= .65, deltalon
+        assert deltalon <= .651, deltalon
         assert deltalat <= .49, deltalat
         deltalon = (lon - r['minlon']).max()
         deltalat = (lat - r['minlat']).max()
