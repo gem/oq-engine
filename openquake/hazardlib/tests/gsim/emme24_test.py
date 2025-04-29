@@ -42,7 +42,7 @@ from openquake.hazardlib.gsim.emme24 import (
     )
 
 
-class EMME24BBGMM1SGM1_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM1SGM1_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM1SGM1
 
     def test_mean(self):
@@ -62,7 +62,7 @@ class EMME24BBGMM1SGM1_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM1SGM2_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM1SGM2_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM1SGM2
 
     def test_mean(self):
@@ -82,7 +82,7 @@ class EMME24BBGMM1SGM2_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM1SGM3_TestCase(BaseGSIMTestCase):
+class EMME24_BBGMM1SGM3_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM1SGM3
 
     def test_mean(self):
@@ -102,7 +102,7 @@ class EMME24BBGMM1SGM3_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM2SGM1_TestCase(BaseGSIMTestCase):
+class EMME24_BBGMM2SGM1_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM2SGM1
 
     def test_mean(self):
@@ -122,7 +122,7 @@ class EMME24BBGMM2SGM1_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM2SGM2_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM2SGM2_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM2SGM2
 
     def test_mean(self):
@@ -142,7 +142,7 @@ class EMME24BBGMM2SGM2_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM2SGM3_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM2SGM3_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM2SGM3
 
     def test_mean(self):
@@ -162,7 +162,7 @@ class EMME24BBGMM2SGM3_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM3SGM1_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM3SGM1_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM3SGM1
 
     def test_mean(self):
@@ -182,7 +182,7 @@ class EMME24BBGMM3SGM1_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM3SGM2_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM3SGM2_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM3SGM2
 
     def test_mean(self):
@@ -202,7 +202,7 @@ class EMME24BBGMM3SGM2_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM3SGM3_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM3SGM3_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM3SGM3
 
     def test_mean(self):
@@ -222,7 +222,7 @@ class EMME24BBGMM3SGM3_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM4SGM1_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM4SGM1_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM4SGM1
 
     def test_mean(self):
@@ -242,7 +242,7 @@ class EMME24BBGMM4SGM1_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM4SGM2_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM4SGM2_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM4SGM2
 
     def test_mean(self):
@@ -262,7 +262,7 @@ class EMME24BBGMM4SGM2_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM4SGM3_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM4SGM3_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM4SGM3
 
     def test_mean(self):
@@ -282,7 +282,7 @@ class EMME24BBGMM4SGM3_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM5SGM1_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM5SGM1_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM5SGM1
 
     def test_mean(self):
@@ -302,7 +302,7 @@ class EMME24BBGMM5SGM1_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM5SGM2_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM5SGM2_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM5SGM2
 
     def test_mean(self):
@@ -322,7 +322,7 @@ class EMME24BBGMM5SGM2_TestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.2)
 
 
-class EMME24BBGMM5SGM3_TestCase(BaseGSIMTestCase):
+class EMME24BB_GMM5SGM3_TestCase(BaseGSIMTestCase):
     GSIM_CLASS = EMME24BB_GMM5SGM3
 
     def test_mean(self):

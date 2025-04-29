@@ -30,7 +30,7 @@ from openquake.baselib.general import (
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
-MAXSIZE = 1_000_000
+MAXSIZE = 600_000
 
 def _normalize(float_string):
     try:
