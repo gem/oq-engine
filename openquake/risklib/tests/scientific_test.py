@@ -363,8 +363,8 @@ class FragilityFunctionTestCase(unittest.TestCase):
             scientific.FragilityFunctionDiscrete(
                 'LS2', [0.05, 0.1, 0.3, 0.5, 0.7],
                 [0, 0.00, 0.05, 0.20, 0.50], 0.05)]
-        self._close_to([0.975, 0.025, 0],
-                       scientific.scenario_damage(ffs, 0.075))
+        self._close_to([[0.975], [0.025], [0]],
+                       scientific.scenario_damage(ffs, [0.075]))
 
     def _close_to(self, expected, actual):
         aac(actual, expected, atol=0.0, rtol=0.05)
