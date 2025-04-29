@@ -75,8 +75,8 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     else:
         # in aelo_test.py
         params['description'] += f' ({lon}, {lat})'
+        params['maximum_distance'] = 'magdist'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
-    params['maximum_distance'] = 'magdist'
     params['pointsource_distance'] = '100.'
     params['truncation_level'] = '3.'
     params['disagg_by_src'] = 'true'
