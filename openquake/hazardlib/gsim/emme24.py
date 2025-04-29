@@ -123,6 +123,8 @@ class EMME24BB(ChiouYoungs2014):
     """
     Central backbone model for implementation
     """
+    experimental = True
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method

@@ -656,6 +656,14 @@ edwards_fah_2013f_coeffs
     :undoc-members:
     :show-inheritance:
 
+emme24
+--------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.emm24
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 eshm20_craton
 -------------------------------------------
 
