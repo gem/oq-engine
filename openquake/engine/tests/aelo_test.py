@@ -230,7 +230,7 @@ def test_WAF():
 
         # test of site with very low hazard, but high enough to compute ASCE
         job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
-        dic = dict(sites='2.4 6.3', site='WAF-site', vs30='760')
+        dic = dict(sites='2.4 6.6', site='WAF-site', vs30='760')
         with logs.init(job_ini) as log:
             params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
             params['maximum_distance'] = '300'
