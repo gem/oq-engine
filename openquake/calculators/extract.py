@@ -1193,7 +1193,7 @@ def build_damage_dt(dstore):
 
 
 @extract.add('damages-rlzs')
-def extract_damages_npz(dstore, what):
+def extract_damages_rlzs_npz(dstore, what):
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
     if oq.collect_rlzs:
@@ -1202,6 +1202,15 @@ def extract_damages_npz(dstore, what):
     assets = util.get_assets(dstore)
     for r in range(R):
         yield 'rlz-%03d' % r, util.compose_arrays(assets, data[:, r])
+
+
+@extract.add('damages-stats')
+def extract_damages_stats_npz(dstore, what):
+    data = dstore['damages-stats']
+    attrs = json.loads(data.attrs['json'])
+    assets = util.get_assets(dstore)
+    for s, stat in enumerate(attrs['stat']):
+        yield stat, util.compose_arrays(assets, data[:, s])
 
 
 # tested on oq-risk-tests event_based/etna
