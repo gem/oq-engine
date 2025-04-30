@@ -1,4 +1,4 @@
-#,,,,,,,,,,"generated_by='OpenQuake engine 3.22.0-git03f37349ed', start_date='2024-10-23T10:53:05', checksum=328047740, investigation_time=1.0, ses_per_logic_tree_path=5"
+#,,,,,,,,,,"generated_by='OpenQuake engine 3.24.0-git57fa466210', start_date='2025-04-29T08:28:59', checksum=328047740, investigation_time=1.0, ses_per_logic_tree_path=5"
 rup_id,source_id,multiplicity,mag,centroid_lon,centroid_lat,centroid_depth,trt,strike,dip,rake
 5368710110,229,1,5.250000E+00,8.708333E+01,2.750075E+01,1.500000E+01,Active Shallow Crust,2.740120E+02,9.000000E+01,0.000000E+00
 6442451212,230,1,6.250000E+00,8.586248E+01,2.762027E+01,1.500000E+01,Active Shallow Crust,2.298893E+01,9.000000E+01,0.000000E+00

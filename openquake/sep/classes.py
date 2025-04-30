@@ -1211,7 +1211,7 @@ def wkt2peril(fname, name, sitecol):
         if not text.startswith('"'):
             raise ValueError('The geometry must be quoted in %s : "%s..."' %
                              (fname, text.split('(')[0]))
-        geom = wkt.loads(text.strip('"'))  # strip quotes
+        geom = wkt.loads(text.strip('"\n'))  # strip quotes and newlines
     peril = numpy.zeros(len(sitecol), float)
     for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
         peril[sid] = geometry.Point(lon, lat).within(geom)

@@ -995,7 +995,7 @@ class SourceModelLogicTree(object):
                     uvalue = ast.literal_eval(row['uvalue'])
                 except (SyntaxError, ValueError):
                     uvalue = row['uvalue']  # not really deserializable :-(
-                br = Branch(bsid, row['branch'], row['weight'], uvalue)
+                br = Branch(bsid, row['branch'], float(row['weight']), uvalue)
                 self.branches[br.branch_id] = br
                 base = BASE33489 if utype == 'sourceModel' else BASE183
                 self.shortener[br.branch_id] = keyno(

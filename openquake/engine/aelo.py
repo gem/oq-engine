@@ -41,11 +41,11 @@ def get_mosaic_df(buffer):
     """
     :returns: a DataFrame with the mosaic geometries used in AELO
     """
-    fname = os.path.join(config.directory.mosaic_dir, 'ModelBoundaries.shp')
+    fname = os.path.join(config.directory.mosaic_dir, 'ModelBoundaries_Year3-4_v2.shp')
     if not os.path.exists(fname):
         fname = os.path.join(os.path.dirname(mosaic.__file__),
-                             'ModelBoundaries.shp')
-    df = readinput.read_geometries(fname, 'code', buffer)
+                             'ModelBoundaries_Year3-4_v2.shp')
+    df = readinput.read_geometries(fname, 'name', buffer)
     return df
 
 
@@ -57,7 +57,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
-    mosaic_df = get_mosaic_df(buffer=.1)
+    mosaic_df = get_mosaic_df(buffer=0)
     lonlats = valid.coordinates(inputs['sites'])
     models = geo.utils.geolocate(lonlats, mosaic_df, exclude)
     if len(set(models)) > 1:
@@ -75,8 +75,8 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     else:
         # in aelo_test.py
         params['description'] += f' ({lon}, {lat})'
+        params['maximum_distance'] = 'magdist'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
-    params['maximum_distance'] = 'magdist'
     params['pointsource_distance'] = '100.'
     params['truncation_level'] = '3.'
     params['disagg_by_src'] = 'true'
