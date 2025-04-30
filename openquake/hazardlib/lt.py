@@ -660,7 +660,7 @@ class BranchSet(object):
                 yield from branch.bset._enumerate_paths(path_branch)
             else:
                 # here is an example of path_branch[1].value:
-                # [('simpleFaultGeometry', ([(-64.5, -0.38221), (-64.5, 0.38221)],
+                # [('simpleFaultGeometry', ([(-64.5, -0.3822), (-64.5, 0.3822)],
                 #                             2.0, 15.0, 90.0, 2.0))]
                 yield path_branch
 
@@ -817,6 +817,8 @@ class CompositeLogicTree(object):
     """
     def __init__(self, branchsets):
         self.branchsets = branchsets
+        for i, bset in enumerate(branchsets):
+            bset.ordinal = i
         self.basepaths = self._attach_to_branches()
 
     def _attach_to_branches(self):
@@ -915,9 +917,10 @@ def build(*bslists):
     """
     bsets = []
     for i, (utype, applyto, *brlists) in enumerate(bslists):
+        bsid = 'bs%02d' % i
         branches = []
         for brid, value, weight in brlists:
-            branches.append(Branch('bs%02d' % i, brid, weight, value))
+            branches.append(Branch(bsid, brid, weight, value))
         bset = BranchSet(utype, i, dict(applyToBranches=applyto))
         bset.branches = branches
         bsets.append(bset)

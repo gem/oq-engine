@@ -140,40 +140,8 @@ class CollapseTestCase(unittest.TestCase):
         ax.loglog(self.imtls['PGA'], coll, label='coll')
         plt.show()
 
-    
-class CompositeLogicTreeTestCase(unittest.TestCase):
-    def test(self):
-        # simple logic tree with 5 realizations
-        #        _C/ E
-        #    _A_/  \ F
-        #   /   \_D/ E
-        #          \ F
-        #   \_______
-        #            B..
-        bs0 = lt.BranchSet('abGRAbsolute')
-        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
-                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
 
-        bs1 = lt.BranchSet('maxMagGRAbsolute',
-                           filters={'applyToBranches': 'A'})
-        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
-                        lt.Branch('bs1', 'D', .5, 7.6)]
-
-        bs2 = lt.BranchSet('applyToTRT',
-                           filters={'applyToBranches': 'CD'})
-        bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
-                        lt.Branch('bs2', 'F', .7, 'B')]
-        for branch in bs1.branches:
-            branch.bset = bs2
-        clt = lt.CompositeLogicTree([bs0, bs1, bs2])
-        self.assertEqual(lt.count_paths(bs0.branches), 5)
-        self.assertEqual(clt.get_all_paths(),
-                         ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
-        self.assertEqual(clt.basepaths,
-                         ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
-
-        xml = clt.to_nrml()
-        self.assertEqual(xml, '''<?xml version="1.0" encoding="utf-8"?>
+EXPECTED_LT = '''<?xml version="1.0" encoding="utf-8"?>
 <nrml
 xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
@@ -208,7 +176,7 @@ xmlns:gml="http://www.opengis.net/gml"
         </LogicTreeBranchSet>
         <LogicTreeBranchSet
         applyToBranches="A"
-        branchSetID="bs0"
+        branchSetID="bs1"
         uncertaintyType="maxMagGRAbsolute"
         >
             <LogicTreeBranch
@@ -234,7 +202,7 @@ xmlns:gml="http://www.opengis.net/gml"
         </LogicTreeBranchSet>
         <LogicTreeBranchSet
         applyToBranches="CD"
-        branchSetID="bs0"
+        branchSetID="bs2"
         uncertaintyType="applyToTRT"
         >
             <LogicTreeBranch
@@ -260,7 +228,41 @@ xmlns:gml="http://www.opengis.net/gml"
         </LogicTreeBranchSet>
     </logicTree>
 </nrml>
-''')
+'''
+
+class CompositeLogicTreeTestCase(unittest.TestCase):
+    def test5(self):
+        # simple logic tree with 5 realizations
+        #        _C/ E
+        #    _A_/  \ F
+        #   /   \_D/ E
+        #          \ F
+        #   \_______
+        #            B..
+        bs0 = lt.BranchSet('abGRAbsolute')
+        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
+                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
+
+        bs1 = lt.BranchSet('maxMagGRAbsolute',
+                           filters={'applyToBranches': 'A'})
+        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
+                        lt.Branch('bs1', 'D', .5, 7.6)]
+
+        bs2 = lt.BranchSet('applyToTRT',
+                           filters={'applyToBranches': 'CD'})
+        bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
+                        lt.Branch('bs2', 'F', .7, 'B')]
+        for branch in bs1.branches:
+            branch.bset = bs2
+        clt = lt.CompositeLogicTree([bs0, bs1, bs2])
+        self.assertEqual(lt.count_paths(bs0.branches), 5)
+        self.assertEqual(clt.get_all_paths(),
+                         ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
+        self.assertEqual(clt.basepaths,
+                         ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
+
+        xml = clt.to_nrml()
+        self.assertEqual(xml, EXPECTED_LT)
 
     def test_build(self):
         clt = lt.build(['sourceModel', '',
