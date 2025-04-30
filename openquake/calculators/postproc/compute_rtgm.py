@@ -679,9 +679,9 @@ def main(dstore, csm):
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
+    plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and N == 1:  # and not warnings[sid]:
         sid = 0
-        plot_sites(dstore, update_dstore=True)
         if not warnings[sid].startswith(('Zero hazard', 'Very low hazard')):
             plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
             plot_governing_mce(dstore, sid, update_dstore=True)
