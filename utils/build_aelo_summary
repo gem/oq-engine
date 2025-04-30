@@ -55,7 +55,6 @@ def build_aelo_summary(output_csv='aelo_summary.csv'):
             writer.writerow([job.id, job.user_name, job.description, job.status,
                              job.start_time, job.stop_time, mosaic_model, lon, lat])
     print(f'Saved {output_csv}')
-    pass
 
 
 build_aelo_summary.output_csv = 'Path of the output csv file (default aelo_summary.csv)'
