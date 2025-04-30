@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Internal: added a method `CompositeLogicTree.to_node`
+  * Internal: added methods `CompositeLogicTree.to_node` and
+    `CompositeLogicTree.to_nrml`
 
   [Paolo Tormene, Michele Simionato]
   * Added extractor for 'damages-stats'

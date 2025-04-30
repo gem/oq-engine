@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib.general import CallableDict, BASE183, BASE33489
 from openquake.baselib.node import Node
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
@@ -880,6 +880,12 @@ class CompositeLogicTree(object):
                      [branch_to_node(br) for br in bset.branches])
             out.nodes.append(n)
         return out
+
+    def to_nrml(self):
+        """
+        Converts the logic tree into a string in NRML format
+        """
+        return nrml.to_string(self.to_node())
 
     def __repr__(self):
         return '<%s>' % self.branchsets
