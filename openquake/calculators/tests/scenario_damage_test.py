@@ -119,6 +119,17 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=5E-4)
 
+        aw = extract(self.calc.datastore, 'damages-stats')
+        self.assertEqual(aw.mean.dtype.names,
+                         ('id', 'taxonomy', 'lon', 'lat', 'contents-no_damage',
+                          'contents-ds1', 'contents-ds2', 'contents-ds3',
+                          'contents-ds4', 'contents-losses',
+                          'nonstructural-no_damage', 'nonstructural-ds1',
+                          'nonstructural-ds2', 'nonstructural-ds3',
+                          'nonstructural-ds4', 'nonstructural-losses',
+                          'structural-no_damage', 'structural-ds1', 'structural-ds2',
+                          'structural-ds3', 'structural-ds4', 'structural-losses'))
+
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(os.path.dirname(case_4b.__file__), 'job_err.ini')
