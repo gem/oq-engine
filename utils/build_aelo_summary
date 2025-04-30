@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2025 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import csv
+import os
+from openquake.baselib import sap
+from openquake.commonlib.datastore import read
+from openquake.commonlib.logs import dbcmd
+
+
+def build_aelo_summary(output_csv='aelo_summary.csv'):
+    jobs = dbcmd("SELECT * FROM job")
+    with open(output_csv, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['id', 'owner', 'description', 'status', 'start_time',
+                         'stop_time', 'mosaic_model', 'lon', 'lat'])
+        for job in jobs:
+            try:
+                ds = read(job.ds_calc_dir + '.hdf5')
+            except (ValueError, OSError):
+                continue
+            if job.calculation_mode != 'classical':
+                continue
+            try:
+                sites = ds['sitecol']
+            except KeyError:
+                continue
+            if len(sites) != 1:
+                continue
+            oqparam = ds['oqparam']
+            if not hasattr(oqparam, 'mosaic_model'):
+                continue
+            mosaic_model = oqparam.mosaic_model
+            if not mosaic_model:
+                # NOTE: in old cases oqparam has the mosaic_model attribute, but empty
+                mosaic_model = oqparam.base_path.split(os.path.sep)[-2]
+            site = sites[0]
+            lon = site['lon']
+            lat = site['lat']
+            writer.writerow([job.id, job.user_name, job.description, job.status,
+                             job.start_time, job.stop_time, mosaic_model, lon, lat])
+    print(f'Saved {output_csv}')
+
+
+build_aelo_summary.output_csv = 'Path of the output csv file (default aelo_summary.csv)'
+
+if __name__ == '__main__':
+    sap.run(build_aelo_summary)
