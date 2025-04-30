@@ -172,7 +172,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(clt.basepaths,
                          ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
 
-        xml = nrml.to_string(clt.to_node())
+        xml = clt.to_nrml()
         self.assertEqual(xml, '''<?xml version="1.0" encoding="utf-8"?>
 <nrml
 xmlns="http://openquake.org/xmlns/nrml/0.5"
