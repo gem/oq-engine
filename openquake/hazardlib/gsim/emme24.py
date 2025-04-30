@@ -17,8 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module exports :class:`EMME24BB`
-               :class:`EMME24BB_GMM1SGM1`
+Module exports :class:`EMME24BB_GMM1SGM1`
                :class:`EMME24BB_GMM1SGM2`
                :class:`EMME24BB_GMM1SGM3`
                :class:`EMME24BB_GMM2SGM1`
@@ -118,7 +117,7 @@ def _compute_scalefactor(ctx, C_BB):
     )
 
 
-class EMME24BB(ChiouYoungs2014):
+class EMME24BB_GMM1SGM1(ChiouYoungs2014):
     """
     EMME24 backbone model for active shallow crustal earthquakes. This GSIM
     class adjusts the Chiou and Youngs (2014) GMPE using the corrections
@@ -161,11 +160,6 @@ class EMME24BB(ChiouYoungs2014):
             phi[m] = std_intra
             sig[m] = np.sqrt(std_intra ** 2. + std_inter ** 2.)
 
-
-class EMME24BB_GMM1SGM1(EMME24BB):
-    """
-    PLACEHOLDER
-    """
     COEFFS_Backbone = CoeffsTable(sa_damping=5, table=""" 
         IMT    c1      c2      c3      c4      c5       c6       c7      Mref   Rref   hfict Mh
         pgv   -0.4422  0.1433  0.0000  0.0887  0.0013  -0.0536   0.0190  6.75   30     3     9.00
@@ -225,7 +219,7 @@ class EMME24BB_GMM1SGM1(EMME24BB):
         )
 
 
-class EMME24BB_GMM1SGM2(EMME24BB):
+class EMME24BB_GMM1SGM2(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -288,7 +282,7 @@ class EMME24BB_GMM1SGM2(EMME24BB):
         )
 
 
-class EMME24BB_GMM1SGM3(EMME24BB):
+class EMME24BB_GMM1SGM3(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -351,7 +345,7 @@ class EMME24BB_GMM1SGM3(EMME24BB):
         )
 
 
-class EMME24BB_GMM2SGM1(EMME24BB):
+class EMME24BB_GMM2SGM1(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -414,7 +408,7 @@ class EMME24BB_GMM2SGM1(EMME24BB):
         )
 
 
-class EMME24BB_GMM2SGM2(EMME24BB):
+class EMME24BB_GMM2SGM2(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -477,7 +471,7 @@ class EMME24BB_GMM2SGM2(EMME24BB):
         )
 
 
-class EMME24BB_GMM2SGM3(EMME24BB):
+class EMME24BB_GMM2SGM3(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -540,7 +534,7 @@ class EMME24BB_GMM2SGM3(EMME24BB):
         )
 
 
-class EMME24BB_GMM3SGM1(EMME24BB):
+class EMME24BB_GMM3SGM1(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -603,7 +597,7 @@ class EMME24BB_GMM3SGM1(EMME24BB):
         )
 
 
-class EMME24BB_GMM3SGM2(EMME24BB):
+class EMME24BB_GMM3SGM2(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -666,7 +660,7 @@ class EMME24BB_GMM3SGM2(EMME24BB):
         )
 
 
-class EMME24BB_GMM3SGM3(EMME24BB):
+class EMME24BB_GMM3SGM3(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -729,7 +723,7 @@ class EMME24BB_GMM3SGM3(EMME24BB):
         )
 
 
-class EMME24BB_GMM4SGM1(EMME24BB):
+class EMME24BB_GMM4SGM1(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -792,7 +786,7 @@ class EMME24BB_GMM4SGM1(EMME24BB):
         )
 
 
-class EMME24BB_GMM4SGM2(EMME24BB):
+class EMME24BB_GMM4SGM2(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -855,7 +849,7 @@ class EMME24BB_GMM4SGM2(EMME24BB):
         )
 
 
-class EMME24BB_GMM4SGM3(EMME24BB):
+class EMME24BB_GMM4SGM3(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -918,7 +912,7 @@ class EMME24BB_GMM4SGM3(EMME24BB):
         )
 
 
-class EMME24BB_GMM5SGM1(EMME24BB):
+class EMME24BB_GMM5SGM1(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -981,7 +975,7 @@ class EMME24BB_GMM5SGM1(EMME24BB):
         )
 
 
-class EMME24BB_GMM5SGM2(EMME24BB):
+class EMME24BB_GMM5SGM2(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
@@ -1044,7 +1038,7 @@ class EMME24BB_GMM5SGM2(EMME24BB):
         )
 
 
-class EMME24BB_GMM5SGM3(EMME24BB):
+class EMME24BB_GMM5SGM3(EMME24BB_GMM1SGM1):
     """
     PLACEHOLDER
     """
