@@ -22,6 +22,7 @@ import collections
 import numpy
 
 from openquake.baselib.general import CallableDict, BASE183, BASE33489
+from openquake.baselib.node import Node
 from openquake.hazardlib import geo
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
@@ -865,8 +866,30 @@ class CompositeLogicTree(object):
     def get_all_paths(self):
         return [rlz.lt_path for rlz in self]
 
+    def to_node(self):
+        """
+        Converts the undelying branchsets into a node that can be serialized
+        into XML with the function nrml.write([node], outfile)
+        """
+        out = Node('logicTree', dict(logicTreeID="lt"))
+        for bset in self.branchsets:
+            attrib = dict(uncertaintyType=bset.uncertainty_type,
+                          branchSetID=f'bs{bset.ordinal}')
+            attrib.update(bset.filters)
+            n = Node('LogicTreeBranchSet', attrib, None,
+                     [branch_to_node(br) for br in bset.branches])
+            out.nodes.append(n)
+        return out
+
     def __repr__(self):
         return '<%s>' % self.branchsets
+
+
+def branch_to_node(branch):
+    attrib = dict(branchID=branch.branch_id)
+    nodes = [Node('uncertaintyModel', {}, branch.value),
+             Node('uncertaintyWeight', {}, branch.weight)]
+    return Node('LogicTreeBranch', attrib, None, nodes)
 
 
 def build(*bslists):
