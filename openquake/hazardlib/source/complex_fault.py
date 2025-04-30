@@ -261,8 +261,7 @@ class ComplexFaultSource(ParametricSeismicSource):
                     rupture_area, rupture_length, cell_area, cell_length)
 
                 # Compute occurrence rates
-                occurrence_rate = (
-                    mag_occ_rate / float(len(rupture_slices)) * wei)
+                occurrence_rate = mag_occ_rate / len(rupture_slices) * wei
                 tmp += occurrence_rate
 
                 # Just counting the ruptures
@@ -293,7 +292,8 @@ class ComplexFaultSource(ParametricSeismicSource):
                     rup.mag_occ_rate = mag_occ_rate
                     yield rup
 
-            assert numpy.abs(mag_occ_rate - tmp) < 1e-5
+            if not only_count:
+                assert numpy.abs(mag_occ_rate - tmp) < 1e-5, mag_occ_rate - tmp
 
     def count_ruptures(self):
         """
@@ -302,8 +302,8 @@ class ComplexFaultSource(ParametricSeismicSource):
         """
         if self.num_ruptures:
             return self.num_ruptures
-        if hasattr(self, '_nr'):
-            self._nr = [v for v in self._iter_ruptures(count=True)]
+        if not hasattr(self, '_nr'):
+            self._nr = list(self._iter_ruptures(count=True))
         return sum(self._nr)
 
     def modify_set_geometry(self, edges, spacing):
