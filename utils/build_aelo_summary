@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import csv
+import os
 from openquake.baselib import sap
 from openquake.commonlib.datastore import read
 from openquake.commonlib.logs import dbcmd
@@ -47,7 +48,7 @@ def build_aelo_summary(output_csv='aelo_summary.csv'):
             mosaic_model = oqparam.mosaic_model
             if not mosaic_model:
                 # NOTE: in old cases oqparam has the mosaic_model attribute, but empty
-                mosaic_model = oqparam.base_path.split('/')[-2]
+                mosaic_model = oqparam.base_path.split(os.path.sep)[-2]
             site = sites[0]
             lon = site['lon']
             lat = site['lat']

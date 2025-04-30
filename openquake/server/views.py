@@ -1458,8 +1458,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
 
 
 def is_model_preliminary(ds):
-    # TODO: it would be better having the model written explicitly into the
-    # datastore
+    # NOTE: recently the mosaic_model has been added as an attribute of oqparam, but we
+    # are getting it from base_path for backwards compatibility
     model = ds['oqparam'].base_path.split(os.path.sep)[-2]
     if model in PRELIMINARY_MODELS:
         return True
