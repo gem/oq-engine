@@ -45,6 +45,9 @@ def build_aelo_summary(output_csv='aelo_summary.csv'):
             if not hasattr(oqparam, 'mosaic_model'):
                 continue
             mosaic_model = oqparam.mosaic_model
+            if not mosaic_model:
+                # NOTE: in old cases oqparam has the mosaic_model attribute, but empty
+                mosaic_model = oqparam.base_path.split('/')[-2]
             site = sites[0]
             lon = site['lon']
             lat = site['lat']
