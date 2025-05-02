@@ -141,8 +141,97 @@ class CollapseTestCase(unittest.TestCase):
         plt.show()
 
 
+EXPECTED_LT = '''<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="lt"
+    >
+        <LogicTreeBranchSet
+        branchSetID="bs0"
+        uncertaintyType="abGRAbsolute"
+        >
+            <LogicTreeBranch
+            branchID="A"
+            >
+                <uncertaintyModel>
+                    4.6000000E+00 1.1000000E+00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    4.0000000E-01
+                </uncertaintyWeight>
+            </LogicTreeBranch>
+            <LogicTreeBranch
+            branchID="B"
+            >
+                <uncertaintyModel>
+                    4.4000000E+00 9.0000000E-01
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    6.0000000E-01
+                </uncertaintyWeight>
+            </LogicTreeBranch>
+        </LogicTreeBranchSet>
+        <LogicTreeBranchSet
+        applyToBranches="A"
+        branchSetID="bs1"
+        uncertaintyType="maxMagGRAbsolute"
+        >
+            <LogicTreeBranch
+            branchID="C"
+            >
+                <uncertaintyModel>
+                    7.0000000E+00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    5.0000000E-01
+                </uncertaintyWeight>
+            </LogicTreeBranch>
+            <LogicTreeBranch
+            branchID="D"
+            >
+                <uncertaintyModel>
+                    7.6000000E+00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    5.0000000E-01
+                </uncertaintyWeight>
+            </LogicTreeBranch>
+        </LogicTreeBranchSet>
+        <LogicTreeBranchSet
+        applyToBranches="CD"
+        branchSetID="bs2"
+        uncertaintyType="applyToTRT"
+        >
+            <LogicTreeBranch
+            branchID="E"
+            >
+                <uncertaintyModel>
+                    A
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    3.0000000E-01
+                </uncertaintyWeight>
+            </LogicTreeBranch>
+            <LogicTreeBranch
+            branchID="F"
+            >
+                <uncertaintyModel>
+                    B
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    7.0000000E-01
+                </uncertaintyWeight>
+            </LogicTreeBranch>
+        </LogicTreeBranchSet>
+    </logicTree>
+</nrml>
+'''
+
 class CompositeLogicTreeTestCase(unittest.TestCase):
-    def test(self):
+    def test5(self):
         # simple logic tree with 5 realizations
         #        _C/ E
         #    _A_/  \ F
@@ -171,6 +260,9 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                          ['ACE', 'ACF', 'ADE', 'ADF', 'B..'])
         self.assertEqual(clt.basepaths,
                          ['A**', 'B**', '*C*', '*D*', '**E', '**F'])
+
+        xml = clt.to_nrml()
+        self.assertEqual(xml, EXPECTED_LT)
 
     def test_build(self):
         clt = lt.build(['sourceModel', '',

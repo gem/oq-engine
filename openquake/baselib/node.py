@@ -458,7 +458,7 @@ class Node(object):
     def __init__(self, fulltag, attrib=None, text=None,
                  nodes=None, lineno=None):
         """
-        :param str tag: the Node name
+        :param str fulltag: the Node name
         :param dict attrib: the Node attributes
         :param str text: the Node text (default None)
         :param nodes: an iterable of subnodes (default empty list)

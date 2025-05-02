@@ -30,7 +30,7 @@ from openquake.engine import engine
 from openquake.qa_tests_data import mosaic
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-PRELIMINARY_MODELS = ['CEA', 'CHN', 'NEA']
+PRELIMINARY_MODELS = []
 PRELIMINARY_MODEL_WARNING = (
     'Results are preliminary. The seismic hazard model used for the site'
     ' is under review and will be updated' ' during Year 3.')

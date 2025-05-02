@@ -22,7 +22,8 @@ import collections
 import numpy
 
 from openquake.baselib.general import CallableDict, BASE183, BASE33489
-from openquake.hazardlib import geo
+from openquake.baselib.node import Node
+from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
@@ -520,6 +521,13 @@ class Branch(object):
         """
         return self.bset is None or self.bset.uncertainty_type == 'dummy'
 
+
+    def to_node(self):
+        attrib = dict(branchID=self.branch_id)
+        nodes = [Node('uncertaintyModel', {}, self.value),
+                 Node('uncertaintyWeight', {}, self.weight)]
+        return Node('LogicTreeBranch', attrib, None, nodes)
+
     def __repr__(self):
         if self.bset:
             return '%s%s' % (self.branch_id, self.bset)
@@ -659,7 +667,7 @@ class BranchSet(object):
                 yield from branch.bset._enumerate_paths(path_branch)
             else:
                 # here is an example of path_branch[1].value:
-                # [('simpleFaultGeometry', ([(-64.5, -0.38221), (-64.5, 0.38221)],
+                # [('simpleFaultGeometry', ([(-64.5, -0.3822), (-64.5, 0.3822)],
                 #                             2.0, 15.0, 90.0, 2.0))]
                 yield path_branch
 
@@ -816,6 +824,8 @@ class CompositeLogicTree(object):
     """
     def __init__(self, branchsets):
         self.branchsets = branchsets
+        for i, bset in enumerate(branchsets):
+            bset.ordinal = i
         self.basepaths = self._attach_to_branches()
 
     def _attach_to_branches(self):
@@ -865,6 +875,27 @@ class CompositeLogicTree(object):
     def get_all_paths(self):
         return [rlz.lt_path for rlz in self]
 
+    def to_node(self):
+        """
+        Converts the undelying branchsets into a node that can be serialized
+        into XML with the function nrml.write([node], outfile)
+        """
+        out = Node('logicTree', dict(logicTreeID="lt"))
+        for bset in self.branchsets:
+            attrib = dict(uncertaintyType=bset.uncertainty_type,
+                          branchSetID=f'bs{bset.ordinal}')
+            attrib.update(bset.filters)
+            n = Node('LogicTreeBranchSet', attrib, None,
+                     [br.to_node() for br in bset.branches])
+            out.nodes.append(n)
+        return out
+
+    def to_nrml(self):
+        """
+        Converts the logic tree into a string in NRML format
+        """
+        return nrml.to_string(self.to_node())
+
     def __repr__(self):
         return '<%s>' % self.branchsets
 
@@ -886,9 +917,10 @@ def build(*bslists):
     """
     bsets = []
     for i, (utype, applyto, *brlists) in enumerate(bslists):
+        bsid = 'bs%02d' % i
         branches = []
         for brid, value, weight in brlists:
-            branches.append(Branch('bs%02d' % i, brid, weight, value))
+            branches.append(Branch(bsid, brid, weight, value))
         bset = BranchSet(utype, i, dict(applyToBranches=applyto))
         bset.branches = branches
         bsets.append(bset)
