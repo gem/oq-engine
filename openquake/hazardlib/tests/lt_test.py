@@ -149,11 +149,11 @@ xmlns:gml="http://www.opengis.net/gml"
     <logicTree
     logicTreeID="lt"
     >
-        <LogicTreeBranchSet
+        <logicTreeBranchSet
         branchSetID="bs0"
         uncertaintyType="abGRAbsolute"
         >
-            <LogicTreeBranch
+            <logicTreeBranch
             branchID="A"
             >
                 <uncertaintyModel>
@@ -162,8 +162,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     4.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-            <LogicTreeBranch
+            </logicTreeBranch>
+            <logicTreeBranch
             branchID="B"
             >
                 <uncertaintyModel>
@@ -172,14 +172,14 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     6.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-        </LogicTreeBranchSet>
-        <LogicTreeBranchSet
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
         applyToBranches="A"
         branchSetID="bs1"
         uncertaintyType="maxMagGRAbsolute"
         >
-            <LogicTreeBranch
+            <logicTreeBranch
             branchID="C"
             >
                 <uncertaintyModel>
@@ -188,8 +188,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     5.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-            <LogicTreeBranch
+            </logicTreeBranch>
+            <logicTreeBranch
             branchID="D"
             >
                 <uncertaintyModel>
@@ -198,14 +198,14 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     5.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-        </LogicTreeBranchSet>
-        <LogicTreeBranchSet
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
         applyToBranches="CD"
         branchSetID="bs2"
         uncertaintyType="applyToTRT"
         >
-            <LogicTreeBranch
+            <logicTreeBranch
             branchID="E"
             >
                 <uncertaintyModel>
@@ -214,8 +214,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     3.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-            <LogicTreeBranch
+            </logicTreeBranch>
+            <logicTreeBranch
             branchID="F"
             >
                 <uncertaintyModel>
@@ -224,8 +224,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     7.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-        </LogicTreeBranchSet>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
     </logicTree>
 </nrml>
 '''
@@ -309,3 +309,14 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['E', 'extra3', 0.2]])
         self.assertEqual(clt.get_all_paths(),
                          ['AC', 'AD', 'AE', 'BC', 'BD', 'BE'])
+
+    def test_build1(self):
+        tstr = "'applyToBranches'='A'"
+        clt = lt.build(['sourceModel', '',
+                        ['A', 'common1', 0.6],
+                        ['B', 'common2', 0.4]],
+                       ['setLowerSeismDepthAbsolute', tstr,
+                        ['lsd10', '10', 0.3],
+                        ['lsd15', '15', 0.4]])
+        self.assertEqual(clt.get_all_paths(),
+                         ['AA', 'AB', 'B.'])

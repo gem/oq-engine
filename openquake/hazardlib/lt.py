@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
+import toml
 import copy
 import itertools
 import collections
@@ -526,7 +528,7 @@ class Branch(object):
         attrib = dict(branchID=self.branch_id)
         nodes = [Node('uncertaintyModel', {}, self.value),
                  Node('uncertaintyWeight', {}, self.weight)]
-        return Node('LogicTreeBranch', attrib, None, nodes)
+        return Node('logicTreeBranch', attrib, None, nodes)
 
     def __repr__(self):
         if self.bset:
@@ -885,7 +887,7 @@ class CompositeLogicTree(object):
             attrib = dict(uncertaintyType=bset.uncertainty_type,
                           branchSetID=f'bs{bset.ordinal}')
             attrib.update(bset.filters)
-            n = Node('LogicTreeBranchSet', attrib, None,
+            n = Node('logicTreeBranchSet', attrib, None,
                      [br.to_node() for br in bset.branches])
             out.nodes.append(n)
         return out
@@ -921,7 +923,11 @@ def build(*bslists):
         branches = []
         for brid, value, weight in brlists:
             branches.append(Branch(bsid, brid, weight, value))
-        bset = BranchSet(utype, i, dict(applyToBranches=applyto))
+        if re.search('=', applyto):
+            tmp = toml.loads(applyto)
+            bset = BranchSet(utype, i, tmp)
+        else:
+            bset = BranchSet(utype, i, dict(applyToBranches=applyto))
         bset.branches = branches
         bsets.append(bset)
     return CompositeLogicTree(bsets)
