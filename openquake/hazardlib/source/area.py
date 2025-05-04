@@ -38,7 +38,7 @@ class AreaSource(ParametricSeismicSource):
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
     code = b'A'
-    MODIFICATIONS = set()
+    MODIFICATIONS = {'set_geometry'}
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -60,6 +60,13 @@ class AreaSource(ParametricSeismicSource):
         self.polygon = polygon
         self.area_discretization = area_discretization
         self.max_radius = 0
+
+    def modify_set_geometry(self, polygon):
+        """
+        Modifies the current source geometry by replacing the original polygon
+        defining the boundary of the area
+        """
+        self.polygon = polygon
 
     def iter_ruptures(self, **kwargs):
         """

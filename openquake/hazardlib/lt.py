@@ -101,6 +101,18 @@ def setMSR_absolute(utype, node, filename):
     return valid.mag_scale_rel(node.text)
 
 
+@parse_uncertainty.add('areaSourceGeometryAbsolute')
+def areaGeom(utype, node, filename):
+    if hasattr(node, 'areaGeometry'):
+        node = node.areaGeometry
+    _validate_area_source_geometry(utype, node, filename)
+    usd = ~node.upperSeismoDepth
+    lsd = ~node.lowerSeismoDepth
+    #coords = split_coords_2d([c for c in re.split('\\s+', ~node)])
+    coords = split_coords_2d(~node.Polygon.exterior.LinearRing.posList)
+    return coords, usd, lsd
+
+
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
 def simpleGeom(utype, node, filename):
     if hasattr(node, 'simpleFaultGeometry'):
@@ -179,6 +191,21 @@ def charGeom(utype, node, filename):
 
 # validations
 
+def _validate_area_source_geometry(utype, node, filename):
+    try:
+        coords = split_coords_2d(~node.Polygon.exterior.LinearRing.posList)
+        poly = geo.Polygon([geo.Point(*p) for p in coords])
+        usd = ~node.upperSeismoDepth
+        lsd = ~node.lowerSeismoDepth
+        assert usd < lsd
+    except ValueError:
+        poly = []
+    if len(poly.lons):
+        return
+    raise LogicTreeError(
+        node, filename, "'areaSourceGeometry' node is not valid")
+
+
 def _validate_simple_fault_geometry(utype, node, filename):
     try:
         coords = split_coords_2d(~node.LineString.posList)
@@ -236,6 +263,13 @@ def _validate_planar_fault_geometry(utype, node, filename):
 #                         apply_uncertainty                                #
 
 apply_uncertainty = CallableDict()
+
+
+@apply_uncertainty.add('areaSourceGeometryAbsolute')
+def _area_source_geom_absolute(utype, source, value):
+    coords, usd, lsd = value
+    poly = geo.Polygon([geo.Point(*p) for p in coords])
+    source.modify('set_geometry', dict(polygon=poly))
 
 
 @apply_uncertainty.add('simpleFaultDipRelative')
