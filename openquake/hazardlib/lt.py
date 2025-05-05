@@ -526,7 +526,7 @@ class Branch(object):
         attrib = dict(branchID=self.branch_id)
         nodes = [Node('uncertaintyModel', {}, self.value),
                  Node('uncertaintyWeight', {}, self.weight)]
-        return Node('LogicTreeBranch', attrib, None, nodes)
+        return Node('logicTreeBranch', attrib, None, nodes)
 
     def __repr__(self):
         if self.bset:
@@ -885,7 +885,7 @@ class CompositeLogicTree(object):
             attrib = dict(uncertaintyType=bset.uncertainty_type,
                           branchSetID=f'bs{bset.ordinal}')
             attrib.update(bset.filters)
-            n = Node('LogicTreeBranchSet', attrib, None,
+            n = Node('logicTreeBranchSet', attrib, None,
                      [br.to_node() for br in bset.branches])
             out.nodes.append(n)
         return out

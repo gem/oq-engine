@@ -149,11 +149,11 @@ xmlns:gml="http://www.opengis.net/gml"
     <logicTree
     logicTreeID="lt"
     >
-        <LogicTreeBranchSet
+        <logicTreeBranchSet
         branchSetID="bs0"
         uncertaintyType="abGRAbsolute"
         >
-            <LogicTreeBranch
+            <logicTreeBranch
             branchID="A"
             >
                 <uncertaintyModel>
@@ -162,8 +162,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     4.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-            <LogicTreeBranch
+            </logicTreeBranch>
+            <logicTreeBranch
             branchID="B"
             >
                 <uncertaintyModel>
@@ -172,14 +172,14 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     6.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-        </LogicTreeBranchSet>
-        <LogicTreeBranchSet
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
         applyToBranches="A"
         branchSetID="bs1"
         uncertaintyType="maxMagGRAbsolute"
         >
-            <LogicTreeBranch
+            <logicTreeBranch
             branchID="C"
             >
                 <uncertaintyModel>
@@ -188,8 +188,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     5.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-            <LogicTreeBranch
+            </logicTreeBranch>
+            <logicTreeBranch
             branchID="D"
             >
                 <uncertaintyModel>
@@ -198,14 +198,14 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     5.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-        </LogicTreeBranchSet>
-        <LogicTreeBranchSet
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
         applyToBranches="CD"
         branchSetID="bs2"
         uncertaintyType="applyToTRT"
         >
-            <LogicTreeBranch
+            <logicTreeBranch
             branchID="E"
             >
                 <uncertaintyModel>
@@ -214,8 +214,8 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     3.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-            <LogicTreeBranch
+            </logicTreeBranch>
+            <logicTreeBranch
             branchID="F"
             >
                 <uncertaintyModel>
@@ -224,13 +224,15 @@ xmlns:gml="http://www.opengis.net/gml"
                 <uncertaintyWeight>
                     7.0000000E-01
                 </uncertaintyWeight>
-            </LogicTreeBranch>
-        </LogicTreeBranchSet>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
     </logicTree>
 </nrml>
 '''
 
+
 class CompositeLogicTreeTestCase(unittest.TestCase):
+
     def test5(self):
         # simple logic tree with 5 realizations
         #        _C/ E
@@ -264,8 +266,8 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         xml = clt.to_nrml()
         self.assertEqual(xml, EXPECTED_LT)
 
-    def test_build(self):
-        clt = lt.build(['sourceModel', '',
+    def test_build0(self):
+        clt = lt.build(['sourceModel', [],
                         ['A', 'common1', 0.6],
                         ['B', 'common2', 0.4]],
                        ['extendModel', 'A',
@@ -282,7 +284,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                          ['AC.', 'AD.', 'AE.', 'AF..',
                           'BG.', 'BH.', 'BI.', 'BJ.'])
 
-        clt = lt.build(['sourceModel', '',
+        clt = lt.build(['sourceModel', [],
                         ['A', 'common1', 0.6],
                         ['B', 'common2', 0.4]],
                        ['extendModel', 'A',
@@ -291,7 +293,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['E', 'extra3', 0.2]])
         self.assertEqual(clt.get_all_paths(), ['AC', 'AD', 'AE', 'B.'])
 
-        clt = lt.build(['sourceModel', '',
+        clt = lt.build(['sourceModel', [],
                         ['A', 'common1', 0.6],
                         ['B', 'common2', 0.4]],
                        ['extendModel', 'B',
@@ -300,7 +302,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['E', 'extra3', 0.2]])
         self.assertEqual(clt.get_all_paths(), ['A.', 'BC', 'BD', 'BE'])
 
-        clt = lt.build(['sourceModel', '',
+        clt = lt.build(['sourceModel', [],
                         ['A', 'common1', 0.6],
                         ['B', 'common2', 0.4]],
                        ['extendModel', 'AB',
@@ -309,3 +311,43 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['E', 'extra3', 0.2]])
         self.assertEqual(clt.get_all_paths(),
                          ['AC', 'AD', 'AE', 'BC', 'BD', 'BE'])
+
+    def test_build1(self):
+        clt = lt.build(['sourceModel', [],
+                        ['ssm1', 'common1', 0.6],
+                        ['ssm2', 'common2', 0.4]],
+                       ['setLowerSeismDepthAbsolute', ['ssm1'],
+                        ['lsd10', '10', 0.3],
+                        ['lsd15', '15', 0.4]])
+        self.assertEqual(clt.get_all_paths(),
+                         ['AAA', 'AAB', 'AB.'])
+
+    def test_build2(self):
+        ltl = [
+            ['sourceModel', [],
+             ['ssm1', 'ssm1.xml', 0.134],
+             ['ssm2', 'ssm2.xml', 0.402],
+             ['ssm3', 'ssm3.xml', 0.134],
+             ['ssm4', 'ssm4.xml', 0.066],
+             ['ssm5', 'ssm5.xml', 0.198],
+             ['ssm6', 'ssm6.xml', 0.066]],
+            ['extendModel', [],
+             ['em0', 'empty1.xml', 0.7],
+             ['em1', 'empty2.xml', 0.1],
+             ['em2', 'empty3.xml', 0.2]],
+            ['abGRAbsolute', ['em0'],
+             ['ab_1', '1.0 1.0', 0.2],
+             ['ab_2', '1.1 0.9', 0.5],
+             ['ab_3', '1.2 0.8', 0.3]],
+            ['maxMagGRAbsolute', [],
+             ['mmax_6pt8', '6.8', 0.3],
+             ['mmax_7pt0', '7.0', 0.3],
+             ['mmax_7pt3', '7.3', 0.3],
+             ['mmax_7pt6', '7.6', 0.1]]
+        ]
+        ltssc = lt.build(*ltl)
+        paths = ltssc.get_all_paths()
+        # The third branchset increases the number of branches from 3 to 5 for
+        # each of the original 6 branches leading to 30 branches in total.
+        # These are multiplied by 4 with the last branchset.
+        self.assertEqual(len(paths), 120)
