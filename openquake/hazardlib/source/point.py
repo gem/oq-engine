@@ -168,10 +168,10 @@ class PointSource(ParametricSeismicSource):
                              'upper seismogenic depth')
 
         for _prob, depth in hypocenter_distribution.data:
-            if depth >= lower_seismogenic_depth:
+            if depth > lower_seismogenic_depth:
                 raise ValueError(
                     f'{depth=} is below {lower_seismogenic_depth=}')
-            elif depth <= upper_seismogenic_depth:
+            elif depth < upper_seismogenic_depth:
                 raise ValueError(
                     f'{depth=} is over {upper_seismogenic_depth=}')
 
