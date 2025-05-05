@@ -760,7 +760,8 @@ class SourceModelLogicTree(object):
                     "source models don't define sources of tectonic region "
                     "type '%s'" % f['applyToTectonicRegionType'])
 
-        if uncertainty_type in self.ABSOLUTE_UNCERTAINTIES:
+        if (uncertainty_type in self.ABSOLUTE_UNCERTAINTIES and
+                len(self.source_data) > 1):  # there is more than one source
             if not f or not list(f) == ['applyToSources'] \
                     or not len(f['applyToSources'].split()) == 1:
                 raise LogicTreeError(
