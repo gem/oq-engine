@@ -313,35 +313,33 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                          ['AC', 'AD', 'AE', 'BC', 'BD', 'BE'])
 
     def test_build1(self):
-        tstr = "'applyToBranches'=['ssm1']"
-        clt = lt.build(['sourceModel', '',
+        clt = lt.build(['sourceModel', [],
                         ['ssm1', 'common1', 0.6],
                         ['ssm2', 'common2', 0.4]],
-                       ['setLowerSeismDepthAbsolute', tstr,
+                       ['setLowerSeismDepthAbsolute', ['ssm1'],
                         ['lsd10', '10', 0.3],
                         ['lsd15', '15', 0.4]])
         self.assertEqual(clt.get_all_paths(),
                          ['AAA', 'AAB', 'AB.'])
 
     def test_build2(self):
-        tstr = "'applyToBranches'=['em0']"
         ltl = [
-            ['sourceModel', '',
+            ['sourceModel', [],
              ['ssm1', 'ssm1.xml', 0.134],
              ['ssm2', 'ssm2.xml', 0.402],
              ['ssm3', 'ssm3.xml', 0.134],
              ['ssm4', 'ssm4.xml', 0.066],
              ['ssm5', 'ssm5.xml', 0.198],
              ['ssm6', 'ssm6.xml', 0.066]],
-            ['extendModel', '',
+            ['extendModel', [],
              ['em0', 'empty1.xml', 0.7],
              ['em1', 'empty2.xml', 0.1],
              ['em2', 'empty3.xml', 0.2]],
-            ['abGRAbsolute', tstr,
+            ['abGRAbsolute', ['em0'],
              ['ab_1', '1.0 1.0', 0.2],
              ['ab_2', '1.1 0.9', 0.5],
              ['ab_3', '1.2 0.8', 0.3]],
-            ['maxMagGRAbsolute', '',
+            ['maxMagGRAbsolute', [],
              ['mmax_6pt8', '6.8', 0.3],
              ['mmax_7pt0', '7.0', 0.3],
              ['mmax_7pt3', '7.3', 0.3],

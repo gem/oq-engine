@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import toml
 import copy
 import itertools
@@ -923,14 +922,7 @@ def build(*bslists):
         branches = []
         for brid, value, weight in brlists:
             branches.append(Branch(bsid, brid, weight, value))
-        # Check if the input for applyTo it is just a string (in this case, we
-        # assume it's the ID of a source) or a dictionary defining a more
-        # complex set of rules
-        if re.search('=', applyto):
-            tmp = toml.loads(applyto)
-            bset = BranchSet(utype, i, tmp)
-        else:
-            bset = BranchSet(utype, i, dict(applyToBranches=applyto))
+        bset = BranchSet(utype, i, dict(applyToBranches=applyto))
         bset.branches = branches
         bsets.append(bset)
     return CompositeLogicTree(bsets)
