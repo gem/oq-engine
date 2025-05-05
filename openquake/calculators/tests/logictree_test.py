@@ -34,7 +34,7 @@ from openquake.qa_tests_data.logictree import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
     case_18, case_19, case_20, case_21, case_28, case_30, case_31, case_36,
     case_39, case_45, case_46, case_52, case_56, case_58, case_59, case_67,
-    case_68, case_71, case_73, case_79, case_83, case_84)
+    case_68, case_71, case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -693,6 +693,12 @@ hazard_uhs-std.csv
         # disagg_by_src with semicolon sources
         self.run_calc(case_79.__file__, 'job.ini')
 
+    def test_case_80(self):
+        # test areaSourceGeometryAbsolute
+        self.run_calc(case_80.__file__, 'job.ini')
+        f1 = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1[0])
+
     def test_case_83(self):
         # two mps, only one should be collapsed and use reqv
         self.run_calc(case_83.__file__, 'job_extendModel.ini')
@@ -706,6 +712,5 @@ hazard_uhs-std.csv
         self.run_calc(case_84.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
-
         [f] = export(('trt_gsim', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/trt_gsim.csv', f)

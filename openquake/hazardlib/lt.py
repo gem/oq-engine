@@ -99,6 +99,15 @@ def setMSR_absolute(utype, node, filename):
     return valid.mag_scale_rel(node.text)
 
 
+@parse_uncertainty.add('areaSourceGeometryAbsolute')
+def areaGeom(utype, node, filename):
+    geom = node.areaGeometry
+    usd = ~geom.upperSeismoDepth
+    lsd = ~geom.lowerSeismoDepth
+    coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
+    return coords, usd, lsd
+
+
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
 def simpleGeom(utype, node, filename):
     if hasattr(node, 'simpleFaultGeometry'):
@@ -234,6 +243,13 @@ def _validate_planar_fault_geometry(utype, node, filename):
 #                         apply_uncertainty                                #
 
 apply_uncertainty = CallableDict()
+
+
+@apply_uncertainty.add('areaSourceGeometryAbsolute')
+def _area_source_geom_absolute(utype, source, value):
+    coords, usd, lsd = value
+    poly = geo.Polygon([geo.Point(*p) for p in coords])
+    source.modify('set_geometry', dict(polygon=poly))
 
 
 @apply_uncertainty.add('simpleFaultDipRelative')

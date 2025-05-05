@@ -80,3 +80,24 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
         for rupture in ruptures:
             self.assertNotEqual(rupture.occurrence_rate, 3)
             self.assertEqual(rupture.occurrence_rate, 3.0 / 8.0)
+
+class ModifySimpleFaultTestCase(unittest.TestCase):
+
+    def test_modify_area_source(self):
+        polygon_ori = Polygon(
+            [Point(0, 0),
+             Point(0, -1),
+             Point(-1, -1),
+             Point(-1, 0)]
+        )
+        polygon_new = Polygon(
+            [Point(0, 0),
+             Point(0, -2),
+             Point(-2, -2),
+             Point(-2, 0)]
+        )
+        src = make_area_source(polygon_ori, 5.0)
+        src.modify_set_geometry(polygon_new)
+        self.assertTrue(polygon_new, src.polygon)
+
+
