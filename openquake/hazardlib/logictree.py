@@ -373,13 +373,6 @@ class SourceModelLogicTree(object):
                'applyToSources',
                'applyToBranches')
 
-    ABSOLUTE_UNCERTAINTIES = ('abGRAbsolute', 'bGRAbsolute',
-                              'maxMagGRAbsolute',
-                              'simpleFaultGeometryAbsolute',
-                              'truncatedGRFromSlipAbsolute',
-                              'complexFaultGeometryAbsolute',
-                              'setMSRAbsolute')
-
     @classmethod
     def trivial(cls, source_model_file, sampling_method='early_weights',
                 source_id=''):
@@ -442,6 +435,8 @@ class SourceModelLogicTree(object):
         self.shortener = {}
         self.branchsets = []
         self.parse_tree(tree)
+        for bset in self.branchsets:
+            bset.check_duplicates()
         self.set_num_paths()
 
     def set_num_paths(self):
@@ -760,7 +755,8 @@ class SourceModelLogicTree(object):
                     "source models don't define sources of tectonic region "
                     "type '%s'" % f['applyToTectonicRegionType'])
 
-        if uncertainty_type in self.ABSOLUTE_UNCERTAINTIES:
+        if (uncertainty_type.endswith('Absolute') and
+                len(self.source_data) > 1):  # there is more than one source
             if not f or not list(f) == ['applyToSources'] \
                     or not len(f['applyToSources'].split()) == 1:
                 raise LogicTreeError(
