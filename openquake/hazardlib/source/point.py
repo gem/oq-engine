@@ -167,10 +167,13 @@ class PointSource(ParametricSeismicSource):
             raise ValueError('lower seismogenic depth must be below '
                              'upper seismogenic depth')
 
-        if not all(upper_seismogenic_depth <= depth <= lower_seismogenic_depth
-                   for (prob, depth) in hypocenter_distribution.data):
-            raise ValueError('depths of all hypocenters must be in between '
-                             'lower and upper seismogenic depths')
+        for _prob, depth in hypocenter_distribution.data:
+            if depth > lower_seismogenic_depth:
+                raise ValueError(
+                    f'{depth=} is below {lower_seismogenic_depth=}')
+            elif depth < upper_seismogenic_depth:
+                raise ValueError(
+                    f'{depth=} is over {upper_seismogenic_depth=}')
 
         if not upper_seismogenic_depth > geodetic.EARTH_ELEVATION:
             raise ValueError(
