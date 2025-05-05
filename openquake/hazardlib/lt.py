@@ -58,7 +58,8 @@ def unknown(utype, node, filename):
     try:
         return float(node.text)
     except (TypeError, ValueError):
-        raise LogicTreeError(node, filename, 'expected single float value')
+        raise LogicTreeError(
+            node, filename, 'expected single float value, got %r' % node.text)
 
 
 parse_uncertainty = CallableDict(keymissing=unknown)
@@ -97,6 +98,15 @@ def trucMFDFromSlip_absolute(utype, node, filename):
 @parse_uncertainty.add('setMSRAbsolute')
 def setMSR_absolute(utype, node, filename):
     return valid.mag_scale_rel(node.text)
+
+
+@parse_uncertainty.add('areaSourceGeometryAbsolute')
+def areaGeom(utype, node, filename):
+    geom = node.areaGeometry
+    usd = ~geom.upperSeismoDepth
+    lsd = ~geom.lowerSeismoDepth
+    coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
+    return coords, usd, lsd
 
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
@@ -234,6 +244,13 @@ def _validate_planar_fault_geometry(utype, node, filename):
 #                         apply_uncertainty                                #
 
 apply_uncertainty = CallableDict()
+
+
+@apply_uncertainty.add('areaSourceGeometryAbsolute')
+def _area_source_geom_absolute(utype, source, value):
+    coords, usd, lsd = value
+    poly = geo.Polygon([geo.Point(*p) for p in coords])
+    source.modify('set_geometry', dict(polygon=poly))
 
 
 @apply_uncertainty.add('simpleFaultDipRelative')
@@ -526,7 +543,7 @@ class Branch(object):
         attrib = dict(branchID=self.branch_id)
         nodes = [Node('uncertaintyModel', {}, self.value),
                  Node('uncertaintyWeight', {}, self.weight)]
-        return Node('LogicTreeBranch', attrib, None, nodes)
+        return Node('logicTreeBranch', attrib, None, nodes)
 
     def __repr__(self):
         if self.bset:
@@ -885,7 +902,10 @@ class CompositeLogicTree(object):
             attrib = dict(uncertaintyType=bset.uncertainty_type,
                           branchSetID=f'bs{bset.ordinal}')
             attrib.update(bset.filters)
-            n = Node('LogicTreeBranchSet', attrib, None,
+            if 'applyToBranches' in attrib and not attrib['applyToBranches']:
+                # remove empty attribute
+                del attrib['applyToBranches']
+            n = Node('logicTreeBranchSet', attrib, None,
                      [br.to_node() for br in bset.branches])
             out.nodes.append(n)
         return out

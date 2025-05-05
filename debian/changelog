@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Added uncertainties for area geometry and seismogenic depths
+
   [Michele Simionato]
   * Internal: added methods `CompositeLogicTree.to_node` and
     `CompositeLogicTree.to_nrml`

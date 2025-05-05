@@ -1238,7 +1238,7 @@ class OqParam(valid.ParamSet):
                             'intensity_measure_types_and_levels is set')
         if 'iml_disagg' in names_vals:
             # normalize things like SA(0.10) -> SA(0.1)
-            self.iml_disagg = {str(from_string(imt)): [iml]
+            self.iml_disagg = {str(from_string(imt)): [float(iml)]
                                for imt, iml in self.iml_disagg.items()}
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
@@ -1247,7 +1247,9 @@ class OqParam(valid.ParamSet):
                     ': they will be inferred from the iml_disagg '
                     'dictionary')
         elif 'intensity_measure_types_and_levels' in names_vals:
-            self.hazard_imtls = self.intensity_measure_types_and_levels
+            self.hazard_imtls = {
+                k: [float(x) for x in v] for k, v in
+                self.intensity_measure_types_and_levels.items()}
             delattr(self, 'intensity_measure_types_and_levels')
             lens = set(map(len, self.hazard_imtls.values()))
             if len(lens) > 1:

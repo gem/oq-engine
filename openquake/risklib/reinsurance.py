@@ -60,12 +60,12 @@ def check_fields(fields, dframe, policyidx, fname, policyfname, treaties,
     if len(indices) > 0:
         raise InvalidFile(
             '%s (rows %s): empty deductible values were found' % (
-                policyfname, [idx + 2 for idx in indices]))
+                policyfname, [int(idx + 2) for idx in indices]))
     [indices] = np.where(np.isnan(dframe.liability.to_numpy()))
     if len(indices) > 0:
         raise InvalidFile(
             '%s (rows %s): empty liability values were found' % (
-                policyfname, [idx + 2 for idx in indices]))
+                policyfname, [int(idx + 2) for idx in indices]))
     [indices] = np.where(dframe.duplicated(subset=[key]).to_numpy())
     if len(indices) > 0:
         # NOTE: reporting only the first row found
