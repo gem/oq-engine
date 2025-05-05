@@ -2,6 +2,7 @@
   * Added uncertainties for area geometry and seismogenic depths
 
   [Michele Simionato]
+  * Added a check on duplicate branches in the source model logic tree
   * Internal: added methods `CompositeLogicTree.to_node` and
     `CompositeLogicTree.to_nrml`
 
