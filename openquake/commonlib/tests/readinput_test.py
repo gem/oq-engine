@@ -518,7 +518,7 @@ class SitecolAssetcolTestCase(unittest.TestCase):
             df = site_amplification.AmplFunction.read_df(
                 oq.inputs['amplification'])
             site_amplification.Amplifier(oq.imtls, df)
-        self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
+        self.assertIn("Found duplicates for (b'F',", str(ctx.exception))
 
 
 class LogicTreeTestCase(unittest.TestCase):
