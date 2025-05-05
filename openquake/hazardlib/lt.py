@@ -942,7 +942,7 @@ def build(*bslists):
     ...           ['extendModel', '',
     ...              ['C', 'extra1', 0.6],
     ...              ['D', 'extra2', 0.2],
-    ...              ['E', 'extra2', 0.2]])
+    ...              ['E', 'extra3', 0.2]])
     >>> lt.get_all_paths()
     ['AC', 'AD', 'AE', 'BC', 'BD', 'BE']
     """
