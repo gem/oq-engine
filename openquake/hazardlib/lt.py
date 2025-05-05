@@ -931,9 +931,12 @@ class CompositeLogicTree(object):
         return '<%s>' % self.branchsets
 
 
-def build(*bslists):
+def build(*bslists, applyToSources=''):
     """
-    :param bslists: a list of lists describing branchsets
+    :param bslists:
+        a list of lists describing branchsets
+    :param applyToSources:
+        source ID (used on Absolute uncertainties)
     :returns: a `CompositeLogicTree` instance
 
     >>> lt = build(['sourceModel', '',
@@ -953,6 +956,8 @@ def build(*bslists):
         for brid, value, weight in brlists:
             branches.append(Branch(bsid, brid, weight, value))
         bset = BranchSet(utype, i, dict(applyToBranches=applyto))
+        if applyToSources and utype.endswith('Absolute'):
+            bset.filters['applyToSources'] = applyToSources.split()
         bset.branches = branches
         bsets.append(bset)
     return CompositeLogicTree(bsets)
