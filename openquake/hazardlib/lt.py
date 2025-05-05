@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import pickle
 import itertools
 import collections
 import numpy
@@ -758,6 +759,15 @@ class BranchSet(object):
             lst.append([br.branch_id, '...', br.weight])
         return lst
 
+    def check_duplicates(self):
+        """
+        Check if the underlying branches are duplicated
+        """
+        values = [pickle.dumps(br.value, protocol=4) for br in self.branches]
+        if len(set(values)) < len(values):
+            bs_id = self.branches[0].bs_id
+            raise ValueError(f'Duplicated branches in {bs_id}')
+
     def __len__(self):
         return len(self.branches)
 
@@ -843,6 +853,7 @@ class CompositeLogicTree(object):
         self.branchsets = branchsets
         for i, bset in enumerate(branchsets):
             bset.ordinal = i
+            bset.check_duplicates()
         self.basepaths = self._attach_to_branches()
 
     def _attach_to_branches(self):
@@ -931,7 +942,7 @@ def build(*bslists):
     ...           ['extendModel', '',
     ...              ['C', 'extra1', 0.6],
     ...              ['D', 'extra2', 0.2],
-    ...              ['E', 'extra2', 0.2]])
+    ...              ['E', 'extra3', 0.2]])
     >>> lt.get_all_paths()
     ['AC', 'AD', 'AE', 'BC', 'BD', 'BE']
     """
