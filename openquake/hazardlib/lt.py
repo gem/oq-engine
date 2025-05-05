@@ -58,7 +58,8 @@ def unknown(utype, node, filename):
     try:
         return float(node.text)
     except (TypeError, ValueError):
-        raise LogicTreeError(node, filename, 'expected single float value')
+        raise LogicTreeError(
+            node, filename, 'expected single float value, got %r' % node.text)
 
 
 parse_uncertainty = CallableDict(keymissing=unknown)
@@ -901,6 +902,9 @@ class CompositeLogicTree(object):
             attrib = dict(uncertaintyType=bset.uncertainty_type,
                           branchSetID=f'bs{bset.ordinal}')
             attrib.update(bset.filters)
+            if 'applyToBranches' in attrib and not attrib['applyToBranches']:
+                # remove empty attribute
+                del attrib['applyToBranches']
             n = Node('logicTreeBranchSet', attrib, None,
                      [br.to_node() for br in bset.branches])
             out.nodes.append(n)
