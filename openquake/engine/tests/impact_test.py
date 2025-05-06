@@ -25,10 +25,12 @@ from openquake.calculators.export import export
 
 cd = pathlib.Path(__file__).parent
 
+
 def strip(fname):
     bname = os.path.basename(fname)
     name, ext = bname.rsplit('_', 1)
     return name + '.' + ext.rsplit('.')[1]
+
 
 def check_export_job(dstore):
     fnames = [strip(f) for f in export(('job', 'zip'), dstore)]
