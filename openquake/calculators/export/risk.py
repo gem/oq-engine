@@ -749,7 +749,7 @@ def export_vulnerability_xml(dstore):
         dest = dstore.export_path('%s_vulnerability.xml' % loss_type)
         with open(dest, 'wb') as out:
             nrml.write([nodeobj], out)
-        dic[f'{loss_type}_vulnerability'] = os.path.basename(dest)
+        dic[f'{loss_type}_vulnerability'] = dest
     return dic
 
 
@@ -817,19 +817,19 @@ def export_job_zip(ekey, dstore):
     oq = dstore['oqparam']
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])
-    inputs['job_ini'] = os.path.basename(job_ini)
+    inputs['job_ini'] = job_ini
     [exposure_xml, _assetcol_csv] = export_exposure(('exposure', 'zip'), dstore)
-    inputs['exposure'] = os.path.basename(exposure_xml)
+    inputs['exposure'] = exposure_xml
     csv = extract(dstore, 'ruptures?slice=0&slice=1').array
     dest = dstore.export_path('rupture.csv')
     with open(dest, 'w') as out:
         out.write(csv)
-    inputs['rupture_model'] = os.path.basename(dest)
+    inputs['rupture_model'] = dest
     gsim_lt = dstore['full_lt'].gsim_lt
     dest = dstore.export_path('gsim_logic_tree.xml')
     with open(dest, 'wb') as out:
         nrml.write([gsim_lt.to_node()], out)
-    inputs['gsim_logic_tree'] = os.path.basename(dest)
+    inputs['gsim_logic_tree'] = dest
     oq.gsim = '[FromFile]'
     inputs.update(export_vulnerability_xml(dstore))
 
@@ -840,8 +840,8 @@ def export_job_zip(ekey, dstore):
     taxmap['taxonomy'] = decode(taxonomies[taxmap['taxi']])
     del taxmap['taxi']
     writer.save(taxmap, dest)
-    inputs['taxonomy_mapping'] = os.path.basename(dest)
-    inputs['sites'] = os.path.basename(dstore.export_path('sites.csv'))
+    inputs['taxonomy_mapping'] = dest
+    inputs['sites'] = dstore.export_path('sites.csv')
     writer.save(dstore['sitecol'].array, inputs['sites'])
     with open(job_ini, 'w') as out:
         out.write(oq.to_ini(**inputs))

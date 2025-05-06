@@ -33,21 +33,24 @@ def strip(fname):
 
 
 def check_export_job(dstore):
-    fnames = [strip(f) for f in export(('job', 'zip'), dstore)]
-    assert fnames == ['job.ini',
-                      'exposure.xml',
-                      'rupture.csv',
-                      'gsim_logic_tree.xml',
-                      'affectedpop_vulnerability.xml',
-                      'area_vulnerability.xml',
-                      'contents_vulnerability.xml',
-                      'injured_vulnerability.xml',
-                      'nonstructural_vulnerability.xml',
-                      'number_vulnerability.xml',
-                      'occupants_vulnerability.xml',
-                      'residents_vulnerability.xml',
-                      'structural_vulnerability.xml',
-                      'taxonomy_mapping.csv']
+    fnames = export(('job', 'zip'), dstore)
+    assert [strip(f) for f in fnames] == [
+        'job.ini',
+        'exposure.xml',
+        'rupture.csv',
+        'gsim_logic_tree.xml',
+        'affectedpop_vulnerability.xml',
+        'area_vulnerability.xml',
+        'contents_vulnerability.xml',
+        'injured_vulnerability.xml',
+        'nonstructural_vulnerability.xml',
+        'number_vulnerability.xml',
+        'occupants_vulnerability.xml',
+        'residents_vulnerability.xml',
+        'structural_vulnerability.xml',
+        'taxonomy_mapping.csv',
+        'sites.csv']
+    return fnames
 
 
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
@@ -57,7 +60,9 @@ def test_impact(n):
         raise unittest.SkipTest(f'Missing {expo}')
     calc = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
-        check_export_job(calc.datastore)
+        # repeat the calculation by exporting the input files
+        fnames = check_export_job(calc.datastore)
+        check(fnames[0])
 
 
 def test_impact5():
