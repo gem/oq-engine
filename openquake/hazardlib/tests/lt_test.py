@@ -16,14 +16,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import filecmp
+import difflib
 import unittest
 import numpy
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, gettemp
 from openquake.hazardlib import (
     nrml, lt, sourceconverter, calc, site, valid, contexts)
 from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.geo.point import Point
 
+CDIR = os.path.dirname(__file__)
 
 # a point source with 2(mag) x 2(npd) x 2(hdd) = 8 ruptures
 ps = nrml.get('''\
@@ -50,6 +54,48 @@ ps = nrml.get('''\
 def scaling_rates(srcs):
     return [getattr(src, 'scaling_rate', 1.) for src in srcs]
 
+
+# coordinates for the area sources of BCHydro
+EN = '''
+-121.28842 49.54551 -121.91309 49.34564 -123.08491 50.29564 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551
+'''
+EC = '''
+-121.7803 49.23488 -121.91309 49.34564 -123.08491 50.29564 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551 -121.22422 49.41373 -121.7803 49.23488
+'''
+ES = '''
+-121.16104 49.28325 -121.70759 49.10641 -121.7803 49.23488 -121.91309 49.34564 -123.08491 50.29564 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551 -121.22422 49.41373 -121.16104 49.28325
+'''
+
+WN = '''
+-121.28842 49.54551 -121.91309 49.34564 -122.15546 49.26664 -122.27591 49.41094 -123.01238 49.82133 -124.68987 50.71523 -125.13614 50.91171 -125.80908 51.11105 -126.56198 51.32721 -126.47716 51.56968 -126.21795 51.67803 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551
+'''
+WC = '''
+-121.7803 49.23488 -122.05466 49.14506 -122.15546 49.26664 -122.27591 49.41094 -123.01238 49.82133 -124.68987 50.71523 -125.13614 50.91171 -125.80908 51.11105 -126.56198 51.32721 -126.47716 51.56968 -126.21795 51.67803 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551 -121.22422 49.41373 -121.7803 49.23488
+'''
+
+WS = '''
+-121.70759 49.10641 -121.94909 49.02693 -122.05466 49.14506 -122.15546 49.26664 -122.27591 49.41094 -123.01238 49.82133 -124.68987 50.71523 -125.13614 50.91171 -125.80908 51.11105 -126.56198 51.32721 -126.47716 51.56968 -126.21795 51.67803 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551 -121.22422 49.41373 -121.16104 49.28325 -121.70759 49.10641
+'''
+
+AREA = '''
+<areaGeometry>
+  <gml:Polygon>
+     <gml:exterior>
+       <gml:LinearRing>
+         <gml:posList>
+         %s
+         </gml:posList>
+      </gml:LinearRing>
+    </gml:exterior>
+  </gml:Polygon>
+<upperSeismoDepth>
+0.0
+</upperSeismoDepth>
+<lowerSeismoDepth>
+15.0
+</lowerSeismoDepth>
+</areaGeometry>
+'''
 
 class CollapseTestCase(unittest.TestCase):
     def setUp(self):
@@ -351,3 +397,72 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         # each of the original 6 branches leading to 30 branches in total.
         # These are multiplied by 4 with the last branchset.
         self.assertEqual(len(paths), 120)
+
+    def test_build3(self):
+        # test with applyToSources for the BCHydro project
+        clt = lt.build(
+            ['sourceModel', [],
+             ['ssm', 'nva.xml', 1.0]
+             ],
+            ['areaSourceGeometryAbsolute', [],
+             ['es', AREA % ES, .134],
+             ['en', AREA % EN, .402],
+             ['ec', AREA % EC, .134],
+             ['ws', AREA % WS, .066],
+             ['wn', AREA % WN, .198],
+             ['wc', AREA % WC, .066],
+             ],
+            ['abGRAbsolute', [],
+             ['ab0', '1.144375 0.5535', 8.6824159E-03],
+             ['ab1', '1.555686 0.6813', 2.6117011E-02],
+             ['ab2', '1.970773 0.809', 3.0156485E-02],
+             ['ab3', '2.386173 0.9368', 1.5198986E-02],
+             ['ab4', '2.801201 1.0645', 3.6951018E-03],
+             ['ab5', '1.266199 0.5535', 1.9593201E-02],
+             ['ab6', '1.681187 0.6813', 7.4035943E-02],
+             ['ab7', '2.096274 0.809', 1.0132525E-01],
+             ['ab8', '2.511673 0.9368', 5.8015175E-02],
+             ['ab9', '2.926702 1.0645', 1.5533167E-02],
+             ['ab10', '1.363446 0.5535', 1.7662801E-02],
+             ['ab11', '1.778434 0.6813',8.5165169E-02],
+             ['ab12', '2.193522 0.80', 1.3994067E-01],
+             ['ab13', '2.60892 0.9368', 9.2004240E-02],
+             ['ab14', '3.02395 1.0645', 2.7369319E-02],
+             ['ab15', '1.476012 0.5535', 6.1173179E-03],
+             ['ab16', '1.891 0.6813', 4.0550596E-02],
+             ['ab17', '2.306088 0.809', 8.4531934E-02],
+             ['ab18', '2.721487 0.9368', 6.6527816E-02],
+             ['ab19', '3.136516 1.0645', 2.2700337E-02],
+             ['ab20', '1.565326 0.5535', 9.4576404E-04],
+             ['ab21', '1.980314 0.6813', 8.8379121E-03],
+             ['ab22', '2.395402 0.809', 2.3747118E-02],
+             ['ab23', '2.810801 0.936', 2.2620635E-02],
+             ['ab24', '3.22583 1.0645', 8.9256359E-03],
+             ],
+            ['setLowerSeismDepthAbsolute', [],
+             ['lsd15', 15, .3],
+             ['lsd20', 20, .4],
+             ['lsd25', 25, .3],
+             ],
+            ['maxMagGRAbsolute', [],
+             ['mm6pt8', 6.8, .3],
+             ['mm7pt0', 7.0, .3],
+             ['mm7pt3', 7.3, .3],
+             ['mm7pt6', 7.5, .1],
+             ],
+            applyToSources='nva')
+        
+        fname = gettemp(clt.to_nrml(), suffix='.xml')
+        expected = os.path.join(CDIR, 'lt_test.xml')
+        with open(fname) as got, open(expected) as exp:
+            msg = f'The two files do not match:\n{expected}\n{fname}\n'
+            diff = difflib.unified_diff(
+                exp.readlines(),
+                got.readlines(),
+                fromfile='expected',
+                tofile='computed',
+            )
+            for line in diff:
+                msg += line
+                msg += '\n'
+        self.assertTrue(filecmp.cmp(expected, fname, shallow=True), msg)
