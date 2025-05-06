@@ -119,12 +119,11 @@ def _compute_scalefactor(ctx, C_BB):
 
 class EMME24BB_GMM1SGM1(ChiouYoungs2014):
     """
-    EMME24 backbone model for active shallow crustal earthquakes. This GSIM
-    class adjusts the Chiou and Youngs (2014) GMPE using the corrections
+    EMME24 backbone model for active shallow crustal earthquakes. This class
+    is the lower range, lower sigma model branch. This backbone GMM adjusts
+    the Chiou and Youngs (2014) GMPE using the corrections 
     described within:
         Publication reference to be added when available
-        
-    EMME24 backbone branch for lower range, lower sigma model
     """
     experimental = True
 
