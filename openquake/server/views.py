@@ -84,6 +84,7 @@ NOT_IMPLEMENTED = 501
 XML = 'application/xml'
 JSON = 'application/json'
 HDF5 = 'application/x-hdf'
+ZIP = 'application/x-zip'
 
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
@@ -179,6 +180,23 @@ def store(request_files, ini, calc_id):
     if not inifiles:
         raise NotFound('There are no %s files in the archive' % ini)
     return inifiles[0]
+
+
+def stream_response(fname, content_type, exportname=''):
+    """
+    Stream a file stored in a temporary directory via Django
+    """
+    ext = os.path.splitext(fname)[-1]
+    exportname = exportname or os.path.basename(fname)
+    tmpdir = os.path.dirname(fname)
+    stream = FileWrapper(open(fname, 'rb'))  # 'b' is needed on Windows
+    response = FileResponse(stream, content_type=content_type)
+    response['Content-Disposition'] = 'attachment; filename=%s' % exportname
+    response['Content-Length'] = str(os.path.getsize(fname))
+    stream.close = lambda: (
+        FileWrapper.close(stream),
+        os.remove(fname) if ext == '.npz' else shutil.rmtree(tmpdir))
+    return response
 
 
 @csrf_exempt
@@ -408,7 +426,8 @@ def calc(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name'], info['status']):
+        if not utils.user_has_permission(
+                request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1134,7 +1153,8 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name'], info['status']):
+        if not utils.user_has_permission(
+                request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1246,14 +1266,7 @@ def calc_result(request, result_id):
         export_type, DEFAULT_CONTENT_TYPE)
 
     fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
-    stream = FileWrapper(open(exported, 'rb'))  # 'b' is needed on Windows
-    stream.close = lambda: (
-        FileWrapper.close(stream), shutil.rmtree(tmpdir))
-    response = FileResponse(stream, content_type=content_type)
-    response['Content-Disposition'] = (
-        'attachment; filename=%s' % os.path.basename(fname))
-    response['Content-Length'] = str(os.path.getsize(exported))
-    return response
+    return stream_response(exported, content_type, fname)
 
 
 @cross_domain_ajax
@@ -1356,13 +1369,7 @@ def extract(request, calc_id, what):
             content_type='text/plain', status=500)
 
     # stream the data back
-    stream = FileWrapper(open(fname, 'rb'))
-    stream.close = lambda: (FileWrapper.close(stream), os.remove(fname))
-    response = FileResponse(stream, content_type='application/octet-stream')
-    response['Content-Disposition'] = (
-        'attachment; filename=%s' % os.path.basename(fname))
-    response['Content-Length'] = str(os.path.getsize(fname))
-    return response
+    return stream_response(fname, ZIP)
 
 
 @cross_domain_ajax
@@ -1394,6 +1401,42 @@ def calc_datastore(request, job_id):
     return response
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_zip(request, job_id):
+    """
+    Download job.zip file
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param job_id:
+        The id of the requested datastore
+    :returns:
+        A `django.http.HttpResponse` containing the content
+        of the requested artifact, if present, else throws a 404
+    """
+    if get_user_level(request) < 2:
+        return HttpResponseForbidden()
+    job = logs.dbcmd('get_job', int(job_id))
+    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
+        return HttpResponseNotFound()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            exported = export(('job', 'zip'), ds)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'job_zip', tb),
+            content_type='text/plain', status=400)
+    # zipping the files
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
+    archname = f'job_{job_id}.zip'
+    zipfiles(exported, os.path.join(tmpdir, archname))
+    return stream_response(os.path.join(tmpdir, archname), ZIP)
+
+
 def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
     # NOTE: application_mode is already added by the context processor
@@ -1410,7 +1453,7 @@ def web_engine(request, **kwargs):
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
 
-        # this is usually '' but it can be set in the local settings for debugging
+        # this is usually ''; can be set in the local settings for debugging
         params['impact_default_usgs_id'] = \
             settings.IMPACT_DEFAULT_USGS_ID
 
