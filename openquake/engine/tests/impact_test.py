@@ -21,6 +21,7 @@ import pathlib
 import unittest
 import pytest
 import numpy
+from openquake.calculators.base import expose_outputs
 from openquake.calculators.checkers import check
 from openquake.calculators.export import export
 
@@ -74,13 +75,15 @@ def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
     if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
         raise unittest.SkipTest(f'Missing {expo}')
-    calc = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
+    calc, log = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
         # repeat the calculation by exporting the input files
         fnames = check_export_job(calc.datastore)
-        calc2 = check(fnames[0])
-        compare(calc.datastore, calc2.datastore)
-
+        calc2, log2 = check(fnames[0])
+        with log, log2:
+            expose_outputs(calc.datastore)
+            expose_outputs(calc2.datastore)
+            compare(calc.datastore, calc2.datastore)
 
 def test_impact5():
     # this is a case where there are no assets inside the MMI multipolygons

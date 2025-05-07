@@ -39,6 +39,7 @@ oq extract "disagg_layer?" 14
 
 # do something with the generated data, 9 is the AreaSource demo
 oq engine --lhc
+oq plot examples
 MPLBACKEND=Agg oq plot 'hcurves?kind=stats&imt=PGA' 9
 MPLBACKEND=Agg oq plot 'hmaps?kind=mean&imt=PGA' 9
 MPLBACKEND=Agg oq plot 'uhs?kind=stats' 9
