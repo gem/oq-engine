@@ -766,7 +766,8 @@ class BranchSet(object):
         values = [pickle.dumps(br.value, protocol=4) for br in self.branches]
         if len(set(values)) < len(values):
             bs_id = self.branches[0].bs_id
-            raise ValueError(f'Duplicated branches in {bs_id}')
+            brvalues = '\n'.join(str(br.value) for br in self.branches)
+            raise ValueError(f'Duplicated branches in {bs_id}:\n{brvalues}')
 
     def __len__(self):
         return len(self.branches)
