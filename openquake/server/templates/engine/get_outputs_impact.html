@@ -56,6 +56,10 @@
                    title="Size: {{ size_mb }} MB" class="btn btn-sm">
                   Download hdf5 datastore</a>
               </div>
+              <div id="my-job">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/job_zip" class="btn btn-sm">
+                  Download job.zip</a>
+              </div>
               {% endif %}
             </div>
           </div>
