@@ -84,7 +84,7 @@ def check(ini, hc_id=None, exports='', what='', prefix='',
     """
     t0 = time.time()
     outdir = pathlib.Path(os.path.dirname(ini))
-    calc, _log = get_calc_log(ini, hc_id)
+    calc, log = get_calc_log(ini, hc_id)
     calc.run(export_dir='/tmp', close=False)
     if exports:
         calc.export(exports)
@@ -108,7 +108,7 @@ def check(ini, hc_id=None, exports='', what='', prefix='',
             tbl = text_table(df, ext='org')
         bname = prefix + re.sub(r'_\d+\.', '.', os.path.basename(fname))
         assert_close(tbl, outdir / bname, atol, rtol)
-    return calc
+    return calc, log
 
 
 # called in run-demos
