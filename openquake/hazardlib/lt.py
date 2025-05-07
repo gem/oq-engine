@@ -759,7 +759,7 @@ class BranchSet(object):
             lst.append([br.branch_id, '...', br.weight])
         return lst
 
-    def check_duplicates(self):
+    def check_duplicates(self, filename=''):
         """
         Check if the underlying branches are duplicated
         """
@@ -767,7 +767,8 @@ class BranchSet(object):
         if len(set(values)) < len(values):
             bs_id = self.branches[0].bs_id
             brvalues = '\n'.join(str(br.value) for br in self.branches)
-            raise ValueError(f'Duplicated branches in {bs_id}:\n{brvalues}')
+            raise ValueError(
+                f'{filename}: duplicated branches in {bs_id}:\n{brvalues}')
 
     def __len__(self):
         return len(self.branches)

@@ -436,7 +436,7 @@ class SourceModelLogicTree(object):
         self.branchsets = []
         self.parse_tree(tree)
         for bset in self.branchsets:
-            bset.check_duplicates()
+            bset.check_duplicates(filename)
         self.set_num_paths()
 
     def set_num_paths(self):
