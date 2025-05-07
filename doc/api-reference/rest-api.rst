@@ -263,6 +263,12 @@ GET v1/calc/:calc_id/datastore
 
 Get the HDF5 datastore for the calculation identified by the parameter ``calc_id``.
 
+******************************
+GET v1/calc/:calc_id/job_zip
+******************************
+
+Get the input files for the calculation identified by the parameter ``calc_id``.
+
 *****************************
 POST /v1/calc/:calc_id/remove
 *****************************

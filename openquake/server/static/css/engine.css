@@ -420,7 +420,7 @@ tr.asce_output {
 .my-pngs a {
     width: 190px;
 }
-.my-pngs {
+.my-pngs, .bottom-right-btns {
     margin-bottom: 3px;
 }
 
