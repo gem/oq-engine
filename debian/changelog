@@ -1,5 +1,6 @@
-  [Michele Simionato]
-  * Added a route /v1/calc/XXX/job_zip
+  [Michele Simionato, Paolo Tormed]
+  * Added a route /v1/calc/XXX/job_zip and a button to download the archive
+    from the WebUI, visible only in OQImpact for level 2 users
   * Fixed an error in `oq plot examples`
 
   [Baran Güryuva, Christopher Brooks]
