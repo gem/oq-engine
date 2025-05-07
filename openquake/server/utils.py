@@ -147,6 +147,7 @@ def oq_server_context_processor(request):
     else:
         # NOTE: when authentication is not required, the user interface
         # can assume the user to have the maximum level
+        # NOTE: this needs to be the maximum existing user level
         context['user_level'] = 2
 
     context['lockdown'] = settings.LOCKDOWN
