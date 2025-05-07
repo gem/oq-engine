@@ -1379,6 +1379,9 @@ def calc_datastore(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
+    user_level = get_user_level(request)
+    if user_level < 2:
+        return HttpResponseForbidden()
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
