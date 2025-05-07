@@ -2298,8 +2298,9 @@ class OqParam(valid.ParamSet):
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         dic['inputs'].update(inputs)
-        del dic['base_path']
-        del dic['req_site_params']
+        del dic['base_path'], dic['req_site_params'], dic['sec_imts']
+        dic.pop('mags_by_trt')
+        dic.pop('close')
         for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.split():
             dic.pop(k, None)
 

@@ -20,11 +20,12 @@ import os
 import pathlib
 import unittest
 import pytest
+import numpy
 from openquake.calculators.checkers import check
 from openquake.calculators.export import export
 
 cd = pathlib.Path(__file__).parent
-
+aac = numpy.testing.assert_allclose
 
 def strip(fname):
     bname = os.path.basename(fname)
@@ -53,6 +54,21 @@ def check_export_job(dstore):
     return fnames
 
 
+def compare(dstore1, dstore2):
+    """
+    Compare avg_losses and loss_by_event
+    """
+    ltypes = sorted(dstore1['avg_losses-stats'])
+    df1 = dstore1.read_df('loss_by_event')
+    df2 = dstore2.read_df('loss_by_event')
+    aac(df1.to_numpy(), df2.to_numpy(), rtol=1e-5)
+
+    for ltype in ltypes:
+        avg1 = dstore1[f'avg_losses-stats/{ltype}'][:]
+        avg2 = dstore2[f'avg_losses-stats/{ltype}'][:]
+        aac(avg1, avg2, rtol=1e-5)
+
+
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
@@ -62,7 +78,8 @@ def test_impact(n):
     if n == 1:
         # repeat the calculation by exporting the input files
         fnames = check_export_job(calc.datastore)
-        check(fnames[0])
+        calc2 = check(fnames[0])
+        compare(calc.datastore, calc2.datastore)
 
 
 def test_impact5():
