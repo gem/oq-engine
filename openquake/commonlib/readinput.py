@@ -869,6 +869,8 @@ def get_source_model_lt(oqparam):
         instance
     """
     smlt = get_smlt(vars(oqparam))
+    for bset in smlt.branchsets:
+        bset.check_duplicates(smlt.filename)
     srcids = set(smlt.source_data['source'])
     for src in oqparam.reqv_ignore_sources:
         if src not in srcids:
