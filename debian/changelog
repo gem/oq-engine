@@ -1,3 +1,7 @@
+  [Baran Güryuva, Christopher Brooks]
+  * Implemented the EMME24 backbone GMC for crustal
+    earthquakes (emme24.py)
+
   [Marco Pagani, Michele Simionato]
   * Added uncertainties for area geometry and seismogenic depths
 
