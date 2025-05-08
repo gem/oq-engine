@@ -46,7 +46,8 @@ class MultiPointSource(ParametricSeismicSource):
     lower_seismogenic_depth, nodal_plane_distribution, hypocenter_distribution
     """
     code = b'M'
-    MODIFICATIONS = set()
+    MODIFICATIONS = {'set_lower_seismogenic_depth',
+                     'set_upper_seismogenic_depth'}
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -106,6 +107,20 @@ class MultiPointSource(ParametricSeismicSource):
         return (len(self.get_annual_occurrence_rates()) *
                 len(self.nodal_plane_distribution.data) *
                 len(self.hypocenter_distribution.data))
+
+    def modify_set_lower_seismogenic_depth(self, lsd):
+        """
+        Modifies the current source geometry by replacing the original
+        lower seismogenic depth with the passed depth
+        """
+        self.lower_seismogenic_depth = lsd
+
+    def modify_set_upper_seismogenic_depth(self, usd):
+        """
+        Modifies the current source geometry by replacing the original
+        upper seismogenic depth with the passed depth
+        """
+        self.upper_seismogenic_depth = usd
 
     def get_bounding_box(self, maxdist):
         """
