@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
 import time
 import gzip
 import json
@@ -1142,7 +1144,8 @@ def main(what,
         for k, v in globals().items():
             if k.startswith('make_figure_'):
                 help_msg.append(v.__doc__)
-        raise SystemExit(''.join(help_msg))
+        print(''.join(help_msg), file=sys.stderr)
+        return
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
     prefix, rest = what.split('?', 1)
