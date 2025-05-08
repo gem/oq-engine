@@ -1178,7 +1178,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
             return None, None, err
     if not rup_data and approach not in ['use_pnt_rup_from_usgs',
                                          'build_rup_from_usgs']:
-        if approach == 'use_shakemap_fault_rup_from_usgs':
+        if approach in ['use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs']:
             with monitor('Downloading rupture json'):
                 # FIXME approach
                 rup_data, rupture_file = download_shakemap_rupture_data(
