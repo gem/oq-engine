@@ -349,6 +349,11 @@ def _setLSD(utype, source, value):
     source.modify('set_lower_seismogenic_depth', dict(lsd=float(value)))
 
 
+@apply_uncertainty.add('setUpperSeismDepthAbsolute')
+def _setUSD(utype, source, value):
+    source.modify('set_upper_seismogenic_depth', dict(lsd=float(value)))
+
+
 @apply_uncertainty.add('dummy')  # do nothing
 def _dummy(utype, source, value):
     pass

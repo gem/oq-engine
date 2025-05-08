@@ -148,7 +148,8 @@ class PointSource(ParametricSeismicSource):
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
     code = b'P'
-    MODIFICATIONS = set()
+    MODIFICATIONS = {'set_lower_seismogenic_depth',
+                     'set_upper_seismogenic_depth'}
     ps_grid_spacing = 0  # updated in CollapsedPointSource
 
     def __init__(self, source_id, name, tectonic_region_type,
@@ -345,6 +346,20 @@ class PointSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         return len(self.get_annual_occurrence_rates()) * self.count_nphc()
+
+    def modify_set_lower_seismogenic_depth(self, lsd):
+        """
+        Modifies the current source geometry by replacing the original
+        lower seismogenic depth with the passed depth
+        """
+        self.lower_seismogenic_depth = lsd
+
+    def modify_set_upper_seismogenic_depth(self, usd):
+        """
+        Modifies the current source geometry by replacing the original
+        upper seismogenic depth with the passed depth
+        """
+        self.upper_seismogenic_depth = usd
 
     @property
     def polygon(self):
