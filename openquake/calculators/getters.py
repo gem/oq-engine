@@ -360,7 +360,6 @@ def get_ebruptures(dstore):
             for proxy in get_proxies(dstore.filename, slice(start, stop)):
                 ebrs.append(proxy.to_ebr(trt))
     else:  # OQImpact calculations, I have no test for this :-(
-        1/0
         for proxy in get_proxies(dstore.filename, slice(None)):
             ebrs.append(proxy.to_ebr(trts[0]))
     return ebrs
