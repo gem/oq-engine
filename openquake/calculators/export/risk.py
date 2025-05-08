@@ -832,7 +832,6 @@ def export_job_zip(ekey, dstore):
     inputs['gsim_logic_tree'] = dest
     oq.gsim = '[FromFile]'
     inputs.update(export_vulnerability_xml(dstore))
-
     dest = dstore.export_path('taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)

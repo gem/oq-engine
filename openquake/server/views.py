@@ -721,16 +721,18 @@ def impact_callback(
     exclude_from_print = []
     if 'shakemap_uri' in params:
         exclude_from_print = [
-            'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
-            'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type', 'gsim',
-            'shakemap_uri', 'rupture_file', 'rupture_from_usgs', 'title', 'mmi_file',
+            'station_data_file', 'station_data_issue',
+            'station_data_file_from_usgs',
+            'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type',
+            'gsim', 'shakemap_uri', 'rupture_file', 'rupture_from_usgs',
+            'title', 'mmi_file',
             'rake']
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
             if key == 'rupture_dict':
-                # NOTE: params['rupture_dict'] is a string representation of a Python
-                # dictionary, not a valid JSON string, so we can't use json.loads
+                # NOTE: params['rupture_dict'] is a string representation of a
+                # dictionary, not a JSON string, so we can't use json.loads
                 rupdic = ast.literal_eval(params['rupture_dict'])
                 for rupkey, rupval in rupdic.items():
                     if rupkey not in exclude_from_print:
@@ -738,10 +740,12 @@ def impact_callback(
             elif key not in exclude_from_print:
                 params_to_print += f'{key}: {val}\n'
     if 'station_data' in params['inputs']:
-        with open(params['inputs']['station_data'], 'r', encoding='utf-8') as file:
+        with open(params['inputs']['station_data'], 'r',
+                  encoding='utf-8') as file:
             n_stations = sum(1 for line in file) - 1  # excluding the header
-        params_to_print += (f'{n_stations} seismic stations were loaded (please see'
-                            f'in the calculation log if any of them were discarded)\n')
+        params_to_print += (
+            f'{n_stations} seismic stations were loaded (please see'
+            f'in the calculation log if any of them were discarded)\n')
     else:
         params_to_print += 'No seismic stations were considered\n'
 
@@ -770,8 +774,8 @@ def impact_get_rupture_data(request):
     Retrieve rupture parameters corresponding to a given usgs id
 
     :param request:
-        a `django.http.HttpRequest` object containing usgs_id, approach, rupture_file,
-        use_shakemap
+        a `django.http.HttpRequest` object containing usgs_id, approach,
+        rupture_file, use_shakemap
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     rup, rupdic, _oqparams, err = impact_validate(
@@ -780,7 +784,8 @@ def impact_get_rupture_data(request):
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
-        figsize = (6.3, 6.3)  # fitting in a single row in the template without resizing
+        figsize = (6.3, 6.3)
+        # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
             with_cities=False, return_base64=True, rupture=rup)
@@ -829,7 +834,8 @@ def impact_get_shakemap_versions(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
-    shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(usgs_id)
+    shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(
+        usgs_id)
     if err:
         shakemap_versions_issue = err['error_msg']
     else:
@@ -852,7 +858,8 @@ def get_uploaded_file_path(request, filename):
 
 def create_impact_job(request, params):
     [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, user_name=utils.get_user(request))
+        [params], config.distribution.log_level,
+        user_name=utils.get_user(request))
 
     job_owner_email = request.user.email
     response_data = dict()
@@ -910,7 +917,8 @@ def impact_run(request):
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
-    station_data_file_from_usgs = request.POST.get('station_data_file_from_usgs', '')
+    station_data_file_from_usgs = request.POST.get(
+        'station_data_file_from_usgs', '')
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
@@ -930,8 +938,8 @@ def impact_run_with_shakemap(request):
     Run an impact calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing a usgs_id and optionally the time
-        of the day ('day', 'night' or 'transit')
+        a `django.http.HttpRequest` object containing a usgs_id and
+        optionally the time of the day ('day', 'night' or 'transit')
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
