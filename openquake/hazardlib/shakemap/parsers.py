@@ -1009,8 +1009,12 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
     except ExpatError as exc:
         err = {"status": "failed", "error_msg": str(exc)}
         return None, {}, err
-    rup = sourceconverter.RuptureConverter(
-        rupture_mesh_spacing=5.).convert_node(rup_node)
+    try:
+        rup = sourceconverter.RuptureConverter(
+            rupture_mesh_spacing=5.).convert_node(rup_node)
+    except ValueError as exc:
+        err = {"status": "failed", "error_msg": str(exc)}
+        return None, {}, err
     rup.tectonic_region_type = '*'
     hp = rup.hypocenter
     rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
