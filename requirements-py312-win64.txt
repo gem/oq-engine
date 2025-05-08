@@ -1,6 +1,11 @@
 # Suggested versions for development
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
+https://wheelhouse.openquake.org/v3/windows/py312/matplotlib-3.10.1-cp312-cp312-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py312/numba-0.61.2-cp312-cp312-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py312/numpy-2.2.5-cp312-cp312-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py312/onnxruntime-1.21.1-cp312-cp312-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py312/shapely-2.1.0-cp312-cp312-win_amd64.whl
 #
 https://wheelhouse.openquake.org/v3/windows/py312/psutil-6.0.0-cp312-abi3-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/charset_normalizer-3.4.0-cp312-cp312-win_amd64.whl
