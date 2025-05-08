@@ -55,22 +55,24 @@ A simple *Exposure Model Metadata XML* is shown in the listing below:
 	</nrml>
 
 Let us take a look at each of the sections in the above example file.
-There are 5 main section:
+There are 5 main sections:
 - general info
 - conversions
 - occupancyPeriods
 - tagNames
 - assets
 
-And the section of `exposureFields` that can be used when asset information is provided in csv format.
+An additional section, ``exposureFields``, can be included when the asset information is provided in CSV format.
 
+************
 general info
 ************
 
-The general information in the metadata XML is common to all of the assets in the portfolio and needs to be incorporated at 
-the beginning of every *Exposure Model XML* file. There are a number of parameters that compose the general info section, which is 
-intended to provide general information regarding the assets within the *Exposure Model*. These parameters are described 
-below:
+The general information section in the metadata XML provides an overview of the characteristics of the exposure model,
+is common to all of the assets in the portfolio, and needs to be incorporated at 
+the beginning of every *Exposure Model XML* file. There are a number of parameters that compose the general info section,
+which is intended to provide general information regarding the assets within the *Exposure Model*. 
+These parameters are described below:
 
 .. code-block:: xml
 
@@ -89,6 +91,7 @@ below:
 - ``description``: mandatory; a brief string (ASCII) with further information about the *Exposure Model*.
 
 
+***********
 conversions
 ***********
 
@@ -175,10 +178,11 @@ structure was used, it is important to mention that any of the other cost storin
 also be employed.
 
 
+****************
 occupancyPeriods
 ****************
 
-The OpenQuake engine is also capable of estimating human losses, based on the number of occupants in an asset, at a 
+The OpenQuake engine is also capable of estimating human losses based on the number of occupants in an asset, at a 
 certain time of the day. The `occupancyPeriods` section is common to all of the assets in the portfolio. 
 This section is only required for probabilistic or scenario calculations that specify an ``occupants_vulnerability_file``. 
 
@@ -193,8 +197,9 @@ Currently supported valid options for the ``period`` are: ``day``, ``transit``, 
 Currently, the number of ``occupants`` for an asset can only be provided as an aggregated value for the asset.
 
 
+********
 tagNames
-*********
+********
 
 Starting from OpenQuake engine v2.7, the user may also provide a set of tags for each asset in the *Exposure Model*. The 
 primary intended use case for the tags is to enable aggregation or accumulation of risk results (casualties / damages / 
@@ -209,8 +214,9 @@ Note that it is not mandatory that every tag name specified in the metadata sect
 for each asset.
 
 
+******
 assets
-*******
+******
 
 The `assets` section is the part of the file describing the set of assets in the portfolio to be used in seismic damage 
 or risk calculations.
@@ -239,6 +245,7 @@ The asset information in an *Exposure Model* can be provided in different format
 2. **CSV Format**: Asset information can also be provided in one or more CSV files, with the metadata section referencing these files. This approach is useful for large datasets. The CSV files must include headers that match the expected attributes, such as `id`, `lon`, `lat`, `taxonomy`, `number`, `structural`, `area`, and others.
 
 
+**************
 exposureFields
 **************
 
@@ -266,13 +273,15 @@ The example below demonstrates how custom headers in a `.csv` file can be mapped
 	</exposureFields>
 
 
+
 Exposure model in CSV format
--------------------------------
+----------------------------
 
 A combination of XML and CSV formats can be used, where the metadata is defined in XML and the asset data is stored in CSV files. This allows for flexibility and scalability.
 
+**************
 Example `.csv`
-*************
+**************
 
 This example illustrates the use of multiple csv files containing the assets information, in conjunction with the 
 metadata section in the usual xml format.
@@ -359,9 +368,9 @@ file or a spreadsheet can be found at the OpenQuake platform at the following ad
 
 
 Exposure models in XML format
---------------------------------
+-----------------------------
 
-
+*************
 Example XML 1
 *************
 
@@ -452,6 +461,7 @@ aggregated value for all structural units (within a given asset) at each locatio
 need to define other attributes such as ``number`` or ``area``. This mode of representing an *Exposure Model* is probably 
 the simplest one.
 
+*************
 Example XML 2
 *************
 
@@ -536,6 +546,7 @@ out the risk calculations in which the economic cost of each asset is provided, 
 asset, the number of units (buildings) by the “per asset” replacement cost. Note that in this case, there is no need to 
 specify the attribute ``area``.
 
+*************
 Example XML 3
 *************
 
@@ -626,6 +637,7 @@ Once again, the OpenQuake engine needs to carry out some calculations in order t
 In this case, this value is computed by multiplying the aggregated built up ``area`` of each asset by the associated cost 
 per unit area. Notice that in this case, there is no need to specify the attribute ``number``.
 
+*************
 Example XML 4
 *************
 
@@ -714,6 +726,7 @@ the assets for this example:
 In this example, the OpenQuake engine will make use of all the parameters to estimate the various costs of each asset, by 
 multiplying the number of structural units by its average built up area, and then by the respective cost per unit area.
 
+*************
 Example XML 5
 *************
 
@@ -756,6 +769,7 @@ Despite the fact that for the demonstration of how the retrofitting cost can be 
 structure described in Example 1 was used, it is important to mention that any of the other cost storing approaches can 
 also be employed (Examples 2–4).
 
+*************
 Example XML 6
 *************
 
@@ -809,6 +823,7 @@ aggregated values for all of the buildings comprising the asset:
 	
 	</nrml>
 
+*************
 Example XML 7
 *************
 
