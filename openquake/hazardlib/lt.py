@@ -17,12 +17,14 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import pickle
 import itertools
 import collections
 import numpy
 
 from openquake.baselib.general import CallableDict, BASE183, BASE33489
-from openquake.hazardlib import geo
+from openquake.baselib.node import Node
+from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
@@ -57,7 +59,8 @@ def unknown(utype, node, filename):
     try:
         return float(node.text)
     except (TypeError, ValueError):
-        raise LogicTreeError(node, filename, 'expected single float value')
+        raise LogicTreeError(
+            node, filename, 'expected single float value, got %r' % node.text)
 
 
 parse_uncertainty = CallableDict(keymissing=unknown)
@@ -96,6 +99,15 @@ def trucMFDFromSlip_absolute(utype, node, filename):
 @parse_uncertainty.add('setMSRAbsolute')
 def setMSR_absolute(utype, node, filename):
     return valid.mag_scale_rel(node.text)
+
+
+@parse_uncertainty.add('areaSourceGeometryAbsolute')
+def areaGeom(utype, node, filename):
+    geom = node.areaGeometry
+    usd = ~geom.upperSeismoDepth
+    lsd = ~geom.lowerSeismoDepth
+    coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
+    return coords, usd, lsd
 
 
 @parse_uncertainty.add('simpleFaultGeometryAbsolute')
@@ -235,6 +247,13 @@ def _validate_planar_fault_geometry(utype, node, filename):
 apply_uncertainty = CallableDict()
 
 
+@apply_uncertainty.add('areaSourceGeometryAbsolute')
+def _area_source_geom_absolute(utype, source, value):
+    coords, usd, lsd = value
+    poly = geo.Polygon([geo.Point(*p) for p in coords])
+    source.modify('set_geometry', dict(polygon=poly))
+
+
 @apply_uncertainty.add('simpleFaultDipRelative')
 def _simple_fault_dip_relative(utype, source, value):
     source.modify('adjust_dip', dict(increment=value))
@@ -328,6 +347,11 @@ def _recompute_mmax_absolute(utype, source, value):
 @apply_uncertainty.add('setLowerSeismDepthAbsolute')
 def _setLSD(utype, source, value):
     source.modify('set_lower_seismogenic_depth', dict(lsd=float(value)))
+
+
+@apply_uncertainty.add('setUpperSeismDepthAbsolute')
+def _setUSD(utype, source, value):
+    source.modify('set_upper_seismogenic_depth', dict(lsd=float(value)))
 
 
 @apply_uncertainty.add('dummy')  # do nothing
@@ -520,6 +544,13 @@ class Branch(object):
         """
         return self.bset is None or self.bset.uncertainty_type == 'dummy'
 
+
+    def to_node(self):
+        attrib = dict(branchID=self.branch_id)
+        nodes = [Node('uncertaintyModel', {}, self.value),
+                 Node('uncertaintyWeight', {}, self.weight)]
+        return Node('logicTreeBranch', attrib, None, nodes)
+
     def __repr__(self):
         if self.bset:
             return '%s%s' % (self.branch_id, self.bset)
@@ -658,7 +689,11 @@ class BranchSet(object):
             if branch.bset is not None:  # dummies can be branchpoints
                 yield from branch.bset._enumerate_paths(path_branch)
             else:
+                # here is an example of path_branch[1].value:
+                # [('simpleFaultGeometry', ([(-64.5, -0.3822), (-64.5, 0.3822)],
+                #                             2.0, 15.0, 90.0, 2.0))]
                 yield path_branch
+
 
     def __getitem__(self, branch_id):
         """
@@ -728,6 +763,17 @@ class BranchSet(object):
         for br in self.branches:
             lst.append([br.branch_id, '...', br.weight])
         return lst
+
+    def check_duplicates(self, filename=''):
+        """
+        Check if the underlying branches are duplicated
+        """
+        values = [pickle.dumps(br.value, protocol=4) for br in self.branches]
+        if len(set(values)) < len(values):
+            bs_id = self.branches[0].bs_id
+            brvalues = '\n'.join(str(br.value) for br in self.branches)
+            raise ValueError(
+                f'{filename}: duplicated branches in {bs_id}:\n{brvalues}')
 
     def __len__(self):
         return len(self.branches)
@@ -812,6 +858,9 @@ class CompositeLogicTree(object):
     """
     def __init__(self, branchsets):
         self.branchsets = branchsets
+        for i, bset in enumerate(branchsets):
+            bset.ordinal = i
+            bset.check_duplicates()
         self.basepaths = self._attach_to_branches()
 
     def _attach_to_branches(self):
@@ -861,13 +910,40 @@ class CompositeLogicTree(object):
     def get_all_paths(self):
         return [rlz.lt_path for rlz in self]
 
+    def to_node(self):
+        """
+        Converts the undelying branchsets into a node that can be serialized
+        into XML with the function nrml.write([node], outfile)
+        """
+        out = Node('logicTree', dict(logicTreeID="lt"))
+        for bset in self.branchsets:
+            attrib = dict(uncertaintyType=bset.uncertainty_type,
+                          branchSetID=f'bs{bset.ordinal}')
+            attrib.update(bset.filters)
+            if 'applyToBranches' in attrib and not attrib['applyToBranches']:
+                # remove empty attribute
+                del attrib['applyToBranches']
+            n = Node('logicTreeBranchSet', attrib, None,
+                     [br.to_node() for br in bset.branches])
+            out.nodes.append(n)
+        return out
+
+    def to_nrml(self):
+        """
+        Converts the logic tree into a string in NRML format
+        """
+        return nrml.to_string(self.to_node())
+
     def __repr__(self):
         return '<%s>' % self.branchsets
 
 
-def build(*bslists):
+def build(*bslists, applyToSources=''):
     """
-    :param bslists: a list of lists describing branchsets
+    :param bslists:
+        a list of lists describing branchsets
+    :param applyToSources:
+        source ID (used on Absolute uncertainties)
     :returns: a `CompositeLogicTree` instance
 
     >>> lt = build(['sourceModel', '',
@@ -876,16 +952,19 @@ def build(*bslists):
     ...           ['extendModel', '',
     ...              ['C', 'extra1', 0.6],
     ...              ['D', 'extra2', 0.2],
-    ...              ['E', 'extra2', 0.2]])
+    ...              ['E', 'extra3', 0.2]])
     >>> lt.get_all_paths()
     ['AC', 'AD', 'AE', 'BC', 'BD', 'BE']
     """
     bsets = []
     for i, (utype, applyto, *brlists) in enumerate(bslists):
+        bsid = 'bs%02d' % i
         branches = []
         for brid, value, weight in brlists:
-            branches.append(Branch('bs%02d' % i, brid, weight, value))
+            branches.append(Branch(bsid, brid, weight, value))
         bset = BranchSet(utype, i, dict(applyToBranches=applyto))
+        if applyToSources and utype.endswith('Absolute'):
+            bset.filters['applyToSources'] = applyToSources.split()
         bset.branches = branches
         bsets.append(bset)
     return CompositeLogicTree(bsets)

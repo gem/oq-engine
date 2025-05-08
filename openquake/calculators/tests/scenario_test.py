@@ -140,6 +140,10 @@ class ScenarioTestCase(CalculatorTestCase):
         [f] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('realizations.csv', f)
 
+        # test ebruptures
+        [ebr] = getters.get_ebruptures(self.calc.datastore)
+        self.assertEqual(ebr.n_occ, 20)
+
     def test_case_10(self):
         # test importing an exposure with automatic gridding
         self.run_calc(case_10.__file__, 'job.ini')

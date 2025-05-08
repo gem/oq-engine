@@ -148,7 +148,8 @@ class PointSource(ParametricSeismicSource):
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
     code = b'P'
-    MODIFICATIONS = set()
+    MODIFICATIONS = {'set_lower_seismogenic_depth',
+                     'set_upper_seismogenic_depth'}
     ps_grid_spacing = 0  # updated in CollapsedPointSource
 
     def __init__(self, source_id, name, tectonic_region_type,
@@ -167,10 +168,13 @@ class PointSource(ParametricSeismicSource):
             raise ValueError('lower seismogenic depth must be below '
                              'upper seismogenic depth')
 
-        if not all(upper_seismogenic_depth <= depth <= lower_seismogenic_depth
-                   for (prob, depth) in hypocenter_distribution.data):
-            raise ValueError('depths of all hypocenters must be in between '
-                             'lower and upper seismogenic depths')
+        for _prob, depth in hypocenter_distribution.data:
+            if depth > lower_seismogenic_depth:
+                raise ValueError(
+                    f'{depth=} is below {lower_seismogenic_depth=}')
+            elif depth < upper_seismogenic_depth:
+                raise ValueError(
+                    f'{depth=} is over {upper_seismogenic_depth=}')
 
         if not upper_seismogenic_depth > geodetic.EARTH_ELEVATION:
             raise ValueError(
@@ -342,6 +346,20 @@ class PointSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         return len(self.get_annual_occurrence_rates()) * self.count_nphc()
+
+    def modify_set_lower_seismogenic_depth(self, lsd):
+        """
+        Modifies the current source geometry by replacing the original
+        lower seismogenic depth with the passed depth
+        """
+        self.lower_seismogenic_depth = lsd
+
+    def modify_set_upper_seismogenic_depth(self, usd):
+        """
+        Modifies the current source geometry by replacing the original
+        upper seismogenic depth with the passed depth
+        """
+        self.upper_seismogenic_depth = usd
 
     @property
     def polygon(self):

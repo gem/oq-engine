@@ -1013,10 +1013,10 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
         rupture_mesh_spacing=5.).convert_node(rup_node)
     rup.tectonic_region_type = '*'
     hp = rup.hypocenter
-    rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
-                  mag=rup.mag, rake=rup.rake,
-                  strike=rup.surface.get_strike(),
-                  dip=rup.surface.get_dip(),
+    rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
+                  mag=float(rup.mag), rake=float(rup.rake),
+                  strike=float(rup.surface.get_strike()),
+                  dip=float(rup.surface.get_dip()),
                   usgs_id=usgs_id,
                   rupture_file=rupture_file)
     return rup, rupdic, err
@@ -1033,8 +1033,8 @@ def _get_rup_dic_from_csv(usgs_id, user, rupture_file):
     hp = rup.hypocenter
     rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
                   mag=float(rup.mag), rake=float(rup.rake),
-                  strike=rup.surface.get_strike(),
-                  dip=rup.surface.get_dip(),
+                  strike=float(rup.surface.get_strike()),
+                  dip=float(rup.surface.get_dip()),
                   usgs_id=usgs_id,
                   rupture_file=rupture_file)
     return rup, rupdic, err

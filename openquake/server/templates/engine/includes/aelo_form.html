@@ -27,8 +27,8 @@
                 <thead>
                   <tr>
                     <th><label class="aelo-label" for="asce_version">{{ aelo_form_labels.asce_version }}</label></th>
-                    <th><label class="aelo-label" for"vs30">{{ aelo_form_labels.vs30 }}</label></th>
-                    <th><label class="aelo-label custom-vs30" for"custom_vs30">{{ aelo_form_labels.custom_vs30 }}</label></th>
+                    <th><label class="aelo-label" for"site_class">{{ aelo_form_labels.site_class }}</label></th>
+                    <th><label class="aelo-label vs30" for"vs30">{{ aelo_form_labels.vs30 }}</label></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -44,8 +44,8 @@
                         {% endfor %}
                         </select>
                     </td>
-                    <td><select class="aelo-select" name="vs30" id="vs30"><option value="760">BC (Vs30 760)</option></select></td>
-                    <td><span class="custom-vs30"><input class="aelo-input" type="text" id="custom_vs30" name="custom_vs30" placeholder="{{ aelo_form_placeholders.custom_vs30 }}"/></span></td>
+                    <td><select class="aelo-select" name="site_class" id="site_class"><option value="760">BC</option></select></td>
+                    <td><span class="vs30"><input class="aelo-input" type="text" id="vs30" name="vs30" value='760' placeholder="{{ aelo_form_placeholders.vs30 }}" disabled/></span></td>
                   </tr>
                 </tbody>
               </table>

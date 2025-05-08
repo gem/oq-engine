@@ -1,6 +1,30 @@
+  [Michele Simionato, Paolo Tormene]
+  * Added a route /v1/calc/XXX/job_zip and a button to download the archive
+    from the WebUI, visible only in OQImpact for level 2 users
+  * Fixed an error in `oq plot examples`
+
+  [Baran Güryuva, Christopher Brooks]
+  * Implemented the EMME24 backbone GMC for crustal
+    earthquakes (emme24.py)
+
+  [Marco Pagani, Michele Simionato]
+  * Added uncertainties for area geometry and seismogenic depths
+
+  [Michele Simionato]
+  * Added a check on duplicate branches in the source model logic tree
+  * Internal: added methods `CompositeLogicTree.to_node` and
+    `CompositeLogicTree.to_nrml`
+
+  [Paolo Tormene, Michele Simionato]
+  * Added extractor for 'damages-stats'
+
+  [Kendra Johnson]
+  * Updated the mosaic geometries for AELO year 4
+
   [Matteo Nastasi]
   * Allow free mapping between standlone apps and their url path prefix
     (regardless of their name)
+
   [Claudia Mascandola]
   * Added GMPEs of ambraseys_1996 and sabetta_pugliese_1996
 
@@ -79,6 +103,8 @@
 
   [Marco Pagani, Valeria Cascone]
   * Added an get_width and get_length methods to Strasser et al. (2010) MSR
+  * Added methods get_length and get_width to the Thingbaijam et al. scaling
+    relationship
   * Fixed a bug in the Thingbaijam et al. (2017) MSR
 
   [Michele Simionato]

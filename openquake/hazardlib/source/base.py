@@ -67,7 +67,7 @@ def is_poissonian(src):
         return False
     return True
 
-    
+
 def poisson_sample(src, eff_num_ses, seed):
     """
     :param src: a poissonian source

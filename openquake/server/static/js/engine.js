@@ -641,69 +641,65 @@ function capitalizeFirstLetter(val) {
                                setTimer();
                            });
 
-            $('select#vs30').on('change', function() {
-                const vs30 = $(this).val();
-                if (vs30 === 'custom') {
-                    $('.custom-vs30').fadeIn();
+            $('select#site_class').on('change', function() {
+                const site_class = $(this).val();
+                const $input_vs30 = $('input#vs30');
+                if (site_class === 'custom') {
+                    $input_vs30.prop('disabled', false);
+                    $input_vs30.val('');
                 } else {
-                    $('.custom-vs30').fadeOut();
+                    $input_vs30.prop('disabled', true);
+                    $input_vs30.val($(this).val());
                 }
             });
 
             $('#asce_version').on('change', function() {
                 const asce_version = $(this).val();
-                const $vs30_select = $('select#vs30');
-                $vs30_select.empty();
+                const $site_class_select = $('select#site_class');
+                const $input_vs30 = $('input#vs30');
+                $site_class_select.empty();
                 if (asce_version === 'ASCE7-16') {
-                    $vs30_select.append(
-                        $('<option>', {
-                            value: 760,
-                            text: 'BC (Vs30 760)'
-                        })
-                    );
+                    $site_class_select.append($('<option>', {value: 760, text: 'BC'}));
+                    $input_vs30.val($site_class_select.val());
                 } else if (asce_version === 'ASCE7-22') {
                     const items = [
-                        {value: 260, text: 'Unknown (D: Vs30 260)' },
-                        {value: 1500, text: 'A (Vs30 1500)'},
-                        {value: 1080, text: 'B (Vs30 1080)' },
-                        {value: 760, text: 'BC (Vs30 760)' },
-                        {value: 530, text: 'C (Vs30 530)' },
-                        {value: 365, text: 'CD (Vs30 365)' },
-                        {value: 260, text: 'D (Vs30 260)' },
-                        {value: 185, text: 'DE (Vs30 185)' },
-                        {value: 150, text: 'E (Vs30 150)' },
-                        {value: 'custom', text: 'Custom Vs30'},
+                        {value: 1500, text: 'A - Hard Rock'},
+                        {value: 1080, text: 'B - Rock' },
+                        {value: 760, text: 'BC' },
+                        {value: 530, text: 'C - Very Dense Soil and Soft Rock' },
+                        {value: 365, text: 'CD' },
+                        {value: 260, text: 'D - Stiff Soil' },
+                        {value: 185, text: 'DE ' },
+                        {value: 150, text: 'E - Soft Clay Soil' },
+                        {value: 'custom', text: 'Custom'},
                     ];
+                    const default_site_class = 'BC';
                     items.forEach(item => {
-                        $vs30_select.append(
+                        $site_class_select.append(
                             $("<option>", {
                                 value: item.value,
-                                text: item.text
+                                text: item.text,
+                                selected: item.text === default_site_class
                             })
                         );
                     });
                 }
-                if ($vs30_select.val() === 'custom') {
-                    $('.custom-vs30').fadeIn();
+                if ($site_class_select.val() === 'custom') {
+                    $input_vs30.prop('disabled', false);
+                    $input_vs30.val('');
                 } else {
-                    $('.custom-vs30').fadeOut();
+                    $input_vs30.prop('disabled', true);
+                    $input_vs30.val($site_class_select.val());
                 }
             });
 
             // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
             $("#aelo_run_form").submit(function (event) {
                 $('#submit_aelo_calc').prop('disabled', true);
-                var vs30;
-                const $vs30_select = $('select#vs30');
-                if ($vs30_select.val() === 'custom') {
-                    vs30 = parseFloat($("input#custom_vs30").val());
-                } else {
-                    vs30 = parseFloat($("select#vs30").val());
-                }
                 var formData = {
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
-                    vs30: vs30,
+                    vs30: parseFloat($("input#vs30").val()),
                     siteid: $("#siteid").val(),
                     asce_version: $("#asce_version").val()
                 };

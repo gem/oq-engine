@@ -360,10 +360,6 @@ tr.asce_output {
     width: 207px;
 }
 
-.custom-vs30 {
-    display: none;
-}
-
 .table-aelo-form {
     width: 70%;
     margin-bottom: 0;
@@ -421,10 +417,10 @@ tr.asce_output {
     width: 90px;
 }
 
-.my-pngs a {
+.my-pngs a, .outputs-general-btns-right a {
     width: 190px;
 }
-.my-pngs {
+.my-pngs, .bottom-right-btns {
     margin-bottom: 3px;
 }
 
