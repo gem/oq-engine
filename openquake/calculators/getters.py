@@ -354,14 +354,15 @@ def get_ebruptures(dstore):
     """
     ebrs = []
     trts = list(dstore['full_lt/gsim_lt'].values)
-    if 'trt_smr_start_stop' in dstore:  # event based
+    if 'trt_smr_start_stop' in dstore:  # regular case
         for trt_smr, start, stop in dstore['trt_smr_start_stop']:
             trt = trts[trt_smr // TWO24]
             for proxy in get_proxies(dstore.filename, slice(start, stop)):
                 ebrs.append(proxy.to_ebr(trt))
-    else:  # scenario
-        for proxy in get_proxies(dstore.filename):
-            ebrs.append(proxy.to_ebr('*'))
+    else:  # OQImpact calculations, I have no test for this :-(
+        1/0
+        for proxy in get_proxies(dstore.filename, slice(None)):
+            ebrs.append(proxy.to_ebr(trts[0]))
     return ebrs
 
 
