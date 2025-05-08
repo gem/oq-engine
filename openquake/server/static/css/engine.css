@@ -417,7 +417,7 @@ tr.asce_output {
     width: 90px;
 }
 
-.my-pngs a {
+.my-pngs a, .outputs-general-btns-right a {
     width: 190px;
 }
 .my-pngs, .bottom-right-btns {
