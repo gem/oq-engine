@@ -11,7 +11,7 @@ https://wheelhouse.openquake.org/macos/arm64/py311/llvmlite-0.44.0-cp311-cp311-m
 #
 https://wheelhouse.openquake.org/macos/arm64/py311/charset_normalizer-3.3.2-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py311/pyzmq-26.0.3-cp311-cp311-macosx_10_15_universal2.whl
-https://wheelhouse.openquake.org/macos/arm64/py311/pandas-2.0.3-cp311-cp311-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py311/pandas-2.2.3-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py311/kiwisolver-1.4.5-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py311/h5py-3.10.0-cp311-cp311-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py311/Pillow-10.1.0-cp311-cp311-macosx_11_0_arm64.whl
