@@ -51,7 +51,8 @@ def check_export_job(dstore):
         'residents_vulnerability.xml',
         'structural_vulnerability.xml',
         'taxonomy_mapping.csv',
-        'sites.csv']
+        'sites.csv',
+        'assetcol.csv']
     return fnames
 
 

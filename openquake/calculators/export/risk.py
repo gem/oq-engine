@@ -818,7 +818,7 @@ def export_job_zip(ekey, dstore):
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])
     inputs['job_ini'] = job_ini
-    [exposure_xml, _assetcol_csv] = export_exposure(('exposure', 'zip'), dstore)
+    [exposure_xml, assetcol_csv] = export_exposure(('exposure', 'zip'), dstore)
     inputs['exposure'] = exposure_xml
     csv = extract(dstore, 'ruptures?slice=0&slice=1').array
     dest = dstore.export_path('rupture.csv')
@@ -844,4 +844,4 @@ def export_job_zip(ekey, dstore):
     writer.save(dstore['sitecol'].array, inputs['sites'])
     with open(job_ini, 'w') as out:
         out.write(oq.to_ini(**inputs))
-    return list(inputs.values())
+    return list(inputs.values()) + [assetcol_csv]
