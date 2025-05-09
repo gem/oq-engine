@@ -31,7 +31,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-            python install.py devel --version=master
+            python install.py devel --version=$GITHUB_HEAD_REF
+            #python install.py devel --version=master
       - name: Calculators hazard tests
         run: |
           set -e
