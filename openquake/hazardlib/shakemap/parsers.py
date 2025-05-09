@@ -724,11 +724,9 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
         # grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         if user.testdir:  # in parsers_test
             grid_fname = f'{user.testdir}/{usgs_id}-grid.xml'
+            shakemap_array = get_shakemap_array(grid_fname)
         else:
-            logging.info('Downloading grid.xml')
-            with monitor('Downloading grid.xml'):
-                grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
-        shakemap_array = get_shakemap_array(grid_fname)
+            shakemap_array = get_array_usgs_id("usgs_id", usgs_id)
     else:
         shakemap_array = None
     return contents, properties, shakemap_array, err
@@ -741,10 +739,12 @@ def _get_nodal_planes(properties):
     # try first reading from the moment tensor, if available. If nodal planes can not be
     # collected from there, fallback attempting to read them from the focal mechanism
     if 'moment-tensor' in properties['products']:
-        moment_tensor = _get_usgs_preferred_item(properties['products']['moment-tensor'])
+        moment_tensor = _get_usgs_preferred_item(
+            properties['products']['moment-tensor'])
         nodal_planes = _get_nodal_planes_from_product(moment_tensor)
     if not nodal_planes and 'focal-mechanism' in properties['products']:
-        focal_mechanism = _get_usgs_preferred_item(properties['products']['focal-mechanism'])
+        focal_mechanism = _get_usgs_preferred_item(
+            properties['products']['focal-mechanism'])
         nodal_planes = _get_nodal_planes_from_product(focal_mechanism)
     if not nodal_planes:
         err = {'status': 'failed',
@@ -999,6 +999,8 @@ def get_array_usgs_id(kind, id):
         raise MissingLink('Could not find grid.xml link in %s' % url)
     uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
         'download/uncertainty.xml')
+    if not uncertainty:
+        logging.warning('No uncertainty.xml file')
     return get_array(
         kind='usgs_xml', grid_url=grid['url'],
         uncertainty_url=uncertainty['url'] if uncertainty else None)
