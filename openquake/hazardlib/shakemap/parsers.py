@@ -982,15 +982,15 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
     return rup, rupdic, err
 
 
-def get_array_usgs_id(kind, usgs_id):
+def get_array_usgs_id(kind, id):
     """
     Download a ShakeMap from the USGS site.
 
     :param kind: the string "usgs_id", for API compatibility
-    :param usgs_id: ShakeMap ID
+    :param id: ShakeMap ID
     """
     # not tested on purpose
-    url = SHAKEMAP_URL.format(usgs_id)
+    url = SHAKEMAP_URL.format(id)
     logging.info('Downloading %s', url)
     contents = json.loads(urlopen(url).read())[
         'properties']['products']['shakemap'][-1]['contents']

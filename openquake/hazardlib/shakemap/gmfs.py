@@ -184,7 +184,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     M = len(imts)
     if N * M > cholesky_limit:
         raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
-            '%d x %d' % (M, N), cholesky_limit))
+            f'{M=} x {N=}', cholesky_limit))
 
     # Cross Correlation
     cross_corr = cross_correlation_matrix(imts, crosscorr)

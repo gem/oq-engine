@@ -815,6 +815,16 @@ def export_job_zip(ekey, dstore):
     """
     inputs = {}
     oq = dstore['oqparam']
+    if 'usgs_id' in oq.rupture_dict:
+        oq.shakemap_uri = {'kind': 'usgs_id',
+                           'id': oq.rupture_dict['usgs_id']}
+        oq.rupture_dict.pop('rupture_file', None)
+        oq.rupture_dict.pop('mmi_file', None)
+        oq.inputs.pop('rupture', None)
+        oq.inputs.pop('mmi', None)
+        gsim_lt = None  # from shakemap
+    else:
+        gsim_lt = dstore['full_lt'].gsim_lt        
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])
     inputs['job_ini'] = job_ini
@@ -825,12 +835,11 @@ def export_job_zip(ekey, dstore):
     with open(dest, 'w') as out:
         out.write(csv)
     inputs['rupture_model'] = dest
-    gsim_lt = dstore['full_lt'].gsim_lt
-    dest = dstore.export_path('gsim_logic_tree.xml')
-    with open(dest, 'wb') as out:
-        nrml.write([gsim_lt.to_node()], out)
-    inputs['gsim_logic_tree'] = dest
-    oq.gsim = '[FromFile]'
+    if gsim_lt:
+        dest = dstore.export_path('gsim_logic_tree.xml')
+        with open(dest, 'wb') as out:
+            nrml.write([gsim_lt.to_node()], out)
+        inputs['gsim_logic_tree'] = dest
     inputs.update(export_vulnerability_xml(dstore))
     dest = dstore.export_path('taxonomy_mapping.csv')
     taxmap = dstore.read_df('taxmap')
