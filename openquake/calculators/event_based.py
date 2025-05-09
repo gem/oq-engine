@@ -736,7 +736,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
-        if oq.impact or 'id' in oq.shakemap_uri:
+        if oq.impact and 'id' in oq.shakemap_uri:
             # this is creating gmf_data
             base.store_gmfs_from_shakemap(self, self.sitecol, self.assetcol)
             return {}
