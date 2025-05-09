@@ -53,6 +53,7 @@ jobs:
             python install.py devel --version ${BRANCH}
           else
             python install.py devel --version master
+          fi
       - name: Install Tools using master branch
         run: |
           set -x
@@ -178,6 +179,7 @@ jobs:
             python install.py devel --version ${BRANCH}
           else
             python install.py devel --version master
+          fi
       - name: Calculators hazard tests
         run: |
           set -e
@@ -221,6 +223,7 @@ jobs:
             python install.py devel --version ${BRANCH}
           else
             python install.py devel --version master
+          fi
       - name: Hazardlib tests
         run: |
           set -e
@@ -272,6 +275,7 @@ jobs:
             python install.py devel --version ${BRANCH}
           else
             python install.py devel --version master
+          fi
       - name: Server 'PUBLIC' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -325,6 +329,7 @@ jobs:
             python install.py devel --version ${BRANCH}
           else
             python install.py devel --version master
+          fi
       - name: Server 'READ_ONLY' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -369,6 +374,7 @@ jobs:
             python install.py devel --version ${BRANCH}
           else
             python install.py devel --version master
+          fi
       - name: Actualize 'aelo' templates for email notifications
         run: |
           for file in ./openquake/server/templates/registration/*.aelo.tmpl; do
@@ -423,6 +429,7 @@ jobs:
             python install.py devel --version ${BRANCH}
           else
             python install.py devel --version master
+          fi
       - name: Actualize 'impact' templates for email notifications
         run: |
           for file in ./openquake/server/templates/registration/*.impact.tmpl; do
