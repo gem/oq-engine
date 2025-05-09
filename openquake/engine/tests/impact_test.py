@@ -53,6 +53,7 @@ def check_export_job(dstore):
         'taxonomy_mapping.csv',
         'sites.csv',
         'assetcol.csv']
+    # there is not gmfs_file, since this is a test without shakemap
     return fnames
 
 

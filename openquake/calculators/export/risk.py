@@ -816,15 +816,22 @@ def export_job_zip(ekey, dstore):
     inputs = {}
     oq = dstore['oqparam']
     if 'usgs_id' in oq.rupture_dict:
-        oq.shakemap_uri = {'kind': 'usgs_id',
-                           'id': oq.rupture_dict['usgs_id']}
+        df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
+        ren = {'sid': 'site_id', 'eid': 'event_id'}
+        df.rename(columns=ren, inplace=True)
+        gmf_fname = dstore.build_fname('gmf', 'data', 'csv')
+        writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
+            df, gmf_fname, comment=dstore.metadata)
+        inputs['gmfs'] = gmf_fname
+        oq.shakemap_uri = {'kind': 'usgs_id', 'id': oq.rupture_dict['usgs_id']}
         oq.rupture_dict.pop('rupture_file', None)
         oq.rupture_dict.pop('mmi_file', None)
         oq.inputs.pop('rupture', None)
         oq.inputs.pop('mmi', None)
         gsim_lt = None  # from shakemap
     else:
-        gsim_lt = dstore['full_lt'].gsim_lt        
+        gsim_lt = dstore['full_lt'].gsim_lt
+        gmf_fname = ''
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])
     inputs['job_ini'] = job_ini
@@ -853,4 +860,5 @@ def export_job_zip(ekey, dstore):
     writer.save(dstore['sitecol'].array, inputs['sites'])
     with open(job_ini, 'w') as out:
         out.write(oq.to_ini(**inputs))
-    return list(inputs.values()) + [assetcol_csv]
+    fnames = list(inputs.values()) + [assetcol_csv]
+    return fnames + ([gmf_fname] if gmf_fname else [])
