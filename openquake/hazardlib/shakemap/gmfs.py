@@ -205,8 +205,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
 
     sig = numpy.array(stddev).flatten()[:, numpy.newaxis]  # (M,N) -> (M*N, 1)
     # mu has unit (pctg), L has unit ln(pctg), sig has unit ln(pctg)
-    return numpy.exp(L @ Z + numpy.log(mu) -
-                     (sig ** 2 / 2)) / PCTG
+    return numpy.exp(L @ Z + numpy.log(mu) - (sig ** 2 / 2)) / PCTG
 
 
 @calculate_gmfs.add('basic')
@@ -218,12 +217,12 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     :param imts: list of required imts
     :returns: F(Z, mu) to calculate gmfs
     """
-    # create vector with std values
+    # create vector with std values of shape (N*M, 1)
     sig = numpy.array([shakemap['std'][str(im)]
                       for im in imts]).flatten()
     sig = sig[:, numpy.newaxis]
 
-    # mu has unit (pctg), sig has unit ln(pctg)
+    # mu of shape (N*M, E) has unit (pctg), sig has unit ln(pctg)
     # multiply Z and sig column-wise and add mean
     return numpy.exp((Z * sig) + numpy.log(mu) - (sig ** 2 / 2.)) / PCTG
 
@@ -259,7 +258,7 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     :param num_gmfs: E, amount of gmfs to generate
     :param seed: seed for generating numbers
     :param imts: list of IMT-strings for which gmfs are generated
-    :returns: list of IMT-objects, array of GMFs of shape (R, N, E, M)
+    :returns: list of IMT-objects, array of GMFs of shape (N, E, M)
     """
     # create list of imts
     if imts is None or len(imts) == 0:
