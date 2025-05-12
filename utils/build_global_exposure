@@ -197,7 +197,7 @@ def main(mosaic_dir, grm_dir, wfp=False):
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.grm_dir = 'Directory containing the global risk model'
-
+main.wfp = 'If true, consider only 7 countries for the World Food Program'
 
 if __name__ == '__main__':
     sap.run(main)
