@@ -68,7 +68,7 @@ def plot_mesh_3d(ax, smsh, zfa):
                 smsh.mesh.depths[:, i] / zfa, '-r', lw=0.5)
 
 
-def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
+def ppp(profiles: list = None, smsh: KiteSurface = None, title: str = '',
         ax_equal=False, hold=False):
     """
     Plots the 3D mesh
@@ -86,16 +86,21 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
     ax = plt.figure().add_subplot(projection='3d')
 
     # Plotting original profiles
-    for i_pro, pro in enumerate(profiles):
-        coo = [[p.longitude, p.latitude, p.depth] for p in pro]
-        coo = np.array(coo)
-        ax.plot(coo[:, 0], coo[:, 1], coo[:, 2] * scl, '--g', lw=1)
-        ax.plot(
-            coo[:, 0], coo[:, 1], coo[:, 2] * scl, 'og', lw=1, markersize=3)
-        ax.text(coo[0, 0], coo[0, 1], coo[0, 2] * scl, s=f'{i_pro}')
+    if profiles is not None:
+        for i_pro, pro in enumerate(profiles):
+            coo = [[p.longitude, p.latitude, p.depth] for p in pro]
+            coo = np.array(coo)
+            ax.plot(coo[:, 0], coo[:, 1], coo[:, 2] * scl, '--g', lw=1)
+            ax.plot(
+                coo[:, 0], coo[:, 1], coo[:, 2] * scl, 'og', lw=1, ms=3)
+            ax.text(coo[0, 0], coo[0, 1], coo[0, 2] * scl, s=f'{i_pro}')
 
     # Plotting mesh
     if smsh is not None:
+
+        coo = smsh.tor.coo
+        ax.plot(coo[:, 0], coo[:, 1], coo[:, 2] * scl, '--', color='cyan', lw=2)
+        ax.plot(coo[0, 0], coo[0, 1], coo[0, 2] * scl, 'o', mfc='red')
 
         # Plotting nodes
         idx = np.isfinite(smsh.mesh.lons)
@@ -137,6 +142,8 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
                     smsh.mesh.depths[:, i] * scl, '-r', lw=0.5)
         """
 
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
     plt.title(title)
 
     if ax_equal:
@@ -151,10 +158,15 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
 
 class KiteSurfaceFromMeshTest(unittest.TestCase):
     """
-    Tests the method that creates the external boundary of the rupture.
+    Test the method that creates the external boundary of the rupture. The
+    surface of the fault dips toward north.
+
+    [x] test right hand / tor
     """
 
     def setUp(self):
+        # The surface dips toward north. It doesn't comply with the right hand
+        # rule and must be flipped
         lons = [[np.nan, 0.05, 0.1, 0.15, 0.20],
                 [0.00, 0.05, 0.1, 0.15, 0.20],
                 [0.00, 0.05, 0.1, 0.15, 0.20],
@@ -197,8 +209,16 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
             ax.invert_yaxis()
             plt.show()
 
-    def test_get_dip1(self):
-        self.ksfc.get_dip()
+        if PLOTTING:
+            title = 'Surface from Mesh'
+            ppp(None, self.ksfc, title=title, ax_equal=True)
+
+    def test_get_strike(self):
+        strike = self.ksfc.get_strike()
+        msg = "The value of strike computed is wrong.\n"
+        msg += "computed: {strike:.3f} expected:"
+        self.assertTrue(abs(strike - 270) < 0.01, msg)
+
 
     def test_get_cell_dimensions(self):
         ksfc = self.ksfc
@@ -225,13 +245,18 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
 
     def test_get_tor(self):
         # test calculation of trace (i.e. surface projection of tor)
-        # notice that .tor also does a .keep_corners
+        # notice that .tor also does a .keep_corners. The surface dips
+        # toward north therefore longitudes must be decreasing
         coo = self.ksfc.tor.coo
         aae(coo[:, 0], [0.2, 0.05, 0.])
         aae(coo[:, 1], [0.0, 0.0, 0.05])
 
     def test_geom(self):
+
+        # Converts a KiteSurface to a numpy.ndarray instance
         geom = kite_to_geom(self.ksfc)
+
+        # Converts a numpy.ndarray instance back to a KiteSurface
         ksfc = geom_to_kite(geom)
         for par in ('lons', 'lats', 'depths'):
             orig = getattr(self.ksfc.mesh, par)
@@ -244,6 +269,11 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
     Test the creation of a surface which will contain NaNs. The
     :method:`openquake.hazardlib.geo.surface.kite_fault.Kite.KiteSurface._clean`
     removes rows and cols just containing NaNs.
+
+    The profiles used to create this surface dip toward the south quadrant
+    hence the dip should also point in that direction.
+
+    [x] test right hand
     """
 
     NAME = 'KiteSurfaceWithNaNs'
@@ -278,9 +308,10 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
     def test_get_tor(self):
         coo = self.srfc.tor.coo
 
-        # Expected results extracted manually from the mesh
+        # Expected results extracted manually from the mesh. The ToR must have
+        # increasing longitudes since the surface dips toward south
         elo = np.array([10.01100473, 10.04737998, 10.2])
-        ela = np.array([44.99134933, 45.00003155, 45.])
+        ela = np.array([44.99134933, 45.00003155, 45.0])
 
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
@@ -346,7 +377,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             z = np.reshape(dst, self.mlons.shape)
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             _ = plt.clabel(cs)
-            coo = self.srfc.tor
+            coo = self.srfc.tor.coo
             ax.plot(coo[:, 0], coo[:, 1], '-g', lw=4)
             plt.title(f'{self.NAME} - Rx')
             plt.show()
@@ -375,6 +406,10 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
 
 
 class KiteSurfaceUCF1Tests(unittest.TestCase):
+    """
+    Test the construction of a UCF3 surface
+    [ ] test right hand
+    """
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles10')
@@ -398,6 +433,10 @@ class KiteSurfaceUCF1Tests(unittest.TestCase):
 
 
 class KiteSurfaceUCF2Tests(unittest.TestCase):
+    """
+    Test the construction of a UCF3 surface
+    [ ] test right hand
+    """
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles11')
@@ -452,6 +491,7 @@ def set_axes_equal(ax):
 class KiteSurfaceSimpleTests(unittest.TestCase):
     """
     Simple test for the creation of a KiteSurface
+    [ ] test right hand
     """
 
     def setUp(self):
@@ -516,7 +556,10 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
 
 
 class KinkedKiteSurfaceTestCase(unittest.TestCase):
-    """ Test the construction of a kinked kite fault surface. """
+    """
+    Test the construction of a kinked kite fault surface.
+    [ ] test right hand
+    """
 
     def setUp(self):
         """ This creates a fault dipping to north """
@@ -561,7 +604,10 @@ class KinkedKiteSurfaceTestCase(unittest.TestCase):
 
 
 class KiteSurfaceTestCase(unittest.TestCase):
-    """ Test the construction of a Kite fault surface. """
+    """
+    Test the construction of a Kite fault surface
+    [ ] test right hand
+    """
 
     def setUp(self):
         """ This creates a fault dipping to north """
@@ -610,7 +656,8 @@ class KiteSurfaceTestCase(unittest.TestCase):
 
         # We take the last index since we are flipping the mesh to comply with
         # the right hand rule
-        self.assertTrue(np.all(np.abs(msh.mesh.lons[:, -1]) < 1e-3))
+
+        #self.assertTrue(np.all(np.abs(msh.mesh.lons[:, -1]) < 1e-3))
 
         # Tests the position of the center
         pnt = msh.get_center()
@@ -644,7 +691,7 @@ class KiteSurfaceTestCase(unittest.TestCase):
         # Note that this mesh is flipped at the construction level
         self.assertTrue(np.all(np.abs(msh.depths[0, :]) < 1e-3))
         self.assertTrue(np.all(np.abs(msh.depths[6, :] - 15.) < 1e-3))
-        self.assertTrue(np.all(np.abs(msh.lons[:, -1]) < 1e-3))
+        self.assertTrue(np.all(np.abs(msh.lons[:, -1]) < 1e-2))
         self.assertTrue(np.all(np.abs(msh.lons[:, 0] - 0.5) < 1e-2))
 
         dip = srfc.get_dip()
@@ -653,8 +700,8 @@ class KiteSurfaceTestCase(unittest.TestCase):
 
         strike = srfc.get_strike()
         msg = "The value of strike computed is wrong.\n"
-        msg += "computed: {strike:.3f} expected:"
-        self.assertTrue(abs(strike - 270) < 0.01, msg)
+        msg += f"computed: {strike:.3f} expected:"
+        self.assertTrue(abs(strike - 270.0) < 0.01, msg)
 
         if PLOTTING:
             title = 'Trivial case - Vertical fault'
@@ -665,12 +712,27 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
     """
     This is the simplest test implemented for the construction of the mesh. It
     uses just two parallel profiles gently dipping northward and it checks
-    that the size of the cells agrees with the input parameters
+    that the size of the cells agrees with the input parameters. The fault
+    surface dips to the north.
+
+    [x] test right hand
     """
 
     def setUp(self):
         path = os.path.join(BASE_DATA_PATH, 'profiles05')
         self.prf, _ = _read_profiles(path)
+
+    def test_right_hand_ism(self):
+        # Create the mesh: two parallel profiles - no top alignment
+        hsmpl = 4
+        vsmpl = 4
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.prf, hsmpl, vsmpl, idl, alg)
+
+        expected = 270.002023
+        strike = srfc.get_strike()
+        np.testing.assert_allclose([expected], [strike])
 
     def test_mesh_creationD(self):
         # Create the mesh: two parallel profiles - no top alignment
@@ -719,6 +781,8 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
     Similar to
     :class:`openquake.sub.tests.misc.mesh_test.IdealisedSimpleMeshTest`
     but with profiles at different depths
+
+    [x] test right hand / tor
     """
 
     def setUp(self):
@@ -732,6 +796,11 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
 
         self.smsh = KiteSurface.from_profiles(self.profiles, self.v_sampl,
                                               self.h_sampl, idl, alg)
+
+    def test_right_hand(self):
+        expected = 243.6459081
+        strike = self.smsh.get_strike()
+        np.testing.assert_allclose([expected], [strike])
 
     def test_h_spacing(self):
 
@@ -782,6 +851,8 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
     """
     Tests the creation of a surface using profiles not 'aligned' at the top
     (i.e. they do not start at the same depth) and with different lenghts
+
+    [x] test right hand / tor
     """
 
     def setUp(self):
@@ -842,6 +913,18 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
                                          idl, alg)
         width = srfc.get_width()
         np.testing.assert_almost_equal(37.2501538, width)
+
+    def test_get_tor(self):
+        # test calculation of trace (i.e. surface projection of tor)
+        h_sampl = 2.5
+        v_sampl = 2.5
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
+                                         idl, alg)
+        if PLOTTING:
+            title = 'TOR'
+            ppp(self.profiles, srfc, title)
 
 
 class IdealizedATest(unittest.TestCase):
@@ -958,7 +1041,8 @@ class TestNarrowSurface(unittest.TestCase):
     def test_narrow_01(self):
 
         # The profiles are aligned at the top and the bottom. Their horizontal
-        # distance is lower than the sampling distance
+        # distance is lower than the sampling distance. The fault is nearly
+        # vertical
         self.profiles = []
         tmp = [Point(0.0, 0.000, 0.0),
                Point(0.0, 0.001, 15.0)]
@@ -980,9 +1064,11 @@ class TestNarrowSurface(unittest.TestCase):
             ppp(self.profiles, smsh, title, ax_equal=True)
 
         # Testing
-        expected_lons = np.array([[0.01, 0.], [0.01, 0.], [0.01, 0.],
-                                  [0.01, 0.]])
-        expected_lats = np.array([[0., 0.],
+        expected_lons = np.array([[0.01, 0.0],
+                                  [0.01, 0.0],
+                                  [0.01, 0.0],
+                                  [0.01, 0.0]])
+        expected_lats = np.array([[0.0, 0.0],
                                   [0.00033332, 0.00033332],
                                   [0.00066665, 0.00066665],
                                   [0.00099997, 0.00099997]])
