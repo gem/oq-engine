@@ -82,6 +82,4 @@ More info about ``nohup``: https://en.wikipedia.org/wiki/Nohup.
 Interactive use
 ---------------
 
-For an interactive use of ``oq`` we suggest to install `byobu <http://byobu.co/>`_ on the target server and use it to run ``oq``.
-
-More info about byobu: http://byobu.co/.
+For an interactive use of ``oq`` we suggest to install screen or byobu on the target server and use it to run ``oq``.
