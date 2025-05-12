@@ -56,7 +56,7 @@ def to_mmi(value):
         raise ValueError(f'{value} is too large to be an MMI')
     elif value < 0.5:
         raise ValueError(f'{value} is too small to be an MMI')
-    return round(value) - 1
+    return round(value)
 
 
 def add_dupl_fields(df, oqfields):
