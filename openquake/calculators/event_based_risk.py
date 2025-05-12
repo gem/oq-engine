@@ -70,7 +70,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         tot = ldf.groupby('aid').loss.sum()
         aids = tot.index.to_numpy()
         rlzs = numpy.zeros_like(tot)
-        return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
+        return sparse.coo_array((tot.to_numpy(), (aids, rlzs)), AR)
     else:
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy(),
@@ -78,7 +78,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         # the SURA calculation would fail with alt.eid being F64 (?)
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
-        return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
+        return sparse.coo_array((tot.to_numpy(), (aids, rlzs)), AR)
 
 
 def debugprint(ln, asset_loss_table, adf):
