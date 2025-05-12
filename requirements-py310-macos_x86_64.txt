@@ -9,6 +9,7 @@ https://wheelhouse.openquake.org/v3/macos/py310/shapely-2.1.0-cp310-cp310-macosx
 https://wheelhouse.openquake.org/v3/macos/py310/onnxruntime-1.21.1-cp310-cp310-macosx_13_0_universal2.whl
 https://wheelhouse.openquake.org/v3/macos/py310/llvmlite-0.44.0-cp310-cp310-macosx_10_14_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/contourpy-1.3.2-cp310-cp310-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py310/scipy-1.15.3-cp310-cp310-macosx_10_13_x86_64.whl
 #
 https://wheelhouse.openquake.org/v3/macos/py310/charset_normalizer-3.3.2-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/pyzmq-26.0.3-cp310-cp310-macosx_10_9_x86_64.whl
@@ -17,7 +18,6 @@ https://wheelhouse.openquake.org/v3/macos/py310/kiwisolver-1.4.5-cp310-cp310-mac
 https://wheelhouse.openquake.org/v3/macos/py310/setproctitle-1.3.3-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/h5py-3.10.0-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/Pillow-10.1.0-cp310-cp310-macosx_10_10_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py310/scipy-1.11.4-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/fiona-1.9.5-cp310-cp310-macosx_10_15_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/GDAL-3.7.3-cp310-cp310-macosx_10_15_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/pyproj-3.6.1-cp310-cp310-macosx_10_15_x86_64.whl
