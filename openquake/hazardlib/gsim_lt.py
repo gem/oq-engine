@@ -490,6 +490,7 @@ class GsimLogicTree(object):
     def _build_branches(self, tectonic_region_types):
         # do the parsing, called at instantiation time to populate .values
         trts = []
+        regs = {}
         branches = []
         branchids = []
         branchsetids = set()
@@ -508,9 +509,20 @@ class GsimLogicTree(object):
             else:
                 branchsetids.add(bsid)
             trt = branchset.get('applyToTectonicRegionType')
+            reg = branchset.get('applyToSiteRegionType')
             if trt:  # missing in logictree_test.py
                 self.bsetdict[trt] = bsid
                 trts.append(trt)
+                if trt not in regs.keys():
+                    regs[trt] = []
+                if reg is not None:
+                    if reg in regs[trt]:
+                        raise InvalidLogicTree(
+                             f'Found duplicated applyToSiteRegionType '
+                             f'({reg}) for {trt} TRT')
+                    else:
+                        regs[trt].append(reg)
+
             self.bsetdict[trt] = bsid
             # NB: '*' is used in scenario calculations to disable filtering
             effective = (tectonic_region_types == ['*'] or
@@ -547,14 +559,24 @@ class GsimLogicTree(object):
                 tot, branchset.attrib['branchSetID'])
             if duplicated(branch_ids):
                 raise InvalidLogicTree(
-                    'There where duplicated branchIDs in %s' %
+                    'There are duplicated branchIDs in %s' %
                     self.filename)
             branchids.extend(branch_ids)
 
         if len(trts) > len(set(trts)):
-            raise InvalidLogicTree(
-                '%s: Found duplicated applyToTectonicRegionType=%s' %
-                (self.filename, trts))
+            if len(regs) < 1: # No site-specific GMCs
+                raise InvalidLogicTree(
+                    '%s: Found duplicated applyToTectonicRegionType=%s' %
+                    (self.filename, trts))
+            else:
+                # Check number of site-spec GMCs corresponds to number
+                # of branchsets with this tectonic region type
+                for tr in set(trts):
+                    if len(regs[tr]) < trts.count(tr):
+                        raise InvalidLogicTree(
+                            f'An applyToSiteRegionType is not assigned '
+                            f'to each branchset for the {tr} TRT')
+                    
         dupl = duplicated(branchids)
         if dupl:
             logging.debug(
