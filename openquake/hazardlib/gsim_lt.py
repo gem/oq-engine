@@ -50,6 +50,7 @@ class GsimBranch:
     gsim: GMPE
     weight: dict
     effective: bool
+    gmc_region: str | None = None
 
 
 class InvalidLogicTree(Exception):
@@ -547,7 +548,8 @@ class GsimLogicTree(object):
                 self.values[trt].append(gsim)
                 bt = GsimBranch(
                     branchset['applyToTectonicRegionType'],
-                    branch_id, gsim, weight, effective)
+                    branch_id, gsim, weight, effective,
+                    branchset['applyToSiteRegionType'])
                 if effective:
                     branches.append(bt)
                     self.shortener[branch_id] = keyno(branch_id, bsno, brno)
@@ -582,6 +584,7 @@ class GsimLogicTree(object):
             logging.debug(
                 'There are duplicated branchIDs %s in %s', dupl, self.filename)
         branches.sort(key=lambda b: b.trt)
+
         return branches
 
     def get_weight(self, trt, gsim, imt='weight'):
