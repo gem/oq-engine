@@ -546,10 +546,11 @@ class GsimLogicTree(object):
 
                 gsim.weight = weight
                 self.values[trt].append(gsim)
-                bt = GsimBranch(
-                    branchset['applyToTectonicRegionType'],
-                    branch_id, gsim, weight, effective,
-                    branchset['applyToSiteRegionType'])
+                args = [branchset['applyToTectonicRegionType'],
+                        branch_id, gsim, weight, effective]
+                if reg is not None:
+                    args.append(branchset['applyToSiteRegionType'])
+                bt = GsimBranch(*args)
                 if effective:
                     branches.append(bt)
                     self.shortener[branch_id] = keyno(branch_id, bsno, brno)
