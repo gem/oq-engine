@@ -1201,8 +1201,14 @@ class Exposure(object):
                 if len(df) == 0:
                     continue
             add_dupl_fields(df, oqfields)
-            df['lon'] = numpy.round(df.lon, 5)
-            df['lat'] = numpy.round(df.lat, 5)
+            try:
+                df['lon'] = numpy.round(df.lon, 5)
+            except AttributeError:  # missing lon or lat
+                raise InvalidFile(f'{fname}: missing column "lon"')
+            try:
+                df['lat'] = numpy.round(df.lat, 5)
+            except AttributeError:  # missing lon or lat
+                raise InvalidFile(f'{fname}: missing column "lat"')
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
                 df = general.random_filter(df, sa)
