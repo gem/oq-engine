@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Missing columns in the exposure.csv files are now automatically
+    filled with 'No_tag'
   * Fixed downloading of uncertainty.xml in OQImpact calculations
 
   [Michele Simionato, Paolo Tormene]
