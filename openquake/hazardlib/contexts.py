@@ -1150,6 +1150,7 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
+            print(mean_stdt[0].flatten())
 
         if len(ctx) < 1000:
             # do not split in slices to make debugging easier
