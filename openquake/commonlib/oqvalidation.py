@@ -1121,6 +1121,7 @@ class OqParam(valid.ParamSet):
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
     shakemap_id = valid.Param(valid.nice_string, None)
+    # example: shakemap_uri = {'kind': 'usgs_id', 'id': 'XXX'}
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(
@@ -1238,7 +1239,7 @@ class OqParam(valid.ParamSet):
                             'intensity_measure_types_and_levels is set')
         if 'iml_disagg' in names_vals:
             # normalize things like SA(0.10) -> SA(0.1)
-            self.iml_disagg = {str(from_string(imt)): [iml]
+            self.iml_disagg = {str(from_string(imt)): [float(iml)]
                                for imt, iml in self.iml_disagg.items()}
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
@@ -1247,7 +1248,9 @@ class OqParam(valid.ParamSet):
                     ': they will be inferred from the iml_disagg '
                     'dictionary')
         elif 'intensity_measure_types_and_levels' in names_vals:
-            self.hazard_imtls = self.intensity_measure_types_and_levels
+            self.hazard_imtls = {
+                k: [float(x) for x in v] for k, v in
+                self.intensity_measure_types_and_levels.items()}
             delattr(self, 'intensity_measure_types_and_levels')
             lens = set(map(len, self.hazard_imtls.values()))
             if len(lens) > 1:
@@ -2296,8 +2299,10 @@ class OqParam(valid.ParamSet):
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         dic['inputs'].update(inputs)
-        del dic['base_path']
-        del dic['req_site_params']
+        del dic['base_path'], dic['req_site_params']
+        dic.pop('close', None)
+        dic.pop('mags_by_trt', None)
+        dic.pop('sec_imts', None)
         for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.split():
             dic.pop(k, None)
 

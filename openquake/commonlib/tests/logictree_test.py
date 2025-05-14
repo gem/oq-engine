@@ -435,7 +435,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error(
             'lt', {'lt': lt, 'sm.xml': sm}, logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 16)
-        self.assertEqual(exc.message, 'expected single float value',
+        self.assertEqual(exc.message,
+                         "expected single float value, got '123.45z'",
                          "wrong exception message: %s" % exc.message)
 
     def test_incremental_mfd_absolute_wrong_format(self):

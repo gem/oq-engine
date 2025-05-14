@@ -65,7 +65,8 @@ def del_calculation(job_id, confirmed=False):
             safeprint(err)
         else:
             if 'success' in resp:
-                os.remove(resp['hdf5path'])
+                if os.path.exists(resp['hdf5path']):
+                    os.remove(resp['hdf5path'])
                 print('Removed %d' % job.id)
             else:
                 print(resp['error'])

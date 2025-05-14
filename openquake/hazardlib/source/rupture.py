@@ -743,12 +743,13 @@ class EBRupture(object):
     """
     seed = 'NA'  # set by the engine
 
-    def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0, e0=0, seed=42):
+    def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
+                 e0=0, seed=42):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = source_id * TWO30 + id
+        self.id = numpy.int64(source_id) * TWO30 + id
         self.e0 = e0
         self.seed = seed
 

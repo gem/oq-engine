@@ -67,7 +67,7 @@ def is_poissonian(src):
         return False
     return True
 
-    
+
 def poisson_sample(src, eff_num_ses, seed):
     """
     :param src: a poissonian source
@@ -111,6 +111,7 @@ def poisson_sample(src, eff_num_ses, seed):
     # else (multi)point sources and area sources
     usd = src.upper_seismogenic_depth
     lsd = src.lower_seismogenic_depth
+    rar = src.rupture_aspect_ratio
     rup_args = []
     rates = []
     for ps in split_source(src):
@@ -132,7 +133,8 @@ def poisson_sample(src, eff_num_ses, seed):
             hc = Point(lon, lat, hc_depth)
             hdd = numpy.array([(1., hc.depth)])
             [[[planar]]] = build_planar(
-                ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat, usd, lsd)
+                ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat,
+                usd, lsd, rar)
             rup = ParametricProbabilisticRupture(
                 mag, np.rake, ps.tectonic_region_type, hc,
                 PlanarSurface.from_(planar), rate, tom)

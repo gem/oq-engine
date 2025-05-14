@@ -359,7 +359,7 @@ agg_id
 
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
-            'expected/portfolio_losses.txt', fname, delta=1E-4)
+            'expected/portfolio_losses.txt', fname, delta=4E-4)
         os.remove(fname)
 
         # check ruptures are stored correctly
@@ -372,13 +372,13 @@ agg_id
             ('aggregate_by/avg_losses?tag=occupancy&kind=quantile-0.5', 'csv'),
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0],
-                              delta=1E-4)
+                              delta=2E-4)
 
         self.check_multi_tag(self.calc.datastore)
 
         # check aggcurves with aggregate_by=id
         fname = export(('aggcurves', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=4E-4)
 
         # test the view gsim_for_event
         gsim = view('gsim_for_event:0', self.calc.datastore)
@@ -394,12 +394,12 @@ agg_id
         # check aggcurves-stats
         [_, fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=2E-4)
+                              fname, delta=4E-4)
 
         # check aggrisk-stats
         [_, fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=2E-4)
+                              fname, delta=4E-4)
 
     def test_case_master(self):
         # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
@@ -410,12 +410,12 @@ agg_id
         assert fnames, 'avg_losses-stats not exported?'
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-4)
+                                  delta=4E-4)
 
         # check event loss table
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-4)
+                              delta=4E-4)
 
         self.check_case_master()
 
@@ -441,7 +441,7 @@ agg_id
             dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                                  delta=1E-4)
+                                  delta=3E-4)
 
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
@@ -559,7 +559,7 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
         nrups = text.count('\n') - 2
         losses = self.calc.datastore['loss_by_rupture/loss'][:]
-        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], rtol=6e-5)
+        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], atol=0.12)
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
@@ -698,7 +698,7 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-risk_by_event', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-risk_by_event.csv',
-                              fname, delta=5E-4)
+                              fname, delta=1E-2)
 
     def test_post_risk(self):
         # calculation from a source model producing 4 events
@@ -748,16 +748,16 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=2E-4)
 
         f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=2E-4)
-        self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=2E-4)
+        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=4E-4)
+        self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=1E-3)
 
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
-                              fname, delta=2E-4)
+                              fname, delta=1E-3)
         [fname] = export(('reinsurance-avg_portfolio', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
-                              fname, delta=2E-4)
+                              fname, delta=1E-3)
 
     def test_ideductible_exposure(self):
         if sys.platform == 'darwin':

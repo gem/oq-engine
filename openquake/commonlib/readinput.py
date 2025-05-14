@@ -869,6 +869,8 @@ def get_source_model_lt(oqparam):
         instance
     """
     smlt = get_smlt(vars(oqparam))
+    for bset in smlt.branchsets:
+        bset.check_duplicates(smlt.filename)
     srcids = set(smlt.source_data['source'])
     for src in oqparam.reqv_ignore_sources:
         if src not in srcids:
@@ -1356,7 +1358,7 @@ def _taxonomy_mapping(filename, taxidx):
     assert set(tmap_df) == {'country', 'peril', 'taxonomy',
                             'risk_id', 'weight'}, set(tmap_df)
     taxos = set()
-    for (taxo, per), df in tmap_df.groupby(['taxonomy', 'peril']):
+    for (taxo, country, per), df in tmap_df.groupby(['taxonomy', 'country', 'peril']):
         taxos.add(taxo)
         if abs(df.weight.sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %

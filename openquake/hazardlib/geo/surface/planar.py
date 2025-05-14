@@ -61,24 +61,54 @@ planin_dt = numpy.dtype([
     ('rate', float),
     ('lon', float),
     ('lat', float),
-    ('dims', (float, 3)),
+    ('area', float),
 ])
 
 
-@compile("(f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8, f8)")
-def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
-    # from the rupture center we can now compute the coordinates of the
-    # four coorners by moving along the diagonals of the plane. This seems
-    # to be better then moving along the perimeter, because in this case
-    # errors are accumulated that induce distorsions in the shape with
-    # consequent raise of exceptions when creating PlanarSurface objects
-    # theta is the angle between the diagonal of the surface projection
-    # and the line passing through the rupture center and parallel to the
-    # top and bottom edges. Theta is zero for vertical ruptures (because
-    # rup_proj_width is zero)
-    half_length, half_width, half_height = dims / 2.
-    rdip = math.radians(dip)
+@compile("(f8, f8, f8, f8, f8)")
+def get_rupdims(usd, lsd, rar, area, dip):
+    """
+    :param usd: upper seismogenic depth
+    :param lsd: lower seismogenic depth
+    :param rar: rupture aspect ratio
+    :param area: area of the surface
+    :param dip: dip angle
+    :returns:
+        array of shape 3with rupture length, width and height
 
+    The rupture area is calculated using the method
+    :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`.
+    If the calculated rupture width, inclined by the nodal plane's
+    dip angle, would not fit in between upper and lower seismogenic
+    depth, the rupture width is shrunken to the maximum possible
+    and the rupture length is extended to preserve the same area.
+    """
+    rdip = math.radians(dip)
+    sindip = math.sin(rdip)
+    cosdip = math.cos(rdip)
+    max_width = (lsd - usd) / sindip
+    rup_length = math.sqrt(area * rar)
+    rup_width = area / rup_length
+    if rup_width > max_width:
+        rup_width = max_width
+        rup_length = area / rup_width
+    return numpy.array([rup_length, rup_width * cosdip, rup_width * sindip])
+
+
+# From the rupture center we can compute the coordinates of the
+# four coorners by moving along the diagonals of the plane. This seems
+# to be better then moving along the perimeter, because in this case
+# errors are accumulated that induce distorsions in the shape with
+# consequent raise of exceptions when creating PlanarSurface objects
+# theta is the angle between the diagonal of the surface projection
+# and the line passing through the rupture center and parallel to the
+# top and bottom edges. Theta is zero for vertical ruptures (because
+# rup_proj_width is zero)
+@compile("(f8[:, :, :], f8, f8, f8, f8, f8, f8, f8, f8, f8, f8, f8[:])")
+def _update(corners, usd, lsd, rar, area, mag, strike, dip, rake,
+            clon, clat, cdeps):
+    half_length, half_width, half_height = get_rupdims(
+        usd, lsd, rar, area, dip) / 2.
     # precalculated azimuth values for horizontal-only and vertical-only
     # moves from one point to another on the plane defined by strike
     # and dip:
@@ -86,59 +116,84 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
     azimuth_down = azimuth_right + 90
     azimuth_left = azimuth_down + 90
     azimuth_up = azimuth_left + 90
-
-    # half height of the vertical component of rupture width
-    # is the vertical distance between the rupture geometrical
-    # center and it's upper and lower borders:
-    # calculate how much shallower the upper border of the rupture
-    # is than the upper seismogenic depth:
-    vshift = usd - cdep + half_height
-    # if it is shallower (vshift > 0) than we need to move the rupture
-    # by that value vertically.
-    if vshift < 0:
-        # the top edge is below upper seismogenic depth. now we need
-        # to check that we do not cross the lower border.
-        vshift = lsd - cdep - half_height
-        if vshift > 0:
-            # the bottom edge of the rupture is above the lower seismo
-            # depth; that means that we don't need to move the rupture
-            # as it fits inside seismogenic layer.
-            vshift = 0
-        # if vshift < 0 than we need to move the rupture up.
-
-    # now we need to find the position of rupture's geometrical center.
-    # in any case the hypocenter point must lie on the surface, however
-    # the rupture center might be off (below or above) along the dip.
-    if vshift != 0:
-        # we need to move the rupture center to make the rupture fit
-        # inside the seismogenic layer.
-        hshift = abs(vshift / math.tan(rdip))
-        clon, clat = geodetic.fast_point_at(
-            clon, clat, azimuth_up if vshift < 0 else azimuth_down,
-            hshift)
-        cdep += vshift
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    corners[0, :2] = geodetic.fast_point_at(
-        clon, clat, strike + 180 + theta, hor_dist)
-    corners[1, :2] = geodetic.fast_point_at(
-        clon, clat, strike - theta, hor_dist)
-    corners[2, :2] = geodetic.fast_point_at(
-        clon, clat, strike + 180 - theta, hor_dist)
-    corners[3, :2] = geodetic.fast_point_at(
-        clon, clat, strike + theta, hor_dist)
-    corners[0:2, 2] = cdep - half_height
-    corners[2:4, 2] = cdep + half_height
-    corners[4, 0] = strike
-    corners[4, 1] = dip
-    corners[4, 2] = rake
-    corners[5, 0] = clon
-    corners[5, 1] = clat
-    corners[5, 2] = cdep
+
+    vshifts = numpy.zeros_like(cdeps)
+    for d, cdep in enumerate(cdeps):
+        # half height of the vertical component of rupture width
+        # is the vertical distance between the rupture geometrical
+        # center and it's upper and lower borders:
+        # calculate how much shallower the upper border of the rupture
+        # is than the upper seismogenic depth:
+        vshift = usd - cdep + half_height
+        # if it is shallower (vshift > 0) than we need to move the rupture
+        # by that value vertically.
+        if vshift < 0:
+            # the top edge is below the upper seismogenic depth: we need
+            # to check that we do not cross the lower border
+            vshift = lsd - cdep - half_height
+            if vshift > 0:
+                # the bottom edge of the rupture is above the lower depth;
+                # that means that we don't need to move the rupture
+                # as it fits inside seismogenic layer.
+                vshift = 0
+        vshifts[d] = vshift
+
+    if len(vshifts) > 1 and (vshifts == 0).all():
+        # fast lane, there is no need to shift the rupture
+        corners[0, :, 0:2] = geodetic.fast_point_at(
+            clon, clat, strike + 180 + theta, hor_dist)
+        corners[1, :, 0:2] = geodetic.fast_point_at(
+            clon, clat, strike - theta, hor_dist)
+        corners[2, :, 0:2] = geodetic.fast_point_at(
+            clon, clat, strike + 180 - theta, hor_dist)
+        corners[3, :, 0:2] = geodetic.fast_point_at(
+            clon, clat, strike + theta, hor_dist)
+        corners[0:2, :, 2] = cdeps - half_height
+        corners[2:4, :, 2] = cdeps + half_height
+        corners[4, :, 0] = strike
+        corners[4, :, 1] = dip
+        corners[4, :, 2] = rake
+        corners[5, :, 0] = clon
+        corners[5, :, 1] = clat
+        corners[5, :, 2] = cdeps
+    else:
+        for d, cdep in enumerate(cdeps):
+            vshift = vshifts[d]
+            # now we need to find the position of rupture's geometrical center.
+            # in any case the hypocenter point must lie on the surface, however
+            # the rupture center might be off (below or above) along the dip
+            if vshift != 0:
+                # we need to move the rupture center to make the rupture fit
+                # inside the seismogenic layer
+                hshift = abs(vshift / half_height * half_width)
+                lon, lat = geodetic.fast_point_at(
+                    clon, clat, azimuth_up if vshift < 0 else azimuth_down,
+                    hshift)
+                cdep += vshift
+            else:
+                lon, lat = clon, clat
+            corners[0, d, 0:2] = geodetic.fast_point_at(
+                lon, lat, strike + 180 + theta, hor_dist)
+            corners[1, d, 0:2] = geodetic.fast_point_at(
+                lon, lat, strike - theta, hor_dist)
+            corners[2, d, 0:2] = geodetic.fast_point_at(
+                lon, lat, strike + 180 - theta, hor_dist)
+            corners[3, d, 0:2] = geodetic.fast_point_at(
+                lon, lat, strike + theta, hor_dist)
+            corners[0:2, d, 2] = cdep - half_height
+            corners[2:4, d, 2] = cdep + half_height
+            corners[4, d, 0] = strike
+            corners[4, d, 1] = dip
+            corners[4, d, 2] = rake
+            corners[5, d, 0] = clon
+            corners[5, d, 1] = clat
+            corners[5, d, 2] = cdep
 
 
 # numbified below, ultrafast
-def build_corners(usd, lsd, mag, dims, strike, dip, rake, hdd, lon, lat):
+def build_corners(usd, lsd, rar, area, mag, strike, dip, rake, hdd, lon, lat):
     M, N = mag.shape
     D = len(hdd)
     corners = numpy.zeros((6, M, N, D, 3))
@@ -147,10 +202,9 @@ def build_corners(usd, lsd, mag, dims, strike, dip, rake, hdd, lon, lat):
     # 5: hypo
     for m in range(M):
         for n in range(N):
-            for d in range(D):
-                _update(corners[:, m, n, d], usd, lsd,
-                        mag[m, n], dims[m, n], strike[m, n],
-                        dip[m, n], rake[m, n], lon, lat, hdd[d, 1])
+            _update(corners[:, m, n, :, :], usd, lsd, rar,
+                    area[m, n], mag[m, n], strike[m, n],
+                    dip[m, n], rake[m, n], lon, lat, hdd[:, 1])
     return corners
 
 
@@ -158,8 +212,9 @@ F8 = numba.float64
 build_corners = compile(F8[:, :, :, :, :](
     F8,              # usd
     F8,              # lsd
+    F8,              # rar
+    F8[:, :],        # area
     F8[:, :],        # mag
-    F8[:, :, :],     # dims
     F8[:, :],        # strike
     F8[:, :],        # dip
     F8[:, :],        # rake
@@ -170,7 +225,7 @@ build_corners = compile(F8[:, :, :, :, :](
 
 
 # not numbified but fast anyway
-def build_planar(planin, hdd, lon, lat, usd, lsd):
+def build_planar(planin, hdd, lon, lat, usd, lsd, rar):
     """
     :param planin:
         Surface input parameters as an array of shape (M, N)
@@ -182,7 +237,7 @@ def build_planar(planin, hdd, lon, lat, usd, lsd):
         an array of shape (M, N, D, 3)
     """
     corners = build_corners(
-        usd, lsd, planin.mag, planin.dims,
+        usd, lsd, rar, planin.area, planin.mag,
         planin.strike, planin.dip, planin.rake, hdd, lon, lat)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     for d, (drate, dep) in enumerate(hdd):

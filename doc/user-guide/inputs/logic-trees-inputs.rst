@@ -568,6 +568,15 @@ The complete realizations can be obtained by not specifying ``applyToBranches``:
 	>>> logictree.get_all_paths() # 2 * 3 * 2 = 12 paths
 	['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'BCF', 'BCG', 'BDF', 'BDG', 'BEF', 'BEG']
 
+You can serialize a logic tree built programmatically into an XML file
+with a call like this:
+
+.. python:
+
+  with open('lt.xml', 'wb') as f:
+      nrml.write([logictree.to_node()], f)
+
+
 *******************
 The logic tree demo
 *******************

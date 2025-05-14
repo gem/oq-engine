@@ -1008,7 +1008,8 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
-                if oq.prefer_global_site_params:
+                if oq.prefer_global_site_params and not numpy.isnan(
+                        oq.reference_vs30_value):
                     self.sitecol.set_global_params(oq)
                 else:
                     # use the site model parameters
