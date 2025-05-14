@@ -23,51 +23,13 @@ from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
-    build_planar, PlanarSurface, planin_dt)
+    build_planar, PlanarSurface, planin_dt, get_rupdims)
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
-
-
-# this is fast
-def get_rupdims(areas, sindip, cosdip, max_width, rar):
-    """
-    Calculate and return the rupture length and width
-    for given magnitude surface parameters.
-
-    :param areas: array, one area value for each magnitude
-    :param dip: scalar dip angle
-    :param width: scalar width
-    :param rar: scalar rupture aspect ratio
-    :returns:
-        array of shape (M, 3) with rupture lengths, widths and heights
-
-    The rupture area is calculated using method
-    :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
-    of source's
-    magnitude-scaling relationship. In any case the returned
-    dimensions multiplication is equal to that value. Than
-    the area is decomposed to length and width with respect
-    to source's rupture aspect ratio.
-
-    If the calculated rupture width, inclined by the nodal plane's
-    dip angle, would not fit in between upper and lower seismogenic
-    depth, the rupture width is shrunken to the maximum possible
-    and the rupture length is extended to preserve the same area.
-    """
-    out = numpy.zeros((len(areas), 3))
-    rup_length = numpy.sqrt(areas * rar)
-    rup_width = areas / rup_length
-    big = rup_width > max_width
-    rup_width[big] = max_width
-    rup_length[big] = areas[big] / rup_width[big]
-    out[:, 0] = rup_length
-    out[:, 1] = rup_width * cosdip
-    out[:, 2] = rup_width * sindip
-    return out
 
 
 def msr_name(src):
@@ -203,15 +165,14 @@ class PointSource(ParametricSeismicSource):
         :return: array of dtype planin_dt of shape (#mags, #planes, #depths)
         """
         msr = self.magnitude_scaling_relationship
-        width = self.lower_seismogenic_depth - self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
+        usd = self.upper_seismogenic_depth
         rar = self.rupture_aspect_ratio
         planin = numpy.zeros((len(magd), len(npd)), planin_dt).view(
             numpy.recarray)
         mrate, mags = numpy.array(magd).T  # shape (2, num_mags)
         nrate = numpy.array([nrate for nrate, np in npd])
-        rdip = numpy.radians([np.dip for nrate, np in npd])
-        sindip = numpy.sin(rdip)
-        cosdip = numpy.cos(rdip)
+
         planin['rate'] = mrate[:, None] * nrate
         for n, (nrate, np) in enumerate(npd):
             arr = planin[:, n]
@@ -220,8 +181,8 @@ class PointSource(ParametricSeismicSource):
             arr['strike'] = np.strike
             arr['dip'] = np.dip
             arr['rake'] = np.rake
-            arr['dims'] = get_rupdims(
-                areas, sindip[n], cosdip[n], width / sindip[n], rar)
+            arr['dims'] = [get_rupdims(usd, lsd, rar, area, np.dip)
+                           for area in areas]
         return planin
 
     def max_radius(self, maxdist):
@@ -256,8 +217,14 @@ class PointSource(ParametricSeismicSource):
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
         self.radius = numpy.zeros(len(magd))
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
+        rar = self.rupture_aspect_ratio
+        msr = self.magnitude_scaling_relationship
         for m, planin in enumerate(self.get_planin(magd, npd)):
-            rup_length, rup_width, _ = planin.dims.max(axis=0)  # (N, 3) => 3
+            area = msr.get_median_area(planin.mag[0], planin.rake[0])
+            rup_length, rup_width, _ = get_rupdims(
+                usd, lsd, rar, area, planin.dip[0])
             # the projection radius is half of the rupture diagonal
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius

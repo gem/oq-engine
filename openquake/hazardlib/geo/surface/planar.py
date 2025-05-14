@@ -65,6 +65,36 @@ planin_dt = numpy.dtype([
 ])
 
 
+@compile("(f8, f8, f8, f8, f8)")
+def get_rupdims(usd, lsd, rar, area, dip):
+    """
+    :param usd: upper seismogenic depth
+    :param lsd: lower seismogenic depth
+    :param rar: rupture aspect ratio
+    :param area: area of the surface
+    :param dip: dip angle
+    :returns:
+        array of shape 3with rupture length, width and height
+
+    The rupture area is calculated using the method
+    :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`.
+    If the calculated rupture width, inclined by the nodal plane's
+    dip angle, would not fit in between upper and lower seismogenic
+    depth, the rupture width is shrunken to the maximum possible
+    and the rupture length is extended to preserve the same area.
+    """
+    rdip = math.radians(dip)
+    sindip = math.sin(rdip)
+    cosdip = math.cos(rdip)
+    max_width = (lsd - usd) / sindip
+    rup_length = math.sqrt(area * rar)
+    rup_width = area / rup_length
+    if rup_width > max_width:
+        rup_width = max_width
+        rup_length = area / rup_width
+    return numpy.array([rup_length, rup_width * cosdip, rup_width * sindip])
+
+
 @compile("(f8[:, :], f8, f8, f8, f8[:], f8, f8, f8, f8, f8, f8)")
 def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
     # from the rupture center we can now compute the coordinates of the
@@ -77,8 +107,6 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
     # top and bottom edges. Theta is zero for vertical ruptures (because
     # rup_proj_width is zero)
     half_length, half_width, half_height = dims / 2.
-    rdip = math.radians(dip)
-
     # precalculated azimuth values for horizontal-only and vertical-only
     # moves from one point to another on the plane defined by strike
     # and dip:
@@ -112,7 +140,7 @@ def _update(corners, usd, lsd, mag, dims, strike, dip, rake, clon, clat, cdep):
     if vshift != 0:
         # we need to move the rupture center to make the rupture fit
         # inside the seismogenic layer.
-        hshift = abs(vshift / math.tan(rdip))
+        hshift = abs(vshift / half_height * half_width)
         clon, clat = geodetic.fast_point_at(
             clon, clat, azimuth_up if vshift < 0 else azimuth_down,
             hshift)
