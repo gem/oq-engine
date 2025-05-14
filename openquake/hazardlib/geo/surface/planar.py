@@ -95,18 +95,18 @@ def get_rupdims(usd, lsd, rar, area, dip):
     return numpy.array([rup_length, rup_width * cosdip, rup_width * sindip])
 
 
+# From the rupture center we can compute the coordinates of the
+# four coorners by moving along the diagonals of the plane. This seems
+# to be better then moving along the perimeter, because in this case
+# errors are accumulated that induce distorsions in the shape with
+# consequent raise of exceptions when creating PlanarSurface objects
+# theta is the angle between the diagonal of the surface projection
+# and the line passing through the rupture center and parallel to the
+# top and bottom edges. Theta is zero for vertical ruptures (because
+# rup_proj_width is zero)
 @compile("(f8[:, :, :], f8, f8, f8, f8, f8, f8, f8, f8, f8, f8, f8[:])")
 def _update(corners, usd, lsd, rar, area, mag, strike, dip, rake,
             clon, clat, cdeps):
-    # from the rupture center we can now compute the coordinates of the
-    # four coorners by moving along the diagonals of the plane. This seems
-    # to be better then moving along the perimeter, because in this case
-    # errors are accumulated that induce distorsions in the shape with
-    # consequent raise of exceptions when creating PlanarSurface objects
-    # theta is the angle between the diagonal of the surface projection
-    # and the line passing through the rupture center and parallel to the
-    # top and bottom edges. Theta is zero for vertical ruptures (because
-    # rup_proj_width is zero)
     half_length, half_width, half_height = get_rupdims(
         usd, lsd, rar, area, dip) / 2.
     # precalculated azimuth values for horizontal-only and vertical-only
