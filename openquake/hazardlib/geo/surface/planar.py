@@ -168,18 +168,20 @@ def _update(corners, usd, lsd, rar, area, mag, strike, dip, rake,
                 # we need to move the rupture center to make the rupture fit
                 # inside the seismogenic layer
                 hshift = abs(vshift / half_height * half_width)
-                clon, clat = geodetic.fast_point_at(
+                lon, lat = geodetic.fast_point_at(
                     clon, clat, azimuth_up if vshift < 0 else azimuth_down,
                     hshift)
                 cdep += vshift
+            else:
+                lon, lat = clon, clat
             corners[0, d, 0:2] = geodetic.fast_point_at(
-                clon, clat, strike + 180 + theta, hor_dist)
+                lon, lat, strike + 180 + theta, hor_dist)
             corners[1, d, 0:2] = geodetic.fast_point_at(
-                clon, clat, strike - theta, hor_dist)
+                lon, lat, strike - theta, hor_dist)
             corners[2, d, 0:2] = geodetic.fast_point_at(
-                clon, clat, strike + 180 - theta, hor_dist)
+                lon, lat, strike + 180 - theta, hor_dist)
             corners[3, d, 0:2] = geodetic.fast_point_at(
-                clon, clat, strike + theta, hor_dist)
+                lon, lat, strike + theta, hor_dist)
             corners[0:2, d, 2] = cdep - half_height
             corners[2:4, d, 2] = cdep + half_height
             corners[4, d, 0] = strike
@@ -200,7 +202,7 @@ def build_corners(usd, lsd, rar, area, mag, strike, dip, rake, hdd, lon, lat):
     # 5: hypo
     for m in range(M):
         for n in range(N):
-            _update(corners[:, m, n], usd, lsd, rar,
+            _update(corners[:, m, n, :, :], usd, lsd, rar,
                     area[m, n], mag[m, n], strike[m, n],
                     dip[m, n], rake[m, n], lon, lat, hdd[:, 1])
     return corners
