@@ -17,7 +17,7 @@ from openquake.sep.landslide.displacement import (
 
 
 def test_critical_accel():
-    slopes = np.array([0.0, 3.0, 10.0, 25.0, 50.0, 70.0])
+    slopes = np.array([0.0, 0.052408, 0.176327, 0.466308, 1.191754, 2.747477])
     fs = infinite_slope_fs(
         slopes,
         cohesion=20e3,
@@ -28,7 +28,8 @@ def test_critical_accel():
     )
     ca = critical_accel(fs, slopes)
     ca_ = np.array(
-        [11.46329996, 10.94148504, 9.66668506, 6.74308623, 1.75870504, 0.0001]
+        [1.14632036e+01, 1.09414828e+01, 9.66668486e+00, 6.74308300e+00,
+       1.75870319e+00, 1.00000000e-04]
     )
     np.testing.assert_allclose(ca, ca_)
 
