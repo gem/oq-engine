@@ -129,12 +129,12 @@ def _update(corners, usd, lsd, rar, area, mag, strike, dip, rake,
         # if it is shallower (vshift > 0) than we need to move the rupture
         # by that value vertically.
         if vshift < 0:
-            # the top edge is below upper seismogenic depth. now we need
-            # to check that we do not cross the lower border.
+            # the top edge is below the upper seismogenic depth: we need
+            # to check that we do not cross the lower border
             vshift = lsd - cdep - half_height
             if vshift > 0:
-                # the bottom edge of the rupture is above the lower seismo
-                # depth; that means that we don't need to move the rupture
+                # the bottom edge of the rupture is above the lower depth;
+                # that means that we don't need to move the rupture
                 # as it fits inside seismogenic layer.
                 vshift = 0
             # if vshift < 0 than we need to move the rupture up.
