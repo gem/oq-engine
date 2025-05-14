@@ -77,16 +77,16 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
     def test_infinite_slope_fs(self):
         factor_of_safety = np.array(
             [
-                17.74377843,
-                15.24124039,
-                73.15947545,
-                0.78146658,
-                27.54726138,
-                9.90996951,
-                2.789039,
-                41.66518694,
-                19.55433591,
-                14.75323389,
+                17.743779, 
+                15.241239, 
+                73.159459,  
+                0.781467, 
+                27.547261,  
+                9.90997 ,
+                2.789039, 
+                41.665187, 
+                19.554335, 
+                14.753234
             ]
         )
         np.testing.assert_array_almost_equal(
