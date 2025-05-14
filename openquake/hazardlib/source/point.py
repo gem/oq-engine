@@ -165,9 +165,6 @@ class PointSource(ParametricSeismicSource):
         :return: array of dtype planin_dt of shape (#mags, #planes, #depths)
         """
         msr = self.magnitude_scaling_relationship
-        lsd = self.lower_seismogenic_depth
-        usd = self.upper_seismogenic_depth
-        rar = self.rupture_aspect_ratio
         planin = numpy.zeros((len(magd), len(npd)), planin_dt).view(
             numpy.recarray)
         mrate, mags = numpy.array(magd).T  # shape (2, num_mags)
@@ -176,13 +173,11 @@ class PointSource(ParametricSeismicSource):
         planin['rate'] = mrate[:, None] * nrate
         for n, (nrate, np) in enumerate(npd):
             arr = planin[:, n]
-            areas = msr.get_median_area(mags, np.rake)
+            arr['area'] = msr.get_median_area(mags, np.rake)
             arr['mag'] = mags
             arr['strike'] = np.strike
             arr['dip'] = np.dip
             arr['rake'] = np.rake
-            arr['dims'] = [get_rupdims(usd, lsd, rar, area, np.dip)
-                           for area in areas]
         return planin
 
     def max_radius(self, maxdist):
@@ -220,11 +215,9 @@ class PointSource(ParametricSeismicSource):
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         rar = self.rupture_aspect_ratio
-        msr = self.magnitude_scaling_relationship
         for m, planin in enumerate(self.get_planin(magd, npd)):
-            area = msr.get_median_area(planin.mag[0], planin.rake[0])
             rup_length, rup_width, _ = get_rupdims(
-                usd, lsd, rar, area, planin.dip[0])
+                usd, lsd, rar, planin.area[0], planin.dip[0])
             # the projection radius is half of the rupture diagonal
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
@@ -245,8 +238,9 @@ class PointSource(ParametricSeismicSource):
         clon, clat = self.location.x, self.location.y
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
+        rar = self.rupture_aspect_ratio
         planin = self.get_planin(magd, npd)
-        planar = build_planar(planin, hdd, clon, clat, usd, lsd)  # MND3
+        planar = build_planar(planin, hdd, clon, clat, usd, lsd, rar)  # MND3
         if not shift_hypo:  # use the original hypocenter
             planar.hypo[:, :, :, 0] = clon
             planar.hypo[:, :, :, 1] = clat
