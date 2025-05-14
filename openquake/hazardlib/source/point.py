@@ -536,18 +536,14 @@ def get_rup_maxlen(src):
     """
     if hasattr(src, 'nodal_plane_distribution'):
         maxmag, _rate = src.get_annual_occurrence_rates()[-1]
-        width = src.lower_seismogenic_depth - src.upper_seismogenic_depth
+        lsd = src.lower_seismogenic_depth
+        usd = src.upper_seismogenic_depth
         msr = src.magnitude_scaling_relationship
         rar = src.rupture_aspect_ratio
         lens = []
         for _, np in src.nodal_plane_distribution.data:
             area = msr.get_median_area(maxmag, np.rake)
-            rdip = math.radians(np.dip)
-            sindip = math.sin(rdip)
-            cosdip = math.cos(rdip)
-            dims = get_rupdims(
-                numpy.array([area]), sindip, cosdip, width / sindip, rar
-            )[0]
+            dims = get_rupdims(usd, lsd, rar, area, np.dip)
             lens.append(dims[0])
         return max(lens)
     return 0.
