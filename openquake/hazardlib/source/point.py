@@ -217,7 +217,7 @@ class PointSource(ParametricSeismicSource):
         rar = self.rupture_aspect_ratio
         for m, planin in enumerate(self.get_planin(magd, npd)):
             rup_length, rup_width, _ = get_rupdims(
-                usd, lsd, rar, planin.area[0], planin.dip[0])
+                usd, lsd, rar, planin.area[-1], planin.dip[-1])
             # the projection radius is half of the rupture diagonal
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
