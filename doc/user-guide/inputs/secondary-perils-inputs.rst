@@ -72,6 +72,7 @@ model parameters required.
 +------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
 | AllstadtEtAl2022Landslides         | LSProb, LSE     | PGV, PGA | slope, lithology, landcover                                                                |
 +------------------------------------+-----------------+----------+--------------------------------------------------------------------------------------------+
+
 Note: The :math:`slope` in the site model must be provided in :math:`m/m` (rise/run). The code will internally convert this value to degrees, which are the units 
 originally used by the landslide model.
 
