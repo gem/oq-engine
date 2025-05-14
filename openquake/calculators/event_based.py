@@ -676,7 +676,7 @@ class EventBasedCalculator(base.HazardCalculator):
         gsim_lt = read_gsim_lt(oq)
         trts = list(gsim_lt.values)
         if (str(gsim_lt.branches[0].gsim) == '[FromFile]'
-                and 'gmfs' not in oq.inputs):
+                and 'gmfs' not in oq.inputs and not oq.shakemap_uri):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
                               oq.inputs['job_ini'])
         G = gsim_lt.get_num_paths()

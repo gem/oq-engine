@@ -42,7 +42,7 @@ def main(calc_id: int):
         info = dstore['source_info'][:]
     if oqparam.ps_grid_spacing:
         raise RuntimeError(
-            'I cannot reduce the source model since ps_grid_spacing was used '
+            'The source model cannot be reduced since ps_grid_spacing was used '
             'in the precalculation')
     info = info[info['num_sites'] > 0]  # reduce to sources affecting sites
     src_ids = info['source_id']
