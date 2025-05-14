@@ -1107,6 +1107,9 @@ class Exposure(object):
         float_fields = vfields + ['ideductible'] + retro
         int_fields = [(str(name), U32) for name in self.tagcol.tagnames
                       if name not in ('id', 'site_id')]
+        for field, dt in int_fields:
+            # sanity check to protect against future wrong refactorings
+            assert assets_df[field].max(), f'The tag {field} has no values'
         asset_dt = numpy.dtype(
             [('id', (numpy.bytes_, valid.ASSET_ID_LENGTH)),
              ('ordinal', U32), ('lon', F32), ('lat', F32),
@@ -1120,7 +1123,6 @@ class Exposure(object):
         self.cost_calculator.update(array)
         self.mesh = mesh
         self.assets = array
-        #self.loss_types = vfields
         self.occupancy_periods = ofields
 
     def _csv_header(self, value='value-', occupants='occupants_'):
