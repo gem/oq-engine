@@ -1107,7 +1107,8 @@ class Exposure(object):
         float_fields = vfields + ['ideductible'] + retro
         int_fields = [(str(name), U32) for name in self.tagcol.tagnames
                       if name not in ('id', 'site_id')]
-        for field, dt in int_fields:  # sanity check
+        for field, dt in int_fields:
+            # sanity check to protect against future wrong refactorings
             assert assets_df[field].max(), f'The tag {field} has no values'
         asset_dt = numpy.dtype(
             [('id', (numpy.bytes_, valid.ASSET_ID_LENGTH)),
