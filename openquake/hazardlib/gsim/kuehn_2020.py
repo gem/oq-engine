@@ -744,7 +744,7 @@ class KuehnEtAl2020SInter(GMPE):
         elif self.region in ("NZL", "TWN"):
             # If region is NZL or TWN then the GMPE needs Z1.0
             self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
-
+            
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
         # USGS basin scaling and M9 basin term is only

@@ -34,7 +34,11 @@ from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
                                                PHI_SETUP,
                                                PHI_S2SS_MODEL,
                                                TAU_EXECUTION)
-warnings.filterwarnings("ignore", category=np.RankWarning)
+try:
+    RW = np.exceptions.RankWarning  # numpy >= 2
+except AttributeError:  # numpy < 2
+    RW = np.RankWarning
+warnings.filterwarnings("ignore", category=RW)
 PATH = os.path.join(os.path.dirname(__file__), "..", "nga_east_tables")
 
 

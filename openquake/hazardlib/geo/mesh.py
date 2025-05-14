@@ -21,7 +21,7 @@ Module :mod:`openquake.hazardlib.geo.mesh` defines classes :class:`Mesh` and
 its subclass :class:`RectangularMesh`.
 """
 
-# import warnings
+import warnings
 import numpy
 from scipy.spatial.distance import cdist
 import shapely.geometry
@@ -595,14 +595,24 @@ class Mesh(object):
             # create the shapely polygon object from the stripe
             # coordinates and simplify it (remove redundant points,
             # if there are any lying on the straight line).
-            stripe = shapely.geometry.LineString(coords) \
-                                     .simplify(self.DIST_TOLERANCE) \
-                                     .buffer(self.DIST_TOLERANCE, 2)
+            stripe = shapely.geometry.LineString(coords).simplify(
+                self.DIST_TOLERANCE)
+            # ignore RuntimeWarning: divide by zero in .buffer
+            # since it is raised by shapely and there is nothing we can do
+            # see https://github.com/gem/oq-engine/issues/10009
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', category=RuntimeWarning)
+                stripe = stripe.buffer(self.DIST_TOLERANCE, 2)
             polygons.append(shapely.geometry.Polygon(stripe.exterior))
             prev_line = line[::-1]
-        # create a final polygon as the union of all the stripe ones
-        polygon = shapely.ops.unary_union(polygons).simplify(
-            self.DIST_TOLERANCE)
+
+        # ignore RuntimeWarning: divide by zero encountered in unary_union
+        # since it is raised by shapely and there is nothing we can do
+        # see https://github.com/gem/oq-engine/issues/10009
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=RuntimeWarning)
+            polygon = shapely.ops.unary_union(polygons).simplify(
+                self.DIST_TOLERANCE)
         # debug_plot(polygons)
         return proj, polygon
 

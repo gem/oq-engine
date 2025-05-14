@@ -205,8 +205,9 @@ class PostProcTestCase(CalculatorTestCase):
         lk.remove('Ss_seismicity')
         lk.remove('S1_seismicity')
         dic07_float = [dic07[k] for k in lk]
-        dic07_float_ref = [0.5, 0.5191, 0.383, 0.5, 1.5, 1.5109, 0.973,
-                           1.2636, 1.5, 0.4297, 0.4297, 0.9326, 0.2555, 0.6]
+        dic07_float_ref = [0.5, 0.5191, 0.383, 0.5, 1.5, 1.35, 0.9, 
+                           1.5109, 0.973, 1.2636, 1.5, 0.4297, 0.4297, 
+                           0.2864, 0.4297, 0.9326, 0.2555, 0.6]
 
         aae(dic07_float, dic07_float_ref, decimal=4)
 
@@ -224,10 +225,14 @@ class PostProcTestCase(CalculatorTestCase):
                          'BSE1E_S1': 0.18822, 'S1_20_50': 0.18822}
 
     def test_median_spectrum1(self):
-        # test with a single site and many rupture
+        # test with a single site and many ruptures
         self.run_calc(case_median_spectrum.__file__, 'job1.ini')
         [fname] = export(('median_spectra', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/median_spectrum1.csv', fname)
+
+        fnames = export(('median_spectrum_disagg', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     def test_median_spectrum2(self):
         # test with two sites and two ruptures

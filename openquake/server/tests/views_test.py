@@ -28,6 +28,9 @@ from openquake.baselib.general import gettemp
 
 
 def loadnpz(lines):
+    if hasattr(lines, 'content'):
+        # there was an error and we got an HTTP response from Django
+        raise RuntimeError(lines.content.decode('utf-8'))
     bio = io.BytesIO(b''.join(ln for ln in lines))
     return numpy.load(bio)
 

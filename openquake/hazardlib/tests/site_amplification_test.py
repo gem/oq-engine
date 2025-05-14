@@ -102,7 +102,7 @@ class AmplifierTestCase(unittest.TestCase):
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01]]  # SA(0.5)
 
     def test_missing_defined_for_reference_velocity(self):
-        fname = gettemp(trivial_ampl_func)
+        fname = gettemp(trivial_ampl_func, suffix='.csv')
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         a = Amplifier(self.imtls, df, self.soil_levels)
@@ -127,7 +127,7 @@ class AmplifierTestCase(unittest.TestCase):
         # smaller than the minimum soil intensity 0.0020, so some contribution
         # is lost and this is the reason why the first poe in 0.985
         # instead of 0.989
-        fname = gettemp(trivial_ampl_func)
+        fname = gettemp(trivial_ampl_func, suffix='.csv')
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         a = Amplifier(self.imtls, df, self.soil_levels)
@@ -150,7 +150,7 @@ class AmplifierTestCase(unittest.TestCase):
                    0.63041], atol=1E-6)
 
     def test_simple(self):
-        fname = gettemp(simple_ampl_func)
+        fname = gettemp(simple_ampl_func, suffix='.csv')
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         a = Amplifier(self.imtls, df, self.soil_levels)
@@ -178,7 +178,7 @@ class AmplifierTestCase(unittest.TestCase):
                                       atol=1E-5)
 
     def test_double(self):
-        fname = gettemp(double_ampl_func)
+        fname = gettemp(double_ampl_func, suffix='.csv')
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
 
@@ -207,7 +207,7 @@ class AmplifierTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(gmvs, [.2, .4, .6])
 
     def test_long_code(self):
-        fname = gettemp(long_ampl_code)
+        fname = gettemp(long_ampl_code, suffix='.csv')
         with self.assertRaises(InvalidFile) as ctx:
             read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                      index='ampcode')
@@ -215,7 +215,7 @@ class AmplifierTestCase(unittest.TestCase):
                       str(ctx.exception))
 
     def test_dupl(self):
-        fname = gettemp(dupl_ampl_func)
+        fname = gettemp(dupl_ampl_func, suffix='.csv')
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         with self.assertRaises(ValueError) as ctx:
@@ -258,7 +258,7 @@ class AmplifierTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(numpy.squeeze(res), expected)
 
     def test_gmf_with_uncertainty(self):
-        fname = gettemp(gmf_ampl_func)
+        fname = gettemp(gmf_ampl_func, suffix='.csv')
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         imtls = DictArray({'PGA': self.imls})
@@ -277,7 +277,7 @@ class AmplifierTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(computed, expected, 2, err_msg=msg)
 
     def test_gmf_cata(self):
-        fname = gettemp(cata_ampl_func)
+        fname = gettemp(cata_ampl_func, suffix='.csv')
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         imtls = DictArray({'PGA': [numpy.nan]})

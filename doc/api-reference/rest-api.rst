@@ -114,11 +114,11 @@ Response:
 
 A list of error lines extracted from the log. If the calculation was successfull, the list is empty.
 
-**********************************
-GET /v1/calc/:calc_id/aggrisk_tags
-**********************************
+********************************
+GET /v1/calc/:calc_id/impact
+********************************
 
-Get risk results aggregated by tag, together with the corresponding exposure values.
+Get impact results aggregated by tag, together with the corresponding exposure values.
 
 NB: this URL is valid only for risk calculations with an aggregate_by parameter.
 Otherwise it returns a BadRequest error with HTTP code 400.
@@ -127,20 +127,34 @@ Parameters: None
 
 Response:
 
-A JSON object. For instance, something like::
+A JSON object containing:
 
-    {
-      ID_1: {0: "RUS-ADM1", 1: "RUS-ADM1", 2: "RUS-ADM1"},
-      OCCUPANCY: {0: "Com", 1: "Ind", 2: "Res"},
-      number: {0: 3409, 1: 1515, 2: 9987},
-      structural: {0: 1100932352, 1: 233680832, 2: 6464446976},
-      residents: {0: 0, 1: 0, 2: 304202.40625},
-      occupants_avg: {0: 53872.5703125, 1: 20316.19921875, 2: 158342.40625},
-      structural_risk: {0: 23865734.5, 1: 1670122.25, 2: 68231988.5},
-      occupants_risk: {0: 1.888562547, 1: 0.0612079581, 2: 4.717694154},
-      number_risk: {0: 14.8953637928, 1: 1.9196949974, 2: 36.6349875927},
-      residents_risk: {0: 0, 1: 0, 2: 1412.8637619019}
-    }
+- an 'impact' key containing a pandas DataFrame; the names of the columns are "ID_1", "loss_type",
+  "value", "lossmea", "lossq05", "lossq95".
+- a 'loss_type_description' dictionary containing a description for each loss type.
+
+*****************************************
+GET /v1/calc/:calc_id/exposure_by_mmi
+*****************************************
+
+Get exposure aggregated by MMI regions and tags.
+
+NB: this URL is valid only for ShakeMap based calculations downloading
+the MMI regions from the USGS service.
+
+Otherwise it returns a BadRequest error with HTTP code 400.
+
+Parameters: None
+
+Response:
+
+A JSON object containing:
+
+- an 'exposure_by_mmi' key corresponding to a pandas DataFrame; the names of the
+  columns are "ID_1", "number", "contents", "nonstructural", "structural",
+  "residents", "area",  "occupants_day", "occupants_night", "occupants_transit",
+  "occupants_avg",  "mmi".
+- a 'column_descriptions' dictionary containing a description for each exposure type.
 
 ***********************************
 GET /v1/calc/:calc_id/extract/:spec
@@ -248,6 +262,12 @@ GET v1/calc/:calc_id/datastore
 ******************************
 
 Get the HDF5 datastore for the calculation identified by the parameter ``calc_id``.
+
+******************************
+GET v1/calc/:calc_id/job_zip
+******************************
+
+Get the input files for the calculation identified by the parameter ``calc_id``.
 
 *****************************
 POST /v1/calc/:calc_id/remove
@@ -503,6 +523,16 @@ If you do not want to put your credentials in the ``openquake.cfg`` file, you ca
 explicitly to the WebExtractor::
 
 	>> extractor = WebExtractor(calc_id, server, username, password)
+
+If you have a scenario calculation you may want to exact the
+``avg_gmf`` output. This can be done simply with a call like::
+
+>> extractor = WebExtractor(calc_id, server, username, password)
+>> imts = list(extractor.oqparam.imtls)  # list of available IMTs
+>> extractor.get(f'avg_gmf?imt={imts[0]}')
+>> aw.lons   # longitudes
+>> aw.lats   # latitudes
+>> aw[imts[0]] # array of values
 
 ********
 Plotting

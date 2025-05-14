@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
+from unittest import mock
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
@@ -27,7 +28,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_master)
+    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -227,10 +228,10 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_14(self):
         # check non-invertible hazard curve
-        with self.assertRaises(ValueError) as ctx:
+        with mock.patch('logging.error') as err:
             self.run_calc(case_14.__file__, 'job.ini')
-        self.assertIn('The PGA hazard curve for site_id=0 cannot be inverted',
-                      str(ctx.exception))
+        self.assertIn('cannot be inverted reliably around poe=0.000404',
+                      err.call_args[0][0])
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
     # in particular it has very different values between 2 and 16 cores(!)
@@ -243,6 +244,13 @@ class DisaggregationTestCase(CalculatorTestCase):
         small1 = mrs1.array[mrs1.array < 2.]  # large rates are different!
         small50 = mrs50.array[mrs50.array < 2.]
         numpy.testing.assert_allclose(small1, small50, rtol=1E-4)
+
+    def test_case_16(self):
+        # Check slab variant of NZ22 Kuehn 2020 GMM has required attributes
+        # which could (pre-fix) be sometimes missing (seemingly randomly)
+        # from the K20 GSIM object (test just checks execution not correctness
+        # of values)
+        self.run_calc(case_16.__file__, 'job_dsg.ini')
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree

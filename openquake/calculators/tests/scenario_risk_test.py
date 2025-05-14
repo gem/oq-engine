@@ -20,14 +20,16 @@ import numpy
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
-from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
-from openquake.calculators.views import view
+from openquake.calculators.tests import (
+    CalculatorTestCase, ignore_gsd_fields, strip_calc_id)
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, case_9, case_10, case_11, occupants, case_master,
-    case_shakemap, case_shapefile, reinsurance, conditioned)
+    case_6a, case_7, case_8, case_9, case_10, case_11, case_12,
+    occupants, case_master, case_shakemap, case_shapefile, reinsurance,
+    conditioned)
 
 
 aac = numpy.testing.assert_allclose
@@ -175,12 +177,18 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2368.613]], atol=.02)  # from avg_losses-stats
+        # from avg_losses-stats with two quantiles
+        aac(obj.array, [[2368.6128, 2280.863 , 2561.6628]], atol=.02)
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
         # sensitive to shapely version
         self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-3)
+
+        # losses_by_site
+        df = extract(self.calc.datastore, 'losses_by_site')
+        fname = gettemp(text_table(df, ext='org'))
+        self.assertEqualFiles('expected/losses_by_site.org', fname, delta=1E-3)
 
     def test_collapse_gsim_logic_tree(self):
         self.run_calc(case_master.__file__, 'job.ini',
@@ -224,7 +232,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_9.__file__, 'job.ini')
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname)
-        [fname] = export(('assetcol', 'csv'), self.calc.datastore)
+        [_, fname] = export(('exposure', 'zip'), self.calc.datastore)
         self.assertEqualFiles('expected/assetcol.csv', fname)
 
     def test_case_10(self):
@@ -240,8 +248,17 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out[('avg_losses-rlzs', 'csv')]
         self.assertEqualFiles(
             'expected/avg_losses-rlz-000_443.csv', fname)
-        [fname] = export(('assetcol', 'csv'), self.calc.datastore)
+        [_, fname] = export(('exposure', 'zip'), self.calc.datastore)
         self.assertEqualFiles('expected/assetcol.csv', fname)
+
+    def test_case_12(self):
+        # testing affected, injured
+        out = self.run_calc(case_12.__file__,  'job.ini', exports='csv')
+        for fname in out[('aggrisk', 'csv')]:
+            self.assertEqualFiles(
+                'expected/%s' % strip_calc_id(fname), fname)
+        [fname] = out[('avg_losses-rlzs', 'csv')]
+        self.assertEqualFiles('expected/avg_losses.csv', fname)
 
     def test_case_shakemap(self):
         self.run_calc(case_shakemap.__file__, 'pre-job.ini')

@@ -1141,7 +1141,16 @@ class SourceConverter(RuptureConverter):
         trt = node.get('tectonicRegion')
         path = os.path.splitext(self.fname)[0] + '.hdf5'
         hdf5_fname = path if os.path.exists(path) else None
-        if hdf5_fname and node.text is None:
+
+        # the first (sub)node called <faults> is optional
+        try:
+            faults = {f['tag']: f['indexes'] for f in node.faults}
+            nodes = node.nodes[1:]  # the other nodes contain the ruptures
+        except AttributeError:
+            faults = {}
+            nodes = node.nodes  # all the nodes contain ruptures
+
+        if hdf5_fname and not nodes:
             # read the rupture data from the HDF5 file
             with hdf5.File(hdf5_fname, 'r') as h:
                 dic = {k: d[:] for k, d in h[node['id']].items()}
@@ -1151,7 +1160,7 @@ class SourceConverter(RuptureConverter):
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt, idxs,
                                    dic['probs_occur'],
-                                   mags, dic['rake'],
+                                   mags, dic['rake'], faults,
                                    self.investigation_time,
                                    self.infer_occur_rates)
             return mfs
@@ -1160,7 +1169,7 @@ class SourceConverter(RuptureConverter):
         rakes = []
         idxs = []
         num_probs = None
-        for i, rupnode in enumerate(node):
+        for i, rupnode in enumerate(nodes):
             with context(self.fname, rupnode):
                 prb = valid.probabilities(rupnode['probs_occur'])
                 if num_probs is None:  # first time
@@ -1175,13 +1184,12 @@ class SourceConverter(RuptureConverter):
                 probs.append(prb)
                 mags.append(~rupnode.magnitude)
                 rakes.append(~rupnode.rake)
-                indexes = rupnode.sectionIndexes['indexes']
-                idxs.append(tuple(indexes.split(',')))
+                idxs.append(rupnode.sectionIndexes['indexes'])
         with context(self.fname, node):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes,
+        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes, faults,
                                self.investigation_time,
                                self.infer_occur_rates)
         return mfs

@@ -167,6 +167,11 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
+      - name: Actualize 'aelo' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.aelo.tmpl; do
+              cp -- "$file" "${file%.aelo.tmpl}"
+          done
       - name: Server 'AELO' mode tests
         run: |
           source ~/openquake/bin/activate
@@ -177,7 +182,7 @@ jobs:
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_aelo_mode.py
 
-  server_aristotle_mode:
+  server_impact_mode:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -201,6 +206,11 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
+      - name: Actualize 'impact' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.impact.tmpl; do
+              cp -- "$file" "${file%.impact.tmpl}"
+          done
       - name: Server 'ARISTOTLE' mode tests
         run: |
           set -x
@@ -209,11 +219,8 @@ jobs:
           date
           mv exposure.hdf5 openquake/qa_tests_data/mosaic/
           source ~/openquake/bin/activate
-          export PY_VER="$(python -c 'import sys; version=sys.version_info[:2]; print("{0}.{1}".format(*version))')"
-          export PYVER="$(echo ${PY_VER} | tr -d .)"
-          pip install https://wheelhouse.openquake.org/v3/linux/py${PYVER}/timezonefinder-6.5.2-cp${PYVER}-cp${PYVER}-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
-          pytest -v openquake/server/tests/test_aristotle_mode.py
+          pytest -v openquake/server/tests/test_impact_mode.py

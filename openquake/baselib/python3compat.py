@@ -92,7 +92,7 @@ def raise_(tp, value=None, tb=None):
     raise exc
 
 
-# the following is used in the SMTK
+# the following is used in the SMT module of the OQ-MBTK
 # copied from http://lucumr.pocoo.org/2013/5/21/porting-to-python-3-redux/
 def with_metaclass(meta, *bases):
     """

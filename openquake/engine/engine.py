@@ -31,7 +31,6 @@ import getpass
 import logging
 import platform
 import functools
-#import multiprocessing.pool
 from os.path import getsize
 from datetime import datetime, timezone
 import psutil
@@ -267,7 +266,7 @@ def start_workers(job_id, dist, nodes):
     """
     if dist == 'zmq':
         print('Starting the workers %s' % config.zworkers.host_cores)
-        logs.dbcmd('workers_start', config.zworkers)  # start the workers
+        logs.dbcmd('workers_start', dict(config.zworkers))
     elif dist == 'slurm':
         slurm.start_workers(job_id, nodes)
         slurm.wait_workers(job_id, nodes)
@@ -312,7 +311,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
         max_cores = int(config.distribution.max_cores)
         if tot_cores > max_cores:
             raise ValueError('You can use at most %d nodes' %
-                             max_cores // parallel.Starmap.num_cores)
+                             (max_cores // parallel.Starmap.num_cores))
 
     if concurrent_jobs is None:
         # // 8 is chosen so that the core occupation in cole is decent

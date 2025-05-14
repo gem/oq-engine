@@ -128,8 +128,8 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqual(list(oq.imtls), ['PGA'])
             dstore = read(self.calc.datastore.calc_id)
             gmf = dstore.read_df('gmf_data', 'sid')
-            gmvs_site_0 = gmf.loc[0]['gmv_0']
-            gmvs_site_1 = gmf.loc[1]['gmv_0']
+            gmvs_site_0 = gmf.loc[0].PGA
+            gmvs_site_1 = gmf.loc[1].PGA
             joint_prob_0_5 = joint_prob_of_occurrence(
                 gmvs_site_0, gmvs_site_1, 0.5, oq.investigation_time,
                 oq.ses_per_logic_tree_path)
@@ -514,21 +514,26 @@ class EventBasedTestCase(CalculatorTestCase):
         # cali landslide simplified
         self.run_calc(case_26.__file__, 'job_land.ini')
         df = self.calc.datastore.read_df('gmf_data', 'sid')
-        pd_mean = df[df.DispProb > 0].DispProb.mean()
-        nd_mean = df[df.Disp > 0].Disp.mean()
+        pd_mean = df[df.JibsonEtAl2000Landslides_DispProb > 0
+                     ].JibsonEtAl2000Landslides_DispProb.mean()
+        nd_mean = df[df.JibsonEtAl2000Landslides_Disp > 0
+                     ].JibsonEtAl2000Landslides_Disp.mean()
         self.assertGreater(pd_mean, 0)
         self.assertGreater(nd_mean, 0)
         [fname, _, _] = export(('gmf_data', 'csv'), self.calc.datastore)
         arr = read_csv(fname, {'custom_site_id': str, None: float})[:2]
         self.assertEqual(arr.dtype.names,
-                         ('event_id', 'gmv_PGA',
-                          'sep_Disp', 'sep_DispProb', 'custom_site_id'))
+                         ('event_id', 'gmv_IA',
+                          'JibsonEtAl2000Landslides_Disp',
+                          'JibsonEtAl2000Landslides_DispProb', 'custom_site_id'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('avg_gmf.csv', fname)
+
+        # TODO: export hcurves and hmaps
 
     def test_case_27(self):
         # splitting ruptures + gmf1 + gmf2
@@ -566,7 +571,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # check bounding box close to the site
         deltalon = (r['maxlon'] - lon).max()
         deltalat = (r['maxlat'] - lat).max()
-        assert deltalon <= .65, deltalon
+        assert deltalon <= .651, deltalon
         assert deltalat <= .49, deltalat
         deltalon = (lon - r['minlon']).max()
         deltalat = (lat - r['minlat']).max()

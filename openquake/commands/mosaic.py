@@ -30,7 +30,7 @@ from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
 from openquake.engine import engine
-from openquake.engine.aristotle import main_cmd
+from openquake.engine.impact import main_cmd
 from openquake.engine.aelo import get_params_from, get_mosaic_df
 from openquake.hazardlib.geo.utils import geolocate
 
@@ -48,6 +48,18 @@ def engine_profile(jobctx, nrows):
                            ext='org'))
 
 # ########################## run_site ############################## #
+
+def append_empty(lst):
+    """
+    Append empty result to the list, assuming lst is not empty
+    """
+    try:
+        arr = lst[-1]
+    except IndexError:
+        return
+    for k in arr.dtype.names:
+        arr[k] = numpy.nan
+    lst.append(arr)
 
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
@@ -85,7 +97,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
-    mosaic_df = get_mosaic_df(buffer=.1)
+    mosaic_df = get_mosaic_df(buffer=0.0)
     sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
@@ -102,7 +114,11 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         sites = ','.join('%s %s' % tuple(lonlat)
                          for lonlat in lonlats[df.index])
         dic = dict(siteid=model + str(ids[model]), sites=sites)
-        allparams.append(get_params_from(dic, mosaic_dir))
+        params = get_params_from(dic, mosaic_dir)
+        # del params['postproc_func']
+        allparams.append(params)
+    print('Considering %d sites (excluding USA, GLD)' %
+          (sum(len(ls) for ls in ids.values())))
 
     logging.root.handlers = []  # avoid too much logging
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
@@ -123,8 +139,11 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             a07s.append(views.view('asce:07', dstore))
             a41s.append(views.view('asce:41', dstore))
         except KeyError:
-            # AELO results could not be computed due to some error
-            continue
+            # AELO results could not be computed due to some error,
+            # so the asce data is missing in the datastore
+            # NB: assume the lists are not empty, i.e. the first site is OK
+            append_empty(a07s)
+            append_empty(a41s)
 
     # printing/saving results
     print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
@@ -260,30 +279,30 @@ sample_rups.gmfs = 'compute GMFs'
 sample_rups.slowest = 'profile and show the slowest operations'
 
 
-aristotle_res = dict(count_errors=0, res_list=[])
+impact_res = dict(count_errors=0, res_list=[])
 
 
 def callback(job_id, params, exc=None):
     if exc:
         logging.error(str(exc), exc_info=True)
-        aristotle_res['count_errors'] += 1
+        impact_res['count_errors'] += 1
         error = str(exc)
     else:
         error = ''
     description = params['description']
-    aristotle_res['res_list'].append((job_id, description, error))
+    impact_res['res_list'].append((job_id, description, error))
 
 
-def aristotle(exposure_hdf5='', *,
-              rupfname=FAMOUS,
-              stations='',
-              mosaic_model='',
-              maximum_distance='300',
-              maximum_distance_stations='',
-              asset_hazard_distance='15',
-              number_of_ground_motion_fields='10'):
+def impact(exposure_hdf5='', *,
+           rupfname=FAMOUS,
+           stations='',
+           mosaic_model='',
+           maximum_distance='300',
+           maximum_distance_stations='',
+           asset_hazard_distance='15',
+           number_of_ground_motion_fields='10'):
     """
-    Run Aristotle calculations starting from a rupture file that can be
+    Run OQImpact calculations starting from a rupture file that can be
     an XML or a CSV (by default "famous_ruptures.csv"). You must pass
     a directory containing two files site_model.hdf5 and exposure.hdf5
     with a well defined structure.
@@ -322,23 +341,23 @@ def aristotle(exposure_hdf5='', *,
                  station_data_file=stations,
                  maximum_distance_stations=maximum_distance_stations)
     header = ['job_id', 'description', 'error']
-    print(views.text_table(aristotle_res['res_list'], header, ext='org'))
+    print(views.text_table(impact_res['res_list'], header, ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt)
-    if aristotle_res['count_errors']:
-        sys.exit(f'{aristotle_res["count_errors"]} error(s) occurred')
+    if impact_res['count_errors']:
+        sys.exit(f'{impact_res["count_errors"]} error(s) occurred')
 
 
-aristotle.exposure_hdf5 = 'Path to the file exposure.hdf5'
-aristotle.rupfname = ('Filename with the same format as famous_ruptures.csv '
+impact.exposure_hdf5 = 'Path to the file exposure.hdf5'
+impact.rupfname = ('Filename with the same format as famous_ruptures.csv '
                       'or file rupture_model.xml')
-aristotle.stations = 'Path to a csv file with the station data'
-aristotle.mosaic_model = 'Mosaic model 3-characters code'
-aristotle.maximum_distance = 'Maximum distance in km'
-aristotle.maximum_distance_stations = "Maximum distance from stations in km"
-aristotle.number_of_ground_motion_fields = 'Number of ground motion fields'
+impact.stations = 'Path to a csv file with the station data'
+impact.mosaic_model = 'Mosaic model 3-characters code'
+impact.maximum_distance = 'Maximum distance in km'
+impact.maximum_distance_stations = "Maximum distance from stations in km"
+impact.number_of_ground_motion_fields = 'Number of ground motion fields'
 
 # ################################## main ################################## #
 
-main = dict(run_site=run_site, aristotle=aristotle,
+main = dict(run_site=run_site, impact=impact,
             sample_rups=sample_rups)

@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.geo.surface.base` implements
 :class:`BaseSurface` and :class:`BaseSurface`.
 """
+import abc
 import numpy
 import math
 from openquake.hazardlib.geo.mesh import Mesh
@@ -136,7 +137,7 @@ def _get_p1_p2(clsname, top_edge, i):
     return p1, p2
 
     
-class BaseSurface:
+class BaseSurface(metaclass=abc.ABCMeta):
     """
     Base class for a surface in 3D-space.
     """
@@ -325,6 +326,10 @@ class BaseSurface:
         """
         top_edge = self.mesh[0:1]
         return top_edge.get_middle_point()
+
+    @abc.abstractmethod
+    def get_width(self):
+        pass
 
     def get_area(self):
         """

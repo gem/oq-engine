@@ -45,7 +45,7 @@ KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
                       'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
-PERILTYPE = numpy.array(['earthquake', 'liquefaction', 'landslide'])
+PERILTYPE = numpy.array(['groundshaking', 'liquefaction', 'landslide'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -71,6 +71,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+affectedpop injured
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -95,7 +96,7 @@ def pairwise(iterable):
     """
     :param iterable: a sequence of N values (s0, s1, ...)
     :returns: N-1 pairs (s0, s1), (s1, s2), (s2, s3), ...
- 
+
     >>> list(pairwise('ABC'))
     [('A', 'B'), ('B', 'C')]
     """
@@ -151,7 +152,8 @@ class Sampler(object):
         means = df['mean'].to_numpy()
         covs = df['cov'].to_numpy()
         eids = df['eid'].to_numpy()
-        return self.rng.lognormal(eids, means, covs)
+        losses = self.rng.lognormal(eids, means, covs)
+        return losses
 
     def sampleBT(self, df):
         means = df['mean'].to_numpy()
@@ -620,14 +622,6 @@ class FragilityFunctionDiscrete(object):
         self._interp = None
         self.no_damage_limit = no_damage_limit
 
-    @property
-    def interp(self):
-        if self._interp is not None:
-            return self._interp
-        self._interp = interpolate.interp1d(self.imls, self.poes,
-                                            bounds_error=False)
-        return self._interp
-
     def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
@@ -638,7 +632,7 @@ class FragilityFunctionDiscrete(object):
         if imls.sum() == 0.0:
             return numpy.zeros_like(imls)
         imls[imls > highest_iml] = highest_iml
-        result = self.interp(imls)
+        result = numpy.interp(imls, self.imls, self.poes)
         if self.no_damage_limit:
             result[imls < self.no_damage_limit] = 0
         return result
@@ -1198,7 +1192,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         lims = j.insurance_limit.to_numpy() * values
         ids_of_invalid_assets = aids[deds > lims]
         if len(ids_of_invalid_assets):
-            invalid_assets = set(ids_of_invalid_assets)
+            invalid_assets = set(map(int, ids_of_invalid_assets))
             raise ValueError(
                 f"Please check deductible values. Values larger than the"
                 f" insurance limit were found for asset(s) {invalid_assets}.")
@@ -1316,8 +1310,8 @@ def dds_to_poes(dmg_dists):
     """
     arr = numpy.fliplr(numpy.fliplr(dmg_dists).cumsum(axis=1))
     return arr
-    
-    
+
+
 def compose_dds(dmg_dists):
     """
     Compose an array of N damage distributions:
@@ -1590,8 +1584,8 @@ class LossCurvesMapsBuilder(object):
                  weights, eff_time, risk_investigation_time, pla_factor=None):
         if return_periods[-1] > eff_time:
             raise ValueError(
-                'The return_period %s is longer than the eff_time per rlz %s'
-                % (return_periods[-1], eff_time))
+                'The return_period %s is longer than the eff_time per rlz'
+                ' [%s years]' % (return_periods[-1], eff_time))
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt
@@ -1683,10 +1677,10 @@ class RiskComputer(dict):
         """
         dic = collections.defaultdict(list)  # peril, lt -> outs
         weights = collections.defaultdict(list)  # peril, lt -> weights
-        perils = {'earthquake'}
+        perils = {'groundshaking'}
         for riskid, rm in self.items():
             for (peril, lt), res in rm(asset_df, haz, rndgen).items():
-                # res is an array of fractions of shape (A, E, D) 
+                # res is an array of fractions of shape (A, E, D)
                 weights[peril, lt].append(self.wdic[riskid, peril])
                 dic[peril, lt].append(res)
                 perils.add(peril)
@@ -1819,6 +1813,10 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
+    if xltype == 'affectedpop':
+        return aval['residents']
+    elif xltype == 'injured':  # like fatalities
+        return aval[f'occupants_{time_event}']
     if consequence in ['collapsed', 'non_operational']:
         return aval['number']
     elif consequence in ['injured', 'fatalities']:

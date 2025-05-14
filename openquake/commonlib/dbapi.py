@@ -189,7 +189,7 @@ NotFound
 import os
 import re
 import sqlite3
-# import datetime
+import warnings
 import threading
 import collections
 from openquake.baselib import config
@@ -341,7 +341,10 @@ class Db(object):
         except Exception as exc:
             raise exc.__class__('%s: %s %s' % (exc, templ, args))
         if templ.lstrip().lower().startswith(('select', 'pragma')):
-            rows = cursor.fetchall()
+            with warnings.catch_warnings():
+                # hide "the default timestamp converter is deprecated as of Python 3.12"
+                warnings.filterwarnings('ignore', category=DeprecationWarning)
+                rows = cursor.fetchall()
             if kw.get('scalar'):  # scalar query
                 if not rows:
                     raise NotFound

@@ -23,49 +23,13 @@ from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
-    build_planar, PlanarSurface, planin_dt)
+    build_planar, PlanarSurface, planin_dt, get_rupdims)
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
-
-
-# this is fast
-def get_rupdims(areas, dip, width, rar):
-    """
-    Calculate and return the rupture length and width
-    for given magnitude surface parameters.
-
-    :returns:
-        array of shape (M, 3) with rupture lengths, widths and heights
-
-    The rupture area is calculated using method
-    :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`
-    of source's
-    magnitude-scaling relationship. In any case the returned
-    dimensions multiplication is equal to that value. Than
-    the area is decomposed to length and width with respect
-    to source's rupture aspect ratio.
-
-    If calculated rupture width being inclined by nodal plane's
-    dip angle would not fit in between upper and lower seismogenic
-    depth, the rupture width is shrunken to a maximum possible
-    and rupture length is extended to preserve the same area.
-    """
-    out = numpy.zeros((len(areas), 3))
-    rup_length = numpy.sqrt(areas * rar)
-    rup_width = areas / rup_length
-    rdip = math.radians(dip)
-    max_width = width / math.sin(rdip)
-    big = rup_width > max_width
-    rup_width[big] = max_width
-    rup_length[big] = areas[big] / rup_width[big]
-    out[:, 0] = rup_length
-    out[:, 1] = rup_width * math.cos(rdip)
-    out[:, 2] = rup_width * math.sin(rdip)
-    return out
 
 
 def msr_name(src):
@@ -85,33 +49,35 @@ def calc_average(pointsources):
         a dict with average strike, dip, rake, lon, lat, dep,
         upper_seismogenic_depth, lower_seismogenic_depth
     """
-    acc = dict(lon=[], lat=[], dep=[], strike=[], dip=[], rake=[],
+    node_w, dep_w, rate_w = [], [], []
+    acc = dict(lon=[], lat=[], strike=[], dip=[], rake=[], dep=[],
                upper_seismogenic_depth=[], lower_seismogenic_depth=[],
                rupture_aspect_ratio=[])
-    rates = []
     trt = pointsources[0].tectonic_region_type
     for src in pointsources:
         assert src.tectonic_region_type == trt
-        rates.append(sum(r for m, r in src.get_annual_occurrence_rates()))
         ws, ds = zip(*src.nodal_plane_distribution.data)
-        strike = numpy.average([np.strike for np in ds], weights=ws)
-        dip = numpy.average([np.dip for np in ds], weights=ws)
-        rake = numpy.average([np.rake for np in ds], weights=ws)
+        acc['strike'].extend([np.strike for np in ds])
+        acc['dip'].extend([np.dip for np in ds])
+        acc['rake'].extend([np.rake for np in ds])
+        node_w.extend(ws)
         ws, deps = zip(*src.hypocenter_distribution.data)
-        dep = numpy.average(deps, weights=ws)
+        acc['dep'].extend(deps)
+        dep_w.extend(ws)
         acc['lon'].append(src.location.x)
         acc['lat'].append(src.location.y)
-        acc['dep'].append(dep)
-        acc['strike'].append(strike)
-        acc['dip'].append(dip)
-        acc['rake'].append(rake)
         acc['upper_seismogenic_depth'].append(src.upper_seismogenic_depth)
         acc['lower_seismogenic_depth'].append(src.lower_seismogenic_depth)
         acc['rupture_aspect_ratio'].append(src.rupture_aspect_ratio)
-    dic = {key: numpy.average(acc[key], weights=rates) for key in acc}
-    dic['lon'] = numpy.round(dic['lon'], 6)
-    dic['lat'] = numpy.round(dic['lat'], 6)
-    return dic
+        rate_w.append(sum(r for m, r in src.get_annual_occurrence_rates()))
+    for key in acc:
+        if key in ('dip', 'strike', 'rake'):
+            acc[key] = numpy.average(acc[key], weights=node_w)
+        elif key == 'dep':
+            acc[key] = numpy.average(acc[key], weights=dep_w)
+        else:
+            acc[key] = numpy.average(acc[key], weights=rate_w)
+    return acc
 
 
 class PointSource(ParametricSeismicSource):
@@ -146,7 +112,8 @@ class PointSource(ParametricSeismicSource):
         than upper seismogenic depth or deeper than lower seismogenic depth.
     """
     code = b'P'
-    MODIFICATIONS = set()
+    MODIFICATIONS = {'set_lower_seismogenic_depth',
+                     'set_upper_seismogenic_depth'}
     ps_grid_spacing = 0  # updated in CollapsedPointSource
 
     def __init__(self, source_id, name, tectonic_region_type,
@@ -165,10 +132,13 @@ class PointSource(ParametricSeismicSource):
             raise ValueError('lower seismogenic depth must be below '
                              'upper seismogenic depth')
 
-        if not all(upper_seismogenic_depth <= depth <= lower_seismogenic_depth
-                   for (prob, depth) in hypocenter_distribution.data):
-            raise ValueError('depths of all hypocenters must be in between '
-                             'lower and upper seismogenic depths')
+        for _prob, depth in hypocenter_distribution.data:
+            if depth > lower_seismogenic_depth:
+                raise ValueError(
+                    f'{depth=} is below {lower_seismogenic_depth=}')
+            elif depth < upper_seismogenic_depth:
+                raise ValueError(
+                    f'{depth=} is over {upper_seismogenic_depth=}')
 
         if not upper_seismogenic_depth > geodetic.EARTH_ELEVATION:
             raise ValueError(
@@ -195,21 +165,19 @@ class PointSource(ParametricSeismicSource):
         :return: array of dtype planin_dt of shape (#mags, #planes, #depths)
         """
         msr = self.magnitude_scaling_relationship
-        width = self.lower_seismogenic_depth - self.upper_seismogenic_depth
-        rar = self.rupture_aspect_ratio
         planin = numpy.zeros((len(magd), len(npd)), planin_dt).view(
             numpy.recarray)
-        mrate, mags = numpy.array(magd).T  # shape (2, M)
+        mrate, mags = numpy.array(magd).T  # shape (2, num_mags)
         nrate = numpy.array([nrate for nrate, np in npd])
+
         planin['rate'] = mrate[:, None] * nrate
         for n, (nrate, np) in enumerate(npd):
             arr = planin[:, n]
-            areas = msr.get_median_area(mags, np.rake)
+            arr['area'] = msr.get_median_area(mags, np.rake)
             arr['mag'] = mags
             arr['strike'] = np.strike
             arr['dip'] = np.dip
             arr['rake'] = np.rake
-            arr['dims'] = get_rupdims(areas, np.dip, width, rar)
         return planin
 
     def max_radius(self, maxdist):
@@ -244,8 +212,12 @@ class PointSource(ParametricSeismicSource):
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
         npd = self.nodal_plane_distribution.data
         self.radius = numpy.zeros(len(magd))
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
+        rar = self.rupture_aspect_ratio
         for m, planin in enumerate(self.get_planin(magd, npd)):
-            rup_length, rup_width, _ = planin.dims.max(axis=0)  # (N, 3) => 3
+            rup_length, rup_width, _ = get_rupdims(
+                usd, lsd, rar, planin.area[-1], planin.dip[-1])
             # the projection radius is half of the rupture diagonal
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
@@ -266,8 +238,9 @@ class PointSource(ParametricSeismicSource):
         clon, clat = self.location.x, self.location.y
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
+        rar = self.rupture_aspect_ratio
         planin = self.get_planin(magd, npd)
-        planar = build_planar(planin, hdd, clon, clat, usd, lsd)  # MND3
+        planar = build_planar(planin, hdd, clon, clat, usd, lsd, rar)  # MND3
         if not shift_hypo:  # use the original hypocenter
             planar.hypo[:, :, :, 0] = clon
             planar.hypo[:, :, :, 1] = clat
@@ -340,6 +313,20 @@ class PointSource(ParametricSeismicSource):
         `openquake.hazardlib.source.base.BaseSeismicSource.count_ruptures`.
         """
         return len(self.get_annual_occurrence_rates()) * self.count_nphc()
+
+    def modify_set_lower_seismogenic_depth(self, lsd):
+        """
+        Modifies the current source geometry by replacing the original
+        lower seismogenic depth with the passed depth
+        """
+        self.lower_seismogenic_depth = lsd
+
+    def modify_set_upper_seismogenic_depth(self, usd):
+        """
+        Modifies the current source geometry by replacing the original
+        upper seismogenic depth with the passed depth
+        """
+        self.upper_seismogenic_depth = usd
 
     @property
     def polygon(self):
@@ -532,7 +519,7 @@ def grid_point_sources(sources, ps_grid_spacing):
         if len(idxs) > 1:
             cnt += 1
             name = 'cps-%03d-%04d' % (grp_id, cnt)
-            cps = CollapsedPointSource(name, ps[idxs])
+            cps = CollapsedPointSource(name, ps[idxs])  # slow part
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
             cps.ps_grid_spacing = ps_grid_spacing
@@ -542,19 +529,21 @@ def grid_point_sources(sources, ps_grid_spacing):
     return out
 
 
+# used only in view('long_ruptures')
 def get_rup_maxlen(src):
     """
     :returns: the maximum rupture length for point sources and area sources
     """
     if hasattr(src, 'nodal_plane_distribution'):
         maxmag, _rate = src.get_annual_occurrence_rates()[-1]
-        width = src.lower_seismogenic_depth - src.upper_seismogenic_depth
+        lsd = src.lower_seismogenic_depth
+        usd = src.upper_seismogenic_depth
         msr = src.magnitude_scaling_relationship
         rar = src.rupture_aspect_ratio
         lens = []
         for _, np in src.nodal_plane_distribution.data:
             area = msr.get_median_area(maxmag, np.rake)
-            dims = get_rupdims(numpy.array([area]), np.dip, width, rar)[0]
+            dims = get_rupdims(usd, lsd, rar, area, np.dip)
             lens.append(dims[0])
         return max(lens)
     return 0.

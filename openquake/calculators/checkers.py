@@ -20,10 +20,10 @@ Helpers for testing the calculators, used in oq-risk-tests
 """
 import os
 import re
-import sys
 import time
 import pathlib
 import numpy
+import pandas
 from openquake.baselib import hdf5
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base
@@ -59,7 +59,7 @@ def _data2rows(data):
     return rows
 
 
-def assert_close(tbl, fname):
+def assert_close(tbl, fname, atol=1E-5, rtol=1E-4):
     """
     Compare a text table with a filename containing the expected table
     """
@@ -73,24 +73,25 @@ def assert_close(tbl, fname):
         with open(fname) as f:
             expected = f.read()
         for exp, got in zip(_data2rows(expected), _data2rows(txt)):
-            aac(exp, got, atol=1E-5, rtol=1E-3)
+            aac(exp, got, rtol, atol)
 
 
-def check(ini, hc_id=None, exports='', what='', prefix=''):
+def check(ini, hc_id=None, exports='', what='', prefix='',
+          atol=1E-5, rtol=1E-4):
     """
     Perform a calculation and compare a view ("what") with the content of
     a corrisponding file (.txt or .org).
     """
     t0 = time.time()
     outdir = pathlib.Path(os.path.dirname(ini))
-    calc, _log = get_calc_log(ini, hc_id)
+    calc, log = get_calc_log(ini, hc_id)
     calc.run(export_dir='/tmp', close=False)
     if exports:
         calc.export(exports)
     print('Spent %.1f seconds' % (time.time() - t0))
     if what:
         calc_id = calc.datastore.calc_id
-        fname = outdir / ('%s_%s.txt' % (what.replace(':', ''), calc_id))
+        fname = outdir / ('%s_%s.org' % (what.replace(':', ''), calc_id))
         try:
             tbl = view(what, calc.datastore)
         except KeyError:
@@ -101,13 +102,16 @@ def check(ini, hc_id=None, exports='', what='', prefix=''):
                 else:
                     df = hdf5.ArrayWrapper.from_(dset).to_dframe()
             except KeyError:
-                df = extract(calc.datastore, what).to_dframe()
+                df = extract(calc.datastore, what)
+                if not isinstance(df, pandas.DataFrame):
+                    df = df.to_dframe()
             tbl = text_table(df, ext='org')
         bname = prefix + re.sub(r'_\d+\.', '.', os.path.basename(fname))
-        assert_close(tbl, outdir / bname)
-    return calc
+        assert_close(tbl, outdir / bname, atol, rtol)
+    return calc, log
 
 
+# called in run-demos
 def check_ini(path, hc):
     dic = readinput.get_params(path)
     if hc:  # disable hazard checks by setting a fake hazard_calculation_id
@@ -121,21 +125,4 @@ def check_ini(path, hc):
     dic2 = readinput.get_params(tmp_ini)
     missing = set(dic) - set(dic2) - {'intensity_measure_types', 'export_dir'}
     if missing:
-        breakpoint()
-
-
-def check_inis(demo_dir):
-    """
-    Check that oqparam.to_ini() works on all the .ini files in demo_dir
-    """
-    for cwd, dirs, files in os.walk(demo_dir):
-        for f in files:
-            if f.endswith('.ini') and not f.endswith('.tmp.ini'):
-                path = os.path.join(cwd, f)
-                print(path)
-                check_ini(path, hc='risk' in f)
-
-
-if __name__ == '__main__':
-    # called by run-demos.sh
-    check_inis(sys.argv[1])
+        raise RuntimeError(missing)

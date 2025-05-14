@@ -48,6 +48,7 @@ MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
 SQRT = math.sqrt(2) / 2
+TWO10 = numpy.uint16(1024)
 
 
 def get_dist(array, point):
@@ -922,7 +923,7 @@ def geohash3(lons, lats):
     array([24767, 26645], dtype=uint16)
     """
     arr = geohash(lons, lats, 3)
-    return arr[:, 0] * 1024 + arr[:, 1] * 32 + arr[:, 2]
+    return arr[:, 0] * TWO10 + arr[:, 1] * 32 + arr[:, 2]
 
 
 def geolocate(lonlats, geom_df, exclude=()):

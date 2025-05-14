@@ -33,8 +33,8 @@ eids = numpy.arange(3)
 def call(vf, gmvs, eids):
     rng = scientific.MultiEventRNG(42, eids)
     gmf_df = pandas.DataFrame(
-        dict(eid=eids, gmv_0=gmvs, sid=numpy.zeros(len(eids))))
-    return [vf(None, gmf_df, 'gmv_0', rng).loss.to_numpy()]
+        dict(eid=eids, PGA=gmvs, sid=numpy.zeros(len(eids))))
+    return [vf(None, gmf_df, 'PGA', rng).loss.to_numpy()]
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
@@ -363,8 +363,8 @@ class FragilityFunctionTestCase(unittest.TestCase):
             scientific.FragilityFunctionDiscrete(
                 'LS2', [0.05, 0.1, 0.3, 0.5, 0.7],
                 [0, 0.00, 0.05, 0.20, 0.50], 0.05)]
-        self._close_to([0.975, 0.025, 0],
-                       scientific.scenario_damage(ffs, 0.075))
+        self._close_to([[0.975], [0.025], [0]],
+                       scientific.scenario_damage(ffs, [0.075]))
 
     def _close_to(self, expected, actual):
         aac(actual, expected, atol=0.0, rtol=0.05)
@@ -649,10 +649,10 @@ class RiskComputerTestCase(unittest.TestCase):
     def test1(self):
         dic = {'calculation_mode': 'event_based_risk',
                'risk_functions': {
-                   'earthquake#structural#RC':
+                   'groundshaking#structural#RC':
                    {"openquake.risklib.scientific.VulnerabilityFunction":
                     {"id": "RC",
-                     "peril": 'earthquake',
+                     "peril": 'groundshaking',
                      "loss_type": "structural",
                      "imt": "PGA",
                      "imls": [0.1, 0.2, 0.3, 0.5, 0.7],
@@ -661,8 +661,8 @@ class RiskComputerTestCase(unittest.TestCase):
                      "distribution_name": "LN"}}}}
         gmfs = {'eid': [0, 1],
                 'sid': [0, 0],
-                'gmv_0': [.23, .31]}
-        rc = riskmodels.get_riskcomputer(dic, alias={'PGA': 'gmv_0'})
+                'PGA': [.23, .31]}
+        rc = riskmodels.get_riskcomputer(dic)
         print(toml.dumps(dic))
         for k, v in rc.todict().items():
             self.assertEqual(dic[k], v)
@@ -679,14 +679,9 @@ class RiskComputerTestCase(unittest.TestCase):
         print(out)
 
     def test2(self):
-        alias = {'PGA': 'gmv_0',
-                 'SA(0.2)': 'gmv_1',
-                 'SA(0.5)': 'gmv_2',
-                 'SA(0.8)': 'gmv_3',
-                 'SA(1.0)': 'gmv_4'}
         dic = {'calculation_mode': 'event_based_risk',
                'risk_functions': {
-                   'earthquake#nonstructural#RM': {
+                   'groundshaking#nonstructural#RM': {
                        'openquake.risklib.scientific.VulnerabilityFunction': {
                            'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
                            'distribution_name': 'LN',
@@ -694,7 +689,7 @@ class RiskComputerTestCase(unittest.TestCase):
                            'imls': [0.1, 0.2, 0.4, 0.7, 1.0],
                            'imt': 'SA(1.0)',
                            'mean_loss_ratios': [0.1, 0.2, 0.35, 0.6, 0.9]}},
-                   'earthquake#structural#RM': {
+                   'groundshaking#structural#RM': {
                        'openquake.risklib.scientific.VulnerabilityFunction': {
                            'covs': [0.0001, 0.0001, 0.0001, 0.0001, 0.0001],
                            'distribution_name': 'LN',
@@ -702,16 +697,16 @@ class RiskComputerTestCase(unittest.TestCase):
                            'imls': [0.02, 0.3, 0.5, 0.9, 1.2],
                            'imt': 'PGA',
                            'mean_loss_ratios': [0.05, 0.1, 0.2, 0.4, 0.8]}}},
-               'wdic': {'RM#earthquake': 1}}
+               'wdic': {'RM#groundshaking': 1}}
 
         gmfs = {'eid': [0, 2],
                 'sid': [0, 0],
-                'gmv_0': [.23, .31],
-                'gmv_1': [.23, .41],
-                'gmv_2': [.23, .51],
-                'gmv_3': [.23, .32],
-                'gmv_4': [.23, .21]}
-        rc = riskmodels.get_riskcomputer(dic, alias)
+                'PGA': [.23, .31],
+                'SA(0.2)': [.23, .41],
+                'SA(0.5)': [.23, .51],
+                'SA(0.8)': [.23, .32],
+                'SA(1.0)': [.23, .21]}
+        rc = riskmodels.get_riskcomputer(dic)
         print(toml.dumps(dic))
         asset_df = pandas.DataFrame({
             'area': [10.0, 1.0],
@@ -745,7 +740,7 @@ class RiskComputerTestCase(unittest.TestCase):
         # multi-peril damage
         rcdic = {'calculation_mode': 'scenario_damage',
                  'risk_functions':
-                 {'earthquake#structural#Wood':
+                 {'groundshaking#structural#Wood':
                   {'openquake.risklib.scientific.FragilityFunctionList': {
                       'array': [[0.0, 0.5, 0.861, 0.957, 0.985, 0.994, 0.997, 0.999],
                                 [0.0, 0.204, 0.6, 0.813, 0.909, 0.954, 0.976, 0.986],
@@ -758,7 +753,7 @@ class RiskComputerTestCase(unittest.TestCase):
                       'kind': 'fragility',
                       'loss_type': 'structural',
                       'nodamage': 0.05,
-                      'peril': 'earthquake'}},
+                      'peril': 'groundshaking'}},
                   'landslide#structural#Wood':
                   {'openquake.risklib.scientific.FragilityFunctionList': {
                       'array': [[0.0, 0.0, 0.0, 1.0],
@@ -774,7 +769,7 @@ class RiskComputerTestCase(unittest.TestCase):
                       'nodamage': 1e-10,
                       'peril': 'landslide'}}}}
         limit_states = 'slight moderate extreme complete'.split()
-        rc = riskmodels.get_riskcomputer(rcdic, {'PGA': 'gmv_0'}, limit_states)
+        rc = riskmodels.get_riskcomputer(rcdic, limit_states)
         asset_df = pandas.DataFrame({
             'id': ['a1'],
             'lon': [83.31],
@@ -786,7 +781,7 @@ class RiskComputerTestCase(unittest.TestCase):
         gmf_df = pandas.DataFrame({
             'eid': [0, 1],
             'sid': [0, 0],
-            'gmv_0': [.098234, .165975],
+            'PGA': [.098234, .165975],
             'DispProb': [.335, .335]})
         dd5 = rc.get_dd5(asset_df, gmf_df)  # (P, A, E, L, D)
         dd0 = dd5[0, 0, 0, 0, 1:]

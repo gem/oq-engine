@@ -1,0 +1,7 @@
+taxonomy,risk_id,weight,peril
+connection,connection,1,groundshaking
+bridge,bridge1,1,groundshaking
+connection,connection,1,liquefaction
+bridge,bridge1,1,liquefaction
+connection,connection,1,landslide
+bridge,bridge1,1,landslide

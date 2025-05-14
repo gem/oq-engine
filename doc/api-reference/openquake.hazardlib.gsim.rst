@@ -126,6 +126,14 @@ allen_2022
     :undoc-members:
     :show-inheritance:
 
+ambraseys_1996
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.ambraseys_1996
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ambraseys_2005
 ------------------------------------------
 
@@ -439,6 +447,14 @@ campbell_bozorgnia_2003
     :undoc-members:
     :show-inheritance:
 
+campbell_bozorgnia_2003_world
+-------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.campbell_bozorgnia_2003_world
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 campbell_bozorgnia_2008
 -------------------------------------------------------
 
@@ -636,6 +652,14 @@ edwards_fah_2013f_coeffs
 --------------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.edwards_fah_2013f_coeffs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+emme24
+--------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.emme24
     :members:
     :undoc-members:
     :show-inheritance:
@@ -880,6 +904,14 @@ lin_lee_2008
     :undoc-members:
     :show-inheritance:
 
+macedo_2019
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.macedo_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 manea_2021
 -----------------------------------------------
 
@@ -986,6 +1018,55 @@ nshmp_2014
     :undoc-members:
     :show-inheritance:
 
+nz22.atkinson_2022
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.atkinson_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nz22.nz_nshm2022_kuehn_2020
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.nz_nshm2022_kuehn_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ 
+nz22.nz_nshm2022_parker
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.nz_nshm2022_parker
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nz22.nz_nshm2022_abrahamson_gulerce_2020
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.nz_nshm2022_abrahamson_gulerce_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nz22.stafford_2022
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.stafford_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nz22.const
+--------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.nz22.const
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pankow_pechmann_2004
 ---------------------------------------------
 
@@ -1038,6 +1119,15 @@ rietbrock_edwards_2019
 ----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.rietbrock_edwards_2019
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+sabetta_pugliese_1996
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.sabetta_pugliese_1996
+
     :members:
     :undoc-members:
     :show-inheritance:

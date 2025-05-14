@@ -15,6 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+import ast
 import time
 import gzip
 import json
@@ -28,6 +31,7 @@ from shapely.geometry import Polygon, LineString
 from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
+from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import (
@@ -35,13 +39,32 @@ from openquake.calculators.extract import (
 from openquake.calculators.postproc.plots import (
     plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d)
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites)
 
 
 ZOOM_MARGIN = 8
 
 
+def getparams(what):
+    """
+    >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10')
+    {'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}
+    """
+    assert '?' in what, what
+    dic = {}
+    for namevalue in what.split('?')[1].split('&'):
+        name, value = namevalue.split('=')
+        try:
+            dic[name] = ast.literal_eval(value)
+        except ValueError:
+            dic[name] = value
+    return dic
+
+
 def make_figure_magdist(extractors, what):
+    """
+    $ oq plot "magdist?"
+    """
     plt = import_plt()
     _fig, ax = plt.subplots()
     [ex] = extractors
@@ -81,12 +104,13 @@ def make_figure_hcurves(extractors, what):
         ax.set_xlabel('%s, site %s, inv_time=%dy' %
                       (imt, site, oq.investigation_time))
         ax.set_ylabel('PoE')
+        ax.set_xlabel(f'{imt} (g units)')
         for ck, arr in got.items():
             if (arr == 0).all():
                 logging.warning('There is a zero curve %s_%s', *ck)
             ax.loglog(imls, arr.flat, '-', label='%s_%s' % ck)
         for poe in oq.poes:
-            ax.plot(imls, [poe]*len(imls), label=f'{poe=}')
+            ax.loglog(imls, [poe]*len(imls), label=f'{poe=}')
         ax.grid(True)
         ax.legend()
     return plt
@@ -1056,12 +1080,24 @@ def make_figure_sources(extractors, what):
 
 def make_figure_rupture(extractors, what):
     """
+    There are two ways of using this command:
+
     $ oq plot "rupture?"
+
+    extracts the rupture from an already performed scenario calculation;
+
+    $ oq plot "rupture?mag=6&lon=10&lat=45&dep=10&rake=45&msr=WC1994"
+
+    builds a new planar rupture.
     """
-    [ex] = extractors
-    dstore = ex.dstore
-    ebr = get_ebrupture(dstore, rup_id=0)
-    return plot_rupture(ebr.rupture)
+    params = getparams(what)
+    if params:
+        rup = build_planar_rupture_from_dict(params)
+    else:
+        [ex] = extractors
+        dstore = ex.dstore
+        rup = get_ebrupture(dstore, rup_id=0).rupture
+    return plot_rupture(rup, with_borders=False)
 
 
 def make_figure_rupture_3d(extractors, what):
@@ -1072,6 +1108,16 @@ def make_figure_rupture_3d(extractors, what):
     dstore = ex.dstore
     ebr = get_ebrupture(dstore, rup_id=0)
     return plot_rupture_3d(ebr.rupture)
+
+
+def make_figure_sites(extractors, what):
+    """
+    $ oq plot "sites?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_sites(dstore)
+    return plt
 
 
 def plot_wkt(wkt_string):
@@ -1139,7 +1185,8 @@ def main(what,
         for k, v in globals().items():
             if k.startswith('make_figure_'):
                 help_msg.append(v.__doc__)
-        raise SystemExit(''.join(help_msg))
+        print(''.join(help_msg), file=sys.stderr)
+        return
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
     prefix, rest = what.split('?', 1)

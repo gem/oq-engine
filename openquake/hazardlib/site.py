@@ -39,7 +39,6 @@ param = dict(
     vs30='reference_vs30_value',
     z1pt0='reference_depth_to_1pt0km_per_sec',
     z2pt5='reference_depth_to_2pt5km_per_sec',
-    backarc='reference_backarc',
     region='region',
     xvf='xvf')
 
@@ -269,6 +268,9 @@ site_param_dt = {
     'precip': numpy.float64,
     'lithology': (numpy.bytes_,2),
     'landcover': (numpy.float64),
+    'hratio': (numpy.float64),
+    'tslope': (numpy.float64),
+    'slab_thickness': (numpy.float64),
 
     # parameters for YoudEtAl2002
     'freeface_ratio': numpy.float64,
@@ -441,11 +443,10 @@ class SiteCollection(object):
 
     xyz = Mesh.xyz
 
-    def set_global_params(
-            self, oq, req_site_params=('z1pt0', 'z2pt5', 'backarc')):
+    def set_global_params(self, oq, req_site_params=('z1pt0', 'z2pt5')):
         """
         Set the global site parameters
-        (vs30, vs30measured, z1pt0, z2pt5, backarc)
+        (vs30, vs30measured, z1pt0, z2pt5)
         """
         self._set('vs30', oq.reference_vs30_value)
         self._set('vs30measured',
@@ -454,8 +455,6 @@ class SiteCollection(object):
             self._set('z1pt0', oq.reference_depth_to_1pt0km_per_sec)
         if 'z2pt5' in req_site_params:
             self._set('z2pt5', oq.reference_depth_to_2pt5km_per_sec)
-        if 'backarc' in req_site_params:
-            self._set('backarc', oq.reference_backarc)
 
     def filtered(self, indices):
         """
@@ -685,7 +684,7 @@ class SiteCollection(object):
 
         :returns: the site model array reduced to the hazard sites
         """
-        # NB: self != self.complete in the aristotle tests with stations
+        # NB: self != self.complete in the impact tests with stations
         m1, m2 = site_model[['lon', 'lat']], self.complete[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(

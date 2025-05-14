@@ -57,7 +57,7 @@ def add_alias(name, cls, **kw):
     Add a GSIM alias to both gsim_aliases and the registry.
     """
     gsim_aliases[name] = toml.dumps({cls.__name__: kw})
-    registry[name] = cls
+    registry[name] = lambda: cls(**kw)
 
 
 class NotVerifiedWarning(UserWarning):

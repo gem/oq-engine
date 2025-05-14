@@ -15,26 +15,36 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import abc
-import inspect
-from openquake.hazardlib import imt
-from openquake.sep.landslide.common import (
-    static_factor_of_safety,
-    rock_slope_static_factor_of_safety,
+import csv
+import logging
+
+import numpy
+from shapely import geometry, wkt
+
+from openquake.hazardlib import geo, imt, valid, InvalidFile
+from openquake.sep.landslide.static_safety_factor import infinite_slope_fs
+from openquake.sep.landslide.displacement import (
+    critical_accel,
+    jibson_2007_model_a,
+    jibson_2007_model_b,
+    cho_rathje_2022,
+    fotopoulou_pitilakis_2015_model_a,
+    fotopoulou_pitilakis_2015_model_b,
+    fotopoulou_pitilakis_2015_model_c,
+    fotopoulou_pitilakis_2015_model_d,
+    saygili_rathje_2008,
+    rathje_saygili_2009,
+    jibson_etal_2000,
 )
-from openquake.sep.landslide.newmark import (
-    newmark_critical_accel,
-    newmark_displ_from_pga_M,
-    prob_failure_given_displacement,
-)
-from openquake.sep.landslide.nowicki_jessee import(
+from openquake.sep.landslide.probability import(
     nowicki_jessee_2018,
     LANDCOVER_TABLE,
-    LITHOLOGY_TABLE
-)
-from openquake.sep.landslide.rockfalls import (
-    critical_accel_rock_slope,
-    newmark_displ_from_pga,
+    LITHOLOGY_TABLE,
+    allstadt_etal_2022_b,
+    jibson_etal_2000_probability,
 )
 from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability,
@@ -90,16 +100,21 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
             imt.from_string(out)
 
     @classmethod
-    def instantiate(cls, secondary_perils, sec_peril_params):
-        inst = []
-        for clsname in secondary_perils:
-            c = globals()[clsname]
-            kw = {}
-            for param in inspect.signature(c).parameters:
-                if param in sec_peril_params:
-                    kw[param] = sec_peril_params[param]
-            inst.append(c(**kw))
-        return inst
+    def instantiate(cls, secondary_perils, sec_peril_params, oq):
+        """
+        :param secondary_perils: a list of class names
+        :param sec_peril_params: a list of dicts with instantiation params
+        :param oq: OqParam object to be attached to the instances
+        :returns: a list of instances of the secondary peril classes
+        """
+        if not sec_peril_params:
+            sec_peril_params = [{}] * len(secondary_perils)
+        instances = []
+        for clsname, params in zip(secondary_perils, sec_peril_params):
+            obj = globals()[clsname](**params)
+            obj.oq = oq
+            instances.append(obj)
+        return instances
 
     @abc.abstractmethod
     def prepare(self, sites):
@@ -115,163 +130,6 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
 
     def __repr__(self):
         return "<%s>" % self.__class__.__name__
-
-
-class NewmarkDisplacement(SecondaryPeril):
-    outputs = ["Disp", "DispProb"]
-
-    def __init__(
-        self,
-        c1=-2.71,
-        c2=2.335,
-        c3=-1.478,
-        c4=0.424,
-        crit_accel_threshold=0.05,
-    ):
-        self.c1 = c1
-        self.c2 = c2
-        self.c3 = c3
-        self.c4 = c4
-        self.crit_accel_threshold = crit_accel_threshold
-
-    def prepare(self, sites):
-        sites.add_col(
-            "Fs",
-            float,
-            static_factor_of_safety(
-                slope=sites.slope,
-                cohesion=sites.cohesion_mid,
-                friction_angle=sites.friction_mid,
-                saturation_coeff=sites.saturation,
-                soil_dry_density=sites.dry_density,
-            ),
-        )
-        sites.add_col(
-            "crit_accel", float, newmark_critical_accel(sites.Fs, sites.slope)
-        )
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        for im, gmf in imt_gmf:
-            if im.string == "PGA":
-                nd = newmark_displ_from_pga_M(
-                    gmf,
-                    sites.crit_accel,
-                    mag,
-                    self.c1,
-                    self.c2,
-                    self.c3,
-                    self.c4,
-                    self.crit_accel_threshold,
-                )
-            out.append(nd)
-            out.append(prob_failure_given_displacement(nd))
-        return out
-
-
-class GrantEtAl2016RockSlopeFailure(SecondaryPeril):
-    outputs = ["Disp"]
-
-    def __init__(self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
-        self.c1 = c1
-        self.c2 = c2
-        self.c3 = c3
-        self.crit_accel_threshold = crit_accel_threshold
-
-    def prepare(self, sites):
-        sites.add_col(
-            "Fs",
-            float,
-            rock_slope_static_factor_of_safety(
-                slope=sites.slope,
-                cohesion=sites.cohesion_mid,
-                friction_angle=sites.friction_mid,
-                saturation_coeff=sites.saturation,
-                soil_dry_density=sites.dry_density,
-            ),
-        )
-        sites.add_col(
-            "crit_accel",
-            float,
-            critical_accel_rock_slope(sites.Fs, sites.slope),
-        )
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        for im, gmf in imt_gmf:
-            if im.string == "PGA":
-                nd = newmark_displ_from_pga(
-                    gmf,
-                    sites.crit_accel,
-                    mag,
-                    self.c1,
-                    self.c2,
-                    self.c3,
-                    self.crit_accel_threshold,
-                )
-            out.append(nd)
-        return out
-
-
-class NowickiJessee2018Landslides(SecondaryPeril):
-    """
-    Computes the landslide probability from PGV and areal coverage.
-    """
-
-    outputs = ["LsProb", "LSE"]
-
-    def __init__(
-        self,
-        intercept: float = -6.30,
-        pgv_coeff: float = 1.65,
-        slope_coeff: float = 0.06,
-        coeff_table_lith = LITHOLOGY_TABLE,
-        coeff_table_cov = LANDCOVER_TABLE,
-        cti_coeff: float = 0.03,
-        interaction_term: float = 0.01,
-    ):
-        self.intercept = intercept
-        self.pgv_coeff = pgv_coeff
-        self.slope_coeff = slope_coeff
-        self.coeff_table_lith = coeff_table_lith
-        self.coeff_table_cov = coeff_table_cov
-        self.cti_coeff = cti_coeff
-        self.interaction_term = interaction_term
-
-    def prepare(self, sites):
-        pass
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        pga = None
-        pgv = None
-        for im, gmf in imt_gmf:
-            if im.string == "PGV":
-                pgv = gmf
-            elif im.string == "PGA":
-                pga = gmf
-            else:
-                continue
-        # Raise error if either PGA or PGV is missing
-        if pga is None or pgv is None:
-            raise ValueError(
-                "Both PGA and PGV are required to compute landslide "
-                "probability using the NowickiJessee2018Landslides model"
-            )
-        
-        prob_ls, lse = nowicki_jessee_2018(
-            pga = pga,
-            pgv = pgv,
-            slope=sites.slope,
-            lithology=sites.lithology,
-            landcover=sites.landcover,
-            cti=sites.cti,
-        )
-        out.append(prob_ls)
-        out.append(lse)
-            
-        return out
-
 
 
 class HazusLiquefaction(SecondaryPeril):
@@ -293,9 +151,7 @@ class HazusLiquefaction(SecondaryPeril):
                         mag=mag,
                         liq_susc_cat=sites.liq_susc_cat,
                         groundwater_depth=sites.gwd,
-                        do_map_proportion_correction=self.map_proportion_flag,
-                    )
-                )
+                        do_map_proportion_correction=self.map_proportion_flag))
         return out
 
 
@@ -739,9 +595,6 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
 
     outputs = ["LiqOccur", "LiqProb"]
 
-    def __init__(self):
-        pass
-
     def prepare(self, sites):
         model_file = (
             "liquefaction/data/todorovic_silva_2022/todorovic_silva_2022.onnx.gz"
@@ -769,3 +622,637 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
 
 
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
+
+
+class Jibson2007ALandslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements of landslides
+    as function of pga and critical acceleration.
+    '''
+
+    outputs = ["Disp"]
+
+    def __init__(self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
+        self.c1 = c1
+        self.c2 = c2
+        self.c3 = c3
+        self.crit_accel_threshold = crit_accel_threshold
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "PGA":
+                Disp = jibson_2007_model_a(
+                    gmf,
+                    sites.crit_accel,
+                    self.c1,
+                    self.c2,
+                    self.c3,
+                    self.crit_accel_threshold,
+                )
+            out.append(Disp)
+        return out
+
+
+class Jibson2007BLandslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements of landslides
+    as function of magnitude, pga and critical acceleration.
+    It is recommended when magnitude is betweeen 
+    5.3 and 7.6.
+    '''
+
+    outputs = ["Disp"]
+
+    def __init__(
+        self,
+        c1=-2.71,
+        c2=2.335,
+        c3=-1.478,
+        c4=0.424,
+        crit_accel_threshold=0.05,
+    ):
+        self.c1 = c1
+        self.c2 = c2
+        self.c3 = c3
+        self.c4 = c4
+        self.crit_accel_threshold = crit_accel_threshold
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "PGA":
+                    Disp = jibson_2007_model_b(
+                        gmf,
+                        sites.crit_accel,
+                        mag,
+                        self.c1,
+                        self.c2,
+                        self.c3,
+                        self.c4,
+                        self.crit_accel_threshold,
+                    )
+
+            out.append(Disp)
+        return out
+
+
+class ChoRathje2022Landslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements of landslides from
+    pgv and considering the slope fundamental period.
+    ''' 
+    outputs = ["Disp"]
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "PGV":
+                Disp = cho_rathje_2022(
+                        gmf,
+                        sites.tslope,
+                        sites.crit_accel,
+                        sites.hratio,
+                        )
+            out.append(Disp)
+
+        return out
+
+
+class FotopoulouPitilakis2015ALandslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements of landslides from
+    pgv and moment magnitude.
+    '''
+    outputs = ["Disp"]
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "PGV":
+                Disp = fotopoulou_pitilakis_2015_model_a(
+                          gmf,
+                          mag,
+                          sites.crit_accel,
+                          )
+            out.append(Disp)
+        return out      
+        
+        
+class FotopoulouPitilakis2015BLandslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements of landslides from
+    pga and moment magnitude.
+    '''
+    outputs = ["Disp"]
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "PGA":
+                Disp = fotopoulou_pitilakis_2015_model_b(
+                          gmf,
+                          mag,
+                          sites.crit_accel,
+                          )
+            out.append(Disp)
+        return out      
+        
+class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements from pga (in terms of ratio with
+    the landslide critical acceleration) and moment magnitude.
+    '''
+    outputs = ["Disp"]
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "PGA":
+                Disp = fotopoulou_pitilakis_2015_model_c(
+                          gmf,
+                          mag,
+                          sites.crit_accel,
+                          )
+            out.append(Disp)
+        return out      
+        
+
+
+class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements of landslides from pgv and 
+    pga
+    '''    
+    outputs = ["Disp"]
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        pga = None
+        pgv = None
+        for im, gmf in imt_gmf:
+            if im.string == "PGV":
+                pgv = gmf
+            elif im.string == "PGA":
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError(
+                "Both PGA and PGV are required to compute landslide disp "
+                "according to Fotopoulou_Pitilakis_2015_PGV_PGA")
+
+        Disp = fotopoulou_pitilakis_2015_model_d(
+            pgv,
+            pga,
+            sites.crit_accel,
+            )
+        out.append(Disp)
+        return out 
+  
+class SaygiliRathje2008Landslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements from pga and pgv
+    '''   
+    outputs = ["Disp"]
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope))
+        
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        pga = None
+        pgv = None
+        for im, gmf in imt_gmf:
+            if im.string == "PGV":
+                pgv = gmf
+            elif im.string == "PGA":
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError(
+                "Both PGA and PGV are required to compute landslide "
+                "disp according to Saygili_Rathje_2008")
+
+        Disp = saygili_rathje_2008(pga, pgv, sites.crit_accel)
+        out.append(Disp)
+        return out  
+  
+  
+        
+class RathjeSaygili2009Landslides(SecondaryPeril):   
+    '''
+    Computes earthquake-induced displacements from pga and moment 
+    magnitude
+
+    ''' 
+    outputs = ["Disp"]
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope))
+        
+        print(sites)
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "PGA":
+                Disp = rathje_saygili_2009(gmf, mag, sites.crit_accel)
+            out.append(Disp)
+        return out  
+
+
+class JibsonEtAl2000Landslides(SecondaryPeril):
+    '''
+    Computes earthquake-induced displacements and related probability according to
+    Jibson et al. (2000) as function of arias intensity.
+    '''
+    outputs = ["Disp", "DispProb"]
+
+    def prepare(self, sites):
+        sites.add_col(
+            "Fs",
+            float,
+            infinite_slope_fs(
+                slope=sites.slope,
+                cohesion=sites.cohesion_mid,
+                friction_angle=sites.friction_mid,
+                saturation_coeff=sites.saturation,
+                soil_dry_density=sites.dry_density,
+                slab_thickness=sites.slab_thickness,
+            ),
+        )
+        sites.add_col(
+            "crit_accel", float, critical_accel(sites.Fs, sites.slope)
+        )
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == "IA":
+                    Disp = jibson_etal_2000(
+                        gmf,
+                        sites.crit_accel,
+                    )
+            out.append(Disp)
+            out.append(jibson_etal_2000_probability(Disp))
+        return out        
+
+
+class NowickiJessee2018Landslides(SecondaryPeril):
+    """
+    Computes the landslide probability from PGV and areal coverage.
+    """
+
+    outputs = ["LsProb", "LSE"]
+
+    def __init__(
+        self,
+        intercept: float = -6.30,
+        pgv_coeff: float = 1.65,
+        slope_coeff: float = 0.06,
+        coeff_table_lith = LITHOLOGY_TABLE,
+        coeff_table_cov = LANDCOVER_TABLE,
+        cti_coeff: float = 0.03,
+        interaction_term: float = 0.01,
+    ):
+        self.intercept = intercept
+        self.pgv_coeff = pgv_coeff
+        self.slope_coeff = slope_coeff
+        self.coeff_table_lith = coeff_table_lith
+        self.coeff_table_cov = coeff_table_cov
+        self.cti_coeff = cti_coeff
+        self.interaction_term = interaction_term
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        pga = None
+        pgv = None
+        for im, gmf in imt_gmf:
+            if im.string == "PGV":
+                pgv = gmf
+            elif im.string == "PGA":
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError(
+                "Both PGA and PGV are required to compute landslide "
+                "probability using the NowickiJessee2018Landslides model"
+            )
+        
+        prob_ls, lse = nowicki_jessee_2018(
+            pgv = pgv,
+            slope=sites.slope,
+            lithology=sites.lithology,
+            landcover=sites.landcover,
+            cti=sites.cti,
+        )
+        out.append(prob_ls)
+        out.append(lse)
+            
+        return out
+
+
+class AllstadtEtAl2022Landslides(SecondaryPeril):
+    """
+    Corrects LSE according to Allstadt et al. (2022).
+    """
+
+    outputs = ["LsProb", "LSE"]
+
+    def __init__(
+        self,
+        intercept: float = -6.30,
+        pgv_coeff: float = 1.65,
+        slope_coeff: float = 0.06,
+        coeff_table_lith = LITHOLOGY_TABLE,
+        coeff_table_cov = LANDCOVER_TABLE,
+        cti_coeff: float = 0.03,
+        interaction_term: float = 0.01,
+    ):
+        self.intercept = intercept
+        self.pgv_coeff = pgv_coeff
+        self.slope_coeff = slope_coeff
+        self.coeff_table_lith = coeff_table_lith.copy()
+        self.coeff_table_lith["su"] = -1.36
+        self.coeff_table_lith[b"su"] = -1.36 
+        self.coeff_table_cov = coeff_table_cov
+        self.cti_coeff = cti_coeff
+        self.interaction_term = interaction_term
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        pga = None
+        pgv = None
+        for im, gmf in imt_gmf:
+            if im.string == "PGV":
+                pgv = gmf
+            elif im.string == "PGA":
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError(
+                "Both PGA and PGV are required to compute landslide "
+                "probability using the AllstadtEtAl2022Landslides model"
+            )
+        
+        prob_ls, lse = allstadt_etal_2022_b(
+            pga = pga,
+            pgv = pgv,
+            slope=sites.slope,
+            lithology=sites.lithology,
+            landcover=sites.landcover,
+            cti=sites.cti,
+        )
+        
+        
+        out.append(prob_ls)
+        out.append(lse)
+            
+        return out
+
+
+def csv2peril(fname, name, sitecol, tofloat, asset_hazard_distance):
+    """
+    Converts a CSV file into a peril array of length N
+    """
+    data = []
+    with open(fname) as f:
+        for row in csv.DictReader(f):
+            intensity = tofloat(row['intensity'])
+            if intensity > 0:
+                data.append((valid.longitude(row['lon']),
+                             valid.latitude(row['lat']),
+                             intensity))
+    data = numpy.array(data, [('lon', float), ('lat', float),
+                              ('number', float)])
+    logging.info('Read %s with %d rows' % (fname, len(data)))
+    if len(data) != len(numpy.unique(data[['lon', 'lat']])):
+        raise InvalidFile('There are duplicated points in %s' % fname)
+    try:
+        distance = asset_hazard_distance[name]
+    except KeyError:
+        distance = asset_hazard_distance['default']
+    sites, filtdata, _discarded = geo.utils.assoc(
+        data, sitecol, distance, 'filter')
+    peril = numpy.zeros(len(sitecol), float)
+    peril[sites.sids] = filtdata['number']
+    return peril
+
+
+def wkt2peril(fname, name, sitecol):
+    """
+    Converts a WKT file into a peril array of length N
+    """
+    with open(fname) as f:
+        header = next(f)  # skip header
+        if header != 'geom\n':
+            raise ValueError('%s has header %r, should be geom instead' %
+                             (fname, header))
+        text = f.read()
+        if not text.startswith('"'):
+            raise ValueError('The geometry must be quoted in %s : "%s..."' %
+                             (fname, text.split('(')[0]))
+        geom = wkt.loads(text.strip('"\n'))  # strip quotes and newlines
+    peril = numpy.zeros(len(sitecol), float)
+    for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
+        peril[sid] = geometry.Point(lon, lat).within(geom)
+    return peril
+
+
+
+class Volcanic(SecondaryPeril):
+    """
+    Import ASH, LAVA, LAHAR, PYRO from CSV files
+    """
+    outputs = ["ASH", "LAVA", "LAHAR", "PYRO"]
+
+    def prepare(self, sites):
+        """
+        Import the CSV files for the volcanic subperils
+        """
+        for peril in self.oq.inputs['multi_peril']:
+            assert peril in self.outputs, peril
+        self.fname_by_peril = self.oq.inputs['multi_peril']
+        N = len(sites)
+        self.data = {'sid': sites.sids, 'eid': numpy.zeros(N, numpy.uint32)}
+        names = []
+        for name, fname in self.fname_by_peril.items():
+            fname = os.path.join(self.oq.base_path, fname)
+            tofloat = (valid.positivefloat if name == 'ASH'
+                       else valid.probability)
+            with open(fname) as f:
+                header = next(f)
+            if 'geom' in header:
+                peril = wkt2peril(fname, name, sites)
+            else:
+                peril = csv2peril(fname, name, sites, tofloat,
+                                  self.oq.asset_hazard_distance)
+            if peril.sum() == 0:
+                logging.warning('No sites were affected by %s' % name)
+            self.data[f'{self.__class__.__name__}_{name}'] = peril
+            names.append(name)
+
+    def compute(self, mag, imt_gmf, sites):
+        # doing nothing, since all the work is in the `prepare` method
+        return []
+        
+

@@ -27,7 +27,7 @@ import logging
 import itertools
 import json
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import geo
+from openquake.hazardlib import geo, site, scalerel
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.mesh import (
     Mesh, RectangularMesh, surface_to_arrays)
@@ -47,6 +47,8 @@ TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO30 = 2 ** 30
 TWO32 = 2 ** 32
+
+MSR = scalerel._get_available_class(scalerel.BaseMSR)
 
 pmf_dt = numpy.dtype([
     ('prob', float),
@@ -741,12 +743,13 @@ class EBRupture(object):
     """
     seed = 'NA'  # set by the engine
 
-    def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0, e0=0, seed=42):
+    def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
+                 e0=0, seed=42):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = source_id * TWO30 + id
+        self.id = numpy.int64(source_id) * TWO30 + id
         self.e0 = e0
         self.seed = seed
 
@@ -833,7 +836,7 @@ class RuptureProxy(object):
             self['source_id'], self['n_occ'])
 
 
-def get_ruptures(fname_csv):
+def get_ruptures_aw(fname_csv):
     """
     Read ruptures in CSV format and return an ArrayWrapper.
 
@@ -886,6 +889,18 @@ def get_ruptures(fname_csv):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
+def get_ruptures(fname_csv):
+    """
+    Read ruptures in CSV format
+    """
+    aw = get_ruptures_aw(fname_csv)
+    rups = []
+    for rec, geom in zip(aw.array, aw.geom):
+        trt = aw.trts[rec['trt_smr'] // TWO24]
+        rups.append(get_ebr(rec, geom, trt).rupture)
+    return rups
+
+    
 def fix_vertices_order(array43):
     """
     Make sure the point inside array43 are in the form top_left, top_right,
@@ -1018,4 +1033,32 @@ def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
     rup = BaseRupture(mag, rake, trt, hypocenter, surf)
     rup.rup_id = 0
     vars(rup).update(vars(hypocenter))
+    return rup
+
+
+def build_planar_rupture_from_dict(rupture_dict):
+    """
+    Build a rupture with a PlanarSurface.
+
+    :param rupture_dict:
+        a dictionary containing at least the coordinates of the hypocenter
+        ('lon', 'lat' and 'dep'), the magnitude ('mag') and the 'rake' and,
+        optionally, the 'trt' (default '*'), the 'strike' (default 0) and
+        the 'dip' (default 90).
+    :returns: a BaseRupture with a PlanarSurface built around the site
+    """
+    r = rupture_dict
+    hypo = Point(r['lon'], r['lat'], r['dep'])
+    trt = r.get('trt', '*')
+    strike = r.get('strike', 0)
+    dip = r.get('dip', 90)
+    if not r.get('msr'):
+        # use the IPT method, to be removed
+        rup = build_planar(hypo, r['mag'], r['rake'], strike, dip, trt)
+    else:
+        aratio = r.get('aspect_ratio', 2.)
+        msr = MSR[r['msr']]()
+        site_ = site.Site(Point(r['lon'], r['lat'], r['dep']))
+        rup = get_planar(site_, msr, r['mag'], aratio,
+                         strike, dip, r['rake'], trt)
     return rup

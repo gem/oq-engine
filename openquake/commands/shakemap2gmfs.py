@@ -74,8 +74,9 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
                       'crosscorr': crosscorr,
                       'cholesky_limit': cholesky_limit}
             store_gmfs(calc, sitecol, shakemap, gmfdic)
-    gmv_0 = calc.datastore.read_df('gmf_data').gmv_0.max()
-    print(f'Maximum {gmv_0=}')
+    imt0 = list(oq.imtls)[0]
+    gmv = calc.datastore.read_df('gmf_data')[imt0].max()
+    print(f'Maximum {gmv=}')
     print('See the output with silx view %s' % calc.datastore.filename)
 
 

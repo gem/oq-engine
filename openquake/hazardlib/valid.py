@@ -27,6 +27,7 @@ import json
 import toml
 import socket
 import logging
+import inspect
 from functools import partial
 import numpy
 
@@ -37,10 +38,15 @@ from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
+from openquake.sep import classes
+
+RENAMED_SEPS = {
+    'NewmarkDisplacement': "Jibson2007BLandslides",
+    'GrantEtAl2016RockSlopeFailure': "Jibson2007ALandslides"}
 
 PRECISION = pmf.PRECISION
 
-SCALEREL = scalerel.get_available_magnitude_scalerel()
+SCALEREL = scalerel._get_available_class(scalerel.BaseMSR)
 
 GSIM = gsim.get_available_gsims()
 
@@ -181,8 +187,11 @@ def gsim(value, basedir=''):
     try:
         gsim_class = registry[gsim_name]
     except KeyError:
-        raise ValueError('Unknown GSIM: %s' % gsim_name)
-    gs = gsim_class(**kwargs)
+        raise NameError('Unknown GSIM: %s' % gsim_name)
+    if inspect.isclass(gsim_class):
+        gs = gsim_class(**kwargs)
+    else:  # is an alias, i.e. a thunk
+        gs = gsim_class()
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
 
@@ -194,8 +203,11 @@ def modified_gsim(gmpe, **kwargs):
 
     mgs = modified_gsim(gsim, add_between_within_stds={'with_betw_ratio':1.5})
     """
-    text = gmpe._toml.replace('[', '[ModifiableGMPE.gmpe.') + '\n'
-    text += toml.dumps({'ModifiableGMPE': kwargs})
+    name, *args = gmpe._toml.split('\n')
+    text = name.replace('[', '[ModifiableGMPE.gmpe.')
+    for arg in args:
+        text += '\n' + arg
+    text += '\n' + toml.dumps({'ModifiableGMPE': kwargs})
     return gsim(text)
 
 
@@ -527,7 +539,7 @@ def longitude(value):
     >>> longitude('0.123456')
     0.12346
     """
-    lon = numpy.round(float_(value), 5)
+    lon = round(float_(value), 5)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -545,7 +557,7 @@ def latitude(value):
     >>> latitude('-0.123456')
     -0.12346
     """
-    lat = numpy.round(float_(value), 5)
+    lat = round(float_(value), 5)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
@@ -987,6 +999,16 @@ def dictionary(value):
     return dic
 
 
+def list_of_dict(value):
+    """
+    :param value:
+        input string corresponding to a list of literal Python dictionaries
+    :returns:
+        the list
+    """
+    return json.loads(value)
+
+
 # ########################### SOURCES/RUPTURES ############################# #
 
 def mag_scale_rel(value):
@@ -1169,6 +1191,14 @@ def positiveints(value):
     return ints
 
 
+def indexes(value):
+    """
+    >>> indexes("1,2,A")
+    ('1', '2', 'A')
+    """
+    return tuple(value.split(','))
+
+
 def tile_spec(value):
     """
     Specify a tile with a string of format "no:nt"
@@ -1262,6 +1292,21 @@ def version(value: str):
         if 'git' not in number:
             vers[i] = int(number)
     return tuple(vers)
+
+
+def secondary_perils(value: str):
+    """
+    >>> secondary_perils("Jibson2007ALandslides, AllstadtEtAl2022Liquefaction")
+    ['Jibson2007ALandslides', 'AllstadtEtAl2022Liquefaction']
+    """
+    clsnames = namelist(value)
+    out = []
+    for name in clsnames:
+        if name in RENAMED_SEPS:
+            raise ValueError(
+                f'{name} has been replaced with {RENAMED_SEPS[name]}')
+        out.append(getattr(classes, name).__name__)
+    return out
 
 
 ###########################################################################
@@ -1507,4 +1552,3 @@ def fragmentno(src):
         return -1
     fragment = fragments[1].split('!')[0]  # strip !b16
     return int(fragment)
-

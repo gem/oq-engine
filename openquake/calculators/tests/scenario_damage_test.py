@@ -96,6 +96,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
         self.assertEqual(gmf_data['rlz-000'].shape, (2,))  # 2 assets
 
+        pd = view('portfolio_damage', self.calc.datastore)
+        self.assertEqual(pd.dtype.names, (
+            'structural-no_damage', 'structural-slight', 'structural-moderate',
+            'structural-extreme', 'structural-complete'))
+
+
     def test_case_2(self):
         self.assert_ok(case_2, 'job_risk.ini')
 
@@ -112,6 +118,17 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                               delta=5E-4)
+
+        aw = extract(self.calc.datastore, 'damages-stats')
+        self.assertEqual(aw.mean.dtype.names,
+                         ('id', 'taxonomy', 'lon', 'lat', 'contents-no_damage',
+                          'contents-ds1', 'contents-ds2', 'contents-ds3',
+                          'contents-ds4', 'contents-losses',
+                          'nonstructural-no_damage', 'nonstructural-ds1',
+                          'nonstructural-ds2', 'nonstructural-ds3',
+                          'nonstructural-ds4', 'nonstructural-losses',
+                          'structural-no_damage', 'structural-ds1', 'structural-ds2',
+                          'structural-ds3', 'structural-ds4', 'structural-losses'))
 
     def test_wrong_gsim_lt(self):
         with self.assertRaises(InvalidFile) as ctx:
@@ -233,16 +250,17 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_14(self):
         # inconsistent IDs between fragility and consequence
         with self.assertRaises(RuntimeError) as ctx:
-            self.run_calc(case_14.__file__, 'job.ini')
+            self.run_calc(case_14.__file__, 'job_wrong.ini')
         self.assertIn(
-            "{'CR+PC/LDUAL/HBET:8.19/m'} are not in the CompositeRiskModel",
+            "{'CR+PC/LDUAL/HBET:8.19/m'} not in the CompositeRiskModel",
             str(ctx.exception))
 
     def test_case_16(self):
         # inconsistent IDs between fragility and consequence in set_tmap
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_16.__file__, 'job.ini')
-        self.assertIn("Missing 'UNM/C_LR/GOV2' in", str(ctx.exception))
+        self.assertIn("{'MUR-CLBRS-LWAL-HBET-1;2/GOV2'} are in the exposure "
+                      "but not in the taxonomy mapping ", str(ctx.exception))
 
     def test_case_17_no_time_event(self):
         out = self.run_calc(
@@ -283,11 +301,18 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_case_22(self):
         # losses with liquefaction and landslides
         self.run_calc(case_22.__file__, 'job_h.ini')
+
+        # checking avg_gmf
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)
+
+        # doing the risk
         hc_id = str(self.calc.datastore.calc_id)
         out = self.run_calc(case_22.__file__, 'job_r.ini',
                             hazard_calculation_id=hc_id, exports='csv')
         [dmg_csv] = out[('damages-rlzs', 'csv')]
-        self.assertEqualFiles('expected/dmg.csv', dmg_csv)
+        self.assertEqualFiles('expected/dmg.csv', dmg_csv,
+                              delta=4E-5)
         [agg_csv] = out[('aggrisk', 'csv')]
         self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
 

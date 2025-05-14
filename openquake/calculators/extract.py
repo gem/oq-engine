@@ -819,7 +819,10 @@ def _aggexp_tags(dstore):
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
-    aggby = oq.aggregate_by[0]
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        aggby = [','.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        [aggby] = oq.aggregate_by
     keys = numpy.array([line.decode('utf8').split('\t')
                         for line in dstore['agg_keys'][:]])
     values = dstore['agg_values'][:-1]  # discard the total aggregation
@@ -843,22 +846,66 @@ def extract_aggexp_tags(dstore, what):
     return _aggexp_tags(dstore)[0]
 
 
+@extract.add('mmi_tags')
+def extract_mmi_tags(dstore, what):
+    """
+    Aggregates exposure by MMI regions and tags. Use it as /extract/mmi_tags?
+    """
+    return dstore.read_df('mmi_tags')
+
+
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
     """
     Aggregates risk by tag. Use it as /extract/aggrisk_tags?
     """
-    df, ok = _aggexp_tags(dstore)
-    K = len(ok)
+    oq = dstore['oqparam']
     ws = dstore['weights'][:]
     adf = dstore.read_df('aggrisk')
-    acc = {lt: numpy.zeros(K) for lt in LOSSTYPE[adf.loss_id.unique()]}
+    if 'aggrisk_quantiles' in dstore:
+        # normally there are two quantiles 0.05, 0.95
+        qdf = dstore.read_df('aggrisk_quantiles', ['agg_id', 'loss_id'])
+        qfields = [col for col in qdf.columns if col != 'agg_id']
+    else:
+        qdf = ()
+        qfields = []
+    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
+        # see impact_test.py
+        aggby = [','.join(a[0] for a in oq.aggregate_by)]
+    else:  # i.e. [['ID_0', 'OCCUPANCY']]
+        # see event_based_risk_test/case_1
+        [aggby] = oq.aggregate_by
+    keys = numpy.array([line.decode('utf8').split('\t')
+                        for line in dstore['agg_keys'][:]])
+    values = dstore['agg_values'][:-1]  # discard the total aggregation
+    lossdic = general.AccumDict(accum=0)
+    K = len(keys)
     for agg_id, rlz_id, loss, loss_id in zip(
             adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
         if agg_id < K:
-            acc[LOSSTYPE[loss_id]][agg_id] += loss * ws[rlz_id]
-    for name in acc:
-        df[name + '_risk'] = acc[name][ok]
+            lossdic[agg_id, loss_id] += loss * ws[rlz_id]
+    acc = general.AccumDict(accum=[])
+    for (agg_id, loss_id), loss in sorted(lossdic.items()):
+        lt = LOSSTYPE[loss_id]
+        if lt in oq.loss_types:
+            for agg_key, key in zip(aggby, keys[agg_id]):
+                acc[agg_key].append(key)
+            acc['loss_type'].append(lt)
+            if lt == 'affectedpop':
+                lt = 'residents'
+            elif lt in ['occupants', 'injured']:
+                lt = 'occupants_' + oq.time_event
+            acc['value'].append(values[agg_id][lt])
+            acc['lossmea'].append(loss)
+            if len(qdf):
+                qvalues = qdf.loc[agg_id, loss_id].to_numpy()
+                for qfield, qvalue in zip(qfields, qvalues):
+                    acc[qfield].append(qvalue)
+    df = pandas.DataFrame(acc)
+    total_df = df.groupby('loss_type', as_index=False).sum()
+    total_df[aggby] = '*total*'
+    df = pandas.concat([df, total_df], ignore_index=True)
+
     return df
 
 
@@ -988,11 +1035,30 @@ def extract_losses_by_asset(dstore, what):
         yield 'rlz-000', data
 
 
+@extract.add('losses_by_site')
+def extract_losses_by_site(dstore, what):
+    """
+    :returns: a DataFrame (lon, lat, number, structural, ...)
+    """
+    sitecol = dstore['sitecol']
+    dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
+    array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
+    try:
+        grp = dstore.getitem('avg_losses-stats')
+    except KeyError:
+        # there is only one realization
+        grp = dstore.getitem('avg_losses-rlzs')
+    for loss_type in grp:
+        losses = grp[loss_type][:, 0]
+        dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))
+    return pandas.DataFrame(dic)
+
+
 def _gmf(df, num_sites, imts, sec_imts):
     # convert data into the composite array expected by QGIS
     gmfa = numpy.zeros(num_sites, [(imt, F32) for imt in imts + sec_imts])
-    for m, imt in enumerate(imts + sec_imts):
-        gmfa[imt][U32(df.sid)] = df[f'gmv_{m}'] if imt in imts else df[imt]
+    for imt in imts + sec_imts:
+        gmfa[imt][U32(df.sid)] = df[imt]
     return gmfa
 
 
@@ -1008,9 +1074,8 @@ def extract_gmf_scenario(dstore, what):
     eids = dstore['gmf_data/eid'][:]
     rlzs = dstore['events']['rlz_id']
     ok = rlzs[eids] == rlz_id
-    m = list(oq.imtls).index(imt)
     eids = eids[ok]
-    gmvs = dstore[f'gmf_data/gmv_{m}'][ok]
+    gmvs = dstore[f'gmf_data/{imt}'][ok]
     sids = dstore['gmf_data/sid'][ok]
     try:
         N = len(dstore['complete'])
@@ -1037,18 +1102,21 @@ def extract_gmf_npz(dstore, what):
         complete = dstore['sitecol']
     sites = get_sites(complete)
     n = len(sites)
+    imt_list = dstore['gmf_data'].attrs['imts'].split()
+    # rename old (version <= 3.23) column names
+    rename_dic = {f'gmv_{i}': imt for i, imt in enumerate(imt_list)}
     try:
-        df = dstore.read_df('gmf_data', 'eid').loc[eid]
+        df = dstore.read_df('gmf_data', 'eid').rename(columns=rename_dic)
     except KeyError:
         # zero GMF
         yield 'rlz-%03d' % rlzi, []
     else:
         prim_imts = list(oq.get_primary_imtls())
-        gmfa = _gmf(df, n, prim_imts, oq.sec_imts)
+        gmfa = _gmf(df[df.index == eid], n, prim_imts, oq.sec_imts)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
-# extract the relevant GMFs as an npz file with fields eid, sid, gmv_
+# extract the relevant GMFs as an npz file with fields eid, sid, imt...
 @extract.add('relevant_gmfs')
 def extract_relevant_gmfs(dstore, what):
     qdict = parse(what)
@@ -1115,14 +1183,15 @@ def build_damage_dt(dstore):
     dt_list = []
     for peril in perils:
         for ds in ['no_damage'] + limit_states + csqs:
-            dt_list.append((ds if peril == 'earthquake' else f'{peril}_{ds}', F32))
+            dt_list.append((ds if peril == 'groundshaking'
+                            else f'{peril}_{ds}', F32))
     damage_dt = numpy.dtype(dt_list)
     loss_types = oq.loss_dt().names
     return numpy.dtype([(lt, damage_dt) for lt in loss_types])
 
 
 @extract.add('damages-rlzs')
-def extract_damages_npz(dstore, what):
+def extract_damages_rlzs_npz(dstore, what):
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
     if oq.collect_rlzs:
@@ -1131,6 +1200,15 @@ def extract_damages_npz(dstore, what):
     assets = util.get_assets(dstore)
     for r in range(R):
         yield 'rlz-%03d' % r, util.compose_arrays(assets, data[:, r])
+
+
+@extract.add('damages-stats')
+def extract_damages_stats_npz(dstore, what):
+    data = dstore['damages-stats']
+    attrs = json.loads(data.attrs['json'])
+    assets = util.get_assets(dstore)
+    for s, stat in enumerate(attrs['stat']):
+        yield stat, util.compose_arrays(assets, data[:, s])
 
 
 # tested on oq-risk-tests event_based/etna

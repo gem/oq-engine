@@ -26,11 +26,19 @@ import logging
 from openquake.baselib import config
 from openquake.commonlib import datastore
 
+# optionally overridden in local_settings.py
+STANDALONE_APP_NAME_MAP = {}
 try:
     from openquakeplatform.settings import STANDALONE, STANDALONE_APPS
 except ImportError:
     STANDALONE = False
     STANDALONE_APPS = ()
+
+try:
+    from openquakeplatform.settings import INSTALLED_APPS as OQP_INSTALLED_APPS
+except ImportError:
+    OQP_INSTALLED_APPS = []
+
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 WEBUI_USER = 'openquake'
@@ -205,8 +213,8 @@ APPLICATION_MODES = [
 
 APPLICATION_MODE = 'PUBLIC'
 
-ARISTOTLE_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
-# ARISTOTLE_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
+IMPACT_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
+# IMPACT_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
 
 EXTERNAL_TOOLS = os.environ.get('EXTERNAL_TOOLS', False) == 'True'
 
@@ -298,7 +306,7 @@ if APPLICATION_MODE not in ('PUBLIC',):
 
 if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     if APPLICATION_MODE == 'ARISTOTLE':
-        from openquake.server.tests.settings.local_settings_aristotle import *  # noqa
+        from openquake.server.tests.settings.local_settings_impact import *  # noqa
     elif APPLICATION_MODE == 'AELO':
         from openquake.server.tests.settings.local_settings_aelo import *  # noqa
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
@@ -409,3 +417,7 @@ if LOCKDOWN:
         {'NAME': 'django.contrib.auth.password_validation.'
                  'NumericPasswordValidator', },
     ]
+
+for app in OQP_INSTALLED_APPS:
+    if app not in INSTALLED_APPS:
+        INSTALLED_APPS += (app,)
