@@ -769,8 +769,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
         raise ValueError('Not enough profiles. Decrease the spacing')
 
     # Convert from profiles to edges
-    msh = msh.swapaxes(0, 1)
-    msh = fix_mesh(msh)
+    msh = fix_mesh(msh.transpose(1, 0, 2))
 
     # Sort the edges composing the mesh using their average depth
     _edges_sort_by_mean_depth(msh)
