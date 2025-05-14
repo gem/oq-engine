@@ -95,9 +95,9 @@ def get_rupdims(usd, lsd, rar, area, dip):
     return numpy.array([rup_length, rup_width * cosdip, rup_width * sindip])
 
 
-@compile("(f8[:, :], f8, f8, f8, f8, f8, f8, f8, f8, f8, f8, f8)")
+@compile("(f8[:, :, :], f8, f8, f8, f8, f8, f8, f8, f8, f8, f8, f8[:])")
 def _update(corners, usd, lsd, rar, area, mag, strike, dip, rake,
-            clon, clat, cdep):
+            clon, clat, cdeps):
     # from the rupture center we can now compute the coordinates of the
     # four coorners by moving along the diagonals of the plane. This seems
     # to be better then moving along the perimeter, because in this case
@@ -116,55 +116,56 @@ def _update(corners, usd, lsd, rar, area, mag, strike, dip, rake,
     azimuth_down = azimuth_right + 90
     azimuth_left = azimuth_down + 90
     azimuth_up = azimuth_left + 90
-
-    # half height of the vertical component of rupture width
-    # is the vertical distance between the rupture geometrical
-    # center and it's upper and lower borders:
-    # calculate how much shallower the upper border of the rupture
-    # is than the upper seismogenic depth:
-    vshift = usd - cdep + half_height
-    # if it is shallower (vshift > 0) than we need to move the rupture
-    # by that value vertically.
-    if vshift < 0:
-        # the top edge is below upper seismogenic depth. now we need
-        # to check that we do not cross the lower border.
-        vshift = lsd - cdep - half_height
-        if vshift > 0:
-            # the bottom edge of the rupture is above the lower seismo
-            # depth; that means that we don't need to move the rupture
-            # as it fits inside seismogenic layer.
-            vshift = 0
-        # if vshift < 0 than we need to move the rupture up.
-
-    # now we need to find the position of rupture's geometrical center.
-    # in any case the hypocenter point must lie on the surface, however
-    # the rupture center might be off (below or above) along the dip.
-    if vshift != 0:
-        # we need to move the rupture center to make the rupture fit
-        # inside the seismogenic layer.
-        hshift = abs(vshift / half_height * half_width)
-        clon, clat = geodetic.fast_point_at(
-            clon, clat, azimuth_up if vshift < 0 else azimuth_down,
-            hshift)
-        cdep += vshift
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    corners[0, :2] = geodetic.fast_point_at(
-        clon, clat, strike + 180 + theta, hor_dist)
-    corners[1, :2] = geodetic.fast_point_at(
-        clon, clat, strike - theta, hor_dist)
-    corners[2, :2] = geodetic.fast_point_at(
-        clon, clat, strike + 180 - theta, hor_dist)
-    corners[3, :2] = geodetic.fast_point_at(
-        clon, clat, strike + theta, hor_dist)
-    corners[0:2, 2] = cdep - half_height
-    corners[2:4, 2] = cdep + half_height
-    corners[4, 0] = strike
-    corners[4, 1] = dip
-    corners[4, 2] = rake
-    corners[5, 0] = clon
-    corners[5, 1] = clat
-    corners[5, 2] = cdep
+
+    for d, cdep in enumerate(cdeps):
+        # half height of the vertical component of rupture width
+        # is the vertical distance between the rupture geometrical
+        # center and it's upper and lower borders:
+        # calculate how much shallower the upper border of the rupture
+        # is than the upper seismogenic depth:
+        vshift = usd - cdep + half_height
+        # if it is shallower (vshift > 0) than we need to move the rupture
+        # by that value vertically.
+        if vshift < 0:
+            # the top edge is below upper seismogenic depth. now we need
+            # to check that we do not cross the lower border.
+            vshift = lsd - cdep - half_height
+            if vshift > 0:
+                # the bottom edge of the rupture is above the lower seismo
+                # depth; that means that we don't need to move the rupture
+                # as it fits inside seismogenic layer.
+                vshift = 0
+            # if vshift < 0 than we need to move the rupture up.
+
+        # now we need to find the position of rupture's geometrical center.
+        # in any case the hypocenter point must lie on the surface, however
+        # the rupture center might be off (below or above) along the dip.
+        if vshift != 0:
+            # we need to move the rupture center to make the rupture fit
+            # inside the seismogenic layer.
+            hshift = abs(vshift / half_height * half_width)
+            clon, clat = geodetic.fast_point_at(
+                clon, clat, azimuth_up if vshift < 0 else azimuth_down,
+                hshift)
+            cdep += vshift
+        corners[0, d, 0:2] = geodetic.fast_point_at(
+            clon, clat, strike + 180 + theta, hor_dist)
+        corners[1, d, 0:2] = geodetic.fast_point_at(
+            clon, clat, strike - theta, hor_dist)
+        corners[2, d, 0:2] = geodetic.fast_point_at(
+            clon, clat, strike + 180 - theta, hor_dist)
+        corners[3, d, 0:2] = geodetic.fast_point_at(
+            clon, clat, strike + theta, hor_dist)
+        corners[0:2, d, 2] = cdep - half_height
+        corners[2:4, d, 2] = cdep + half_height
+        corners[4, d, 0] = strike
+        corners[4, d, 1] = dip
+        corners[4, d, 2] = rake
+        corners[5, d, 0] = clon
+        corners[5, d, 1] = clat
+        corners[5, d, 2] = cdep
 
 
 # numbified below, ultrafast
@@ -177,10 +178,9 @@ def build_corners(usd, lsd, rar, area, mag, strike, dip, rake, hdd, lon, lat):
     # 5: hypo
     for m in range(M):
         for n in range(N):
-            for d in range(D):
-                _update(corners[:, m, n, d], usd, lsd, rar,
-                        area[m, n], mag[m, n], strike[m, n],
-                        dip[m, n], rake[m, n], lon, lat, hdd[d, 1])
+            _update(corners[:, m, n], usd, lsd, rar,
+                    area[m, n], mag[m, n], strike[m, n],
+                    dip[m, n], rake[m, n], lon, lat, hdd[:, 1])
     return corners
 
 
