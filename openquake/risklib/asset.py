@@ -901,7 +901,8 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         df['id'] = asset_prefix + df.id
         dfs.append(df)
 
-    assets_df = pandas.concat(dfs)
+    # NB: missing columns in the files are filled with NaN by pandas.concat
+    assets_df = pandas.concat(dfs).fillna('No_tag')
     del fname_dfs  # save memory
     del dfs  # save memory
 
@@ -1176,7 +1177,7 @@ class Exposure(object):
                     '%s: expected %d fields in %s, got %d' %
                     (fname, len(fields), header, len(header)))
             elif missing:
-                raise InvalidFile('%s: missing %s' % (fname, missing))
+                logging.warning('%s: missing %s', fname, missing)
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
                 'residents': float, 'retrofitted': float, 'ideductible': float,
                 'occupants_day': float, 'occupants_night': float,
@@ -1202,8 +1203,14 @@ class Exposure(object):
                 if len(df) == 0:
                     continue
             add_dupl_fields(df, oqfields)
-            df['lon'] = numpy.round(df.lon, 5)
-            df['lat'] = numpy.round(df.lat, 5)
+            try:
+                df['lon'] = numpy.round(df.lon, 5)
+            except AttributeError:  # missing lon or lat
+                raise InvalidFile(f'{fname}: missing column "lon"')
+            try:
+                df['lat'] = numpy.round(df.lat, 5)
+            except AttributeError:  # missing lon or lat
+                raise InvalidFile(f'{fname}: missing column "lat"')
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
                 df = general.random_filter(df, sa)

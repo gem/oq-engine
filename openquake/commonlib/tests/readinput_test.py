@@ -407,7 +407,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         fname = os.path.join(DATADIR, 'exposure.xml')
         with self.assertRaises(InvalidFile) as ctx:
             asset.Exposure.read_all([fname])
-        self.assertIn("missing {'lon'}", str(ctx.exception))
+        self.assertIn('missing column "lon"', str(ctx.exception))
 
     def test_case_similar(self):
         fname = os.path.join(DATADIR, 'exposure2.xml')
