@@ -119,6 +119,7 @@ def _update(corners, usd, lsd, rar, area, mag, strike, dip, rake,
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
 
+    vshifts = numpy.zeros_like(cdeps)
     for d, cdep in enumerate(cdeps):
         # half height of the vertical component of rupture width
         # is the vertical distance between the rupture geometrical
@@ -137,35 +138,56 @@ def _update(corners, usd, lsd, rar, area, mag, strike, dip, rake,
                 # that means that we don't need to move the rupture
                 # as it fits inside seismogenic layer.
                 vshift = 0
-            # if vshift < 0 than we need to move the rupture up.
+        vshifts[d] = vshift
 
-        # now we need to find the position of rupture's geometrical center.
-        # in any case the hypocenter point must lie on the surface, however
-        # the rupture center might be off (below or above) along the dip.
-        if vshift != 0:
-            # we need to move the rupture center to make the rupture fit
-            # inside the seismogenic layer.
-            hshift = abs(vshift / half_height * half_width)
-            clon, clat = geodetic.fast_point_at(
-                clon, clat, azimuth_up if vshift < 0 else azimuth_down,
-                hshift)
-            cdep += vshift
-        corners[0, d, 0:2] = geodetic.fast_point_at(
+    if len(vshifts) > 1 and (vshifts == 0).all():
+        # fast lane, there is no need to shift the rupture
+        corners[0, :, 0:2] = geodetic.fast_point_at(
             clon, clat, strike + 180 + theta, hor_dist)
-        corners[1, d, 0:2] = geodetic.fast_point_at(
+        corners[1, :, 0:2] = geodetic.fast_point_at(
             clon, clat, strike - theta, hor_dist)
-        corners[2, d, 0:2] = geodetic.fast_point_at(
+        corners[2, :, 0:2] = geodetic.fast_point_at(
             clon, clat, strike + 180 - theta, hor_dist)
-        corners[3, d, 0:2] = geodetic.fast_point_at(
+        corners[3, :, 0:2] = geodetic.fast_point_at(
             clon, clat, strike + theta, hor_dist)
-        corners[0:2, d, 2] = cdep - half_height
-        corners[2:4, d, 2] = cdep + half_height
-        corners[4, d, 0] = strike
-        corners[4, d, 1] = dip
-        corners[4, d, 2] = rake
-        corners[5, d, 0] = clon
-        corners[5, d, 1] = clat
-        corners[5, d, 2] = cdep
+        corners[0:2, :, 2] = cdeps - half_height
+        corners[2:4, :, 2] = cdeps + half_height
+        corners[4, :, 0] = strike
+        corners[4, :, 1] = dip
+        corners[4, :, 2] = rake
+        corners[5, :, 0] = clon
+        corners[5, :, 1] = clat
+        corners[5, :, 2] = cdeps
+    else:
+        for d, cdep in enumerate(cdeps):
+            vshift = vshifts[d]
+            # now we need to find the position of rupture's geometrical center.
+            # in any case the hypocenter point must lie on the surface, however
+            # the rupture center might be off (below or above) along the dip
+            if vshift != 0:
+                # we need to move the rupture center to make the rupture fit
+                # inside the seismogenic layer
+                hshift = abs(vshift / half_height * half_width)
+                clon, clat = geodetic.fast_point_at(
+                    clon, clat, azimuth_up if vshift < 0 else azimuth_down,
+                    hshift)
+                cdep += vshift
+            corners[0, d, 0:2] = geodetic.fast_point_at(
+                clon, clat, strike + 180 + theta, hor_dist)
+            corners[1, d, 0:2] = geodetic.fast_point_at(
+                clon, clat, strike - theta, hor_dist)
+            corners[2, d, 0:2] = geodetic.fast_point_at(
+                clon, clat, strike + 180 - theta, hor_dist)
+            corners[3, d, 0:2] = geodetic.fast_point_at(
+                clon, clat, strike + theta, hor_dist)
+            corners[0:2, d, 2] = cdep - half_height
+            corners[2:4, d, 2] = cdep + half_height
+            corners[4, d, 0] = strike
+            corners[4, d, 1] = dip
+            corners[4, d, 2] = rake
+            corners[5, d, 0] = clon
+            corners[5, d, 1] = clat
+            corners[5, d, 2] = cdep
 
 
 # numbified below, ultrafast
