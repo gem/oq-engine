@@ -12,10 +12,10 @@ on:
         required: false
         default: false
   schedule:
-    - cron: "0 4 * * 0"
+    - cron: "0 4 * * *"
 
 jobs:
-  webUI and calcs in user mode:
+  webUI_and_Calc:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
