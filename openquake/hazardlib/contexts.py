@@ -326,7 +326,11 @@ def simple_cmaker(gsims, imts, **params):
 # ############################ genctxs ################################## #
 
 # generator of quartets (rup_index, mag, planar_array, sites)
-def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
+def _quartets(cmaker, src, sitecol, cdist, magdist):
+    with cmaker.ir_mon:
+        # building planar geometries
+        planardict = src.get_planar(cmaker.shift_hypo)
+
     minmag = cmaker.maximum_distance.x[0]
     maxmag = cmaker.maximum_distance.x[-1]
     # splitting by magnitude
@@ -340,7 +344,7 @@ def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
             mag = rup.mag
             if mag > maxmag or mag < minmag:
                 continue
-            arr = [rup.surface.array.reshape(-1, 3)]
+            arr = [rup.surface.array.reshape(-1, 3)]  # planar
             pla = planardict[mag]
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
@@ -448,10 +452,6 @@ def genctxs_Pp(src, sitecol, cmaker):
                          if par in dd]
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
-    with cmaker.ir_mon:
-        # building planar geometries
-        planardict = src.get_planar(cmaker.shift_hypo)
-
     magdist = {mag: cmaker.maximum_distance(mag)
                for mag, rate in src.get_annual_occurrence_rates()}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range
@@ -465,7 +465,7 @@ def genctxs_Pp(src, sitecol, cmaker):
         return []
 
     for magi, mag, planarlist, sites in _quartets(
-            cmaker, src, sitecol, cdist[mask], magdist, planardict):
+            cmaker, src, sitecol, cdist[mask], magdist):
         if not planarlist:
             continue
         elif len(planarlist) > 1:  # when using ps_grid_spacing
