@@ -26,7 +26,7 @@ from openquake.baselib.general import CallableDict, BASE183, BASE33489
 from openquake.baselib.node import Node
 from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
-    split_coords_2d, split_coords_3d)
+    split_coords_2d, split_coords_3d, SourceGroup)
 from openquake.hazardlib import valid
 
 
@@ -903,6 +903,7 @@ class CompositeLogicTree(object):
         ordinal = 0
         for weight, branches in self.branchsets[0].enumerate_paths():
             value = [br.value for br in branches]
+            # assume 1-letter branch_ids
             lt_path = ''.join(branch.id for branch in branches)
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
@@ -933,6 +934,25 @@ class CompositeLogicTree(object):
         Converts the logic tree into a string in NRML format
         """
         return nrml.to_string(self.to_node())
+
+    def apply_all(self, src):
+        """
+        Apply all uncertainties for each realization.
+
+        :param src: source object
+        :returns: R modified sources
+        """
+        srcs = []
+        bs0 = self.branchsets[0]
+        for rlz in self:
+            bset_values = bs0.get_bset_values(rlz.lt_path)
+            new = copy.deepcopy(src)
+            for bset, value in bset_values:
+                apply_uncertainty(bset.uncertainty_type, new, value)
+            srcs.append(new)
+        for i, new in enumerate(srcs):
+            new.id = i
+        return srcs
 
     def __repr__(self):
         return '<%s>' % self.branchsets

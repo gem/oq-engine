@@ -28,6 +28,7 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.geo.point import Point
 
 CDIR = os.path.dirname(__file__)
+ae = numpy.testing.assert_equal
 
 # a point source with 2(mag) x 2(npd) x 2(hdd) = 8 ruptures
 ps = nrml.get('''\
@@ -103,14 +104,16 @@ class CollapseTestCase(unittest.TestCase):
         #    ___/ b11 (w=.2)
         #  _/   \ b12 (w=.2)
         #   \____ b02 (w=.6)
-        self.bs0 = bs0 = lt.BranchSet('abGRAbsolute')
-        bs0.branches = [lt.Branch('bs0', 'b01', .4, (4.6, 1.1)),
-                        lt.Branch('bs0', 'b02', .6, (4.4, 0.9))]
+        self.bs0 = bs0 = lt.BranchSet('abGRAbsolute', 0)
+        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
+                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
 
-        self.bs1 = bs1 = lt.BranchSet('maxMagGRAbsolute')
-        bs1.branches = [lt.Branch('bs1', 'b11', .5, 7.0),
-                        lt.Branch('bs1', 'b12', .5, 7.6)]
-        bs0.branches[0].bset = bs1
+        self.bs1 = bs1 = lt.BranchSet('maxMagGRAbsolute', 1,
+                                      dict(applyToBranches=['A']))
+        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
+                        lt.Branch('bs1', 'D', .5, 7.6)]
+
+        self.clt = lt.CompositeLogicTree([bs0, bs1])
 
         # setup sitecol, srcfilter, gsims, imtls
         self.sitecol = site.SiteCollection(
@@ -177,6 +180,25 @@ class CollapseTestCase(unittest.TestCase):
         assert scaling_rates(srcs) == [0.4, 0.6, 0.5, 0.5]
         self.assertEqual(effctxs, 36)
         # numpy.testing.assert_allclose(mean, coll2, atol=.21)  # big diff
+
+    def test_apply_all(self):
+        rlz0, rlz1, rlz2 = self.clt
+        src0, src1, src2 = self.clt.apply_all(self.sg[0])
+        self.assertEqual(src0.mfd.a_val, 4.6)
+        self.assertEqual(src0.mfd.b_val, 1.1)
+        self.assertEqual(src0.mfd.max_mag, 7.0)
+
+        self.assertEqual(src1.mfd.a_val, 4.6)
+        self.assertEqual(src1.mfd.b_val, 1.1)
+        self.assertEqual(src1.mfd.max_mag, 7.6)
+
+        self.assertEqual(src2.mfd.a_val, 4.4)
+        self.assertEqual(src2.mfd.b_val, 0.9)
+        self.assertEqual(src2.mfd.max_mag, 7.0)
+
+        ae(rlz0.value, [(4.6, 1.1), 7.0])
+        ae(rlz1.value, [(4.6, 1.1), 7.6])
+        ae(rlz2.value, [(4.4, 0.9), None])
 
     def plot(self, mean, coll):
         import matplotlib.pyplot as plt
