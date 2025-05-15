@@ -96,16 +96,16 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
     def test_critical_accel(self):
         ca = np.array(
             [
-                5.537960,
-                6.459174,
-                5.791588,
-                0.0001,
-                14.815133,
-                5.269902,
-                4.204173,
-                135.892846,
-                6.401494,
-                6.286276,
+                0.564522,
+                0.658428,
+                0.590376,
+                0.000100,
+                1.510207,
+                0.537197,
+                0.428560,
+                13.852482,
+                0.652548,
+                0.640803,
             ]
         )
         np.testing.assert_array_almost_equal(self.sites["crit_accel"], ca)
@@ -114,8 +114,9 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
         self.sites["newmark_disp"] = jibson_2007_model_b(
             pga=self.pga, crit_accel=self.sites["crit_accel"], mag=7.5
         )
+        #breakpoint()
         nd = np.array(
-            [0.0, 0.0, 0.0, 2.19233517, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            [0.0, 7.899399e-04, 0.0, 2.192335e+00, 0.0, 0.0, 0.0, 0.0, 9.145443e-06, 9.660795e-05]
         )
         np.testing.assert_array_almost_equal(self.sites["newmark_disp"], nd)
 

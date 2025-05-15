@@ -28,8 +28,8 @@ def test_critical_accel():
     )
     ca = critical_accel(fs, slopes)
     ca_ = np.array(
-        [1.14632036e+01, 1.09414828e+01, 9.66668486e+00, 6.74308300e+00,
-       1.75870319e+00, 1.00000000e-04]
+        [1.16852228e+00, 1.11533974e+00, 9.85390913e-01, 6.87368298e-01,
+       1.79276574e-01, 1.00000000e-04]
     )
     np.testing.assert_allclose(ca, ca_)
 

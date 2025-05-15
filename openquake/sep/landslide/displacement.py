@@ -34,7 +34,7 @@ def critical_accel(
         crit_accel: critical acceleration in g units
     """    
 
-    crit_accel = (factor_of_safety - 1) * np.sin(np.arctan(slope)) * g
+    crit_accel = (factor_of_safety - 1) * np.sin(np.arctan(slope))
     print(factor_of_safety)
     print(crit_accel)
     print("crit_accel")
