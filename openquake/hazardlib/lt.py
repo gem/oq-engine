@@ -728,7 +728,7 @@ class BranchSet(object):
     def get_bset_values(self, ltpath):
         """
         :param ltpath:
-            List of branch IDs
+            String of chars
         :returns:
             A list of pairs [(bset, value), ...]
         """
@@ -903,8 +903,7 @@ class CompositeLogicTree(object):
         ordinal = 0
         for weight, branches in self.branchsets[0].enumerate_paths():
             value = [br.value for br in branches]
-            # assume 1-letter branch_ids
-            lt_path = ''.join(branch.id for branch in branches)
+            lt_path = ''.join(br.id for br in branches)
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
 
@@ -944,7 +943,10 @@ class CompositeLogicTree(object):
         """
         srcs = []
         bs0 = self.branchsets[0]
+        n = len(self.branchsets)
         for rlz in self:
+            if len(rlz.lt_path) != n:
+                raise ValueError("The branch IDs must be one-character long")
             bset_values = bs0.get_bset_values(rlz.lt_path)
             new = copy.deepcopy(src)
             for bset, value in bset_values:
