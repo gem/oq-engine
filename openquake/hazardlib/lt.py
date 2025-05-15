@@ -903,6 +903,8 @@ class CompositeLogicTree(object):
         ordinal = 0
         for weight, branches in self.branchsets[0].enumerate_paths():
             value = [br.value for br in branches]
+            # NB: the branch_ids must be one-character long if we want to use
+            # apply_all
             lt_path = ''.join(br.id for br in branches)
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
