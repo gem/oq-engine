@@ -28,6 +28,8 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA, PGV
+from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
+
 
 CONSTANTS = {"mlf0": 5.5, "mlf1": 7, "f1": 0, "f3": 98.1,
              "b1": -1.3, "b2": -0.5, "v0": 100, "v1": 250, "v2": 1000,
@@ -179,7 +181,7 @@ def _get_basin_term(C, ctx, region=None):
     """
     z2pt5 = ctx.z2pt5
     mask = z2pt5 == -999 # Non-measured values
-    
+    z2pt5[mask] = _get_z1_ref(ctx.vs30[mask]) # pp.1805 states CY08 vs30 vs z1pt0
 
     s = CONSTANTS
     fz2pt5 = np.where(z2pt5 >= 0, C['cz0'], 0)
