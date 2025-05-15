@@ -35,11 +35,11 @@ jobs:
           set -x
           BRANCH=master
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-          python install.py user --version=master
+          python install.py user --version=master --venv gh-venv
       - name: Test WebUI and run https calculation
         run: |
           BRANCH=master
-          source ~/openquake/bin/activate
+          source ~/gh-venv/bin/activate
           set -x
           oq engine --upgrade-db
           oq --version
