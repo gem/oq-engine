@@ -137,12 +137,9 @@ class KijkoSellevolBayes(BaseMaximumMagnitude):
         while d_t > config["tolerance"]:
             rval = pval / (pval + mmax - mmin)
             ldelt = (1.0 / (1.0 - (rval**qval))) ** neq
-            delta = (
-                ldelt
-                * quad(
-                    self._ksb_intfunc, mmin, mmax, args=(neq, mmin, pval, qval)
-                )[0]
-            )
+            delta = ldelt * quad(
+                self._ksb_intfunc, mmin, mmax, args=(neq, mmin, pval, qval)
+            )[0]
 
             tmmax = obsmax + delta
             d_t = np.abs(tmmax - mmax)
