@@ -325,11 +325,23 @@ def simple_cmaker(gsims, imts, **params):
 
 # ############################ genctxs ################################## #
 
-# generator of quartets (rup_index, mag, planar_array, sites)
-def _quartets(cmaker, src, sitecol, cdist, magdist):
+# generator of quintets (rup_index, mag, planar_array, sites)
+def _quintets(cmaker, src, sitecol):
     with cmaker.ir_mon:
         # building planar geometries
         planardict = src.get_planar(cmaker.shift_hypo)
+
+    magdist = {mag: cmaker.maximum_distance(mag)
+               for mag, rate in src.get_annual_occurrence_rates()}
+    # cmaker.maximum_distance(mag) can be 0 if outside the mag range
+    maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
+    maxdist = magdist[maxmag]
+    cdist = sitecol.get_cdist(src.location)
+    # NB: having a decent max_radius is essential for performance!
+    mask = cdist <= maxdist + src.max_radius(maxdist)
+    sitecol = sitecol.filter(mask)
+    if sitecol is None:
+        return
 
     minmag = cmaker.maximum_distance.x[0]
     maxmag = cmaker.maximum_distance.x[-1]
@@ -338,32 +350,33 @@ def _quartets(cmaker, src, sitecol, cdist, magdist):
         # one rupture per magnitude
         for m, (mag, pla) in enumerate(planardict.items()):
             if minmag <= mag <= maxmag:
-                yield m, mag, pla, sitecol
+                yield m, mag, magdist[mag], pla, sitecol
     else:
         for m, rup in enumerate(src.iruptures()):
             mag = rup.mag
             if mag > maxmag or mag < minmag:
                 continue
+            mdist = magdist[mag]
             arr = [rup.surface.array.reshape(-1, 3)]  # planar
             pla = planardict[mag]
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
                                     magdist)
-            close = sitecol.filter(cdist <= psdist)
-            far = sitecol.filter(cdist > psdist)
+            close = sitecol.filter(cdist[mask] <= psdist)
+            far = sitecol.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
                 if close is None:  # all is far, common for small mag
-                    yield m, mag, arr, sitecol
+                    yield m, mag, mdist, arr, sitecol
                 else:  # something is close
-                    yield m, mag, pla, sitecol
+                    yield m, mag, mdist, pla, sitecol
             else:  # many sites
                 if close is None:  # all is far
-                    yield m, mag, arr, far
+                    yield m, mag, mdist, arr, far
                 elif far is None:  # all is close
-                    yield m, mag, pla, close
+                    yield m, mag, mdist, pla, close
                 else:  # some sites are far, some are close
-                    yield m, mag, arr, far
-                    yield m, mag, pla, close
+                    yield m, mag, mdist, arr, far
+                    yield m, mag, mdist, pla, close
 
 
 # helper used to populate contexts for planar ruptures
@@ -452,26 +465,13 @@ def genctxs_Pp(src, sitecol, cmaker):
                          if par in dd]
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
-    magdist = {mag: cmaker.maximum_distance(mag)
-               for mag, rate in src.get_annual_occurrence_rates()}
-    # cmaker.maximum_distance(mag) can be 0 if outside the mag range
-    maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
-    maxdist = magdist[maxmag]
-    cdist = sitecol.get_cdist(src.location)
-    # NB: having a decent max_radius is essential for performance!
-    mask = cdist <= maxdist + src.max_radius(maxdist)
-    sitecol = sitecol.filter(mask)
-    if sitecol is None:
-        return []
-
-    for magi, mag, planarlist, sites in _quartets(
-            cmaker, src, sitecol, cdist[mask], magdist):
-        if not planarlist:
+    for magi, mag, magdist, planars, sites in _quintets(cmaker, src, sitecol):
+        if not planars:
             continue
-        elif len(planarlist) > 1:  # when using ps_grid_spacing
-            pla = numpy.concatenate(planarlist).view(numpy.recarray)
+        elif len(planars) > 1:  # when using ps_grid_spacing
+            pla = numpy.concatenate(planars).view(numpy.recarray)
         else:
-            pla = planarlist[0]
+            pla = planars[0]
 
         offset = src.offset + magi * len(pla)
         zctx = builder.zeros((len(pla), len(sites)))  # shape (N, U)
@@ -482,7 +482,7 @@ def genctxs_Pp(src, sitecol, cmaker):
 
         # building contexts
         ctx = _get_ctx_planar(cmaker, zctx, mag, pla, sites, src.id, tom)
-        ctxt = ctx[ctx.rrup < magdist[mag]]
+        ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
             yield ctxt
 
