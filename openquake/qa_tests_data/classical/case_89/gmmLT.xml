@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="SINTERLT"
+    >
+        <logicTreeBranchingLevel
+        branchingLevelID="SI"
+        >
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Subduction Interface"
+            branchSetID="1"
+            uncertaintyType="gmpeModel"
+            >
+                <logicTreeBranch
+                branchID="CB14"
+                >
+                    <uncertaintyModel>
+                        CampbellBozorgnia2014
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        1.000
+                    </uncertaintyWeight>            
+                </logicTreeBranch>
+            
+            </logicTreeBranchSet>
+        
+        </logicTreeBranchingLevel>
+    </logicTree>
+</nrml>
