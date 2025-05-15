@@ -868,4 +868,4 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(1.0).csv',
             'hazard_curve-mean-SA(2.0).csv'],
-            case_88.__file__)
+            case_89.__file__)
