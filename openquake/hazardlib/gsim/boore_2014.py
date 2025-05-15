@@ -61,17 +61,27 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     In the case of the base model the basin depth term is switched off.
     Therefore we return an array of zeros.
     """
+    # Get basin model
+    if region == "JPN":
+        bmodel = japan_basin_model
+    else:
+        bmodel = california_basin_model
+
+    # Get z1pt0
+    if hasattr(ctx, "z1pt0"):
+        z1pt0 = ctx.z1pt0
+        mask = z1pt0 == -999 # None-measured values
+        z1pt0[mask] = bmodel(ctx.vs30[mask])
+
     # Get USGS basin scaling factor if required
     if usgs_bs:
-        usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(z1pt0, imt.period)
     else:
         usgs_baf = np.ones(len(ctx.vs30))
 
     # Get basin model or return no basin term
     if region == "nobasin" or imt.period < 0.65:  
         return np.zeros(len(ctx.vs30), dtype=float) # Switched off
-    bmodel = (japan_basin_model(ctx.vs30) if region == "JPN"
-              else california_basin_model(ctx.vs30))
     
     # If cybershake basin adj and SA(T > 1.9)
     if cy and imt.period > 1.9: 
@@ -84,7 +94,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     
     # Regular basin term
     else:
-        dz1 = (ctx.z1pt0 / 1000.0) - bmodel
+        dz1 = (z1pt0 / 1000.0) - bmodel(ctx.vs30)
         f_ratio = C["f7"] / C["f6"]
         f_dz1 = np.where(dz1 <= f_ratio, C["f6"] * dz1, C["f7"])
         

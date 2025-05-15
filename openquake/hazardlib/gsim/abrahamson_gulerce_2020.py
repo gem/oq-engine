@@ -32,7 +32,6 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
 # global model (GLO) should be applied
 SUPPORTED_REGIONS = ["GLO", "USA-AK", "CAS", "CAM", "JPN", "NZL", "SAM", "TWN"]
 
-
 # Region-specific constants or references to the corresponding column
 # of the coefficients table
 REGIONAL_TERMS = {
@@ -302,11 +301,13 @@ def _get_basin_term(C, ctx, region, usgs_baf):
         # Basin depth defined only for Cascadia and Japan, so return 0
         return 0.0
 
-    # Convert z25 from km to m
-    z25 = 1000.0 * ctx.z2pt5
-
     # Define the reference basin depth from Vs30
     z25_ref = get_reference_basin_depth(region, ctx.vs30)
+
+    mask = ctx.z2pt5 == -999 # Non-measured values
+    z25 = 1000.0 * ctx.z2pt5 # Convert z25 from km to m
+    z25[mask] = z25_ref[mask]
+    
     # Normalise the basin depth term (Equation 3.9)
     ln_z25_prime = np.log((z25 + 50.0) / (z25_ref + 50.0))
     f_basin = np.zeros(ctx.vs30.shape)

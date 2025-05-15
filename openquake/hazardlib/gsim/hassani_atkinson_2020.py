@@ -178,6 +178,9 @@ def _get_basin_term(C, ctx, region=None):
     Z2pt5 factor.
     """
     z2pt5 = ctx.z2pt5
+    mask = z2pt5 == -999 # Non-measured values
+    
+
     s = CONSTANTS
     fz2pt5 = np.where(z2pt5 >= 0, C['cz0'], 0)
 

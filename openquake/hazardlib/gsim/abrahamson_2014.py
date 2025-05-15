@@ -260,20 +260,24 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
     """
     Compute and return soil depth term.  See page 1042.
     """
-    # Get USGS basin scaling factor if required
-    if usgs_bs:
-        usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
-    else:
-        usgs_baf = np.ones(len(ctx.vs30))
+    # Get vs30
+    vs30 = ctx.vs30
 
     if v1180 is None:
-        vs30 = ctx.vs30
         z1pt0 = ctx.z1pt0
+        mask = z1pt0 == -999 # None-measured values
+        z1pt0[mask] = _get_z1pt0ref(region, vs30[mask])
     else:
         vs30 = v1180
         # fake Z1.0 - Since negative it will be replaced by the default Z1.0
         # for the corresponding region
-        z1pt0 = np.ones_like(ctx.vs30) * -1
+        z1pt0 = np.ones_like(vs30) * -1
+
+    # Get USGS basin scaling factor if required
+    if usgs_bs:
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(z1pt0, imt.period)
+    else:
+        usgs_baf = np.ones(len(vs30))
 
     # Get reference z1pt0
     z1ref = _get_z1pt0ref(region, vs30)

@@ -51,13 +51,15 @@ def _get_basin_term(C, ctx, region, SJ):
 
     The deep basin response (z2.5 > 1km) is not included in this model
     """
-    if isinstance(ctx.z2pt5, np.ndarray):
-        # Site model defined
+    z2pt5_ref = _select_basin_model(SJ, ctx.vs30)
+    if hasattr(ctx, "z2pt5"):
         z2pt5 = ctx.z2pt5
+        mask = z2pt5 == -999
+        z2pt5[mask] = z2pt5_ref[mask]
     else:
         # Estimate unspecified sediment depth according to
         # equations 33 and 34 of CB14
-        z2pt5 = _select_basin_model(SJ, ctx.vs30)
+        z2pt5 = z2pt5_ref
     f_sed = np.zeros_like(z2pt5)
     idx = z2pt5 < 1.0
     f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)

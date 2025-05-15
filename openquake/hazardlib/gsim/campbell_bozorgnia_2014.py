@@ -123,8 +123,7 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     # Get basin term
     if isinstance(a1100, np.ndarray): # Site model defined
         z2pt5 = ctx.z2pt5
-        mask = z2pt5 == -1 # For sites without z2pt5 defined in
-                           # site model use CB14 vs30 relationships
+        mask = z2pt5 == -999 # None-measured values
         z2pt5[mask] = _select_basin_model(SJ, ctx.vs30[mask])
     else:
         z2pt5 = z_ref
@@ -133,7 +132,7 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     # Apply USGS basin scaling model if required
     if usgs_bs:
         # Get the scaling factor per site
-        usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
+        usgs_baf = _get_z2pt5_usgs_basin_scaling(z2pt5, imt.period)
         z_scaled = z_ref_term * (1.0 - usgs_baf) + z2pt5_term * usgs_baf
         # Apply additional CyberShake (CY_CSIM) adjustment if required
         if cy and imt.period > 1.9:

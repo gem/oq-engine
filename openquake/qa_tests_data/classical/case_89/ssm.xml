@@ -5,15 +5,15 @@ xmlns:gml="http://www.opengis.net/gml"
 >
     <sourceModel
     investigation_time="1.0"
-    name="interface"
+    name="ascr"
     >
         <sourceGroup
         rup_interdep="indep"
         src_interdep="indep"
-        tectonicRegion="Subduction Interface"
+        tectonicRegion="Active Shallow Crust"
         >
             <complexFaultSource
-            id="interface1"
+            id="ascr1"
             name="mfd_tree"
             >
                 <complexFaultGeometry>
@@ -51,7 +51,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </rake>
             </complexFaultSource>
             <complexFaultSource
-            id="interface2"
+            id="ascr2"
             name="mfd_tree"
             >
                 <complexFaultGeometry>
@@ -71,7 +71,7 @@ xmlns:gml="http://www.opengis.net/gml"
                     </faultBottomEdge>
                 </complexFaultGeometry>
                 <magScaleRel>
-                    StrasserInterface
+                    WC1994
                 </magScaleRel>
                 <ruptAspectRatio>
                     0.1

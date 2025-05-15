@@ -136,6 +136,10 @@ def _get_basin_term(C, ctx, region):
     """
     Return the basin term (equation 9)
     """
+    z1pt0 = ctx.z1pt0
+    mask = ctx.z1pt0 == -999 # None-measured value
+    z1pt0[mask] = _get_lnmu_z1(region, ctx.vs30[mask])
+
     dz1 = ctx.z1pt0 - np.exp(_get_lnmu_z1(region, ctx.vs30))
     fb = C['c5'] * dz1
     fb[dz1 > CONSTANTS["dz1ref"]] = (C["c5"] * CONSTANTS["dz1ref"])

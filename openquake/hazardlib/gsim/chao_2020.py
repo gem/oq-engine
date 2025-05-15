@@ -123,18 +123,28 @@ def _fvs30(geology, C, ctx):
                     C['c27'] if geology else C['c28'])
 
 
+def _get_z1pt0_ref(vs30):
+    """
+    Get reference z1pt0
+    """ 
+    return np.exp(-4.08 / 2 * np.log((
+        vs30 ** 2 + 355.4 ** 2) / (1750 ** 2 + 355.4 ** 2)))
+
+
 def _get_basin_term(C, ctx, region=None):
     """
     z1pt0 factor.
     """
-    result = np.zeros_like(ctx.z1pt0)
-    idx = ctx.z1pt0 >= 0
+    z1pt0 = ctx.z1pt0
+    mask = z1pt0 == -999 # None-measured value
+    z1pt0_ref = _get_z1pt0_ref(ctx.vs30)
+    z1pt0[mask] = z1pt0_ref[mask]
+
+    result = np.zeros_like(z1pt0)
+    idx = z1pt0 >= 0
     if sum(idx) == 0:
         return result
-
-    z1pt0_ref = np.exp(-4.08 / 2 * np.log((ctx.vs30 ** 2 + 355.4 ** 2)
-                                          / (1750 ** 2 + 355.4 ** 2)))
-    result[idx] = np.log(ctx.z1pt0[idx] / z1pt0_ref) * C['c25']
+    result[idx] = np.log(z1pt0[idx] / z1pt0_ref) * C['c25']
     return result
 
 

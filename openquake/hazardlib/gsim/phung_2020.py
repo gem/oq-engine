@@ -57,10 +57,14 @@ def _get_basin_term(C, ctx, region):
             phi6 = 300
         else:
             phi6 = 800
+    
+    z1pt0 = ctx.z1pt0
+    mask = z1pt0 == -999 # Non-measured values
+    z1pt0[mask] = ez_1[mask]
 
-    d_z1 = ctx.z1pt0 - ez_1
+    d_z1 = z1pt0 - ez_1
     return np.where(
-        ctx.z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
+        z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
 
 
 def _distance_attenuation(s, region, aftershocks, C, mag, rrup, ztor):
@@ -284,6 +288,9 @@ def _fz1pt0(region, C, vs30, z1pt0):
     elif region == 'jptw':
         ez_1 = np.exp(-5.23 / 2 * np.log((vs30 ** 2 + 412.39 ** 2)
                                          / (1360 ** 2 + 412.39 ** 2)))
+        
+    mask = z1pt0 == -999 # Non-measured values
+    z1pt0[mask] = ez_1[mask]
 
     result[idx] = C['a8' + region] * np.minimum(np.log(z1pt0[idx] / ez_1), 1)
     return result

@@ -32,6 +32,8 @@ def _get_basin_term(C, ctx, region=None):
     Returns the basin response term (equation 12, page 146)
     """
     z2pt5 = ctx.z2pt5
+    mask = z2pt5 == -999 # Non-measured values
+    breakpoint()
     fsed = np.zeros_like(z2pt5, dtype=float)
     idx = z2pt5 < 1.0
     if np.any(idx):

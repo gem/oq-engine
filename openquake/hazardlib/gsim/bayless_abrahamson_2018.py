@@ -96,9 +96,14 @@ def _get_basin_term(C, ctx, region=None):
     # Compute the Z1ref parameter
     tmp = (ctx.vs30**4 + 610**4) / (1360**4 + 610**4)
     z1ref = 1/1000. * np.exp(-7.67/4*np.log(tmp))
+    # Get z1pt0
+    z1pt0 = ctx.z1pt0
+    mask = z1pt0 == -999 # Non-measured values
+    z1pt0[mask] = z1ref[mask]
+    breakpoint()
     # Return the fz1 parameter. The z1pt0 is converted from m (standard in OQ)
     # to km as indicated in the paper
-    tmp = np.minimum(ctx.z1pt0/1000, np.ones_like(ctx.z1pt0)*2.0) + 0.01
+    tmp = np.minimum(z1pt0/1000, np.ones_like(z1pt0)*2.0) + 0.01
     return c11 * np.log(tmp / (z1ref + 0.01))
 
 

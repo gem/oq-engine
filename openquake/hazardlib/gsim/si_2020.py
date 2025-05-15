@@ -117,10 +117,20 @@ def get_shallow_site_response_term(C, vs30, pga760):
     return (f_site_lin + f_site_nl) / np.log(10.0)
 
 
+def _get_z2pt5_ref(vs30):
+    """
+    Return z2pt5 ref
+    """
+    breakpoint()
+
+
 def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term (Eq. 3.10)
     """
+    z2pt5 = ctx.z2pt5
+    mask = z2pt5 == -999 # Non-measured values
+    z2pt5[mask] = _get_z2pt5_ref(ctx.vs30)
     return C["Cd"] + C["Dd"] * ctx.z2pt5
 
 
