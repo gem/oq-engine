@@ -979,7 +979,9 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
 
 
 # tested in the nightly tests aristotle_run
-def get_array_usgs_id(kind, id, contents):
+# the default argument is needed to avoid an
+# error in is_valid_shakemap
+def get_array_usgs_id(kind, id, contents={}):
     """
     Download a ShakeMap from the USGS site.
 

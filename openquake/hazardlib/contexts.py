@@ -1573,7 +1573,9 @@ class PmapMaker(object):
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
         for src in self.sources:
             t0 = time.time()
-            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims)).fill(self.rup_indep)
+            pm = MapArray(
+                pmap.sids, cm.imtls.size, len(cm.gsims)
+            ).fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:

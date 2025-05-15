@@ -18,6 +18,7 @@
 
 import ast
 import sys
+import logging
 import operator
 from contextlib import contextmanager
 import numpy
@@ -384,8 +385,9 @@ class SourceFilter(object):
                                      src.tectonic_region_type)[-1][1]
         try:
             bbox = get_bounding_box(src, maxdist)
-        except Exception as exc:
-            raise exc.__class__('source %r: %s' % (src.source_id, exc))
+        except Exception:
+            logging.error(f'Error in source {src.source_id}')
+            raise
         return bbox
 
     def get_rectangle(self, src):
