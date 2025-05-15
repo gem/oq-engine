@@ -861,9 +861,9 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_89(self):
         # Check execution of a calculation with some of the z1pt0
-        # and z2pt5 set to -999 and check expected values for the
-        # NGAWest2 GMMs (-999 values will use z1pt0/z2pt5 computed
-        # from the NGAWest2 GMM's own vs30 relationships)
+        # and z2pt5 set to -999 and the NGAWest2 GMMs (-999 values
+        # will use z1pt0/z2pt5 computed from the NGAWest2 GMM's own
+        # vs30 relationships)
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(1.0).csv',
