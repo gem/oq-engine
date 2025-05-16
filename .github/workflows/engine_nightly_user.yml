@@ -30,13 +30,13 @@ jobs:
         run: |
           set -x
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-          python install.py user --version=master --venv gh-venv
+          python install.py user --version=master --venv $HOME/gh-venv
         if: github.event.inputs.git-ref == ''
       - name: Install OQ (Custom Ref)
         run: |
           set -x
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-          python install.py user --version=${{ github.event.inputs.git-ref }} --venv gh-venv
+          python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv
         if: github.event.inputs.git-ref != ''
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
@@ -44,7 +44,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Test WebUI and run https calculation
         run: |
-          source ~/gh-venv/bin/activate
+          source $HOME/gh-venv/bin/activate
           set -x
           oq engine --upgrade-db
           oq --version
