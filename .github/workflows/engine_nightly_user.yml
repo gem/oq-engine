@@ -26,19 +26,26 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install OQ (Master)
+        run: |
+          set -x
+          curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+          python install.py user --version=master --venv gh-venv
+        if: github.event.inputs.git-ref == ''
+      - name: Install OQ (Custom Ref)
+        run: |
+          set -x
+          curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+          python install.py user --version=${{ github.event.inputs.git-ref }} --venv gh-venv
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 30
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-      - name: Install OQ using install.py
-        run: |
-          set -x
-          BRANCH=master
-          curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-          python install.py user --version=master --venv gh-venv
       - name: Test WebUI and run https calculation
         run: |
-          BRANCH=master
           source ~/gh-venv/bin/activate
           set -x
           oq engine --upgrade-db
