@@ -38,8 +38,6 @@ jobs:
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
           python install.py user --version=${{ github.event.inputs.git-ref }} --venv gh-venv
         if: github.event.inputs.git-ref != ''
-        with:
-          ref: ${{ github.event.inputs.git-ref }}
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 30
