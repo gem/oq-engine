@@ -1,4 +1,9 @@
+  [Lana Todorovic]
+  * Updated units of slope (in m/m) in site model.
+
   [Michele Simionato]
+  * Improved the validation of area source polygons
+  * Internal: added method `CompositeLogicTree.apply_all`
   * Fixed downloading of uncertainty.xml in OQImpact calculations
 
   [Michele Simionato, Paolo Tormene]

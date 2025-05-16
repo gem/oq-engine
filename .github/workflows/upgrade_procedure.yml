@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
           #os: [macos-latest, windows-latest, ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: ["3.12"]
     #
     steps:
     # This Checkout use git-ref keyword from dispatch
@@ -50,7 +50,7 @@ jobs:
       run: |
         sudo env "PATH=$PATH" python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
         sleep 2
-        sudo env "PATH=$PATH" python install.py server 
+        sudo env "PATH=$PATH" python install.py server
       shell: bash
     - name: Run demos to test installation
       run: |
