@@ -458,7 +458,7 @@ def _get_basin_term(C, ctx, region):
             mask_z = z_values == int(-999) # Non-measured values
         else:
             z_values = np.zeros(vs30.shape)
-            mask_z = None
+            mask_z = None # Set to None if none-basin 
         
         # Get non-measured values using vs30 relationship
         if mask_z is not None: # Skip if none-basin region
