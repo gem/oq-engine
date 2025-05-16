@@ -380,7 +380,12 @@ def _quintets(cmaker, src, sitecol):
 
 
 # helper used to populate contexts for planar ruptures
-def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id, tom):
+def _get_ctx_planar(cmaker, builder, mag, magi, planar, sites, src, tom):
+    zeroctx = builder.zeros((len(planar), len(sites)))  # shape (N, U)
+    if cmaker.fewsites:
+        offset = src.offset + magi * len(planar)
+        rup_ids = zeroctx['rup_id'].T  # numpy trick, shape (U, N)
+        rup_ids[:] = numpy.arange(offset, offset+len(planar))
 
     # computing distances
     rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
@@ -398,7 +403,7 @@ def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id, tom):
 
     # ctx has shape (U, N), ctxt (N, U)
     ctxt = zeroctx.T  # smart trick taking advantage of numpy magic
-    ctxt['src_id'] = src_id
+    ctxt['src_id'] = src.id
 
     # setting rupture parameters
     for par in cmaker.ruptparams:
@@ -472,16 +477,8 @@ def genctxs_Pp(src, sitecol, cmaker):
             pla = numpy.concatenate(planars).view(numpy.recarray)
         else:
             pla = planars[0]
-
-        offset = src.offset + magi * len(pla)
-        zctx = builder.zeros((len(pla), len(sites)))  # shape (N, U)
-
-        if cmaker.fewsites:
-            rup_ids = zctx['rup_id'].T  # numpy trick, shape (U, N)
-            rup_ids[:] = numpy.arange(offset, offset+len(pla))
-
         # building contexts
-        ctx = _get_ctx_planar(cmaker, zctx, mag, pla, sites, src.id, tom)
+        ctx = _get_ctx_planar(cmaker, builder, mag, magi, pla, sites, src, tom)
         ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
             yield ctxt
