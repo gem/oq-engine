@@ -201,14 +201,14 @@ def build_corners(usd, lsd, rar, area, mag, strike,
 
 
 # not numbified but fast anyway
-def build_planar(planin, hdd, lon, lat, usd, lsd, rar):
+def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
     """
     :param planin:
         Surface input parameters as an array of shape (M, N)
+    :param hdd:
+        Hypocenter depths
     :param lon, lat:
         Longitude and latitude of the hypocenters (scalars)
-    :parameter deps:
-        Depths of the hypocenters (vector)
     :return:
         an array of shape (M, N, D, 3)
     """
@@ -218,6 +218,10 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar):
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     for d, (drate, dep) in enumerate(hdd):
         planar_array.wlr[:, :, d, 2] = planin.rate * drate
+        if not shift_hypo:  # use the original hypocenter
+            planar_array.hypo[:, :, d, 0] = lon
+            planar_array.hypo[:, :, d, 1] = lat
+            planar_array.hypo[:, :, d, 2] = dep
     return planar_array
 
 

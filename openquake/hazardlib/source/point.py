@@ -240,13 +240,9 @@ class PointSource(ParametricSeismicSource):
         lsd = self.lower_seismogenic_depth
         rar = self.rupture_aspect_ratio
         planin = self.get_planin(magd, npd)
-        planar = build_planar(planin, hdd, clon, clat, usd, lsd, rar)  # MND3
-        if not shift_hypo:  # use the original hypocenter
-            planar.hypo[:, :, :, 0] = clon
-            planar.hypo[:, :, :, 1] = clat
-            for d, (drate, dep) in enumerate(hdd):
-                planar.hypo[:, :, d, 2] = dep
-        dic = {mag: [pla.reshape(-1, 3)]
+        planar = build_planar(
+            planin, hdd, clon, clat, usd, lsd, rar, shift_hypo)
+        dic = {mag: [pla.reshape(-1, 3)]   # MND3
                for (_rate, mag), pla in zip(magd, planar)}
         return dic
 
