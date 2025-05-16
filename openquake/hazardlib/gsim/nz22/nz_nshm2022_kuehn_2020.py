@@ -68,10 +68,19 @@ def _get_basin_term(C, ctx, region):
 
     if region in ("JPN", "CAS"):
         z_values = ctx.z2pt5 * 1000.0
+        mask_z = ctx.z2pt5 == int(-999)
     elif region == "TWN":
         z_values = ctx.z1pt0
+        # Get none-measured values in site model
+        mask_z = z_values == int(-999)
     else:
         z_values = np.zeros_like(ctx.vs30)
+        mask_z = None
+
+    # Use GMM's vs30 to basin param for none-measured values
+    if mask_z is not None: # Skip if none-basin region
+        z_values[mask_z] = _get_ln_z_ref(CZ, ctx.vs30[mask_z])
+
     brt = np.zeros_like(z_values)
     mask = z_values > 0.0
     vs30 = ctx.vs30[mask]
@@ -81,9 +90,10 @@ def _get_basin_term(C, ctx, region):
     if region == "NZL":
         # Personal communication with Nico. We need to use the NZ
         # specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
-        brt[mask] = c11 + c12 * (_get_ln_z_ref(CZ, vs30) - _get_ln_z_ref(CZ, vs30))
+        ln_z_ref = _get_ln_z_ref(CZ, vs30)
+        brt[mask] = c11 + c12 * (ln_z_ref - ln_z_ref)
     else:
-        brt[mask] = c11 + c12 * (np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30))
+        brt[mask] = c11 + c12 * (np.log(z_values[mask]) - ln_z_ref)
     return brt
 
 

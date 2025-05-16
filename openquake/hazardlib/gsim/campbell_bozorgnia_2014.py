@@ -123,7 +123,8 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     # Get basin term
     if isinstance(a1100, np.ndarray): # Site model defined
         z2pt5 = ctx.z2pt5
-        mask = z2pt5 == -999 # None-measured values
+        # Use GMM's vs30 to z2pt5 for non-measured values
+        mask = z2pt5 == int(-999)
         z2pt5[mask] = _select_basin_model(SJ, ctx.vs30[mask])
     else:
         z2pt5 = z_ref

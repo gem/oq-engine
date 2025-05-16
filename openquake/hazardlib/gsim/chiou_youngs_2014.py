@@ -176,7 +176,8 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     Returns the basin depth scaling
     """
     z1pt0 = ctx.z1pt0
-    mask = z1pt0 == -999 # None-measured values
+    # Use GMMs vs30 to z1pt0 for non-measured values
+    mask = z1pt0 == int(-999)
     if region == "JPN":
         z1pt0[mask] = japan_mean_z1pt0(ctx.vs30[mask])
     else:

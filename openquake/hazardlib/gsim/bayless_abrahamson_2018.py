@@ -98,7 +98,8 @@ def _get_basin_term(C, ctx, region=None):
     z1ref = 1/1000. * np.exp(-7.67/4*np.log(tmp))
     # Get z1pt0
     z1pt0 = ctx.z1pt0
-    mask = z1pt0 == -999 # Non-measured values
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == int(-999)
     z1pt0[mask] = z1ref[mask]
     # Return the fz1 parameter. The z1pt0 is converted from m (standard in OQ)
     # to km as indicated in the paper

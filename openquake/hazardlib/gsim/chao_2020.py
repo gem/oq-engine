@@ -136,7 +136,8 @@ def _get_basin_term(C, ctx, region=None):
     z1pt0 factor.
     """
     z1pt0 = ctx.z1pt0
-    mask = z1pt0 == -999 # None-measured value
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == int(-999)
     z1pt0_ref = _get_z1pt0_ref(ctx.vs30)
     z1pt0[mask] = z1pt0_ref[mask]
 

@@ -304,7 +304,8 @@ def _get_basin_term(C, ctx, region, usgs_baf):
     # Define the reference basin depth from Vs30
     z25_ref = get_reference_basin_depth(region, ctx.vs30)
 
-    mask = ctx.z2pt5 == -999 # Non-measured values
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = ctx.z2pt5 == int(-999)
     z25 = 1000.0 * ctx.z2pt5 # Convert z25 from km to m
     z25[mask] = z25_ref[mask]
     

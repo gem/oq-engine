@@ -137,7 +137,9 @@ def _get_basin_term(C, ctx, region):
     Return the basin term (equation 9)
     """
     z1pt0 = ctx.z1pt0
-    mask = ctx.z1pt0 == -999 # None-measured value
+    
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = ctx.z1pt0 == int(-999)
     z1pt0[mask] = _get_lnmu_z1(region, ctx.vs30[mask])
 
     dz1 = ctx.z1pt0 - np.exp(_get_lnmu_z1(region, ctx.vs30))

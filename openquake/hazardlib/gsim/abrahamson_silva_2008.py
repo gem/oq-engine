@@ -164,7 +164,9 @@ def _get_basin_term(C, ctx, region, imt, v1100=None):
     paragraph 'Soil Depth Model', page 79.
     """
     z1pt0 = ctx.z1pt0
-    mask = z1pt0 == -999 # None measured values
+    
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == int(-999)
     z1pt0[mask] = _compute_median_z1pt0(ctx.vs30[mask])
 
     if v1100 is None:

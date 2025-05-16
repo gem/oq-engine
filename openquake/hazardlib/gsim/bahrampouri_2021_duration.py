@@ -74,7 +74,8 @@ def _get_basin_term(C, ctx, region=None):
     Get the basin term
     """
     z1pt0 = ctx.z1pt0
-    mask = z1pt0 == -999 # Non-measured values
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == int(-999) 
     mean_z1pt0 = _get_mean_z1pt0(ctx.vs30)
     z1pt0[mask] = mean_z1pt0[mask]
     

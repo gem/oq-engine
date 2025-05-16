@@ -265,7 +265,8 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
 
     if v1180 is None:
         z1pt0 = ctx.z1pt0
-        mask = z1pt0 == -999 # None-measured values
+        # Use GMM's vs30 to z1pt0 to get none-measured values
+        mask = z1pt0 == int(-999)
         z1pt0[mask] = _get_z1pt0ref(region, vs30[mask])
     else:
         vs30 = v1180

@@ -70,7 +70,8 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     # Get z1pt0
     if hasattr(ctx, "z1pt0"):
         z1pt0 = ctx.z1pt0
-        mask = z1pt0 == -999 # None-measured values
+        # Use GMM's vs30 to z1pt0 for non-measured values
+        mask = z1pt0 == int(-999)
         z1pt0[mask] = bmodel(ctx.vs30[mask])
 
     # Get USGS basin scaling factor if required

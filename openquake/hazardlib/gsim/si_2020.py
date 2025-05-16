@@ -129,7 +129,8 @@ def _get_basin_term(C, ctx, region=None):
     Returns the basin response term (Eq. 3.10)
     """
     z2pt5 = ctx.z2pt5
-    mask = z2pt5 == -999 # Non-measured values
+    # Use GMM's vs30 to z2pt5 for none-measured values
+    mask = z2pt5 == int(-999)
     z2pt5[mask] = _get_z2pt5_ref(ctx.vs30)
     return C["Cd"] + C["Dd"] * ctx.z2pt5
 

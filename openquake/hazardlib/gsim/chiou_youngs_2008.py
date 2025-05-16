@@ -40,7 +40,8 @@ def _get_basin_term(C, ctx, region=None):
     sediment sites through z1pt0 
     """
     z1pt0 = ctx.z1pt0
-    mask = z1pt0 == -999 # Non-measured values
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == int(-999)
     z1pt0[mask] = _get_z1_ref(ctx.vs30[mask])
     # Equation 3.10
     deep_soil = C['phi5'] * (1.0 - 1.0 / np.cosh(C['phi6'] * (

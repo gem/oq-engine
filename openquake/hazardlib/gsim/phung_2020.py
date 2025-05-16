@@ -289,7 +289,8 @@ def _fz1pt0(region, C, vs30, z1pt0):
         ez_1 = np.exp(-5.23 / 2 * np.log((vs30 ** 2 + 412.39 ** 2)
                                          / (1360 ** 2 + 412.39 ** 2)))
         
-    mask = z1pt0 == -999 # Non-measured values
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == int(-999)
     z1pt0[mask] = ez_1[mask]
 
     result[idx] = C['a8' + region] * np.minimum(np.log(z1pt0[idx] / ez_1), 1)
