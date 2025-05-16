@@ -75,7 +75,7 @@ def _get_basin_term(C, ctx, region):
         mask_z = z_values == int(-999)
     else:
         z_values = np.zeros_like(ctx.vs30)
-        mask_z = None
+        mask_z = None # Set to None if none-basin region
 
     # Use GMM's vs30 to basin param for none-measured values
     if mask_z is not None: # Skip if none-basin region
