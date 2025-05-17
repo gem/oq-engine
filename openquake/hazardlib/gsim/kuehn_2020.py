@@ -462,7 +462,7 @@ def _get_basin_term(C, ctx, region):
         
         # Get non-measured values using vs30 relationship
         if mask_z is not None: # Skip if none-basin region
-            z_values[mask_z] = _get_ln_z_ref(CZ, vs30[mask_z])
+            z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, vs30[mask_z]))
 
         brt = np.zeros_like(z_values)
         mask = z_values > 0.0
