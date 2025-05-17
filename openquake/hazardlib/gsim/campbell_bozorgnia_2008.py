@@ -36,7 +36,7 @@ def _get_cb07_z2pt5_ref(vs30):
     within this GMM's paper for obtaining z2pt5 for sites missing
     this basin parameter.
     """
-    # First get z1pt0 using Chiou and Youngs (2008)
+    # First get z1pt0 using Chiou and Youngs (2008) vs30 to z1pt0
     z1pt0 = _get_z1_ref(vs30)
     
     # Now use Campbell and Bozorgnia (2007) to get z2pt5 from z1pt0
