@@ -29,6 +29,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA, PGV
 
+
 CONSTANTS = {"mlf0": 5.5, "mlf1": 7, "f1": 0, "f3": 98.1,
              "b1": -1.3, "b2": -0.5, "v0": 100, "v1": 250, "v2": 1000,
              "zx0": 150, "zx1": 800, "zx2": 4200,

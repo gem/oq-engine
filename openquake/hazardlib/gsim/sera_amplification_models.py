@@ -433,7 +433,16 @@ REGION_SET = ["USNZ", "JP", "TW", "CH", "WA", "TRGR", "WMT", "NWE"]
 
 def _get_basin_term(C, ctx, region=None):
     """
-    Get basin amplification term
+    Get basin amplification term.
+    
+    NOTE: The value of z1pt0 used here always comes directly from the site
+    model. If the site model contains -999 values (indicating missing
+    measurements), they will not be replaced using the GMPE’s vs30–to–z1pt0
+    relationship, even if the GMM supports it. As a result, using thiss
+    amplification model with a site model that includes -999 values is not
+    recommended, as it will lead to inconsistencies between the z1pt0 used
+    here and the z1pt0 used by the underlying GSIM to compute the mean
+    ground-motion.
     """
     return C["b2"] * np.log(ctx.z1pt0)
 

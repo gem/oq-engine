@@ -240,7 +240,7 @@ class US23AdjustmentTestCase(unittest.TestCase):
     def test_all(self):
         """
         Test the execution and correctness of values for GMMs as
-        adjusted within the Conterminous US 2023 NSHM:
+        adjusted within the Conterminous US 2023 NSHM.
         """
         # Make the ctx
         imts = ['PGA', 'SA(1.0)', 'SA(2.0)']
@@ -249,14 +249,15 @@ class US23AdjustmentTestCase(unittest.TestCase):
         oqp = {'imtls': {k: [] for k in imts},
                'mags': [f'{k:.2f}' for k in mags]}
         cmaker = simple_cmaker(gmms, imts, **oqp)                     
-        ctx = new_ctx(cmaker, 3)
+        ctx = new_ctx(cmaker, 4)
         ctx.dip = 60.
         ctx.rake = 90.
-        ctx.z1pt0 = np.array([72.1, 457.77, 522.32])
-        ctx.z2pt5 = np.array([0.69, 1.75, 6.32])
-        ctx.z_sed = np.array([1.20, 4.50, 8.40])
-        ctx.rrup = np.array([50., 200., 500.])
-        ctx.vs30 = np.array([800., 400., 200.])
+        ctx.z1pt0 = np.array([72.1, 457.77, 522.32, -999])
+        ctx.z2pt5 = np.array([0.69, 1.75, 6.32, -999])
+        ctx.z_sed = np.array([1.20, 4.50, 8.40, 2.5])
+        ctx.rrup = np.array([50., 200., 500., 600])
+        ctx.vs30 = np.array([800., 400., 200., 760])
         ctx.vs30measured = 1
         mea, _, _, _ = cmaker.get_mean_stds([ctx])
+        breakpoint()
         np.testing.assert_allclose(mea, exp_res, rtol=1e-6)
