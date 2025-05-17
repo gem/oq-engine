@@ -87,10 +87,10 @@ def _get_basin_term(C, ctx, region):
     if not np.any(mask):
         # No basin amplification to be applied
         return 0.0
+    ln_z_ref = _get_ln_z_ref(CZ, vs30)
     if region == "NZL":
         # Personal communication with Nico. We need to use the NZ
         # specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
-        ln_z_ref = _get_ln_z_ref(CZ, vs30)
         brt[mask] = c11 + c12 * (ln_z_ref - ln_z_ref)
     else:
         brt[mask] = c11 + c12 * (np.log(z_values[mask]) - ln_z_ref)
