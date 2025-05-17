@@ -25,6 +25,24 @@ from math import log, exp
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, PGD, CAV, SA
+from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
+
+
+def _get_cb07_z2pt5_ref(vs30):
+    """
+    Estimate unknown z2pt5 using the relationships described
+    in Campbell and Bozorgnia (2007). First compute z1pt0 from
+    vs30, and then z2pt5 from z1pt0. This approach is suggested
+    within this GMM's paper for obtaining z2pt5 for sites missing
+    this basin parameter.
+    """
+    # First get z1pt0 using Chiou and Youngs (2008)
+    z1pt0 = _get_z1_ref(vs30)
+    
+    # Now use Campbell and Bozorgnia (2007) to get z2pt5 from z1pt0
+    z2pt5 = 519 + (3.595 * z1pt0)
+
+    return z2pt5
 
 
 def _get_basin_term(C, ctx, region=None):
@@ -33,8 +51,8 @@ def _get_basin_term(C, ctx, region=None):
     """
     z2pt5 = ctx.z2pt5
     # Use GMM's vs30 to z2pt5 for non-measured values
-    mask = z2pt5 ==(-999)
-    breakpoint()
+    mask = z2pt5 == int(-999)
+    z2pt5[mask] = _get_cb07_z2pt5_ref(ctx.vs30[mask])
     fsed = np.zeros_like(z2pt5, dtype=float)
     idx = z2pt5 < 1.0
     if np.any(idx):

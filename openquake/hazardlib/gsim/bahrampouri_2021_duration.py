@@ -63,7 +63,7 @@ def _get_path_term(C, ctx):
 
 def _get_mean_z1pt0(vs30):
     """
-    Return centered z1pt0 for given vs30 values
+    Return reference z1pt0 for given vs30 values
     """
     return (np.exp(((-5.23 / 2.) * np.log((
         vs30 ** 2. + 412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.)))-0.9))
