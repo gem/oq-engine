@@ -43,6 +43,15 @@ class M9BasinTerm(GMPE):
     within the Moschetti et al. (2024) EQ Spectra article on the conterminous
     US 2023 NSHM GMC (pp. 1178).
 
+    NOTE: The value of z2pt5 used here always comes directly from the site
+    model. If the site model contains -999 values (indicating missing z2pt5
+    to be estimated from the GMM's vss30 to z2pt5 relationship), they will
+    not be estimated, even if the GMM supports it. As a result, using this
+    amplification model with a site model that includes -999 (missing) z2pt5
+    values is not recommended, as it will lead to inconsistencies between
+    the z2pt5 used here and the z2pt5 used by the underlying GSIM to compute
+    the mean ground-motion.
+
     :param gmpe_name:
         The name of a GMPE class
     """

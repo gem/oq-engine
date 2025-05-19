@@ -27,6 +27,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
 
 
 def _get_distance_term(C, rrup, mag):
@@ -118,7 +119,16 @@ class AtkinsonMacias2009(GMPE):
             # Apply m9 basin term if specified (will override
             # cb14 basin term for basin sites if T >= 1.9 s)
             if self.m9_basin_term and imt.period >= 1.9:
-                fb[ctx.z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
+                # NOTE: also need to update -999 z2pt5 here so have
+                # a z2pt5 for each site to ensure always applying m9
+                # basin term where appropriate --> given always using
+                # (at least in US23 model) in combination with CB14 basin
+                # term use this relationship to estimate missing z2pt5
+                # for consistency
+                z2pt5 = ctx.z2pt5
+                mask = z2pt5 == int(-999) # None-measured values
+                z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
+                fb[z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
             
             # Add site/basin term (if any) to mean and get sigma
             mean[m] = ln_mean + fs + fb
