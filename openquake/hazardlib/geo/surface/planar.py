@@ -187,21 +187,21 @@ def _build_corners(half_length, half_width, half_height,
 
 
 @compile("(f8, f8, f8, f8[:, :], f8[:, :], "
-         "f8[:, :], f8[:, :], f8[:, :], f8, f8)")
+         "f8[:, :], f8[:, :], f8[:], f8, f8)")
 def build_corners(usd, lsd, rar, area, strike,
-                  dip, rake, hdd, lon, lat):
+                  dip, rake, deps, lon, lat):
     M, N = area.shape
-    corners = numpy.zeros((6, M, N, len(hdd), 3))
+    corners = numpy.zeros((6, M, N, len(deps), 3))
     # 0,1,2,3: tl, tr, bl, br
     # 4: (strike, dip, rake)
     # 5: hypo
     for m in range(M):
         for n in range(N):
             half_length, half_width, half_height, vshifts = get_vshifts(
-                usd, lsd, rar, area[m, n], dip[m, n], hdd[:, 1])
+                usd, lsd, rar, area[m, n], dip[m, n], deps)
             corners[:, m, n]  = _build_corners(
                 half_length, half_width, half_height, strike[m, n],
-                dip[m, n], rake[m, n], lon, lat, hdd[:, 1], vshifts)
+                dip[m, n], rake[m, n], lon, lat, deps, vshifts)
     return corners
 
 
@@ -211,7 +211,7 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
     :param planin:
         Surface input parameters as an array of shape (M, N)
     :param hdd:
-        Hypocenter depths
+        Hypocenter distribution
     :param lon, lat:
         Longitude and latitude of the hypocenters (scalars)
     :return:
@@ -219,7 +219,7 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
     """
     corners = build_corners(
         usd, lsd, rar, planin.area, planin.strike, planin.dip, planin.rake,
-        hdd, lon, lat)
+        hdd[:, 1], lon, lat)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     for d, (drate, dep) in enumerate(hdd):
         planar_array.wlr[:, :, d, 2] = planin.rate * drate
