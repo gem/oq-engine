@@ -124,7 +124,7 @@ def _a0_2(trt, region, basin, C, C_PGA):
     return C[region + "_a0slab"], C_PGA[region + "_a0slab"]
 
 
-def _get_basin_term(C, ctx, region, basin):
+def _get_basin_term(C, ctx, region, imt, basin, m9_basin_term, usgs_basin_scaling):
     """
     Basin term main handler.
     """
@@ -132,27 +132,35 @@ def _get_basin_term(C, ctx, region, basin):
         return 0
 
     if region == "JP":
-        return _get_basin_term_factors(3.05, -0.8, 500, 0.33,
+        return _get_basin_term_factors(C, ctx, 3.05, -0.8, 500, 0.33,
                                        C["J_e1"], C["J_e2"],
-                                       C["J_e3"], ctx)
+                                       C["J_e3"], imt,
+                                       m9_basin_term,
+                                       usgs_basin_scaling)
 
     if region == "Cascadia":
         if basin is None:
-            return _get_basin_term_factors(3.94, -0.42, 200, 0.2,
+            return _get_basin_term_factors(C, ctx, 3.94, -0.42, 200, 0.2,
                                            C["C_e1"], C["C_e2"],
-                                           C["C_e3"], ctx)
+                                           C["C_e3"], imt,
+                                           m9_basin_term,
+                                           usgs_basin_scaling)
         if basin == "out":
             dn = C["del_None"]
-            return _get_basin_term_factors(3.94, -0.42, 200, 0.2,
+            return _get_basin_term_factors(C, ctx, 3.94, -0.42, 200, 0.2,
                                            C["C_e1"],
                                            C["C_e2"] + dn,
-                                           C["C_e3"] + dn, ctx)
+                                           C["C_e3"] + dn,
+                                           imt, m9_basin_term,
+                                           usgs_basin_scaling)
         if basin == "Seattle":
             ds = C["del_Seattle"]
-            return _get_basin_term_factors(3.94, -0.42, 200, 0.2,
+            return _get_basin_term_factors(C, ctx, 3.94, -0.42, 200, 0.2,
                                            C["C_e1"],
                                            C["C_e2"] + ds,
-                                           C["C_e3"] + ds, ctx)
+                                           C["C_e3"] + ds,
+                                           imt, m9_basin_term,
+                                           usgs_basin_scaling)
     
     return 0
 
@@ -206,7 +214,16 @@ def _depth_scaling_2(trt, C, ctx):
     return res
 
 
-def _get_basin_term_factors(theta0, theta1, vmu, vsig, e1, e2, e3, ctx):
+def _get_z2pt5_ref(theta0, theta1, vs30, vmu, vsig):
+    """
+    Return reference z2pt5 in metres
+    """
+    return 10 ** (theta0 + theta1 * (
+        1 + erf((np.log10(vs30) - np.log10(vmu)) / (vsig * np.sqrt(2)))))
+
+
+def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
+                            imt, m9_basin_term, usgs_basin_scaling):
     """
     Basin term for given factors.
     """
@@ -217,8 +234,7 @@ def _get_basin_term_factors(theta0, theta1, vmu, vsig, e1, e2, e3, ctx):
     vs30 = ctx.vs30[select]
     z2pt5 = ctx.z2pt5[select]
 
-    z2pt5_pred = 10 ** (theta0 + theta1 * (
-        1 + erf((np.log10(vs30) - np.log10(vmu)) / (vsig * np.sqrt(2)))))
+    z2pt5_pred = _get_z2pt5_ref(theta0, theta1, vs30, vmu, vsig)
 
     # Use GMM's vs30 to z2pt5 to update none-measured values
     mask = z2pt5 == int(-999)
@@ -230,7 +246,26 @@ def _get_basin_term_factors(theta0, theta1, vmu, vsig, e1, e2, e3, ctx):
         del_z2pt5 <= (e1 / e3), e1, np.where(
             del_z2pt5 >= (e2 / e3), e2, e3 * del_z2pt5))
     
-    return btf
+    # Get USGS basin scaling factor if req (should
+    # only really be applied to Cascadia region)
+    if usgs_basin_scaling:
+        usgs_baf = _get_z2pt5_usgs_basin_scaling(z2pt5, imt.period)
+    else:
+        usgs_baf = 1.0
+
+    # If required get the m9 basin adjustment if long period SA
+    # for deep basin sites
+    if m9_basin_term and imt != PGV:
+        if imt.period >= 1.9:
+            m9_adj = _get_adjusted_m9_basin_term(C, z2pt5)
+            btf[z2pt5 >= 6.0] = m9_adj[z2pt5 >= 6.0] 
+
+    # Now that basin term has been (if required) adjusted with m9
+    # correction then apply the usgs basin scaling factor (again
+    # if specified)
+    btf *= usgs_baf
+
+    return btf 
 
 
 def _linear_amplification(region, C, vs30):
@@ -462,13 +497,6 @@ class ParkerEtAl2020SInter(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
-            # Get USGS basin scaling factor if required (can only be
-            # applied for CAS region)
-            if self.usgs_basin_scaling:
-                usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
-            else:
-                usgs_baf = np.ones(len(ctx.vs30))
-
             # Regional Mb factor
             if self.saturation_region in self.MB_REGIONS:
                 m_b = self.MB_REGIONS[self.saturation_region]
@@ -483,24 +511,16 @@ class ParkerEtAl2020SInter(GMPE):
                 C, C_PGA, ctx.mag, ctx.rrup, m_b)
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
-            fb = _get_basin_term(C, ctx, self.region, self.basin)
+            fb = _get_basin_term(C, ctx, self.region, imt,
+                                 self.basin, self.m9_basin_term,
+                                 self.usgs_basin_scaling)
             flin = _linear_amplification(self.region, C, ctx.vs30)
             fnl = _non_linear_term(C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga,
                                    fd_pga)
 
             # The output is the desired median model prediction in LN units
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
-            pre_baf_mean = fp + fnl + flin + fm + c0 + fd
-            
-            # If required get the m9 basin adjustment if long period SA
-            # for deep basin sites
-            if self.m9_basin_term and imt != PGV:
-                if imt.period >= 1.9:
-                    m9_adj = _get_adjusted_m9_basin_term(C, ctx.z2pt5)
-                    fb[ctx.z2pt5 >= 6.0] = m9_adj[ctx.z2pt5 >= 6.0] 
-
-            # Now get the mean with basin term added
-            mean[m] = pre_baf_mean + (fb * usgs_baf)
+            mean[m] = fp + fnl + flin + fm + c0 + fd + fb
 
             if self.sigma_mu_epsilon and imt != PGV: # Assume don't apply to PGV
                 # Apply epistemic uncertainty scaling

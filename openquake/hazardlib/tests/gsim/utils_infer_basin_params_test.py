@@ -47,7 +47,7 @@ gmms_sa = [valid.gsim('[AbrahamsonEtAl2014]'),
            valid.gsim('[KuehnEtAl2020SInter]\nregion="JPN"'), # z2pt5
            valid.gsim('[CB14BasinTerm]\ngmpe_name="AtkinsonMacias2009"'),
            valid.gsim('[NZNSHM2022_KuehnEtAl2020SInter]'),
-           valid.gsim('[ParkerEtAl2020SInter]\nregion="CAS"'),
+           valid.gsim('[ParkerEtAl2020SInter]\nregion="Cascadia"'),
            valid.gsim('[PhungEtAl2020Asc]'),
            valid.gsim('[SiEtAl2020SInter]'),
            ]
