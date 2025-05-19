@@ -191,16 +191,13 @@ def _build_corners(strike, dip, rake, clon, clat, cdeps, dims, vshifts):
     return corners
 
 
-@compile("(f8, f8, f8, f8[:, :], f8[:, :], "
-         "f8[:, :], f8[:, :], f8[:], f8, f8)")
-def build_corners(usd, lsd, rar, area, strike,
-                  dip, rake, deps, lon, lat):
-    M, N = area.shape
+@compile("(f8[:,:], f8[:,:], f8[:,:], f8, f8, f8[:], f8[:,:,:], f8[:,:,:])")
+def build_corners(strike, dip, rake, lon, lat, deps, dims, shifts):
+    M, N = strike.shape
     corners = numpy.zeros((6, M, N, len(deps), 3))
     # 0,1,2,3: tl, tr, bl, br
     # 4: (strike, dip, rake)
     # 5: hypo
-    dims, shifts = get_dims_shifts(usd, lsd, rar, area, dip, deps)
     for m in range(M):
         for n in range(N):
             corners[:, m, n]  = _build_corners(
@@ -221,9 +218,11 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
     :return:
         an array of shape (M, N, D, 3)
     """
+    deps = hdd[:, 1]
+    dims, shifts = get_dims_shifts(
+        usd, lsd, rar, planin.area, planin.dip, deps)
     corners = build_corners(
-        usd, lsd, rar, planin.area, planin.strike, planin.dip, planin.rake,
-        hdd[:, 1], lon, lat)
+        planin.strike, planin.dip, planin.rake, lon, lat, deps, dims, shifts)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     for d, (drate, dep) in enumerate(hdd):
         planar_array.wlr[:, :, d, 2] = planin.rate * drate
