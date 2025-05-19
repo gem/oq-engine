@@ -65,16 +65,16 @@ planin_dt = numpy.dtype([
 ])
 
 
-@compile("(f8, f8, f8, f8, f8)")
-def get_rupdims(usd, lsd, rar, area, dip):
+@compile("(f8, f8, f8[:], f8[:])")
+def get_rupdims(seismo_len, rar, areas, dips):
     """
-    :param usd: upper seismogenic depth
+    :param seismo_len: seismogenic length
     :param lsd: lower seismogenic depth
     :param rar: rupture aspect ratio
-    :param area: area of the surface
-    :param dip: dip angle
+    :param areas: areas of the surface
+    :param dips: dip angles
     :returns:
-        array of shape 3 with rupture length, width and height
+        array of shape (N, 3) with rupture length, width and height
 
     The rupture area is calculated using the method
     :meth:`~openquake.hazardlib.scalerel.base.BaseMSR.get_median_area`.
@@ -83,17 +83,21 @@ def get_rupdims(usd, lsd, rar, area, dip):
     depth, the rupture width is shrunken to the maximum possible
     and the rupture length is extended to preserve the same area.
     """
-    rdip = math.radians(dip)
-    sindip = math.sin(rdip)
-    cosdip = math.cos(rdip)
-    max_width = (lsd - usd) / sindip
-    rup_length = math.sqrt(area * rar)
-    rup_width = area / rup_length
-    if rup_width > max_width:
-        rup_width = max_width
-        rup_length = area / rup_width
-    return numpy.array([rup_length, rup_width * cosdip, rup_width * sindip])
-
+    rdip = numpy.radians(dips)
+    sindip = numpy.sin(rdip)
+    cosdip = numpy.cos(rdip)
+    max_width = seismo_len / sindip
+    rup_length = numpy.sqrt(areas * rar)
+    rup_width = areas / rup_length
+    big = rup_width > max_width
+    if big.any():
+        rup_width[big] = max_width
+        rup_length[big] = areas / rup_width
+    out = numpy.empty((len(areas), 3))
+    out[:, 0] = rup_length
+    out[:, 1] = rup_width * cosdip
+    out[:, 2] = rup_width * sindip
+    return out
 
 
 @compile("(f8, f8, f8, f8[:,:], f8[:,:], f8[:])")
@@ -102,8 +106,8 @@ def get_dims_shifts(usd, lsd, rar, area, dip, deps):
     dims = numpy.empty((M, N, 3))
     shifts = numpy.zeros((M, N, len(deps)))
     for m in range(M):
+        dims[m] = get_rupdims(lsd - usd, rar, area[m], dip[m]) / 2.
         for n in range(N):
-            dims[m, n] = get_rupdims(usd, lsd, rar, area[m, n], dip[m, n]) / 2.
             half_height = dims[m, n, 2]
             # precalculate azimuth value, s for horizontal and vertica moves
             # from one point to another on the plane defined by strike and dip

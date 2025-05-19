@@ -31,6 +31,7 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
+F64 = numpy.float64
 
 def msr_name(src):
     """
@@ -220,7 +221,7 @@ class PointSource(ParametricSeismicSource):
         rar = self.rupture_aspect_ratio
         for m, planin in enumerate(self.get_planin()):
             rup_length, rup_width, _ = get_rupdims(
-                usd, lsd, rar, planin.area[-1], planin.dip[-1])
+                lsd - usd, rar, planin.area, planin.dip).max(axis=0)
             # the projection radius is half of the rupture diagonal
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
@@ -550,10 +551,10 @@ def get_rup_maxlen(src):
         usd = src.upper_seismogenic_depth
         msr = src.magnitude_scaling_relationship
         rar = src.rupture_aspect_ratio
-        lens = []
+        areas, dips = [], []
         for _, np in src.nodal_plane_distribution.data:
-            area = msr.get_median_area(maxmag, np.rake)
-            dims = get_rupdims(usd, lsd, rar, area, np.dip)
-            lens.append(dims[0])
-        return max(lens)
+            areas.append(msr.get_median_area(maxmag, np.rake))
+            dips.append(np.dip)
+        dims = get_rupdims(float(lsd - usd), float(rar), F64(areas), F64(dips))
+        return dims.max(axis=0)
     return 0.
