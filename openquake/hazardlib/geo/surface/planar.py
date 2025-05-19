@@ -95,33 +95,38 @@ def get_rupdims(usd, lsd, rar, area, dip):
     return numpy.array([rup_length, rup_width * cosdip, rup_width * sindip])
 
 
-@compile("(f8, f8, f8, f8, f8, f8[:])")
-def get_vshifts(usd, lsd, rar, area, dip, cdeps):
-    half_length, half_width, half_height = get_rupdims(
-        usd, lsd, rar, area, dip) / 2.
-    # precalculate azimuth values for horizontal and vertica moves
-    # from one point to another on the plane defined by strike and dip
-    vshifts = numpy.zeros_like(cdeps)
-    for d, cdep in enumerate(cdeps):
-        # half height of the vertical component of rupture width
-        # is the vertical distance between the rupture geometrical
-        # center and it's upper and lower borders:
-        # calculate how much shallower the upper border of the rupture
-        # is than the upper seismogenic depth:
-        vshift = usd - cdep + half_height
-        # if it is shallower (vshift > 0) than we need to move the rupture
-        # by that value vertically.
-        if vshift < 0:
-            # the top edge is below the upper seismogenic depth: we need
-            # to check that we do not cross the lower border
-            vshift = lsd - cdep - half_height
-            if vshift > 0:
-                # the bottom edge of the rupture is above the lower depth;
-                # that means that we don't need to move the rupture
-                # as it fits inside seismogenic layer.
-                vshift = 0
-        vshifts[d] = vshift
-    return half_length, half_width, half_height, vshifts
+
+@compile("(f8, f8, f8, f8[:,:], f8[:,:], f8[:])")
+def get_dims_shifts(usd, lsd, rar, area, dip, cdeps):
+    M, N = area.shape
+    dims = numpy.empty((M, N, 3))
+    shifts = numpy.zeros((M, N, len(cdeps)))
+    for m in range(M):
+        for n in range(N):
+            dims[m, n] = get_rupdims(usd, lsd, rar, area[m, n], dip[m,n]) / 2.
+            half_height = dims[m, n, 2]
+            # precalculate azimuth value, s for horizontal and vertica moves
+            # from one point to another on the plane defined by strike and dip
+            for d, cdep in enumerate(cdeps):
+                # half height of the vertical component of rupture width
+                # is the vertical distance between the rupture geometrical
+                # center and it's upper and lower borders:
+                # calculate how much shallower the upper border of the rupture
+                # is than the upper seismogenic depth:
+                vshift = usd - cdep + half_height
+                # if it is shallower (vshift > 0) than we need to move the
+                # rupture by that value vertically.
+                if vshift < 0:
+                    # the top edge is below the upper seismogenic depth: we need
+                    # to check that we do not cross the lower border
+                    vshift = lsd - cdep - half_height
+                    if vshift > 0:
+                        # the bottom edge of the rupture is above the lower
+                        # depth; that means that we don't need to move the
+                        # rupture as it fits inside seismogenic layer.
+                        vshift = 0
+                shifts[m, n, d] = vshift
+    return dims, shifts
 
 
 # From the rupture center we can compute the coordinates of the
@@ -133,9 +138,9 @@ def get_vshifts(usd, lsd, rar, area, dip, cdeps):
 # and the line passing through the rupture center and parallel to the
 # top and bottom edges. Theta is zero for vertical ruptures (because
 # rup_proj_width is zero)
-@compile("(f8, f8, f8, f8, f8, f8, f8, f8, f8[:], f8[:])")
-def _build_corners(half_length, half_width, half_height,
-                   strike, dip, rake, clon, clat, cdeps, vshifts):
+@compile("(f8, f8, f8, f8, f8, f8[:], f8[:], f8[:])")
+def _build_corners(strike, dip, rake, clon, clat, cdeps, dims, vshifts):
+    half_length, half_width, half_height = dims
     # precalculate azimuth values for horizontal and vertica moves
     # from one point to another on the plane defined by strike and dip
     azimuth_right = strike
@@ -195,13 +200,12 @@ def build_corners(usd, lsd, rar, area, strike,
     # 0,1,2,3: tl, tr, bl, br
     # 4: (strike, dip, rake)
     # 5: hypo
+    dims, shifts = get_dims_shifts(usd, lsd, rar, area, dip, deps)
     for m in range(M):
         for n in range(N):
-            half_length, half_width, half_height, vshifts = get_vshifts(
-                usd, lsd, rar, area[m, n], dip[m, n], deps)
             corners[:, m, n]  = _build_corners(
-                half_length, half_width, half_height, strike[m, n],
-                dip[m, n], rake[m, n], lon, lat, deps, vshifts)
+                strike[m, n], dip[m, n], rake[m, n], lon, lat, deps,
+                dims[m, n], shifts[m, n])
     return corners
 
 
