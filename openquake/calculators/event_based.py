@@ -317,8 +317,13 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
                 rlzs_by_gsim[model, trt_smr] = rbg
         dstore['full_lt'] = full_lt  # saving the last lt (hackish)
         r.copy('events', dstore.hdf5) # saving the events
-        logging.info('Selecting the ruptures close to the sites')
-        rups = close_ruptures(r['ruptures'][:], sitecol)
+        manysites = len(sitecol) > oq.max_sites_disagg
+        if manysites:
+            logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
+            rups = r['ruptures'][:]
+        else:
+            logging.info('Selecting the ruptures close to the sites')
+            rups = close_ruptures(r['ruptures'][:], sitecol)
         dstore['ruptures'] = rups
         R = full_lt.num_samples
         dstore['weights'] = numpy.ones(R) / R
@@ -328,7 +333,6 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
     extra = sitecol.array.dtype.names
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    logging.info('Computing the GMFs')
     for (model, trt_smr), rups in rups_dic.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
@@ -339,8 +343,11 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
                               oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for block in block_splitter(proxies, maxw * 1.02, rup_weight):
+            if manysites:
+                logging.info('Sending %d ruptures of %s', len(block), model)
             args = block, cmaker, sitecol, (None, None), ruptures_hdf5
             smap.submit(args)
+    logging.info('Computing the GMFs')
     return smap
 
 
