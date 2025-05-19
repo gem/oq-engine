@@ -259,16 +259,17 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
-    with dstore, rmon:
+    with rmon:
         srcfilter = SourceFilter(
             sitecol.complete, oq.maximum_distance(cmaker.trt))
         if isinstance(dstore, str):
             # when passing ruptures.hdf5
             proxies = get_proxies(dstore, proxies)
         else:
-            dset = dstore['rupgeoms']
-            for proxy in proxies:
-                proxy.geom = dset[proxy['geom_id']]
+            with dstore:
+                dset = dstore['rupgeoms']
+                for proxy in proxies:
+                    proxy.geom = dset[proxy['geom_id']]
     for block in block_splitter(proxies, 20_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
