@@ -138,7 +138,7 @@ def _get_basin_term(C, ctx, region, imt, basin, m9_basin_term, usgs_basin_scalin
                                        m9_basin_term,
                                        usgs_basin_scaling)
 
-    if region == "Cascadia":
+    elif region == "Cascadia":
         if basin is None:
             return _get_basin_term_factors(C, ctx, 3.94, -0.42, 200, 0.2,
                                            C["C_e1"], C["C_e2"],
@@ -161,8 +161,8 @@ def _get_basin_term(C, ctx, region, imt, basin, m9_basin_term, usgs_basin_scalin
                                            C["C_e3"] + ds,
                                            imt, m9_basin_term,
                                            usgs_basin_scaling)
-    
-    return 0
+    else:
+        return 0
 
 
 _c0 = CallableDict()

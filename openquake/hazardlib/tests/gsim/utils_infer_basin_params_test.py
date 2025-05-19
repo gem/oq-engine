@@ -20,6 +20,8 @@ import unittest
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import new_ctx
 from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib import valid
+from openquake.hazardlib.gsim.mgmpe.m9_basin_term import M9BasinTerm
+from openquake.hazardlib.gsim.sera_amplification_models import SandikkayaDinsever2018
 
 
 aae = np.testing.assert_almost_equal
@@ -58,13 +60,16 @@ gmms_sdi = [valid.gsim('[AristeidouEtAl2023]')]
 
 gmms_eas = [valid.gsim('[BaylessAbrahamson2018]')]
 
+gmms_error = [M9BasinTerm(gmpe_name='KuehnEtAl2020SInter'),
+              SandikkayaDinsever2018(gmpe_name='BooreEtAl2014')]
+
 
 def make_ctx(imts, gmms):
     cmaker = simple_cmaker(gmms, imts)                     
     ctx = new_ctx(cmaker, 4)
     ctx.dip = 60.
     ctx.rake = 90.
-    ctx.z1pt0 = np.array([72.1, -999, 522.32, -999])
+    ctx.z1pt0 = np.array([72.1, -999, 522.32, 999])
     ctx.z2pt5 = np.array([0.69, -999, 6.32, -999])
     ctx.rrup = np.array([50., 200., 500., 250.])
     ctx.vs30 = np.array([800., 400., 200., 600.])
@@ -104,3 +109,8 @@ class InferBasinParamTestCase(unittest.TestCase):
         ctx_eas, cmaker_eas = make_ctx(imts_eas, gmms_eas)
         mea_eas, _, _, _ = cmaker_eas.get_mean_stds([ctx_eas])
         #np.testing.assert_allclose(mea_eas, exp_eas, rtol=1e-6)
+
+        # GMMs which should raise a value error if -999 z1pt0 or z2pt5 in site model
+        ctx_error, cmaker_error = make_ctx(imts_sa, gmms_error)
+        with self.assertRaises(ValueError):
+            cmaker_error.get_mean_stds([ctx_error])

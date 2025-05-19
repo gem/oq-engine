@@ -581,12 +581,10 @@ class SandikkayaDinsever2018(GMPE):
         Returns the mean and standard deviations
         """
         # Check no unknown z1pt0 in the site model
-        if any(ctx.z1pt0) == int(-999):
+        if any(ctx.z1pt0 == int(-999)):
             raise ValueError("z1pt0 must be provided for each site in the " \
-            "site model (i.e. no -999 values) used with SandikkayaDinsever2018 " \
-            "to ensure consistency in the z1pt0 (potentially) estimated" \
-            "by the underlying GMPE's vs30 to z1pt0 relationship and this" \
-            "site amp. model.")
+            "site model (i.e. no -999 z1pt0 values) used with the " \
+            "SandikkayaDinsever2018 GSIM")
         ctx_r = copy.copy(ctx)
         ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
         rock = contexts.get_mean_stds(self.gsim, ctx_r, imts)
