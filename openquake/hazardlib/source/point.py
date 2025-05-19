@@ -23,7 +23,7 @@ from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
-    build_planar, PlanarSurface, planin_dt, get_rupdims)
+    build_planar, PlanarSurface, planin_dt, get_rupdims, get_dims_shifts)
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.hazardlib.source.base import ParametricSeismicSource
@@ -221,6 +221,18 @@ class PointSource(ParametricSeismicSource):
             # the projection radius is half of the rupture diagonal
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
+
+    def get_dims_shifts(self):
+        # useful for debugging
+        magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
+        npd = self.nodal_plane_distribution.data
+        deps = numpy.array(self.hypocenter_distribution.data)[:, 1]
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
+        rar = self.rupture_aspect_ratio
+        planin = self.get_planin(magd, npd)
+        return get_dims_shifts(
+            usd, lsd, rar, planin.area, planin.dip, deps)
 
     def get_planar(self, shift_hypo=False, iruptures=False):
         """

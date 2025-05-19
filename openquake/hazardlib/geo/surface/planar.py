@@ -97,29 +97,29 @@ def get_rupdims(usd, lsd, rar, area, dip):
 
 
 @compile("(f8, f8, f8, f8[:,:], f8[:,:], f8[:])")
-def get_dims_shifts(usd, lsd, rar, area, dip, cdeps):
+def get_dims_shifts(usd, lsd, rar, area, dip, deps):
     M, N = area.shape
     dims = numpy.empty((M, N, 3))
-    shifts = numpy.zeros((M, N, len(cdeps)))
+    shifts = numpy.zeros((M, N, len(deps)))
     for m in range(M):
         for n in range(N):
             dims[m, n] = get_rupdims(usd, lsd, rar, area[m, n], dip[m,n]) / 2.
             half_height = dims[m, n, 2]
             # precalculate azimuth value, s for horizontal and vertica moves
             # from one point to another on the plane defined by strike and dip
-            for d, cdep in enumerate(cdeps):
+            for d, dep in enumerate(deps):
                 # half height of the vertical component of rupture width
                 # is the vertical distance between the rupture geometrical
                 # center and it's upper and lower borders:
                 # calculate how much shallower the upper border of the rupture
                 # is than the upper seismogenic depth:
-                vshift = usd - cdep + half_height
+                vshift = usd - dep + half_height
                 # if it is shallower (vshift > 0) than we need to move the
                 # rupture by that value vertically.
                 if vshift < 0:
                     # the top edge is below the upper seismogenic depth: we need
                     # to check that we do not cross the lower border
-                    vshift = lsd - cdep - half_height
+                    vshift = lsd - dep - half_height
                     if vshift > 0:
                         # the bottom edge of the rupture is above the lower
                         # depth; that means that we don't need to move the
