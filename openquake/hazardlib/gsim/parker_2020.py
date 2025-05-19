@@ -23,7 +23,6 @@ Module exports :class:`ParkerEtAl2020SInter`
                :class:`ParkerEtAl2020SSlabB`
 """
 import os
-import math
 import numpy as np
 import pandas as pd
 from scipy.special import erf
@@ -41,6 +40,8 @@ EPI_ADJS = os.path.join(os.path.dirname(__file__),
 CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,
              "vref_fnl": 760, "V1": 270, "vref": 760}
 
+METRES_PER_KM = 1000.
+
 _a0 = CallableDict()
 
 
@@ -49,7 +50,7 @@ def _get_adjusted_m9_basin_term(C, z2pt5):
     Return the adjusted version of the M9 basin term as detailed within the 
     USGS NSHM java code for the Abrahamson and Gulerce 2020 subduction GMM.
     """
-    delta_z2pt5_adj = np.log(z2pt5 * 1000.) - np.log(1279.)
+    delta_z2pt5_adj = np.log(z2pt5 * METRES_PER_KM) - np.log(1279.)
     fb_adj = np.zeros(len(z2pt5))
     idx_ce1 = delta_z2pt5_adj <= (C['C_e1']/C['C_e3'])
     idx_ce2 = delta_z2pt5_adj >= (C['C_e2']/C['C_e3'])
@@ -216,14 +217,19 @@ def _get_basin_term_factors(theta0, theta1, vmu, vsig, e1, e2, e3, ctx):
     vs30 = ctx.vs30[select]
     z2pt5 = ctx.z2pt5[select]
 
-    z2pt5_pred = 10 ** (theta0 + theta1
-                        * (1 + erf((np.log10(vs30) - math.log10(vmu))
-                                   / (vsig * math.sqrt(2)))))
+    z2pt5_pred = 10 ** (theta0 + theta1 * (
+        1 + erf((np.log10(vs30) - np.log10(vmu)) / (vsig * np.sqrt(2)))))
+
+    # Use GMM's vs30 to z2pt5 to update none-measured values
+    mask = z2pt5 == int(-999)
+    z2pt5[mask] = z2pt5_pred[mask]
+
     del_z2pt5 = np.log(z2pt5) - np.log(z2pt5_pred)
 
-    btf[select] = np.where(del_z2pt5 <= (e1 / e3), e1,
-                           np.where(del_z2pt5 >= (e2 / e3), e2,
-                                    e3 * del_z2pt5))
+    btf[select] = np.where(
+        del_z2pt5 <= (e1 / e3), e1, np.where(
+            del_z2pt5 >= (e2 / e3), e2, e3 * del_z2pt5))
+    
     return btf
 
 
@@ -246,11 +252,11 @@ def _linear_amplification(region, C, vs30):
 
     # linear site term
     fnl = np.where(vs30 <= v1,
-                   s1 * np.log(vs30 / v1) + s2 * math.log(v1 / vref),
+                   s1 * np.log(vs30 / v1) + s2 * np.log(v1 / vref),
                    0)
     fnl = np.where((v1 < vs30) & (vs30 <= C["V2"]),
                    s2 * np.log(vs30 / vref), fnl)
-    fnl = np.where(vs30 > C["V2"], s2 * math.log(C["V2"] / vref), fnl)
+    fnl = np.where(vs30 > C["V2"], s2 * np.log(C["V2"] / vref), fnl)
 
     return fnl
 
@@ -281,7 +287,7 @@ def _non_linear_term(C, imt, vs30, fp, fm, c0, fd=0):
     else:
         fnl = C["f4"] * (np.exp(C["f5"] * (
             np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"]))
-             - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
+             - np.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
         fnl *= np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
 
     return fnl
@@ -322,8 +328,8 @@ def _path_term_h_2(trt, mag, m_b=None):
     """
     H factor for path term, subduction slab.
     """
-    m = (math.log10(35) - math.log10(3.12)) / (m_b - 4)
-    return np.where(mag <= m_b, 10 ** (m * (mag - m_b) + math.log10(35)), 35)
+    m = (np.log10(35) - np.log10(3.12)) / (m_b - 4)
+    return np.where(mag <= m_b, 10 ** (m * (mag - m_b) + np.log10(35)), 35)
 
 
 def get_stddevs(C, rrup, vs30):
@@ -347,19 +353,19 @@ def get_stddevs(C, rrup, vs30):
             phi_rv[i] = C["phi22"]
         else:
             phi_rv[i] = ((C["phi22"] - C["phi21"])
-                         / (math.log(r2) - math.log(r1))) \
-                        * (math.log(rrup[i]) - math.log(r1)) + C["phi21"]
+                         / (np.log(r2) - np.log(r1))) \
+                        * (np.log(rrup[i]) - np.log(r1)) + C["phi21"]
 
         if vs30i <= v1:
             phi_rv[i] += C["phi2V"] * \
-                         (math.log(r2 / max(r1, min(r2, rrup[i])))
-                          / math.log(r2 / r1))
+                         (np.log(r2 / max(r1, min(r2, rrup[i])))
+                          / np.log(r2 / r1))
         elif vs30i < v2:
             phi_rv[i] += C["phi2V"] * \
-                      ((math.log(v2 / min(v2, vs30i)))
-                       / math.log(v2 / v1)) * \
-                      (math.log(r2 / max(r1, min(r2, rrup[i])))
-                       / math.log(r2 / r1))
+                      ((np.log(v2 / min(v2, vs30i)))
+                       / np.log(v2 / v1)) * \
+                      (np.log(r2 / max(r1, min(r2, rrup[i])))
+                       / np.log(r2 / r1))
 
     phi_tot = np.sqrt(phi_rv)
 
