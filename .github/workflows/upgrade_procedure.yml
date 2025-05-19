@@ -1,4 +1,4 @@
-name: Upgrade procedure for engine from 3.16 to Latest Release
+name: Upgrade procedure for engine from 3.23 to Latest Release
 
 on:
   workflow_dispatch:
@@ -65,6 +65,8 @@ jobs:
         source /opt/openquake/venv/bin/activate
         oq --version
         deactivate
+        sudo systemctl stop openquake-dbserver
+        sleep 10
         sudo env "PATH=$PATH" python install.py server --remove
         sleep 10
         sudo env "PATH=$PATH" python install.py server --version=master
