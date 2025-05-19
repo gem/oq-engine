@@ -103,7 +103,7 @@ def get_dims_shifts(usd, lsd, rar, area, dip, deps):
     shifts = numpy.zeros((M, N, len(deps)))
     for m in range(M):
         for n in range(N):
-            dims[m, n] = get_rupdims(usd, lsd, rar, area[m, n], dip[m,n]) / 2.
+            dims[m, n] = get_rupdims(usd, lsd, rar, area[m, n], dip[m, n]) / 2.
             half_height = dims[m, n, 2]
             # precalculate azimuth value, s for horizontal and vertica moves
             # from one point to another on the plane defined by strike and dip
