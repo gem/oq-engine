@@ -867,7 +867,7 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
     properties = js['properties']
     shakemaps = properties['products']['shakemap']
     usgs_preferred_shakemap = _get_usgs_preferred_item(shakemaps)
-    usgs_preferred_version = usgs_preferred_shakemap['properties']['version']
+    usgs_preferred_version = usgs_preferred_shakemap['id']
     sorted_shakemaps = sorted(
         shakemaps, key=lambda x: x["updateTime"], reverse=True)
     shakemap_versions = [
