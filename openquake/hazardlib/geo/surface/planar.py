@@ -89,10 +89,10 @@ def get_rupdims(seismo_len, rar, areas, dips):
     max_width = seismo_len / sindip
     rup_length = numpy.sqrt(areas * rar)
     rup_width = areas / rup_length
-    big = rup_width > max_width
-    if big.any():
-        rup_width[big] = max_width
-        rup_length[big] = areas / rup_width
+    for i, area in enumerate(areas):
+        if rup_width[i] > max_width[i]:
+            rup_width[i] = max_width[i]
+            rup_length[i] = area / rup_width[i]
     out = numpy.empty((len(areas), 3))
     out[:, 0] = rup_length
     out[:, 1] = rup_width * cosdip

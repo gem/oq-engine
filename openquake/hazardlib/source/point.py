@@ -219,6 +219,7 @@ class PointSource(ParametricSeismicSource):
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         rar = self.rupture_aspect_ratio
+        # the magnitude is increasing
         for m, planin in enumerate(self.get_planin()):
             rup_length, rup_width, _ = get_rupdims(
                 lsd - usd, rar, planin.area, planin.dip).max(axis=0)
