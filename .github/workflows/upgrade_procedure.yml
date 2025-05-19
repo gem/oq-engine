@@ -68,7 +68,8 @@ jobs:
         sudo systemctl stop openquake-dbserver
         sleep 10
         sudo env "PATH=$PATH" python install.py server --remove
-        sleep 10
+        echo "Wait 10 minutes to avoid 429 Client Error: Too Many Requests for url: https://raw.githubusercontent.com"
+        sleep 600
         sudo env "PATH=$PATH" python install.py server --version=master
         source /opt/openquake/venv/bin/activate
         journalctl -xe -u openquake-dbserver
