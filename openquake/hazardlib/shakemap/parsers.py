@@ -874,7 +874,8 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
         {'id': shakemap['id'],
          'number': shakemap['properties']['version'],
          'utc_date_time': ms_to_utc_date_time(shakemap['updateTime'])}
-        for shakemap in sorted_shakemaps]
+        for shakemap in sorted_shakemaps
+        if 'version' in shakemap['properties']]
     return shakemap_versions, usgs_preferred_version, err
 
 
