@@ -252,9 +252,6 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    if isinstance(dstore, str):
-        # when passing ruptures.hdf5
-        dstore = hdf5.File(dstore)
     oq = cmaker.oq
     rmon = monitor('reading sites and ruptures', measuremem=True)
     fmon = monitor('instantiating GmfComputer', measuremem=False)
@@ -265,9 +262,13 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     with dstore, rmon:
         srcfilter = SourceFilter(
             sitecol.complete, oq.maximum_distance(cmaker.trt))
-        dset = dstore['rupgeoms']
-        for proxy in proxies:
-            proxy.geom = dset[proxy['geom_id']]
+        if isinstance(dstore, str):
+            # when passing ruptures.hdf5
+            proxies = get_proxies(dstore, proxies)
+        else:
+            dset = dstore['rupgeoms']
+            for proxy in proxies:
+                proxy.geom = dset[proxy['geom_id']]
     for block in block_splitter(proxies, 20_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
@@ -336,15 +337,14 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
     for (model, trt_smr), rups in rups_dic.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
-        proxies = get_proxies(ruptures_hdf5, rups)
         mags = numpy.unique(numpy.round(rups['mag'], 2))
         oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        for block in block_splitter(proxies, maxw * 1.02, rup_weight):
+        for block in block_splitter(rups, maxw * 1.02, rup_weight):
             if manysites:
-                logging.info('Sending %d ruptures of %s', len(block), model)
+                logging.info('%s: sending %d ruptures', model, len(block))
             args = block, cmaker, sitecol, (None, None), ruptures_hdf5
             smap.submit(args)
     logging.info('Computing the GMFs')
