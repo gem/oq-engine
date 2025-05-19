@@ -269,7 +269,7 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
             dset = dstore['rupgeoms']
             for proxy in proxies:
                 proxy.geom = dset[proxy['geom_id']]
-    for block in block_splitter(proxies, 20_000, rup_weight):
+    for block in block_splitter(proxies, 200_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 
@@ -342,7 +342,7 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        for block in block_splitter(rups, maxw * 1.02, rup_weight):
+        for block in block_splitter(rups, 20_000, rup_weight):
             if manysites:
                 logging.info('%s: sending %d ruptures', model, len(block))
             args = block, cmaker, sitecol, (None, None), ruptures_hdf5
