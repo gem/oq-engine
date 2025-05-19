@@ -34,7 +34,7 @@ from openquake.hazardlib.source.rupture import \
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.hazardlib.site import Site, SiteCollection
-from openquake.hazardlib.source import PointSource
+from openquake.hazardlib.source.point import PointSource, get_planin
 from openquake.hazardlib.mfd import ArbitraryMFD
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -332,8 +332,7 @@ class PlanarDistancesTestCase(unittest.TestCase):
         aac(ctx.repi, [27.79873166, 38.91822433])
         aac(ctx.azimuth, [0., 0.])
 
-        magd = [(r, mag) for mag, r in src.get_annual_occurrence_rates()]
-        planin = src.get_planin(magd, npd.data)
+        planin = get_planin(src)
         planar = build_planar(planin, numpy.array(hdd.data),
                               loc.x, loc.y, usd, lsd, rar)[0, 0]
         for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):

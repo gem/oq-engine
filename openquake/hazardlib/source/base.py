@@ -27,11 +27,37 @@ from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.calc.filters import magstr, split_source
 from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.surface.planar import planin_dt
 from openquake.hazardlib.geo.surface.planar import build_planar, PlanarSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
     EBRupture)
+
+
+def get_planin(src, magd=None, npd=None):
+    """
+    :param src: a point source or an area source
+    :return: array of dtype planin_dt of shape (#mags, #planes)
+    """
+    if magd is None:
+        magd = [(r, mag) for mag, r in src.get_annual_occurrence_rates()]
+    if npd is None:
+        npd = src.nodal_plane_distribution.data
+    msr = src.magnitude_scaling_relationship
+    planin = numpy.zeros((len(magd), len(npd)), planin_dt).view(
+        numpy.recarray)
+    mrate, mags = numpy.array(magd).T  # shape (2, num_mags)
+    nrate = numpy.array([nrate for nrate, np in npd])
+    planin['rate'] = mrate[:, None] * nrate
+    for n, (nrate, np) in enumerate(npd):
+        arr = planin[:, n]
+        arr['area'] = msr.get_median_area(mags, np.rake)
+        arr['mag'] = mags
+        arr['strike'] = np.strike
+        arr['dip'] = np.dip
+        arr['rake'] = np.rake
+    return planin
 
 
 @dataclass
@@ -133,7 +159,7 @@ def poisson_sample(src, eff_num_ses, seed):
             hc = Point(lon, lat, hc_depth)
             hdd = numpy.array([(1., hc.depth)])
             [[[planar]]] = build_planar(
-                ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat,
+                get_planin(ps, [(1., mag)], [(1., np)]), hdd, lon, lat,
                 usd, lsd, rar)
             rup = ParametricProbabilisticRupture(
                 mag, np.rake, ps.tectonic_region_type, hc,

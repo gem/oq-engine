@@ -65,6 +65,19 @@ planin_dt = numpy.dtype([
 ])
 
 
+
+@compile(["(f8, f8, f8[:], f8[:])",
+          "(f8, f8, f8[:,:], f8[:,:])"])
+def get_max_width4(seismo_len, rar, areas, dips):
+    rdip = numpy.radians(dips)
+    sindip = numpy.sin(rdip)
+    cosdip = numpy.cos(rdip)
+    max_width = seismo_len / sindip
+    rup_length = numpy.sqrt(areas * rar)
+    rup_width = areas / rup_length
+    return max_width, rup_width, rup_length, cosdip, sindip
+
+
 @compile("(f8, f8, f8[:], f8[:])")
 def get_rupdims(seismo_len, rar, areas, dips):
     """
@@ -83,12 +96,8 @@ def get_rupdims(seismo_len, rar, areas, dips):
     depth, the rupture width is shrunken to the maximum possible
     and the rupture length is extended to preserve the same area.
     """
-    rdip = numpy.radians(dips)
-    sindip = numpy.sin(rdip)
-    cosdip = numpy.cos(rdip)
-    max_width = seismo_len / sindip
-    rup_length = numpy.sqrt(areas * rar)
-    rup_width = areas / rup_length
+    max_width, rup_width, rup_length, cosdip, sindip = get_max_width4(
+        seismo_len, rar, areas, dips)
     for i, area in enumerate(areas):
         if rup_width[i] > max_width[i]:
             rup_width[i] = max_width[i]

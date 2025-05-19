@@ -23,10 +23,11 @@ from openquake.baselib.general import AccumDict, groupby_grid, Deduplicate
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
-    build_planar, PlanarSurface, planin_dt, get_rupdims, get_dims_shifts)
+    build_planar, PlanarSurface, get_rupdims,
+    get_dims_shifts, get_max_width4)
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.scalerel.point import PointMSR
-from openquake.hazardlib.source.base import ParametricSeismicSource
+from openquake.hazardlib.source.base import ParametricSeismicSource, get_planin
 from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
@@ -161,30 +162,6 @@ class PointSource(ParametricSeismicSource):
         new.hypocenter_distribution = PMF([(1., depth)])
         return new
 
-    def get_planin(self, magd=None, npd=None):
-        """
-        :return: array of dtype planin_dt of shape (#mags, #planes)
-        """
-        if magd is None:
-            magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
-        if npd is None:
-            npd = self.nodal_plane_distribution.data
-        msr = self.magnitude_scaling_relationship
-        planin = numpy.zeros((len(magd), len(npd)), planin_dt).view(
-            numpy.recarray)
-        mrate, mags = numpy.array(magd).T  # shape (2, num_mags)
-        nrate = numpy.array([nrate for nrate, np in npd])
-
-        planin['rate'] = mrate[:, None] * nrate
-        for n, (nrate, np) in enumerate(npd):
-            arr = planin[:, n]
-            arr['area'] = msr.get_median_area(mags, np.rake)
-            arr['mag'] = mags
-            arr['strike'] = np.strike
-            arr['dip'] = np.dip
-            arr['rake'] = np.rake
-        return planin
-
     def max_radius(self, maxdist):
         """
         :returns: max radius + ps_grid_spacing * sqrt(2)/2
@@ -220,22 +197,28 @@ class PointSource(ParametricSeismicSource):
         lsd = self.lower_seismogenic_depth
         rar = self.rupture_aspect_ratio
         # the magnitude is increasing
-        for m, planin in enumerate(self.get_planin()):
+        for m, planin in enumerate(get_planin(self)):
             rup_length, rup_width, _ = get_rupdims(
                 lsd - usd, rar, planin.area, planin.dip).max(axis=0)
             # the projection radius is half of the rupture diagonal
             self.radius[m] = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
         return self.radius[-1]  # max radius
 
+    def get_max_width4(self):
+        # useful for debugging
+        usd = self.upper_seismogenic_depth
+        lsd = self.lower_seismogenic_depth
+        rar = self.rupture_aspect_ratio
+        planin = get_planin(self)
+        return get_max_width4(lsd - usd, rar, planin.area, planin.dip)
+
     def get_dims_shifts(self):
         # useful for debugging
-        magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
-        npd = self.nodal_plane_distribution.data
         deps = numpy.array(self.hypocenter_distribution.data)[:, 1]
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         rar = self.rupture_aspect_ratio
-        planin = self.get_planin(magd, npd)
+        planin = get_planin(self)
         return get_dims_shifts(
             usd, lsd, rar, planin.area, planin.dip, deps)
 
@@ -255,7 +238,7 @@ class PointSource(ParametricSeismicSource):
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         rar = self.rupture_aspect_ratio
-        planin = self.get_planin()
+        planin = get_planin(self)
         planar = build_planar(
             planin, hdd, clon, clat, usd, lsd, rar, shift_hypo)
         dic = {mag: [pla.reshape(-1, 3)]   # MND3
