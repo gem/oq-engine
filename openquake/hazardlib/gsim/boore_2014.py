@@ -55,6 +55,8 @@ COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
     10.00    1.340000    0.498000    0.370755
     """)
 
+METRES_PER_KM = 1000.0
+
 
 def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
@@ -63,16 +65,16 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
     # Get basin model
     if region == "JPN":
-        bmodel = japan_basin_model
+        bmodel_mu_z1 = japan_basin_model(ctx.vs30)
     else:
-        bmodel = california_basin_model
+        bmodel_mu_z1 = california_basin_model(ctx.vs30)
 
     # Get z1pt0
     if hasattr(ctx, "z1pt0"):
-        z1pt0 = ctx.z1pt0
+        z1pt0 = ctx.z1pt0 # Site z1pt0 in metres
         # Use GMM's vs30 to z1pt0 for non-measured values
         mask = z1pt0 == int(-999)
-        z1pt0[mask] = bmodel(ctx.vs30[mask])
+        z1pt0[mask] = bmodel_mu_z1[mask] * METRES_PER_KM # mu_z1 to metres
 
     # Get USGS basin scaling factor if required
     if usgs_bs:
@@ -95,7 +97,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     
     # Regular basin term
     else:
-        dz1 = (z1pt0 / 1000.0) - bmodel(ctx.vs30)
+        dz1 = (z1pt0 / 1000.0) - bmodel_mu_z1 # Convert site z1pt0 to km
         f_ratio = C["f7"] / C["f6"]
         f_dz1 = np.where(dz1 <= f_ratio, C["f6"] * dz1, C["f7"])
         

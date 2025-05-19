@@ -79,7 +79,7 @@ def _get_basin_term(C, ctx, region):
 
     # Use GMM's vs30 to basin param for none-measured values
     if mask_z is not None: # Skip if none-basin region
-        z_values[mask_z] = _get_ln_z_ref(CZ, ctx.vs30[mask_z])
+        z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, ctx.vs30[mask_z]))
 
     brt = np.zeros_like(z_values)
     mask = z_values > 0.0

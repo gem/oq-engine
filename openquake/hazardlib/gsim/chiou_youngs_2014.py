@@ -179,9 +179,9 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     # Use GMMs vs30 to z1pt0 for non-measured values
     mask = z1pt0 == int(-999)
     if region == "JPN":
-        z1pt0[mask] = japan_mean_z1pt0(ctx.vs30[mask])
+        z1pt0[mask] = np.exp(japan_mean_z1pt0(ctx.vs30[mask]))
     else:
-        z1pt0[mask] = global_mean_z1pt0(ctx.vs30[mask])
+        z1pt0[mask] = np.exp(global_mean_z1pt0(ctx.vs30[mask]))
 
     # Get USGS basin scaling factor if required
     if usgs_bs:

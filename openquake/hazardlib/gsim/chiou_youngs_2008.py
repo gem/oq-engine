@@ -28,10 +28,10 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 def _get_z1_ref(vs30):
     """
-    Return z1pt0 ref as defined within equation 0 of the
-    EQ spectra article.
+    Return z1pt0 ref (in metres) as defined within equation 0
+    of the EQ spectra article. 
     """
-    return 28.5 - (3.82/8) * np.log(vs30**8 + 378.7**8)
+    return np.exp(28.5 - (3.82/8) * np.log(vs30**8 + 378.7**8))
 
 
 def _get_basin_term(C, ctx, region=None):

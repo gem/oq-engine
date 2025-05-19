@@ -28,18 +28,21 @@ from openquake.hazardlib.imt import PGA, PGV, PGD, CAV, SA
 from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 
 
+METRES_PER_KM = 1000.0
+
+
 def _get_cb07_z2pt5_ref(vs30):
     """
     Estimate unknown z2pt5 using the relationships described
-    in Campbell and Bozorgnia (2007).
+    in Campbell and Bozorgnia (2007). Returns z2pt5 in km.
     """
-    # First get z1pt0 using Chiou and Youngs (2008) vs30 to z1pt0
+    # First get z1pt0 (in metres) using Chiou and Youngs (2008)
     z1pt0 = _get_z1_ref(vs30)
     
     # Now use Campbell and Bozorgnia (2007) to get z2pt5 from z1pt0
     z2pt5 = 519 + (3.595 * z1pt0)
 
-    return z2pt5
+    return z2pt5 / METRES_PER_KM
 
 
 def _get_basin_term(C, ctx, region=None):

@@ -125,7 +125,7 @@ def _fvs30(geology, C, ctx):
 
 def _get_z1pt0_ref(vs30):
     """
-    Get reference z1pt0
+    Get reference z1pt0 in metres
     """ 
     return np.exp(-4.08 / 2 * np.log((
         vs30 ** 2 + 355.4 ** 2) / (1750 ** 2 + 355.4 ** 2)))

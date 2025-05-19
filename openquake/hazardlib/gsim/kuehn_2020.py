@@ -469,8 +469,8 @@ def _get_basin_term(C, ctx, region):
         if not mask.any():
             # No basin amplification to be applied
             return 0.0
-        brt[mask] = c11 + c12 * (np.log(z_values[mask]) -\
-                                _get_ln_z_ref(CZ, vs30[mask]))
+        brt[mask] = c11 + c12 * (
+            np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30[mask]))
         return brt
 
 

@@ -28,6 +28,8 @@ from openquake.hazardlib.imt import EAS
 BA_COEFFS = os.path.join(os.path.dirname(__file__),
                          "bayless_abrahamson_2018.csv")
 
+METRES_PER_KM = 1000.0
+
 
 def _magnitude_scaling(C, ctx):
     """
@@ -106,16 +108,16 @@ def _get_basin_term(C, ctx, region=None):
     c11[(ctx.vs30 > 500)] = C['c11d']
     # Compute the Z1ref parameter
     tmp = (ctx.vs30**4 + 610**4) / (1360**4 + 610**4)
-    z1ref = 1/1000. * np.exp(-7.67/4*np.log(tmp))
-    # Get z1pt0
+    z1ref = np.exp(-7.67/4*np.log(tmp)) # in metres
+    # Get z1pt0 (already in metres)
     z1pt0 = ctx.z1pt0
     # Use GMM's vs30 to z1pt0 for none-measured values
     mask = z1pt0 == int(-999)
     z1pt0[mask] = z1ref[mask]
     # Return the fz1 parameter. The z1pt0 is converted from m (standard in OQ)
     # to km as indicated in the paper
-    tmp = np.minimum(z1pt0/1000, np.ones_like(z1pt0)*2.0) + 0.01
-    return c11 * np.log(tmp / (z1ref + 0.01))
+    tmp = np.minimum(z1pt0/METRES_PER_KM, np.ones_like(z1pt0)*2.0) + 0.01
+    return c11 * np.log(tmp / (z1ref/METRES_PER_KM + 0.01))
 
 
 def _get_stddevs(C, ctx):

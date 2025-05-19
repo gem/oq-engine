@@ -225,6 +225,10 @@ def get_stddevs(suffix, C):
 class HassaniAtkinson2020SInter(GMPE):
     """
     Hassani Atkinson (2020) for Subduction Interface.
+
+    Hassani, B., and G. M. Atkinson (2021). Equivalent Point-Source
+    Ground-Motion Model for Subduction Earthquakes in Japan, Bull.
+    Seismol. Soc. Am. 111, 951–974, doi: 10.1785/0120200257
     """
     gmpe_table = None  # use split_by_mag
 

@@ -345,7 +345,6 @@ class AristeidouEtAl2024(GMPE):
         z2pt5 = np.array(ctx.z2pt5).reshape(-1, 1) * 1000
         rx = np.array(ctx.rx).reshape(-1, 1)
         ztor = np.array(ctx.ztor).reshape(-1, 1)
-
         ctx_params = np.column_stack([
             rjb, rrup, d_hyp, mag, vs30, mechanism, z2pt5, rx, ztor
         ])

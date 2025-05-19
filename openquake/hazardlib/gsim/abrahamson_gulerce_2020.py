@@ -131,6 +131,8 @@ CONSTS = {
     "d5_phi3": 0.000,
 }
 
+METRES_PER_KM = 1000.0
+
 
 def get_base_term(C, region, apply_adjust):
     """
@@ -294,21 +296,21 @@ def _get_basin_term(C, ctx, region, usgs_baf):
     and Japan regions, defined in equations 3.9 - 3.11 and corrected in the
     Erratum
 
-    :param numpy.ndarray z25:
+    :param numpy.ndarray z25 (attribute of ctx object):
         Depth to 2.5 m/s shearwave velocity layer (km)
     """
     if region not in ("CAS", "JPN"):
         # Basin depth defined only for Cascadia and Japan, so return 0
         return 0.0
 
-    # Define the reference basin depth from Vs30
+    # Define the ref basin depth (z2pt5 in m) from Vs30
     z25_ref = get_reference_basin_depth(region, ctx.vs30)
 
-    # Use GMM's vs30 to z1pt0 for none-measured values
+    # Use GMM's vs30 to z2pt5 for none-measured values
     mask = ctx.z2pt5 == int(-999)
-    z25 = 1000.0 * ctx.z2pt5 # Convert z25 from km to m
+    z25 = METRES_PER_KM * ctx.z2pt5 # From km to metres
     z25[mask] = z25_ref[mask]
-    
+        
     # Normalise the basin depth term (Equation 3.9)
     ln_z25_prime = np.log((z25 + 50.0) / (z25_ref + 50.0))
     f_basin = np.zeros(ctx.vs30.shape)

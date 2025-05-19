@@ -99,7 +99,7 @@ def _basin_term(C, imt, z2pt5, SJ, cy):
 def _select_basin_model(SJ, vs30):
     """
     Select the preferred basin model (California or Japan) to scale
-    basin depth with respect to Vs30
+    basin depth with respect to Vs30. Returns z2pt5 in km
     """
     if SJ:
         # Japan Basin Model - Equation 34 of Campbell & Bozorgnia (2014)
@@ -119,7 +119,7 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     # Get reference basin depth
     z_ref = _select_basin_model(SJ, 1100.0) * np.ones_like(ctx.vs30)
     z_ref_term = _basin_term(C, imt, z_ref, SJ, False)
-    
+
     # Get basin term
     if isinstance(a1100, np.ndarray): # Site model defined
         z2pt5 = ctx.z2pt5
