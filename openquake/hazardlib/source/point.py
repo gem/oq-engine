@@ -162,7 +162,7 @@ class PointSource(ParametricSeismicSource):
 
     def get_planin(self, magd=None, npd=None):
         """
-        :return: array of dtype planin_dt of shape (#mags, #planes, #depths)
+        :return: array of dtype planin_dt of shape (#mags, #planes)
         """
         if magd is None:
             magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
