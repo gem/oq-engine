@@ -97,7 +97,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     
     # Regular basin term
     else:
-        dz1 = (z1pt0 / 1000.0) - bmodel_mu_z1 # Convert site z1pt0 to km
+        dz1 = (z1pt0 / METRES_PER_KM) - bmodel_mu_z1 # Convert site z1pt0 to km
         f_ratio = C["f7"] / C["f6"]
         f_dz1 = np.where(dz1 <= f_ratio, C["f6"] * dz1, C["f7"])
         

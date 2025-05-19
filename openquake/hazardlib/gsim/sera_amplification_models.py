@@ -489,7 +489,7 @@ class SandikkayaDinsever2018(GMPE):
 
     NOTE: The value of z1pt0 used here always comes directly from the site
     model. If the site model contains -999 values (indicating missing z1pt0
-    to be estimated from the GMM's vss30 to z1pt0 relationship), they will
+    to be estimated from the GMM's vs30 to z1pt0 relationship), they will
     not be estimated, even if the GMM supports it. As a result, using this
     amplification model with a site model that includes -999 (missing) z1pt0
     values is not recommended, as it will lead to inconsistencies between

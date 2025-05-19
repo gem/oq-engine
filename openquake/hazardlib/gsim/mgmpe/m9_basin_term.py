@@ -45,7 +45,7 @@ class M9BasinTerm(GMPE):
 
     NOTE: The value of z2pt5 used here always comes directly from the site
     model. If the site model contains -999 values (indicating missing z2pt5
-    to be estimated from the GMM's vss30 to z2pt5 relationship), they will
+    to be estimated from the GMM's vs30 to z2pt5 relationship), they will
     not be estimated, even if the GMM supports it. As a result, using this
     amplification model with a site model that includes -999 (missing) z2pt5
     values is not recommended, as it will lead to inconsistencies between
