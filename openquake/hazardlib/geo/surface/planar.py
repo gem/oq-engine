@@ -95,6 +95,33 @@ def get_rupdims(usd, lsd, rar, area, dip):
     return numpy.array([rup_length, rup_width * cosdip, rup_width * sindip])
 
 
+@compile("(f8, f8, f8, f8, f8, f8, f8[:])")
+def get_vshifts(usd, lsd, rar, area, dip, half_height, cdeps):
+    # precalculate azimuth values for horizontal and vertica moves
+    # from one point to another on the plane defined by strike and dip
+    vshifts = numpy.zeros_like(cdeps)
+    for d, cdep in enumerate(cdeps):
+        # half height of the vertical component of rupture width
+        # is the vertical distance between the rupture geometrical
+        # center and it's upper and lower borders:
+        # calculate how much shallower the upper border of the rupture
+        # is than the upper seismogenic depth:
+        vshift = usd - cdep + half_height
+        # if it is shallower (vshift > 0) than we need to move the rupture
+        # by that value vertically.
+        if vshift < 0:
+            # the top edge is below the upper seismogenic depth: we need
+            # to check that we do not cross the lower border
+            vshift = lsd - cdep - half_height
+            if vshift > 0:
+                # the bottom edge of the rupture is above the lower depth;
+                # that means that we don't need to move the rupture
+                # as it fits inside seismogenic layer.
+                vshift = 0
+        vshifts[d] = vshift
+    return vshifts
+
+
 # From the rupture center we can compute the coordinates of the
 # four coorners by moving along the diagonals of the plane. This seems
 # to be better then moving along the perimeter, because in this case
@@ -117,26 +144,7 @@ def _build_corners(usd, lsd, rar, area, mag, strike, dip, rake,
     azimuth_up = azimuth_left + 90
     theta = math.degrees(math.atan(half_width / half_length))
     hor_dist = math.sqrt(half_length ** 2 + half_width ** 2)
-    vshifts = numpy.zeros_like(cdeps)
-    for d, cdep in enumerate(cdeps):
-        # half height of the vertical component of rupture width
-        # is the vertical distance between the rupture geometrical
-        # center and it's upper and lower borders:
-        # calculate how much shallower the upper border of the rupture
-        # is than the upper seismogenic depth:
-        vshift = usd - cdep + half_height
-        # if it is shallower (vshift > 0) than we need to move the rupture
-        # by that value vertically.
-        if vshift < 0:
-            # the top edge is below the upper seismogenic depth: we need
-            # to check that we do not cross the lower border
-            vshift = lsd - cdep - half_height
-            if vshift > 0:
-                # the bottom edge of the rupture is above the lower depth;
-                # that means that we don't need to move the rupture
-                # as it fits inside seismogenic layer.
-                vshift = 0
-        vshifts[d] = vshift
+    vshifts = get_vshifts(usd, lsd, rar, area, dip, half_height, cdeps)
     if (vshifts == 0).any():
         lonlat = numpy.empty((4, 2))
         lonlat[0] = geodetic.fast_point_at(

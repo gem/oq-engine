@@ -695,15 +695,15 @@ class BranchSet(object):
                 yield path_branch
 
 
-    def __getitem__(self, branch_id):
+    def __getitem__(self, brid):
         """
         Return :class:`Branch` object belonging to this branchset with id
-        equal to ``branch_id``.
+        equal to ``brid``.
         """
         for branch in self.branches:
-            if branch.branch_id == branch_id:
+            if branch.branch_id == brid:
                 return branch
-        raise KeyError(branch_id)
+        raise KeyError(brid)
 
     def filter_source(self, source):
         """
@@ -903,8 +903,7 @@ class CompositeLogicTree(object):
         ordinal = 0
         for weight, branches in self.branchsets[0].enumerate_paths():
             value = [br.value for br in branches]
-            # NB: the branch_ids must be one-character long if we want to use
-            # apply_all
+            # NB: branch.id is one-character long
             lt_path = ''.join(br.id for br in branches)
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
