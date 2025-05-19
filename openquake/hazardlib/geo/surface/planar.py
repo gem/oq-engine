@@ -238,6 +238,7 @@ def dot(a, b):
 def build_planar_array(corners, sdr=None, hypo=None, check=False):
     """
     :param corners: array of shape (4, M, N, D, 3)
+    :param sdr: None or array of shape (M, N, D, 3)
     :param hypo: None or array of shape (M, N, D, 3)
     :returns: a planar_array array of length (M, N, D, 3)
     """
@@ -455,7 +456,7 @@ def get_rjb(planar, points):  # numbified below
     out = numpy.zeros((len(planar), len(points)))
     for u, pla in enumerate(planar):
         strike, _dip, _rake = pla['sdr']
-        downdip = (strike + 90) % 360
+        downdip = (strike + 90.) % 360.
         corners = pla.corners
         clons, clats = numpy.zeros(4), numpy.zeros(4)
         clons[:], clats[:] = corners[0], corners[1]
