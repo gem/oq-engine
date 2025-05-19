@@ -147,11 +147,11 @@ def _build_corners(half_length, half_width, half_height,
     if (vshifts == 0).any():
         lonlat = numpy.empty((4, 2))
         lonlat[0] = geodetic.fast_point_at(
-            clon, clat, strike + 180 + theta, hor_dist)
+            clon, clat, strike + 180. + theta, hor_dist)
         lonlat[1] = geodetic.fast_point_at(
             clon, clat, strike - theta, hor_dist)
         lonlat[2] = geodetic.fast_point_at(
-            clon, clat, strike + 180 - theta, hor_dist)
+            clon, clat, strike + 180. - theta, hor_dist)
         lonlat[3] = geodetic.fast_point_at(
             clon, clat, strike + theta, hor_dist)
 
@@ -186,11 +186,11 @@ def _build_corners(half_length, half_width, half_height,
     return corners
 
 
-@compile("(f8, f8, f8, f8[:, :], f8[:, :], f8[:, :], "
+@compile("(f8, f8, f8, f8[:, :], f8[:, :], "
          "f8[:, :], f8[:, :], f8[:, :], f8, f8)")
-def build_corners(usd, lsd, rar, area, mag, strike,
+def build_corners(usd, lsd, rar, area, strike,
                   dip, rake, hdd, lon, lat):
-    M, N = mag.shape
+    M, N = area.shape
     corners = numpy.zeros((6, M, N, len(hdd), 3))
     # 0,1,2,3: tl, tr, bl, br
     # 4: (strike, dip, rake)
@@ -218,8 +218,8 @@ def build_planar(planin, hdd, lon, lat, usd, lsd, rar, shift_hypo=False):
         an array of shape (M, N, D, 3)
     """
     corners = build_corners(
-        usd, lsd, rar, planin.area, planin.mag,
-        planin.strike, planin.dip, planin.rake, hdd, lon, lat)
+        usd, lsd, rar, planin.area, planin.strike, planin.dip, planin.rake,
+        hdd, lon, lat)
     planar_array = build_planar_array(corners[:4], corners[4], corners[5])
     for d, (drate, dep) in enumerate(hdd):
         planar_array.wlr[:, :, d, 2] = planin.rate * drate
