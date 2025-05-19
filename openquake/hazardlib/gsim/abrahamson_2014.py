@@ -265,9 +265,6 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
 
     if v1180 is None:
         z1pt0 = ctx.z1pt0
-        # Use GMM's vs30 to z1pt0 to get none-measured values
-        mask = z1pt0 == int(-999)
-        z1pt0[mask] = _get_z1pt0ref(region, vs30[mask])
     else:
         vs30 = v1180
         # fake Z1.0 - Since negative it will be replaced by the default Z1.0
@@ -281,13 +278,13 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
         usgs_baf = np.ones(len(vs30))
 
     # Get reference z1pt0
-    z1ref = _get_z1pt0ref(region, vs30)
+    z1ref = _get_z1pt0ref(region, vs30) # in km
     # Get z1pt0
     z10 = copy.deepcopy(z1pt0)
-    z10 /= METRES_PER_KM
+    z10 /= METRES_PER_KM # convert site z1pt0 to km
     # This is used for the calculation of the motion on reference rock
     idx = z1pt0 < 0
-    z10[idx] = z1ref[idx]
+    z10[idx] = z1ref[idx] # -999 z1pt0 values in site model updated here
     factor = np.log((z10 + 0.01) / (z1ref + 0.01))
     
     # Get cybershake adjustments if required and SA(T > 1.9)
@@ -360,14 +357,16 @@ def _get_vs30star(vs30, imt):
 
 def _get_z1pt0ref(region, vs30):
     """
-    This computes the reference depth to the 1.0 km/s interface using
-    equation 18 at page 1042 of Abrahamson et al. (2014)
+    This computes the reference depth to the 1.0 km/s interface
+    (z1pt0 in km) using equation 18 at page 1042 of Abrahamson et
+    al. (2014)
     """
     if region == 'JPN':
-        return 1./1000. * np.exp(-5.23/2.*np.log((vs30**2+412.**2.) /
-                                                 (1360.**2+412**2.)))
-    return (1. / 1000.) * np.exp((-7.67 / 4.)*np.log((vs30**4 + 610.**4) /
-                                                     (1360.**4 + 610.**4)))
+        return np.exp(-5.23/2.*np.log(
+            (vs30**2+412.**2.) / (1360.**2+412**2.))) / METRES_PER_KM
+    else:    
+        return np.exp((-7.67 / 4.)*np.log(
+            (vs30**4 + 610.**4) / (1360.**4 + 610.**4))) / METRES_PER_KM
 
 
 def _hw_taper1(ctx):
