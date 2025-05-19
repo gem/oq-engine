@@ -342,7 +342,7 @@ class AristeidouEtAl2024(GMPE):
         mask = z2pt5 == int(-999)
         z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
         # Transform z2pt5 to [m]
-        z2pt5 = np.array(ctx.z2pt5).reshape(-1, 1) * 1000
+        z2pt5 = np.array(z2pt5).reshape(-1, 1) * 1000
         rx = np.array(ctx.rx).reshape(-1, 1)
         ztor = np.array(ctx.ztor).reshape(-1, 1)
         ctx_params = np.column_stack([

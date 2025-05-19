@@ -487,14 +487,12 @@ class SandikkayaDinsever2018(GMPE):
     to define manually the input phi0 model, and if this is not possible a
     "default" phi0 is taken by reducing the original GMPE's phi by 15 %.
 
-    NOTE: The value of z1pt0 used here always comes directly from the site
-    model. If the site model contains -999 values (indicating missing z1pt0
-    to be estimated from the GMM's vs30 to z1pt0 relationship), they will
-    not be estimated, even if the GMM supports it. As a result, using this
-    amplification model with a site model that includes -999 (missing) z1pt0
-    values is not recommended, as it will lead to inconsistencies between
-    the z1pt0 used here and the z1pt0 used by the underlying GSIM to compute
-    the mean ground-motion on bedrock.
+    NOTE: Unknown (-999) z1pt0 values (which can be estimated from an
+    underlying GSIM's vs30 to z1pt0 relationship when computing the basin
+    term) are not permitted in the site model used with this amplification
+    model to avoid inconsistency between the z1pt0 used here inside the
+    ``_get_basin_term`` function and the z1pt0 used by the underlying GSIM
+    to compute the mean ground-motion on bedrock.
 
     The amplification model is compatible only with GMPEs with separate
     inter- and intra-event standard deviation, otherwise an error is raised.
@@ -582,6 +580,12 @@ class SandikkayaDinsever2018(GMPE):
         """
         Returns the mean and standard deviations
         """
+        # Check no unknown z1pt0 in the site model
+        if any(ctx.z1pt0) == int(-999):
+            raise ValueError("z1pt0 must be provided for each site in the " \
+            "site model (i.e. no -999 values) used with SandikkayaDinsever2018 " \
+            "to ensure consistency in the z1pt0 used by the underlying GMPE" \
+            "and this site amp. model.")
         ctx_r = copy.copy(ctx)
         ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
         rock = contexts.get_mean_stds(self.gsim, ctx_r, imts)

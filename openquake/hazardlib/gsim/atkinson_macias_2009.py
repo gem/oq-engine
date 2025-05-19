@@ -113,7 +113,8 @@ class AtkinsonMacias2009(GMPE):
                 fs = _get_ba08_site_term(imt, ctx) 
             # Set a null basin term
             fb = np.zeros(len(ln_mean))
-            # Apply cb14 basin term if specified
+            # Apply cb14 basin term if specified (-999 z2pt5
+            # values will be updated within this function)
             if self.cb14_basin_term:
                 fb = _get_cb14_basin_term(imt, ctx)
             # Apply m9 basin term if specified (will override
@@ -124,7 +125,7 @@ class AtkinsonMacias2009(GMPE):
                 # basin term where appropriate --> given always using
                 # (at least in US23 model) in combination with CB14 basin
                 # term use this relationship to estimate missing z2pt5
-                # for consistency
+                # consistently
                 z2pt5 = ctx.z2pt5
                 mask = z2pt5 == int(-999) # None-measured values
                 z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])

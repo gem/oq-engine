@@ -140,7 +140,6 @@ def _get_basin_term(C, ctx, region=None):
     mask = z1pt0 == int(-999)
     z1pt0_ref = _get_z1pt0_ref(ctx.vs30)
     z1pt0[mask] = z1pt0_ref[mask]
-
     result = np.zeros_like(z1pt0)
     idx = z1pt0 >= 0
     if sum(idx) == 0:
