@@ -259,7 +259,7 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
-    with dstore, rmon:
+    with rmon:
         srcfilter = SourceFilter(
             sitecol.complete, oq.maximum_distance(cmaker.trt))
         if isinstance(dstore, str):
