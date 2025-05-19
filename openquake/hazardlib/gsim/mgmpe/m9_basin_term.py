@@ -29,9 +29,11 @@ def _apply_m9_basin_term(ctx, imt, mean):
     # this function is imported to ModifiableGMPE to apply same adjustment)
     if any(ctx.z2pt5) == int(-999):
         raise ValueError("z2pt5 must be provided for each site in the " \
-        "site model (i.e. no -999 values) used to ensure consistency in " \
-        "the z2pt5 by the underlying GMPE and the z2pt5 used here "
-        "for determining where to apply the M9 basin adjustment.")
+        "site model (i.e. no -999 values) used with this ModifiableGMPE" \
+        "feature to ensure consistency in the z2pt5 (potentially)" \
+        "estimated by the underlying GMPE's vs30 to z2pt5 relationship " \
+        "and the z2pt5 used here for determining where to apply the M9" \
+        "basin adjustment.")
 
     if imt.period > 1.9: # Only apply to long-period SA
         fb_m9 = np.log(2.0)
@@ -52,11 +54,11 @@ class M9BasinTerm(GMPE):
     US 2023 NSHM GMC (pp. 1178).
 
     NOTE: Unknown (-999) z2pt5 values (which can be estimated from an
-    underlying GSIM's vs30 to z2pt5 relationship when computing the
+    underlying GSIM's vs30 to z2pt5 relationship when computing a
     basin term) are not permitted in the site model used with this GSIM
     class to avoid inconsistency between the z2pt5 used here inside the
-    ``_apply_m9_basin_term`` function and the z2pt5 used by the underlying
-    GSIM to compute the pre-M9 adjusted mean ground-motion.
+    ``_apply_m9_basin_term`` function and the z2pt5 (potentially) used
+    by the underlying GSIM to compute the pre-M9 adjusted mean ground-motion.
 
     :param gmpe_name:
         The name of a GMPE class
