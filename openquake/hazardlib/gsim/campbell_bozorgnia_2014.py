@@ -96,7 +96,7 @@ def _basin_term(C, imt, z2pt5, SJ, cy):
     return fb
 
 
-def _select_basin_model(SJ, vs30):
+def _get_z2pt5_ref(SJ, vs30):
     """
     Select the preferred basin model (California or Japan) to scale
     basin depth with respect to Vs30. Returns z2pt5 in km
@@ -117,7 +117,7 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     apply any required adjustments.
     """
     # Get reference basin depth
-    z_ref = _select_basin_model(SJ, 1100.0) * np.ones_like(ctx.vs30)
+    z_ref = _get_z2pt5_ref(SJ, 1100.0) * np.ones_like(ctx.vs30)
     z_ref_term = _basin_term(C, imt, z_ref, SJ, False)
 
     # Get basin term
@@ -125,7 +125,7 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
         z2pt5 = ctx.z2pt5
         # Use GMM's vs30 to z2pt5 for non-measured values
         mask = z2pt5 == int(-999)
-        z2pt5[mask] = _select_basin_model(SJ, ctx.vs30[mask])
+        z2pt5[mask] = _get_z2pt5_ref(SJ, ctx.vs30[mask])
     else:
         z2pt5 = z_ref
     z2pt5_term = _basin_term(C, imt, z2pt5, SJ, cy)

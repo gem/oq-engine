@@ -28,7 +28,7 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SDi
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _select_basin_model
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
 
 
 CONSTS = {
@@ -151,7 +151,7 @@ def _get_basin_term(C, ctx, region=None):
     z2pt5 = ctx.z2pt5
     # Use non-Japan CB14 vs30 to z2pt5 relationship for none-measured values
     mask = z2pt5 == int(-999)
-    z2pt5[mask] = _select_basin_model(False, ctx.vs30[mask])
+    z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
     f_basin = np.zeros(ctx.sids.shape)
     f_basin[(z2pt5 <= 1)] = (C["d1"] * (z2pt5 - 1))[z2pt5 <= 1]
     f_basin[(z2pt5 > 1) & (ctx.z2pt5 <= 3)] = 0
