@@ -28,6 +28,7 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA, PGV
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _select_basin_model
 
 
 CONSTANTS = {"mlf0": 5.5, "mlf1": 7, "f1": 0, "f3": 98.1,
@@ -179,6 +180,12 @@ def _get_basin_term(C, ctx, region=None):
     Z2pt5 factor.
     """
     z2pt5 = ctx.z2pt5
+
+    # No vs30 to z2pt5 relationship for this GMM (see pp. 959) so
+    # use the Campbell and Bozorgnia 2014 vs30 to z2pt5 for Japan
+    mask = z2pt5 == int(-999)
+    z2pt5[mask] = _select_basin_model(SJ=True, vs30=ctx.vs30[mask])
+    
     s = CONSTANTS
     fz2pt5 = np.where(z2pt5 >= 0, C['cz0'], 0)
 
