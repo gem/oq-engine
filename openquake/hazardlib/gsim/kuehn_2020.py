@@ -39,6 +39,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
 import numpy as np
 import os
 import h5py
+import copy
 from scipy.interpolate import RegularGridInterpolator
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
@@ -145,6 +146,8 @@ REGION_TERMS_IF = {
         "file_unc": "kuehn2020_uncertainty_if_Cascadia.hdf5",
         },
 }
+
+METRES_PER_KM = 1000.
 
 
 # Regional terms for the in-slab events
@@ -424,6 +427,15 @@ def _get_ln_z_ref(CZ, vs30):
     return ln_z_ref
 
 
+def _infer_z(z_values, vs30, CZ):
+    """
+    Infer either z1pt0 or z2pt5 (determined by region-dependent CZ) 
+    """
+    mask_z = z_values == int(-999) # None-measured values  
+    z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, vs30[mask_z]))    
+    return z_values
+
+
 def _get_basin_term(C, ctx, region):
     """
     Returns the basin response term, based on the region and the depth
@@ -451,18 +463,15 @@ def _get_basin_term(C, ctx, region):
 
         vs30 = ctx.vs30
         if region in ("JPN", "CAS"):
-            z_values = ctx.z2pt5 * 1000.0          
-            mask_z = ctx.z2pt5 == int(-999) # Non-measured values  
+            z2pt5 = copy.deepcopy(ctx.z2pt5)  
+            # Infer missing z2pt5
+            z_values = _infer_z(z2pt5, ctx.vs30, CZ) * METRES_PER_KM
         elif region in ("NZL", "TWN"):
-            z_values = copy.deepcopy(ctx.z1pt0)
-            mask_z = z_values == int(-999) # Non-measured values
+            z1pt0 = copy.deepcopy(ctx.z1pt0)
+            # Infer missing z1pt0          
+            z_values = _infer_z(z1pt0, ctx.vs30, CZ)
         else:
             z_values = np.zeros(vs30.shape)
-            mask_z = None # Set to None if none-basin 
-        
-        # Get non-measured values using vs30 relationship
-        if mask_z is not None: # Skip if none-basin region
-            z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, vs30[mask_z]))
 
         brt = np.zeros_like(z_values)
         mask = z_values > 0.0
@@ -474,9 +483,8 @@ def _get_basin_term(C, ctx, region):
         return brt
 
 
-def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
-                    get_basin_term=_get_basin_term, m9_basin_term=False,
-                    usgs_bs=False):
+def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
+                    m9_basin_term=False, usgs_bs=False):
     """
     Returns the mean ground values for a specific IMT
 
@@ -510,7 +518,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100=None,
             usgs_baf = np.ones(len(ctx.vs30))
 
         # Get GMM's own basin term
-        fb = get_basin_term(C, ctx, region)
+        fb = _get_basin_term(C, ctx, region)
         
         # For KuehnEtAl2020 in US 2023 either the M9 basin term OR the GMM's
         # basin term is applied (i.e. it is not additive to GMM basin term here
