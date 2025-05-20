@@ -209,11 +209,30 @@ def get_array_usgs_xml(kind, grid_url, uncertainty_url=None):
             'USGS xml grid file could not be found at %s' % grid_url) from e
 
 
+def sort_vertices(vertices):
+    # Sort vertices by depth (ascending)
+    sorted_by_depth = sorted(vertices, key=lambda v: v[2])
+    # Reorder vertices to topLeft, topRight, bottomRight, bottomLeft
+    top_vertices = sorted(
+        sorted_by_depth[:2], key=lambda v: v[0]
+    )  # Sort by longitude
+    bottom_vertices = sorted(
+        sorted_by_depth[2:], key=lambda v: v[0]
+    )  # Sort by longitude
+    sorted_vertices = [
+        top_vertices[0],  # topLeft
+        top_vertices[1],  # topRight
+        bottom_vertices[1],  # bottomRight
+        bottom_vertices[0],  # bottomLeft
+    ]
+    return sorted_vertices
+
+
 # Calculate strike and dip from the vertices
 def calculate_strike_and_dip(vertices):
     # Determine the top edge by finding the two vertices with the smallest depth
     top_vertices = vertices[:2]
-    _bottom_vertices = vertices[2:]  # FIXME: unused?
+    # bottom_vertices = vertices[2:]  # unused
 
     # Calculate the top edge vector
     top_edge = [
@@ -255,7 +274,7 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
         rupture = SubElement(nrml, "pointRupture")
         magnitude = SubElement(rupture, "magnitude")
         magnitude.text = str(metadata["mag"])
-        _hypocenter = SubElement(  # FIXME: unused?
+        SubElement(
             rupture,
             "hypocenter",
             {
@@ -282,7 +301,7 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
             rake = SubElement(rupture, "rake")
             rake.text = str(metadata.get("rake", 0))
 
-            _hypocenter = SubElement(  # FIXME: unused?
+            SubElement(
                 rupture,
                 "hypocenter",
                 {
@@ -301,23 +320,7 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
                 else:
                     vertices = polygon
 
-                # Sort vertices by depth (ascending)
-                sorted_by_depth = sorted(vertices, key=lambda v: v[2])
-
-                # Reorder vertices to topLeft, topRight, bottomRight, bottomLeft
-                top_vertices = sorted(
-                    sorted_by_depth[:2], key=lambda v: v[0]
-                )  # Sort by longitude
-                bottom_vertices = sorted(
-                    sorted_by_depth[2:], key=lambda v: v[0]
-                )  # Sort by longitude
-
-                sorted_vertices = [
-                    top_vertices[0],  # topLeft
-                    top_vertices[1],  # topRight
-                    bottom_vertices[1],  # bottomRight
-                    bottom_vertices[0],  # bottomLeft
-                ]
+                sorted_vertices = sort_vertices(vertices)
 
                 strike, dip = calculate_strike_and_dip(sorted_vertices)
 
@@ -331,7 +334,7 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
                 )
 
                 # Assign vertices based on depth
-                _top_left = SubElement(  # FIXME: unused?
+                SubElement(
                     planar_surface,
                     "topLeft",
                     {
@@ -340,7 +343,7 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
                         "depth": str(sorted_vertices[0][2]),
                     },
                 )
-                _top_right = SubElement(  # FIXME: unused?
+                SubElement(
                     planar_surface,
                     "topRight",
                     {
@@ -349,7 +352,7 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
                         "depth": str(sorted_vertices[1][2]),
                     },
                 )
-                _bottom_right = SubElement(  # FIXME: unused?
+                SubElement(
                     planar_surface,
                     "bottomRight",
                     {
@@ -358,7 +361,7 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
                         "depth": str(sorted_vertices[2][2]),
                     },
                 )
-                _bottom_left = SubElement(  # FIXME: unused?
+                SubElement(
                     planar_surface,
                     "bottomLeft",
                     {
@@ -377,7 +380,7 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
             rake = SubElement(rupture, "rake")
             rake.text = str(metadata.get("rake", 0))
 
-            _hypocenter = SubElement(  # FIXME: unused
+            SubElement(
                 rupture,
                 "hypocenter",
                 {
