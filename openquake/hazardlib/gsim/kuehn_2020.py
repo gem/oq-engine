@@ -427,12 +427,21 @@ def _get_ln_z_ref(CZ, vs30):
     return ln_z_ref
 
 
-def _infer_z(z_values, vs30, CZ):
+def _infer_z(z_values, vs30, CZ, region):
     """
-    Infer either z1pt0 or z2pt5 (determined by region-dependent CZ) 
+    Infer either z1pt0 or z2pt5 as required for given region. The
+    relationship is controlled by region-dependent coefficients in
+    the CZ variable.
     """
-    mask_z = z_values == int(-999) # None-measured values  
-    z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, vs30[mask_z]))    
+    mask_z = z_values == int(-999) # None-measured values     
+    if region in ("JPN", "CAS"):
+        # Convert to kilometres as within ctx.z2pt5
+        z_values[mask_z] = np.exp(
+            _get_ln_z_ref(CZ, vs30[mask_z])) / METRES_PER_KM
+    else:
+        # Metres in both ctx.z1pt0 and from k20's vs30 to z1pt0
+        z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, vs30[mask_z])) 
+
     return z_values
 
 
@@ -465,11 +474,12 @@ def _get_basin_term(C, ctx, region):
         if region in ("JPN", "CAS"):
             z2pt5 = copy.deepcopy(ctx.z2pt5)  
             # Infer missing z2pt5
-            z_values = _infer_z(z2pt5, ctx.vs30, CZ) * METRES_PER_KM
+            z_values = _infer_z(
+                z2pt5, ctx.vs30, CZ, region) * METRES_PER_KM
         elif region in ("NZL", "TWN"):
             z1pt0 = copy.deepcopy(ctx.z1pt0)
             # Infer missing z1pt0          
-            z_values = _infer_z(z1pt0, ctx.vs30, CZ)
+            z_values = _infer_z(z1pt0, ctx.vs30, CZ, region)
         else:
             z_values = np.zeros(vs30.shape)
 
