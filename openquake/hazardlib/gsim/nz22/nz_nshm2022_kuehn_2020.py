@@ -61,7 +61,7 @@ def _get_basin_term(C, ctx, region):
     # Basin term only defined for the four regions: Cascadia, Japan,
     # New Zealand and Taiwan
     assert region in ("CAS", "JPN", "NZL", "TWN")
-    # Get c11, c12 and Z-model (same for both interface and inslab events)
+    # Get c11, c12 and Z-model (same for interface and inslab events)
     c11 = C[REGION_TERMS_IF[region]["c11"]]
     c12 = C[REGION_TERMS_IF[region]["c12"]]
     CZ = Z_MODEL[region]
