@@ -456,5 +456,6 @@ class Dummy(GMPE):
     REQUIRES_DISTANCES = {'rrup'}
 
     def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
-        for m, imt in enumerate(imts):
-            sig[m] = .000001
+        sig[:] = .005
+        tau[:] = .003
+        phi[:] = .004
