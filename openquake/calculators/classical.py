@@ -166,6 +166,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         for srcs in groupby(sources, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
             result['rmap'].gid = cmaker.gid
+            result['rmap'].wei = cmaker.wei
             yield result
         return
 
@@ -195,6 +196,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         elif rmap.size_mb:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
+            result['rmap'].wei = cmaker.wei
         yield result
 
 
@@ -341,46 +343,28 @@ def make_hmap_png(hmap, lons, lats):
     return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
 
 
-class Hazard:
+# used in in disagg_by_src
+def get_rates(pmap, grp_id, M, itime):
     """
-    Helper class for storing the rates
+    :param pmap: a MapArray
+    :returns: an array of rates of shape (N, M, L1)
     """
-    def __init__(self, dstore, srcidx):
-        self.datastore = dstore
-        oq = dstore['oqparam']
-        self.itime = oq.investigation_time
-        self.weig = numpy.concatenate(
-            [cm.wei for cm in read_cmakers(dstore)])
-        self.imtls = oq.imtls
-        self.sids = dstore['sitecol/sids'][:]
-        self.srcidx = srcidx
-        self.N = len(dstore['sitecol/sids'])
-        self.M = len(oq.imtls)
-        self.L = oq.imtls.size
-        self.L1 = self.L // self.M
-        self.acc = AccumDict(accum={})
+    rates = pmap.array @ pmap.wei / itime
+    return rates.reshape((len(rates), M, -1))
 
-    # used in in disagg_by_src
-    def get_rates(self, pmap, grp_id):
-        """
-        :param pmap: a MapArray
-        :returns: an array of rates of shape (N, M, L1)
-        """
-        rates = pmap.array @ self.weig[pmap.gid] / self.itime
-        return rates.reshape((self.N, self.M, self.L1))
 
-    def store_mean_rates_by_src(self, dic):
-        """
-        Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
-        """
-        mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
-        for key, rates in dic.items():
-            if isinstance(key, str):
-                # in case of mean_rates_by_src key is a source ID
-                idx = self.srcidx[valid.corename(key)]
-                mean_rates_by_src[..., idx] += rates
-        self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
-        return mean_rates_by_src
+def store_mean_rates_by_src(dstore, srcidx, dic):
+    """
+    Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
+    """
+    mean_rates_by_src = dstore['mean_rates_by_src/array'][()]
+    for key, rates in dic.items():
+        if isinstance(key, str):
+            # in case of mean_rates_by_src key is a source ID
+            idx = srcidx[valid.corename(key)]
+            mean_rates_by_src[..., idx] += rates
+    dstore['mean_rates_by_src/array'][:] = mean_rates_by_src
+    return mean_rates_by_src
 
 
 @base.calculators.add('classical')
@@ -421,7 +405,9 @@ class ClassicalCalculator(base.HazardCalculator):
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source
-            acc[source_id] += self.haz.get_rates(rmap, grp_id)
+            oq = self.oqparam
+            M = len(oq.imtls)
+            acc[source_id] += get_rates(rmap, grp_id, M, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
             pass
@@ -532,8 +518,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not hasattr(self, 'trt_rlzs'):
             self.max_gb, self.trt_rlzs = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
-        srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
-        self.haz = Hazard(self.datastore, srcidx)
+        self.srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         rlzs = self.R == 1 or oq.individual_rlzs
         if not rlzs and not oq.hazard_stats():
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
@@ -657,7 +642,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 _store(rates, self.num_chunks, self.datastore)
         del self.rmap
         if oq.disagg_by_src:
-            mrs = self.haz.store_mean_rates_by_src(acc)
+            mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)
             if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
 
