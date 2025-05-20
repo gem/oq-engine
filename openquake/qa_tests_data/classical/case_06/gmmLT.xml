@@ -4,7 +4,7 @@
   <logicTree logicTreeID="Default">
     <logicTreeBranchSet
         applyToTectonicRegionType="Subduction Interface"
-        branchSetID="int_def"
+        branchSetID="SI"
         uncertaintyType="gmpeModel">
       <logicTreeBranch branchID="AM09-BASIN">
         <uncertaintyModel>
@@ -17,7 +17,7 @@
     </logicTreeBranchSet>
     <logicTreeBranchSet
         applyToTectonicRegionType="Active Shallow Crust"
-        branchSetID="ascr_def"
+        branchSetID="ASC"
         uncertaintyType="gmpeModel">
       <logicTreeBranch branchID="ASK14_MEAN">
         <uncertaintyModel>AbrahamsonEtAl2014NSHMPMean</uncertaintyModel>
@@ -27,13 +27,34 @@
         <uncertaintyModel>BooreEtAl2014NSHMPMean</uncertaintyModel>
         <uncertaintyWeight>0.50</uncertaintyWeight>
       </logicTreeBranch>
+      <logicTreeBranch branchID="dummy">
+        <uncertaintyModel>Dummy</uncertaintyModel>
+        <uncertaintyWeight>0.0</uncertaintyWeight>
+      </logicTreeBranch>
     </logicTreeBranchSet>
   </logicTree>
   
   <logicTree logicTreeID="Cascadia">
     <logicTreeBranchSet
+        applyToTectonicRegionType="Active Shallow Crust"
+        branchSetID="Cas_ASC"
+        uncertaintyType="gmpeModel">
+      <logicTreeBranch branchID="ASK14_MEAN">
+        <uncertaintyModel>AbrahamsonEtAl2014NSHMPMean</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="BSSA14_MEAN">
+        <uncertaintyModel>BooreEtAl2014NSHMPMean</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="dummy">
+        <uncertaintyModel>Dummy</uncertaintyModel>
+        <uncertaintyWeight>0.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet
         applyToTectonicRegionType="Subduction Interface"
-        branchSetID="int_cas"
+        branchSetID="Cas_SI"
         uncertaintyType="gmpeModel">
       <logicTreeBranch branchID="AM09-BASIN">
         <uncertaintyModel>
@@ -50,7 +71,7 @@
   <logicTree logicTreeID="LosAngeles">
     <logicTreeBranchSet
         applyToTectonicRegionType="Active Shallow Crust"
-        branchSetID="ascr_la"
+        branchSetID="LA_ASC"
         uncertaintyType="gmpeModel">
       <logicTreeBranch branchID="CB14_MEAN">
         <uncertaintyModel>CampbellBozorgnia2014NSHMPMean</uncertaintyModel>
@@ -58,7 +79,24 @@
       </logicTreeBranch>
       <logicTreeBranch branchID="CY14_MEAN">
         <uncertaintyModel>ChiouYoungs2014NSHMPMean</uncertaintyModel>
-        <uncertaintyWeight>0.50</uncertaintyWeight>
+        <uncertaintyWeight>0.25</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="BSSA14_MEAN">
+        <uncertaintyModel>BooreEtAl2014NSHMPMean</uncertaintyModel>
+        <uncertaintyWeight>0.25</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet
+        applyToTectonicRegionType="Subduction Interface"
+        branchSetID="LA_SI"
+        uncertaintyType="gmpeModel">
+      <logicTreeBranch branchID="AM09-BASIN">
+        <uncertaintyModel>
+          [AtkinsonMacias2009]
+          ba08_site_term=true
+          cb14_basin_term=true
+        </uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
     </logicTree>
