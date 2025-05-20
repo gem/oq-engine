@@ -407,7 +407,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             oq = self.oqparam
             M = len(oq.imtls)
-            acc[source_id] += get_rates(rmap, grp_id, oq.investigation_time)
+            acc[source_id] += get_rates(rmap, grp_id, M, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
             pass
