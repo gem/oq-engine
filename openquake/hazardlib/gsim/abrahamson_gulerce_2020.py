@@ -310,7 +310,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_baf):
     # Use GMM's vs30 to z2pt5 for none-measured values
     z2pt5 = copy.deepcopy(ctx.z2pt5)
     mask = z2pt5 == float(-999.)
-    z25 = METRES_PER_KM * z2pt5 # From km in ctx to metres
+    z25 = METRES_PER_KM * z2pt5 # From km in ctx metres
     z25[mask] = z25_ref[mask]
         
     # Get USGS basin scaling factor if required (can only be for
@@ -355,7 +355,7 @@ def get_acceleration_on_reference_rock(C, trt, region, ctx, apply_adjustment):
 
 
 def get_mean_acceleration(C, trt, region, ctx, pga1000, imt,
-                          apply_adjustment, usgs_baf):
+                          apply_adjustment, usgs_baf=False):
     """
     Returns the mean acceleration on soil
     """
