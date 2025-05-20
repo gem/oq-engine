@@ -69,7 +69,7 @@ def _get_basin_term(C, ctx, region):
     if region in ("JPN", "CAS"):
         z_values = ctx.z2pt5 * 1000.0
         mask_z = ctx.z2pt5 == float(-999.)
-    elif region == "TWN":
+    elif region in ("TWN", "NZL"):
         z_values = ctx.z1pt0
         # Get none-measured values in site model
         mask_z = z_values == float(-999.)
