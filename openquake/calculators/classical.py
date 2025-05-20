@@ -31,7 +31,8 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize, block_splitter)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import (
+    read_cmakers, get_cmakers, read_full_lt_by_label)
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
@@ -467,13 +468,16 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def init_poes(self):
         oq = self.oqparam
-        self.cmakers = read_cmakers(self.datastore, self.csm)
+        full_lt_by_label = read_full_lt_by_label(self.datastore)
+        self.cmakers = {label: get_cmakers(self.csm.src_groups, full_lt, oq)
+                        for label, full_lt in full_lt_by_label.items()}
         parent = self.datastore.parent
         if parent:
             # tested in case_43
             self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
                 preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol, self.cmakers))
+                    self.datastore, self.csm, self.sitecol,
+                    self.cmakers['Default']))
 
         self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures

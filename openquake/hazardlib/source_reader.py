@@ -719,24 +719,18 @@ class CompositeSourceModel:
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
-        oq = cmakers[0].oq
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
-        manylabels = len(oq.site_labels) > 1
-        if manylabels:
-             dic = gsim_lt.GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
-        for cmaker in cmakers[grp_ids]:
-            if self.src_groups[cmaker.grp_id].weight == 0:
-                # happens in LogicTreeTestCase::test_case_08 since the
-                # point sources are far away as determined in preclassical
-                continue
-            elif manylabels:
-                for idx, label in enumerate(dic):
-                    sites = sitecol.filter(sitecol.label==idx)
-                    yield self._split(cmaker.new(dic, label), sites,
-                                      max_weight, num_chunks, tiling)
-            else:
-                yield self._split(cmaker, sitecol, max_weight,
-                                  num_chunks, tiling)
+        for idx, label in enumerate(cmakers):
+            for cmaker in cmakers[label][grp_ids]:
+                if self.src_groups[cmaker.grp_id].weight == 0:
+                    # happens in LogicTreeTestCase::test_case_08 since the
+                    # point sources are far away as determined in preclassical
+                    continue
+                if len(cmakers) > 1:  # has labels
+                    sites = sitecol.filter(sitecol.label == idx)
+                else:
+                    sites = sitecol
+                yield self._split(cmaker, sites, max_weight, num_chunks, tiling)
 
     def _split(self, cmaker, sitecol, max_weight, num_chunks=1, tiling=False):
         N = len(sitecol)

@@ -761,8 +761,8 @@ sites:
 site_labels:
   Specify a list of labels (i.e. strings without spaces) assuming each site
   have a field "label" corresponding to the label index.
-  Example: *site_labels = Default Cascadia*.
-  Default: ['Default']
+  Example: *site_labels = Cascadia*.
+  Default: []
 
 tile_spec:
   INTERNAL
@@ -1132,7 +1132,7 @@ class OqParam(valid.ParamSet):
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(
         valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
-    site_labels = valid.Param(valid.namelist, ['Default'])
+    site_labels = valid.Param(valid.namelist, [])
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)
     tiling = valid.Param(valid.boolean, None)
@@ -1989,12 +1989,6 @@ class OqParam(valid.ParamSet):
         if self.disagg_by_src:
             return self.ps_grid_spacing == 0
         return True
-
-    def is_valid_site_labels(self):
-        """
-        site_labels must start with "Default"
-        """
-        return self.site_labels[0] == 'Default'
 
     def is_valid_concurrent_tasks(self):
         """

@@ -1922,7 +1922,9 @@ def read_cmakers(dstore, csm=None):
     """
     :param dstore: a DataStore-like object
     :param csm: a CompositeSourceModel instance, if given
-    :returns: an array of ContextMaker instances, one per source group
+    :returns:
+        an array of ContextMaker instances, one per source group or
+        a dictionary label -> cmakers
     """
     from openquake.hazardlib.site_amplification import AmplFunction
     oq = dstore['oqparam']
@@ -1944,6 +1946,20 @@ def read_cmakers(dstore, csm=None):
     return numpy.array(cmakers)
 
 
+def read_full_lt_by_label(dstore):
+    """
+    :param dstore: a DataStore-like object
+    :returns: a dictionary label -> full_lt
+    """
+    oq = dstore['oqparam']
+    full_lt = dstore['full_lt'].init()
+    dic = {'Default': full_lt}
+    for label in oq.site_labels:
+        dic[label] = copy.copy(full_lt)
+        dic[label].gsim_lt = dstore['gsim_lt' + label]
+    return dic
+
+    
 # used in event_based
 def read_cmaker(dstore, trt_smr):
     """
