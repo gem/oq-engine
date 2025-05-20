@@ -166,6 +166,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         for srcs in groupby(sources, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
             result['rmap'].gid = cmaker.gid
+            result['rmap'].wei = cmaker.wei
             yield result
         return
 
@@ -195,6 +196,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         elif rmap.size_mb:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
+            result['rmap'].wei = cmaker.wei
         yield result
 
 
@@ -349,8 +351,6 @@ class Hazard:
         self.datastore = dstore
         oq = dstore['oqparam']
         self.itime = oq.investigation_time
-        self.weig = numpy.concatenate(
-            [cm.wei for cm in read_cmakers(dstore)])
         self.imtls = oq.imtls
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
@@ -366,7 +366,7 @@ class Hazard:
         :param pmap: a MapArray
         :returns: an array of rates of shape (N, M, L1)
         """
-        rates = pmap.array @ self.weig[pmap.gid] / self.itime
+        rates = pmap.array @ pmap.wei / self.itime
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_mean_rates_by_src(self, dic):
