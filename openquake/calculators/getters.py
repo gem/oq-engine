@@ -147,9 +147,8 @@ def get_pmaps_gb(dstore, full_lt=None):
     else:
         trt_smrs = dstore['trt_smrs'][:]
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
-    gids = full_lt.get_gids(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
-    return max_gb, trt_rlzs, gids
+    return max_gb, trt_rlzs
 
 
 def get_num_chunks_sites(dstore):
@@ -180,7 +179,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
 
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
-    _req_gb, trt_rlzs, _gids = get_pmaps_gb(dstore, full_lt)
+    _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
     if oq.fastmean and not disagg:
         weights = numpy.concatenate(
             [cm.wei for cm in read_cmakers(dstore)])

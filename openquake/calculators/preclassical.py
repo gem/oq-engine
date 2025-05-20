@@ -178,7 +178,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # determine light groups and tiling
     light, = numpy.where(data['blocks'] == 1)
-    req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
+    req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
     mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
     if len(light):
         logging.info('mem_gb = %.2f with %d light groups out of %d',
@@ -200,7 +200,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
-    return req_gb, max_weight, trt_rlzs, gids
+    return req_gb, max_weight, trt_rlzs
 
 
 @base.calculators.add('preclassical')
@@ -411,9 +411,8 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # save 'source_groups'
         if self.sitecol is not None:
-            self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-                store_tiles(self.datastore, self.csm,
-                            self.sitecol, self.cmakers))
+            self.req_gb, self.max_weight, self.trt_rlzs = store_tiles(
+                self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims
         toml = []
