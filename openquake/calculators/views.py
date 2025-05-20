@@ -38,7 +38,7 @@ from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source, geo
 from openquake.hazardlib.valid import basename
-from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.contexts import ContextMaker, read_cmakers
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
@@ -1783,7 +1783,7 @@ def view_fastmean(token, dstore):
     site_id = int(token.split(':')[1])
     oq = dstore['oqparam']
     ws = dstore['weights'][:]
-    gweights =  dstore['gweights'][:]
+    gweights = numpy.concatenate([cm.wei for cm in read_cmakers(dstore)])
     slicedic = AccumDict(accum=[])
     for idx, start, stop in dstore['_rates/slice_by_idx'][:]:
         slicedic[idx].append((start, stop))
@@ -1806,7 +1806,8 @@ def view_gw(token, dstore):
     """
     Display the gweights
     """
-    return numpy.round(dstore['gweights'][:].sum(), 3)
+    gweights = numpy.concatenate([cm.wei for cm in read_cmakers(dstore)])
+    return numpy.round(gweights.sum(), 3)
 
 
 @view.add('long_ruptures')

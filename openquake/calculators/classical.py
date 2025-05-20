@@ -349,7 +349,8 @@ class Hazard:
         self.datastore = dstore
         oq = dstore['oqparam']
         self.itime = oq.investigation_time
-        self.weig = dstore['gweights'][:]
+        self.weig = numpy.concatenate(
+            [cm.wei for cm in read_cmakers(dstore)])
         self.imtls = oq.imtls
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
