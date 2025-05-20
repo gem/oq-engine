@@ -24,7 +24,8 @@ import logging
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat, config
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
+from openquake.hazardlib import (
+    nrml, sourceconverter, InvalidFile, calc, gsim_lt)
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -718,40 +719,53 @@ class CompositeSourceModel:
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
-        N = len(sitecol)
         oq = cmakers[0].oq
-        max_mb = float(config.memory.pmap_max_mb)
-        mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
-        # send heavy groups first
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
+        manylabels = len(oq.site_labels) > 1
+        if manylabels:
+             dic = gsim_lt.GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
         for cmaker in cmakers[grp_ids]:
-            grp_id = cmaker.grp_id
-            sg = self.src_groups[grp_id]
-            if sg.weight == 0:
+            if self.src_groups[cmaker.grp_id].weight == 0:
                 # happens in LogicTreeTestCase::test_case_08 since the
                 # point sources are far away as determined in preclassical
                 continue
-            G = len(cmaker.gsims)
-            splits = G * mb_per_gsim / max_mb
-            hint = sg.weight / max_weight
-            if sg.atomic or tiling:
-                blocks = [None]
-                tiles = max(hint, splits)
+            elif manylabels:
+                for idx, label in enumerate(dic):
+                    sites = sitecol.filter(sitecol.label==idx)
+                    yield self._split(cmaker.new(dic, label), sites,
+                                      max_weight, num_chunks, tiling)
             else:
-                # if hint > max_blocks generate max_blocks and more tiles
-                blocks = list(general.split_in_blocks(
-                    sg, min(hint, oq.max_blocks), lambda s: s.weight))
-                tiles = max(hint / oq.max_blocks * splits, splits)
-            tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
-            cmaker.tiling = tiling
-            cmaker.gsims = list(cmaker.gsims)  # save data transfer
-            cmaker.codes = sg.codes
-            cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cmaker.num_chunks = num_chunks
-            cmaker.blocks = len(blocks)
-            cmaker.weight = sg.weight
-            cmaker.atomic = sg.atomic
-            yield cmaker, tilegetters, blocks, numpy.ceil(splits)
+                yield self._split(cmaker, sitecol, max_weight,
+                                  num_chunks, tiling)
+
+    def _split(self, cmaker, sitecol, max_weight, num_chunks=1, tiling=False):
+        N = len(sitecol)
+        oq = cmaker.oq
+        grp_id = cmaker.grp_id
+        sg = self.src_groups[grp_id]
+        max_mb = float(config.memory.pmap_max_mb)
+        mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
+        G = len(cmaker.gsims)
+        splits = G * mb_per_gsim / max_mb
+        hint = sg.weight / max_weight
+        if sg.atomic or tiling:
+            blocks = [None]
+            tiles = max(hint, splits)
+        else:
+            # if hint > max_blocks generate max_blocks and more tiles
+            blocks = list(general.split_in_blocks(
+                sg, min(hint, oq.max_blocks), lambda s: s.weight))
+            tiles = max(hint / oq.max_blocks * splits, splits)
+        tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
+        cmaker.tiling = tiling
+        cmaker.gsims = list(cmaker.gsims)  # save data transfer
+        cmaker.codes = sg.codes
+        cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+        cmaker.num_chunks = num_chunks
+        cmaker.blocks = len(blocks)
+        cmaker.weight = sg.weight
+        cmaker.atomic = sg.atomic
+        return cmaker, tilegetters, blocks, numpy.ceil(splits)
 
     def __toh5__(self):
         G = len(self.src_groups)
