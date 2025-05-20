@@ -133,7 +133,7 @@ def _get_basin_term(C, ctx, region, imt, basin, m9_basin_term=False,
     if not hasattr(ctx, 'z2pt5'):
         return 0
 
-    if region == "JP":
+    elif region == "JP":
         return _get_basin_term_factors(C, ctx, 3.05, -0.8, 500, 0.33,
                                        C["J_e1"], C["J_e2"],
                                        C["J_e3"], imt,
@@ -602,7 +602,6 @@ class ParkerEtAl2020SSlabB(ParkerEtAl2020SSlab):
     For Cascadia and Japan where basins are defined (also require z2pt5).
     """
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
-
 
 
 add_alias('ParkerEtAl2020SInterAleutian', ParkerEtAl2020SInter,
