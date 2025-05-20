@@ -3,8 +3,7 @@
 xmlns="http://openquake.org/xmlns/nrml/0.5"
 xmlns:gml="http://www.opengis.net/gml"
 >
-  <logicTree
-      logicTreeID="case_89">
+  <logicTree logicTreeID="case_89">
     <logicTreeBranchSet
         branchSetID="bs1"
         uncertaintyType="sourceModel"
