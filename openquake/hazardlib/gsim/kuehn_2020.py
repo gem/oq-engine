@@ -518,9 +518,9 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term):
         brt[mask] = c11 + c12 * (
             np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30[mask]))
 
-        # For KuehnEtAl2020 in US 2023 NSHM either the M9 basin term OR the GMM
-        # basin term is applied (i.e. it is not additive to GMM basin term here
-        # as can be seen in the code - line 457 to 499 of KuehnEtAl_2020.java)
+        # For KuehnEtAl2020 in US 2023 NSHM java code either the M9 basin term
+        # OR the GMM basin term is applied (i.e. it is not additive to GMM basin
+        # term here as seen in the code - line 457 to 499 of KuehnEtAl_2020.java)
         if m9_basin_term and imt != PGV:
             assert region in ("CAS") # Only remaining z2pt5 region (SEA handled above)
             brt = _apply_m9(imt.period, brt, z_values / METRES_PER_KM)
