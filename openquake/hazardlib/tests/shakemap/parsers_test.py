@@ -273,7 +273,8 @@ class ShakemapParsersTestCase(unittest.TestCase):
             usgs_id, user=user)
         self.assertEqual(err, {})
         self.assertEqual(len(shakemap_versions), 3)
-        self.assertEqual(usgs_preferred_version, '1')
+        self.assertEqual(usgs_preferred_version,
+                         'urn:usgs-product:atlas:shakemap:us20002926:1594162031303')
         first_version = shakemap_versions[0]
         self.assertIn('id', first_version)
         self.assertIn('utc_date_time', first_version)

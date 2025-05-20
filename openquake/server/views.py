@@ -834,8 +834,7 @@ def impact_get_shakemap_versions(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
-    shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(
-        usgs_id)
+    shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(usgs_id)
     if err:
         shakemap_versions_issue = err['error_msg']
     else:
