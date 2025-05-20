@@ -344,13 +344,13 @@ def make_hmap_png(hmap, lons, lats):
 
 
 # used in in disagg_by_src
-def get_rates(NML1, itime, pmap, grp_id):
+def get_rates(pmap, grp_id, M, itime):
     """
     :param pmap: a MapArray
     :returns: an array of rates of shape (N, M, L1)
     """
     rates = pmap.array @ pmap.wei / itime
-    return rates.reshape(NML1)
+    return rates.reshape((len(rates), M, -1))
 
 
 def store_mean_rates_by_src(dstore, srcidx, dic):
@@ -406,8 +406,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if source_id:
             # accumulate the rates for the given source
             oq = self.oqparam
-            NML1 = (len(rmap.array), len(oq.imtls), oq.imtls.size // len(oq.imtls))
-            acc[source_id] += get_rates(NML1, oq.investigation_time, rmap, grp_id)
+            M = len(oq.imtls)
+            acc[source_id] += get_rates(rmap, grp_id, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
             pass
