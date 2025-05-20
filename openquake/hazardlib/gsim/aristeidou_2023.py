@@ -25,6 +25,8 @@ Module exports :class:`AristeidouEtAl2023`
 """
 
 import numpy as np
+import copy
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import SDi
@@ -148,7 +150,7 @@ def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term defined in equation (9), p. 1611
     """
-    z2pt5 = ctx.z2pt5
+    z2pt5 = copy.deepcopy(ctx.z2pt5)
     # Use non-Japan CB14 vs30 to z2pt5 relationship for none-measured values
     mask = z2pt5 == int(-999)
     z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])

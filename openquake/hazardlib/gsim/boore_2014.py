@@ -22,6 +22,7 @@ Module exports :class:`BooreEtAl2014`,
                :class:`BooreEtAl2014LowQ`
 """
 import numpy as np
+import copy
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
@@ -71,7 +72,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
 
     # Get z1pt0
     if hasattr(ctx, "z1pt0"):
-        z1pt0 = ctx.z1pt0 # Site z1pt0 in metres
+        z1pt0 = copy.deepcopy(ctx.z1pt0) # Site z1pt0 in metres
         # Use GMM's vs30 to z1pt0 for non-measured values
         mask = z1pt0 == int(-999)
         z1pt0[mask] = bmodel_mu_z1[mask] * METRES_PER_KM # mu_z1 to metres

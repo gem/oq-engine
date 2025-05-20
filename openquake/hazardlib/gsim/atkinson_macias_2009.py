@@ -10,7 +10,7 @@
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARsTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
@@ -21,6 +21,7 @@ Module exports :class:'AtkinsonMacias2009'
 """
 import numpy as np
 from scipy.constants import g
+import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -126,7 +127,7 @@ class AtkinsonMacias2009(GMPE):
                 # (at least in US23 model) in combination with CB14 basin
                 # term use this relationship to estimate missing z2pt5
                 # consistently
-                z2pt5 = ctx.z2pt5
+                z2pt5 = copy.deepcopy(ctx.z2pt5)
                 mask = z2pt5 == int(-999) # None-measured values
                 z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
                 fb[z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin

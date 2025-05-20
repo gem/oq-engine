@@ -48,7 +48,7 @@ cbd_polygon = shapely.geometry.Polygon(
 
 
 def _get_basin_term(C, ctx, region=None):
-    z1pt0 = ctx.z1pt0
+    z1pt0 = copy.deepcopy(ctx.z1pt0)
     # Use GMM's vs30 to z1pt0 for non-measured values
     mask = z1pt0 == int(-999)
     z1pt0[mask] = _get_z1_ref(ctx.vs30[mask]) # pp.1805 states CY08 vs30 vs z2pt5

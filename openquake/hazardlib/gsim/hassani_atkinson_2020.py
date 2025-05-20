@@ -22,8 +22,8 @@ Module exports :class:`HassaniAtkinson2020SInter`
                :class:`HassaniAtkinson2020Asc`
 """
 import math
-
 import numpy as np
+import copy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -179,7 +179,7 @@ def _get_basin_term(C, ctx, region=None):
     """
     Z2pt5 factor.
     """
-    z2pt5 = ctx.z2pt5
+    z2pt5 = copy.deepcopy(ctx.z2pt5)
 
     # No vs30 to z2pt5 relationship for this GMM (see pp. 959) so
     # use the Campbell and Bozorgnia 2014 vs30 to z2pt5 for Japan

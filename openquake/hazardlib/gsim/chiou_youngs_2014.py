@@ -23,6 +23,7 @@ Module exports :class:`ChiouYoungs2014`
 """
 import os
 import pathlib
+import copy
 import numpy as np
 
 from openquake.baselib.general import CallableDict
@@ -175,7 +176,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
     Returns the basin depth scaling
     """
-    z1pt0 = ctx.z1pt0
+    z1pt0 = copy.deepcopy(ctx.z1pt0)
     # Use GMMs vs30 to z1pt0 for non-measured values
     mask = z1pt0 == int(-999)
     if region == "JPN":

@@ -21,6 +21,7 @@ Module exports :class:`AfshariStewart2016`,
                :class:`AfshariStewart2016Japan`
 """
 import numpy as np
+import copy
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
@@ -136,7 +137,7 @@ def _get_basin_term(C, ctx, region):
     """
     Return the basin term (equation 9)
     """
-    z1pt0 = ctx.z1pt0
+    z1pt0 = copy.deepcopy(ctx.z1pt0)
     z1pt0_ref = np.exp(_get_lnmu_z1(region, ctx.vs30))
 
     # Use GMM's vs30 to z1pt0 for none-measured values

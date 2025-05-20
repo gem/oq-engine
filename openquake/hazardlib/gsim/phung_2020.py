@@ -23,6 +23,8 @@ Module exports :class:`PhungEtAl2020SInter`
 """
 import math
 import numpy as np
+import copy
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
@@ -58,7 +60,7 @@ def _get_basin_term(C, ctx, region):
         else:
             phi6 = 800
     
-    z1pt0 = ctx.z1pt0
+    z1pt0 = copy.deepcopy(ctx.z1pt0)
     mask = z1pt0 == -999 # Non-measured values
     z1pt0[mask] = ez_1[mask]
 

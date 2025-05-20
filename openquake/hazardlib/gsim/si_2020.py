@@ -21,6 +21,8 @@ Module exports :class:`SiEtAl2020SInter`
                :class:`SiEtAl2020SSlab`
 """
 import numpy as np
+import copy
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -122,7 +124,7 @@ def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term (Eq. 3.10)
     """
-    z2pt5 = ctx.z2pt5
+    z2pt5 = copy.deepcopy(ctx.z2pt5)
 
     # No vs30 to z2pt5 relationship for this GMM (see pp. 959) so
     # use the Campbell and Bozorgnia 2014 vs30 to z2pt5 for Japan

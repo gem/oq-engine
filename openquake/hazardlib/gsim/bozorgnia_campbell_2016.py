@@ -4,7 +4,7 @@
 # Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
+# under the terms of the GNU Affero General Public License as publishedt
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
@@ -25,6 +25,8 @@ Module exports :class:`BozorgniaCampbell2016`
                :class:`BozorgniaCampbell2016LowQJapanSite`
 """
 import numpy as np
+import copy
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
     _get_z2pt5_ref, _get_magnitude_term, _get_geometric_attenuation_term,
@@ -53,7 +55,7 @@ def _get_basin_term(C, ctx, region, SJ):
     """
     z2pt5_ref = _get_z2pt5_ref(SJ, ctx.vs30)
     if hasattr(ctx, "z2pt5"):
-        z2pt5 = ctx.z2pt5
+        z2pt5 = copy.deepcopy(ctx.z2pt5)
         # Use GMM's vs30 to z2pt5 for none-measured values
         mask = z2pt5 == int(-999)
         z2pt5[mask] = z2pt5_ref[mask]

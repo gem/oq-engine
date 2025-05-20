@@ -22,8 +22,8 @@ Module exports :class:`ChaoEtAl2020SInter`
                :class:`ChaoEtAl2020Asc`
 """
 import math
-
 import numpy as np
+import copy
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const
@@ -135,7 +135,7 @@ def _get_basin_term(C, ctx, region=None):
     """
     z1pt0 factor.
     """
-    z1pt0 = ctx.z1pt0
+    z1pt0 = copy.deepcopy(ctx.z1pt0)
     # Use GMM's vs30 to z1pt0 for none-measured values
     mask = z1pt0 == int(-999)
     z1pt0_ref = _get_z1pt0_ref(ctx.vs30)

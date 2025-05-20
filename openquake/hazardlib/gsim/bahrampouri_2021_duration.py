@@ -24,6 +24,8 @@ Module exports :class:`BahrampouriEtAldm2021`
                :class:`BahrampouriEtAldm2021SInter`
 """
 import numpy as np
+import copy
+
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import RSD595, RSD575
@@ -73,7 +75,7 @@ def _get_basin_term(C, ctx, region=None):
     """
     Get the basin term
     """
-    z1pt0 = ctx.z1pt0
+    z1pt0 = copy.deepcopy(ctx.z1pt0)
     
     # Use GMM's vs30 to z1pt0 for none-measured values
     mask = z1pt0 == int(-999) 

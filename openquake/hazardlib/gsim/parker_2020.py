@@ -25,6 +25,7 @@ Module exports :class:`ParkerEtAl2020SInter`
 import os
 import numpy as np
 import pandas as pd
+import copy
 from scipy.special import erf
 
 from openquake.baselib.general import CallableDict
@@ -232,7 +233,7 @@ def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
     if len(select) == 0:
         return btf
     vs30 = ctx.vs30[select]
-    z2pt5 = ctx.z2pt5[select]
+    z2pt5 = copy.deepcopy(ctx.z2pt5[select])
 
     z2pt5_pred = _get_z2pt5_ref(theta0, theta1, vs30, vmu, vsig)
 

@@ -20,6 +20,7 @@
 Module exports :class:`AbrahamsonSilva2008`.
 """
 import numpy as np
+import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -163,7 +164,7 @@ def _get_basin_term(C, ctx, region, imt, v1100=None):
     equation 1, page 74. The calculation of this term is explained in
     paragraph 'Soil Depth Model', page 79.
     """
-    z1pt0 = ctx.z1pt0
+    z1pt0 = copy.deepcopy(ctx.z1pt0)
     
     # Use GMM's vs30 to z1pt0 for none-measured values
     mask = z1pt0 == int(-999)

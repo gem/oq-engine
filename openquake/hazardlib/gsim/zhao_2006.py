@@ -22,8 +22,7 @@ Module exports :class:`ZhaoEtAl2006Asc`, :class:`ZhaoEtAl2006SInter`,
 :class:`ZhaoEtAl2006SSlabNSHMP2014`
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
+from scipy.constants import g # standard acceleration of gravity in m/s**2
 import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -59,11 +58,10 @@ def _get_us23_nshm_adjustments(ln_mean, imt, ctx, cb14_basin_term,
         # (at least in US23 model) in combination with CB14 basin
         # term use this relationship to estimate missing z2pt5
         # consistently
-        z2pt5 = ctx.z2pt5
+        z2pt5 = copy.deepcopy(ctx.z2pt5)
         mask = z2pt5 == int(-999) # None-measured values
         z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
         fb[z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
-        fb[ctx.z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
 
     return fb
 

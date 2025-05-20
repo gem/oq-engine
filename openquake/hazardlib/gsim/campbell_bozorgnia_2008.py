@@ -21,7 +21,9 @@ Module exports :class:`CampbellBozorgnia2008`, and
 :class:'CampbellBozorgnia2008Arbitrary'
 """
 import numpy as np
+import copy
 from math import log, exp
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, PGD, CAV, SA
@@ -49,7 +51,7 @@ def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term (equation 12, page 146)
     """
-    z2pt5 = ctx.z2pt5
+    z2pt5 = copy.deepcopy(ctx.z2pt5)
     # Use GMM's vs30 to z2pt5 for non-measured values
     mask = z2pt5 == int(-999)
     z2pt5[mask] = _get_cb07_z2pt5_ref(ctx.vs30[mask])

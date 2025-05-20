@@ -20,6 +20,7 @@
 Module exports :class:`ChiouYoungs2008`.
 """
 import numpy as np
+import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -39,7 +40,7 @@ def _get_basin_term(C, ctx, region=None):
     Return the basin term describing effects of deep sediment sites and shallow
     sediment sites through z1pt0 
     """
-    z1pt0 = ctx.z1pt0
+    z1pt0 = copy.deepcopy(ctx.z1pt0)
     # Use GMM's vs30 to z1pt0 for none-measured values
     mask = z1pt0 == int(-999)
     z1pt0[mask] = _get_z1_ref(ctx.vs30[mask])

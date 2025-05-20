@@ -21,6 +21,8 @@ Module exports :class:`BaylessAbrahamson2018`
 """
 import os
 import numpy as np
+import copy
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
@@ -110,7 +112,7 @@ def _get_basin_term(C, ctx, region=None):
     tmp = (ctx.vs30**4 + 610**4) / (1360**4 + 610**4)
     z1ref = np.exp(-7.67/4*np.log(tmp)) # in metres
     # Get z1pt0 (already in metres)
-    z1pt0 = ctx.z1pt0
+    z1pt0 = copy.deepcopy(ctx.z1pt0)
     # Use GMM's vs30 to z1pt0 for none-measured values
     mask = z1pt0 == int(-999)
     z1pt0[mask] = z1ref[mask]

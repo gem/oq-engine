@@ -454,7 +454,7 @@ def _get_basin_term(C, ctx, region):
             z_values = ctx.z2pt5 * 1000.0          
             mask_z = ctx.z2pt5 == int(-999) # Non-measured values  
         elif region in ("NZL", "TWN"):
-            z_values = ctx.z1pt0
+            z_values = copy.deepcopy(ctx.z1pt0)
             mask_z = z_values == int(-999) # Non-measured values
         else:
             z_values = np.zeros(vs30.shape)
