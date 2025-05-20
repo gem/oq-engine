@@ -542,7 +542,7 @@ function capitalizeFirstLetter(val) {
             } else {
                 if (data.shakemap_versions.length > 0) {
                     data.shakemap_versions.forEach(function (shakemap_version) {
-                        var usgs_preferred = shakemap_version.number == data.usgs_preferred_version ? " (USGS preferred)" : "";
+                        var usgs_preferred = shakemap_version.id == data.usgs_preferred_version ? " (USGS preferred)" : "";
                         $select.append(`<option value="${shakemap_version.id}">v${shakemap_version.number}: ${shakemap_version.utc_date_time}${usgs_preferred}</option>`);
                     });
                 } else {

@@ -105,7 +105,7 @@ def nowicki_jessee_2018(
     :param pgv:
         Peak Ground Velocity, measured in cm/s
     :param slope:
-        Topographic slope expressed in degrees
+        Topographic slope expressed in m/m
     :param lithology:
         Rock lithology, a "measure" of rock strength
     :param landcover:
@@ -131,11 +131,11 @@ def nowicki_jessee_2018(
 
     Xg = (
         pgv_coeff * np.log(pgv) +
-        slope_coeff * slope +
+        slope_coeff * np.degrees(np.arctan(slope)) +
         lithology_coeff +
         landcover_coeff +
         cti_coeff * cti +
-        interaction_term * np.log(pgv) * slope +
+        interaction_term * np.log(pgv) * np.degrees(np.arctan(slope)) +
         intercept
     )
 
@@ -165,7 +165,7 @@ def allstadt_etal_2022_b(
     :param pga:
         Peak Ground Acceleration, measured in g
     :param slope:
-        Topographic slope expressed in degrees
+        Topographic slope expressed in m/m
     :param prob_ls:
         Probability of landslide
         
@@ -189,7 +189,7 @@ def allstadt_etal_2022_b(
         coeff_table_lith=coeff_table_lith,
     )
     
-    LSE = np.where((slope < 2) | (pga < 0.02), 0, LSE)
+    LSE = np.where((slope < 3.5e-2) | (pga < 0.02), 0, LSE)
     
     return prob_ls, LSE
     

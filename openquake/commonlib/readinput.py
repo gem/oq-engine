@@ -689,8 +689,9 @@ def get_site_collection(oqparam, h5=None):
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         if oqparam.calculation_mode != 'preclassical':
-            raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
-                              % oqparam.inputs['job_ini'])
+            raise InvalidFile(
+                'You are missing sites.csv or site_model.csv in %s'
+                % oqparam.inputs['job_ini'])
         return None
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
@@ -805,6 +806,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
             oqparam.gsim, oqparam.inputs['job_ini'])
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+    if len(oqparam.site_labels) > 1:
+        logictree.GsimLogicTree.check_multiple(gsim_file, trts)
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
@@ -1358,7 +1361,8 @@ def _taxonomy_mapping(filename, taxidx):
     assert set(tmap_df) == {'country', 'peril', 'taxonomy',
                             'risk_id', 'weight'}, set(tmap_df)
     taxos = set()
-    for (taxo, country, per), df in tmap_df.groupby(['taxonomy', 'country', 'peril']):
+    for (taxo, country, per), df in tmap_df.groupby(
+            ['taxonomy', 'country', 'peril']):
         taxos.add(taxo)
         if abs(df.weight.sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %

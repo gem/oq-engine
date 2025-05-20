@@ -939,8 +939,7 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
             err = {"status": "failed", "error_msg": err_msg}
             return None, None, None, err
 
-    js = json.loads(text)
-    properties = js['properties']
+    properties = json.loads(text)['properties']
 
     # NB: currently we cannot find a case with missing shakemap
     shakemaps = properties['products']['shakemap']
@@ -951,16 +950,11 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
     contents = shakemap['contents']
 
     if get_grid and 'download/grid.xml' in contents:
-        # only for Aristotle users try to download the shakemap
-        url = contents.get('download/grid.xml')['url']
-        # grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         if user.testdir:  # in parsers_test
             grid_fname = f'{user.testdir}/{usgs_id}-grid.xml'
-        else:
-            logging.info('Downloading grid.xml')
-            with monitor('Downloading grid.xml'):
-                grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
-        shakemap_array = get_shakemap_array(grid_fname)
+            shakemap_array = get_shakemap_array(grid_fname)
+        else:  # download the shakemap
+            shakemap_array = get_array_usgs_id("usgs_id", usgs_id, contents)
     else:
         shakemap_array = None
     return contents, properties, shakemap_array, err
@@ -970,8 +964,8 @@ def _get_nodal_planes(properties):
     # in parsers_test
     nodal_planes = {}
     err = {}
-    # try first reading from the moment tensor, if available. If nodal planes can not be
-    # collected from there, fallback attempting to read them from the focal mechanism
+    # try reading from the moment tensor, if available. If nodal planes can not
+    # be collected, fallback attempting to read them from the focal mechanism
     if 'moment-tensor' in properties['products']:
         moment_tensor = _get_usgs_preferred_item(
             properties['products']['moment-tensor'])
@@ -981,8 +975,8 @@ def _get_nodal_planes(properties):
             properties['products']['focal-mechanism'])
         nodal_planes = _get_nodal_planes_from_product(focal_mechanism)
     if not nodal_planes:
-        err = {'status': 'failed',
-               'error_msg': 'Unable to retrieve information about the nodal options'}
+        err = {'status': 'failed', 'error_msg':
+               'Unable to retrieve information about the nodal options'}
         return None, err
     return nodal_planes, err
 
@@ -1096,14 +1090,15 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
     properties = js['properties']
     shakemaps = properties['products']['shakemap']
     usgs_preferred_shakemap = _get_usgs_preferred_item(shakemaps)
-    usgs_preferred_version = usgs_preferred_shakemap['properties']['version']
+    usgs_preferred_version = usgs_preferred_shakemap['id']
     sorted_shakemaps = sorted(
         shakemaps, key=lambda x: x["updateTime"], reverse=True)
     shakemap_versions = [
         {'id': shakemap['id'],
          'number': shakemap['properties']['version'],
          'utc_date_time': ms_to_utc_date_time(shakemap['updateTime'])}
-        for shakemap in sorted_shakemaps]
+        for shakemap in sorted_shakemaps
+        if 'version' in shakemap['properties']]
     return shakemap_versions, usgs_preferred_version, err
 
 
@@ -1229,23 +1224,24 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
     return rup, rupdic, err
 
 
-def get_array_usgs_id(kind, usgs_id):
+# tested in the nightly tests aristotle_run
+# the default argument is needed to avoid an
+# error in is_valid_shakemap
+def get_array_usgs_id(kind, id, contents={}):
     """
     Download a ShakeMap from the USGS site.
 
     :param kind: the string "usgs_id", for API compatibility
-    :param usgs_id: ShakeMap ID
+    :param id: ShakeMap ID
+    :param contents: a dictionary containing 'download/grid.xml'
     """
-    # not tested on purpose
-    url = SHAKEMAP_URL.format(usgs_id)
-    logging.info('Downloading %s', url)
-    contents = json.loads(urlopen(url).read())[
-        'properties']['products']['shakemap'][-1]['contents']
     grid = contents.get('download/grid.xml')
-    if grid is None:
-        raise MissingLink('Could not find grid.xml link in %s' % url)
+    if not grid:
+        raise MissingLink('Could not find grid.xml link for %s' % id)
     uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
         'download/uncertainty.xml')
+    if not uncertainty:
+        logging.warning('No uncertainty.xml file')
     return get_array(
         kind='usgs_xml', grid_url=grid['url'],
         uncertainty_url=uncertainty['url'] if uncertainty else None)

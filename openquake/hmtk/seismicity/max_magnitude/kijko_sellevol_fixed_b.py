@@ -52,7 +52,7 @@ the Kijko & Sellevol algorithm for maximum magnitude
 import warnings
 import numpy as np
 from math import fabs
-from scipy.integrate import quadrature
+from scipy.integrate import quad
 from openquake.hmtk.seismicity.max_magnitude.base import (
     BaseMaximumMagnitude,
     MAX_MAGNITUDE_METHODS,
@@ -141,7 +141,7 @@ class KijkoSellevolFixedb(BaseMaximumMagnitude):
         iterator = 0
         print(mmin, mmax, neq, beta)
         while d_t > config["tolerance"]:
-            delta = quadrature(
+            delta = quad(
                 self._ks_intfunc, mmin, mmax, args=(neq, mmax, mmin, beta)
             )[0]
             tmmax = obsmax + delta

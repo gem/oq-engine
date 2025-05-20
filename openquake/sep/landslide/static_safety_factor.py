@@ -30,7 +30,7 @@ def infinite_slope_fs(
     https://www.sciencedirect.com/science/article/pii/S0013795200000399.
 
     :param slope: This is either a scalar or array representing the slope of
-        topography at the point of interest, in degrees.
+        topography at the point of interest, in m/m.
 
     :param cohesion: This parameter is the unstressed tensile strength of the
         material. It should be given in Pa. Typical values are around 20e3 Pa
@@ -66,14 +66,11 @@ def infinite_slope_fs(
     else:
         slope[slope == 0.0] = 1e-5
 
-    r_slope = np.radians(slope)
     r_fric_ang = np.radians(friction_angle)
 
-    term_1 = cohesion / (soil_weight * slab_thickness * np.sin(r_slope))
-    term_2 = np.tan(r_fric_ang) / np.tan(r_slope)
-    term_3 = (saturation_coeff * water_weight * np.tan(r_fric_ang)) / (
-        soil_weight * np.tan(r_slope)
-    )
+    term_1 = cohesion / (soil_weight * slab_thickness * (slope / np.sqrt(1 + slope**2)))
+    term_2 = np.tan(r_fric_ang) / slope
+    term_3 = (saturation_coeff * water_weight * np.tan(r_fric_ang)) / (soil_weight * slope)
 
     return term_1 + term_2 - term_3
 

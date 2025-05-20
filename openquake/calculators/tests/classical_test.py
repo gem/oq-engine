@@ -32,9 +32,9 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
-    case_01, case_02, case_03, case_04, case_05, case_12, case_18, case_22,
-    case_23, case_24, case_25, case_26, case_27, case_29, case_32, case_33,
-    case_34, case_35, case_37, case_38, case_40, case_41,
+    case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_12,
+    case_18, case_22, case_23, case_24, case_25, case_26, case_27, case_29,
+    case_32, case_33, case_34, case_35, case_37, case_38, case_40, case_41,
     case_42, case_43, case_44, case_47, case_48, case_49,
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
@@ -129,6 +129,16 @@ class ClassicalTestCase(CalculatorTestCase):
         trt, gsim = view('rlz:1', self.calc.datastore)[1]
         self.assertEqual(trt, 'Volcanic Shallow')
         self.assertEqual(gsim.__class__.__name__, 'FaccioliEtAl2010')
+
+    def test_case_06(self):
+        self.run_calc(case_06.__file__, 'job.ini')
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs.csv', fname)
+
+    def test_case_07(self):
+        # make sure the Dummy GMPE works in event based too
+        self.run_calc(case_07.__file__, 'job.ini',
+                      calculation_mode='event_based')
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -249,7 +259,7 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(total, 780)  # 260 x 3; 2 sites => 1560 contexts
         self.assertEqual(len(self.calc.datastore['rup/mag']), 1560)
         numpy.testing.assert_equal(self.calc.cfactor, [1560, 5])
-        # (rjb is depth-independent, there should be collapsing of the hypocenters
+        # NB: rjb is depth-independent, the hypocenters could be collapsed
 
     def test_case_25(self):  # negative depths
         self.assert_curves_ok(['hazard_curve-smltp_b1-gsimltp_b1.csv'],
@@ -713,7 +723,8 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # test the source is split into 2 tags
         sinfo = self.calc.datastore['source_info'][:]
-        self.assertEqual(decode(sinfo['source_id']), ['ufc3mean_0@A', 'ufc3mean_0@B'])
+        self.assertEqual(decode(sinfo['source_id']),
+                         ['ufc3mean_0@A', 'ufc3mean_0@B'])
         ae(sinfo['num_ruptures'], [4, 1])
 
         # test contexts

@@ -86,7 +86,8 @@ class AristotleParam:
             mosaic_model=self.mosaic_model,
             tectonic_region_type=self.trt,
             truncation_level=str(self.truncation_level),
-            number_of_ground_motion_fields=str(self.number_of_ground_motion_fields),
+            number_of_ground_motion_fields=str(
+                self.number_of_ground_motion_fields),
             asset_hazard_distance=str(self.asset_hazard_distance),
             ses_seed=str(self.ses_seed),
             inputs=inputs)
@@ -98,10 +99,12 @@ class AristotleParam:
         if self.local_timestamp is not None:
             params['local_timestamp'] = self.local_timestamp
         if self.maximum_distance_stations is not None:
-            params['maximum_distance_stations'] = str(self.maximum_distance_stations)
+            params['maximum_distance_stations'] = str(
+                self.maximum_distance_stations)
         if not params['description']:
             if 'title' in rupdic:
-                params['description'] = f'{rupdic["usgs_id"]}: {rupdic["title"]}'
+                params['description'] = (
+                    f'{rupdic["usgs_id"]}: {rupdic["title"]}')
             else:
                 params['description'] = (
                     f'{rupdic["usgs_id"]}: M {rupdic["mag"]}'
@@ -250,8 +253,8 @@ def _validate(POST):
     invalid_inputs = []
     params = {}
     dic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
-               mag=None, msr=None, aspect_ratio=None, rake=None, dip=None, strike=None,
-               description=None)
+               mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
+               strike=None, description=None)
     for field, validation_func in validators.items():
         if field not in POST:
             continue
