@@ -1990,6 +1990,12 @@ class OqParam(valid.ParamSet):
             return self.ps_grid_spacing == 0
         return True
 
+    def is_valid_site_labels(self):
+        """
+        site_labels must start with "Default"
+        """
+        return self.site_labels[0] == 'Default'
+
     def is_valid_concurrent_tasks(self):
         """
         At most you can use 30_000 tasks
