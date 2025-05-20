@@ -57,7 +57,7 @@ def _get_basin_term(C, ctx, region, SJ):
     if hasattr(ctx, "z2pt5"):
         z2pt5 = copy.deepcopy(ctx.z2pt5)
         # Use GMM's vs30 to z2pt5 for none-measured values
-        mask = z2pt5 == int(-999)
+        mask = z2pt5 == float(-999.)
         z2pt5[mask] = z2pt5_ref[mask]
     else:
         # Estimate unspecified sediment depth according to

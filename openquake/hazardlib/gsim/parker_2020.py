@@ -228,17 +228,18 @@ def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
     """
     Basin term for given factors.
     """
+    z2 = copy.deepcopy(ctx.z2pt5)
     btf = np.zeros_like(ctx.vs30)
-    select = ctx.z2pt5 != 0
+    select = z2pt5 != 0
     if len(select) == 0:
         return btf
     vs30 = ctx.vs30[select]
-    z2pt5 = copy.deepcopy(ctx.z2pt5[select])
+    z2pt5 = z2[select]
 
     z2pt5_pred = _get_z2pt5_ref(theta0, theta1, vs30, vmu, vsig)
 
     # Use GMM's vs30 to z2pt5 to update none-measured values
-    mask = z2pt5 == int(-999)
+    mask = z2pt5 == float(-999.)
     z2pt5[mask] = z2pt5_pred[mask]
 
     del_z2pt5 = np.log(z2pt5) - np.log(z2pt5_pred)

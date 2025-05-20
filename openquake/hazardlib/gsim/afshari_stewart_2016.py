@@ -28,6 +28,7 @@ from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import RSD595, RSD575, RSD2080
 
+
 CONSTANTS = {"mstar": 6.0,
              "r1": 10.0,
              "r2": 50.0,
@@ -137,11 +138,11 @@ def _get_basin_term(C, ctx, region):
     """
     Return the basin term (equation 9)
     """
-    z1pt0 = copy.deepcopy(ctx.z1pt0)
+    z1pt0 = copy.deepcopy(ctx.z1pt0) # metres
+    mask = z1pt0 == float(-999.)
     z1pt0_ref = np.exp(_get_lnmu_z1(region, ctx.vs30))
 
     # Use GMM's vs30 to z1pt0 for none-measured values
-    mask = ctx.z1pt0 == int(-999)
     z1pt0[mask] = z1pt0_ref[mask]
 
     dz1 = z1pt0 - z1pt0_ref

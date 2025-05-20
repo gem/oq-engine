@@ -53,7 +53,7 @@ def _get_basin_term(C, ctx, region=None):
     """
     z2pt5 = copy.deepcopy(ctx.z2pt5)
     # Use GMM's vs30 to z2pt5 for non-measured values
-    mask = z2pt5 == int(-999)
+    mask = z2pt5 == float(-999.)
     z2pt5[mask] = _get_cb07_z2pt5_ref(ctx.vs30[mask])
     fsed = np.zeros_like(z2pt5, dtype=float)
     idx = z2pt5 < 1.0

@@ -309,8 +309,8 @@ def _get_basin_term(C, ctx, region, imt, usgs_baf):
 
     # Use GMM's vs30 to z2pt5 for none-measured values
     z2pt5 = copy.deepcopy(ctx.z2pt5)
-    mask = z2pt5 == int(-999)
-    z25 = METRES_PER_KM * z2pt5 # From km to metres
+    mask = z2pt5 == float(-999.)
+    z25 = METRES_PER_KM * z2pt5 # From km in ctx to metres
     z25[mask] = z25_ref[mask]
         
     # Get USGS basin scaling factor if required (can only be for

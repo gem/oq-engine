@@ -42,13 +42,13 @@ def _get_basin_term(C, ctx, region=None):
     """
     z1pt0 = copy.deepcopy(ctx.z1pt0)
     # Use GMM's vs30 to z1pt0 for none-measured values
-    mask = z1pt0 == int(-999)
+    mask = z1pt0 == float(-999.)
     z1pt0[mask] = _get_z1_ref(ctx.vs30[mask])
     # Equation 3.10
     deep_soil = C['phi5'] * (1.0 - 1.0 / np.cosh(C['phi6'] * (
-        ctx.z1pt0 - C['phi7']).clip(0, np.inf)))
+        z1pt0 - C['phi7']).clip(0, np.inf)))
     # Equation 3.11
-    shallow_soil = C['phi8'] / np.cosh(0.15 * (ctx.z1pt0 - 15).clip(0, np.inf))
+    shallow_soil = C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
     return deep_soil + shallow_soil
 
 

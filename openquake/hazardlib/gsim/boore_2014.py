@@ -74,7 +74,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     if hasattr(ctx, "z1pt0"):
         z1pt0 = copy.deepcopy(ctx.z1pt0) # Site z1pt0 in metres
         # Use GMM's vs30 to z1pt0 for non-measured values
-        mask = z1pt0 == int(-999)
+        mask = z1pt0 == float(-999.)
         z1pt0[mask] = bmodel_mu_z1[mask] * METRES_PER_KM # mu_z1 to metres
 
     # Get USGS basin scaling factor if required

@@ -167,7 +167,7 @@ def _get_basin_term(C, ctx, region, imt, v1100=None):
     z1pt0 = copy.deepcopy(ctx.z1pt0)
     
     # Use GMM's vs30 to z1pt0 for none-measured values
-    mask = z1pt0 == int(-999)
+    mask = z1pt0 == float(-999.)
     z1pt0[mask] = _compute_median_z1pt0(ctx.vs30[mask])
     
     if v1100 is None:

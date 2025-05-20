@@ -128,10 +128,10 @@ def _get_basin_term(C, ctx, region=None):
 
     # No vs30 to z2pt5 relationship for this GMM (see pp. 959) so
     # use the Campbell and Bozorgnia 2014 vs30 to z2pt5 for Japan
-    mask = z2pt5 == int(-999)
+    mask = z2pt5 == float(-999.)
     z2pt5[mask] = _get_z2pt5_ref(SJ=True, vs30=ctx.vs30[mask])
 
-    return C["Cd"] + C["Dd"] * ctx.z2pt5
+    return C["Cd"] + C["Dd"] * z2pt5
 
 
 def _get_pga_rock(C, trt, imt, ctx):
