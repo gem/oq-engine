@@ -223,6 +223,7 @@ site_param_dt = {
     'z2pt5': numpy.float64,
     'z_sed': numpy.float64,
     'siteclass': (numpy.bytes_, 1),
+    'label': numpy.uint8,
     'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
