@@ -125,7 +125,8 @@ def _a0_2(trt, region, basin, C, C_PGA):
     return C[region + "_a0slab"], C_PGA[region + "_a0slab"]
 
 
-def _get_basin_term(C, ctx, region, imt, basin, m9_basin_term, usgs_basin_scaling):
+def _get_basin_term(C, ctx, region, imt, basin, m9_basin_term=False,
+                    usgs_basin_scaling=False):
     """
     Basin term main handler.
     """
