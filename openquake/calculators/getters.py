@@ -22,6 +22,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
 from openquake.commonlib.calc import get_proxies
@@ -181,7 +182,8 @@ def map_getters(dstore, full_lt=None, disagg=False):
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs, _gids = get_pmaps_gb(dstore, full_lt)
     if oq.fastmean and not disagg:
-        weights = dstore['gweights'][:]
+        weights = numpy.concatenate(
+            [cm.wei for cm in read_cmakers(dstore)])
         trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
     else:
        weights = full_lt.weights
