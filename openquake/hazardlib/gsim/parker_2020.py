@@ -231,7 +231,7 @@ def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
     """
     z2 = copy.deepcopy(ctx.z2pt5)
     btf = np.zeros_like(ctx.vs30)
-    select = z2pt5 != 0
+    select = z2 != 0
     if len(select) == 0:
         return btf
     vs30 = ctx.vs30[select]
