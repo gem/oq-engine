@@ -823,7 +823,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # check numerical stability of the hmaps around the poes
             if self.N <= oq.max_sites_disagg and not self.amplifier:
-                mean_hcurves = self.datastore.sel('hcurves-stats', stat='mean')[:, 0]
+                mean_hcurves = self.datastore.sel(
+                    'hcurves-stats', stat='mean')[:, 0]
                 check_hmaps(mean_hcurves, oq.imtls, oq.poes)
 
     def plot_hmaps(self):
