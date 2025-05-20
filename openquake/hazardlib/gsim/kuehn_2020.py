@@ -445,7 +445,7 @@ def _infer_z(z_values, vs30, CZ, region):
     return z_values
 
 
-def _get_basin_term(C, ctx, region):
+def _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -457,11 +457,26 @@ def _get_basin_term(C, ctx, region):
     # New Zealand and Taiwan
     assert region in ("CAS", "JPN", "NZL", "TWN", "SEA")
 
+    # If z2pt5 region retrieve ref depth values, infer any missing
+    # z2pt5 in sites and retrieve usgs basin scaling factor if req
+    if region in ("CAS", "SEA", "JPN"):
+        z2pt5 = copy.deepcopy(ctx.z2pt5)  
+        z_values = _infer_z(
+                z2pt5, ctx.vs30, Z_MODEL[region], region) * METRES_PER_KM
+        if usgs_bs:
+            assert region != "JPN" # Sanity check
+            # Get USGS basin scaling if required (checks during init ensure
+            # can only be applied to the z2pt5-using CAS or SEA regions)
+            usgs_baf = _get_z2pt5_usgs_basin_scaling(z_values * METRES_PER_KM,
+                                                     imt.period)
+        else:
+            usgs_baf = np.ones(len(ctx.vs30))
+
     # If region is Seattle retrieve theta_11 as basin term (this coeff
     # is imt-dependent but are the same for interface and inslab)
     if region == "SEA":
         theta_11 = C[REGION_TERMS_IF[region]["theta_11"]]
-        return np.full_like(ctx.vs30, theta_11) 
+        return np.full_like(ctx.vs30, theta_11)
 
     else:
         # Get c11, c12 and Z-model (same for both interface and
@@ -471,16 +486,11 @@ def _get_basin_term(C, ctx, region):
         CZ = Z_MODEL[region]
 
         vs30 = ctx.vs30
-        if region in ("JPN", "CAS"):
-            z2pt5 = copy.deepcopy(ctx.z2pt5)  
-            # Infer missing z2pt5
-            z_values = _infer_z(
-                z2pt5, ctx.vs30, CZ, region) * METRES_PER_KM
-        elif region in ("NZL", "TWN"):
+        if region in ("NZL", "TWN"):
             z1pt0 = copy.deepcopy(ctx.z1pt0)
-            # Infer missing z1pt0          
-            z_values = _infer_z(z1pt0, ctx.vs30, CZ, region)
-        else:
+            # Infer missing z1pt0       
+            z_values = _infer_z(z1pt0, ctx.vs30, CZ, region)   
+        elif region not in ("CAS", "JPN"): # Already retrieved z2pt5 above
             z_values = np.zeros(vs30.shape)
 
         brt = np.zeros_like(z_values)
@@ -490,6 +500,7 @@ def _get_basin_term(C, ctx, region):
             return 0.0
         brt[mask] = c11 + c12 * (
             np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30[mask]))
+        
         return brt
 
 
@@ -518,17 +529,9 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
     if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN", "SEA"):
-        
-        # Get USGS basin scaling factor if required (checks during
-        # init ensure can only be applied to the CAS or SEA regions
-        # which use z2pt5
-        if usgs_bs:
-            usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
-        else:
-            usgs_baf = np.ones(len(ctx.vs30))
 
         # Get GMM's own basin term
-        fb = _get_basin_term(C, ctx, region)
+        fb = _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term)
         
         # For KuehnEtAl2020 in US 2023 either the M9 basin term OR the GMM's
         # basin term is applied (i.e. it is not additive to GMM basin term here
@@ -538,7 +541,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
                 fb[ctx.z2pt5 >= 6.0] = np.log(2.0) # M9 term instead
 
         # Now add the basin term to pre-basin amp mean
-        mean += fb * usgs_baf
+        mean += fb
 
     return mean
 
