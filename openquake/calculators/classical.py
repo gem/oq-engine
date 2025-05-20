@@ -345,7 +345,7 @@ class Hazard:
     """
     Helper class for storing the rates
     """
-    def __init__(self, dstore, srcidx, gids):
+    def __init__(self, dstore, srcidx):
         self.datastore = dstore
         oq = dstore['oqparam']
         self.itime = oq.investigation_time
@@ -354,7 +354,6 @@ class Hazard:
         self.imtls = oq.imtls
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
-        self.gids = gids
         self.N = len(dstore['sitecol/sids'])
         self.M = len(oq.imtls)
         self.L = oq.imtls.size
@@ -367,8 +366,7 @@ class Hazard:
         :param pmap: a MapArray
         :returns: an array of rates of shape (N, M, L1)
         """
-        gids = self.gids[grp_id]
-        rates = pmap.array @ self.weig[gids] / self.itime
+        rates = pmap.array @ self.weig[pmap.gid] / self.itime
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_mean_rates_by_src(self, dic):
@@ -471,9 +469,9 @@ class ClassicalCalculator(base.HazardCalculator):
         parent = self.datastore.parent
         if parent:
             # tested in case_43
-            self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
+            self.req_gb, self.max_weight, self.trt_rlzs = \
                 preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol, self.cmakers))
+                    self.datastore, self.csm, self.sitecol, self.cmakers)
 
         self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -532,10 +530,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            self.max_gb, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
-        self.haz = Hazard(self.datastore, srcidx, self.gids)
+        self.haz = Hazard(self.datastore, srcidx)
         rlzs = self.R == 1 or oq.individual_rlzs
         if not rlzs and not oq.hazard_stats():
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
