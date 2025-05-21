@@ -42,6 +42,7 @@ from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, idx_start_stop
 from openquake.hazardlib import (
     InvalidFile, geo, site, stats, logictree, source_reader)
+from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -559,6 +560,10 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
+                if oq.site_labels:
+                    dic = GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
+                    for label in list(dic)[1:]:
+                        self.datastore['gsim_lt' + label] = dic[label]
                 oq.mags_by_trt = csm.get_mags_by_trt(oq.maximum_distance)
                 assert oq.mags_by_trt, 'Filtered out all magnitudes!'
                 for trt in oq.mags_by_trt:

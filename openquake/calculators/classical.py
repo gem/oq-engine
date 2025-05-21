@@ -31,7 +31,8 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize, block_splitter)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import (
+    read_cmakers, get_cmakers, read_full_lt_by_label)
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
@@ -221,6 +222,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
+# NB: fast_mean is used only if there are no site_labels
 def fast_mean(pgetter, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
@@ -303,10 +305,13 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc[:, r].reshape(M, L1))
             if hstats:
+                if len(pgetter.labels):
+                    weights = pgetter.weights[pgetter.labels[sid]]
+                else:
+                    weights = pgetter.weights[0]
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
-                        pc, imtls, stat, pgetter.weights, wget,
-                        pgetter.use_rates)
+                        pc, imtls, stat, weights, wget, pgetter.use_rates)
                     arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -426,9 +431,10 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
-        for cm in self.cmakers:
-            params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
-            params.update(cm.REQUIRES_DISTANCES)
+        for label, cmakers in self.cmakers.items():
+            for cm in cmakers:
+                params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
+                params.update(cm.REQUIRES_DISTANCES)
         if self.few_sites:
             descr = []  # (param, dt)
             for param in sorted(params):
@@ -451,7 +457,16 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def init_poes(self):
         oq = self.oqparam
-        self.cmakers = read_cmakers(self.datastore, self.full_lt)
+        full_lt_by_label = read_full_lt_by_label(self.datastore)
+        trt_smrs = self.datastore['trt_smrs'][:]
+        self.cmakers = {label: get_cmakers(trt_smrs, full_lt, oq)
+                        for label, full_lt in full_lt_by_label.items()}
+        if 'delta_rates' in self.datastore:  # aftershock
+            drgetter = getters.DeltaRatesGetter(self.datastore)
+            for cmakers in self.cmakers.values():
+                for cmaker in cmakers:
+                    cmaker.deltagetter = drgetter
+
         parent = self.datastore.parent
         if parent:
             # tested in case_43
@@ -518,7 +533,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if not hasattr(self, 'trt_rlzs'):
             self.max_gb, self.trt_rlzs = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
-        self.srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
+        self.srcidx = {
+            name: i for i, name in enumerate(self.csm.get_basenames())}
         rlzs = self.R == 1 or oq.individual_rlzs
         if not rlzs and not oq.hazard_stats():
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
@@ -544,6 +560,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _pre_execute(self):
         oq = self.oqparam
+        if oq.disagg_by_src and oq.site_labels:
+            assert len(numpy.unique(self.sitecol.label)) == 1, \
+                'disagg_by_src not supported on splittable site collection'
         sgs = self.datastore['source_groups']
         self.tiling = sgs.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
@@ -582,7 +601,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        gids = get_heavy_gids(sgs, self.cmakers)
+        gids = get_heavy_gids(sgs, self.cmakers['Default'])
         self.rmap = RateMap(self.sitecol.sids, L, gids)
 
         self.datastore.swmr_on()  # must come before the Starmap

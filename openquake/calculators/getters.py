@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import copy
 import operator
 import collections
 import numpy
@@ -166,7 +167,7 @@ def get_num_chunks_sites(dstore):
     chunks = max(int(5 * req_gb), max_chunks)
     return chunks, N
 
-    
+
 def map_getters(dstore, full_lt=None, disagg=False):
     """
     :returns: a list of pairs (MapGetter, weights)
@@ -186,7 +187,14 @@ def map_getters(dstore, full_lt=None, disagg=False):
             [cm.wei for cm in read_cmakers(dstore)])
         trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
     else:
-       weights = full_lt.weights
+        attrs = vars(full_lt)
+        weights = [full_lt.weights]
+        for label in oq.site_labels:
+            flt = copy.copy(full_lt)
+            flt.__dict__.update(attrs)
+            flt.gsim_lt = dstore['gsim_lt' + label]
+            flt.init()
+            weights.append(full_lt.weights)
     fnames = [dstore.filename]
     try:
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
@@ -200,6 +208,8 @@ def map_getters(dstore, full_lt=None, disagg=False):
     for chunk in range(n):
         getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
         getter.weights = weights
+        if oq.site_labels:
+            getter.labels = dstore['sitecol'].label
         out.append(getter)
     return out
 
@@ -253,7 +263,19 @@ class CurveGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    
+
+class DeltaRatesGetter(object):
+    """
+    Read the delta rates from an aftershock datastore
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+
+    def __call__(self, src_id):
+        with self.dstore.open('r') as dstore:
+            return dstore['delta_rates'][src_id]
+
+
 class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
@@ -268,6 +290,7 @@ class MapGetter(object):
         self.poes = oq.poes
         self.use_rates = oq.use_rates
         self.eids = None
+        self.labels = ()  # overridden in case of labels
         self._map = {}
 
     @property
