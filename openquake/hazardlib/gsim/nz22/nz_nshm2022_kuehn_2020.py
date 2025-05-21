@@ -26,12 +26,14 @@ Module exports :class:`NZNSHM2022_KuehnEtAl2020SInter`
 """
 
 import numpy as np
+import copy
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,
+    _infer_z,
     get_mean_values,
     get_sigma_mu_adjustment,
     KuehnEtAl2020SInter,
@@ -58,8 +60,7 @@ def _get_basin_term(C, ctx, region):
     :param numpy.ndarray z_value:
         Basin depth term (Z2.5 for JPN and CAS, Z1.0 for NZL and TWN)
     """
-    # Basin term only defined for the four regions: Cascadia, Japan,
-    # New Zealand and Taiwan
+    # Basin term for Cascadia, Japan, New Zealand and Taiwan
     assert region in ("CAS", "JPN", "NZL", "TWN")
     # Get c11, c12 and Z-model (same for interface and inslab events)
     c11 = C[REGION_TERMS_IF[region]["c11"]]
@@ -67,19 +68,15 @@ def _get_basin_term(C, ctx, region):
     CZ = Z_MODEL[region]
 
     if region in ("JPN", "CAS"):
-        z_values = ctx.z2pt5 * 1000.0
-        mask_z = ctx.z2pt5 == float(-999.)
+        z_values = copy.deepcopy(ctx.z2pt5)
     elif region in ("TWN", "NZL"):
-        z_values = ctx.z1pt0
-        # Get none-measured values in site model
-        mask_z = z_values == float(-999.)
+        z_values = copy.deepcopy(ctx.z1pt0)
     else:
         z_values = np.zeros_like(ctx.vs30)
-        mask_z = None # Set to None if none-basin region
 
     # Use GMM's vs30 to basin param for none-measured values
-    if mask_z is not None: # Skip if none-basin region
-        z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, ctx.vs30[mask_z]))
+    # (conversion of z2pt5 to metres also performed here)
+    z_values = _infer_z(z_values, ctx.vs30, CZ, region)
 
     brt = np.zeros_like(z_values)
     mask = z_values > 0.0

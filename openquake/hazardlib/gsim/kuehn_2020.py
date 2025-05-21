@@ -435,9 +435,9 @@ def _infer_z(z_values, vs30, CZ, region):
     """
     mask_z = z_values == float(-999.) # None-measured values     
     if region in ("JPN", "CAS"):
-        # Convert to kilometres as within ctx.z2pt5
         z_values[mask_z] = np.exp(
-            _get_ln_z_ref(CZ, vs30[mask_z])) / METRES_PER_KM
+            _get_ln_z_ref(CZ, vs30[mask_z])) # Predictions in metres
+        z_values[~mask_z] *= METRES_PER_KM # Get ctx values in metres
     else:
         # Metres in both ctx.z1pt0 and from k20's vs30 to z1pt0
         z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, vs30[mask_z])) 
@@ -474,14 +474,14 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term):
         else:
             # No Seattle-specific model so use CAS for SEA too
             CZ_INFER = Z_MODEL["CAS"]
-        z_values = _infer_z(
-                z2pt5, ctx.vs30, CZ_INFER, region) * METRES_PER_KM
+        # Get z2pt5 (and infer -999 values in sites) then into metres
+        z_values = _infer_z(z2pt5, ctx.vs30, CZ_INFER, region)
         # Get USGS basin scaling if required (checks during init ensure
         # can only be applied to the z2pt5-using CAS or SEA regions)
         if usgs_bs:
             assert region != "JPN" # Sanity check
             usgs_baf = _get_z2pt5_usgs_basin_scaling(
-                z_values / METRES_PER_KM, imt.period)
+                z_values / METRES_PER_KM, imt.period) # back to km here
 
     # If region is Seattle retrieve theta_11 as basin term (this coeff
     # is imt-dependent but are the same for interface and inslab)
@@ -491,7 +491,8 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term):
         # Apply m9 basin term where appropriate now have
         # got (potentially inferred) z2pt5 for each site
         if m9_basin_term and imt != PGV:
-            brt_sea = _apply_m9(imt.period, brt_sea, z_values / METRES_PER_KM)
+            brt_sea = _apply_m9(
+                imt.period, brt_sea, z_values / METRES_PER_KM) # back to km
         if usgs_bs:
             brt_sea *= usgs_baf # Apply usgs baf if required
         return brt_sea
