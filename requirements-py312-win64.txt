@@ -3,7 +3,7 @@
 # GEM Mirror
 https://wheelhouse.openquake.org/v3/windows/py312/matplotlib-3.10.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/numba-0.61.2-cp312-cp312-win_amd64.whl
-https://wheelhouse.openquake.org/v3/windows/py312/numpy-2.2.5-cp312-cp312-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py312/numpy-2.2.6-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/onnxruntime-1.21.1-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/shapely-2.1.0-cp312-cp312-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py312/llvmlite-0.44.0-cp312-cp312-win_amd64.whl

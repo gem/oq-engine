@@ -3,7 +3,7 @@
 #
 https://wheelhouse.openquake.org/v3/windows/py310/matplotlib-3.10.1-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/numba-0.61.2-cp310-cp310-win_amd64.whl
-https://wheelhouse.openquake.org/v3/windows/py310/numpy-2.2.5-cp310-cp310-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py310/numpy-2.2.6-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/onnxruntime-1.21.1-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/shapely-2.1.0-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/llvmlite-0.44.0-cp310-cp310-win_amd64.whl
