@@ -738,7 +738,7 @@ class CompositeSourceModel:
                     sites = sitecol.filter(sitecol.label == idx)
                 else:
                     sites = sitecol
-                if len(sites):
+                if sites:
                     yield self._split(
                         cmaker, sites, max_weight, num_chunks, tiling)
 
