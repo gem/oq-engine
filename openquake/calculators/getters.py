@@ -263,7 +263,19 @@ class CurveGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    
+
+class DeltaRatesGetter(object):
+    """
+    Read the delta rates from an aftershock datastore
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+
+    def __call__(self, src_id):
+        with self.dstore.open('r') as dstore:
+            return dstore['delta_rates'][src_id]
+
+
 class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a

@@ -226,18 +226,6 @@ class Oq(object):
                 for key, value in self.inputs['reqv'].items()}
 
 
-class DeltaRatesGetter(object):
-    """
-    Read the delta rates from an aftershock datastore
-    """
-    def __init__(self, dstore):
-        self.dstore = dstore
-
-    def __call__(self, src_id):
-        with self.dstore.open('r') as dstore:
-            return dstore['delta_rates'][src_id]
-
-
 # same speed as performance.kround, round more
 def kround1(ctx, kfields):
     kdist = 2. * ctx.mag**2  # heuristic collapse distance from 32 to 200 km
@@ -1933,9 +1921,6 @@ def read_cmakers(dstore, full_lt=None):
     if not full_lt:
         full_lt = dstore['full_lt'].init()
     cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
-    if 'delta_rates' in dstore:  # aftershock
-        for cmaker in cmakers:
-            cmaker.deltagetter = DeltaRatesGetter(dstore)
     return cmakers
 
 

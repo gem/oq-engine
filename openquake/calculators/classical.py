@@ -461,6 +461,12 @@ class ClassicalCalculator(base.HazardCalculator):
         trt_smrs = self.datastore['trt_smrs'][:]
         self.cmakers = {label: get_cmakers(trt_smrs, full_lt, oq)
                         for label, full_lt in full_lt_by_label.items()}
+        if 'delta_rates' in self.datastore:  # aftershock
+            drgetter = getters.DeltaRatesGetter(self.datastore)
+            for cmakers in self.cmakers.values():
+                for cmaker in cmakers:
+                    cmaker.deltagetter = drgetter
+
         parent = self.datastore.parent
         if parent:
             # tested in case_43
