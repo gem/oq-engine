@@ -139,7 +139,7 @@ def _get_basin_term(C, ctx, region):
     Return the basin term (equation 9)
     """
     z1pt0 = copy.deepcopy(ctx.z1pt0) # metres
-    mask = z1pt0 == float(-999.)
+    mask = z1pt0 == float(-999)
     z1pt0_ref = np.exp(_get_lnmu_z1(region, ctx.vs30))
 
     # Use GMM's vs30 to z1pt0 for none-measured values

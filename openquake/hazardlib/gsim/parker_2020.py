@@ -240,7 +240,7 @@ def _get_basin_term_factors(C, ctx, theta0, theta1, vmu, vsig, e1, e2, e3,
     z2pt5_pred = _get_z2pt5_ref(theta0, theta1, vs30, vmu, vsig)
 
     # Use GMM's vs30 to z2pt5 to update none-measured values
-    mask = z2pt5 == float(-999.)
+    mask = z2pt5 == float(-999)
     z2pt5[mask] = z2pt5_pred[mask]
 
     del_z2pt5 = np.log(z2pt5) - np.log(z2pt5_pred)

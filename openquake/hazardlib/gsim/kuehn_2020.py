@@ -435,7 +435,7 @@ def _infer_z(z_values, vs30, CZ, region):
     relationship is controlled by region-dependent coefficients in
     the CZ variable.
     """
-    mask_z = z_values == float(-999.) # None-measured values     
+    mask_z = z_values == float(-999) # None-measured values     
     if region in ("JPN", "CAS"):
         z_values[mask_z] = np.exp(
             _get_ln_z_ref(CZ, vs30[mask_z])) # Predictions in metres

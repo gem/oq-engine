@@ -61,7 +61,7 @@ def _get_basin_term(C, ctx, region):
             phi6 = 800
     
     z1pt0 = copy.deepcopy(ctx.z1pt0)
-    mask = z1pt0 == float(-999.) # None-measured values
+    mask = z1pt0 == float(-999) # None-measured values
     z1pt0[mask] = ez_1[mask]
 
     d_z1 = z1pt0 - ez_1
@@ -289,7 +289,7 @@ def _fz1pt0(region, C, vs30, z1pt0):
                                          / (1360 ** 2 + 412.39 ** 2)))
 
     # Use GMM's vs30 to z1pt0 for none-measured values
-    mask = z1pt0 == float(-999.)
+    mask = z1pt0 == float(-999)
     z1pt0[mask] = ez_1[mask]
 
     result = np.zeros_like(z1pt0)

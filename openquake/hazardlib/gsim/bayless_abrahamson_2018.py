@@ -114,7 +114,7 @@ def _get_basin_term(C, ctx, region=None):
     # Get z1pt0 (already in metres)
     z1pt0 = copy.deepcopy(ctx.z1pt0)
     # Use GMM's vs30 to z1pt0 for none-measured values
-    mask = z1pt0 == float(-999.)
+    mask = z1pt0 == float(-999)
     z1pt0[mask] = z1ref[mask]
     # Return the fz1 parameter. The z1pt0 is converted from m (standard in OQ)
     # to km as indicated in the paper

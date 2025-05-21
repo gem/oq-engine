@@ -62,12 +62,12 @@ class SiteTestCase(unittest.TestCase):
         self._assert_creation(error=error, vs30=-1)
 
     def test_wrong_z1pt0(self):
-        error = 'z1pt0 must be positive'
+        error = 'z1pt0 must be positive or set to -999'
         self._assert_creation(error=error, z1pt0=0)
         self._assert_creation(error=error, z1pt0=-1)
 
     def test_wrong_z2pt5(self):
-        error = 'z2pt5 must be positive'
+        error = 'z2pt5 must be positive or set to -999'
         self._assert_creation(error=error, z2pt5=0)
         self._assert_creation(error=error, z2pt5=-1)
 
