@@ -1887,17 +1887,13 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-def get_cmakers(src_groups, full_lt, oq):
+def get_cmakers(all_trt_smrs, full_lt, oq):
     """
-    :params src_groups: a list of SourceGroups
+    :params all_trt_smrs: a list of arrays
     :param full_lt: a FullLogicTree instance
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    all_trt_smrs = []
-    for sg in src_groups:
-        src = sg.sources[0]
-        all_trt_smrs.append(src.trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     gweights = full_lt.g_weights(all_trt_smrs)[:, -1]  # shape Gt
     cmakers = []
@@ -1915,13 +1911,13 @@ def get_cmakers(src_groups, full_lt, oq):
     for cm in cmakers:
         cm.gid = gids[cm.grp_id]
         cm.wei = gweights[cm.gid]
-    return cmakers
+    return numpy.array(cmakers)
 
 
-def read_cmakers(dstore, csm=None):
+def read_cmakers(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
-    :param csm: a CompositeSourceModel instance, if given
+    :param all_trt_smrs: a list of arrays
     :returns: an array of ContextMaker instances, one per source group
     """
     from openquake.hazardlib.site_amplification import AmplFunction
@@ -1933,15 +1929,14 @@ def read_cmakers(dstore, csm=None):
         oq.af = AmplFunction.from_dframe(df)
     else:
         oq.af = None
-    if csm is None:
-        csm = dstore['_csm']
-    if not hasattr(csm, 'full_lt'):
-        csm.full_lt = dstore['full_lt'].init()
-    cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
+    all_trt_smrs = dstore['trt_smrs'][:]
+    if not full_lt:
+        full_lt = dstore['full_lt'].init()
+    cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
-    return numpy.array(cmakers)
+    return cmakers
 
 
 # used in event_based
