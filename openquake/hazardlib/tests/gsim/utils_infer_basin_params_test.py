@@ -160,8 +160,8 @@ def make_ctx(imts, gmms):
     ctx = new_ctx(cmaker, 4)
     ctx.dip = 60.
     ctx.rake = 90.
-    ctx.z1pt0 = np.array([72.1, -999., 522.32, -999.])
-    ctx.z2pt5 = np.array([0.69, -999., 6.32, -999.])
+    ctx.z1pt0 = np.array([72.1, -999., 522.32, -999])
+    ctx.z2pt5 = np.array([0.69, -999., 6.32, -999])
     ctx.rrup = np.array([50., 200., 500., 250.])
     ctx.vs30 = np.array([800., 400., 200., 600.])
     ctx.vs30measured = 1

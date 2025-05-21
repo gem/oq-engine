@@ -276,8 +276,8 @@ class US23AdjustmentTestCase(unittest.TestCase):
         ctx = new_ctx(cmaker, 4)
         ctx.dip = 60.
         ctx.rake = 90.
-        ctx.z1pt0 = np.array([72.1, 457.77, 522.32, -999.])
-        ctx.z2pt5 = np.array([0.69, 1.75, 6.32, -999.])
+        ctx.z1pt0 = np.array([72.1, 457.77, 522.32, -999])
+        ctx.z2pt5 = np.array([0.69, 1.75, 6.32, -999])
         ctx.z_sed = np.array([1.20, 4.50, 8.40, 2.5])
         ctx.rrup = np.array([50., 200., 500., 600])
         ctx.vs30 = np.array([800., 400., 200., 760])
