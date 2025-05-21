@@ -94,7 +94,7 @@ class ClusterTestCase(unittest.TestCase):
         numpy.testing.assert_almost_equal(ratio, 1.0, decimal=2)
 
     def test_src_mutex(self):
-        # The rate of occurrence of the cluster is 1/10, the sources are
+        # The rate of occurrence of the cluster is 0.1, the sources are
         # mutually exclusive (equally weighted) and ruptures independent. In
         # case of 1_000_000 samples of 1 year each, we expect on average
         # 100_000 occurences of the cluster. For each realization we sample one
@@ -111,9 +111,13 @@ class ClusterTestCase(unittest.TestCase):
         tot_occ = 0
         nrlz = 10
         for i in range(nrlz):
+
             ebrups = sample_cluster(ssm[0], 1000000, i)
 
             # Computing the total number of occurrences
+            if ebrups is None:
+                breakpoint()
+                continue
             tot_occ += numpy.sum([e.n_occ for e in ebrups])
 
         # Checking the number of ruptures generated

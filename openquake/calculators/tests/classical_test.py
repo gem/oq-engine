@@ -789,8 +789,8 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       ground_motion_fields='false')
         rups = self.calc.datastore['ruptures'][()]
+        rups.sort(order='id')
         tbl = text_table(rups[['source_id', 'n_occ', 'mag']], ext='org')
-        breakpoint()
         self.assertEqualFiles('expected/rups.org', general.gettemp(tbl))
 
     def test_case_81(self):

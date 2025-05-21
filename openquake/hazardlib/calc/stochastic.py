@@ -265,6 +265,8 @@ def _get_src_mutex_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
                 ebr.seed = ebr.id + ses_seed
                 eb_ruptures.append(ebr)
 
+    return eb_ruptures
+
 
 def _get_src_indep_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
 
@@ -289,9 +291,13 @@ def _get_src_indep_rups(group, tot_num_occ, trt_smr, seed, ses_seed):
         if not hasattr(src, 'rup_weights'):
             rwei = 1.0 / src.num_ruptures
 
+        # Source seed
+        src_seed = src.serial(ses_seed)
+        rng = numpy.random.default_rng(src_seed)
+
         # Get rupture index for each realization
         tmp_rup_ids = numpy.arange(src.num_ruptures)
-        ridx = numpy.random.choice(tmp_rup_ids, nocc, p=rwei)
+        ridx = rng.choice(tmp_rup_ids, nocc, p=rwei)
 
         # Set the rupture IDs for the current source
         rupids = src.offset + numpy.arange(src.num_ruptures)
@@ -318,7 +324,9 @@ def _get_occs_indep_sources(tot_num_occ, group, seed):
     # the indexes of the sources activated in each cluster realization
     ids = numpy.empty((tot_num_occ, len(group)))
     ids[:] = numpy.nan
-    n_srcs_rlz = numpy.random.choice(range(1, len(group) + 1), tot_num_occ)
+
+    rng = numpy.random.default_rng(seed)
+    n_srcs_rlz = rng.choice(range(1, len(group) + 1), tot_num_occ)
     _set_ids(n_srcs_rlz, ids, seed, None)
 
     # Find the number of occurrences per source
