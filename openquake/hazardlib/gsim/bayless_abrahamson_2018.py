@@ -30,7 +30,7 @@ from openquake.hazardlib.imt import EAS
 BA_COEFFS = os.path.join(os.path.dirname(__file__),
                          "bayless_abrahamson_2018.csv")
 
-METRES_PER_KM = 1000.0
+METRES_PER_KM = 1000.
 
 
 def _magnitude_scaling(C, ctx):

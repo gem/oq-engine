@@ -56,7 +56,7 @@ COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
     10.00    1.340000    0.498000    0.370755
     """)
 
-METRES_PER_KM = 1000.0
+METRES_PER_KM = 1000.
 
 
 def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):

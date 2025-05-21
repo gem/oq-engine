@@ -32,7 +32,7 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z1pt0_usgs_basin_scaling
 
-METRES_PER_KM = 1000.0
+METRES_PER_KM = 1000.
 
 #: equation constants (that are IMT independent)
 CONSTS = {

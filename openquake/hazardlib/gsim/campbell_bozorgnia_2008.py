@@ -30,7 +30,7 @@ from openquake.hazardlib.imt import PGA, PGV, PGD, CAV, SA
 from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 
 
-METRES_PER_KM = 1000.0
+METRES_PER_KM = 1000.
 
 
 def _get_cb07_z2pt5_ref(vs30):

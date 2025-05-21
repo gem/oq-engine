@@ -132,7 +132,7 @@ CONSTS = {
     "d5_phi3": 0.000,
 }
 
-METRES_PER_KM = 1000.0
+METRES_PER_KM = 1000.
 
 
 def get_base_term(C, region, apply_adjust):
