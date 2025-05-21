@@ -1894,6 +1894,12 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
+    from openquake.hazardlib.site_amplification import AmplFunction
+    if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
+        df = AmplFunction.read_df(oq.inputs['amplification'])
+        oq.af = AmplFunction.from_dframe(df)
+    else:
+        oq.af = None
     trts = list(full_lt.gsim_lt.values)
     gweights = full_lt.g_weights(all_trt_smrs)[:, -1]  # shape Gt
     cmakers = []
@@ -1920,15 +1926,9 @@ def read_cmakers(dstore, full_lt=None):
     :param all_trt_smrs: a list of arrays
     :returns: an array of ContextMaker instances, one per source group
     """
-    from openquake.hazardlib.site_amplification import AmplFunction
     oq = dstore['oqparam']
     oq.mags_by_trt = {
         k: decode(v[:]) for k, v in dstore['source_mags'].items()}
-    if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
-        df = AmplFunction.read_df(oq.inputs['amplification'])
-        oq.af = AmplFunction.from_dframe(df)
-    else:
-        oq.af = None
     all_trt_smrs = dstore['trt_smrs'][:]
     if not full_lt:
         full_lt = dstore['full_lt'].init()
