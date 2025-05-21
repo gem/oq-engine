@@ -263,6 +263,12 @@ GET v1/calc/:calc_id/datastore
 
 Get the HDF5 datastore for the calculation identified by the parameter ``calc_id``.
 
+******************************
+GET v1/calc/:calc_id/job_zip
+******************************
+
+Get the input files for the calculation identified by the parameter ``calc_id``.
+
 *****************************
 POST /v1/calc/:calc_id/remove
 *****************************
@@ -517,6 +523,16 @@ If you do not want to put your credentials in the ``openquake.cfg`` file, you ca
 explicitly to the WebExtractor::
 
 	>> extractor = WebExtractor(calc_id, server, username, password)
+
+If you have a scenario calculation you may want to exact the
+``avg_gmf`` output. This can be done simply with a call like::
+
+>> extractor = WebExtractor(calc_id, server, username, password)
+>> imts = list(extractor.oqparam.imtls)  # list of available IMTs
+>> extractor.get(f'avg_gmf?imt={imts[0]}')
+>> aw.lons   # longitudes
+>> aw.lats   # latitudes
+>> aw[imts[0]] # array of values
 
 ********
 Plotting

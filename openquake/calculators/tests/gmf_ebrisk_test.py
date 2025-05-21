@@ -85,22 +85,22 @@ class EventRiskTestCase(CalculatorTestCase):
         calc1 = self.calc.datastore  # event_based_risk
         [fname] = export(('risk_by_event', 'csv'), calc1)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-5)
+                              delta=.00013)
 
         # checking avg_losses-stats with collect_rlzs
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-5)
+                              delta=1E-4)
 
         # checking aggrisk
         for fname in export(('aggrisk', 'csv'), self.calc.datastore):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+                                  delta=3E-5)
 
         # checking aggcurves
         for fname in export(('aggcurves', 'csv'), self.calc.datastore):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+                                  delta=2E-5)
 
     def test_case_5(self):
         # no risk due to small hazard

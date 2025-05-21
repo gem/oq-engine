@@ -65,7 +65,8 @@ def del_calculation(job_id, confirmed=False):
             safeprint(err)
         else:
             if 'success' in resp:
-                os.remove(resp['hdf5path'])
+                if os.path.exists(resp['hdf5path']):
+                    os.remove(resp['hdf5path'])
                 print('Removed %d' % job.id)
             else:
                 print(resp['error'])
@@ -119,12 +120,13 @@ def main(
         os.makedirs(datadir)
 
     fname = os.path.expanduser(config.dbserver.file)
-    if (os.environ.get('OQ_DATABASE', config.dbserver.host) == '127.0.0.1'
-            and getpass.getuser() != 'openquake'):  # no DbServer
+    host = os.environ.get('OQ_DATABASE', config.dbserver.host)
+    if host == '127.0.0.1' and getpass.getuser() != 'openquake':  # no DbServer
         if not os.path.exists(fname):
             upgrade_db = True  # automatically creates the db
             yes = True
     else:  # DbServer yes
+        print(f'Using the DbServer on {host}')
         dbserver.ensure_on()
         # check that we are talking to the right server
         err = dbserver.check_foreign()

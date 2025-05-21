@@ -35,8 +35,9 @@
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
                   Show assets</a>
               </div>
+              {% endif %}
 
-              {% if user_level == 2 %}
+              {% if user_level >= 2 %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags" class="btn btn-sm">
                   Show impact table</a>
@@ -49,12 +50,17 @@
             </div>
             <div class="outputs-general-btns-center"></div>
             <div class="outputs-general-btns-right">
-              <div id="my-datastore">
+              {% if user_level >= 2 %}
+              <div id="my-datastore" class="bottom-right-btns">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
                    title="Size: {{ size_mb }} MB" class="btn btn-sm">
                   Download hdf5 datastore</a>
               </div>
-            {% endif %}
+              <div id="my-job" class="bottom-right-btns">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/job_zip" class="btn btn-sm">
+                  Download job.zip</a>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>

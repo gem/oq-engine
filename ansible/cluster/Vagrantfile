@@ -1,0 +1,65 @@
+# -*- mode: ruby -*-
+# vi: ft=ruby :
+
+Vagrant.configure(2) do | config |
+  #config.vm.synced_folder ".", "/vagrant", type: "nfs", nfs_version: 4, nfs_udp: false
+  config.vm.synced_folder '.', '/vagrant', disabled: true
+  config.vm.boot_timeout = 999999
+  config.ssh.insert_key = false
+  config.vm.box_check_update = false
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.qemu_use_session = false
+    libvirt.cpu_mode = "host-passthrough"
+    libvirt.cpus = 2
+    libvirt.memory = 2048
+  end
+  N = 3
+  ANSIBLE_RAW_SSH_ARGS  = []
+  ANSIBLE_INVENTORY_DIR = "inventory"
+  VAGRANT_VM_PROVIDER   = "libvirt"
+  (1..N).each do | machine_id |
+    ANSIBLE_RAW_SSH_ARGS << "-o IdentityFile=.vagrant/machines/machine#{machine_id}/#{VAGRANT_VM_PROVIDER}/private_key"
+  end
+
+  # ensure directory exists
+  Dir.mkdir(ANSIBLE_INVENTORY_DIR) unless Dir.exist?(ANSIBLE_INVENTORY_DIR)
+
+  # dynamically create the Ansible inventory file
+  File.open("#{ANSIBLE_INVENTORY_DIR}/hosts" ,'w') do | f |
+    f.write "[worker]\n"
+  end
+
+  (1..N).each do | machine_id |
+    config.vm.define "machine#{machine_id}" do | machine |
+      machine.vm.box  = "debian/bookworm64"
+      if machine_id == N
+      machine.vm.hostname = "server"
+      else
+      machine.vm.hostname = "worker#{machine_id}"
+      end
+      machine.vm.network "private_network", ip: "192.168.2.#{10+machine_id-1}"
+        # dynamically create individual Ansible entries
+        File.open("#{ANSIBLE_INVENTORY_DIR}/hosts" ,'a') do | f |
+          if machine_id == N
+          f.write "\n"
+          f.write "[master]\n"
+          f.write "#{machine.vm.hostname} ansible_host=192.168.2.#{10+machine_id-1}\n"
+          else
+          f.write "#{machine.vm.hostname} ansible_host=192.168.2.#{10+machine_id-1}\n"
+          end
+        end
+      # Only execute once the Ansible provisioner,
+      # when all the machines are up and ready.
+      if machine_id == N
+        machine.vm.provision :ansible do | ansible |
+          # Disable default limit to connect to all the machines
+          ansible.limit           = "all"
+          ansible.playbook        = "oq_cluster.yaml"
+          ansible.inventory_path  = "#{ANSIBLE_INVENTORY_DIR}/hosts"
+          ansible.verbose         = "-v"
+          ansible.raw_ssh_args    = ANSIBLE_RAW_SSH_ARGS
+        end
+      end
+    end
+  end
+end

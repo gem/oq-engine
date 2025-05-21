@@ -67,7 +67,6 @@ The OpenQuake Engine is released under the **[GNU Affero Public License 3](LICEN
 ## Contacts
 
 * Support forum: https://groups.google.com/forum/#!forum/openquake-users
-* Twitter: [@gem_devs](https://twitter.com/gem_devs)
 
 ## Thanks
 

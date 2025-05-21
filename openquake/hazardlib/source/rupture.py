@@ -743,12 +743,13 @@ class EBRupture(object):
     """
     seed = 'NA'  # set by the engine
 
-    def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0, e0=0, seed=42):
+    def __init__(self, rupture, source_id=0, trt_smr=0, n_occ=1, id=0,
+                 e0=0, seed=42):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = source_id * TWO30 + id
+        self.id = numpy.int64(source_id) * TWO30 + id
         self.e0 = e0
         self.seed = seed
 
@@ -835,7 +836,7 @@ class RuptureProxy(object):
             self['source_id'], self['n_occ'])
 
 
-def get_ruptures(fname_csv):
+def get_ruptures_aw(fname_csv):
     """
     Read ruptures in CSV format and return an ArrayWrapper.
 
@@ -888,6 +889,18 @@ def get_ruptures(fname_csv):
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 
 
+def get_ruptures(fname_csv):
+    """
+    Read ruptures in CSV format
+    """
+    aw = get_ruptures_aw(fname_csv)
+    rups = []
+    for rec, geom in zip(aw.array, aw.geom):
+        trt = aw.trts[rec['trt_smr'] // TWO24]
+        rups.append(get_ebr(rec, geom, trt).rupture)
+    return rups
+
+    
 def fix_vertices_order(array43):
     """
     Make sure the point inside array43 are in the form top_left, top_right,

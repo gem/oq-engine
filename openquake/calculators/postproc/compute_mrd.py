@@ -90,4 +90,5 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
                      meabins, sigbins, method))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
-    mrd[:] = combine_mrds(acc, dstore['gweights'][:])
+    gweights = numpy.concatenate([cm.wei for cm in cmakers])
+    mrd[:] = combine_mrds(acc, gweights)

@@ -1,3 +1,3 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.23.0-git7df4c4c8e1', start_date='2025-02-04T13:41:43', checksum=3982247066"
+#,,,,,,,"generated_by='OpenQuake engine 3.24.0-gitd79b62c328', start_date='2025-03-31T05:06:48', checksum=1397702736"
 loss_type,dmg_0,dmg_1,dmg_2,dmg_3,dmg_4,losses,stat
 structural,9.81785E+01,7.77490E-01,7.95100E-01,2.45056E-01,3.89033E-03,1.48164E+00,mean

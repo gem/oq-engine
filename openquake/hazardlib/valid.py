@@ -27,6 +27,7 @@ import json
 import toml
 import socket
 import logging
+import inspect
 from functools import partial
 import numpy
 
@@ -186,8 +187,11 @@ def gsim(value, basedir=''):
     try:
         gsim_class = registry[gsim_name]
     except KeyError:
-        raise ValueError('Unknown GSIM: %s' % gsim_name)
-    gs = gsim_class(**kwargs)
+        raise NameError('Unknown GSIM: %s' % gsim_name)
+    if inspect.isclass(gsim_class):
+        gs = gsim_class(**kwargs)
+    else:  # is an alias, i.e. a thunk
+        gs = gsim_class()
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
 
@@ -535,7 +539,7 @@ def longitude(value):
     >>> longitude('0.123456')
     0.12346
     """
-    lon = numpy.round(float_(value), 5)
+    lon = round(float_(value), 5)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -553,7 +557,7 @@ def latitude(value):
     >>> latitude('-0.123456')
     -0.12346
     """
-    lat = numpy.round(float_(value), 5)
+    lat = round(float_(value), 5)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
@@ -993,6 +997,16 @@ def dictionary(value):
             elif val[0] == 'linscale':
                 dic[key] = list(linscale(*val[1:]))
     return dic
+
+
+def list_of_dict(value):
+    """
+    :param value:
+        input string corresponding to a list of literal Python dictionaries
+    :returns:
+        the list
+    """
+    return json.loads(value)
 
 
 # ########################### SOURCES/RUPTURES ############################# #

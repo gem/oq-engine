@@ -373,13 +373,6 @@ class SourceModelLogicTree(object):
                'applyToSources',
                'applyToBranches')
 
-    ABSOLUTE_UNCERTAINTIES = ('abGRAbsolute', 'bGRAbsolute',
-                              'maxMagGRAbsolute',
-                              'simpleFaultGeometryAbsolute',
-                              'truncatedGRFromSlipAbsolute',
-                              'complexFaultGeometryAbsolute',
-                              'setMSRAbsolute')
-
     @classmethod
     def trivial(cls, source_model_file, sampling_method='early_weights',
                 source_id=''):
@@ -760,7 +753,8 @@ class SourceModelLogicTree(object):
                     "source models don't define sources of tectonic region "
                     "type '%s'" % f['applyToTectonicRegionType'])
 
-        if uncertainty_type in self.ABSOLUTE_UNCERTAINTIES:
+        if (uncertainty_type.endswith('Absolute') and
+                len(self.source_data) > 1):  # there is more than one source
             if not f or not list(f) == ['applyToSources'] \
                     or not len(f['applyToSources'].split()) == 1:
                 raise LogicTreeError(
@@ -995,7 +989,7 @@ class SourceModelLogicTree(object):
                     uvalue = ast.literal_eval(row['uvalue'])
                 except (SyntaxError, ValueError):
                     uvalue = row['uvalue']  # not really deserializable :-(
-                br = Branch(bsid, row['branch'], row['weight'], uvalue)
+                br = Branch(bsid, row['branch'], float(row['weight']), uvalue)
                 self.branches[br.branch_id] = br
                 base = BASE33489 if utype == 'sourceModel' else BASE183
                 self.shortener[br.branch_id] = keyno(

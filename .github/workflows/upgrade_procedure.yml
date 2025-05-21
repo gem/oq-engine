@@ -1,4 +1,4 @@
-name: Upgrade procedure for engine from 3.16 to Latest Release
+name: Upgrade procedure for engine from 3.23 to Latest Release
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
           #os: [macos-latest, windows-latest, ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: ["3.12"]
     #
     steps:
     # This Checkout use git-ref keyword from dispatch
@@ -50,7 +50,7 @@ jobs:
       run: |
         sudo env "PATH=$PATH" python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
         sleep 2
-        sudo env "PATH=$PATH" python install.py server 
+        sudo env "PATH=$PATH" python install.py server
       shell: bash
     - name: Run demos to test installation
       run: |
@@ -65,8 +65,11 @@ jobs:
         source /opt/openquake/venv/bin/activate
         oq --version
         deactivate
-        sudo env "PATH=$PATH" python install.py server --remove
+        sudo systemctl stop openquake-dbserver
         sleep 10
+        sudo env "PATH=$PATH" python install.py server --remove
+        echo "Wait 10 minutes to avoid 429 Client Error: Too Many Requests for url: https://raw.githubusercontent.com"
+        sleep 600
         sudo env "PATH=$PATH" python install.py server --version=master
         source /opt/openquake/venv/bin/activate
         journalctl -xe -u openquake-dbserver

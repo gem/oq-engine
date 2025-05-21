@@ -252,13 +252,16 @@ class DamageCalculator(EventBasedRiskCalculator):
         assert (self.dmgcsq >= 0).all()  # sanity check
         self.datastore['damages-rlzs'] = arr = self.crmodel.to_multi_damage(
             self.dmgcsq)
+        self.datastore.set_shape_descr(
+            'damages-rlzs', asset_id=len(arr), rlz_id=self.R)
         s = oq.hazard_stats()
         if s and self.R > 1:
             _statnames, statfuncs = zip(*s.items())
             weights = self.datastore['weights'][:]
             self.datastore.hdf5.create_dataset(
                 'damages-stats', data=compute_stats2(arr, statfuncs, weights))
-
+            self.datastore.set_shape_descr(
+                'damages-stats', asset_id=len(arr), stat=list(s))
         if oq.infrastructure_connectivity_analysis:
             logging.info('Running connectivity analysis')
             results = connectivity.analysis(self.datastore)

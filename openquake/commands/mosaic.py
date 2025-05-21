@@ -49,6 +49,18 @@ def engine_profile(jobctx, nrows):
 
 # ########################## run_site ############################## #
 
+def append_empty(lst):
+    """
+    Append empty result to the list, assuming lst is not empty
+    """
+    try:
+        arr = lst[-1]
+    except IndexError:
+        return
+    for k in arr.dtype.names:
+        arr[k] = numpy.nan
+    lst.append(arr)
+
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
 def from_file(fname, mosaic_dir, concurrent_jobs):
@@ -85,7 +97,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
-    mosaic_df = get_mosaic_df(buffer=.1)
+    mosaic_df = get_mosaic_df(buffer=0.0)
     sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
@@ -102,7 +114,11 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         sites = ','.join('%s %s' % tuple(lonlat)
                          for lonlat in lonlats[df.index])
         dic = dict(siteid=model + str(ids[model]), sites=sites)
-        allparams.append(get_params_from(dic, mosaic_dir))
+        params = get_params_from(dic, mosaic_dir)
+        # del params['postproc_func']
+        allparams.append(params)
+    print('Considering %d sites (excluding USA, GLD)' %
+          (sum(len(ls) for ls in ids.values())))
 
     logging.root.handlers = []  # avoid too much logging
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
@@ -123,8 +139,11 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             a07s.append(views.view('asce:07', dstore))
             a41s.append(views.view('asce:41', dstore))
         except KeyError:
-            # AELO results could not be computed due to some error
-            continue
+            # AELO results could not be computed due to some error,
+            # so the asce data is missing in the datastore
+            # NB: assume the lists are not empty, i.e. the first site is OK
+            append_empty(a07s)
+            append_empty(a41s)
 
     # printing/saving results
     print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))

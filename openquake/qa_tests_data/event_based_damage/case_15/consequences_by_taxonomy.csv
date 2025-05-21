@@ -1,4 +1,4 @@
-taxonomy,consequence,peril,moderate,complete
+risk_id,consequence,peril,moderate,complete
 Concrete,losses,groundshaking,0.31,1
 Adobe,losses,groundshaking,0.31,1
 Stone-Masonry,losses,groundshaking,0.31,1

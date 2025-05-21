@@ -31,7 +31,6 @@ import getpass
 import logging
 import platform
 import functools
-#import multiprocessing.pool
 from os.path import getsize
 from datetime import datetime, timezone
 import psutil

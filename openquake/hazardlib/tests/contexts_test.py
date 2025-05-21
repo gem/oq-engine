@@ -335,7 +335,7 @@ class PlanarDistancesTestCase(unittest.TestCase):
         magd = [(r, mag) for mag, r in src.get_annual_occurrence_rates()]
         planin = src.get_planin(magd, npd.data)
         planar = build_planar(planin, numpy.array(hdd.data),
-                              loc.x, loc.y, usd, lsd)[0, 0]
+                              loc.x, loc.y, usd, lsd, rar)[0, 0]
         for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):
             dist = get_distances_planar(planar, sites, par)[0]
             aac(dist, ctx[par], err_msg=par)

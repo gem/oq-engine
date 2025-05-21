@@ -232,7 +232,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(case_9.__file__, 'job.ini')
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname)
-        [fname] = export(('assetcol', 'csv'), self.calc.datastore)
+        [_, fname] = export(('exposure', 'zip'), self.calc.datastore)
         self.assertEqualFiles('expected/assetcol.csv', fname)
 
     def test_case_10(self):
@@ -248,7 +248,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         [fname] = out[('avg_losses-rlzs', 'csv')]
         self.assertEqualFiles(
             'expected/avg_losses-rlz-000_443.csv', fname)
-        [fname] = export(('assetcol', 'csv'), self.calc.datastore)
+        [_, fname] = export(('exposure', 'zip'), self.calc.datastore)
         self.assertEqualFiles('expected/assetcol.csv', fname)
 
     def test_case_12(self):

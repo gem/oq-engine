@@ -5,6 +5,7 @@ on:
   workflow_run:
     workflows:
       - "Build Image Nightly for Docker"
+      - "Nightly Engine tests on User mode"
       - "hazardlib + engine + server tests"
       - "MacOS Intel install and test"
       - "MacOS M1"
@@ -14,6 +15,7 @@ on:
       - "Windows amd64 full tests of OpenQuake Engine"
       - "Test WebUI on RH based OS"
       - "Weekly Engine tests"
+      - "Cluster ZMQ"
     types:
       - completed
 

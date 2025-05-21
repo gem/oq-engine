@@ -152,7 +152,8 @@ class Sampler(object):
         means = df['mean'].to_numpy()
         covs = df['cov'].to_numpy()
         eids = df['eid'].to_numpy()
-        return self.rng.lognormal(eids, means, covs)
+        losses = self.rng.lognormal(eids, means, covs)
+        return losses
 
     def sampleBT(self, df):
         means = df['mean'].to_numpy()
@@ -621,14 +622,6 @@ class FragilityFunctionDiscrete(object):
         self._interp = None
         self.no_damage_limit = no_damage_limit
 
-    @property
-    def interp(self):
-        if self._interp is not None:
-            return self._interp
-        self._interp = interpolate.interp1d(self.imls, self.poes,
-                                            bounds_error=False)
-        return self._interp
-
     def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
@@ -639,7 +632,7 @@ class FragilityFunctionDiscrete(object):
         if imls.sum() == 0.0:
             return numpy.zeros_like(imls)
         imls[imls > highest_iml] = highest_iml
-        result = self.interp(imls)
+        result = numpy.interp(imls, self.imls, self.poes)
         if self.no_damage_limit:
             result[imls < self.no_damage_limit] = 0
         return result
@@ -1199,7 +1192,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         lims = j.insurance_limit.to_numpy() * values
         ids_of_invalid_assets = aids[deds > lims]
         if len(ids_of_invalid_assets):
-            invalid_assets = set(ids_of_invalid_assets)
+            invalid_assets = set(map(int, ids_of_invalid_assets))
             raise ValueError(
                 f"Please check deductible values. Values larger than the"
                 f" insurance limit were found for asset(s) {invalid_assets}.")

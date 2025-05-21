@@ -56,7 +56,7 @@ def to_mmi(value):
         raise ValueError(f'{value} is too large to be an MMI')
     elif value < 0.5:
         raise ValueError(f'{value} is too small to be an MMI')
-    return round(value) - 1
+    return round(value)
 
 
 def add_dupl_fields(df, oqfields):
@@ -355,8 +355,9 @@ class AssetCollection(object):
         :returns: dictionary taxonomy string -> taxonomy index starting from 1
         """
         taxonomies = self.tagcol.taxonomy[1:]
+        tuniq = numpy.unique(self['taxonomy'])
         return {taxo: taxi for taxi, taxo in enumerate(taxonomies, 1)
-                if taxi in numpy.unique(self['taxonomy'])}
+                if len(numpy.where(tuniq == taxi)[0])}
 
     @property
     def tagnames(self):
@@ -1106,6 +1107,9 @@ class Exposure(object):
         float_fields = vfields + ['ideductible'] + retro
         int_fields = [(str(name), U32) for name in self.tagcol.tagnames
                       if name not in ('id', 'site_id')]
+        for field, dt in int_fields:
+            # sanity check to protect against future wrong refactorings
+            assert assets_df[field].max(), f'The tag {field} has no values'
         asset_dt = numpy.dtype(
             [('id', (numpy.bytes_, valid.ASSET_ID_LENGTH)),
              ('ordinal', U32), ('lon', F32), ('lat', F32),
@@ -1119,7 +1123,6 @@ class Exposure(object):
         self.cost_calculator.update(array)
         self.mesh = mesh
         self.assets = array
-        #self.loss_types = vfields
         self.occupancy_periods = ofields
 
     def _csv_header(self, value='value-', occupants='occupants_'):

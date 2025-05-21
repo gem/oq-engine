@@ -226,18 +226,6 @@ class Oq(object):
                 for key, value in self.inputs['reqv'].items()}
 
 
-class DeltaRatesGetter(object):
-    """
-    Read the delta rates from an aftershock datastore
-    """
-    def __init__(self, dstore):
-        self.dstore = dstore
-
-    def __call__(self, src_id):
-        with self.dstore.open('r') as dstore:
-            return dstore['delta_rates'][src_id]
-
-
 # same speed as performance.kround, round more
 def kround1(ctx, kfields):
     kdist = 2. * ctx.mag**2  # heuristic collapse distance from 32 to 200 km
@@ -325,8 +313,24 @@ def simple_cmaker(gsims, imts, **params):
 
 # ############################ genctxs ################################## #
 
-# generator of quartets (rup_index, mag, planar_array, sites)
-def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
+# generator of quintets (rup_index, mag, planar_array, sites)
+def _quintets(cmaker, src, sitecol):
+    with cmaker.ir_mon:
+        # building planar geometries
+        planardict = src.get_planar(cmaker.shift_hypo)
+
+    magdist = {mag: cmaker.maximum_distance(mag)
+               for mag, rate in src.get_annual_occurrence_rates()}
+    # cmaker.maximum_distance(mag) can be 0 if outside the mag range
+    maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
+    maxdist = magdist[maxmag]
+    cdist = sitecol.get_cdist(src.location)
+    # NB: having a decent max_radius is essential for performance!
+    mask = cdist <= maxdist + src.max_radius(maxdist)
+    sitecol = sitecol.filter(mask)
+    if sitecol is None:
+        return
+
     minmag = cmaker.maximum_distance.x[0]
     maxmag = cmaker.maximum_distance.x[-1]
     # splitting by magnitude
@@ -334,36 +338,43 @@ def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
         # one rupture per magnitude
         for m, (mag, pla) in enumerate(planardict.items()):
             if minmag <= mag <= maxmag:
-                yield m, mag, pla, sitecol
+                yield m, mag, magdist[mag], pla, sitecol
     else:
         for m, rup in enumerate(src.iruptures()):
             mag = rup.mag
             if mag > maxmag or mag < minmag:
                 continue
-            arr = [rup.surface.array.reshape(-1, 3)]
+            mdist = magdist[mag]
+            arr = [rup.surface.array.reshape(-1, 3)]  # planar
             pla = planardict[mag]
             # NB: having a good psdist is essential for performance!
             psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
                                     magdist)
-            close = sitecol.filter(cdist <= psdist)
-            far = sitecol.filter(cdist > psdist)
+            close = sitecol.filter(cdist[mask] <= psdist)
+            far = sitecol.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
                 if close is None:  # all is far, common for small mag
-                    yield m, mag, arr, sitecol
+                    yield m, mag, mdist, arr, sitecol
                 else:  # something is close
-                    yield m, mag, pla, sitecol
+                    yield m, mag, mdist, pla, sitecol
             else:  # many sites
                 if close is None:  # all is far
-                    yield m, mag, arr, far
+                    yield m, mag, mdist, arr, far
                 elif far is None:  # all is close
-                    yield m, mag, pla, close
+                    yield m, mag, mdist, pla, close
                 else:  # some sites are far, some are close
-                    yield m, mag, arr, far
-                    yield m, mag, pla, close
+                    yield m, mag, mdist, arr, far
+                    yield m, mag, mdist, pla, close
 
 
 # helper used to populate contexts for planar ruptures
-def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id, tom):
+def _get_ctx_planar(cmaker, builder, mag, magi, planar, sites,
+                    src_id, src_offset, tom):
+    zeroctx = builder.zeros((len(planar), len(sites)))  # shape (N, U)
+    if cmaker.fewsites:
+        offset = src_offset + magi * len(planar)
+        rup_ids = zeroctx['rup_id'].T  # numpy trick, shape (U, N)
+        rup_ids[:] = numpy.arange(offset, offset+len(planar))
 
     # computing distances
     rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
@@ -448,41 +459,17 @@ def genctxs_Pp(src, sitecol, cmaker):
                          if par in dd]
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
-    with cmaker.ir_mon:
-        # building planar geometries
-        planardict = src.get_planar(cmaker.shift_hypo)
-
-    magdist = {mag: cmaker.maximum_distance(mag)
-               for mag, rate in src.get_annual_occurrence_rates()}
-    # cmaker.maximum_distance(mag) can be 0 if outside the mag range
-    maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
-    maxdist = magdist[maxmag]
-    cdist = sitecol.get_cdist(src.location)
-    # NB: having a decent max_radius is essential for performance!
-    mask = cdist <= maxdist + src.max_radius(maxdist)
-    sitecol = sitecol.filter(mask)
-    if sitecol is None:
-        return []
-
-    for magi, mag, planarlist, sites in _quartets(
-            cmaker, src, sitecol, cdist[mask], magdist, planardict):
-        if not planarlist:
+    for magi, mag, magdist, planars, sites in _quintets(cmaker, src, sitecol):
+        if not planars:
             continue
-        elif len(planarlist) > 1:  # when using ps_grid_spacing
-            pla = numpy.concatenate(planarlist).view(numpy.recarray)
+        elif len(planars) > 1:  # when using ps_grid_spacing
+            pla = numpy.concatenate(planars).view(numpy.recarray)
         else:
-            pla = planarlist[0]
-
-        offset = src.offset + magi * len(pla)
-        zctx = builder.zeros((len(pla), len(sites)))  # shape (N, U)
-
-        if cmaker.fewsites:
-            rup_ids = zctx['rup_id'].T  # numpy trick, shape (U, N)
-            rup_ids[:] = numpy.arange(offset, offset+len(pla))
-
+            pla = planars[0]
         # building contexts
-        ctx = _get_ctx_planar(cmaker, zctx, mag, pla, sites, src.id, tom)
-        ctxt = ctx[ctx.rrup < magdist[mag]]
+        ctx = _get_ctx_planar(
+            cmaker, builder, mag, magi, pla, sites, src.id, src.offset, tom)
+        ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
             yield ctxt
 
@@ -1574,7 +1561,9 @@ class PmapMaker(object):
             sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
         for src in self.sources:
             t0 = time.time()
-            pm = MapArray(pmap.sids, cm.imtls.size, len(cm.gsims)).fill(self.rup_indep)
+            pm = MapArray(
+                pmap.sids, cm.imtls.size, len(cm.gsims)
+            ).fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
@@ -1757,11 +1746,12 @@ def full_context(sites, rup, dctx=None):
     return self
 
 
-def get_mean_stds(gsim, ctx, imts, **kw):
+def get_mean_stds(gsim, ctx, imts, return_dicts=False, **kw):
     """
     :param gsim: a single GSIM or a a list of GSIMs
     :param ctx: a RuptureContext or a recarray of size N with same magnitude
-    :param imts: a list of M IMTs
+    :param imts: a list of M IMT objects
+    :param return_dicts: if True, returns 4 dictionaries keyed by IMT strings
     :param kw: additional keyword arguments
     :returns:
         an array of shape (4, M, N) obtained by applying the
@@ -1771,7 +1761,12 @@ def get_mean_stds(gsim, ctx, imts, **kw):
     kw['imtls'] = {imt.string: [0] for imt in imts}
     cmaker = ContextMaker('*', [gsim] if single else gsim, kw)
     out = cmaker.get_mean_stds([ctx], split_by_mag=False)  # (4, G, M, N)
-    return out[:, 0] if single else out
+    out = out[:, 0] if single else out
+    if return_dicts:
+        assert single
+        return [{imt.string: out[o, m] for m, imt in enumerate(imts)}
+                for o in range(4)]
+    return out
 
 
 # mock of a rupture used in the tests and in the module of the OQ-MBTK
@@ -1881,17 +1876,19 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-def get_cmakers(src_groups, full_lt, oq):
+def get_cmakers(all_trt_smrs, full_lt, oq):
     """
-    :params src_groups: a list of SourceGroups
+    :params all_trt_smrs: a list of arrays
     :param full_lt: a FullLogicTree instance
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    all_trt_smrs = []
-    for sg in src_groups:
-        src = sg.sources[0]
-        all_trt_smrs.append(src.trt_smrs)
+    from openquake.hazardlib.site_amplification import AmplFunction
+    if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
+        df = AmplFunction.read_df(oq.inputs['amplification'])
+        oq.af = AmplFunction.from_dframe(df)
+    else:
+        oq.af = None
     trts = list(full_lt.gsim_lt.values)
     gweights = full_lt.g_weights(all_trt_smrs)[:, -1]  # shape Gt
     cmakers = []
@@ -1909,35 +1906,41 @@ def get_cmakers(src_groups, full_lt, oq):
     for cm in cmakers:
         cm.gid = gids[cm.grp_id]
         cm.wei = gweights[cm.gid]
-    return cmakers
-
-
-def read_cmakers(dstore, csm=None):
-    """
-    :param dstore: a DataStore-like object
-    :param csm: a CompositeSourceModel instance, if given
-    :returns: an array of ContextMaker instances, one per source group
-    """
-    from openquake.hazardlib.site_amplification import AmplFunction
-    oq = dstore['oqparam']
-    oq.mags_by_trt = {
-        k: decode(v[:]) for k, v in dstore['source_mags'].items()}
-    if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
-        df = AmplFunction.read_df(oq.inputs['amplification'])
-        oq.af = AmplFunction.from_dframe(df)
-    else:
-        oq.af = None
-    if csm is None:
-        csm = dstore['_csm']
-    if not hasattr(csm, 'full_lt'):
-        csm.full_lt = dstore['full_lt'].init()
-    cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
-    if 'delta_rates' in dstore:  # aftershock
-        for cmaker in cmakers:
-            cmaker.deltagetter = DeltaRatesGetter(dstore)
     return numpy.array(cmakers)
 
 
+def read_cmakers(dstore, full_lt=None):
+    """
+    :param dstore: a DataStore-like object
+    :param all_trt_smrs: a list of arrays
+    :returns: an array of ContextMaker instances, one per source group
+    """
+    oq = dstore['oqparam']
+    oq.mags_by_trt = {
+        k: decode(v[:]) for k, v in dstore['source_mags'].items()}
+    all_trt_smrs = dstore['trt_smrs'][:]
+    if not full_lt:
+        full_lt = dstore['full_lt'].init()
+    cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
+    return cmakers
+
+
+def read_full_lt_by_label(dstore):
+    """
+    :param dstore: a DataStore-like object
+    :returns: a dictionary label -> full_lt
+    """
+    oq = dstore['oqparam']
+    full_lt = dstore['full_lt'].init()
+    attrs = vars(full_lt)
+    dic = {'Default': full_lt}
+    for label in oq.site_labels:
+        dic[label] = copy.copy(full_lt)
+        dic[label].__dict__.update(attrs)
+        dic[label].gsim_lt = dstore['gsim_lt' + label]
+    return dic
+
+    
 # used in event_based
 def read_cmaker(dstore, trt_smr):
     """

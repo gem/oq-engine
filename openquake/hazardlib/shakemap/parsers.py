@@ -21,35 +21,40 @@ https://earthquake.usgs.gov/scenario/product/shakemap-scenario/sclegacyshakeout2
 to numpy composite arrays.
 """
 
+import io
+import os
+import sys
+import pathlib
+import logging
+import json
+import base64
+import zipfile
+import tempfile
+from dataclasses import dataclass
 from urllib.request import urlopen, pathname2url
 from urllib.error import URLError
 from collections import defaultdict
 from xml.parsers.expat import ExpatError
-import io
-import os
-import pathlib
-import logging
-import json
-import zipfile
-import base64
-from dataclasses import dataclass
-import pandas as pd
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
 from shapely.geometry import shape
+import pandas as pd
 import numpy
 import fiona
 
-from openquake.baselib import performance
+from openquake.baselib import performance, config
 from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter, valid
 from openquake.hazardlib.source.rupture import (
-    get_multiplanar, is_matrix, build_planar_rupture_from_dict)
+    get_multiplanar, is_matrix, build_planar_rupture_from_dict, get_ruptures)
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
-SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query?eventid={}&format=geojson'
+# NOTE: remove the includesuperseded parameter to download less data for testing
+QUERY_PARAMS = '?eventid={}&format=geojson&includesuperseded=True'
+SHAKEMAP_URL = US_GOV + '/fdsnws/event/1/query' + QUERY_PARAMS
 F32 = numpy.float32
 SHAKEMAP_FIELDS = set(
     'LON LAT SVEL MMI PGA PSA03 PSA06 PSA10 PSA30 '
@@ -109,7 +114,7 @@ def path2url(url):
     if not url.startswith('file:') and not url.startswith('http'):
         file = pathlib.Path(url)
         if file.is_file():
-            return 'file:{}'.format(pathname2url(str(file.absolute())))
+            return f'file:{pathname2url(str(file.absolute()))}'
         raise FileNotFoundError(
             'The following path could not be found: %s' % url)
     return url
@@ -142,11 +147,19 @@ def get_array_shapefile(kind, fname):
     either a zip or the location of one of the files,
     *.shp and *.dbf are necessary, *.prj and *.shx optional
     """
-    fname = path2url(fname)
-    if fname.endswith('.zip'):
-        fname = 'zip://' + fname[5:]
-    else:
+    if fname.startswith('file:'):
         fname = fname[5:]  # strip file:
+    if fname.endswith('.zip'):
+        if sys.platform == 'win32':
+            # fiona cannot automatically unzip, so unzip manually
+            targetdir = tempfile.mkdtemp(
+                dir=config.directory.custom_tmp or None)
+            with zipfile.ZipFile(fname) as archive:
+                archive.extractall(targetdir)
+            [fname] = [os.path.join(targetdir, f)
+                       for f in os.listdir(targetdir) if f.endswith('.shp')]
+        else:
+            fname = 'zip://' + fname
     polygons = []
     data = defaultdict(list)
     with fiona.open(fname) as f:
@@ -280,17 +293,17 @@ def read_usgs_stations_json(js: bytes):
     # ==========================================
     # The "channels/amplitudes" dictionary contains the values recorded at
     # the seismic stations. The values could report the 3 components, in such
-    # cases, take the componet with maximum PGA (and in absence of PGA, the
+    # cases, take the component with maximum PGA (and in absence of PGA, the
     # first IM reported).
     channels = pd.DataFrame(stations.channels.to_list())
     vals = pd.Series([], dtype='object')
     for row, rec_station in channels.iterrows():
         rec_station.dropna(inplace=True)
-        # Iterate over different columns. Each colum can be a component
+        # Iterate over different columns. Each column can be a component
         data = []
         pgas = []
         for _, chan in rec_station.items():
-            if chan["name"].endswith("Z") or chan["name"].endswith("U"):
+            if chan["name"].endswith(("z", "Z", "u", "U")):
                 continue
             # logging.info(chan["name"])
             df = pd.DataFrame(chan["amplitudes"])
@@ -306,8 +319,8 @@ def read_usgs_stations_json(js: bytes):
             data.append(chan["amplitudes"])
         # get values for maximum component
         if pgas:
-            max_componet = pgas.index(max(pgas))
-            vals[row] = data[max_componet]
+            max_component = pgas.index(max(pgas))
+            vals[row] = data[max_component]
         else:
             vals[row] = None
     # The "pgm_from_mmi" dictionary contains the values estimated from MMI.
@@ -332,7 +345,7 @@ def read_usgs_stations_json(js: bytes):
         df.columns = [col[1]+'_'+col[0] for col in df.columns.values]
         for col in df.columns:
             if col in values:
-                # Colum already exist. Combine values in unique column
+                # Column already exist. Combine values in unique column
                 values[col] = values[col].combine_first(df[col])
             else:
                 values = pd.concat([values, df[col]], axis=1)
@@ -384,7 +397,7 @@ def usgs_stations_to_oq_format(stations, exclude_imts=(), seismic_only=False):
     return df
 
 
-def _get_preferred_item(items):
+def _get_usgs_preferred_item(items):
     # items can be for instance shakemaps, moment tensors or finite faults
     preferred_weights = [item['preferredWeight'] for item in items]
     preferred_idxs = [idx for idx, val in enumerate(preferred_weights)
@@ -475,7 +488,7 @@ def load_rupdic_from_finite_fault(usgs_id, mag, products):
         err = {"status": "failed", "error_msg": err_msg}
         return None, err
     ffs = products['finite-fault']
-    ff = _get_preferred_item(ffs)
+    ff = _get_usgs_preferred_item(ffs)
     p = ff['properties']
     # TODO: we probably need to get the rupture coordinates from shakemap_polygon.txt
     # if 'shakemap_polygon.txt' in ff['contents']:
@@ -522,7 +535,7 @@ def load_rupdic_from_origin(usgs_id, products):
         err = {"status": "failed", "error_msg": err_msg}
         return None, err
     origins = products['origin']
-    origin = _get_preferred_item(origins)
+    origin = _get_usgs_preferred_item(origins)
     p = origin['properties']
     mag = float(p['magnitude'])
     lon = float(p['longitude'])
@@ -671,10 +684,13 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     return rupdic
 
 
-def _contents_properties_shakemap(usgs_id, user, get_grid, monitor):
+def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
+                                  shakemap_version='preferred'):
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
     #     url = SHAKEMAP_URL.format(usgs_id)
     #     f.write(urlopen(url).read())
+    #     # NOTE: remove the includesuperseded parameter to download less
+    #             data for testing
     err = {}
     if user.testdir:  # in parsers_test
         fname = os.path.join(user.testdir, usgs_id + '.json')
@@ -691,24 +707,22 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor):
             err = {"status": "failed", "error_msg": err_msg}
             return None, None, None, err
 
-    js = json.loads(text)
-    properties = js['properties']
+    properties = json.loads(text)['properties']
 
     # NB: currently we cannot find a case with missing shakemap
-    shakemap = _get_preferred_item(properties['products']['shakemap'])
+    shakemaps = properties['products']['shakemap']
+    if shakemap_version == 'preferred':
+        shakemap = _get_usgs_preferred_item(shakemaps)
+    else:
+        [shakemap] = [shm for shm in shakemaps if shm['id'] == shakemap_version]
     contents = shakemap['contents']
 
     if get_grid and 'download/grid.xml' in contents:
-        # only for Aristotle users try to download the shakemap
-        url = contents.get('download/grid.xml')['url']
-        # grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
         if user.testdir:  # in parsers_test
             grid_fname = f'{user.testdir}/{usgs_id}-grid.xml'
-        else:
-            logging.info('Downloading grid.xml')
-            with monitor('Downloading grid.xml'):
-                grid_fname = gettemp(urlopen(url).read(), suffix='.xml')
-        shakemap_array = get_shakemap_array(grid_fname)
+            shakemap_array = get_shakemap_array(grid_fname)
+        else:  # download the shakemap
+            shakemap_array = get_array_usgs_id("usgs_id", usgs_id, contents)
     else:
         shakemap_array = None
     return contents, properties, shakemap_array, err
@@ -718,17 +732,19 @@ def _get_nodal_planes(properties):
     # in parsers_test
     nodal_planes = {}
     err = {}
-    # try first reading from the moment tensor, if available. If nodal planes can not be
-    # collected from there, fallback attempting to read them from the focal mechanism
+    # try reading from the moment tensor, if available. If nodal planes can not
+    # be collected, fallback attempting to read them from the focal mechanism
     if 'moment-tensor' in properties['products']:
-        moment_tensor = _get_preferred_item(properties['products']['moment-tensor'])
+        moment_tensor = _get_usgs_preferred_item(
+            properties['products']['moment-tensor'])
         nodal_planes = _get_nodal_planes_from_product(moment_tensor)
     if not nodal_planes and 'focal-mechanism' in properties['products']:
-        focal_mechanism = _get_preferred_item(properties['products']['focal-mechanism'])
+        focal_mechanism = _get_usgs_preferred_item(
+            properties['products']['focal-mechanism'])
         nodal_planes = _get_nodal_planes_from_product(focal_mechanism)
     if not nodal_planes:
-        err = {'status': 'failed',
-               'error_msg': 'Unable to retrieve information about the nodal options'}
+        err = {'status': 'failed', 'error_msg':
+               'Unable to retrieve information about the nodal options'}
         return None, err
     return nodal_planes, err
 
@@ -759,10 +775,28 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
         rupture_mesh_spacing=5.).convert_node(rup_node)
     rup.tectonic_region_type = '*'
     hp = rup.hypocenter
-    rupdic = dict(lon=hp.x, lat=hp.y, dep=hp.z,
-                  mag=rup.mag, rake=rup.rake,
-                  strike=rup.surface.get_strike(),
-                  dip=rup.surface.get_dip(),
+    rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
+                  mag=float(rup.mag), rake=float(rup.rake),
+                  strike=float(rup.surface.get_strike()),
+                  dip=float(rup.surface.get_dip()),
+                  usgs_id=usgs_id,
+                  rupture_file=rupture_file)
+    return rup, rupdic, err
+
+
+def _get_rup_dic_from_csv(usgs_id, user, rupture_file):
+    err = {}
+    try:
+        [rup] = get_ruptures(os.path.join(user.testdir, rupture_file)
+                             if user.testdir else rupture_file)
+    except Exception as exc:
+        err = {"status": "failed", "error_msg": str(exc)}
+        return None, {}, err
+    hp = rup.hypocenter
+    rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
+                  mag=float(rup.mag), rake=float(rup.rake),
+                  strike=float(rup.surface.get_strike()),
+                  dip=float(rup.surface.get_dip()),
                   usgs_id=usgs_id,
                   rupture_file=rupture_file)
     return rup, rupdic, err
@@ -781,7 +815,8 @@ def _get_rup_from_json(usgs_id, rupture_file):
     return rup, rupdic, rup_data, err_msg
 
 
-def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
+def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
+                           shakemap_version='preferred'):
     err = {}
     n_stations = 0
     try:
@@ -790,7 +825,7 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
         err = {'status': 'failed', 'error_msg': str(exc)}
         return None, n_stations, err
     contents, _properties, _shakemap, err = _contents_properties_shakemap(
-        usgs_id, user, False, monitor)
+        usgs_id, user, False, monitor, shakemap_version)
     if err:
         return None, n_stations, err
     with monitor('Downloading stations'):
@@ -799,8 +834,53 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor()):
     return station_data_file, n_stations, err
 
 
-def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
-                monitor=performance.Monitor()):
+def ms_to_utc_date_time(ms):
+    # convert from milliseconds to utc date time
+    dt = datetime.utcfromtimestamp(ms / 1000)  # convert to seconds
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
+    err = {}
+    usgs_preferred_version = None
+    try:
+        usgs_id = valid.simple_id(usgs_id)
+    except ValueError as exc:
+        err = {'status': 'failed', 'error_msg': str(exc)}
+        return None, None, err
+    if user.testdir:  # in parsers_test
+        fname = os.path.join(user.testdir, usgs_id + '.json')
+        text = open(fname).read()
+    else:
+        url = SHAKEMAP_URL.format(usgs_id)
+        logging.info('Downloading %s' % url)
+        try:
+            with monitor('Downloading USGS json'):
+                text = urlopen(url).read()
+        except URLError as exc:
+            # in parsers_test
+            err_msg = f'Unable to download from {url}: {exc}'
+            err = {"status": "failed", "error_msg": err_msg}
+            return None, None, err
+
+    js = json.loads(text)
+    properties = js['properties']
+    shakemaps = properties['products']['shakemap']
+    usgs_preferred_shakemap = _get_usgs_preferred_item(shakemaps)
+    usgs_preferred_version = usgs_preferred_shakemap['id']
+    sorted_shakemaps = sorted(
+        shakemaps, key=lambda x: x["updateTime"], reverse=True)
+    shakemap_versions = [
+        {'id': shakemap['id'],
+         'number': shakemap['properties']['version'],
+         'utc_date_time': ms_to_utc_date_time(shakemap['updateTime'])}
+        for shakemap in sorted_shakemaps
+        if 'version' in shakemap['properties']]
+    return shakemap_versions, usgs_preferred_version, err
+
+
+def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferred',
+                rupture_file=None, monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
     the ShakeMap ID, else build the rupture locally with the given usgs_id.
@@ -811,6 +891,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
     :param dic: dictionary with ShakeMap ID and other parameters
     :param user: User instance
     :param use_shakemap: download the ShakeMap only if True
+    :param shakemap_version: id of the ShakeMap to be used (if the ShakeMap is used)
     :param rupture_file: None
     :returns: (rupture object or None, rupture dictionary, error dictionary or {})
     """
@@ -831,6 +912,8 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
     if rupture_file:
         if rupture_file.endswith('.xml'):
             rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
+        elif rupture_file.endswith('.csv'):
+            rup, rupdic, err = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
         elif rupture_file.endswith('.json'):
             rup, rupdic, rup_data, err_msg = _get_rup_from_json(usgs_id, rupture_file)
             if err_msg:
@@ -840,7 +923,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
     assert usgs_id
     get_grid = user.level == 1 or use_shakemap
     contents, properties, shakemap, err = _contents_properties_shakemap(
-        usgs_id, user, get_grid, monitor)
+        usgs_id, user, get_grid, monitor, shakemap_version)
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
@@ -896,23 +979,24 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, rupture_file=None,
     return rup, rupdic, err
 
 
-def get_array_usgs_id(kind, usgs_id):
+# tested in the nightly tests aristotle_run
+# the default argument is needed to avoid an
+# error in is_valid_shakemap
+def get_array_usgs_id(kind, id, contents={}):
     """
     Download a ShakeMap from the USGS site.
 
     :param kind: the string "usgs_id", for API compatibility
-    :param usgs_id: ShakeMap ID
+    :param id: ShakeMap ID
+    :param contents: a dictionary containing 'download/grid.xml'
     """
-    # not tested on purpose
-    url = SHAKEMAP_URL.format(usgs_id)
-    logging.info('Downloading %s', url)
-    contents = json.loads(urlopen(url).read())[
-        'properties']['products']['shakemap'][-1]['contents']
     grid = contents.get('download/grid.xml')
-    if grid is None:
-        raise MissingLink('Could not find grid.xml link in %s' % url)
+    if not grid:
+        raise MissingLink('Could not find grid.xml link for %s' % id)
     uncertainty = contents.get('download/uncertainty.xml.zip') or contents.get(
         'download/uncertainty.xml')
+    if not uncertainty:
+        logging.warning('No uncertainty.xml file')
     return get_array(
         kind='usgs_xml', grid_url=grid['url'],
         uncertainty_url=uncertainty['url'] if uncertainty else None)

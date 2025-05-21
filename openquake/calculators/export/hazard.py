@@ -442,7 +442,7 @@ def export_gmf_data_csv(ekey, dstore):
     for imt in imts:
         ren[imt] = 'gmv_' + imt
     for imt in oq.sec_imts:
-        ren[imt] = f'sep_{imt}'
+        ren[imt] = imt
     df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
     fname = dstore.build_fname('gmf', 'data', 'csv')

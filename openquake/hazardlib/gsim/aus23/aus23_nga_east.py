@@ -21,7 +21,18 @@ Module exports :class:`NGAEastAUS23_vs3000`
 import pathlib
 from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
+from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import ModifiableGMPE
 
 path = pathlib.Path(__file__).parent
-fname = path / 'NGA-East_Backbone_Model.geometric.3000.mps.hdf5'
-add_alias("NGAEastAUS23_vs3000", GMPETable, gmpe_table=str(fname))
+
+
+
+class NGAEastAUS2023GMPE(GMPETable):
+    def __init__(self, table_relpath):
+        super().__init__(gmpe_table=path / table_relpath)
+
+
+add_alias("NGAEastAUS23_vs3000", ModifiableGMPE,
+          gmpe={'NGAEastAUS2023GMPE': dict(
+              table_relpath='NGA-East_Backbone_Model.geometric.3000.mps.hdf5')},
+          ceus2020_site_term=dict(ref_vs30=3000, wimp=0.0))
