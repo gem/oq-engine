@@ -173,10 +173,11 @@ def map_getters(dstore, full_lt=None, disagg=False):
     """
     oq = dstore['oqparam']
     # disaggregation is meant for few sites, i.e. no tiling
-    chunks, N = get_num_chunks_sites(dstore)
-    if disagg and N > chunks:
-        raise ValueError('There are %d sites but only %d chunks' % (N, chunks))
+    n, N = get_num_chunks_sites(dstore)
+    if disagg and N > n:
+        raise ValueError('There are %d sites but only %d chunks' % (N, n))
 
+    # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
@@ -196,7 +197,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
             if f.endswith('.hdf5'):
                 fnames.append(os.path.join(scratch_dir, f))
     out = []
-    for chunk in range(chunks):
+    for chunk in range(n):
         getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
         getter.weights = weights
         out.append(getter)
