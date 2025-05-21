@@ -451,7 +451,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def init_poes(self):
         oq = self.oqparam
-        self.cmakers = read_cmakers(self.datastore, self.csm)
+        self.cmakers = read_cmakers(self.datastore, self.full_lt)
         parent = self.datastore.parent
         if parent:
             # tested in case_43

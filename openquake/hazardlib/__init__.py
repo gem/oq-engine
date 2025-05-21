@@ -320,8 +320,8 @@ class Input(object):
                 for ebr in grp:
                     ebr.n_occ = ngmfs * num_rlzs
                     ebr.trt_smrs = (ebr.trt_smr,)
-
-        return groups, contexts.get_cmakers(groups, self.full_lt, self.oq)
+        trt_smrs = [group[0].trt_smrs for group in groups]
+        return groups, contexts.get_cmakers(trt_smrs, self.full_lt, self.oq)
 
     @property
     def cmaker(self):

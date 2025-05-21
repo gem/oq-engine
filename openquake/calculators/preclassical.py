@@ -25,7 +25,7 @@ import h5py
 from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -234,8 +234,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         logging.info('Building cmakers')
-        self.cmakers = read_cmakers(self.datastore, csm)
         trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
+        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
