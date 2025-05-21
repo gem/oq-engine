@@ -227,11 +227,36 @@ ngaeast_both = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'coastal_plains_site_amp="true"\n'
                           'z_sed_scaling="true"')
 
-gmms = [ag_adj, ag_def, k20_adj, k20_def, p20_adj, p20_def, a09_adj, a09_def,
-        z06_adj, z06_def, k20_def_sea_int, k20_adj_sea_int, k20_def_sea_sslab,
-        k20_adj_sea_sslab, ask14_adj, ask14_def, bssa14_adj, bssa14_def,
-        cb14_adj, cb14_def, cy14_adj, cy14_def, nshmp14_ask14_adj, ask14_cy,
-        bssa14_cy, cb14_cy, cy14_cy, ngaeast_bias, ngaeast_cpa, ngaeast_both]
+gmms = [ag_adj,
+        ag_def,
+        k20_adj,
+        k20_def,
+        p20_adj,
+        p20_def,
+        a09_adj,
+        a09_def,
+        z06_adj,
+        z06_def,
+        k20_def_sea_int,
+        k20_adj_sea_int,
+        k20_def_sea_sslab,
+        k20_adj_sea_sslab,
+        ask14_adj,
+        ask14_def,
+        bssa14_adj,
+        bssa14_def,
+        cb14_adj,
+        cb14_def,
+        cy14_adj,
+        cy14_def,
+        nshmp14_ask14_adj,
+        ask14_cy,
+        bssa14_cy,
+        cb14_cy,
+        cy14_cy,
+        ngaeast_bias,
+        ngaeast_cpa,
+        ngaeast_both]
 
 
 class US23AdjustmentTestCase(unittest.TestCase):       
