@@ -454,7 +454,8 @@ class ClassicalCalculator(base.HazardCalculator):
     def init_poes(self):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore)
-        self.cmakers = {label: get_cmakers(self.csm.src_groups, full_lt, oq)
+        trt_smrs = self.datastore['trt_smrs'][:]
+        self.cmakers = {label: get_cmakers(trt_smrs, full_lt, oq)
                         for label, full_lt in full_lt_by_label.items()}
         parent = self.datastore.parent
         if parent:

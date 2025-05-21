@@ -177,6 +177,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
     if disagg and N > n:
         raise ValueError('There are %d sites but only %d chunks' % (N, n))
 
+    # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
