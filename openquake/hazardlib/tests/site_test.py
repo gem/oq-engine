@@ -71,6 +71,9 @@ class SiteTestCase(unittest.TestCase):
         self._assert_creation(error=error, z2pt5=0)
         self._assert_creation(error=error, z2pt5=-1)
 
+    def test_infer_zref(self):
+        self._assert_creation(z1pt0=-999, z2pt5=-999)
+
     def test_successful_creation(self):
         self._assert_creation()
 

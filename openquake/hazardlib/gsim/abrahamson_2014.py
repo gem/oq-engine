@@ -306,6 +306,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
                               [C['a43'], C['a43'], a44, a45, C['a46'],
                                C['a46'], C['a46']], kind='linear')
     f10 = (f2(vs30) * factor) + adj
+    
     return f10 * usgs_baf
 
 
