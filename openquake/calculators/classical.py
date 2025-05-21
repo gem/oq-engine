@@ -222,6 +222,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
+# NB: fast_mean is used only if there are no site_labels
 def fast_mean(pgetter, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
@@ -245,7 +246,7 @@ def fast_mean(pgetter, monitor):
 
 
 def postclassical(pgetter, wget, hstats, individual_rlzs,
-                  max_sites_disagg, amplifier, monitor):
+                  max_sites_disagg, amplifier, labels, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param wget: function (weights[:, :], imt) -> weights[:]
@@ -253,6 +254,7 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
     :param individual_rlzs: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
     :param amplifier: instance of Amplifier or None
+    :param labels: full array of label indices, one per site
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> MapArray
 
@@ -304,10 +306,13 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc[:, r].reshape(M, L1))
             if hstats:
+                if len(labels):
+                    weights = pgetter.weights[:, labels[sid]]
+                else:
+                    weights = pgetter.weights
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
-                        pc, imtls, stat, pgetter.weights, wget,
-                        pgetter.use_rates)
+                        pc, imtls, stat, weights, wget, pgetter.use_rates)
                     arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -778,8 +783,12 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             dstore = self.datastore.parent
         wget = self.full_lt.wget
+        if oq.site_labels:
+            labels = self.sitecol.label
+        else:
+            labels = ()
         allargs = [(getter, wget, hstats, oq.individual_rlzs,
-                    oq.max_sites_disagg, self.amplifier)
+                    oq.max_sites_disagg, self.amplifier, labels)
                    for getter in getters.map_getters(dstore, self.full_lt)]
         if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')

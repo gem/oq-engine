@@ -1923,7 +1923,8 @@ class OqParam(valid.ParamSet):
         Return True if it is possible to use the fast mean algorithm
         """
         return (not self.individual_rlzs and self.soil_intensities is None
-                and list(self.hazard_stats()) == ['mean'] and self.use_rates)
+                and list(self.hazard_stats()) == ['mean'] and self.use_rates
+                and not self.site_labels)
 
     def get_kinds(self, kind, R):
         """
