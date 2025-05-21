@@ -722,8 +722,9 @@ class CompositeSourceModel:
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
             for cmaker in cmakers:
-                yield self._split(
-                    cmaker, sitecol, max_weight, num_chunks, tiling)
+                if self.src_groups[cmaker.grp_id].weight:
+                    yield self._split(
+                        cmaker, sitecol, max_weight, num_chunks, tiling)
             return
         # cmakers is a dictionary label -> array of cmakers
         for idx, label in enumerate(cmakers):
