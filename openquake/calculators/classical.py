@@ -307,9 +307,9 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                         pc[:, r].reshape(M, L1))
             if hstats:
                 if len(labels):
-                    weights = pgetter.weights[:, labels[sid]]
+                    weights = pgetter.weights[labels[sid]]
                 else:
-                    weights = pgetter.weights
+                    weights = pgetter.weights[0]
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
                         pc, imtls, stat, weights, wget, pgetter.use_rates)
