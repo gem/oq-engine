@@ -24,7 +24,7 @@ import numpy
 from unittest import mock
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import InvalidFile, nrml, calc
+from openquake.hazardlib import InvalidFile, nrml, calc, contexts
 from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
@@ -145,13 +145,25 @@ class ClassicalTestCase(CalculatorTestCase):
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs.csv', fname)
 
-        src_groups = self.calc.csm.src_groups
-        sitecol = self.calc.sitecol
-        full_lt = self.calc.full_lt
         oq = self.calc.oqparam
-        hcurve = calc.mean_rates.calc_mcurves(
-            src_groups, sitecol, full_lt, oq)[0, 0]
-        pga = self.calc.datastore['hcurves-stats'][0, 0, 0]
+        flt0, flt1, flt2 = contexts.read_full_lt_by_label(
+            self.calc.datastore).values()
+        sitecol = self.calc.sitecol
+        sites0 = sitecol.filter(sitecol.label == 0)
+        sites1 = sitecol.filter(sitecol.label == 1)
+        sites2 = sitecol.filter(sitecol.label == 2)
+
+        src_groups = self.calc.csm.src_groups
+        hcurve0 = calc.mean_rates.calc_mcurves(
+            src_groups, sites0, flt0, oq)[0, 0]
+        hcurve1 = calc.mean_rates.calc_mcurves(
+            src_groups, sites1, flt1, oq)[0, 0]
+        hcurve2 = calc.mean_rates.calc_mcurves(
+            src_groups, sites2, flt2, oq)[0, 0]
+        pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
+        pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
+        pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
+        breakpoint()
       
     def test_case_07(self):
         # make sure the Dummy GMPE works in event based too
