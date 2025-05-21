@@ -1915,7 +1915,7 @@ def get_cmakers(src_groups, full_lt, oq):
     for cm in cmakers:
         cm.gid = gids[cm.grp_id]
         cm.wei = gweights[cm.gid]
-    return cmakers
+    return numpy.array(cmakers)
 
 
 def read_cmakers(dstore, csm=None):
@@ -1943,7 +1943,7 @@ def read_cmakers(dstore, csm=None):
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
-    return numpy.array(cmakers)
+    return cmakers
 
 
 def read_full_lt_by_label(dstore):
@@ -1953,9 +1953,11 @@ def read_full_lt_by_label(dstore):
     """
     oq = dstore['oqparam']
     full_lt = dstore['full_lt'].init()
+    attrs = vars(full_lt)
     dic = {'Default': full_lt}
     for label in oq.site_labels:
         dic[label] = copy.copy(full_lt)
+        dic[label].__dict__.update(attrs)
         dic[label].gsim_lt = dstore['gsim_lt' + label]
     return dic
 

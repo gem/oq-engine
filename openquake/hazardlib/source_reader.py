@@ -720,6 +720,12 @@ class CompositeSourceModel:
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
+        if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
+            for cmaker in cmakers:
+                yield self._split(
+                    cmaker, sitecol, max_weight, num_chunks, tiling)
+            return
+        # cmakers is a dictionary label -> array of cmakers
         for idx, label in enumerate(cmakers):
             for cmaker in cmakers[label][grp_ids]:
                 if self.src_groups[cmaker.grp_id].weight == 0:
@@ -730,7 +736,9 @@ class CompositeSourceModel:
                     sites = sitecol.filter(sitecol.label == idx)
                 else:
                     sites = sitecol
-                yield self._split(cmaker, sites, max_weight, num_chunks, tiling)
+                if len(sites):
+                    yield self._split(
+                        cmaker, sites, max_weight, num_chunks, tiling)
 
     def _split(self, cmaker, sitecol, max_weight, num_chunks=1, tiling=False):
         N = len(sitecol)
