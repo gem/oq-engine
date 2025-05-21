@@ -22,6 +22,7 @@ import csv
 from openquake.hazardlib.shakemap.parsers import (
     get_rup_dic, User, utc_to_local_time, get_stations_from_usgs, get_shakemap_versions)
 from openquake.hazardlib.source.rupture import BaseRupture
+from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
@@ -100,8 +101,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         _rup, dic, _err = get_rup_dic(
             {'usgs_id': usgs_id, 'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
-        self.assertIn('Unable to convert the rupture from the USGS format',
-                      dic['rupture_issue'])
+        self.assertIn('Unable to convert the rupture', dic['rupture_issue'])
         station_data_file, n_stations, station_err = get_stations_from_usgs(
             usgs_id, user=user, shakemap_version='preferred')
         self.assertIn('stations', station_data_file)
@@ -133,14 +133,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_5(self):
         for approach in ['use_shakemap_fault_rup_from_usgs', 'use_shakemap_from_usgs']:
-            # 12 vertices instead of 4 in rupture.json
-            rup, dic, _err = get_rup_dic(
+            rup, _dic, _err = get_rup_dic(
                 {'usgs_id': 'us20002926', 'approach': approach},
                 user=user, use_shakemap=True)
-            self.assertIsNone(rup)
-            rupture_issue = ('Unable to convert the rupture from the USGS format: '
-                             'at least one surface is not rectangular')
-            self.assertEqual(dic['rupture_issue'], rupture_issue)
+            self.assertIsInstance(rup.surface, ComplexFaultSurface)
 
     def test_6(self):
         usgs_id = 'usp0001ccb'

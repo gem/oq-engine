@@ -262,7 +262,7 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
     geometry_type = data["features"][0]["geometry"]["type"]
     coordinates = data["features"][0]["geometry"]["coordinates"]
     metadata = data["metadata"]
-    print(metadata["reference"])
+    logging.info(metadata["reference"])
 
     nrml = Element(
         "nrml",
@@ -271,6 +271,11 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
     )
 
     if geometry_type == "Point":
+
+        # TODO: as soon as OQ will be able to handle xml files with Point sources,
+        # convert also this to xml
+        return input_json_file
+
         rupture = SubElement(nrml, "pointRupture")
         magnitude = SubElement(rupture, "magnitude")
         magnitude.text = str(metadata["mag"])
@@ -797,7 +802,7 @@ def get_shakemap_version(usgs_id):
         with urlopen(product_url) as response:
             event_data = json.loads(response.read().decode())
     except Exception as e:
-        print(f"Error: Unable to fetch data for event {usgs_id} - {e}")
+        logging.error(f"Error: Unable to fetch data for event {usgs_id} - {e}")
         return None
     if ("properties" in event_data and "products" in event_data["properties"] and
             "shakemap" in event_data["properties"]["products"]):
@@ -808,7 +813,7 @@ def get_shakemap_version(usgs_id):
             '/')[-3]
         return version_id
     else:
-        print(f"No ShakeMap found for event {usgs_id}")
+        logging.error(f"No ShakeMap found for event {usgs_id}")
         return None
 
 
@@ -828,10 +833,10 @@ def download_jpg(usgs_id, what):
                 img_base64 = base64.b64encode(img_data).decode('utf-8')
                 return img_base64
         except Exception as e:
-            print(f"Error: Unable to download the {what} image - {e}")
+            logging.error(f"Error: Unable to download the {what} image - {e}")
             return None
     else:
-        print("Error: Could not retrieve the ShakeMap version ID.")
+        logging.error("Error: Could not retrieve the ShakeMap version ID.")
         return None
 
 
@@ -1004,13 +1009,15 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
         [rup_node] = nrml.read(os.path.join(user.testdir, rupture_file)
                                if user.testdir else rupture_file)
     except ExpatError as exc:
-        err = {"status": "failed", "error_msg": str(exc)}
+        err = {"status": "failed",
+               "error_msg": f'Unable to convert the rupture: {exc}'}
         return None, {}, err
     try:
         rup = sourceconverter.RuptureConverter(
             rupture_mesh_spacing=5.).convert_node(rup_node)
     except ValueError as exc:
-        err = {"status": "failed", "error_msg": str(exc)}
+        err = {"status": "failed",
+               "error_msg": f'Unable to convert the rupture: {exc}'}
         return None, {}, err
     rup.tectonic_region_type = '*'
     hp = rup.hypocenter
@@ -1127,6 +1134,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
     usgs_id = dic['usgs_id']
     approach = dic['approach']
     rup = None
+    rupture_issue = None
     if approach == 'provide_rup_params':
         rupdic = dic.copy()
         rupdic.update(rupture_file=rupture_file)
@@ -1139,7 +1147,9 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
         if rupture_file.endswith('.json'):
             rupture_file_xml = gettemp(prefix='rup_', suffix='.xml')
             try:
-                # replacing the input json file with the output xml
+                # replacing the input json file with the output xml if possible
+                # NOTE: in case of failure, returns the input rupture_file (e.g. in case
+                # of a Point rupture)
                 rupture_file = convert_to_openquake_xml(rupture_file, rupture_file_xml)
             except ValueError as exc:
                 err = {"status": "failed", "error_msg": str(exc)}
@@ -1148,6 +1158,9 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
             rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
         elif rupture_file.endswith('.csv'):
             rup, rupdic, err = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
+        elif rupture_file.endswith('.json') and usgs_id != 'FromFile':
+            with open(rupture_file) as f:
+                rup_data = json.load(f)
         if err or usgs_id == 'FromFile':
             return rup, rupdic, err
     assert usgs_id
@@ -1185,6 +1198,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
                 # FIXME approach
                 rup_data, rupture_file = download_shakemap_rupture_data(
                     usgs_id, contents, user)
+            if rupture_file:
                 rupture_file_xml = gettemp(prefix='rup_', suffix='.xml')
                 try:
                     # replacing the input json file with the output xml
@@ -1193,9 +1207,14 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
                 except ValueError as exc:
                     err = {"status": "failed", "error_msg": str(exc)}
                     return rup, rupdic, err
-            rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
-            if not rupture_file and approach in ('use_shakemap_fault_rup_from_usgs',
-                                                 'use_finite_fault_model_from_usgs'):
+                if rupture_file.endswith('.xml'):
+                    rup, rupdic, rupture_issue = _get_rup_dic_from_xml(
+                        usgs_id, user, rupture_file)
+                elif rupture_file.endswith('.json'):
+                    with open(rupture_file) as f:
+                        rup_data = json.load(f)
+            elif approach in ('use_shakemap_fault_rup_from_usgs',
+                              'use_finite_fault_model_from_usgs'):
                 err = {"status": "failed",
                        "error_msg": 'Unable to retrieve rupture geometries'}
                 return None, None, err
@@ -1214,16 +1233,9 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
-    # ftype = rup_data['features'][0]['geometry']['type']
-    # if ftype == 'Point':
-    #     rupdic['msr'] = 'PointMSR'
-    #     rup = build_planar_rupture_from_dict(rupdic)
-    # else:
-    #     rup, err_msg = convert_to_oq_rupture(rup_data)
-    # if rup is None and user.level > 1:  # in parsers_test for us6000jllz
-    #     # NOTE: hiding rupture-related issues to level 1 users
-    #     rupdic['rupture_issue'] = err_msg
-    # in parsers_test for usp0001ccb
+    if rupture_issue and user.level > 1:  # in parsers_test for us6000jllz
+        # NOTE: hiding rupture-related issues to level 1 users
+        rupdic['rupture_issue'] = rupture_issue['error_msg']
     return rup, rupdic, err
 
 
