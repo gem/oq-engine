@@ -51,6 +51,8 @@ from openquake.hazardlib.gsim.nz22.const import (
     theta8s,
 )
 
+BASIN_REGIONS = ["CAS", "JPN", "NZL", "TWN"]
+
 
 def get_basin_term(C, ctx, region):
     """
@@ -61,7 +63,8 @@ def get_basin_term(C, ctx, region):
         Basin depth term (Z2.5 for JPN and CAS, Z1.0 for NZL and TWN)
     """
     # Basin term for Cascadia, Japan, New Zealand and Taiwan
-    assert region in ("CAS", "JPN", "NZL", "TWN")
+    assert region in BASIN_REGIONS
+
     # Get c11, c12 and Z-model (same for interface and inslab events)
     c11 = C[REGION_TERMS_IF[region]["c11"]]
     c12 = C[REGION_TERMS_IF[region]["c12"]]
@@ -247,8 +250,9 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         a1100 = None
         pga1100 = get_mean_values(C_PGA, self.region, 0., trt, m_b,
                                   ctx, a1100, pre_basin=True)
-        pga1100 += (get_basin_term(
-            C_PGA, ctx, self.region) + get_backarc_term(trt, PGA(), ctx))
+        if self.region in BASIN_REGIONS:
+            pga1100 += get_basin_term(C_PGA, ctx, self.region)
+        pga1100 += get_backarc_term(trt, PGA(), ctx)
         pga1100 = np.exp(pga1100)
         # For PGA and SA (T <= 0.1) we need to define PGA on soil to
         # ensure that SA (T) does not fall below PGA on soil
@@ -257,8 +261,9 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
             if ("PGA" in imt.string) or ("SA" in imt.string) and (imt.period <= 0.1):
                 pga_soil = get_mean_values(
                     C_PGA, self.region, 0., trt, m_b, ctx, pga1100, pre_basin=True)
-                pga_soil += get_basin_term(
-                    C_PGA, ctx, self.region) + get_backarc_term(trt, PGA(), ctx)
+                if pga1100.any() and self.region in BASIN_REGIONS:
+                    pga_soil += get_basin_term(C_PGA, ctx, self.region)
+                pga_soil += get_backarc_term(trt, PGA(), ctx)
                 break
 
         for m, imt in enumerate(imts):
@@ -275,16 +280,19 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
                 mean[m] = get_mean_values(C, self.region, imt.period, trt,
                                           m_break, ctx, pga1100, pre_basin=True)
-                mean[m] += (get_basin_term(
-                    C, ctx, self.region) + get_backarc_term(trt, imt, ctx))
+                if pga1100.any() and self.region in BASIN_REGIONS:
+                    mean[m] += get_basin_term(C, ctx, self.region)
+                mean[m] += get_backarc_term(trt, imt, ctx)
                 idx = mean[m] < pga_soil
                 mean[m][idx] = pga_soil[idx]
             else:
                 # For PGV and Sa (T > 0.1 s)
                 mean[m] = get_mean_values(C, self.region, imt.period, trt, m_break,
                                           ctx, pga1100, pre_basin=True)
-                mean[m] += (get_basin_term(
-                    C, ctx, self.region) + get_backarc_term(trt, imt, ctx))
+                if pga1100.any() and self.region in BASIN_REGIONS:
+                    mean[m] += get_basin_term(C, ctx, self.region)
+                mean[m] += get_backarc_term(trt, imt, ctx)
+
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
                 sigma_mu_adjust = get_sigma_mu_adjustment(

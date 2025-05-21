@@ -264,26 +264,25 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
     vs30 = ctx.vs30
 
     if v1180 is None:
-        z1pt0 = ctx.z1pt0
+        z10 = copy.deepcopy(ctx.z1pt0)
     else:
         vs30 = v1180
         # fake Z1.0 - Since negative it will be replaced by the default Z1.0
         # for the corresponding region
-        z1pt0 = np.ones_like(vs30) * -1
+        z10 = np.ones_like(vs30) * -1
 
     # Get USGS basin scaling factor if required
     if usgs_bs:
-        usgs_baf = _get_z1pt0_usgs_basin_scaling(z1pt0, imt.period)
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(z10, imt.period)
     else:
         usgs_baf = np.ones(len(vs30))
 
     # Get reference z1pt0
     z1ref = _get_z1pt0ref(region, vs30) # in km
     # Get z1pt0
-    z10 = copy.deepcopy(z1pt0)
     z10 /= METRES_PER_KM # convert site z1pt0 to km
     # This is used for the calculation of the motion on reference rock
-    idx = z1pt0 < 0
+    idx = z10 < 0
     z10[idx] = z1ref[idx] # -999 z1pt0 values in site model updated here
     factor = np.log((z10 + 0.01) / (z1ref + 0.01))
     
