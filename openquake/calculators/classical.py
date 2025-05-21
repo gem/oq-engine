@@ -246,7 +246,7 @@ def fast_mean(pgetter, monitor):
 
 
 def postclassical(pgetter, wget, hstats, individual_rlzs,
-                  max_sites_disagg, amplifier, labels, monitor):
+                  max_sites_disagg, amplifier, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
     :param wget: function (weights[:, :], imt) -> weights[:]
@@ -254,7 +254,6 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
     :param individual_rlzs: if True, also build the individual curves
     :param max_sites_disagg: if there are less sites than this, store rup info
     :param amplifier: instance of Amplifier or None
-    :param labels: full array of label indices, one per site
     :param monitor: instance of Monitor
     :returns: a dictionary kind -> MapArray
 
@@ -306,8 +305,8 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc[:, r].reshape(M, L1))
             if hstats:
-                if len(labels):
-                    weights = pgetter.weights[labels[sid]]
+                if len(pgetter.labels):
+                    weights = pgetter.weights[pgetter.labels[sid]]
                 else:
                     weights = pgetter.weights[0]
                 for s, (statname, stat) in enumerate(hstats.items()):
@@ -783,12 +782,8 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             dstore = self.datastore.parent
         wget = self.full_lt.wget
-        if oq.site_labels:
-            labels = self.sitecol.label
-        else:
-            labels = ()
         allargs = [(getter, wget, hstats, oq.individual_rlzs,
-                    oq.max_sites_disagg, self.amplifier, labels)
+                    oq.max_sites_disagg, self.amplifier)
                    for getter in getters.map_getters(dstore, self.full_lt)]
         if not config.directory.custom_tmp and not allargs:  # case_60
             logging.warning('No rates were generated')
