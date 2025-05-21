@@ -62,6 +62,8 @@ SUPPORTED_REGIONS = ["GLO",
                      "USA-AK", "CAS", "SEA", 
                      "CAM", "JPN", "NZL", "SAM", "TWN"]
 
+BASIN_REGIONS = ["CAS", "JPN", "NZL", "TWN", "SEA"]
+
 # Define inputs according to 3-letter codes
 REGION_TERMS_IF = {
     # Global - to be used in any other subduction region
@@ -454,7 +456,8 @@ def _apply_m9(period, brt, z_values):
     return brt
 
 
-def _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term):
+def _get_basin_term(C, ctx, region, imt, usgs_bs=False,
+                    m9_basin_term=False):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -463,7 +466,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term):
         Basin depth term (Z2.5 for JPN, CAS and SEA, Z1.0 for NZL and TWN)
     """
     # Basin term defined Cascadia, Japan, New Zealand, Taiwan, Seattle
-    assert region in ("CAS", "JPN", "NZL", "TWN", "SEA")
+    assert region in BASIN_REGIONS
 
     # If z2pt5 region retrieve ref depth values, infer any missing
     # z2pt5 in sites and retrieve usgs basin scaling factor if req
@@ -505,7 +508,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term):
         CZ = Z_MODEL[region]
 
         vs30 = ctx.vs30
-        if region in ("NZL", "TWN"):
+        if region in ("TWN", "NZL"):
             z1pt0 = copy.deepcopy(ctx.z1pt0)
             z_values = _infer_z(z1pt0, ctx.vs30, CZ, region) # Infer z1pt0
         elif region not in ("CAS", "JPN"):  # Already retrieved (potentially
@@ -534,7 +537,8 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term):
 
 
 def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
-                    m9_basin_term=False, usgs_bs=False):
+                    m9_basin_term=False, usgs_bs=False,
+                    pre_basin=False):
     """
     Returns the mean ground values for a specific IMT
 
@@ -547,6 +551,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
         a1100 = np.zeros(vs30.shape)
     else:
         vs30 = ctx.vs30.copy()
+
     # Get the mean ground motions
     mean = (get_base_term(C, trt, region) +
             get_magnitude_scaling_term(C, trt, m_b, ctx.mag) +
@@ -557,7 +562,7 @@ def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
-    if a1100.any() and region in ("CAS", "JPN", "NZL", "TWN", "SEA"):
+    if a1100.any() and region in BASIN_REGIONS and pre_basin is False:
 
         # Get GMM's own basin term
         fb = _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term)
@@ -764,13 +769,13 @@ class KuehnEtAl2020SInter(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30', }
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and depth-to-top-of-rupture
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     #: Required distance measure is Rrup
-    REQUIRES_DISTANCES = {'rrup', }
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Defined for a reference velocity of 1100 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
