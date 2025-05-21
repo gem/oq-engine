@@ -57,7 +57,7 @@ def add_alias(name, cls, **kw):
     Add a GSIM alias to both gsim_aliases and the registry.
     """
     gsim_aliases[name] = toml.dumps({cls.__name__: kw})
-    registry[name] = cls
+    registry[name] = lambda: cls(**kw)
 
 
 class NotVerifiedWarning(UserWarning):
@@ -440,3 +440,22 @@ class GMPE(GroundShakingIntensityModel):
         arrays and returning None.
         """
         raise NotImplementedError
+
+
+class Dummy(GMPE):
+    """
+    A fake GMPE doing nothing
+    """
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+    REQUIRES_SITES_PARAMETERS = set()
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
+    REQUIRES_DISTANCES = {'rrup'}
+
+    def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
+        sig[:] = .005
+        tau[:] = .003
+        phi[:] = .004

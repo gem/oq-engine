@@ -18,7 +18,6 @@
 """
 Module exports :class:`NGAEastAUS23Test`
 """
-import pathlib
 import unittest
 import numpy as np
 
@@ -31,9 +30,6 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
     hashash2020_non_linear_scaling)
 
 
-HERE = pathlib.Path(__file__).parent
-
-
 class NGAEastAUS23Test(unittest.TestCase):
 
     def test01(self):
@@ -44,8 +40,6 @@ class NGAEastAUS23Test(unittest.TestCase):
 
         # Data for the original GMM
         fname = "NGA-East_Backbone_Model.geometric.3000.mps.hdf5"
-        path = HERE / ".." / ".." / ".." / "gsim" / "aus23"
-        fname = str(path / fname)
 
         # Create context
         ctx = RuptureContext()
@@ -55,7 +49,7 @@ class NGAEastAUS23Test(unittest.TestCase):
         wimp = 0.8
 
         # Table GMM
-        tgmm = valid.gsim(f'[GMPETable]\ngmpe_table="{fname}"')
+        tgmm = valid.gsim(f'[NGAEastAUS2023GMPE]\ntable_relpath="{fname}"')
 
         # Modifiable GMM
         param = {'ref_vs30': ref_vs30, 'wimp': wimp, 'usgs': False}
@@ -104,8 +98,6 @@ class NGAEastAUS23Test(unittest.TestCase):
 
         # Data for the original GMM
         fname = "NGA-East_Backbone_Model.geometric.3000.mps.hdf5"
-        path = HERE / ".." / ".." / ".." / "gsim" / "aus23"
-        fname = str(path / fname)
 
         # Create context
         ctx = RuptureContext()
@@ -115,7 +107,7 @@ class NGAEastAUS23Test(unittest.TestCase):
         wimp = 0.8
 
         # Table GMM
-        tgmm = valid.gsim(f'[GMPETable]\ngmpe_table="{fname}"')
+        tgmm = valid.gsim(f'[NGAEastAUS2023GMPE]\ntable_relpath="{fname}"')
 
         # Modifiable GMM
         param = {'ref_vs30': ref_vs30, 'wimp': wimp, 'usgs': True}
@@ -153,3 +145,40 @@ class NGAEastAUS23Test(unittest.TestCase):
 
         # Compute values on soil
         np.testing.assert_allclose(mean_comp, expected)
+
+    def test03(self):
+        """
+        Tests the calculation with 1 site
+        """
+
+        # Data for the original GMM
+        fname = "NGA-East_Backbone_Model.geometric.3000.mps.hdf5"
+
+        # Create context
+        ctx = RuptureContext()
+        mags = ['6.00']
+        ctx.mag = 6.0
+        ref_vs30 = 3000
+        wimp = 0.8
+
+        # Table GMM
+        tgmm = valid.gsim(f'[NGAEastAUS2023GMPE]\ntable_relpath="{fname}"')
+
+        # Modifiable GMM
+        param = {'ref_vs30': ref_vs30, 'wimp': wimp, 'usgs': False}
+        mgmm = valid.modified_gsim(tgmm, ceus2020_site_term=param)
+
+        # Compute values on rock for PGA
+        ctx.rjb = ctx.rrup = [20]
+        ctx.vs30 = np.ones_like(ctx.rjb) * ref_vs30
+        ctx.sids = np.arange(len(ctx.vs30))
+        imts = [PGA()]
+        [_mean_r], [_sigma_r], _, _ = contexts.get_mean_stds(
+            tgmm, ctx, [imts[0]], mags=mags)
+
+        # Computed values
+        [_mean_comp], [_sigma_comp], _, _ = contexts.get_mean_stds(
+            mgmm, ctx, [imts[0]], mags=mags)
+
+        # Compute values on soil
+        # np.testing.assert_allclose(mean_comp, expected)

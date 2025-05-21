@@ -40,7 +40,7 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
-    RuptureProxy, EBRupture, get_ruptures)
+    RuptureProxy, EBRupture, get_ruptures_aw)
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
@@ -252,9 +252,6 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    if isinstance(dstore, str):
-        # when passing ruptures.hdf5
-        dstore = hdf5.File(dstore)
     oq = cmaker.oq
     rmon = monitor('reading sites and ruptures', measuremem=True)
     fmon = monitor('instantiating GmfComputer', measuremem=False)
@@ -262,12 +259,17 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
-    with dstore, rmon:
+    with rmon:
         srcfilter = SourceFilter(
             sitecol.complete, oq.maximum_distance(cmaker.trt))
-        dset = dstore['rupgeoms']
-        for proxy in proxies:
-            proxy.geom = dset[proxy['geom_id']]
+        if isinstance(dstore, str):
+            # when passing ruptures.hdf5
+            proxies = get_proxies(dstore, proxies)
+        else:
+            with dstore:
+                dset = dstore['rupgeoms']
+                for proxy in proxies:
+                    proxy.geom = dset[proxy['geom_id']]
     for block in block_splitter(proxies, 20_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
@@ -317,30 +319,37 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
                 rlzs_by_gsim[model, trt_smr] = rbg
         dstore['full_lt'] = full_lt  # saving the last lt (hackish)
         r.copy('events', dstore.hdf5) # saving the events
-        logging.info('Selecting the ruptures close to the sites')
-        rups = close_ruptures(r['ruptures'][:], sitecol)
+        manysites = len(sitecol) > oq.max_sites_disagg
+        if manysites:
+            logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
+            rups = r['ruptures'][:]
+        else:
+            logging.info('Selecting the ruptures close to the sites')
+            rups = close_ruptures(r['ruptures'][:], sitecol)
         dstore['ruptures'] = rups
         R = full_lt.num_samples
         dstore['weights'] = numpy.ones(R) / R
     rups_dic = group_array(rups, 'model', 'trt_smr')
     totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
+    logging.info(f'{maxw=}')
     extra = sitecol.array.dtype.names
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
-    logging.info('Computing the GMFs')
     for (model, trt_smr), rups in rups_dic.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
-        proxies = get_proxies(ruptures_hdf5, rups)
         mags = numpy.unique(numpy.round(rups['mag'], 2))
         oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        for block in block_splitter(proxies, maxw * 1.02, rup_weight):
+        for block in block_splitter(rups, maxw * 1.02, rup_weight):
+            if manysites:
+                logging.info('%s: sending %d ruptures', model, len(block))
             args = block, cmaker, sitecol, (None, None), ruptures_hdf5
             smap.submit(args)
+    logging.info('Computing the GMFs')
     return smap
 
 
@@ -676,7 +685,7 @@ class EventBasedCalculator(base.HazardCalculator):
         gsim_lt = read_gsim_lt(oq)
         trts = list(gsim_lt.values)
         if (str(gsim_lt.branches[0].gsim) == '[FromFile]'
-                and 'gmfs' not in oq.inputs):
+                and 'gmfs' not in oq.inputs and not oq.shakemap_uri):
             raise InvalidFile('%s: missing gsim or gsim_logic_tree_file' %
                               oq.inputs['job_ini'])
         G = gsim_lt.get_num_paths()
@@ -710,7 +719,7 @@ class EventBasedCalculator(base.HazardCalculator):
                     'The rupture is too far from the sites! Please check the '
                     'maximum_distance and the position of the rupture')
         elif oq.inputs['rupture_model'].endswith('.csv'):
-            aw = get_ruptures(oq.inputs['rupture_model'])
+            aw = get_ruptures_aw(oq.inputs['rupture_model'])
             if len(gsim_lt.values) == 1:  # fix for scenario_damage/case_12
                 aw['trt_smr'] = 0  # a single TRT
             if oq.calculation_mode.startswith('scenario'):

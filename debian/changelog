@@ -1,4 +1,87 @@
   [Michele Simionato]
+  * Avoided out of memory in calculations starting from the global SES
+
+  [Lana Todorovic]
+  * Updated units of slope (in m/m) in site model.
+
+  [Michele Simionato]
+  * Improved the validation of area source polygons
+  * Internal: added method `CompositeLogicTree.apply_all`
+  * Fixed downloading of uncertainty.xml in OQImpact calculations
+
+  [Michele Simionato, Paolo Tormene]
+  * Added a route /v1/calc/XXX/job_zip and a button to download the archive
+    from the WebUI, visible only in OQImpact for level 2 users
+  * Fixed an error in `oq plot examples`
+
+  [Baran Güryuva, Christopher Brooks]
+  * Implemented the EMME24 backbone GMC for crustal
+    earthquakes (emme24.py)
+
+  [Marco Pagani, Michele Simionato]
+  * Added uncertainties for area geometry and seismogenic depths
+
+  [Michele Simionato]
+  * Added a check on duplicate branches in the source model logic tree
+  * Internal: added methods `CompositeLogicTree.to_node` and
+    `CompositeLogicTree.to_nrml`
+
+  [Paolo Tormene, Michele Simionato]
+  * Added extractor for 'damages-stats'
+
+  [Kendra Johnson]
+  * Updated the mosaic geometries for AELO year 4
+
+  [Matteo Nastasi]
+  * Allow free mapping between standlone apps and their url path prefix
+    (regardless of their name)
+
+  [Claudia Mascandola]
+  * Added GMPEs of ambraseys_1996 and sabetta_pugliese_1996
+
+  [Graeme Weatherill, Michele Simionato]
+  * Implemented the MacedoEtAl2019SInter and MacedoEtAl2019SSlab conditional
+    GMMs
+
+  [Anirudh Rao]
+  * In the stations parser, make sure to skip all "vertical" ('z' or 'Z') or
+    "up" ('u' or 'U') components when extracting the max horizontal component
+
+  [Manuela Villani]
+  * Implementation of ASCE design parameters Sd, Sm in the AELO engine
+
+  [Paolo Tormene]
+  * Added to oq-impact the possibility to upload a rupture in csv format
+  * Added to oq-impact the possibility to choose between different ShakeMap
+    versions for the given USGS identifier
+  * Added to oq-impact the possibility to edit the preset job description
+
+  [Michele Simionato]
+  * Internal: added utility `get_ruptures(file_csv)`
+  * Optimized memory consumption in conditioned GMFs calculations
+
+  [Anirudh Rao]
+  * Sort observed imtls and imts and ensure all of the target imts go
+    into the context maker for the target sites in the conditioned gmfs
+    calculator - helps in debugging mode to prevent accidental
+    reordering of the imts
+
+ [Michele Simionato]
+  * Managed better the low hazard case in AELO calculations
+  * Optimized get_taxidx, thus making reading the USA exposure 10x faster
+  * Internal: restored the view portfolio_damage
+  * Too many post_classical tasks were generated with an artificially large
+    parameter `max_sites_disagg`
+  * Internal: added a flag --wfp to the script `utils/build_global_exposure`
+
+  [Paolo Tormene]
+  * Added `oq plot "sites?"` and added to the AELO advanced outputs page a
+    button to visualize the site of interest
+
+  [Michele Simionato]
+  * Implemented `gsim_aliases` as thunks
+  * Forced the consequence files to contain risk IDs and removed
+    utils/fix_consequences, now useless
   * OQImpact: now aggregating by ID_2 and not ID_1
   * Removed the --config-file option from the oq engine command
   * Fixed numeric error in high intensity hazard curves produced by
@@ -31,6 +114,8 @@
 
   [Marco Pagani, Valeria Cascone]
   * Added an get_width and get_length methods to Strasser et al. (2010) MSR
+  * Added methods get_length and get_width to the Thingbaijam et al. scaling
+    relationship
   * Fixed a bug in the Thingbaijam et al. (2017) MSR
 
   [Michele Simionato]
@@ -154,7 +239,7 @@ python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
   * Extended the ShakeMap parser to read the intensities associated to SA(0.6)
   * Fixed a bug while exporting realizations.csv for scenario calculations
   * Added `webapi.calc_timeout` configuration parameter
-  * Reduced `conditioned_gmf_gb` to 8 GB by default
+  * Reduced `conditioned_gmfs_gb` to 8 GB by default
   * Parallelized `get_mean_covs` when conditioning the GMFs
 
   [Christopher Brooks]
@@ -3490,7 +3575,7 @@ python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
   [Daniele Viganò]
   * `celery-status` script converted into `oq celery status` command
   * Removed Django < 1.10 backward compatibility
-  * Updated Python dependices (numpy 1.14, scipy 1.0.1,
+  * Updated Python dependencies (numpy 1.14, scipy 1.0.1,
     Django 1.10+, Celery 4+)
 
   [Michele Simionato]

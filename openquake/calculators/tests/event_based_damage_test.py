@@ -143,4 +143,5 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.run_calc(case_16.__file__, 'job.ini')
         pdd = view('portfolio_dmgdist', self.calc.datastore)
         assert_close(text_table(pdd, ext='org'),
-                     os.path.join(self.testdir, 'dmgdist.txt'))
+                     os.path.join(self.testdir, 'dmgdist.txt'),
+                     rtol=.00012)

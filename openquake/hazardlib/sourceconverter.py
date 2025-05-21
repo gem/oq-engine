@@ -905,12 +905,13 @@ class SourceConverter(RuptureConverter):
         :param node: a node with tag areaGeometry
         :returns: a :class:`openquake.hazardlib.source.AreaSource` instance
         """
-        geom = node.areaGeometry
-        coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
-        polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
-        msr = ~node.magScaleRel
-        area_discretization = geom.attrib.get(
-            'discretization', self.area_source_discretization)
+        with context(self.fname, node):
+            geom = node.areaGeometry
+            coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
+            polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
+            msr = ~node.magScaleRel
+            area_discretization = geom.attrib.get(
+                'discretization', self.area_source_discretization)
         if area_discretization is None:
             raise ValueError(
                 'The source %r has no `discretization` parameter and the job.'

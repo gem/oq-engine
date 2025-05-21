@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import ast
 import time
 import gzip
@@ -38,7 +39,7 @@ from openquake.calculators.extract import (
 from openquake.calculators.postproc.plots import (
     plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d)
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites)
 
 
 ZOOM_MARGIN = 8
@@ -61,6 +62,9 @@ def getparams(what):
 
 
 def make_figure_magdist(extractors, what):
+    """
+    $ oq plot "magdist?"
+    """
     plt = import_plt()
     _fig, ax = plt.subplots()
     [ex] = extractors
@@ -1081,7 +1085,7 @@ def make_figure_rupture(extractors, what):
     $ oq plot "rupture?"
 
     extracts the rupture from an already performed scenario calculation;
-    
+
     $ oq plot "rupture?mag=6&lon=10&lat=45&dep=10&rake=45&msr=WC1994"
 
     builds a new planar rupture.
@@ -1104,6 +1108,16 @@ def make_figure_rupture_3d(extractors, what):
     dstore = ex.dstore
     ebr = get_ebrupture(dstore, rup_id=0)
     return plot_rupture_3d(ebr.rupture)
+
+
+def make_figure_sites(extractors, what):
+    """
+    $ oq plot "sites?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_sites(dstore)
+    return plt
 
 
 def plot_wkt(wkt_string):
@@ -1171,7 +1185,8 @@ def main(what,
         for k, v in globals().items():
             if k.startswith('make_figure_'):
                 help_msg.append(v.__doc__)
-        raise SystemExit(''.join(help_msg))
+        print(''.join(help_msg), file=sys.stderr)
+        return
     if '?' not in what:
         raise SystemExit('Missing ? in %r' % what)
     prefix, rest = what.split('?', 1)

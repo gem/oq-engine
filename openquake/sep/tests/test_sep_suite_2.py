@@ -14,6 +14,7 @@ from openquake.sep.landslide.displacement import (
 
 from openquake.sep.landslide.probability import (
     nowicki_jessee_2018,
+    allstadt_etal_2022_b,
 )
 
 from openquake.sep.classes import (
@@ -76,16 +77,16 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
     def test_infinite_slope_fs(self):
         factor_of_safety = np.array(
             [
-                17.74377843,
-                15.24124039,
-                73.15947545,
-                0.78146658,
-                27.54726138,
-                9.90996951,
-                2.789039,
-                41.66518694,
-                19.55433591,
-                14.75323389,
+                17.743779, 
+                15.241239, 
+                73.159459,  
+                0.781467, 
+                27.547261,  
+                9.90997 ,
+                2.789039, 
+                41.665187, 
+                19.554335, 
+                14.753234
             ]
         )
         np.testing.assert_array_almost_equal(
@@ -95,16 +96,16 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
     def test_critical_accel(self):
         ca = np.array(
             [
-                5.53795977,
-                6.45917414,
-                5.791588,
-                0.0001,
-                14.81513269,
-                5.26990181,
-                4.20417316,
-                135.89284561,
-                6.40149393,
-                6.28627584,
+                0.564522,
+                0.658428,
+                0.590376,
+                0.000100,
+                1.510207,
+                0.537197,
+                0.428560,
+                13.852482,
+                0.652548,
+                0.640803,
             ]
         )
         np.testing.assert_array_almost_equal(self.sites["crit_accel"], ca)
@@ -113,13 +114,54 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
         self.sites["newmark_disp"] = jibson_2007_model_b(
             pga=self.pga, crit_accel=self.sites["crit_accel"], mag=7.5
         )
+        #breakpoint()
         nd = np.array(
-            [0.0, 0.0, 0.0, 2.19233517, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            [0.0, 7.899399e-04, 0.0, 2.192335e+00, 0.0, 0.0, 0.0, 0.0, 9.145443e-06, 9.660795e-05]
         )
         np.testing.assert_array_almost_equal(self.sites["newmark_disp"], nd)
 
     def test_nowicki_jessee_18(self):
         prob_ls, coverage = nowicki_jessee_2018(
+            pgv=self.pgv,
+            slope=self.sites["slope"],
+            lithology=self.sites["lithology"],
+            landcover=self.sites["landcover"],
+            cti=self.sites["cti"],
+        )
+        zlp = np.array(
+            [
+                0.011672,
+                0.052064,
+                0.057599,
+                0.888425,
+                0.191497,
+                0.190742,
+                0.48066,
+                0.897942,
+                0.207814,
+                0.17799,
+            ]
+        )
+        cls = np.array(
+            [
+                0.053605,
+                0.065753,
+                0.067576,
+                8.119564,
+                0.126543,
+                0.126111,
+                0.484645,
+                8.884508,
+                0.136195,
+                0.119038,
+            ]
+        )
+        np.testing.assert_array_almost_equal(prob_ls, zlp)
+        np.testing.assert_array_almost_equal(coverage, cls)
+
+
+    def test_allstadt_etal_2022_b(self):
+        prob_ls, coverage = allstadt_etal_2022_b(
             pga=self.pga,
             pgv=self.pgv,
             slope=self.sites["slope"],
@@ -143,9 +185,9 @@ class CaliSmallLandslideTestCase(unittest.TestCase):
         )
         cls = np.array(
             [
-                0.0,
+                0,
                 0.172675,
-                0.0,
+                0,
                 20.709538,
                 0.953252,
                 0.946616,

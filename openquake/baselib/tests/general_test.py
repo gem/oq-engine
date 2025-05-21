@@ -229,7 +229,7 @@ class RandomChoiceTestCase(unittest.TestCase):
 
 
 def test_get_duplicates():
-    dtlist = [('lon', float), ('lat', float), (('id', numpy.string_, 3))]
+    dtlist = [('lon', float), ('lat', float), (('id', numpy.bytes_, 3))]
     lst = [(2.1, 1.0, 's01'), (2.2, 1.0, 's02'), (2.1, 1.0, 's03')]
     arr = numpy.array(lst, dtlist)
     dic = get_duplicates(arr, 'lon', 'lat')

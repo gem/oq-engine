@@ -27,7 +27,8 @@ import numpy
 from openquake.baselib import hdf5, general, InvalidFile
 from openquake.hazardlib import (
     geo, site, nrml, sourceconverter, gsim_lt, logictree, contexts, valid)
-from openquake.hazardlib.source.rupture import EBRupture, get_ruptures, get_ebr
+from openquake.hazardlib.source.rupture import (
+    EBRupture, get_ruptures_aw, get_ebr)
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.source_reader import get_csm
 
@@ -101,7 +102,7 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         return ebrs
 
     assert fname.endswith('.csv'), fname
-    aw = get_ruptures(fname)
+    aw = get_ruptures_aw(fname)
     ebrs = []
     for i, rec in enumerate(aw.array):
         ebr = get_ebr(rec, aw.geoms[i], aw.trts[rec['trt_smr']])
@@ -319,8 +320,8 @@ class Input(object):
                 for ebr in grp:
                     ebr.n_occ = ngmfs * num_rlzs
                     ebr.trt_smrs = (ebr.trt_smr,)
-
-        return groups, contexts.get_cmakers(groups, self.full_lt, self.oq)
+        trt_smrs = [group[0].trt_smrs for group in groups]
+        return groups, contexts.get_cmakers(trt_smrs, self.full_lt, self.oq)
 
     @property
     def cmaker(self):

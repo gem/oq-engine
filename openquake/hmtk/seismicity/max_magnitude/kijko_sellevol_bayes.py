@@ -51,7 +51,7 @@ from observed seismicity with uncertain b-value
 
 import numpy as np
 from math import fabs
-from scipy.integrate import quadrature
+from scipy.integrate import quad
 from openquake.hmtk.seismicity.max_magnitude.base import (
     BaseMaximumMagnitude,
     MAX_MAGNITUDE_METHODS,
@@ -139,7 +139,7 @@ class KijkoSellevolBayes(BaseMaximumMagnitude):
             ldelt = (1.0 / (1.0 - (rval**qval))) ** neq
             delta = (
                 ldelt
-                * quadrature(
+                * quad(
                     self._ksb_intfunc, mmin, mmax, args=(neq, mmin, pval, qval)
                 )[0]
             )

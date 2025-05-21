@@ -16,12 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import copy
 import operator
 import collections
 import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
 from openquake.commonlib.calc import get_proxies
@@ -146,45 +148,53 @@ def get_pmaps_gb(dstore, full_lt=None):
     else:
         trt_smrs = dstore['trt_smrs'][:]
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
-    gids = full_lt.get_gids(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
-    return max_gb, trt_rlzs, gids
+    return max_gb, trt_rlzs
 
 
-def get_num_chunks(dstore):
+def get_num_chunks_sites(dstore):
     """
-    :returns: the number of postclassical tasks to generate.
+    :returns: (number of postclassical tasks to generate, number of sites)
 
     It is 5 times the number of GB required to store the rates.
     """
-    msd = dstore['oqparam'].max_sites_disagg
+    N = len(dstore['sitecol/sids'])
+    max_chunks = min(dstore['oqparam'].max_sites_disagg, N)
     try:
         req_gb = dstore['source_groups'].attrs['req_gb']
     except KeyError:
-        return msd
-    chunks = max(int(5 * req_gb), msd)
-    return chunks
+        return max_chunks, N
+    chunks = max(int(5 * req_gb), max_chunks)
+    return chunks, N
 
-    
+
 def map_getters(dstore, full_lt=None, disagg=False):
     """
     :returns: a list of pairs (MapGetter, weights)
     """
     oq = dstore['oqparam']
     # disaggregation is meant for few sites, i.e. no tiling
-    N = len(dstore['sitecol/sids'])
-    chunks = get_num_chunks(dstore)
-    if disagg and N > chunks:
-        raise ValueError('There are %d sites but only %d chunks' % (N, chunks))
+    n, N = get_num_chunks_sites(dstore)
+    if disagg and N > n:
+        raise ValueError('There are %d sites but only %d chunks' % (N, n))
 
+    # full_lt is None in classical_risk, classical_damage
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
-    _req_gb, trt_rlzs, _gids = get_pmaps_gb(dstore, full_lt)
+    _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
     if oq.fastmean and not disagg:
-        weights = dstore['gweights'][:]
+        weights = numpy.concatenate(
+            [cm.wei for cm in read_cmakers(dstore)])
         trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
     else:
-       weights = full_lt.weights
+        attrs = vars(full_lt)
+        weights = [full_lt.weights]
+        for label in oq.site_labels:
+            flt = copy.copy(full_lt)
+            flt.__dict__.update(attrs)
+            flt.gsim_lt = dstore['gsim_lt' + label]
+            flt.init()
+            weights.append(full_lt.weights)
     fnames = [dstore.filename]
     try:
         scratch_dir = dstore.hdf5.attrs['scratch_dir']
@@ -195,9 +205,11 @@ def map_getters(dstore, full_lt=None, disagg=False):
             if f.endswith('.hdf5'):
                 fnames.append(os.path.join(scratch_dir, f))
     out = []
-    for chunk in range(chunks):
+    for chunk in range(n):
         getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
         getter.weights = weights
+        if oq.site_labels:
+            getter.labels = dstore['sitecol'].label
         out.append(getter)
     return out
 
@@ -251,7 +263,19 @@ class CurveGetter(object):
                 r0[:, rlz] += rates
         return to_probs(r0)
 
-    
+
+class DeltaRatesGetter(object):
+    """
+    Read the delta rates from an aftershock datastore
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+
+    def __call__(self, src_id):
+        with self.dstore.open('r') as dstore:
+            return dstore['delta_rates'][src_id]
+
+
 class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
@@ -266,6 +290,7 @@ class MapGetter(object):
         self.poes = oq.poes
         self.use_rates = oq.use_rates
         self.eids = None
+        self.labels = ()  # overridden in case of labels
         self._map = {}
 
     @property
@@ -354,10 +379,14 @@ def get_ebruptures(dstore):
     """
     ebrs = []
     trts = list(dstore['full_lt/gsim_lt'].values)
-    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
-        trt = trts[trt_smr // TWO24]
-        for proxy in get_proxies(dstore.filename, slice(start, stop)):
-            ebrs.append(proxy.to_ebr(trt))
+    if 'trt_smr_start_stop' in dstore:  # regular case
+        for trt_smr, start, stop in dstore['trt_smr_start_stop']:
+            trt = trts[trt_smr // TWO24]
+            for proxy in get_proxies(dstore.filename, slice(start, stop)):
+                ebrs.append(proxy.to_ebr(trt))
+    else:  # OQImpact calculations, I have no test for this :-(
+        for proxy in get_proxies(dstore.filename, slice(None)):
+            ebrs.append(proxy.to_ebr(trts[0]))
     return ebrs
 
 
