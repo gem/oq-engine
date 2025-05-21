@@ -195,7 +195,7 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
     """
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -281,7 +281,7 @@ class CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014(AbrahamsonEtAl2014):
 
     See also header in CanadaSHM6_ActiveCrust.py
     """
-    REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30'}
+    REQUIRES_SITES_PARAMETERS = {'vs30measured', 'vs30', 'z1pt0'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
