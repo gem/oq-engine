@@ -255,6 +255,169 @@ def calculate_strike_and_dip(vertices):
     return strike, dip
 
 
+def add_point_elements(nrml, metadata, coordinates):
+    rupture = SubElement(nrml, "pointRupture")
+    magnitude = SubElement(rupture, "magnitude")
+    magnitude.text = str(metadata["mag"])
+    SubElement(
+        rupture,
+        "hypocenter",
+        {
+            "lon": str(coordinates[0]),
+            "lat": str(coordinates[1]),
+            "depth": str(coordinates[2]),
+        },
+    )
+
+
+def add_single_and_multi_plane_elements(nrml, metadata, polygons):
+    rupture = (
+        SubElement(nrml, "singlePlaneRupture")
+        if len(polygons) == 1
+        else SubElement(nrml, "multiPlanesRupture")
+    )
+    magnitude = SubElement(rupture, "magnitude")
+    magnitude.text = str(metadata["mag"])
+
+    rake = SubElement(rupture, "rake")
+    rake.text = str(metadata.get("rake", 0))
+
+    SubElement(
+        rupture,
+        "hypocenter",
+        {
+            "lon": str(metadata["lon"]),
+            "lat": str(metadata["lat"]),
+            "depth": str(metadata["depth"]),
+        },
+    )
+
+    for polygon in polygons:
+        # Check if the last vertex is identical to the first
+        # (closing the polygon)
+        if polygon[-1] == polygon[0]:
+            # Discard the last vertex
+            vertices = polygon[:-1]
+        else:
+            vertices = polygon
+
+        sorted_vertices = sort_vertices(vertices)
+
+        strike, dip = calculate_strike_and_dip(sorted_vertices)
+
+        planar_surface = SubElement(
+            rupture,
+            "planarSurface",
+            {
+                "strike": f"{strike:.2f}",
+                "dip": f"{dip:.2f}",
+            },
+        )
+
+        # Assign vertices based on depth
+        SubElement(
+            planar_surface,
+            "topLeft",
+            {
+                "lon": str(sorted_vertices[0][0]),
+                "lat": str(sorted_vertices[0][1]),
+                "depth": str(sorted_vertices[0][2]),
+            },
+        )
+        SubElement(
+            planar_surface,
+            "topRight",
+            {
+                "lon": str(sorted_vertices[1][0]),
+                "lat": str(sorted_vertices[1][1]),
+                "depth": str(sorted_vertices[1][2]),
+            },
+        )
+        SubElement(
+            planar_surface,
+            "bottomRight",
+            {
+                "lon": str(sorted_vertices[2][0]),
+                "lat": str(sorted_vertices[2][1]),
+                "depth": str(sorted_vertices[2][2]),
+            },
+        )
+        SubElement(
+            planar_surface,
+            "bottomLeft",
+            {
+                "lon": str(sorted_vertices[3][0]),
+                "lat": str(sorted_vertices[3][1]),
+                "depth": str(sorted_vertices[3][2]),
+            },
+        )
+
+
+def add_complex_fault_elements(nrml, metadata, polygons):
+    rupture = SubElement(nrml, "complexFaultRupture")
+    magnitude = SubElement(rupture, "magnitude")
+    magnitude.text = str(metadata["mag"])
+
+    rake = SubElement(rupture, "rake")
+    rake.text = str(metadata.get("rake", 0))
+
+    SubElement(
+        rupture,
+        "hypocenter",
+        {
+            "lon": str(metadata["lon"]),
+            "lat": str(metadata["lat"]),
+            "depth": str(metadata["depth"]),
+        },
+    )
+
+    for polygon in polygons:
+        geometry = SubElement(rupture, "complexFaultGeometry")
+        # Split the polygon into top and bottom edges based on depth
+        sorted_vertices = sorted(polygon[:-1], key=lambda v: v[2])
+        mid_index = len(sorted_vertices) // 2
+        top_edge_vertices = sorted_vertices[:mid_index]
+        bottom_edge_vertices = sorted_vertices[mid_index:][::-1]
+
+        # Create faultTopEdge
+        indent_str = "\n            "
+        fault_top_edge = SubElement(geometry, "faultTopEdge")
+        top_line_string = SubElement(fault_top_edge, "gml:LineString")
+        top_pos_list = SubElement(top_line_string, "gml:posList")
+        top_pos_list.text = (
+            indent_str
+            + indent_str.join(
+                f"{v[0]:.4f} {v[1]:.4f} {v[2]:.1f}" for v in top_edge_vertices
+            )
+            + "\n          "
+        )
+
+        # Create faultBottomEdge
+        fault_bottom_edge = SubElement(geometry, "faultBottomEdge")
+        bottom_line_string = SubElement(fault_bottom_edge, "gml:LineString")
+        bottom_pos_list = SubElement(bottom_line_string, "gml:posList")
+        bottom_pos_list.text = (
+            indent_str
+            + indent_str.join(
+                f"{v[0]:.4f} {v[1]:.4f} {v[2]:.1f}"
+                for v in bottom_edge_vertices
+            )
+            + "\n          "
+        )
+
+
+def add_multipolygon_elements(nrml, metadata, coordinates):
+    polygons = coordinates[0]
+
+    # Handle Single-plane ruptures and Multi-plane ruptures
+    # in the same if block
+    if all(len(polygon) == 5 for polygon in polygons):
+        add_single_and_multi_plane_elements(nrml, metadata, polygons)
+    elif any(len(polygon) > 5 for polygon in polygons):
+        # Complex fault rupture with one or more geometries
+        add_complex_fault_elements(nrml, metadata, polygons)
+
+
 def convert_to_openquake_xml(input_json_file, output_xml_file):
     with open(input_json_file, "r") as f:
         data = json.load(f)
@@ -271,164 +434,12 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
     )
 
     if geometry_type == "Point":
-
         # TODO: as soon as OQ will be able to handle xml files with Point sources,
         # convert also this to xml
         return input_json_file
-
-        rupture = SubElement(nrml, "pointRupture")
-        magnitude = SubElement(rupture, "magnitude")
-        magnitude.text = str(metadata["mag"])
-        SubElement(
-            rupture,
-            "hypocenter",
-            {
-                "lon": str(coordinates[0]),
-                "lat": str(coordinates[1]),
-                "depth": str(coordinates[2]),
-            },
-        )
-
+        add_point_elements(nrml, metadata, coordinates)
     elif geometry_type == "MultiPolygon":
-        polygons = coordinates[0]
-
-        # Handle Single-plane ruptures and Multi-plane ruptures
-        # in the same if block
-        if all(len(polygon) == 5 for polygon in polygons):
-            rupture = (
-                SubElement(nrml, "singlePlaneRupture")
-                if len(polygons) == 1
-                else SubElement(nrml, "multiPlanesRupture")
-            )
-            magnitude = SubElement(rupture, "magnitude")
-            magnitude.text = str(metadata["mag"])
-
-            rake = SubElement(rupture, "rake")
-            rake.text = str(metadata.get("rake", 0))
-
-            SubElement(
-                rupture,
-                "hypocenter",
-                {
-                    "lon": str(metadata["lon"]),
-                    "lat": str(metadata["lat"]),
-                    "depth": str(metadata["depth"]),
-                },
-            )
-
-            for polygon in polygons:
-                # Check if the last vertex is identical to the first
-                # (closing the polygon)
-                if polygon[-1] == polygon[0]:
-                    # Discard the last vertex
-                    vertices = polygon[:-1]
-                else:
-                    vertices = polygon
-
-                sorted_vertices = sort_vertices(vertices)
-
-                strike, dip = calculate_strike_and_dip(sorted_vertices)
-
-                planar_surface = SubElement(
-                    rupture,
-                    "planarSurface",
-                    {
-                        "strike": f"{strike:.2f}",
-                        "dip": f"{dip:.2f}",
-                    },
-                )
-
-                # Assign vertices based on depth
-                SubElement(
-                    planar_surface,
-                    "topLeft",
-                    {
-                        "lon": str(sorted_vertices[0][0]),
-                        "lat": str(sorted_vertices[0][1]),
-                        "depth": str(sorted_vertices[0][2]),
-                    },
-                )
-                SubElement(
-                    planar_surface,
-                    "topRight",
-                    {
-                        "lon": str(sorted_vertices[1][0]),
-                        "lat": str(sorted_vertices[1][1]),
-                        "depth": str(sorted_vertices[1][2]),
-                    },
-                )
-                SubElement(
-                    planar_surface,
-                    "bottomRight",
-                    {
-                        "lon": str(sorted_vertices[2][0]),
-                        "lat": str(sorted_vertices[2][1]),
-                        "depth": str(sorted_vertices[2][2]),
-                    },
-                )
-                SubElement(
-                    planar_surface,
-                    "bottomLeft",
-                    {
-                        "lon": str(sorted_vertices[3][0]),
-                        "lat": str(sorted_vertices[3][1]),
-                        "depth": str(sorted_vertices[3][2]),
-                    },
-                )
-
-        elif any(len(polygon) > 5 for polygon in polygons):
-            # Complex fault rupture with one or more geometries
-            rupture = SubElement(nrml, "complexFaultRupture")
-            magnitude = SubElement(rupture, "magnitude")
-            magnitude.text = str(metadata["mag"])
-
-            rake = SubElement(rupture, "rake")
-            rake.text = str(metadata.get("rake", 0))
-
-            SubElement(
-                rupture,
-                "hypocenter",
-                {
-                    "lon": str(metadata["lon"]),
-                    "lat": str(metadata["lat"]),
-                    "depth": str(metadata["depth"]),
-                },
-            )
-
-            for polygon in polygons:
-                geometry = SubElement(rupture, "complexFaultGeometry")
-                # Split the polygon into top and bottom edges based on depth
-                sorted_vertices = sorted(polygon[:-1], key=lambda v: v[2])
-                mid_index = len(sorted_vertices) // 2
-                top_edge_vertices = sorted_vertices[:mid_index]
-                bottom_edge_vertices = sorted_vertices[mid_index:][::-1]
-
-                # Create faultTopEdge
-                indent_str = "\n            "
-                fault_top_edge = SubElement(geometry, "faultTopEdge")
-                top_line_string = SubElement(fault_top_edge, "gml:LineString")
-                top_pos_list = SubElement(top_line_string, "gml:posList")
-                top_pos_list.text = (
-                    indent_str
-                    + indent_str.join(
-                        f"{v[0]:.4f} {v[1]:.4f} {v[2]:.1f}" for v in top_edge_vertices
-                    )
-                    + "\n          "
-                )
-
-                # Create faultBottomEdge
-                fault_bottom_edge = SubElement(geometry, "faultBottomEdge")
-                bottom_line_string = SubElement(fault_bottom_edge, "gml:LineString")
-                bottom_pos_list = SubElement(bottom_line_string, "gml:posList")
-                bottom_pos_list.text = (
-                    indent_str
-                    + indent_str.join(
-                        f"{v[0]:.4f} {v[1]:.4f} {v[2]:.1f}"
-                        for v in bottom_edge_vertices
-                    )
-                    + "\n          "
-                )
-
+        add_multipolygon_elements(nrml, metadata, coordinates)
     else:
         raise ValueError(f"Unsupported geometry type: {geometry_type}")
 
