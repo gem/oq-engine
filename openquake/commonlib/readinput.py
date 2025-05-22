@@ -548,14 +548,12 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
                 if name == "lat":
                     z[name] = valid.latitudes(coos)
                 else:
-                    assert name == "lon"
                     z[name] = valid.longitudes(coos)
             elif name in ["vs30", "z1pt0", "z2pt5"]:
                  pars = ' '.join(str(x) for x in vals)
                  if name == 'vs30':
                     z[name] = valid.positivefloats(pars)
                  else:
-                    assert name in ['z1pt0', 'z2pt5']
                     z[name] = valid.positivefloatsorsentinels(pars)
             else:
                 z[name] = vals # None "core" site parameter
