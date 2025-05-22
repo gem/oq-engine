@@ -742,6 +742,13 @@ class BranchSet(object):
             raise ValueError(
                 f'{filename}: duplicated branches in {bs_id}:\n{brvalues}')
 
+    def check_weights(self):
+        """
+        The branch weights must sum up to 1.
+        """
+        tot = sum(br.weight for br in self.branches)
+        assert abs(tot - 1.) < 1E-10
+
     def __len__(self):
         return len(self.branches)
 
@@ -829,6 +836,7 @@ class CompositeLogicTree(object):
         for i, bset in enumerate(branchsets):
             bset.ordinal = i
             bset.check_duplicates()
+            bset.check_weights()
         self.basepaths = self._attach_to_branches()
 
     def _attach_to_branches(self):
