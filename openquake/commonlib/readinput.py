@@ -539,10 +539,11 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
     params = sorted(set(sm.dtype.names) | set(oqparam.req_site_params))
     z = numpy.zeros(
         len(sm), [(p, site.site_param_dt[p]) for p in params])
-    for name in z.dtype.names:
-        try:
+    for name in z.dtype.names:    
+        if name in sm.dtype.names:
             vals = sm[name]
-            # Validate core site params
+            # Otherwise get param from site model and if
+            # "core" then validate the associated values
             if name in ['lon', 'lat']:
                 coos = ','.join(str(x) for x in vals)
                 if name == "lat":
@@ -550,17 +551,20 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
                 else:
                     z[name] = valid.longitudes(coos)
             elif name in ["vs30", "z1pt0", "z2pt5"]:
-                 pars = ' '.join(str(x) for x in vals)
-                 if name == 'vs30':
+                pars = ' '.join(str(x) for x in vals)
+                if name == 'vs30':
                     z[name] = valid.positivefloats(pars)
-                 else:
+                else:
                     z[name] = valid.positivefloatsorsentinels(pars)
             else:
-                z[name] = vals # None "core" site parameter
-        except ValueError:  # missing, use the global parameter
+                z[name] = vals # None-core site parameter
+
+        else:
+            # If missing use the global parameter
             if name != 'backarc':  # backarc has default zero
                 # exercised in the test classical/case_28_bis
                 z[name] = check_site_param(oqparam, name)
+
     arrays.append(z)
 
 
