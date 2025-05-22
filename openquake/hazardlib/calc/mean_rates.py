@@ -72,6 +72,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
         if len(dic['rup_data']) == 0:  # the group was filtered away
             continue
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
+        print(dic['rmap'].array)
         rmap += dic['rmap']  # tested in logictree/case_05
     return rmap, ctxs, cmakers
 
@@ -93,6 +94,26 @@ def calc_mean_rates(rmap, gweights, wget, imtls, imts=None):
     return rates
 
 
+# useful for debugging
+def calc_mcurves(src_groups, sitecol, full_lt, oq):
+    """
+    Compute the mean hazard curves with use_rates. This is less
+    efficient than the algorithm used in the engine and can run out
+    of memory. It is meant to generate the expected results in small tests.
+
+    :param src_groups: a list of source groups
+    :param sitecol: a SiteCollection instance
+    :param full_lt: a FullLogicTree instance
+    :param oq: an OqParam instance
+    :returns: an array of shape (N, M, L1)
+    """
+    assert oq.use_rates
+    rmap, _, cmakers = calc_rmap(src_groups, full_lt, sitecol, oq)
+    gweights = numpy.concatenate([cm.wei for cm in cmakers])
+    rates = (rmap.array @ gweights).reshape(len(sitecol), len(oq.imtls), -1)
+    return to_probs(rates)
+
+
 def main(job_ini):
     """
     Compute the mean rates from scratch without source splitting and without
@@ -110,7 +131,7 @@ def main(job_ini):
                       if oq.region_grid_spacing else 5)  # Graeme's 5km
         sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
     rmap, _ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
-    gws = csm.full_lt.g_weights([cm.trt_smrs for cm in cmakers])
+    gws = numpy.concatenate([cm.wei for cm in cmakers])
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, _M, L1 = rates.shape
     mrates = numpy.zeros((N, L1), oq.imt_dt())

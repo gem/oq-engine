@@ -116,11 +116,15 @@ class TileGetter:
         self.tileno = tileno
         self.ntiles = ntiles
 
-    def __call__(self, complete):
-        if self.ntiles == 1:
+    def __call__(self, complete, label=None):
+        if self.ntiles == 1 and label is None:
             return complete
         sc = SiteCollection.__new__(SiteCollection)
-        sc.array = complete.array[complete.sids % self.ntiles == self.tileno]
+        array = complete.array[complete.sids % self.ntiles == self.tileno]
+        if label is not None:
+            sc.array = array[array['label'] == label]
+        else:
+            sc.array = array
         sc.complete = complete
         return sc
 

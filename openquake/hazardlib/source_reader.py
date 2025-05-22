@@ -504,7 +504,8 @@ def split_by_tom(sources):
     Groups together sources with the same TOM
     """
     def key(src):
-        return getattr(src, 'temporal_occurrence_model', None).__class__.__name__
+        tom = getattr(src, 'temporal_occurrence_model', None)
+        return tom.__class__.__name__
     return general.groupby(sources, key).values()
 
 
@@ -727,6 +728,7 @@ class CompositeSourceModel:
                         cmaker, sitecol, max_weight, num_chunks, tiling)
             return
         # cmakers is a dictionary label -> array of cmakers
+        with_labels = len(cmakers) > 1
         for idx, label in enumerate(cmakers):
             for cmaker in cmakers[label][grp_ids]:
                 if self.src_groups[cmaker.grp_id].weight == 0:
@@ -737,7 +739,9 @@ class CompositeSourceModel:
                     sites = sitecol.filter(sitecol.label == idx)
                 else:
                     sites = sitecol
-                if len(sites):
+                if sites:
+                    if with_labels:
+                        cmaker.label = idx
                     yield self._split(
                         cmaker, sites, max_weight, num_chunks, tiling)
 
