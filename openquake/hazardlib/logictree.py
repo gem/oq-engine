@@ -1493,7 +1493,7 @@ def compose(source_model_lt, gsim_lt):
     bsno = len(source_model_lt.branchsets)
     for trt, btuples in dic.items():
         bsid = gsim_lt.bsetdict[trt]
-        bset = BranchSet('gmpeModel')
+        bset = BranchSet('gmpeModel', dict(applyToTectonicRegionType=trt))
         bset.branches = [Branch(bt.id, bt.gsim, bt.weight['weight'], bsid)
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)
