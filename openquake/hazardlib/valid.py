@@ -697,6 +697,29 @@ def positivefloats(value):
     return floats
 
 
+def positivefloatorsentinel(value):
+    """
+    :param value: input string
+    :returns: positive float or -999 (sentinel)
+    """
+    f = float(not_empty(value))
+    if f < 0 and f!= float(-999):
+        raise ValueError('float %s < 0' % f)
+    return f
+
+
+def positivefloatsorsentinels(value):
+    """
+    :param value:
+        string of whitespace separated floats
+    :returns:
+        a list of positive floats or -999 (sentinel) values
+    """
+    values = value.strip('[]').split()
+    floats = list(map(positivefloatorsentinel, values))
+    return floats
+
+
 def floats(value):
     """
     :param value:
