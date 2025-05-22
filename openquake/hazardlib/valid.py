@@ -704,7 +704,8 @@ def positivefloatorsentinel(value):
     """
     f = float(not_empty(value))
     if f < 0 and f!= float(-999):
-        raise ValueError('float %s < 0' % f)
+        msg = 'float %s < 0 or not equal to -999' % f
+        raise ValueError(msg)
     return f
 
 
