@@ -105,13 +105,13 @@ class CollapseTestCase(unittest.TestCase):
         #  _/   \ b12 (w=.2)
         #   \____ b02 (w=.6)
         self.bs0 = bs0 = lt.BranchSet('abGRAbsolute', 0)
-        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
-                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
+        bs0.branches = [lt.Branch('bs0', 'A', (4.6, 1.1), .4),
+                        lt.Branch('bs0', 'B', (4.4, 0.9), .6)]
 
         self.bs1 = bs1 = lt.BranchSet('maxMagGRAbsolute', 1,
                                       dict(applyToBranches=['A']))
-        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
-                        lt.Branch('bs1', 'D', .5, 7.6)]
+        bs1.branches = [lt.Branch('bs1', 'C', 7.0, .5),
+                        lt.Branch('bs1', 'D', 7.6, .5)]
 
         self.clt = lt.CompositeLogicTree([bs0, bs1])
 
@@ -309,18 +309,18 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         #   \_______
         #            B..
         bs0 = lt.BranchSet('abGRAbsolute')
-        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
-                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
+        bs0.branches = [lt.Branch('bs0', 'A', (4.6, 1.1), .4),
+                        lt.Branch('bs0', 'B', (4.4, 0.9), .6)]
 
         bs1 = lt.BranchSet('maxMagGRAbsolute',
                            filters={'applyToBranches': 'A'})
-        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
-                        lt.Branch('bs1', 'D', .5, 7.6)]
+        bs1.branches = [lt.Branch('bs1', 'C', 7.0, .5),
+                        lt.Branch('bs1', 'D', 7.6, .5)]
 
         bs2 = lt.BranchSet('applyToTRT',
                            filters={'applyToBranches': 'CD'})
-        bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
-                        lt.Branch('bs2', 'F', .7, 'B')]
+        bs2.branches = [lt.Branch('bs2', 'E', 'A', .3),
+                        lt.Branch('bs2', 'F', 'B', .7)]
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])

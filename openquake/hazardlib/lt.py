@@ -519,19 +519,19 @@ class Branch(object):
         BranchSetID of the branchset to which the branch belongs
     :param branch_id:
         String identifier of the branch
-    :param weight:
-        float value of weight assigned to the branch. A text node contents
-        of ``<uncertaintyWeight />`` child node.
     :param value:
         The actual uncertainty parameter value. A text node contents
         of ``<uncertaintyModel />`` child node. Type depends
         on the branchset's uncertainty type.
+    :param weight:
+        float value of weight assigned to the branch. A text node contents
+        of ``<uncertaintyWeight />`` child node.
     """
-    def __init__(self, bs_id, branch_id, weight, value):
+    def __init__(self, bs_id, branch_id, value, weight):
         self.bs_id = bs_id
         self.branch_id = branch_id
-        self.weight = weight
         self.value = value
+        self.weight = weight
         self.bset = None
 
     @property
@@ -807,7 +807,7 @@ def dummy_branchset():
     :returns: a dummy BranchSet with a single branch
     """
     bset = BranchSet('dummy')
-    bset.branches = [Branch('dummy%d' % next(dummy_counter), '.', 1, None)]
+    bset.branches = [Branch('dummy%d' % next(dummy_counter), '.', None, 1)]
     bset.branches[0].short_id = '.'
     return bset
 
@@ -985,7 +985,7 @@ def build(*bslists, applyToSources=''):
         bsid = 'bs%02d' % i
         branches = []
         for brid, value, weight in brlists:
-            branches.append(Branch(bsid, brid, weight, value))
+            branches.append(Branch(bsid, brid, value, weight))
         bset = BranchSet(utype, i, dict(applyToBranches=applyto))
         if applyToSources and utype.endswith('Absolute'):
             bset.filters['applyToSources'] = applyToSources.split()
