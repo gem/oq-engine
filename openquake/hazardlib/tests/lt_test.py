@@ -419,8 +419,9 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         # These are multiplied by 4 with the last branchset.
         self.assertEqual(len(paths), 120)
         paths = ltssc.sample_paths(10)
-        self.assertEqual(paths, ['BCFH', 'BADI', 'CBDJ', 'EADG', 'BAEG',
-                                 'CAEH', 'BBDH', 'CAEG', 'ACFI', 'BAEH'])
+        self.assertEqual(paths, ['BC.H', 'BADI', 'CB.J', 'EADG', 'BAEG',
+                                 'CAEH', 'BB.H', 'CAEG', 'AC.I', 'BAEH'])
+
 
 
     def test_build3(self):

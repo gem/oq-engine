@@ -478,11 +478,7 @@ def sample(weighted_objects, probabilities, sampling_method='early_weights'):
     return [weighted_objects[idx] for idx in idxs]
 
 
-Weighted = collections.namedtuple('Weighted', 'object weight')
-
-
 # ######################### branches and branchsets ######################## #
-
 
 class Branch(object):
     """
@@ -888,10 +884,10 @@ class CompositeLogicTree(object):
                      sampling_method='early_weights'):
         nbs = len(self.branchsets)
         probs = random((num_samples, nbs), seed, sampling_method)
-        arr = numpy.zeros((num_samples, nbs), object)
-        for b, bset in enumerate(self.branchsets):
-            arr[:, b] = sample(bset.branches, probs[:, b], sampling_method)
-        return [''.join(w.id for w in row) for row in arr]
+        out = []
+        for branches in self.branchsets[0].sample(probs, sampling_method):
+            out.append(''.join(br.id for br in branches))
+        return out
 
     def to_node(self):
         """
