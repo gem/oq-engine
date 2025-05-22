@@ -202,4 +202,3 @@ class ValidationTestCase(unittest.TestCase):
         self.assertEqual(ag20_alaska.region, 'USA-AK')
         self.assertEqual(ag20_alaska._toml,
                          '[AbrahamsonGulerce2020SInterAlaska]')
-
