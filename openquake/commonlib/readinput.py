@@ -542,8 +542,8 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
     for name in z.dtype.names:    
         if name in sm.dtype.names:
             vals = sm[name]
-            # Otherwise get param from site model and if
-            # "core" then validate the associated values
+            # Get param from site model and if "core"
+            # then validate the associated values
             if name in ['lon', 'lat']:
                 coos = ','.join(str(x) for x in vals)
                 if name == "lat":
