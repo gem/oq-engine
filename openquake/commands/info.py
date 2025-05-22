@@ -384,7 +384,7 @@ def main(what, report=False):
                 print('description: %s' % oq.description)
                 print('input size: %s' % size)
                 for bset in ltree.branchsets:
-                    pprint(bset.to_list())
+                    pprint(bset)
         if mon.duration > 1:
             print(mon)
     elif what:

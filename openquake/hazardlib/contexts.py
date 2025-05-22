@@ -226,18 +226,6 @@ class Oq(object):
                 for key, value in self.inputs['reqv'].items()}
 
 
-class DeltaRatesGetter(object):
-    """
-    Read the delta rates from an aftershock datastore
-    """
-    def __init__(self, dstore):
-        self.dstore = dstore
-
-    def __call__(self, src_id):
-        with self.dstore.open('r') as dstore:
-            return dstore['delta_rates'][src_id]
-
-
 # same speed as performance.kround, round more
 def kround1(ctx, kfields):
     kdist = 2. * ctx.mag**2  # heuristic collapse distance from 32 to 200 km
@@ -552,6 +540,7 @@ class ContextMaker(object):
     scenario = False
     deltagetter = None
     fewsites = False
+    label = None
     tom = None
     cluster = None  # set in PmapMaker
 
@@ -1887,17 +1876,19 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
-def get_cmakers(src_groups, full_lt, oq):
+def get_cmakers(all_trt_smrs, full_lt, oq):
     """
-    :params src_groups: a list of SourceGroups
+    :params all_trt_smrs: a list of arrays
     :param full_lt: a FullLogicTree instance
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    all_trt_smrs = []
-    for sg in src_groups:
-        src = sg.sources[0]
-        all_trt_smrs.append(src.trt_smrs)
+    from openquake.hazardlib.site_amplification import AmplFunction
+    if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
+        df = AmplFunction.read_df(oq.inputs['amplification'])
+        oq.af = AmplFunction.from_dframe(df)
+    else:
+        oq.af = None
     trts = list(full_lt.gsim_lt.values)
     gweights = full_lt.g_weights(all_trt_smrs)[:, -1]  # shape Gt
     cmakers = []
@@ -1915,35 +1906,41 @@ def get_cmakers(src_groups, full_lt, oq):
     for cm in cmakers:
         cm.gid = gids[cm.grp_id]
         cm.wei = gweights[cm.gid]
-    return cmakers
-
-
-def read_cmakers(dstore, csm=None):
-    """
-    :param dstore: a DataStore-like object
-    :param csm: a CompositeSourceModel instance, if given
-    :returns: an array of ContextMaker instances, one per source group
-    """
-    from openquake.hazardlib.site_amplification import AmplFunction
-    oq = dstore['oqparam']
-    oq.mags_by_trt = {
-        k: decode(v[:]) for k, v in dstore['source_mags'].items()}
-    if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
-        df = AmplFunction.read_df(oq.inputs['amplification'])
-        oq.af = AmplFunction.from_dframe(df)
-    else:
-        oq.af = None
-    if csm is None:
-        csm = dstore['_csm']
-    if not hasattr(csm, 'full_lt'):
-        csm.full_lt = dstore['full_lt'].init()
-    cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
-    if 'delta_rates' in dstore:  # aftershock
-        for cmaker in cmakers:
-            cmaker.deltagetter = DeltaRatesGetter(dstore)
     return numpy.array(cmakers)
 
 
+def read_cmakers(dstore, full_lt=None):
+    """
+    :param dstore: a DataStore-like object
+    :param all_trt_smrs: a list of arrays
+    :returns: an array of ContextMaker instances, one per source group
+    """
+    oq = dstore['oqparam']
+    oq.mags_by_trt = {
+        k: decode(v[:]) for k, v in dstore['source_mags'].items()}
+    all_trt_smrs = dstore['trt_smrs'][:]
+    if not full_lt:
+        full_lt = dstore['full_lt'].init()
+    cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
+    return cmakers
+
+
+def read_full_lt_by_label(dstore):
+    """
+    :param dstore: a DataStore-like object
+    :returns: a dictionary label -> full_lt
+    """
+    oq = dstore['oqparam']
+    full_lt = dstore['full_lt'].init()
+    attrs = vars(full_lt)
+    dic = {'Default': full_lt}
+    for label in oq.site_labels:
+        dic[label] = copy.copy(full_lt)
+        dic[label].__dict__.update(attrs)
+        dic[label].gsim_lt = dstore['gsim_lt' + label]
+    return dic
+
+    
 # used in event_based
 def read_cmaker(dstore, trt_smr):
     """

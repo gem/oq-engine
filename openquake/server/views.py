@@ -918,6 +918,11 @@ def impact_run(request):
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
     station_data_file_from_usgs = request.POST.get(
         'station_data_file_from_usgs', '')
+    station_source = None
+    if station_data_file:
+        station_source = 'user-provided'
+    elif station_data_file_from_usgs:
+        station_source = 'USGS'
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
@@ -925,6 +930,8 @@ def impact_run(request):
         request.POST, request.user, rupture_path, station_data_file)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    if station_source is not None:
+        params['station_source'] = station_source
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
