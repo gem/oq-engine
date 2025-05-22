@@ -524,8 +524,8 @@ class SourceModelLogicTree(object):
         if 'applyToSources' in filters and not filters['applyToSources']:
             return  # ignore the branchset
 
-        ordinal = len(self.bsetdict)
-        branchset = BranchSet(uncertainty_type, ordinal, filters)
+        branchset = BranchSet(uncertainty_type, filters)
+        branchset.ordinal = len(self.bsetdict)
         branchset.id = bsid = attrs.pop('branchSetID')
         if bsid in self.bsetdict:
             raise nrml.DuplicatedID('%s in %s' % (bsid, self.filename))
@@ -982,7 +982,8 @@ class SourceModelLogicTree(object):
                 filters['applyToSources'] = ats.split()
             if atb:
                 filters['applyToBranches'] = atb.split()
-            bset = BranchSet(utype, ordinal, filters)
+            bset = BranchSet(utype, filters)
+            bset.ordinal = ordinal
             bset.id = bsid
             for no, row in enumerate(rows):
                 try:
@@ -1494,7 +1495,7 @@ def compose(source_model_lt, gsim_lt):
     bsno = len(source_model_lt.branchsets)
     for trt, btuples in dic.items():
         bsid = gsim_lt.bsetdict[trt]
-        bset = BranchSet('gmpeModel', bsno)
+        bset = BranchSet('gmpeModel')
         bset.branches = [Branch(bt.id, bt.gsim, bt.weight['weight'], bsid)
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)

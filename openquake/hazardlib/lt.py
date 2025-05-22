@@ -620,12 +620,11 @@ class BranchSet(object):
             Stable Shallow Crust, etc.) the uncertainty applies to. This
             filter is required for all branchsets in GMPE logic tree.
     """
+    ordinal = 0
     applied = None  # to be replaced by a string in hazardlib.logictree
 
-    def __init__(self, uncertainty_type, ordinal=0, filters=None,
-                 collapsed=False):
+    def __init__(self, uncertainty_type, filters=None, collapsed=False):
         self.uncertainty_type = uncertainty_type
-        self.ordinal = ordinal
         self.filters = filters or {}
         self.collapsed = collapsed
         self.branches = []
@@ -986,7 +985,7 @@ def build(*bslists, applyToSources=''):
         branches = []
         for brid, value, weight in brlists:
             branches.append(Branch(brid, value, weight, bsid))
-        bset = BranchSet(utype, i, dict(applyToBranches=applyto))
+        bset = BranchSet(utype, dict(applyToBranches=applyto))
         if applyToSources and utype.endswith('Absolute'):
             bset.filters['applyToSources'] = applyToSources.split()
         bset.branches = branches

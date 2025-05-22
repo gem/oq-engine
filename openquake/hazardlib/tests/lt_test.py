@@ -104,11 +104,11 @@ class CollapseTestCase(unittest.TestCase):
         #    ___/ b11 (w=.2)
         #  _/   \ b12 (w=.2)
         #   \____ b02 (w=.6)
-        self.bs0 = bs0 = lt.BranchSet('abGRAbsolute', 0)
+        self.bs0 = bs0 = lt.BranchSet('abGRAbsolute')
         bs0.branches = [lt.Branch('A', (4.6, 1.1), .4, 'bs0'),
                         lt.Branch('B', (4.4, 0.9), .6, 'bs0')]
 
-        self.bs1 = bs1 = lt.BranchSet('maxMagGRAbsolute', 1,
+        self.bs1 = bs1 = lt.BranchSet('maxMagGRAbsolute',
                                       dict(applyToBranches=['A']))
         bs1.branches = [lt.Branch('C', 7.0, .5, 'bs1'),
                         lt.Branch('D', 7.6, .5, 'bs1')]
