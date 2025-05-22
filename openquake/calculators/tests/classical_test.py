@@ -145,6 +145,7 @@ class ClassicalTestCase(CalculatorTestCase):
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs.csv', fname)
 
+        # check the mean hazard curves manually
         oq = self.calc.oqparam
         flt0, flt1, flt2 = contexts.read_full_lt_by_label(
             self.calc.datastore).values()
@@ -152,7 +153,6 @@ class ClassicalTestCase(CalculatorTestCase):
         sites0 = sitecol.filter(sitecol.label == 0)
         sites1 = sitecol.filter(sitecol.label == 1)
         sites2 = sitecol.filter(sitecol.label == 2)
-
         src_groups = self.calc.csm.src_groups
         hcurve0 = calc.mean_rates.calc_mcurves(
             src_groups, sites0, flt0, oq)[0, 0]
@@ -163,7 +163,9 @@ class ClassicalTestCase(CalculatorTestCase):
         pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
         pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
         pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
-        breakpoint()
+        aac(hcurve0, pga0, rtol=2e-6)
+        aac(hcurve1, pga1, rtol=2e-6)
+        aac(hcurve2, pga2, rtol=2e-6)
       
     def test_case_07(self):
         # make sure the Dummy GMPE works in event based too
