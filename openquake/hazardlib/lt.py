@@ -19,7 +19,6 @@
 import copy
 import pickle
 import itertools
-import collections
 import numpy
 
 from openquake.baselib.general import CallableDict, BASE183
@@ -738,7 +737,8 @@ class BranchSet(object):
         values = [pickle.dumps(br.value, protocol=4) for br in self.branches]
         if len(set(values)) < len(values):
             bs_id = self.branches[0].bs_id
-            brvalues = '\n'.join(str(br.value) for br in self.branches)
+            brvalues = '\n'.join(f'{br.branch_id}: value={br.value}'
+                                 for br in self.branches)
             raise ValueError(
                 f'{filename}: duplicated branches in {bs_id}:\n{brvalues}')
 
