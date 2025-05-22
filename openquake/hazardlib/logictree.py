@@ -638,7 +638,7 @@ class SourceModelLogicTree(object):
                 zero_id = branch_id
                 zeros.append(weight)
             else:
-                branch = Branch(bs_id, branch_id, value, weight)
+                branch = Branch(branch_id, value, weight, bs_id)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
             # use two-letter abbrev for the first branchset (sourceModel)
@@ -646,7 +646,7 @@ class SourceModelLogicTree(object):
             self.shortener[branch_id] = keyno(branch_id, bsno, brno, base)
             weight_sum += weight
         if zeros:
-            branch = Branch(bs_id, zero_id, '', sum(zeros))
+            branch = Branch(zero_id, '', sum(zeros), bs_id)
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
 
@@ -989,7 +989,7 @@ class SourceModelLogicTree(object):
                     uvalue = ast.literal_eval(row['uvalue'])
                 except (SyntaxError, ValueError):
                     uvalue = row['uvalue']  # not really deserializable :-(
-                br = Branch(bsid, row['branch'], uvalue, float(row['weight']))
+                br = Branch(row['branch'], uvalue, float(row['weight']), bsid)
                 self.branches[br.branch_id] = br
                 base = BASE33489 if utype == 'sourceModel' else BASE183
                 self.shortener[br.branch_id] = keyno(
@@ -1495,7 +1495,7 @@ def compose(source_model_lt, gsim_lt):
     for trt, btuples in dic.items():
         bsid = gsim_lt.bsetdict[trt]
         bset = BranchSet('gmpeModel', bsno)
-        bset.branches = [Branch(bsid, bt.id, bt.gsim, bt.weight['weight'])
+        bset.branches = [Branch(bt.id, bt.gsim, bt.weight['weight'], bsid)
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)
         bsno += 1
