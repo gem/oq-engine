@@ -1405,8 +1405,13 @@ class OqParam(valid.ParamSet):
         if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
             self.raise_invalid('You forgot to specify a site_model')
+
         elif self.inputs.get('gmfs', [''])[0].endswith('.xml'):
             self.raise_invalid('GMFs in XML are not supported anymore')
+
+        elif self.number_of_logic_tree_samples >= TWO16:
+            self.raise_invalid('number_of_logic_tree_samples too big: %d' %
+                               self.number_of_logic_tree_samples)
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
@@ -1420,9 +1425,6 @@ class OqParam(valid.ParamSet):
             if self.ses_per_logic_tree_path >= TWO32:
                 self.raise_invalid('ses_per_logic_tree_path too big: %d' %
                                    self.ses_per_logic_tree_path)
-            if self.number_of_logic_tree_samples >= TWO16:
-                self.raise_invalid('number_of_logic_tree_samples too big: %d' %
-                                   self.number_of_logic_tree_samples)
 
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
