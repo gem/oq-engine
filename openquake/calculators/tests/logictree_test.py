@@ -652,6 +652,13 @@ hazard_uhs-std.csv
         assert len(csm.src_groups) == 1
         assert len(self.calc.csm.src_groups) == 4
 
+        # checking `oq show rlz:2`, 2 being the rlz without extendModel
+        assert len(self.calc.datastore['weights']) == 3
+        dic = dict(view('rlz:2', self.calc.datastore))
+        assert str(dic) == ("{'sourceModel': 'common2.xml', "
+                            "'extendModel': '', "
+                            "'active shallow crust': [SadighEtAl1997]}")
+
     def test_case_68_bis(self):
         # extendModel with sampling and reduction to single source
         self.run_calc(case_68.__file__, 'job1.ini')
