@@ -22,11 +22,11 @@ import itertools
 import collections
 import numpy
 
-from openquake.baselib.general import CallableDict, BASE183, BASE33489
+from openquake.baselib.general import CallableDict, BASE183
 from openquake.baselib.node import Node
 from openquake.hazardlib import geo, nrml
 from openquake.hazardlib.sourceconverter import (
-    split_coords_2d, split_coords_3d, SourceGroup)
+    split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
 
 
@@ -324,6 +324,7 @@ def _incMFD_absolute(utype, source, value):
     source.mfd.modify('set_mfd', dict(min_mag=min_mag, bin_width=bin_width,
                                       occurrence_rates=occur_rates))
 
+
 @apply_uncertainty.add('truncatedGRFromSlipAbsolute')
 def _trucMFDFromSlip_absolute(utype, source, value):
     slip_rate, rigidity, const_term = value
@@ -480,34 +481,6 @@ def sample(weighted_objects, probabilities, sampling_method='early_weights'):
 Weighted = collections.namedtuple('Weighted', 'object weight')
 
 
-# used in notebooks for teaching, not in the engine
-def random_sample(branchsets, num_samples, seed, sampling_method):
-    """
-    >>> bsets = [[('X', .4), ('Y', .6)], [('A', .2), ('B', .3), ('C', .5)]]
-    >>> paths = random_sample(bsets, 100, 42, 'early_weights')
-    >>> collections.Counter(paths)
-    Counter({'YC': 26, 'XC': 24, 'YB': 17, 'XA': 13, 'YA': 10, 'XB': 10})
-
-    >>> paths = random_sample(bsets, 100, 42, 'late_weights')
-    >>> collections.Counter(paths)
-    Counter({'XA': 20, 'YA': 18, 'XB': 17, 'XC': 15, 'YB': 15, 'YC': 15})
-
-    >>> paths = random_sample(bsets, 100, 42, 'early_latin')
-    >>> collections.Counter(paths)
-    Counter({'YC': 31, 'XC': 19, 'YB': 17, 'XB': 13, 'YA': 12, 'XA': 8})
-
-    >>> paths = random_sample(bsets, 100, 45, 'late_latin')
-    >>> collections.Counter(paths)
-    Counter({'YC': 18, 'XA': 18, 'XC': 16, 'YA': 16, 'XB': 16, 'YB': 16})
-    """
-    probs = random((num_samples, len(branchsets)), seed, sampling_method)
-    arr = numpy.zeros((num_samples, len(branchsets)), object)
-    for b, bset in enumerate(branchsets):
-        arr[:, b] = sample([Weighted(*it) for it in bset], probs[:, b],
-                           sampling_method)
-    return [''.join(w.object for w in row) for row in arr]
-
-
 # ######################### branches and branchsets ######################## #
 
 
@@ -543,7 +516,6 @@ class Branch(object):
         :returns: True if the branch has no branchset or has a dummy branchset
         """
         return self.bset is None or self.bset.uncertainty_type == 'dummy'
-
 
     def to_node(self):
         attrib = dict(branchID=self.branch_id)
@@ -693,7 +665,6 @@ class BranchSet(object):
                 # [('simpleFaultGeometry', ([(-64.5, -0.3822), (-64.5, 0.3822)],
                 #                             2.0, 15.0, 90.0, 2.0))]
                 yield path_branch
-
 
     def __getitem__(self, branch_id):
         """
@@ -912,6 +883,15 @@ class CompositeLogicTree(object):
 
     def get_all_paths(self):
         return [rlz.lt_path for rlz in self]
+
+    def sample_paths(self, num_samples, seed=42,
+                     sampling_method='early_weights'):
+        nbs = len(self.branchsets)
+        probs = random((num_samples, nbs), seed, sampling_method)
+        arr = numpy.zeros((num_samples, nbs), object)
+        for b, bset in enumerate(self.branchsets):
+            arr[:, b] = sample(bset.branches, probs[:, b], sampling_method)
+        return [''.join(w.id for w in row) for row in arr]
 
     def to_node(self):
         """

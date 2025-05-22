@@ -418,6 +418,10 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         # each of the original 6 branches leading to 30 branches in total.
         # These are multiplied by 4 with the last branchset.
         self.assertEqual(len(paths), 120)
+        paths = ltssc.sample_paths(10)
+        self.assertEqual(paths, ['BCFH', 'BADI', 'CBDJ', 'EADG', 'BAEG',
+                                 'CAEH', 'BBDH', 'CAEG', 'ACFI', 'BAEH'])
+
 
     def test_build3(self):
         # test with applyToSources for the BCHydro project
