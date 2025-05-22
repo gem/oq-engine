@@ -385,7 +385,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['ssm2', 'common2', 0.4]],
                        ['setLowerSeismDepthAbsolute', ['ssm1'],
                         ['lsd10', '10', 0.3],
-                        ['lsd15', '15', 0.4]])
+                        ['lsd15', '15', 0.7]])
         self.assertEqual(clt.get_all_paths(),
                          ['AA', 'AB', 'B.'])
 
