@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a new uncertainty `abMaxMagAbsolute` to the logic tree
   * Avoided out of memory in calculations starting from the global SES
 
   [Lana Todorovic]

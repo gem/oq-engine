@@ -80,6 +80,16 @@ def abGR(utype, node, filename):
             node, filename, 'expected a pair of floats separated by space')
 
 
+@parse_uncertainty.add('abMMaxAbsolute')
+def abMMax(utype, node, filename):
+    try:
+        [a, b, c] = node.text.split()
+        return float(a), float(b), float(c)
+    except ValueError:
+        raise LogicTreeError(
+            node, filename, 'expected a triple of floats separated by space')
+
+
 @parse_uncertainty.add('incrementalMFDAbsolute')
 def incMFD(utype, node, filename):
     min_mag, bin_width = (node.incrementalMFD["minMag"],
@@ -289,6 +299,13 @@ def _char_fault_geom_absolute(utype, source, value):
 def _abGR_absolute(utype, source, value):
     a, b = value
     source.mfd.modify('set_ab', dict(a_val=a, b_val=b))
+
+
+@apply_uncertainty.add('abMMaxAbsolute')
+def _abMMax_absolute(utype, source, value):
+    a, b, c = value
+    source.mfd.modify('set_ab_max_mag', dict(a_val=a, b_val=b, max_mag=c))
+
 
 
 @apply_uncertainty.add('bGRAbsolute')
