@@ -31,8 +31,7 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize, block_splitter)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import (
-    read_cmakers, get_cmakers, read_full_lt_by_label)
+from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
@@ -172,7 +171,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         return
 
     for tileno, tileget in enumerate(tilegetters):
-        result = hazclassical(sources, tileget(sitecol), cmaker)
+        result = hazclassical(sources, tileget(sitecol, cmaker.label), cmaker)
         if tileno:
             # source_data has keys src_id, grp_id, nsites, esites, nrupts,
             # weight, ctimes, taskno
@@ -210,7 +209,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
         arr = dstore.getitem('_csm')[cmaker.grp_id]
         sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
-    result = hazclassical(sources, tilegetter(sitecol), cmaker)
+    result = hazclassical(sources, tilegetter(sitecol, cmaker.label), cmaker)
     rmap = result.pop('rmap').remove_zeros()
     if config.directory.custom_tmp:
         rates = rmap.to_array(cmaker.gid)

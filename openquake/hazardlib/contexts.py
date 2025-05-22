@@ -540,6 +540,7 @@ class ContextMaker(object):
     scenario = False
     deltagetter = None
     fewsites = False
+    label = None
     tom = None
     cluster = None  # set in PmapMaker
 
