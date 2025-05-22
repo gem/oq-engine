@@ -104,14 +104,14 @@ class CollapseTestCase(unittest.TestCase):
         #    ___/ b11 (w=.2)
         #  _/   \ b12 (w=.2)
         #   \____ b02 (w=.6)
-        self.bs0 = bs0 = lt.BranchSet('abGRAbsolute', 0)
-        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
-                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
+        self.bs0 = bs0 = lt.BranchSet('abGRAbsolute')
+        bs0.branches = [lt.Branch('A', (4.6, 1.1), .4, 'bs0'),
+                        lt.Branch('B', (4.4, 0.9), .6, 'bs0')]
 
-        self.bs1 = bs1 = lt.BranchSet('maxMagGRAbsolute', 1,
+        self.bs1 = bs1 = lt.BranchSet('maxMagGRAbsolute',
                                       dict(applyToBranches=['A']))
-        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
-                        lt.Branch('bs1', 'D', .5, 7.6)]
+        bs1.branches = [lt.Branch('C', 7.0, .5, 'bs1'),
+                        lt.Branch('D', 7.6, .5, 'bs1')]
 
         self.clt = lt.CompositeLogicTree([bs0, bs1])
 
@@ -309,18 +309,18 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         #   \_______
         #            B..
         bs0 = lt.BranchSet('abGRAbsolute')
-        bs0.branches = [lt.Branch('bs0', 'A', .4, (4.6, 1.1)),
-                        lt.Branch('bs0', 'B', .6, (4.4, 0.9))]
+        bs0.branches = [lt.Branch('A', (4.6, 1.1), .4, 'bs0'),
+                        lt.Branch('B', (4.4, 0.9), .6, 'bs0')]
 
         bs1 = lt.BranchSet('maxMagGRAbsolute',
                            filters={'applyToBranches': 'A'})
-        bs1.branches = [lt.Branch('bs1', 'C', .5, 7.0),
-                        lt.Branch('bs1', 'D', .5, 7.6)]
+        bs1.branches = [lt.Branch('C', 7.0, .5, 'bs1'),
+                        lt.Branch('D', 7.6, .5, 'bs1')]
 
         bs2 = lt.BranchSet('applyToTRT',
                            filters={'applyToBranches': 'CD'})
-        bs2.branches = [lt.Branch('bs2', 'E', .3, 'A'),
-                        lt.Branch('bs2', 'F', .7, 'B')]
+        bs2.branches = [lt.Branch('E', 'A', .3, 'bs2'),
+                        lt.Branch('F', 'B', .7, 'bs2')]
         for branch in bs1.branches:
             branch.bset = bs2
         clt = lt.CompositeLogicTree([bs0, bs1, bs2])
@@ -385,9 +385,9 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['ssm2', 'common2', 0.4]],
                        ['setLowerSeismDepthAbsolute', ['ssm1'],
                         ['lsd10', '10', 0.3],
-                        ['lsd15', '15', 0.4]])
+                        ['lsd15', '15', 0.7]])
         self.assertEqual(clt.get_all_paths(),
-                         ['AAA', 'AAB', 'AB.'])
+                         ['AA', 'AB', 'B.'])
 
     def test_build2(self):
         ltl = [
@@ -418,6 +418,11 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         # each of the original 6 branches leading to 30 branches in total.
         # These are multiplied by 4 with the last branchset.
         self.assertEqual(len(paths), 120)
+        paths = ltssc.sample_paths(10)
+        self.assertEqual(paths, ['BC.H', 'BADI', 'CB.J', 'EADG', 'BAEG',
+                                 'CAEH', 'BB.H', 'CAEG', 'AC.I', 'BAEH'])
+
+
 
     def test_build3(self):
         # test with applyToSources for the BCHydro project

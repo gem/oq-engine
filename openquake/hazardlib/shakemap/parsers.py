@@ -705,7 +705,7 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
             # in parsers_test
             err_msg = f'Unable to download from {url}: {exc}'
             err = {"status": "failed", "error_msg": err_msg}
-            return None, None, None, err
+            return None, None, None, None, err
 
     properties = json.loads(text)['properties']
 
@@ -725,7 +725,10 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
             shakemap_array = get_array_usgs_id("usgs_id", usgs_id, contents)
     else:
         shakemap_array = None
-    return contents, properties, shakemap_array, err
+    shakemap_version = shakemap['properties']['version']
+    utc_date_time = ms_to_utc_date_time(shakemap['updateTime'])
+    shakemap_desc = f'v{shakemap_version}: {utc_date_time}'
+    return contents, properties, shakemap_array, shakemap_desc, err
 
 
 def _get_nodal_planes(properties):
@@ -824,8 +827,8 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
     except ValueError as exc:
         err = {'status': 'failed', 'error_msg': str(exc)}
         return None, n_stations, err
-    contents, _properties, _shakemap, err = _contents_properties_shakemap(
-        usgs_id, user, False, monitor, shakemap_version)
+    contents, _properties, _shakemap, _shakemap_desc, err = \
+        _contents_properties_shakemap(usgs_id, user, False, monitor, shakemap_version)
     if err:
         return None, n_stations, err
     with monitor('Downloading stations'):
@@ -922,7 +925,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
             return rup, rupdic, err
     assert usgs_id
     get_grid = user.level == 1 or use_shakemap
-    contents, properties, shakemap, err = _contents_properties_shakemap(
+    contents, properties, shakemap, shakemap_desc, err = _contents_properties_shakemap(
         usgs_id, user, get_grid, monitor, shakemap_version)
     if err:
         return None, None, err
@@ -963,6 +966,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
     if approach == 'use_shakemap_from_usgs':
         rupdic['shakemap_array'] = shakemap
     rupdic['title'] = properties['title']
+    rupdic['shakemap_desc'] = shakemap_desc
     if not rup_data:  # in parsers_test
         if approach == 'use_pnt_rup_from_usgs':
             rupdic['msr'] = 'PointMSR'
