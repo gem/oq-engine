@@ -524,8 +524,7 @@ class SourceModelLogicTree(object):
         if 'applyToSources' in filters and not filters['applyToSources']:
             return  # ignore the branchset
 
-        branchset = BranchSet(uncertainty_type, filters)
-        branchset.ordinal = len(self.bsetdict)
+        branchset = BranchSet(uncertainty_type, filters, len(self.bsetdict))
         branchset.id = bsid = attrs.pop('branchSetID')
         if bsid in self.bsetdict:
             raise nrml.DuplicatedID('%s in %s' % (bsid, self.filename))
@@ -982,8 +981,7 @@ class SourceModelLogicTree(object):
                 filters['applyToSources'] = ats.split()
             if atb:
                 filters['applyToBranches'] = atb.split()
-            bset = BranchSet(utype, filters)
-            bset.ordinal = ordinal
+            bset = BranchSet(utype, filters, ordinal)
             bset.id = bsid
             for no, row in enumerate(rows):
                 try:
