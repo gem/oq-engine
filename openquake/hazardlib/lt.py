@@ -838,7 +838,8 @@ class Realization(object):
 
 
 def add_path(bset, bsno, brno, num_prev, tot, paths):
-    base = BASE33489 if bset.uncertainty_type == 'sourceModel' else BASE183
+    # base = BASE33489
+    base = BASE183
     for br in bset.branches:
         br.short_id = base[brno]
         path = ['*'] * tot

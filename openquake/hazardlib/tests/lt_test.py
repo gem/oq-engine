@@ -387,7 +387,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                         ['lsd10', '10', 0.3],
                         ['lsd15', '15', 0.4]])
         self.assertEqual(clt.get_all_paths(),
-                         ['AAA', 'AAB', 'AB.'])
+                         ['AA', 'AB', 'B.'])
 
     def test_build2(self):
         ltl = [
