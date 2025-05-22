@@ -524,8 +524,7 @@ class SourceModelLogicTree(object):
         if 'applyToSources' in filters and not filters['applyToSources']:
             return  # ignore the branchset
 
-        ordinal = len(self.bsetdict)
-        branchset = BranchSet(uncertainty_type, ordinal, filters)
+        branchset = BranchSet(uncertainty_type, filters, len(self.bsetdict))
         branchset.id = bsid = attrs.pop('branchSetID')
         if bsid in self.bsetdict:
             raise nrml.DuplicatedID('%s in %s' % (bsid, self.filename))
@@ -638,7 +637,7 @@ class SourceModelLogicTree(object):
                 zero_id = branch_id
                 zeros.append(weight)
             else:
-                branch = Branch(bs_id, branch_id, weight, value)
+                branch = Branch(branch_id, value, weight, bs_id)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
             # use two-letter abbrev for the first branchset (sourceModel)
@@ -646,7 +645,7 @@ class SourceModelLogicTree(object):
             self.shortener[branch_id] = keyno(branch_id, bsno, brno, base)
             weight_sum += weight
         if zeros:
-            branch = Branch(bs_id, zero_id, sum(zeros), '')
+            branch = Branch(zero_id, '', sum(zeros), bs_id)
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
 
@@ -982,14 +981,14 @@ class SourceModelLogicTree(object):
                 filters['applyToSources'] = ats.split()
             if atb:
                 filters['applyToBranches'] = atb.split()
-            bset = BranchSet(utype, ordinal, filters)
+            bset = BranchSet(utype, filters, ordinal)
             bset.id = bsid
             for no, row in enumerate(rows):
                 try:
                     uvalue = ast.literal_eval(row['uvalue'])
                 except (SyntaxError, ValueError):
                     uvalue = row['uvalue']  # not really deserializable :-(
-                br = Branch(bsid, row['branch'], float(row['weight']), uvalue)
+                br = Branch(row['branch'], uvalue, float(row['weight']), bsid)
                 self.branches[br.branch_id] = br
                 base = BASE33489 if utype == 'sourceModel' else BASE183
                 self.shortener[br.branch_id] = keyno(
@@ -1494,8 +1493,8 @@ def compose(source_model_lt, gsim_lt):
     bsno = len(source_model_lt.branchsets)
     for trt, btuples in dic.items():
         bsid = gsim_lt.bsetdict[trt]
-        bset = BranchSet('gmpeModel', bsno)
-        bset.branches = [Branch(bsid, bt.id, bt.weight['weight'], bt.gsim)
+        bset = BranchSet('gmpeModel', dict(applyToTectonicRegionType=trt))
+        bset.branches = [Branch(bt.id, bt.gsim, bt.weight['weight'], bsid)
                          for bt in btuples]  # branch ID fixed later
         bsets.append(bset)
         bsno += 1
