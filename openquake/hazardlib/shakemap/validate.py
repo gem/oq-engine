@@ -221,7 +221,7 @@ validators = {
                              'use_pnt_rup_from_usgs',
                              'build_rup_from_usgs',
                              'use_shakemap_fault_rup_from_usgs',
-                             'use_finite_fault_model_from_usgs',
+                             # TODO: 'use_finite_fault_model_from_usgs',
                              'provide_rup',
                              'provide_rup_params'),
     'usgs_id': valid.simple_id,
