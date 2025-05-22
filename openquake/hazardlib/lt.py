@@ -527,7 +527,7 @@ class Branch(object):
     :param bs_id:
         BranchSetID of the branchset to which the branch belongs
     """
-    def __init__(self, branch_id, value, weight, bs_id):
+    def __init__(self, branch_id, value, weight, bs_id=''):
         self.branch_id = branch_id
         self.value = value
         self.weight = weight
