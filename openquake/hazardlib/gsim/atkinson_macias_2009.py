@@ -121,12 +121,12 @@ class AtkinsonMacias2009(GMPE):
             # Apply m9 basin term if specified (will override
             # cb14 basin term for basin sites if T >= 1.9 s)
             if self.m9_basin_term and imt.period >= 1.9:
-                # NOTE: also need to update -999 z2pt5 here so have
+                # Also need to update -999 z2pt5 here so have
                 # a z2pt5 for each site to ensure always applying m9
-                # basin term where appropriate --> given always using
-                # (at least in US23 model) in combination with CB14 basin
-                # term use this relationship to estimate missing z2pt5
-                # consistently
+                # basin term where appropriate --> In US23 model we
+                # always use in combination with CB14 basin term so
+                # using this relationship here to provides consistency
+                # for estimating z2pt5 from vs30
                 z2pt5 = copy.deepcopy(ctx.z2pt5)
                 mask = z2pt5 == float(-999) # None-measured values
                 z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
