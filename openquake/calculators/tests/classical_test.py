@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88, case_89)
+    case_86, case_87, case_88, case_89, case_90)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -912,3 +912,10 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(1.0).csv',
             'hazard_curve-mean-SA(2.0).csv'],
             case_89.__file__)
+        
+    def test_case_90(self):
+        # Make sure a site model with negative z1pt0 or
+        # or z2pt5 (that are not -999) prevents successful
+        # instantiation of a SiteCollection
+        with self.assertRaises(ValueError):
+            self.run_calc(self.run_calc(case_90.__file__, 'job.ini'))
