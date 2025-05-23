@@ -26,9 +26,9 @@ jobs:
       matrix:
         os: [windows-2022, windows-2019]
         python-version: ["3.11", "3.12"]
-    env:
-      GITHUB_HEAD_REF: ${{ github.head_ref }}
-      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+     env:
+       GITHUB_HEAD_REF: ${{ github.head_ref }}
+       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
