@@ -150,9 +150,9 @@ def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term defined in equation (9), p. 1611
     """
-    z2pt5 = copy.deepcopy(ctx.z2pt5)
+    z2pt5 = ctx.z2pt5.copy()
     # Use non-Japan CB14 vs30 to z2pt5 relationship for none-measured values
-    mask = z2pt5 == float(-999)
+    mask = z2pt5 == -999
     z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
     f_basin = np.zeros(ctx.sids.shape)
     f_basin[(z2pt5 <= 1)] = (C["d1"] * (z2pt5 - 1))[z2pt5 <= 1]

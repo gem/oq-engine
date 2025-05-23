@@ -127,8 +127,8 @@ class AtkinsonMacias2009(GMPE):
                 # always use in combination with CB14 basin term so
                 # using this relationship here to provides consistency
                 # for estimating z2pt5 from vs30
-                z2pt5 = copy.deepcopy(ctx.z2pt5)
-                mask = z2pt5 == float(-999) # None-measured values
+                z2pt5 = ctx.z2pt5.copy()
+                mask = z2pt5 == -999 # None-measured values
                 z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
                 fb[z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
             

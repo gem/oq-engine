@@ -435,7 +435,7 @@ def _infer_z(z_values, vs30, CZ, region):
     relationship is controlled by region-dependent coefficients in
     the CZ variable.
     """
-    mask_z = z_values == float(-999) # None-measured values     
+    mask_z = z_values == -999 # None-measured values     
     if region in ("JPN", "CAS"):
         z_values[mask_z] = np.exp(
             _get_ln_z_ref(CZ, vs30[mask_z])) # Predictions in metres
@@ -471,7 +471,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False,
     # If z2pt5 region retrieve ref depth values, infer any missing
     # z2pt5 in sites and retrieve usgs basin scaling factor if req
     if region in ("CAS", "SEA", "JPN"):
-        z2pt5 = copy.deepcopy(ctx.z2pt5) 
+        z2pt5 = ctx.z2pt5.copy() 
         if region == "JPN":
             CZ_INFER = Z_MODEL["JPN"]
         else:
@@ -509,7 +509,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False,
 
         vs30 = ctx.vs30
         if region in ("TWN", "NZL"):
-            z1pt0 = copy.deepcopy(ctx.z1pt0)
+            z1pt0 = ctx.z1pt0.copy()
             z_values = _infer_z(z1pt0, ctx.vs30, CZ, region) # Infer z1pt0
         elif region not in ("CAS", "JPN"):  # Already retrieved (potentially
             z_values = np.zeros(vs30.shape) # inferred) z2pt5 values above

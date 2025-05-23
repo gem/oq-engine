@@ -27,7 +27,7 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 def _apply_m9_basin_term(ctx, imt, mean):
     # Check no unknown z2pt5 in the site model (check here because
     # this function is imported to ModifiableGMPE to apply same adjustment)
-    if any(ctx.z2pt5 == float(-999)):
+    if any(ctx.z2pt5 == -999):
         raise ValueError("z2pt5 must be provided for each site in the " \
         "site model (i.e. no -999 z2pt5 values) used with this ModifiableGMPE" \
         "feature")

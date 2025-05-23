@@ -703,7 +703,7 @@ def positivefloatorsentinel(value):
     :returns: positive float or -999 (sentinel)
     """
     f = float(not_empty(value))
-    if f < 0 and f!= float(-999):
+    if f < 0 and f!= -999:
         msg = 'float %s < 0 or not equal to -999' % f
         raise ValueError(msg)
     return f

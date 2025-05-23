@@ -581,7 +581,7 @@ class SandikkayaDinsever2018(GMPE):
         Returns the mean and standard deviations
         """
         # Check no unknown z1pt0 in the site model
-        if any(ctx.z1pt0 == float(-999)):
+        if any(ctx.z1pt0 == -999):
             raise ValueError("z1pt0 must be provided for each site in the " \
             "site model (i.e. no -999 z1pt0 values) used with the " \
             "SandikkayaDinsever2018 GSIM")

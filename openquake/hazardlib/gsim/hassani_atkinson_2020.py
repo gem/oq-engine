@@ -179,11 +179,11 @@ def _get_basin_term(C, ctx, region=None):
     """
     Z2pt5 factor.
     """
-    z2pt5 = copy.deepcopy(ctx.z2pt5)
+    z2pt5 = ctx.z2pt5.copy()
 
     # No vs30 to z2pt5 relationship for this GMM (see pp. 959) so
     # use the Campbell and Bozorgnia 2014 vs30 to z2pt5 for Japan
-    mask = z2pt5 == float(-999)
+    mask = z2pt5 == -999
     z2pt5[mask] = _get_z2pt5_ref(SJ=True, vs30=ctx.vs30[mask])
 
     s = CONSTANTS

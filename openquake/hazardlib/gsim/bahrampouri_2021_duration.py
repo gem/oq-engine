@@ -75,10 +75,10 @@ def _get_basin_term(C, ctx, region=None):
     """
     Get the basin term
     """
-    z1pt0 = copy.deepcopy(ctx.z1pt0)
+    z1pt0 = ctx.z1pt0.copy()
     
     # Use GMM's vs30 to z1pt0 for none-measured values
-    mask = z1pt0 == float(-999) 
+    mask = z1pt0 == -999 
     mean_z1pt0 = _get_mean_z1pt0(ctx.vs30)
     z1pt0[mask] = mean_z1pt0[mask]
     delta_z1pt0 = np.round(z1pt0 - mean_z1pt0, 4)

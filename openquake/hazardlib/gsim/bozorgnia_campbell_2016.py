@@ -4,7 +4,7 @@
 # Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as publishedt
+# under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
@@ -55,9 +55,9 @@ def _get_basin_term(C, ctx, region, SJ):
     """
     z2pt5_ref = _get_z2pt5_ref(SJ, ctx.vs30)
     if hasattr(ctx, "z2pt5"):
-        z2pt5 = copy.deepcopy(ctx.z2pt5)
+        z2pt5 = ctx.z2pt5.copy()
         # Use GMM's vs30 to z2pt5 for none-measured values
-        mask = z2pt5 == float(-999)
+        mask = z2pt5 == -999
         z2pt5[mask] = z2pt5_ref[mask]
     else:
         # Estimate unspecified sediment depth according to

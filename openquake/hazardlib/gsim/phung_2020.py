@@ -60,8 +60,8 @@ def _get_basin_term(C, ctx, region):
         else:
             phi6 = 800
     
-    z1pt0 = copy.deepcopy(ctx.z1pt0)
-    mask = z1pt0 == float(-999) # None-measured values
+    z1pt0 = ctx.z1pt0.copy()
+    mask = z1pt0 == -999 # None-measured values
     z1pt0[mask] = ez_1[mask]
 
     d_z1 = z1pt0 - ez_1
@@ -289,7 +289,7 @@ def _fz1pt0(region, C, vs30, z1pt0):
                                          / (1360 ** 2 + 412.39 ** 2)))
 
     # Use GMM's vs30 to z1pt0 for none-measured values
-    mask = z1pt0 == float(-999)
+    mask = z1pt0 == -999
     z1pt0[mask] = ez_1[mask]
 
     result = np.zeros_like(z1pt0)
@@ -376,7 +376,7 @@ class PhungEtAl2020SInter(GMPE):
             # non-linear component
             f_site = _fsite(s, self.region, C, vs30, pga_1000)
             # basin depth term
-            z1pt0 = copy.deepcopy(ctx.z1pt0)
+            z1pt0 = ctx.z1pt0.copy()
             f_z1pt0 = _fz1pt0(self.region, C, vs30, z1pt0)
 
             # median total and stddev

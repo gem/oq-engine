@@ -36,7 +36,7 @@ def _get_cb14_basin_term(imt, ctx, jpn_flag=False):
     basin term is for now turned off).
     """
     C = CampbellBozorgnia2014.COEFFS[imt]
-    z2pt5 = copy.deepcopy(ctx.z2pt5)
+    z2pt5 = ctx.z2pt5.copy()
     mask = z2pt5 == -999 # None-measured values
     z2pt5[mask] = _get_z2pt5_ref(jpn_flag, ctx.vs30[mask])
     fb = np.zeros(len(z2pt5))

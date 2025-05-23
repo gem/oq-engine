@@ -71,9 +71,9 @@ def get_basin_term(C, ctx, region):
     CZ = Z_MODEL[region]
 
     if region in ("JPN", "CAS"):
-        z_values = copy.deepcopy(ctx.z2pt5)
+        z_values = ctx.z2pt5.copy()
     elif region == "TWN":
-        z_values = copy.deepcopy(ctx.z1pt0)
+        z_values = ctx.z1pt0.copy()
     else:
         z_values = np.zeros_like(ctx.vs30)
 

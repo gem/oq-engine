@@ -264,7 +264,7 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
     vs30 = ctx.vs30
 
     if v1180 is None:
-        z10 = copy.deepcopy(ctx.z1pt0)
+        z10 = ctx.z1pt0.copy()
     else:
         vs30 = v1180
         # fake Z1.0 - Since negative it will be replaced by the default Z1.0
