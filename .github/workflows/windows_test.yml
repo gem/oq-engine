@@ -97,6 +97,7 @@ jobs:
             python -m pip install pytest pyshp flake8
           }
       - name: Run oq webui console and curl for the standalone tools
+        if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq.exe --version
