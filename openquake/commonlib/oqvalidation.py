@@ -758,6 +758,12 @@ sites:
   Used to specify a list of sites.
   Example: *sites = 10.1 45, 10.2 45*.
 
+site_labels:
+  Specify a list of labels (i.e. strings without spaces) assuming each site
+  have a field "label" corresponding to the label index.
+  Example: *site_labels = Cascadia*.
+  Default: []
+
 tile_spec:
   INTERNAL
 
@@ -1126,6 +1132,7 @@ class OqParam(valid.ParamSet):
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(
         valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
+    site_labels = valid.Param(valid.namelist, [])
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)
     tiling = valid.Param(valid.boolean, None)
@@ -1378,25 +1385,33 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid(
                     'conditional_loss_poes are not defined '
                     'for classical_damage calculations')
-            if not self.investigation_time and self.hazard_calculation_id is None:
+            if (not self.investigation_time and
+                    self.hazard_calculation_id is None):
                 self.raise_invalid('missing investigation_time')
 
     def check_ebrisk(self):
         # check specific to ebrisk
         if self.calculation_mode == 'ebrisk':
             if self.ground_motion_fields:
-                print('ground_motion_fields overridden to false', file=sys.stderr)
+                print('ground_motion_fields overridden to false',
+                      file=sys.stderr)
                 self.ground_motion_fields = False
             if self.hazard_curves_from_gmfs:
-                self.raise_invalid('hazard_curves_from_gmfs=true is invalid in ebrisk')
+                self.raise_invalid(
+                    'hazard_curves_from_gmfs=true is invalid in ebrisk')
 
     def check_hazard(self):
         # check for GMFs from file
         if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
             self.raise_invalid('You forgot to specify a site_model')
+
         elif self.inputs.get('gmfs', [''])[0].endswith('.xml'):
             self.raise_invalid('GMFs in XML are not supported anymore')
+
+        elif self.number_of_logic_tree_samples >= TWO16:
+            self.raise_invalid('number_of_logic_tree_samples too big: %d' %
+                               self.number_of_logic_tree_samples)
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
@@ -1410,9 +1425,6 @@ class OqParam(valid.ParamSet):
             if self.ses_per_logic_tree_path >= TWO32:
                 self.raise_invalid('ses_per_logic_tree_path too big: %d' %
                                    self.ses_per_logic_tree_path)
-            if self.number_of_logic_tree_samples >= TWO16:
-                self.raise_invalid('number_of_logic_tree_samples too big: %d' %
-                                   self.number_of_logic_tree_samples)
 
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
@@ -1428,7 +1440,8 @@ class OqParam(valid.ParamSet):
                 self.poes = self.poes_disagg
             elif self.poes != self.poes_disagg:
                 self.raise_invalid(
-                    'poes_disagg != poes: %s!=%s' % (self.poes_disagg, self.poes))
+                    'poes_disagg != poes: %s!=%s' %
+                    (self.poes_disagg, self.poes))
             if not self.poes_disagg and not self.iml_disagg:
                 self.raise_invalid('poes_disagg or iml_disagg must be set')
             elif self.poes_disagg and self.iml_disagg:
@@ -1454,7 +1467,8 @@ class OqParam(valid.ParamSet):
 
     def set_loss_types(self):
         """
-        Set .all_cost_types and .total_losses from the parent calculation, if any
+        Set .all_cost_types and .total_losses from the parent calculation,
+        if any
         """
         from openquake.commonlib import datastore  # avoid circular import
         if self.hazard_calculation_id:
@@ -1642,7 +1656,8 @@ class OqParam(valid.ParamSet):
     def set_risk_imts(self, risklist):
         """
         :param risklist:
-            a list of risk functions with attributes .id, .peril, .loss_type, .kind
+            a list of risk functions with attributes
+            .id, .peril, .loss_type, .kind
         :returns:
             a list of ordered unique perils
 
@@ -1910,7 +1925,8 @@ class OqParam(valid.ParamSet):
         Return True if it is possible to use the fast mean algorithm
         """
         return (not self.individual_rlzs and self.soil_intensities is None
-                and list(self.hazard_stats()) == ['mean'] and self.use_rates)
+                and list(self.hazard_stats()) == ['mean'] and self.use_rates
+                and not self.site_labels)
 
     def get_kinds(self, kind, R):
         """
@@ -2189,7 +2205,8 @@ class OqParam(valid.ParamSet):
                                  '=%d' % n)
         hstats = list(self.hazard_stats())
         if hstats and hstats != ['mean']:
-            self.raise_invalid('quantiles are not supported with collect_rlzs=true')
+            self.raise_invalid(
+                'quantiles are not supported with collect_rlzs=true')
         if self.number_of_logic_tree_samples == 0:
             raise ValueError('collect_rlzs=true is inconsistent with '
                              'full enumeration')

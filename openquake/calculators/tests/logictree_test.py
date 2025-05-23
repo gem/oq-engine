@@ -30,11 +30,11 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
-    case_01, case_02, case_04, case_05, case_06, case_07, case_08, case_09,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
-    case_18, case_19, case_20, case_21, case_28, case_30, case_31, case_36,
-    case_39, case_45, case_46, case_52, case_56, case_58, case_59, case_67,
-    case_68, case_71, case_73, case_79, case_80, case_83, case_84)
+    case_01, case_02, case_03, case_04, case_05, case_06, case_07, case_08,
+    case_09, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
+    case_17, case_18, case_19, case_20, case_21, case_28, case_30, case_31,
+    case_36, case_39, case_45, case_46, case_52, case_56, case_58, case_59,
+    case_67, case_68, case_71, case_73, case_79, case_80, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -107,6 +107,10 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve.csv', fname)
+
+    def test_case_03(self):
+        # ab_max_mag uncertainty
+        self.assert_curves_ok(['curve-mean.csv'], case_03.__file__)
 
     def test_case_04(self):
         # KOR model
@@ -651,6 +655,13 @@ hazard_uhs-std.csv
         csm = readinput.get_composite_source_model(oq)
         assert len(csm.src_groups) == 1
         assert len(self.calc.csm.src_groups) == 4
+
+        # checking `oq show rlz:2`, 2 being the rlz without extendModel
+        assert len(self.calc.datastore['weights']) == 3
+        dic = dict(view('rlz:2', self.calc.datastore))
+        assert str(dic) == ("{'sourceModel': 'common2.xml', "
+                            "'extendModel': '', "
+                            "'active shallow crust': [SadighEtAl1997]}")
 
     def test_case_68_bis(self):
         # extendModel with sampling and reduction to single source

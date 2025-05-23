@@ -160,10 +160,14 @@ class PointSource(ParametricSeismicSource):
         new.hypocenter_distribution = PMF([(1., depth)])
         return new
 
-    def get_planin(self, magd, npd):
+    def get_planin(self, magd=None, npd=None):
         """
-        :return: array of dtype planin_dt of shape (#mags, #planes, #depths)
+        :return: array of dtype planin_dt of shape (#mags, #planes)
         """
+        if magd is None:
+            magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
+        if npd is None:
+            npd = self.nodal_plane_distribution.data
         msr = self.magnitude_scaling_relationship
         planin = numpy.zeros((len(magd), len(npd)), planin_dt).view(
             numpy.recarray)
@@ -210,12 +214,11 @@ class PointSource(ParametricSeismicSource):
             self.radius = numpy.zeros(M)
             return self.radius[-1]
         magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
-        npd = self.nodal_plane_distribution.data
         self.radius = numpy.zeros(len(magd))
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         rar = self.rupture_aspect_ratio
-        for m, planin in enumerate(self.get_planin(magd, npd)):
+        for m, planin in enumerate(self.get_planin()):
             rup_length, rup_width, _ = get_rupdims(
                 usd, lsd, rar, planin.area[-1], planin.dip[-1])
             # the projection radius is half of the rupture diagonal
@@ -233,20 +236,15 @@ class PointSource(ParametricSeismicSource):
                 out += src.get_planar(shift_hypo)
             return out
 
-        npd = self.nodal_plane_distribution.data
         hdd = numpy.array(self.hypocenter_distribution.data)
         clon, clat = self.location.x, self.location.y
         usd = self.upper_seismogenic_depth
         lsd = self.lower_seismogenic_depth
         rar = self.rupture_aspect_ratio
-        planin = self.get_planin(magd, npd)
-        planar = build_planar(planin, hdd, clon, clat, usd, lsd, rar)  # MND3
-        if not shift_hypo:  # use the original hypocenter
-            planar.hypo[:, :, :, 0] = clon
-            planar.hypo[:, :, :, 1] = clat
-            for d, (drate, dep) in enumerate(hdd):
-                planar.hypo[:, :, d, 2] = dep
-        dic = {mag: [pla.reshape(-1, 3)]
+        planin = self.get_planin()
+        planar = build_planar(
+            planin, hdd, clon, clat, usd, lsd, rar, shift_hypo)
+        dic = {mag: [pla.reshape(-1, 3)]   # MND3
                for (_rate, mag), pla in zip(magd, planar)}
         return dic
 

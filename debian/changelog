@@ -1,4 +1,14 @@
   [Michele Simionato]
+  * Added a new uncertainty `abMaxMagAbsolute` to the logic tree
+  * Internal: refactored lt.Branch, lt.BranchSet and lt.CompositeLogicTree
+  * Avoided out of memory in calculations starting from the global SES
+
+  [Lana Todorovic]
+  * Updated units of slope (in m/m) in site model.
+
+  [Michele Simionato]
+  * Improved the validation of area source polygons
+  * Internal: added method `CompositeLogicTree.apply_all`
   * Fixed downloading of uncertainty.xml in OQImpact calculations
 
   [Michele Simionato, Paolo Tormene]

@@ -116,11 +116,15 @@ class TileGetter:
         self.tileno = tileno
         self.ntiles = ntiles
 
-    def __call__(self, complete):
-        if self.ntiles == 1:
+    def __call__(self, complete, label=None):
+        if self.ntiles == 1 and label is None:
             return complete
         sc = SiteCollection.__new__(SiteCollection)
-        sc.array = complete.array[complete.sids % self.ntiles == self.tileno]
+        array = complete.array[complete.sids % self.ntiles == self.tileno]
+        if label is not None:
+            sc.array = array[array['label'] == label]
+        else:
+            sc.array = array
         sc.complete = complete
         return sc
 
@@ -219,6 +223,7 @@ site_param_dt = {
     'z2pt5': numpy.float64,
     'z_sed': numpy.float64,
     'siteclass': (numpy.bytes_, 1),
+    'label': numpy.uint8,
     'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc

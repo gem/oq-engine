@@ -28,13 +28,13 @@ def critical_accel(
         Static Factor of Safety 
 
     :param slope:
-        slope angle in degrees.
+        slope angle in m/m.
 
     :returns: 
         crit_accel: critical acceleration in g units
     """    
 
-    crit_accel = (factor_of_safety - 1) * np.sin(np.radians(slope)) * g
+    crit_accel = (factor_of_safety - 1) * np.sin(np.arctan(slope))
     print(factor_of_safety)
     print(crit_accel)
     print("crit_accel")
