@@ -8,7 +8,7 @@
         <uncertaintyWeight>1.0</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
-    <logicTreeBranchSet uncertaintyType="abMMaxAbsolute" branchSetID="bs2">
+    <logicTreeBranchSet uncertaintyType="abMaxMagAbsolute" branchSetID="bs2">
       <logicTreeBranch branchID="b1">
         <uncertaintyModel>4.5 1.0 7.8</uncertaintyModel>
         <uncertaintyWeight>0.25</uncertaintyWeight>

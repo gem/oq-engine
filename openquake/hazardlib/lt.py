@@ -80,7 +80,7 @@ def abGR(utype, node, filename):
             node, filename, 'expected a pair of floats separated by space')
 
 
-@parse_uncertainty.add('abMMaxAbsolute')
+@parse_uncertainty.add('abMaxMagAbsolute')
 def abMMax(utype, node, filename):
     try:
         [a, b, c] = node.text.split()
@@ -301,11 +301,10 @@ def _abGR_absolute(utype, source, value):
     source.mfd.modify('set_ab', dict(a_val=a, b_val=b))
 
 
-@apply_uncertainty.add('abMMaxAbsolute')
+@apply_uncertainty.add('abMaxMagAbsolute')
 def _abMMax_absolute(utype, source, value):
-    a, b, c = value
-    source.mfd.modify('set_ab_max_mag', dict(a_val=a, b_val=b, max_mag=c))
-
+    a, b, mm = value
+    source.mfd.modify('set_ab_max_mag', dict(a_val=a, b_val=b, max_mag=mm))
 
 
 @apply_uncertainty.add('bGRAbsolute')
@@ -609,6 +608,11 @@ class BranchSet(object):
     def __init__(self, uncertainty_type, filters=None, ordinal=0,
                  collapsed=False):
         self.uncertainty_type = uncertainty_type
+        if (uncertainty_type not in [
+                'sourceModel', 'extendModel', 'gmpeModel'] and
+                not uncertainty_type in apply_uncertainty):
+            raise NotImplementedError(
+                f'apply_uncertainty: missing {uncertainty_type}')
         self.filters = filters or {}
         self.ordinal = ordinal
         self.collapsed = collapsed
