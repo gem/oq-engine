@@ -54,4 +54,3 @@
 | case_87 | Tests execution of NGAEastUSGSGMPE with Chapman and Guo (2021) coastal plains site amp model           |
 | case_88 | Tests execution of AtkinsonMacias2009 GMM with BA08 site term specified as input argument              |
 | case_89 | Tests execution of site model with non-measured (-999) z1pt0 and z2pt5 and basin-param using GMMs      |
-| case_90 | Assert that using a site model with negative and not -999 z1pt0 or z2pt5 leads to an error being raised|

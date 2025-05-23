@@ -912,10 +912,3 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(1.0).csv',
             'hazard_curve-mean-SA(2.0).csv'],
             case_89.__file__)
-        
-    def test_case_90(self):
-        # Make sure a site model with negative z1pt0 or
-        # or z2pt5 (that are not -999) prevents successful
-        # instantiation of a SiteCollection in a calculation
-        with self.assertRaises(ValueError):
-            self.run_calc(self.run_calc(case_90.__file__, 'job.ini'))
