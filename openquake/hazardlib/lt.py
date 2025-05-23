@@ -28,6 +28,8 @@ from openquake.hazardlib.sourceconverter import (
     split_coords_2d, split_coords_3d)
 from openquake.hazardlib import valid
 
+NOAPPLY_UNCERTAINTIES = [
+    'sourceModel', 'extendModel', 'gmpeModel', 'applyToTectonicRegionType']
 
 class LogicTreeError(Exception):
     """
@@ -608,8 +610,7 @@ class BranchSet(object):
     def __init__(self, uncertainty_type, filters=None, ordinal=0,
                  collapsed=False):
         self.uncertainty_type = uncertainty_type
-        if (uncertainty_type not in [
-                'sourceModel', 'extendModel', 'gmpeModel'] and
+        if (uncertainty_type not in NOAPPLY_UNCERTAINTIES and
                 not uncertainty_type in apply_uncertainty):
             raise NotImplementedError(
                 f'apply_uncertainty: missing {uncertainty_type}')
@@ -855,8 +856,12 @@ class CompositeLogicTree(object):
     Build a logic tree from a set of branches by automatically
     setting the branch IDs.
     """
-    def __init__(self, branchsets):
+    def __init__(self, branchsets, seed=42, num_samples=0,
+                 sampling_method='early_weights'):
         self.branchsets = branchsets
+        self.seed = seed
+        self.num_samples = num_samples
+        self.sampling_method = sampling_method
         for i, bset in enumerate(branchsets):
             bset.ordinal = i
             bset.check_duplicates()
@@ -909,8 +914,20 @@ class CompositeLogicTree(object):
             yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
             ordinal += 1
 
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+        return self.num_samples if self.num_samples else count_paths(
+            self.branchsets[0].branches)
+
     def get_all_paths(self):
-        return [rlz.lt_path for rlz in self]
+        out = []
+        nb = len(self.branchsets)
+        for weight, branches in self.branchsets[0].enumerate_paths():
+            lt_path = ''.join(br.id for br in branches)
+            out.append(lt_path.ljust(nb, '.'))
+        return out
 
     def sample_paths(self, num_samples, seed=42,
                      sampling_method='early_weights'):
