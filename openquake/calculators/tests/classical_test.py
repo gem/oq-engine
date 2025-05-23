@@ -914,7 +914,7 @@ class ClassicalTestCase(CalculatorTestCase):
             case_89.__file__)
         
         # And check z1pt0 of -100 m/s raises value error when compiling
-        # the site collection from a non-valid CSV
+        # the site collection from a CSV within a regular OQ calc
         with self.assertRaises(ValueError) as job:
             self.run_calc(case_89.__file__, 'job_error.ini')
         self.assertIn('float -100.0 < 0 or not equal to -999', str(job.exception))
