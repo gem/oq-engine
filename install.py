@@ -280,8 +280,6 @@ def install_standalone(venv):
         "oq-platform-standalone",
         "oq-platform-ipt",
         "oq-platform-taxonomy",
-        "oq-platform-taxtweb",
-        "openquake.taxonomy",
     ]:
         try:
             print("Applications " + app + " are not installed yet \n")

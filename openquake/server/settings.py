@@ -236,7 +236,7 @@ GOOGLE_ANALYTICS_TOKEN = None
 
 CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
 
-# OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
+# OpenQuake Standalone tools (IPT, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
         'openquakeplatform', 'corsheaders',
