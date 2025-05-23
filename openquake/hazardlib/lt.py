@@ -763,7 +763,10 @@ class BranchSet(object):
         """
         The branch weights must sum up to 1.
         """
-        tot = sum(br.weight for br in self.branches)
+        tot = 0
+        for br in self.branches:
+            assert 0 <= br.weight <= 1, br.weight
+            tot += br.weight
         assert abs(tot - 1.) < 1E-6, [br.weight for br in self.branches]
 
     def __len__(self):
