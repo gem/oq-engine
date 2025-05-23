@@ -26,14 +26,18 @@ jobs:
       matrix:
         os: [windows-2022, windows-2019]
         python-version: ["3.11", "3.12"]
-
+    env:
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
       # This Checkout use git-ref keyword from dispatch
-      - name: Clone Repository (Master)
+      - name: Clone Repository (Master or PR)
         uses: actions/checkout@v4
         if: github.event.inputs.git-ref == ''
+        with:
+          ref: ${{ github.head_ref }}
       - name: Clone Repository (Custom Ref)
         uses: actions/checkout@v4
         if: github.event.inputs.git-ref != ''
@@ -47,6 +51,7 @@ jobs:
       - name: Display Python version and check OS, after install OQ and test
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
         run: |
           $need_to_run = 0
           @"
@@ -87,8 +92,8 @@ jobs:
             else
             {
               Write-Host "Install on user mode on scheduled task"
-              Write-Host "python install.py devel "
-              python install.py devel
+              Write-Host "python install.py devel --version ${env:GITHUB_HEAD_REF}"
+              python install.py devel --version ${env:GITHUB_HEAD_REF}
             }
             C:\Users\runneradmin\openquake\Scripts\activate.ps1
             python -m pip install pytest pyshp flake8
