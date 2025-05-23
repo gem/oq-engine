@@ -22,14 +22,14 @@ Module exports :class:`ZhaoEtAl2006Asc`, :class:`ZhaoEtAl2006SInter`,
 :class:`ZhaoEtAl2006SSlabNSHMP2014`
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
+from scipy.constants import g # standard acceleration of gravity in m/s**2
 import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
 
 
 def _get_us23_nshm_adjustments(ln_mean, imt, ctx, cb14_basin_term,
@@ -45,13 +45,23 @@ def _get_us23_nshm_adjustments(ln_mean, imt, ctx, cb14_basin_term,
     """
     # Set a null basin term
     fb = np.zeros(len(ln_mean))
-    # Apply cb14 basin term if specified
+    # Apply cb14 basin term if specified (-999 z2pt5
+    # values will be updated within this function)
     if cb14_basin_term:
         fb = _get_cb14_basin_term(imt, ctx)
     # Apply m9 basin term if specified (will override
     # cb14 basin term for basin sites if T >= 1.9 s)
     if m9_basin_term and imt.period >= 1.9:
-        fb[ctx.z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
+        # NOTE: also need to update -999 z2pt5 here so have
+        # a z2pt5 for each site to ensure always applying m9
+        # basin term where appropriate --> given always using
+        # (at least in US23 model) in combination with CB14 basin
+        # term use this relationship to estimate missing z2pt5
+        # consistently
+        z2pt5 = ctx.z2pt5.copy()
+        mask = z2pt5 == -999 # None-measured values
+        z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
+        fb[z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
 
     return fb
 

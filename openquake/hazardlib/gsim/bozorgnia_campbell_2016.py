@@ -25,9 +25,11 @@ Module exports :class:`BozorgniaCampbell2016`
                :class:`BozorgniaCampbell2016LowQJapanSite`
 """
 import numpy as np
+import copy
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (
-    _select_basin_model, _get_magnitude_term, _get_geometric_attenuation_term,
+    _get_z2pt5_ref, _get_magnitude_term, _get_geometric_attenuation_term,
     _get_hanging_wall_term, _get_fault_dip_term,
     _get_hypocentral_depth_term, _get_taulny, _get_philny)
 from openquake.hazardlib import const
@@ -51,13 +53,16 @@ def _get_basin_term(C, ctx, region, SJ):
 
     The deep basin response (z2.5 > 1km) is not included in this model
     """
-    if isinstance(ctx.z2pt5, np.ndarray):
-        # Site model defined
-        z2pt5 = ctx.z2pt5
+    z2pt5_ref = _get_z2pt5_ref(SJ, ctx.vs30)
+    if hasattr(ctx, "z2pt5"):
+        z2pt5 = ctx.z2pt5.copy()
+        # Use GMM's vs30 to z2pt5 for none-measured values
+        mask = z2pt5 == -999
+        z2pt5[mask] = z2pt5_ref[mask]
     else:
         # Estimate unspecified sediment depth according to
         # equations 33 and 34 of CB14
-        z2pt5 = _select_basin_model(SJ, ctx.vs30)
+        z2pt5 = z2pt5_ref
     f_sed = np.zeros_like(z2pt5)
     idx = z2pt5 < 1.0
     f_sed[idx] = (C["c14"] + C["c15"] * SJ) * (z2pt5[idx] - 1.0)

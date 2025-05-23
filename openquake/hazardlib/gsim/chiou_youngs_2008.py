@@ -20,10 +20,19 @@
 Module exports :class:`ChiouYoungs2008`.
 """
 import numpy as np
+import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+
+def _get_z1_ref(vs30):
+    """
+    Return z1pt0 ref (in metres) as defined within equation 0
+    of the EQ spectra article. 
+    """
+    return np.exp(28.5 - (3.82/8) * np.log(vs30**8 + 378.7**8))
 
 
 def _get_basin_term(C, ctx, region=None):
@@ -31,11 +40,15 @@ def _get_basin_term(C, ctx, region=None):
     Return the basin term describing effects of deep sediment sites and shallow
     sediment sites through z1pt0 
     """
+    z1pt0 = ctx.z1pt0.copy()
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == -999
+    z1pt0[mask] = _get_z1_ref(ctx.vs30[mask])
     # Equation 3.10
     deep_soil = C['phi5'] * (1.0 - 1.0 / np.cosh(C['phi6'] * (
-        ctx.z1pt0 - C['phi7']).clip(0, np.inf)))
+        z1pt0 - C['phi7']).clip(0, np.inf)))
     # Equation 3.11
-    shallow_soil = C['phi8'] / np.cosh(0.15 * (ctx.z1pt0 - 15).clip(0, np.inf))
+    shallow_soil = C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
     return deep_soil + shallow_soil
 
 

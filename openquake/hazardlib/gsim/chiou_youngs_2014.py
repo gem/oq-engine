@@ -23,6 +23,7 @@ Module exports :class:`ChiouYoungs2014`
 """
 import os
 import pathlib
+import copy
 import numpy as np
 
 from openquake.baselib.general import CallableDict
@@ -52,20 +53,34 @@ IMT   phi5cy   phi6cy
 """)
 
 
-def _get_centered_z1pt0(region, ctx):
+def japan_mean_z1pt0(vs30):
+    """
+    Return z1pt0 based on Japan region CY14 relationship
+    """
+    return (-5.23 / 2.) * np.log(((
+        vs30 ** 2.) + 412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.))
+
+
+def global_mean_z1pt0(vs30):
+    """
+    Return z1pt0 based on non-Japan region CY14 relationship
+    """
+    return (-7.15 / 4.) * np.log((
+        (vs30) ** 4. + 570.94 ** 4.) / (1360 ** 4. + 570.94 ** 4.))
+
+
+def _get_centered_z1pt0(region, vs30, z1pt0):
     """
     Get z1pt0 centered on the Vs30- dependent average z1pt0(m)
     California and non-Japan regions
     """
     if region == "JPN":
-        mean_z1pt0 = (-5.23 / 2.) * np.log(((ctx.vs30 ** 2.) + 412.39 ** 2.)
-                                           / (1360 ** 2. + 412.39 ** 2.))
-        return ctx.z1pt0 - np.exp(mean_z1pt0)
+        mean_z1pt0 = japan_mean_z1pt0(vs30)
+        return z1pt0 - np.exp(mean_z1pt0)
 
-    #: California and non-Japan regions
-    mean_z1pt0 = (-7.15 / 4.) * np.log(((ctx.vs30) ** 4. + 570.94 ** 4.)
-                                       / (1360 ** 4. + 570.94 ** 4.))
-    return ctx.z1pt0 - np.exp(mean_z1pt0)
+    else:
+        mean_z1pt0 = global_mean_z1pt0(vs30)
+        return z1pt0 - np.exp(mean_z1pt0)
 
 
 def _get_centered_ztor(ctx):
@@ -161,17 +176,26 @@ def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
     Returns the basin depth scaling
     """
+    z1pt0 = ctx.z1pt0.copy()
+
+    # Use GMMs vs30 to z1pt0 for non-measured values
+    mask = z1pt0 == -999
+    if region == "JPN":
+        z1pt0[mask] = np.exp(japan_mean_z1pt0(ctx.vs30[mask]))
+    else:
+        z1pt0[mask] = np.exp(global_mean_z1pt0(ctx.vs30[mask]))
+
     # Get USGS basin scaling factor if required
     if usgs_bs:
-        usgs_baf = _get_z1pt0_usgs_basin_scaling(ctx.z1pt0, imt.period)
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(z1pt0, imt.period)
     else:
         usgs_baf = np.ones(len(ctx.vs30))
 
     # Get basin depth
-    dz1pt0 = _get_centered_z1pt0(region, ctx)
+    dz1pt0 = _get_centered_z1pt0(region, ctx.vs30, z1pt0)
 
     # for Z1.0 = 0.0 no deep soil correction is applied
-    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
+    dz1pt0[z1pt0 <= 0.0] = 0.0
     if region == "JPN":
         return C["phi5jp"] * (1.0 - np.exp(-dz1pt0 / CONSTANTS["phi6jp"]))
 

@@ -19,10 +19,12 @@ Module :mod:`openquake.hazardlib.mgmpe.cb14_basin_term` implements
 :class:`~openquake.hazardlib.mgmpe.CB14BasinTerm`
 """
 import numpy as np
+import copy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import CampbellBozorgnia2014
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (CampbellBozorgnia2014,
+                                                              _get_z2pt5_ref)
 
 
 def _get_cb14_basin_term(imt, ctx, jpn_flag=False):
@@ -34,7 +36,9 @@ def _get_cb14_basin_term(imt, ctx, jpn_flag=False):
     basin term is for now turned off).
     """
     C = CampbellBozorgnia2014.COEFFS[imt]
-    z2pt5 = ctx.z2pt5
+    z2pt5 = ctx.z2pt5.copy()
+    mask = z2pt5 == -999 # None-measured values
+    z2pt5[mask] = _get_z2pt5_ref(jpn_flag, ctx.vs30[mask])
     fb = np.zeros(len(z2pt5))
     idx = z2pt5 < 1.0
     fb[idx] = (C["c14"] + C["c15"] * jpn_flag) * (z2pt5[idx] - 1.0)
@@ -54,7 +58,7 @@ class CB14BasinTerm(GMPE):
         The name of a GMPE class
     """
     # Req Params
-    REQUIRES_SITES_PARAMETERS = {'z2pt5'}
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
     # Others are set from underlying GMM
     REQUIRES_DISTANCES = set() 

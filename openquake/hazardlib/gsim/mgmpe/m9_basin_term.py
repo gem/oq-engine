@@ -25,6 +25,13 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 
 
 def _apply_m9_basin_term(ctx, imt, mean):
+    # Check no unknown z2pt5 in the site model (check here because
+    # this function is imported to ModifiableGMPE to apply same adjustment)
+    if any(ctx.z2pt5 == -999):
+        raise ValueError("z2pt5 must be provided for each site in the " \
+        "site model (i.e. no -999 z2pt5 values) used with this ModifiableGMPE" \
+        "feature")
+
     if imt.period > 1.9: # Only apply to long-period SA
         fb_m9 = np.log(2.0)
         idx = ctx.z2pt5 >= 6.0 # Apply only to sites with z2pt5 >= 6
@@ -42,6 +49,13 @@ class M9BasinTerm(GMPE):
     This implementation is based on the description of the M9 adjustment 
     within the Moschetti et al. (2024) EQ Spectra article on the conterminous
     US 2023 NSHM GMC (pp. 1178).
+
+    NOTE: Unknown (-999) z2pt5 values (which can be estimated from an
+    underlying GSIM's vs30 to z2pt5 relationship when computing a
+    basin term) are not permitted in the site model used with this GSIM
+    class to avoid inconsistency between the z2pt5 used here inside the
+    ``_apply_m9_basin_term`` function and the z2pt5 (potentially) used
+    by the underlying GSIM to compute the pre-M9 adjusted mean ground-motion.
 
     :param gmpe_name:
         The name of a GMPE class

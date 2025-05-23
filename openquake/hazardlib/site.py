@@ -147,7 +147,11 @@ class Site(object):
         start to propagate with a speed above 2.5 km/sec, in km.
 
     :raises ValueError:
-        If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
+        If ``vs30`` is zero or negative
+        OR
+        ``z1pt0`` or ``z2pt5`` is zero or negative AND not -999 (a value of
+        -999 informs basin param using GMMs to estimate values for such sites
+        with median value from GMM's own vs30 to z1pt0 or z2pt5 relationship).
 
     .. note::
 
@@ -158,10 +162,10 @@ class Site(object):
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
-        if not numpy.isnan(z1pt0) and z1pt0 <= 0:
-            raise ValueError('z1pt0 must be positive')
-        if not numpy.isnan(z2pt5) and z2pt5 <= 0:
-            raise ValueError('z2pt5 must be positive')
+        if not numpy.isnan(z1pt0) and z1pt0 <= 0 and z1pt0 != -999:
+            raise ValueError('z1pt0 must be positive or set to -999')
+        if not numpy.isnan(z2pt5) and z2pt5 <= 0 and z2pt5 != -999:
+            raise ValueError('z2pt5 must be positive or set to -999')
 
         self.location = location
         self.vs30 = vs30

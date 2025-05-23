@@ -172,3 +172,22 @@ the engine usually does.
 
 Notice that the equivalent epicenter distance approximation only applies to ruptures coming from 
 PointSources/AreaSources/MultiPointSources, fault sources are untouched.
+
+.. _infer-site-basin-params:
+
+Infer Unknown Basin Parameters
+-------------------------------------------
+
+The ``z1pt0`` (depth to a shear wave velocity of 1000 m/s) and ``z2pt5`` (depth to shear wave velocity of 2500 m/s) provided
+in the site model CSV are used in GMPEs to compute the basin term (if the GMPE includes one). In engine version 3.24
+we introduce the ability to specify a sentinel value of ``-999`` for either parameter in the site model to permit each GMPE
+considered within a calculation to compute ``z1pt0`` or ``z2pt5`` independelty using the ``vs30`` values in the site model (most
+GMPEs using basin terms also provide a ``vs30`` to ``z1pt0`` or ``vs30`` to ``z2pt5`` relationship which can be used to estimate
+the required value for each site). For GMPEs which do use either ``z1pt0`` or ``z2pt5``, but do not provide in their associated
+publications a ``vs30`` to ``z1pt0`` or ``vs30`` to ``z2pt5`` relationship, we use the most appropriate of those available from
+other GMPEs (e.g. for the ``HassaniAtkinson2020`` GMPE developed for application to Japan no ``vs30`` to ``z2pt5`` relationship
+is provided in the journal article, so we assume the ``CampbellBozorgnia2014`` GMPE's ``vs30`` to ``z2pt5`` relationship for Japan
+is the most appropriate to use here). It is strongly advisable that if you make use of this feature that you examine this behaviour
+within any GMPEs included in the GMC logic tree.
+
+This capability was added as required for implementation of the 2023 Conterminous USA model developed by the USGS.

@@ -520,6 +520,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
             sm = get_poor_site_model(fname)
 
     sm_fieldsets[fname] = set(sm.dtype.names)
+
     # make sure site_id starts from 0, if given
     if 'site_id' in sm.dtype.names:
         if (sm['site_id'] != numpy.arange(len(sm))).any():
@@ -534,17 +535,36 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
         raise InvalidFile(
             'Found duplicate sites %s in %s' % (dupl, fname))
 
-    # used global parameters is local ones are missing
+    # used global parameters if local ones are missing
     params = sorted(set(sm.dtype.names) | set(oqparam.req_site_params))
     z = numpy.zeros(
         len(sm), [(p, site.site_param_dt[p]) for p in params])
-    for name in z.dtype.names:
-        try:
-            z[name] = sm[name]
-        except ValueError:  # missing, use the global parameter
+    for name in z.dtype.names:    
+        if name in sm.dtype.names:
+            vals = sm[name]
+            # Get param from site model and if "core"
+            # then validate the associated values
+            if name in ['lon', 'lat']:
+                coos = ','.join(str(x) for x in vals)
+                if name == "lat":
+                    z[name] = valid.latitudes(coos)
+                else:
+                    z[name] = valid.longitudes(coos)
+            elif name in ["vs30", "z1pt0", "z2pt5"]:
+                pars = ' '.join(str(x) for x in vals)
+                if name == 'vs30':
+                    z[name] = valid.positivefloats(pars)
+                else:
+                    z[name] = valid.positivefloatsorsentinels(pars)
+            else:
+                z[name] = vals # None-core site parameter
+
+        else:
+            # If missing use the global parameter
             if name != 'backarc':  # backarc has default zero
                 # exercised in the test classical/case_28_bis
                 z[name] = check_site_param(oqparam, name)
+
     arrays.append(z)
 
 
@@ -643,6 +663,7 @@ def get_site_model(oqparam, h5=None):
     sm = numpy.concatenate(arrays, dtype=arrays[0].dtype)
     if h5:
         h5['site_model'] = sm
+
     return sm
 
 
