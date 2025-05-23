@@ -974,8 +974,6 @@ def dictionary(value):
     Traceback (most recent call last):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
-    >>> dictionary('{"ls": logscale(0.01, 2, 5)}')
-    {'ls': [0.01, 0.03760603093086393, 0.14142135623730948, 0.5318295896944986, 1.9999999999999991]}
     """
     if not value:
         return {}

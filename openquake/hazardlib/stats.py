@@ -78,17 +78,17 @@ def norm_cdf(x, a, s):
     Gaussian cumulative distribution function; if s=0, returns an
     Heaviside function instead. NB: for x=a, 0.5 is returned for all s.
 
-    >>> round(norm_cdf(1.2, 1, .1), 10)
+    >>> round(float(norm_cdf(1.2, 1, .1)), 10)
     0.9772498681
-    >>> norm_cdf(1.2, 1, 0)
+    >>> float(norm_cdf(1.2, 1, 0))
     1.0
-    >>> round(norm_cdf(.8, 1, .1), 10)
+    >>> round(float(norm_cdf(.8, 1, .1)), 10)
     0.0227501319
-    >>> norm_cdf(.8, 1, 0)
+    >>> float(norm_cdf(.8, 1, 0))
     0.0
-    >>> norm_cdf(1, 1, .1)
+    >>> float(norm_cdf(1, 1, .1))
     0.5
-    >>> norm_cdf(1, 1, 0)
+    >>> float(norm_cdf(1, 1, 0))
     0.5
     """
     if s == 0:
