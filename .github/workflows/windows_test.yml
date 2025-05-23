@@ -9,8 +9,7 @@ on:
         required: true
   schedule:
     - cron: "00 19 * * *"
-  push:
-    branches: [windows-all-tests]
+  pull_request:
 
 jobs:
   install_oq:
@@ -94,6 +93,24 @@ jobs:
             C:\Users\runneradmin\openquake\Scripts\activate.ps1
             python -m pip install pytest pyshp flake8
           }
+      - name: Run oq webui console and curl for the standalone tools
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq.exe --version
+          Start-Job -ScriptBlock{& oq.exe webui start 127.0.0.1:8800 -s 2>&1 > "$env:LOCALAPPDATA\Temp\webui.log" }
+          ping 127.0.0.1 -n 6 > null
+          Get-Job
+          netstat -o -n -a | findstr 8800
+          Write-Host "Test webui and tools Web pages"
+          ping 127.0.0.1 -n 6 > null
+          curl.exe -I --fail -G http://127.0.0.1:8800/engine
+          ping 127.0.0.1 -n 6 > null
+          curl.exe -X HEAD -I --fail http://127.0.0.1:8800/ipt/
+          ping 127.0.0.1 -n 6 > null
+          curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/
+          ping 127.0.0.1 -n 6 > null
+          oq.exe engine --list-risk-calculations
+          curl.exe -v --fail -G http://127.0.0.1:8800/engine/1/outputs
       - name: Run tests for calculators
         if: always() && env.to_run == 0
         run: |
