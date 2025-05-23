@@ -249,6 +249,7 @@ if STANDALONE and WEBUI:
     if corsheader_middleware not in MIDDLEWARE:
         MIDDLEWARE += (corsheader_middleware,)
     CORS_ALLOW_ALL_ORIGINS = True
+    CORS_URLS_REGEX = r'^/taxtweb/explanation/.*$'
 
     FILE_PATH_FIELD_DIRECTORY = datastore.get_datadir()
 
