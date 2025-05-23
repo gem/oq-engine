@@ -621,7 +621,8 @@ class SourceModelLogicTree(object):
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-                if self.branchID and self.branchID not in branchnode['branchID']:
+                if (self.branchID and self.branchID not in
+                        branchnode['branchID']):
                     value = ''  # reduce all branches except branchID
                 elif self.source_id:  # only the files containing source_id
                     srcid = self.source_id.split('@')[0]
@@ -665,40 +666,7 @@ class SourceModelLogicTree(object):
         """
         return self.num_samples if self.num_samples else self.num_paths
 
-    def __iter__(self):
-        """
-        Yield Realization tuples. Notice that the weight is homogeneous when
-        sampling is enabled, since it is accounted for in the sampling
-        procedure.
-        """
-        if self.num_samples:
-            # random sampling of the logic tree
-            probs = random((self.num_samples, len(self.bsetdict)),
-                           self.seed, self.sampling_method)
-            ordinal = 0
-            for branches in self.root_branchset.sample(
-                    probs, self.sampling_method):
-                value = [br.value for br in branches]
-                smlt_path_ids = [br.branch_id for br in branches]
-                if self.sampling_method.startswith('early_'):
-                    weight = 1. / self.num_samples  # already accounted
-                elif self.sampling_method.startswith('late_'):
-                    weight = numpy.prod([br.weight for br in branches])
-                else:
-                    raise NotImplementedError(self.sampling_method)
-                yield Realization(value, weight, ordinal, tuple(smlt_path_ids))
-                ordinal += 1
-        else:  # full enumeration
-            rlzs = []
-            for weight, branches in self.root_branchset.enumerate_paths():
-                value = [br.value for br in branches]
-                branch_ids = [branch.branch_id for branch in branches]
-                rlz = Realization(value, weight, 0, tuple(branch_ids))
-                rlzs.append(rlz)
-            rlzs.sort(key=operator.attrgetter('pid'))
-            for r, rlz in enumerate(rlzs):
-                rlz.ordinal = r
-                yield rlz
+    __iter__ = CompositeLogicTree.__iter__
 
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
