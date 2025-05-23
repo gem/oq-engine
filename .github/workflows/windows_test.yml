@@ -18,17 +18,15 @@ jobs:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
       GITHUB_REF: ${{ github.ref }}
-      GITHUB_HD_REF: ${{ github.head_ref }}
-      GITHUB_BS_REF: ${{ github.base_ref }}
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      GITHUB_BASE_REF: ${{ github.base_ref }}
       BRANCH: ${{ github.event.inputs.git-ref }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     strategy:
       fail-fast: false
       matrix:
         os: [windows-2022, windows-2019]
         python-version: ["3.11", "3.12"]
-     env:
-       GITHUB_HEAD_REF: ${{ github.head_ref }}
-       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
