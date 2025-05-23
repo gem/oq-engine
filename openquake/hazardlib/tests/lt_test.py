@@ -270,7 +270,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <logicTreeBranchSet
         applyToBranches="CD"
         branchSetID="bs2"
-        uncertaintyType="applyToTRT"
+        uncertaintyType="applyToTectonicRegionType"
         >
             <logicTreeBranch
             branchID="E"
@@ -317,7 +317,7 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         bs1.branches = [lt.Branch('C', 7.0, .5, 'bs1'),
                         lt.Branch('D', 7.6, .5, 'bs1')]
 
-        bs2 = lt.BranchSet('applyToTRT',
+        bs2 = lt.BranchSet('applyToTectonicRegionType',
                            filters={'applyToBranches': 'CD'})
         bs2.branches = [lt.Branch('E', 'A', .3, 'bs2'),
                         lt.Branch('F', 'B', .7, 'bs2')]
