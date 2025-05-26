@@ -171,7 +171,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         return
 
     for tileno, tileget in enumerate(tilegetters):
-        result = hazclassical(sources, tileget(sitecol, cmaker.label), cmaker)
+        result = hazclassical(sources, tileget(sitecol, cmaker.ilabel), cmaker)
         if tileno:
             # source_data has keys src_id, grp_id, nsites, esites, nrupts,
             # weight, ctimes, taskno
@@ -209,7 +209,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
         arr = dstore.getitem('_csm')[cmaker.grp_id]
         sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
-    result = hazclassical(sources, tilegetter(sitecol, cmaker.label), cmaker)
+    result = hazclassical(sources, tilegetter(sitecol, cmaker.ilabel), cmaker)
     rmap = result.pop('rmap').remove_zeros()
     if config.directory.custom_tmp:
         rates = rmap.to_array(cmaker.gid)
@@ -304,8 +304,8 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc[:, r].reshape(M, L1))
             if hstats:
-                if len(pgetter.labels):
-                    weights = pgetter.weights[pgetter.labels[sid]]
+                if len(pgetter.ilabels):
+                    weights = pgetter.weights[pgetter.ilabels[sid]]
                 else:
                     weights = pgetter.weights[0]
                 for s, (statname, stat) in enumerate(hstats.items()):

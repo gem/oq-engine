@@ -209,7 +209,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
         getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
         getter.weights = weights
         if oq.site_labels:
-            getter.labels = dstore['sitecol'].label
+            getter.ilabels = dstore['sitecol'].ilabel
         out.append(getter)
     return out
 
@@ -290,7 +290,7 @@ class MapGetter(object):
         self.poes = oq.poes
         self.use_rates = oq.use_rates
         self.eids = None
-        self.labels = ()  # overridden in case of labels
+        self.ilabels = ()  # overridden in case of ilabels
         self._map = {}
 
     @property

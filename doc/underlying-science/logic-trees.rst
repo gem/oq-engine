@@ -84,50 +84,42 @@ structure are (see for example the figure above):
   of a value and a real number in [0, 1] that can be either be
   considered a degree of confidence or a probability.
 
-- *branch set*
+- *branchset*
 
-  A branch set is a group of branches which collectively describes the
+  A branchset is a group of branches which collectively describes the
   (epistemic) uncertainty associated with a parameter or a model; the
-  sum of weights for the branches within a branch set must be equal to
+  sum of weights for the branches within a branchset must be equal to
   one.
-
-- *branching level*
-
-  A branching level defines the position of a branch set within the
-  logic tree structure. The lower is the value of the branching level
-  the closer is the branch set to the roots of the tree.
-  A branch set, as well as a branch, is defined with a unique
-  identifier.
 
 The logic-tree is the combination of a set of linked modules which
 starting from the roots specify the structure until the uppermost
-branches. A branch set can applied to all the sources included in the
+branches. A branchset can applied to all the sources included in the
 initial seismic source model, to a subset of sources, to a branch
-included in a branch set occurring before in the logic tree structure
+included in a branchset occurring before in the logic tree structure
 or even just to a single source. Currently, the rules controlling the
-application of a branch set incorporated into the OpenQuake engine are the
+application of a branchset incorporated into the OpenQuake engine are the
 following:
 
 - *applyToBranches*
 
-  The current branch set is applied to one or more branches of the
+  The current branchset is applied to one or more branches of the
   previous branching level designated through their unique ID;
 
 - *applyToSources*
 
-  The current branch set is applied to one or more sources included in
+  The current branchset is applied to one or more sources included in
   one of the initial seismic source models and designated through their
   unique ID;
 
 - *applyToSourceType*
 
-  The current branch set is applied to all the sources of a specific
+  The current branchset is applied to all the sources of a specific
   type (e.g. simple fault sources) included in one of the initial
   seismic source models; 
 
 - *applyToTectonicRegionType*
 
-  The current branch set is applied to all the sources belonging to a
+  The current branchset is applied to all the sources belonging to a
   selected tectonic region type (e.g. stable continental).
 
 The schematic represented in Figure 5.1 shows an
@@ -155,50 +147,77 @@ be added into future versions of the software.
 
 **Supported epistemic uncertainties**
 
-At the present time the OpenQuake engine provides a limited set of modules
-describing a specific epistemic uncertainty related to the creation
-of the seismic source model. A short description of each module is
-provided below. Note that the rules defined by each branch set are
-applied to the sources in the input model matching one of the filters. If a branch set
-has not a filter, then the associated epistemic uncertainty will be
-applied to all the sources included in the seismic source model.
+The OpenQuake engine supports multiple types of uncertainties in the
+logic tree branchsets. You can see the full list of available
+uncertainties with the command::
 
-- *Seismic source model*
+ $ oq info uncertainty_types
 
-  This module allows the user to load one or several initial seismic
+At the time of writing (engine v3.24) there are 23 uncertainty types::
+
+ 01 abGRAbsolute
+ 02 abMaxMagAbsolute
+ 03 applyToTectonicRegionType
+ 04 areaSourceGeometryAbsolute
+ 05 bGRAbsolute
+ 06 bGRRelative
+ 07 characteristicFaultGeometryAbsolute
+ 08 complexFaultGeometryAbsolute
+ 09 extendModel
+ 10 gmpeModel
+ 11 incrementalMFDAbsolute
+ 12 maxMagGRAbsolute
+ 13 maxMagGRRelative
+ 14 maxMagGRRelativeNoMoBalance
+ 15 recomputeMmax
+ 16 setLowerSeismDepthAbsolute
+ 17 setMSRAbsolute
+ 18 setUpperSeismDepthAbsolute
+ 19 simpleFaultDipAbsolute
+ 20 simpleFaultDipRelative
+ 21 simpleFaultGeometryAbsolute
+ 22 sourceModel
+ 23 truncatedGRFromSlipAbsolute
+
+You can see examples in the demos/hazard directory and in
+the directory qa_tests_data/logictree. Here we will document
+only the simplest uncertainty types.
+
+- *sourceModel*
+
+  This branchset allows the user to load one or several initial seismic
   source models. Using this module it is possible to use models with
   different source geometries and properties based on distinct
   assumptions or interpretations.
 
-- *Relative uncertainty on the b-value of the double truncated Gutenberg-Richter relationship* 
+- *bGRRelative*
 
-  This branch set adds (or subtracts) a
-  delta to the b-value of the double truncated Gutenberg-Richter
-  relationship.
+  This branchset adds (or subtracts) a delta to the b-value of the
+  double truncated Gutenberg-Richter relationship.
 
-- *Uncertainty on the a-value of the double truncated Gutenberg-Richter relationship*
+- *bGRAbsolute*
 
-  This branch set assigns a specific value of the a-value of the double
+  This branchset assigns a specific value of the b-value of the double
   truncated Gutenberg-Richter relationship.
 
-- *Uncertainty on the maximum magnitude of a double truncated Gutenberg-Richter distribution*
+- *maxMagGRRelative*
 
-  This branch set considers the epistemic uncertainty on the maximum
+  This branchset considers the epistemic uncertainty on the maximum
   value of magnitude used to define a double truncated
-  Gutenberg-Richter distribution. The application of this branch set
+  Gutenberg-Richter distribution. The application of this branchset
   adds (or subtracts) a delta value to the maximum magnitude.
 
-- *Uncertainty on the maximum magnitude of a double truncated Gutenberg-Richter distribution*
+- *maxMagGRAbsolute*
 
-  This branch set considers the epistemic uncertainty on the maximum
+  This branchset considers the epistemic uncertainty on the maximum
   value of magnitude used to define a double truncated
-  Gutenberg-Richter distribution. The application of this branch set
+  Gutenberg-Richter distribution. The application of this branchset
   assigns a specific value of the maximum magnitude of a double
   truncated Gutenberg-Richter.
 
 .. figure:: _images/branch_set_example.png
 
-   *(upper panel) Example of branch sets belonging to
+   *(upper panel) Example of branchsets belonging to
    the ground-motion logic tree. (lower panel) Example of ground-motion
    logic tree processing. The initial seismic source model, on the left,
    is propagated through a simple logic tree structure following the
@@ -207,6 +226,11 @@ applied to all the sources included in the seismic source model.
    structure. In this example hazard is compute using GSIM A for the
    sources in active shallow tectonic region and GSIM Y for sources in
    stable continental region*
+
+Note that the rules defined by each branchset are applied to the
+sources in the input model matching one of the filters. If a branch
+set has not a filter, then the associated epistemic uncertainty will
+be applied to all the sources included in the seismic source model.
 
 The ground-motion model logic tree
 **********************************
@@ -220,17 +244,17 @@ a single tectonic region.
 The epistemic uncertainty allowed for the GSIM logic-tree is the
 following:
 
-- *Ground shaking intensity models*
+- *gmpeModel*
 
   This module assigns to each tectonic region one or many GSIMs. This
-  branch set implicitly contains a filter since it is applied only to
+  branchset implicitly contains a filter since it is applied only to
   the seismic sources belonging to the corresponding tectonic region.
   The example within the figure above illustrates the
   common processing of the ground-motion logic tree operated by the
   OpenQuake engine. In this example the source model contains seismic sources
   included in two tectonic domains: active tectonics and stable
-  continental. The branch set defined for ’active shallow’ is therefore
-  applied just to sources ’S1 and ’S3’ while the branch set for sources
+  continental. The branchset defined for ’active shallow’ is therefore
+  applied just to sources ’S1 and ’S3’ while the branchset for sources
   in stable continental regions is utilized only for source ’S3’.
 
 Logic tree processing
@@ -275,14 +299,14 @@ structure defined. Let’s consider the example described in the figure
 above to illustrate how this method operates.
 
 The logic structure depicted in this figure contains two branching
-levels each one including a single branch set. Note that for the sake
+levels each one including a single branchset. Note that for the sake
 of simplicity and clarity we assume that the first branching level
 (i.e. the one used to define the initial seismic source model) is not
 affected by epistemic uncertainty. Note also that the initial seismic
-source model contains only one fault source. The branch set in the
+source model contains only one fault source. The branchset in the
 first branching level describes the epistemic uncertainty on the dip
 angle; three values, each one with an associated probability, are
-considered plausible. The second branch set describes the epistemic
+considered plausible. The second branchset describes the epistemic
 uncertainties associated with the modelling of ground-motion; two
 GSIMs are admitted in this case. On the right side of the figure the
 entire set of models originated by the logic tree structure are
@@ -292,7 +316,7 @@ Monte Carlo sampling
 ********************
 
 The Monte Carlo sampling of the logic tree is implemented in a simple
-and straightforward way. Given a branch set, following the same order
+and straightforward way. Given a branchset, following the same order
 used to add the branches we create a cumulative distribution function
 like the one represented by the red bars in the figure below.
 A sample model is then obtained from this
@@ -316,7 +340,7 @@ each branching level.
 .. figure:: _images/list_of_branches.png
 
    *On the x-axis an hypothetical list of branches
-   included in a branch set. The height of the blue bar is proportional
+   included in a branchset. The height of the blue bar is proportional
    to the corresponding weight. The red bars show the cumulative
    distribution function.*
 
@@ -345,11 +369,3 @@ In case of a logic tree processing based on a Monte Carlo sampling
 the quantiles are computed from this set of probabilities using
 standard methodologies.
 
-Future developments
--------------------
-
-The most urgent development with respect to this topic is the
-expansion of the modules provided to model epistemic uncertainties at
-the level of the seismic source modeling as well as for the
-description of epistemic uncertainties involving the ground motion
-model.
