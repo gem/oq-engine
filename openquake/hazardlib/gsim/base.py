@@ -442,9 +442,10 @@ class GMPE(GroundShakingIntensityModel):
         raise NotImplementedError
 
 
-class Dummy(GMPE):
+class DummyGMPE(GMPE):
     """
-    A fake GMPE doing nothing
+    A fake GMPE doing nothing, to be used with zero-weight branches of
+    the logic tree.
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {}
@@ -454,6 +455,9 @@ class Dummy(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
     REQUIRES_DISTANCES = {'rrup'}
+
+    def __init__(self, ordinal=0):
+        self.ordinal = ordinal
 
     def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         sig[:] = .005
