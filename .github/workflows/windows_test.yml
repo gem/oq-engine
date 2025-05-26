@@ -96,6 +96,7 @@ jobs:
             python -m pip install pytest pyshp flake8
           }
       - name: Run oq calcs, webui console and curl for the standalone tools
+        timeout-minutes: 10
         if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
@@ -103,7 +104,7 @@ jobs:
           ping 127.0.0.1 -n 3 > null
           Start-Job -ScriptBlock{& oq.exe webui start 127.0.0.1:8800 -s 2>&1 > "$env:LOCALAPPDATA\Temp\webui.log" }
           ping 127.0.0.1 -n 6 > null
-          timeout 10m do {
+          do {
              Write-Host "waiting..."
              sleep 2      
           } until(Test-NetConnection 127.0.0.1 -Port 8800 | ? { $_.TcpTestSucceeded } )
