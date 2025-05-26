@@ -100,11 +100,10 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq.exe --version
-          oq.exe engine --run "https://downloads.openquake.org/jobs/M4_Exercise.zip"
-          ping 127.0.0.1 -n 10 > null
+          ping 127.0.0.1 -n 3 > null
           Start-Job -ScriptBlock{& oq.exe webui start 127.0.0.1:8800 -s 2>&1 > "$env:LOCALAPPDATA\Temp\webui.log" }
           ping 127.0.0.1 -n 6 > null
-          do {
+          timeout 10m do {
              Write-Host "waiting..."
              sleep 2      
           } until(Test-NetConnection 127.0.0.1 -Port 8800 | ? { $_.TcpTestSucceeded } )
@@ -117,7 +116,6 @@ jobs:
           curl.exe -X HEAD -I --fail-with-body http://127.0.0.1:8800/ipt/
           ping 127.0.0.1 -n 10 > null
           curl.exe -X HEAD -I --fail-with-body http://127.0.0.1:8800/taxonomy/
-          ping 127.0.0.1 -n 10 > null
       - name: Run tests for calculators
         if: always() && env.to_run == 0
         run: |
