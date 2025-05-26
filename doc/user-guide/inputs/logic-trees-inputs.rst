@@ -1138,3 +1138,8 @@ By carefully adding dummy branches, the logic trees can be made consistent,
 in the sense that they will all generate the same number of realizations,
 even if some realizations will have zero weight in case of full
 enumeration, or will never be sampled in case of sampling.
+
+NB: site-dependent logic trees are currently **not supported** for event based
+calculations and in general for all risk calculations. The calculations
+will run, but only the weights corresponding to the default logic tree
+will be used.
