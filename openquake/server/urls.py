@@ -23,6 +23,7 @@ from django.views.generic.base import RedirectView
 
 from openquake.server import views
 
+urlpatterns = []
 if settings.WEBUI:
     urlpatterns += [
         re_path(r'^$', RedirectView.as_view(
