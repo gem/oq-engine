@@ -96,7 +96,7 @@ jobs:
             python -m pip install pytest pyshp flake8
           }
       - name: Run oq calcs, webui console and curl for the standalone tools
-        timeout-minutes: 10
+        timeout-minutes: 5
         if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
