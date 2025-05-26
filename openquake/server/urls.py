@@ -23,7 +23,7 @@
 #
 # from openquake.server import views
 #
-# urlpatterns = []
+urlpatterns = []
 # if settings.WEBUI:
 #     urlpatterns += [
 #         re_path(r'^$', RedirectView.as_view(
