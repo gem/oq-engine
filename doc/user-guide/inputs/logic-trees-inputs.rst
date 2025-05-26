@@ -1129,7 +1129,6 @@ you will get an error. The solution is to add the missing branches
 by using a ``Dummy`` GMPE with a weight of zero:
 
 .. code-block: xml
-
       <logicTreeBranch branchID="dummy">
         <uncertaintyModel>Dummy</uncertaintyModel>
         <uncertaintyWeight>0.0</uncertaintyWeight>
