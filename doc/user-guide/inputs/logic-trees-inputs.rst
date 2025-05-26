@@ -1126,7 +1126,7 @@ region 1 and the source model for region 2. If all the logic trees
 have the same number of branches per branchset
 there is nothing more to do. However, if some branches are missing,
 you will get an error. The solution is to add the missing branches
-by using a ``Dummy`` GMPE with a weight of zero::
+by using a ``Dummy`` GMPE with a weight of zero:
 
 .. code-block: xml
 
@@ -1139,4 +1139,3 @@ By carefully adding dummy branches, the logic trees can be made consistent,
 in the sense that they will all generate the same number of realizations,
 even if some realizations will have zero weight in case of full
 enumeration, or will never be sampled in case of sampling.
-
