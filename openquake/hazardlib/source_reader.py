@@ -736,12 +736,12 @@ class CompositeSourceModel:
                     # point sources are far away as determined in preclassical
                     continue
                 if len(cmakers) > 1:  # has labels
-                    sites = sitecol.filter(sitecol.label == idx)
+                    sites = sitecol.filter(sitecol.ilabel == idx)
                 else:
                     sites = sitecol
                 if sites:
                     if with_labels:
-                        cmaker.label = idx
+                        cmaker.ilabel = idx
                     yield self._split(
                         cmaker, sites, max_weight, num_chunks, tiling)
 
