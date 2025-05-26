@@ -1126,7 +1126,7 @@ region 1 and the source model for region 2. If all the logic trees
 have the same number of branches per branchset
 there is nothing more to do. However, if some branches are missing,
 you will get an error. The solution is to add the missing branches
-by using a ``DummyGMEP`` with a weight of zero:
+by using a ``DummyGMPE`` with a weight of zero:
 
 .. code-block:: xml
 
