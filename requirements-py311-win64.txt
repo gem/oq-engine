@@ -36,7 +36,6 @@ https://wheelhouse.openquake.org/v3/py/Django-4.2.10-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_pam-2.1.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cookie_consent-0.6.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_cors_headers-4.3.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/django_cors_headers-4.3.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/docutils-0.20.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flake8-6.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flatbuffers-23.5.26-py2.py3-none-any.whl
