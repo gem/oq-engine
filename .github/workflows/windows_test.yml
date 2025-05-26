@@ -23,7 +23,6 @@ jobs:
       BRANCH: ${{ github.event.inputs.git-ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     strategy:
-      fail-fast: false
       matrix:
         os: [windows-2022, windows-2019]
         python-version: ["3.11", "3.12"]
@@ -96,13 +95,19 @@ jobs:
             C:\Users\runneradmin\openquake\Scripts\activate.ps1
             python -m pip install pytest pyshp flake8
           }
-      - name: Run oq webui console and curl for the standalone tools
+      - name: Run oq calcs, webui console and curl for the standalone tools
         if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq.exe --version
+          oq.exe engine --run "https://downloads.openquake.org/jobs/M4_Exercise.zip"
+          ping 127.0.0.1 -n 10 > null
           Start-Job -ScriptBlock{& oq.exe webui start 127.0.0.1:8800 -s 2>&1 > "$env:LOCALAPPDATA\Temp\webui.log" }
           ping 127.0.0.1 -n 6 > null
+          do {
+             Write-Host "waiting..."
+             sleep 2      
+          } until(Test-NetConnection 127.0.0.1 -Port 8800 | ? { $_.TcpTestSucceeded } )
           Get-Job
           netstat -o -n -a | findstr 8800
           Write-Host "Test webui and tools Web pages"
