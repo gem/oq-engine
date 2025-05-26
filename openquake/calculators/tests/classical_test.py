@@ -141,18 +141,22 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(gsim.__class__.__name__, 'FaccioliEtAl2010')
 
     def test_case_06(self):
+        # test with site-dependent logic trees
         self.run_calc(case_06.__file__, 'job.ini')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs.csv', fname)
+
+        # the default logic tree has 3 realizations, one of zero weight
+        aac(self.calc.datastore['weights'][:], [.5, .5, 0])
 
         # check the mean hazard curves manually
         oq = self.calc.oqparam
         flt0, flt1, flt2 = contexts.read_full_lt_by_label(
             self.calc.datastore).values()
         sitecol = self.calc.sitecol
-        sites0 = sitecol.filter(sitecol.label == 0)
-        sites1 = sitecol.filter(sitecol.label == 1)
-        sites2 = sitecol.filter(sitecol.label == 2)
+        sites0 = sitecol.filter(sitecol.ilabel == 0)
+        sites1 = sitecol.filter(sitecol.ilabel == 1)
+        sites2 = sitecol.filter(sitecol.ilabel == 2)
         src_groups = self.calc.csm.src_groups
         hcurve0 = calc.mean_rates.calc_mcurves(
             src_groups, sites0, flt0, oq)[0, 0]
@@ -166,7 +170,13 @@ class ClassicalTestCase(CalculatorTestCase):
         aac(hcurve0, pga0, rtol=2e-6)
         aac(hcurve1, pga1, rtol=2e-6)
         aac(hcurve2, pga2, rtol=2e-6)
-      
+
+        # testing (over)sampling
+        self.run_calc(case_06.__file__, 'job.ini',
+                      number_of_logic_tree_samples='10')
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs.csv', fname)
+
     def test_case_07(self):
         # make sure the Dummy GMPE works in event based too
         self.run_calc(case_07.__file__, 'job.ini',
