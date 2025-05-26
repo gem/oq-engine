@@ -13,7 +13,7 @@
                 </logicTreeBranch>
 
                 <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>Dummy</uncertaintyModel>
+                    <uncertaintyModel>[DummyGMPE]ordinal=1</uncertaintyModel>
                     <uncertaintyWeight>0.0</uncertaintyWeight>
                 </logicTreeBranch>
 
