@@ -26,7 +26,7 @@ class PyprojTestCase(unittest.TestCase):
     # to suddenly exit without giving any kind of error message.
     # In the following test, we assume that hazardlib has already been imported and we
     # attempt to import pyproj. A complementary test importing first hazardlib then
-    # hazardlib was added to hazardlib.
+    # pyproj was added to hazardlib.
     def test_import_pyproj_before_hazardlib(self):
         import pyproj  # noqa
         import openquake.hazardlib  # noqa
