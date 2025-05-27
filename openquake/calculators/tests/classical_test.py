@@ -923,6 +923,10 @@ class ClassicalTestCase(CalculatorTestCase):
             'hazard_curve-mean-SA(2.0).csv'],
             case_89.__file__)
         
+        # Check execution of a calculation specifiying reference z1pt0
+        # and z2pt5 values in the job file instead of in site model file
+        self.run_calc(case_89.__file__, 'job_ref.ini')
+
         # And check z1pt0 of -100 m/s raises value error when compiling
         # the site collection from a CSV within a regular OQ calc
         with self.assertRaises(ValueError) as job:
