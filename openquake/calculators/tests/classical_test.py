@@ -924,7 +924,8 @@ class ClassicalTestCase(CalculatorTestCase):
             case_89.__file__)
         
         # Check execution of a calculation specifiying reference z1pt0
-        # and z2pt5 values in the job file instead of in site model file
+        # and z2pt5 values of -999 in the job file instead of in site
+        # model file
         self.run_calc(case_89.__file__, 'job_ref.ini')
 
         # And check z1pt0 of -100 m/s raises value error when compiling
