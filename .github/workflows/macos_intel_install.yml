@@ -57,7 +57,7 @@ jobs:
         if: always()
         run: |
           source ~/openquake/bin/activate
-          cd ~/work/oq-engine/oq-engine
+          cd ~/work/oq-engine/oq-engine/openquake
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 baselib/tests/pyproj_wheel_test.py
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib/tests/pyproj_wheel_test.py
 
