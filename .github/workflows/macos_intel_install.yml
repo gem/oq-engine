@@ -88,6 +88,19 @@ jobs:
           cd ~/work/oq-engine/oq-engine/openquake
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
 
+      - name: Run test to start OQ-WebUI in public mode to test installation
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          # Starting the webui here is not needed by test_public_mode,
+          # but here we also want to check that the webui starts without errors
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+           sleep 5 # wait for 5 seconds before check again
+          done
+
       - name: Run tests for the engine server in public mode to test installation
         if: always()
         run: |
