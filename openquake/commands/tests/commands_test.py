@@ -52,7 +52,7 @@ from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import (
     case_1 as eb_case_1, case_5, case_16, case_21)
 from openquake.qa_tests_data.event_based_risk import (
-    case_master, case_1 as case_eb)
+    case_master, case_01 as case_eb)
 from openquake.qa_tests_data.scenario import case_25
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
