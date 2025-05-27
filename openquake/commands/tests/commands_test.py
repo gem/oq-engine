@@ -51,7 +51,8 @@ from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import (
     case_1 as eb_case_1, case_5, case_16, case_21)
-from openquake.qa_tests_data.event_based_risk import case_master, case_01
+from openquake.qa_tests_data.event_based_risk import (
+    case_master, case_01 as case_eb)
 from openquake.qa_tests_data.scenario import case_25
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
@@ -456,7 +457,7 @@ class ZipTestCase(unittest.TestCase):
 
     def test_zip_ebr(self):
         # this is a case with an exposure.csv
-        ini = os.path.join(os.path.dirname(case_01.__file__), 'job_ins.ini')
+        ini = os.path.join(os.path.dirname(case_eb.__file__), 'job_ins.ini')
         dtemp = tempfile.mkdtemp()
         xzip = os.path.join(dtemp, 'x.zip')
         sap.runline(f'openquake.commands zip {ini} {xzip}')
