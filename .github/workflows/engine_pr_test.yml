@@ -36,6 +36,11 @@ jobs:
           source ~/openquake/bin/activate
           pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
           oq engine --upgrade-db
+
+          # Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
+          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/baselib/tests/pyproj_wheel_test.py
+          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/hazardlib/tests/pyproj_wheel_test.py
+
           pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
 
   hazardlib:
