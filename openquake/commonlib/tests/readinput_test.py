@@ -33,7 +33,8 @@ from openquake.commonlib import readinput, datastore
 from openquake.qa_tests_data.logictree import case_02, case_15, case_21
 from openquake.qa_tests_data.classical import case_34, case_65
 from openquake.qa_tests_data.event_based import case_16
-from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
+from openquake.qa_tests_data.event_based_risk import (
+    case_02 as ebr2, case_caracas)
 from openquake.qa_tests_data import mosaic
 
 
@@ -433,7 +434,7 @@ description = Description containing a % sign''')
         self.assertEqual(a1.tags, {'taxonomy': 'S1M_MC'})
 
         # test a call used in the GEM4ALL importer, XML + CSV
-        fname = os.path.join(os.path.dirname(case_2.__file__),
+        fname = os.path.join(os.path.dirname(ebr2.__file__),
                              'exposure.xml')
         for ass in asset.Exposure.read_all([fname]).assets:
             # make sure all the attributes exist
@@ -528,8 +529,18 @@ class LogicTreeTestCase(unittest.TestCase):
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
         paths = [rlz.lt_path for rlz in lt]
-        expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
-                    'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
+        expected = [('SM1', '.', 'gA0', 'gA1'),
+                    ('SM1', '.', 'gA0', 'gB1'),
+                    ('SM1', '.', 'gB0', 'gA1'),
+                    ('SM1', '.', 'gB0', 'gB1'),
+                    ('SM2', 'a3b1', 'gA0', 'gA1'),
+                    ('SM2', 'a3b1', 'gA0', 'gB1'),
+                    ('SM2', 'a3b1', 'gB0', 'gA1'),
+                    ('SM2', 'a3b1', 'gB0', 'gB1'),
+                    ('SM2', 'a3pt2b0pt8', 'gA0', 'gA1'),
+                    ('SM2', 'a3pt2b0pt8', 'gA0', 'gB1'),
+                    ('SM2', 'a3pt2b0pt8', 'gB0', 'gA1'),
+                    ('SM2', 'a3pt2b0pt8', 'gB0', 'gB1')]
         self.assertEqual(paths, expected)
 
 
@@ -563,8 +574,9 @@ class ReadRiskTestCase(unittest.TestCase):
         sitecol = readinput.get_site_collection(oq)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_station_data(oq, sitecol, duplicates_strategy='error')
-        self.assertIn("Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
-                      str(ctx.exception))
+        self.assertIn(
+            "Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
+            str(ctx.exception))
         df = readinput.read_df(
             oq.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
             duplicates_strategy='keep_first')

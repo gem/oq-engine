@@ -28,7 +28,7 @@
         <uncertaintyWeight>0.50</uncertaintyWeight>
       </logicTreeBranch>
       <logicTreeBranch branchID="dummy">
-        <uncertaintyModel>Dummy</uncertaintyModel>
+        <uncertaintyModel>DummyGMPE</uncertaintyModel>
         <uncertaintyWeight>0.0</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
