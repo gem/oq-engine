@@ -8,8 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "00 19 * * *"
-  pull_request:
+    - cron: "0 */12 * * *" # At minute 0 past every 12th hour
 
 jobs:
   install_oq:
