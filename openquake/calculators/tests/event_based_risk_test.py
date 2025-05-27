@@ -579,6 +579,8 @@ agg_id
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
 
     def test_case_9a(self):
+        # example with two DummyGMPEs with zero weight and sampling:
+        # it is IDENTICAL to the calculation without the DummyGMPEs
         self.run_calc(case_09.__file__, 'job_a.ini')
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
