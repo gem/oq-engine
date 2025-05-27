@@ -19,13 +19,11 @@ import unittest
 class PyprojTestCase(unittest.TestCase):
 
     # NOTE: we found that sometimes broken pyproj wheels cause a very tricky behavior,
-    # so the order in which some libraries are imported causes different behaviors.
+    # so the order in which some libraries are imported causes different effects.
     # We had a case in which importing hazardlib and then pyproj caused the application
     # to suddenly exit without giving any kind of error message.
-    def test_import_hazardlib_then_pyproj(self):
-        import openquake.hazardlib  # noqa
+    # In the following test, we assume that hazardlib has already been imported and we
+    # attempt to import pyproj. We could not find a proper way to test the imports in
+    # the opposite order, i.e. importing pyproj first and then hazardlib.
+    def test_import_pyproj(self):
         import pyproj  # noqa
-
-    def test_import_pyproj_then_hazardlib(self):
-        import pyproj  # noqa
-        import openquake.hazardlib  # noqa
