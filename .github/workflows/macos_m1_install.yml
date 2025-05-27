@@ -89,6 +89,14 @@ jobs:
           oq engine --upgrade-db
           sleep 5
 
+      - name: Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 baselib/tests/pyproj_wheel_test.py
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib/tests/pyproj_wheel_test.py
+
       - name: Run test to start OQ-WebUI in public mode to test installation
         if: always()
         run: |
