@@ -35,7 +35,7 @@ from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.event_based import get_mean_curve, compute_avg_gmf
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
@@ -47,11 +47,6 @@ from openquake.qa_tests_data.event_based.spatial_correlation import (
 
 aac = numpy.testing.assert_allclose
 ae = numpy.testing.assert_equal
-
-
-def strip_calc_id(fname):
-    name = os.path.basename(fname)
-    return re.sub(r'_\d+\.', '.', name)
 
 
 def joint_prob_of_occurrence(gmvs_site_1, gmvs_site_2, gmv, time_span,

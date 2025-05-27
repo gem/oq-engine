@@ -584,7 +584,7 @@ agg_id
         self.run_calc(case_09.__file__, 'job_a.ini')
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname, 'a'), fname)
 
     # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):
