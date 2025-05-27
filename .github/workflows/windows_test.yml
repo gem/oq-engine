@@ -109,14 +109,17 @@ jobs:
              sleep 2
           } until(Test-NetConnection 127.0.0.1 -Port 8800 | ? { $_.TcpTestSucceeded } )
           Get-Job
-          netstat -o -n -a | findstr 8800
           Write-Host "Test webui and tools Web pages"
-          ping 127.0.0.1 -n 10 > null
-          curl.exe -I --fail-with-body -G http://127.0.0.1:8800/engine
-          ping 127.0.0.1 -n 10 > null
-          curl.exe -X HEAD -I --fail-with-body http://127.0.0.1:8800/ipt/
-          ping 127.0.0.1 -n 10 > null
-          curl.exe -X HEAD -I --fail-with-body http://127.0.0.1:8800/taxonomy/
+          ping 127.0.0.1 -n 6 > null
+          Write-Host "curl.exe -I --fail -G http://127.0.0.1:8800/engine"
+          curl.exe -I --fail -G http://127.0.0.1:8800/engine
+          ping 127.0.0.1 -n 6 > null
+          Write-Host "curl.exe -X HEAD -I --fail http://127.0.0.1:8800/ipt/"
+          curl.exe -X HEAD -I --fail http://127.0.0.1:8800/ipt/
+          ping 127.0.0.1 -n 6 > null
+          Write-Host "curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/"
+          curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/
+          ping 127.0.0.1 -n 6 > null
       - name: Run tests for calculators
         if: always() && env.to_run == 0
         run: |
