@@ -29,11 +29,10 @@ import subprocess
 import traceback
 import signal
 import zlib
-import urllib.parse as urlparse
 import re
 import psutil
 from datetime import datetime, timezone
-from urllib.parse import unquote_plus
+from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -459,7 +458,7 @@ def calc_list(request, id=None):
          parent_id, size_mb, host, start_time) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
-        url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
+        url = urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
             try:
@@ -1191,10 +1190,18 @@ def calc_results(request, calc_id):
             outtypes = [ot for ot in output_types[rtype] if ot != 'txt']
         except KeyError:
             continue  # non-exportable outputs should not be shown
-        url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
+        path = f'v1/calc/result/{result.id}'
+        url = urljoin(base_url, path)
+        # NOTE: in case of multiple available export types, we provide only the url to
+        # download the data in the first of the types. We may want to expose multiple
+        # urls, one per export type, or a single url with the "preferred" type, that
+        # may depend from the kind of output
+        query_params = {'export_type': outtypes[0]}
+        parsed_url = urlparse(url)
+        url_with_query = urlunparse(parsed_url._replace(query=urlencode(query_params)))
         datum = dict(
             id=result.id, name=result.display_name, type=rtype,
-            outtypes=outtypes, url=url, size_mb=result.size_mb)
+            outtypes=outtypes, url=url_with_query, size_mb=result.size_mb)
         response_data.append(datum)
 
     return HttpResponse(content=json.dumps(response_data))
