@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * In the API endpoint listing the outputs for a job, the first available
+    export_type is specified in each output url
+
   [Michele Simionato]
   * Added a new uncertainty `abMaxMagAbsolute` to the logic tree
   * Internal: refactored lt.Branch, lt.BranchSet and lt.CompositeLogicTree

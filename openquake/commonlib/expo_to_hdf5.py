@@ -40,15 +40,15 @@ TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = (numpy.bytes_, 24)
 for f in (None, 'ID_1', 'ID_2'):
     CONV[f] = str
-TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [], 'OCCUPANCY': []}
-IGNORE = set('NAME_0 NAME_1 NAME_2 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
-             .split())
+TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [],
+        'NAME_1': [], 'NAME_2': [], 'OCCUPANCY': []}
+IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
           'OCCUPANTS_PER_ASSET', 'OCCUPANTS_PER_ASSET_AVERAGE',
           'OCCUPANTS_PER_ASSET_DAY', 'OCCUPANTS_PER_ASSET_NIGHT',
           'OCCUPANTS_PER_ASSET_TRANSIT', 'TOTAL_AREA_SQM',
-          'BUILDINGS', 'COST_STRUCTURAL_USD',
+          'BUILDINGS', 'COST_STRUCTURAL_USD', 'NAME_1', 'NAME_2',
           'LATITUDE', 'ID_0', 'ID_1', 'ID_2'}
 
 
@@ -96,23 +96,25 @@ def store_tagcol(dstore):
     tagsizes = []
     tagnames = []
     for tagname in TAGS:
-        name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
-        tagnames.append(name)
-        tagvalues = numpy.concatenate(TAGS[tagname])
-        uvals, inv, counts = numpy.unique(
-            tagvalues, return_inverse=1, return_counts=1)
-        size = len(uvals) + 1
-        tagsizes.append(size)
-        logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-        dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
-        if name == 'ID_0':
-            dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
-            arr = numpy.empty(len(uvals), dtlist)
-            arr['country'] = uvals
-            arr['counts'] = counts
-            dstore['assets_by_country'] = arr
-
+        if TAGS[tagname]:
+            name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
+            tagnames.append(name)
+            tagvalues = numpy.concatenate(TAGS[tagname])
+            uvals, inv, counts = numpy.unique(
+                tagvalues, return_inverse=1, return_counts=1)
+            size = len(uvals) + 1
+            tagsizes.append(size)
+            logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
+            hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
+            dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
+            if name == 'ID_0':
+                dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
+                arr = numpy.empty(len(uvals), dtlist)
+                arr['country'] = uvals
+                arr['counts'] = counts
+                dstore['assets_by_country'] = arr
+        else:
+            logging.warning(f'No data for {tagname}')
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(tagnames, hdf5.vstr),
                tagsizes=tagsizes)
@@ -169,6 +171,7 @@ def store(exposures_xml, wfp, dstore):
     if wfp:
         files = [f for f in files if any(field.startswith('WFP_')
                                          for field in f.header)]
+    commonfields = sorted(files[0].fields & FIELDS)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
         [('ASSET_ID', h5py.string_dtype('ascii', 25))]
@@ -186,7 +189,7 @@ def store(exposures_xml, wfp, dstore):
     # NB: we need to keep everything in memory to make gzip efficient
     acc = general.AccumDict(accum=[])
     for gh3, arr in smap:
-        for name in FIELDS:
+        for name in commonfields:
             if name in TAGS:
                 TAGS[name].append(arr[name])
             else:
@@ -204,7 +207,7 @@ def store(exposures_xml, wfp, dstore):
     store_tagcol(dstore)
 
     # sanity check
-    for name in FIELDS:
+    for name in commonfields:
         n = len(dstore['assets/' + name])
         assert n == num_assets, (name, n, num_assets)
 
