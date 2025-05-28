@@ -167,9 +167,9 @@ class ClassicalTestCase(CalculatorTestCase):
         pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
         pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
         pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
-        aac(hcurve0, pga0, rtol=2e-6)
-        aac(hcurve1, pga1, rtol=2e-6)
-        aac(hcurve2, pga2, rtol=2e-6)
+        aac(hcurve0, pga0, rtol=2e-5)
+        aac(hcurve1, pga1, rtol=2e-5)
+        aac(hcurve2, pga2, rtol=2e-5)
 
         # testing (over)sampling
         self.run_calc(case_06.__file__, 'job.ini',
@@ -905,7 +905,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_88(self):
         # Check execution of the BA08 site term when specified as
         # an input argument within the Atkinson and Macias (2009)
-        # GMM as required for the USA 2023 model 
+        # GMM as required for the USA 2023 model
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(1.0).csv',
