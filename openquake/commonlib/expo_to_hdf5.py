@@ -133,7 +133,6 @@ def gen_tasks(files, wfp, sample_assets, monitor):
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=usecols, skiprows=1, chunksize=1_000_000)
-        breakpoint()
         nrows = 0
         for i, df in enumerate(dfs):
             if sample_assets:
