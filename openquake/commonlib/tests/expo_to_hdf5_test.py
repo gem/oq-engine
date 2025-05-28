@@ -25,6 +25,8 @@ def test_expo_to_hdf5():
                              'data', 'grm_exposure.xml')
     expo2_xml = os.path.join(os.path.dirname(__file__),
                              'data', 'Exposure_Haiti.xml')
+    expo3_xml = os.path.join(os.path.dirname(__file__),
+                             'data', 'Exposure_Colombia.xml')
     job, dstore = create_job_dstore()
     with job, dstore:
         store([expo1_xml, expo2_xml], True, dstore)
