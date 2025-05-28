@@ -255,14 +255,16 @@ class ComplexFaultSource(ParametricSeismicSource):
 
             # Loop over the rupture lengths
             tmp = 0.0
+            tmp_wei = 0.0
             for rupture_length, wei in zip(rup_lens, pmf):
 
+                # Generate rupture slices
                 rupture_slices = _float_ruptures(
                     rupture_area, rupture_length, cell_area, cell_length)
 
-                # Compute occurrence rates
+                # Compute occurrence rate for each rupture
                 occurrence_rate = mag_occ_rate / len(rupture_slices) * wei
-                tmp += occurrence_rate
+                tmp += occurrence_rate * len(rupture_slices)
 
                 # Just counting the ruptures
                 if only_count:
