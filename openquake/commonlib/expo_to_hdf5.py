@@ -75,7 +75,7 @@ def fix(arr):
     arr['ASSET_ID'] = numpy.char.add(country, arr['ASSET_ID'])
     for i, (id0, id1) in enumerate(zip(ID0, ID1)):
         if not id1.startswith(id0):
-            ID1[i] = numpy.char.add(country[i], ID1[i])
+            ID1[i] = country[i] + ID1[i]
 
 
 def exposure_by_geohash(array, monitor):
