@@ -12,8 +12,8 @@ https://wheelhouse.openquake.org/v3/windows/py311/scipy-1.15.3-cp311-cp311-win_a
 https://wheelhouse.openquake.org/v3/windows/py311/h5py-3.13.0-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/psutil-7.0.0-cp37-abi3-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/fiona-1.10.1-cp311-cp311-win_amd64.whl
-https://wheelhouse.openquake.org/v3/windows/py311/GDAL-3.9.2-cp311-cp311-win_amd64.whl
-https://wheelhouse.openquake.org/v3/windows/py311/pyproj-3.6.1-cp311-cp311-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py311/GDAL-3.10.1-cp311-cp311-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py311/pyproj-3.7.0-cp311-cp311-win_amd64.whl
 #
 https://wheelhouse.openquake.org/v3/windows/py311/charset_normalizer-3.3.2-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/pandas-2.2.3-cp311-cp311-win_amd64.whl
