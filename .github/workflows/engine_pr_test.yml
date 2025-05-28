@@ -38,8 +38,8 @@ jobs:
           oq engine --upgrade-db
 
           # Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
-          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/baselib/tests/pyproj_wheel_test.py
-          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/hazardlib/tests/pyproj_wheel_test.py
+          pytest openquake/baselib/tests/pyproj_wheel_test.py
+          pytest openquake/hazardlib/tests/pyproj_wheel_test.py
 
           pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
 

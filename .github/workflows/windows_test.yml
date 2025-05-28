@@ -99,8 +99,8 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           cd D:\a\oq-engine\oq-engine\openquake
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 baselib/tests/pyproj_wheel_test.py
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib/tests/pyproj_wheel_test.py
+          pytest baselib/tests/pyproj_wheel_test.py
+          pytest hazardlib/tests/pyproj_wheel_test.py
       - name: Run oq calcs, webui console and curl for the standalone tools
         timeout-minutes: 5
         if: always() && env.to_run == 0
