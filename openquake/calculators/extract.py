@@ -905,7 +905,6 @@ def extract_aggrisk_tags(dstore, what):
     total_df = df.groupby('loss_type', as_index=False).sum()
     total_df[aggby] = '*total*'
     df = pandas.concat([df, total_df], ignore_index=True)
-
     return df
 
 
