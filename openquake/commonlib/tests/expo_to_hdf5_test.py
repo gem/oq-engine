@@ -21,16 +21,24 @@ from openquake.commonlib.datastore import create_job_dstore
 
 
 def test_expo_to_hdf5():
-    expo_xml = os.path.join(os.path.dirname(__file__),
-                            'data', 'grm_exposure.xml')
+    expo1_xml = os.path.join(os.path.dirname(__file__),
+                             'data', 'grm_exposure.xml')
+    expo2_xml = os.path.join(os.path.dirname(__file__),
+                             'data', 'Exposure_Haiti.xml')
     job, dstore = create_job_dstore()
     with job, dstore:
-        store([expo_xml], True, dstore)
-        assets = list(dstore['assets/ASSET_ID'])
-        assert assets == [b'TWNRes_0', b'TWNRes_1', b'TWNRes_2', b'TWNRes_3',
-                          b'TWNRes_4', b'TWNRes_5', b'TWNRes_6', b'TWNRes_7',
-                          b'TWNRes_8', b'TWNRes_9']
-        id1s = list(dstore['assets/ID_1'])
-        assert id1s == [1, 1, 1, 1, 2, 2, 2, 2, 2, 2]
+        store([expo1_xml, expo2_xml], True, dstore)
+        assets = list(dstore['assets/ASSET_ID'][:])
+        assert assets == [b'HTIInd_124', b'TWNRes_0', b'TWNRes_1', b'TWNRes_2',
+                          b'TWNRes_3', b'TWNRes_4', b'TWNRes_5', b'TWNRes_6',
+                          b'TWNRes_7', b'TWNRes_8', b'TWNRes_9', b'HTIInd_394',
+                          b'HTIInd_2564', b'HTIInd_2925', b'HTIInd_2991',
+                          b'HTIInd_368', b'HTIInd_2544', b'HTIInd_2756']
+        id1s = list(dstore['assets/ID_1'][:])
+        assert id1s == [5, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8,
+                        4, 1, 3, 3, 6, 2, 2]
 
-
+        ID1s = list(dstore['tagcol/ID_1'])
+        assert ID1s == [b'?', b'HTI901001.0', b'HTI901003.0', b'HTI901004.0',
+                        b'HTI901005.0', b'HTI901007.0', b'HTI901009.0',
+                        b'TWNA', b'TWNB']

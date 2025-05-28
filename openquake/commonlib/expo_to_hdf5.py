@@ -39,7 +39,7 @@ OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = (numpy.bytes_, 24)
 for f in (None, 'ID_1', 'ID_2'):
-    CONV[f] = str
+    CONV[f] = (numpy.bytes_, 24)
 TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [],
         'NAME_1': [], 'NAME_2': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
@@ -71,10 +71,11 @@ def fix(arr):
     # prepend the country to ASSET_ID and ID_1
     ID0 = arr['ID_0']
     ID1 = arr['ID_1']
-    arr['ASSET_ID'] = numpy.char.add(numpy.array(ID0, 'S3'), arr['ASSET_ID'])
+    country = numpy.array(ID0, 'S3')
+    arr['ASSET_ID'] = numpy.char.add(country, arr['ASSET_ID'])
     for i, (id0, id1) in enumerate(zip(ID0, ID1)):
         if not id1.startswith(id0):
-            ID1[i] = '%s-%s' % (id0, ID1[i])
+            ID1[i] = numpy.char.add(country[i], ID1[i])
 
 
 def exposure_by_geohash(array, monitor):
@@ -132,6 +133,7 @@ def gen_tasks(files, wfp, sample_assets, monitor):
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=usecols, skiprows=1, chunksize=1_000_000)
+        breakpoint()
         nrows = 0
         for i, df in enumerate(dfs):
             if sample_assets:
@@ -159,6 +161,10 @@ def gen_tasks(files, wfp, sample_assets, monitor):
         print(os.path.basename(file.fname), nrows)
 
 
+def keep_wfp(csvfile):
+    return any(col.startswith('WFP_') for col in csvfile.header)
+
+
 def store(exposures_xml, wfp, dstore):
     """
     Store the given exposures in the datastore
@@ -167,7 +173,7 @@ def store(exposures_xml, wfp, dstore):
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
         csvfiles.extend(exposure.datafiles)
-    files = hdf5.sniff(csvfiles, ',', IGNORE)
+    files = hdf5.sniff(csvfiles, ',', IGNORE, keep=keep_wfp if wfp else lambda csvfile: True)
     if wfp:
         files = [f for f in files if any(field.startswith('WFP_')
                                          for field in f.header)]

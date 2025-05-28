@@ -945,13 +945,13 @@ def find_error(fname, errors, dtype):
 
 
 # called in `oq info file.csv`, used expecially for the exposures
-def sniff(fnames, sep=',', ignore=set()):
+def sniff(fnames, sep=',', ignore=set(), keep=lambda csvfile: True):
     """
     Read the first line of a set of CSV files by stripping the pre-headers.
 
     :returns: a list of CSVFile namedtuples.
     """
-    common = None
+    common = set()
     files = []
     for fname in fnames:
         df = pandas.read_csv(fname, encoding='utf-8-sig', nrows=1)
@@ -962,12 +962,14 @@ def sniff(fnames, sep=',', ignore=set()):
         else:
             header = df.columns
             skip = 1  # only header
-        if common is None:
-            common = set(header)
-        else:
-            common &= set(header)
-        files.append(CSVFile(fname, header, common, os.path.getsize(fname),
-                             skip, 'ID_2' in header))
+        csvfile = CSVFile(fname, header, common, os.path.getsize(fname),
+                          skip, 'ID_2' in header)
+        if keep(csvfile):
+            if not common:
+                common.update(header)
+            else:
+                common &= set(header)
+            files.append(csvfile)
     common -= ignore
     assert common, 'There is no common header subset among %s' % fnames
     return files
