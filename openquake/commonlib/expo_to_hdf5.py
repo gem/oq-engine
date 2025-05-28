@@ -107,7 +107,7 @@ def store_tagcol(dstore):
             tagsizes.append(size)
             logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
             hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-            dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
+            dstore['tagcol/' + name] = numpy.concatenate([[b'?'], uvals])
             if name == 'ID_0':
                 dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
                 arr = numpy.empty(len(uvals), dtlist)
@@ -152,7 +152,11 @@ def gen_tasks(files, wfp, sample_assets, monitor):
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
             array = numpy.zeros(len(df), dt)
             for col in df.columns:
-                array[col] = df[col].to_numpy()
+                arr = df[col].to_numpy()
+                if len(arr) and hasattr(arr[0], 'encode'):
+                    array[col] = [x.encode('utf8') for x in arr]
+                else:
+                    array[col] = arr
             if i == 0:
                 yield from exposure_by_geohash(array, monitor)
             else:
