@@ -12,9 +12,9 @@ https://wheelhouse.openquake.org/macos/arm64/py312/contourpy-1.3.2-cp312-cp312-m
 https://wheelhouse.openquake.org/macos/arm64/py312/scipy-1.15.3-cp312-cp312-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py312/h5py-3.13.0-cp312-cp312-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py312/psutil-7.0.0-cp36-abi3-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py312/pyproj-3.6.1-cp312-cp312-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py312/gdal-3.9.2-cp312-cp312-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py312/fiona-1.10.1-cp312-cp312-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py312/gdal-3.10.1-cp312-cp312-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py312/pyproj-3.7.0-cp312-cp312-macosx_11_0_arm64.whl
 #
 https://wheelhouse.openquake.org/macos/arm64/py312/charset_normalizer-3.4.0-cp312-cp312-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py312/kiwisolver-1.4.7-cp312-cp312-macosx_11_0_arm64.whl
