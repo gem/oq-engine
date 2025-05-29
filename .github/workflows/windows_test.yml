@@ -88,8 +88,8 @@ jobs:
             else
             {
               Write-Host "Install on user mode on scheduled task"
-              Write-Host "python install.py devel --version ${env:GITHUB_HEAD_REF}"
-              python install.py devel --version ${env:GITHUB_HEAD_REF}
+              Write-Host "python install.py devel --version master
+              python install.py devel --version master
             }
             C:\Users\runneradmin\openquake\Scripts\activate.ps1
             python -m pip install pytest pyshp flake8
