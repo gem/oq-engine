@@ -293,7 +293,8 @@ class ComplexFaultSource(ParametricSeismicSource):
             return self.num_ruptures
         if not hasattr(self, '_nr'):
             self._nr = list(self._iter_ruptures(count=True))
-        return sum(self._nr)
+            self.num_ruptures = sum(self._nr)
+        return self.num_ruptures
 
     def modify_set_geometry(self, edges, spacing):
         """
