@@ -148,7 +148,6 @@ def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     imts, facts = [], []
     for m, imt in enumerate(job_imts):
         afe = to_rates(hcurves[m], oq.investigation_time, minrate=1E-12)
-
         IMT = norm_imt(imt)
         imts.append(IMT)
         T = from_string(imt).period

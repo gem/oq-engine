@@ -182,7 +182,10 @@ def main(mosaic_dir, grm_dir, wfp=False):
     Storing global exposure
     """
     mon = performance.Monitor(measuremem=True)
-    job, dstore = create_job_dstore()
+    description = 'Storing global exposure to hdf5'
+    if wfp:
+        description += ' (only for WFP countries)'
+    job, dstore = create_job_dstore(description=description)
     with dstore, job:
         with mon:
             n = build_site_model_gsims(mosaic_dir, grm_dir, dstore)
