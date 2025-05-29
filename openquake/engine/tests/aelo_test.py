@@ -241,7 +241,7 @@ def test_WAF():
         # check that warning indicates very low hazard
         warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
         assert len(warnings) == 1
-        assert warnings[0].startswith('The MCE at the site is very low.')
+        assert warnings[0].startswith('The ASCE 7 and/or ASCE 41 parameter')
 
         # check that 2 of 3 plots have been created
         assert 'png/hcurves.png' in calc.datastore
