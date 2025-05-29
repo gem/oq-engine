@@ -472,6 +472,7 @@ def get_asce41(dstore, mce, facts, sid):
     fact = dict(zip(mce, facts))
     hmap = dstore["hmaps-stats"][sid, 0]  # mean hazard, shape (M, P)
     oq = dstore['oqparam']
+    ASCE_version = oq.asce_version
     poes = oq.poes
     imts = list(oq.imtls)
     sa02 = imts.index('SA(0.2)')
