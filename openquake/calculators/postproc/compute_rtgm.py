@@ -100,7 +100,7 @@ def get_DLLs(job_imts, vs30):
         soil_class_asce = 'D'
     elif vs30 > 152:
         soil_class_asce = 'DE'
-    else: 
+    else:
         soil_class_asce = 'E'
 
     D = DLL_df[soil_class_asce]
@@ -396,12 +396,12 @@ def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30,
                asce07 = {
                  'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
                  'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
-                 'Sms': design[2], 'Sds': design[0], 
+                 'Sms': design[2], 'Sds': design[0],
                  'Ss_RT': prob_mce_out['SA(0.2)'],
                  'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
                  'Ss_det': det_mce['SA(0.2)'],
                  'Ss_seismicity': Ss_seismicity,
-                 'Sm1': design[3], 'Sd1': design[1], 
+                 'Sm1': design[3], 'Sd1': design[1],
                  'S1_RT': prob_mce_out['SA(1.0)'],
                  'CR1': cr1, 'S1_84th': det_imt['SA(1.0)'],
                  'S1_det': det_mce['SA(1.0)'],
