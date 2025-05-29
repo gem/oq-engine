@@ -1468,8 +1468,7 @@ def web_engine(request, **kwargs):
     if application_mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
-        params['asce_versions'] = (
-            oqvalidation.OqParam.asce_version.validator.choices)
+        params['asce_versions'] = oqvalidation.ASCE_VERSIONS
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
