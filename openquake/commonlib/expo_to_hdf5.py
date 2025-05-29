@@ -80,12 +80,16 @@ def fix(arr):
 
 def exposure_by_geohash(array, monitor):
     """
-    Yields pairs (geohash, array)
+    Yields triples (geohash, array, name2dic)
     """
     array = add_geohash3(array)
     fix(array)
+    if 'NAME_2' in array.dtype.names:
+        dic = dict(zip(array['ID_2'], array['NAME_2']))
+    else:
+        dic = {}
     for gh in numpy.unique(array['geohash3']):
-        yield gh, array[array['geohash3']==gh]
+        yield gh, array[array['geohash3']==gh], dic
 
 
 def store_tagcol(dstore):
@@ -176,7 +180,8 @@ def store(exposures_xml, wfp, dstore):
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
         csvfiles.extend(exposure.datafiles)
-    files = hdf5.sniff(csvfiles, ',', IGNORE, keep=keep_wfp if wfp else lambda csvfile: True)
+    files = hdf5.sniff(csvfiles, ',', IGNORE,
+                       keep=keep_wfp if wfp else lambda csvfile: True)
     if wfp:
         files = [f for f in files if any(field.startswith('WFP_')
                                          for field in f.header)]
@@ -197,7 +202,9 @@ def store(exposures_xml, wfp, dstore):
     num_assets = 0
     # NB: we need to keep everything in memory to make gzip efficient
     acc = general.AccumDict(accum=[])
-    for gh3, arr in smap:
+    name2dic = {b'?': b'?'}
+    for gh3, arr, dic in smap:
+        name2dic.update(dic)
         for name in commonfields:
             if name in TAGS:
                 TAGS[name].append(arr[name])
@@ -214,6 +221,10 @@ def store(exposures_xml, wfp, dstore):
         logging.info(f'Storing assets/{name}')
         hdf5.extend(dstore['assets/' + name], arr)
     store_tagcol(dstore)
+    #if len(name2dic) > 1:
+    #    ID2s = dstore['tagcol/ID_2'][:]
+    #    dstore.create_dset('NAME_2full', numpy.array(
+    #        [name2dic[id2] for id2 in ID2s]))
 
     # sanity check
     for name in commonfields:

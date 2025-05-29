@@ -16,13 +16,68 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import numpy
 from openquake.commonlib.expo_to_hdf5 import store
 from openquake.commonlib.datastore import create_job_dstore
+
+ae = numpy.testing.assert_equal
+EXPECTED_ASSETS = (
+    b'COLRes_89558',
+    b'HTIInd_124',
+    b'TWNRes_0',
+    b'TWNRes_1',
+    b'TWNRes_2',
+    b'TWNRes_3',
+    b'TWNRes_4',
+    b'TWNRes_5',
+    b'TWNRes_6',
+    b'TWNRes_7',
+    b'TWNRes_8',
+    b'TWNRes_9',
+    b'TURRes_971000',
+    b'COLRes_325763',
+    b'HTIInd_394',
+    b'HTIInd_2564',
+    b'HTIInd_2925',
+    b'HTIInd_2991',
+    b'TURRes_1867459',
+    b'COLRes_276440',
+    b'COLRes_256836',
+    b'COLRes_279883',
+    b'HTIInd_368',
+    b'HTIInd_2544',
+    b'HTIInd_2756',
+    b'TURRes_1425004',
+    b'TURRes_2265963',
+    b'COLRes_216273',
+    b'TURRes_2050206',
+    b'COLRes_13074')
+
+EXPECTED_ID1s = (
+    b'?',
+    b'COL903931.0',
+    b'COL903934.0',
+    b'COL903951.0',
+    b'COL903957.0',
+    b'COL903960.0',
+    b'HTI901001.0',
+    b'HTI901003.0',
+    b'HTI901004.0',
+    b'HTI901005.0',
+    b'HTI901007.0',
+    b'HTI901009.0',
+    b'TUR901304.0',
+    b'TUR901314.0',
+    b'TUR901328.0',
+    b'TUR901337.0',
+    b'TUR901347.0',
+    b'TWNA',
+    b'TWNB')
 
 
 def test_expo_to_hdf5():
     expo1_xml = os.path.join(os.path.dirname(__file__),
-                             'data', 'grm_exposure.xml')
+                             'data', 'Exposure_Taiwan.xml')
     expo2_xml = os.path.join(os.path.dirname(__file__),
                              'data', 'Exposure_Haiti.xml')
     expo3_xml = os.path.join(os.path.dirname(__file__),
@@ -31,18 +86,10 @@ def test_expo_to_hdf5():
                              'data', 'Exposure_Turkiye.xml')
     job, dstore = create_job_dstore()
     with job, dstore:
-        store([expo1_xml, expo2_xml], True, dstore)
+        store([expo1_xml, expo2_xml, expo3_xml, expo4_xml], True, dstore)
         assets = list(dstore['assets/ASSET_ID'][:])
-        assert assets == [b'HTIInd_124', b'TWNRes_0', b'TWNRes_1', b'TWNRes_2',
-                          b'TWNRes_3', b'TWNRes_4', b'TWNRes_5', b'TWNRes_6',
-                          b'TWNRes_7', b'TWNRes_8', b'TWNRes_9', b'HTIInd_394',
-                          b'HTIInd_2564', b'HTIInd_2925', b'HTIInd_2991',
-                          b'HTIInd_368', b'HTIInd_2544', b'HTIInd_2756']
-        id1s = list(dstore['assets/ID_1'][:])
-        assert id1s == [5, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8,
-                        4, 1, 3, 3, 6, 2, 2]
+        ae(assets, EXPECTED_ASSETS)
+        assert len(dstore['assets/ID_1']) == 30
 
         ID1s = list(dstore['tagcol/ID_1'])
-        assert ID1s == [b'?', b'HTI901001.0', b'HTI901003.0', b'HTI901004.0',
-                        b'HTI901005.0', b'HTI901007.0', b'HTI901009.0',
-                        b'TWNA', b'TWNB']
+        ae(ID1s, EXPECTED_ID1s)
