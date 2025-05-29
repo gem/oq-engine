@@ -1571,10 +1571,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             asce07_key_mapping = {
                 'PGA': 'PGAm',
             }
-            asce07 = {asce07_key_mapping[k]: v
-                      for k, v in asce07.items()
-                      if k in asce07_key_mapping}
-            for key, value in asce07.items():
+            asce07_m = {asce07_key_mapping.get(k, k): v for k, v in asce07.items()}
+            for key, value in asce07_m.items():
                 if key not in ('PGAm', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
                 if not isinstance(value, float):
@@ -1601,10 +1599,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 'BSE1N_S1': 'BSE1N_Sm1',
                 'BSE1E_S1': 'BSE1E_Sm1',
             }
-            asce41 = {asce41_key_mapping[k]: v
-                      for k, v in asce41.items()
-                      if k in asce41_key_mapping}
-            for key, value in asce41.items():
+            asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
+            for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
                     continue
                 if not isinstance(value, float):
