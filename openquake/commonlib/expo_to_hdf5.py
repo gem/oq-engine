@@ -30,16 +30,16 @@ from openquake.risklib.asset import _get_exposure
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-B25 = (numpy.bytes_, 25)
+B30 = (numpy.bytes_, 30)
 CONV = {n: F32 for n in '''
 BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD
 COST_STRUCTURAL_USD LATITUDE LONGITUDE OCCUPANTS_PER_ASSET
 OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
-CONV['ASSET_ID'] = B25
+CONV['ASSET_ID'] = B30
 for f in (None, 'ID_1', 'ID_2'):
-    CONV[f] = B25
+    CONV[f] = B30
 TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [],
         'NAME_1': [], 'NAME_2': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
@@ -191,7 +191,7 @@ def store(exposures_xml, wfp, dstore):
     commonfields = sorted(files[0].fields & FIELDS)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
-        [('ASSET_ID', B25)]
+        [('ASSET_ID', B30)]
     for name, dt in dtlist:
         logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
