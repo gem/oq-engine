@@ -189,7 +189,7 @@ def main(dstore, csm):
                 dtlist.append((f'wei{g}', dt))
             name = f"median_spectrum_disagg/grp{cm.grp_id}"
             logging.info('Creating %s', name)
-            dstore.create_dset(name, dtlist, fillvalue=None)
+            dstore.create_dset(name, dtlist)
 
     for (grp_id, site_id), out in res.items():
         if site_id == -1:  # median_spectrum_disagg

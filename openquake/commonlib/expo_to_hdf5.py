@@ -21,7 +21,6 @@ import logging
 import operator
 import pandas
 import numpy
-import h5py
 from openquake.baselib import hdf5, sap, general
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
@@ -32,7 +31,6 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 B25 = (numpy.bytes_, 25)
-U25 = h5py.string_dtype('utf-8', 25)
 CONV = {n: F32 for n in '''
 BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD
 COST_STRUCTURAL_USD LATITUDE LONGITUDE OCCUPANTS_PER_ASSET
