@@ -517,10 +517,9 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         if (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
                 (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
             warning = (
-                'The MCE at the site is very low. Users may need to'
-                ' increase the ASCE 7 and ASCE 41 parameter values'
-                ' to user-specified minimums (e.g., Ss=0.11g and'
-                ' S1=0.04g). See User Guide.')
+                'The ASCE 7 and/or ASCE 41 parameter values at the site are very low.'
+                ' User may need to increase the values to user-specified minimums'
+                ' (e.g., Ss=0.11g and S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
 
         elif (rtgm_df.ProbMCE < DLLs[site.id]).all():
