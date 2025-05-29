@@ -655,7 +655,7 @@ function capitalizeFirstLetter(val) {
                 const $input_vs30 = $('input#vs30');
                 $site_class_select.empty();
                 if (asce_version === 'ASCE7-16') {
-                    $site_class_select.append($('<option>', {value: 760, text: 'BC'}));
+                    $site_class_select.append($('<option>', {value: 760, text: 'B'}));
                     $input_vs30.val($site_class_select.val());
                 } else if (asce_version === 'ASCE7-22') {
                     const items = [
@@ -667,7 +667,7 @@ function capitalizeFirstLetter(val) {
                         {value: 260, text: 'D - Stiff Soil' },
                         {value: 185, text: 'DE ' },
                         {value: 150, text: 'E - Soft Clay Soil' },
-                        {value: 'custom', text: 'Custom'},
+                        {value: 'custom', text: 'Specify Vs30'},
                     ];
                     const default_site_class = 'BC';
                     items.forEach(item => {

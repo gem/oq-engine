@@ -109,7 +109,7 @@ AELO_FORM_LABELS = {
     'site_class': 'Site class',
     'vs30': 'Vs30 (m/s)',
     'siteid': 'Site name',
-    'asce_version': 'ASCE version',
+    'asce_version': 'ASCE standard',
 }
 
 AELO_FORM_PLACEHOLDERS = {
@@ -117,7 +117,7 @@ AELO_FORM_PLACEHOLDERS = {
     'lat': 'max. 5 decimals',
     'vs30': 'float (150 - 3000)',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
-    'asce_version': 'ASCE version',
+    'asce_version': 'ASCE standard',
 }
 
 HIDDEN_OUTPUTS = ['assetcol', 'job']
