@@ -241,44 +241,88 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
 
 def get_zero_hazard_asce07():
     na = 'n.a.'
-    asce07 = {
-             'PGA': 0,
-             'PGA_2_50': 0,
-             'PGA_84th': na,
-             'PGA_det': na,
 
-             'Ss': na,
-             'Ss_RT': na,
-             'CRs': na,
-             'Ss_84th': na,
+    if ASCE_version == 'ASCE7-16':
+        asce07 = {
+             'PGA': 0, 'PGA_2_50': 0,
+             'PGA_84th': na, 'PGA_det': na,
+
+             'Ss': na, 'Ss_RT': na,
+             'CRs': na, 'Ss_84th': na,
              'Ss_det': na,
              'Ss_seismicity': 'Low',
 
-             'S1': na,
-             'S1_RT': na,
-             'CR1': na,
-             'S1_84th': na,
+             'S1': na, 'S1_RT': na,
+             'CR1': na, 'S1_84th': na,
              'S1_det': na,
-             'S1_seismicity': 'Low',
+             'S1_seismicity': 'Low'
              }
+    else:
+        
+        if vs30 == 760:
+            asce07 = {
+                 'PGA': 0, 'PGA_2_50': 0,
+                 'PGA_84th': na, 'PGA_det': na,
+                 'Ss': na, 'Sms': na,
+                 'Sds': na, 'Ss_RT': na,
+                 'CRs': na, 'Ss_84th': na,
+                 'Ss_det': na,
+                 'Ss_seismicity': 'Low',
+                 'S1': na, 'Sm1': na,
+                 'Sd1': na, 'S1_RT': na,
+                 'CR1': na, 'S1_84th': na,
+                 'S1_det': na,
+                 'S1_seismicity': 'Low'
+                 }
+        else:
+               asce07 = {
+                 'PGA': 0, 'PGA_2_50': 0,
+                 'PGA_84th': na, 'PGA_det': na,
+                 'Sms': na,
+                 'Sds': na, 'Ss_RT': na,
+                 'CRs': na, 'Ss_84th': na,
+                 'Ss_det': na,
+                 'Ss_seismicity': 'Low',
+                 'Sm1': na,
+                 'Sd1': na, 'S1_RT': na,
+                 'CR1': na, 'S1_84th': na,
+                 'S1_det': na,
+                 'S1_seismicity': 'Low'
+                 }
+            
     return asce07
 
 
 def get_zero_hazard_asce41():
     na = 'n.a.'
-    asce41 = {'BSE2N_Ss': na,
-              'BSE2E_Ss': na,
-              'Ss_5_50': na,
-              'BSE1N_Ss': na,
-              'BSE1E_Ss': na,
-              'Ss_20_50': na,
-              'BSE2N_S1': na,
-              'BSE2E_S1': na,
-              'S1_5_50': na,
-              'BSE1N_S1': na,
-              'BSE1E_S1': na,
-              'S1_20_50': na,
-              }
+    if ASCE_version == 'ASCE7-16':
+        asce41 = {'BSE2N_Ss': na,
+                  'BSE2E_Ss': na,
+                  'Ss_5_50': na,
+                  'BSE1N_Ss': na,
+                  'BSE1E_Ss': na,
+                  'Ss_20_50': na,
+                  'BSE2N_S1': na,
+                  'BSE2E_S1': na,
+                  'S1_5_50': na,
+                  'BSE1N_S1': na,
+                  'BSE1E_S1': na,
+                  'S1_20_50': na,
+                  }
+    else:
+        asce41 = {'BSE2N_Ss': na,
+                  'BSE2E_Ss': na,
+                  'Ss_5_50': na,
+                  'BSE1N_Ss': na,
+                  'BSE1E_Ss': na,
+                  'Ss_20_50': na,
+                  'BSE2N_S1': na,
+                  'BSE2E_S1': na,
+                  'S1_5_50': na,
+                  'BSE1N_S1': na,
+                  'BSE1E_S1': na,
+                  'S1_20_50': na,
+                  }
     return asce41
 
 
@@ -452,19 +496,34 @@ def get_asce41(dstore, mce, facts, sid):
     BSE1N_S1 = 2/3 * BSE2N_S1
     S1_20_50 = hmap[sa10, poe20_50] * fact['SA(1.0)']
     BSE1E_S1 = min(S1_20_50, BSE1N_S1)
-    asce41 = {'BSE2N_Ss': BSE2N_Ss,
-              'BSE2E_Ss': BSE2E_Ss,
-              'Ss_5_50': Ss_5_50,
-              'BSE1N_Ss': BSE1N_Ss,
-              'BSE1E_Ss': BSE1E_Ss,
-              'Ss_20_50': Ss_20_50,
-              'BSE2N_S1': BSE2N_S1,
-              'BSE2E_S1': BSE2E_S1,
-              'S1_5_50': S1_5_50,
-              'BSE1N_S1': BSE1N_S1,
-              'BSE1E_S1': BSE1E_S1,
-              'S1_20_50': S1_20_50,
-              }
+    if ASCE_version == 'ASCE7-16':
+         asce41 = {'BSE2N_Ss': BSE2N_Ss,
+                  'BSE2E_Ss': BSE2E_Ss,
+                  'Ss_5_50': Ss_5_50,
+                  'BSE1N_Ss': BSE1N_Ss,
+                  'BSE1E_Ss': BSE1E_Ss,
+                  'Ss_20_50': Ss_20_50,
+                  'BSE2N_S1': BSE2N_S1,
+                  'BSE2E_S1': BSE2E_S1,
+                  'S1_5_50': S1_5_50,
+                  'BSE1N_S1': BSE1N_S1,
+                  'BSE1E_S1': BSE1E_S1,
+                  'S1_20_50': S1_20_50,
+                  }
+    else: # the below needs to be changed 
+        asce41 = {'BSE2N_Ss': BSE2N_Ss,
+                  'BSE2E_Ss': BSE2E_Ss,
+                  'Ss_5_50': Ss_5_50,
+                  'BSE1N_Ss': BSE1N_Ss,
+                  'BSE1E_Ss': BSE1E_Ss,
+                  'Ss_20_50': Ss_20_50,
+                  'BSE2N_S1': BSE2N_S1,
+                  'BSE2E_S1': BSE2E_S1,
+                  'S1_5_50': S1_5_50,
+                  'BSE1N_S1': BSE1N_S1,
+                  'BSE1E_S1': BSE1E_S1,
+                  'S1_20_50': S1_20_50,
+                  }
     for key in asce41:
         asce41[key] = round(asce41[key], ASCE_DECIMALS)
     return asce41
