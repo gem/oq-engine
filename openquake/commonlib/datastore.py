@@ -296,7 +296,7 @@ class DataStore(collections.abc.MutableMapping):
         return dict(dset.attrs)
 
     def create_dset(self, key, dtype, shape=(None,), compression=None,
-                    fillvalue=0, attrs=None):
+                    fillvalue=None, attrs=None):
         """
         Create a one-dimensional HDF5 dataset.
 

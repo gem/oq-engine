@@ -113,11 +113,10 @@ def store_tagcol(dstore):
             tagsizes.append(size)
             logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
             hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-            strings = [
-                x.decode('utf8') for x in numpy.concatenate([[b'?'], uvals])]
-            dset = dstore.create_dset('tagcol/' + name, hdf5.vstr,
-                                      (len(strings),))
-            dset[:] = strings
+            vals = numpy.concatenate([[b'?'], uvals])
+            dset = dstore.create_dset(
+                'tagcol/' + name, hdf5.vstr, (len(vals),))
+            dset[:] = [x.decode('utf8') for x in vals]
             if name == 'ID_0':
                 dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
                 arr = numpy.empty(len(uvals), dtlist)

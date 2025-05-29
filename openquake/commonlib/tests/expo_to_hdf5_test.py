@@ -74,6 +74,12 @@ EXPECTED_ID1s = sorted([
     b'TWNA',
     b'TWNB'])
 
+EXPECTED_NAME2s = [
+    '?', 'Saint-Marc', 'Çayiralan', 'Terrier Rouge', 'Türkeli', 'Acigöl',
+    'Kocasinan', 'Port-De-Paix', 'Antakya', 'Cap-Haitien',
+    'Croix-Des-Bouquets', 'Les Cayes', 'Bogotá, D.C.', 'Iles', 'Sincelejo',
+    'Cali', 'Arauquita', 'No_tag']
+
 
 def test_expo_to_hdf5():
     expo1_xml = os.path.join(os.path.dirname(__file__),
@@ -93,3 +99,6 @@ def test_expo_to_hdf5():
 
         ID1s = sorted(dstore['tagcol/ID_1'])
         ae(ID1s, EXPECTED_ID1s)
+
+        NAME2s = dstore['NAME_2'][:]
+        assert [x.decode('utf8') for x in NAME2s] == EXPECTED_NAME2s
