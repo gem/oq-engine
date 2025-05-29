@@ -21,7 +21,7 @@ from openquake.commonlib.expo_to_hdf5 import store
 from openquake.commonlib.datastore import create_job_dstore
 
 ae = numpy.testing.assert_equal
-EXPECTED_ASSETS = (
+EXPECTED_ASSETS = sorted([
     b'COLRes_89558',
     b'HTIInd_124',
     b'TWNRes_0',
@@ -51,9 +51,9 @@ EXPECTED_ASSETS = (
     b'TURRes_2265963',
     b'COLRes_216273',
     b'TURRes_2050206',
-    b'COLRes_13074')
+    b'COLRes_13074'])
 
-EXPECTED_ID1s = (
+EXPECTED_ID1s = sorted([
     b'?',
     b'COL903931.0',
     b'COL903934.0',
@@ -72,7 +72,7 @@ EXPECTED_ID1s = (
     b'TUR901337.0',
     b'TUR901347.0',
     b'TWNA',
-    b'TWNB')
+    b'TWNB'])
 
 
 def test_expo_to_hdf5():
@@ -87,9 +87,9 @@ def test_expo_to_hdf5():
     job, dstore = create_job_dstore()
     with job, dstore:
         store([expo1_xml, expo2_xml, expo3_xml, expo4_xml], True, dstore)
-        assets = list(dstore['assets/ASSET_ID'][:])
+        assets = sorted(dstore['assets/ASSET_ID'][:])
         ae(assets, EXPECTED_ASSETS)
         assert len(dstore['assets/ID_1']) == 30
 
-        ID1s = list(dstore['tagcol/ID_1'])
+        ID1s = sorted(dstore['tagcol/ID_1'])
         ae(ID1s, EXPECTED_ID1s)
