@@ -84,12 +84,8 @@ def exposure_by_geohash(array, monitor):
     """
     array = add_geohash3(array)
     fix(array)
-    if 'NAME_2' in array.dtype.names:
-        dic = dict(zip(array['ID_2'], array['NAME_2']))
-    else:
-        dic = {}
     for gh in numpy.unique(array['geohash3']):
-        yield gh, array[array['geohash3']==gh], dic
+        yield gh, array[array['geohash3']==gh]
 
 
 def store_tagcol(dstore):
@@ -206,8 +202,9 @@ def store(exposures_xml, wfp, dstore):
     # NB: we need to keep everything in memory to make gzip efficient
     acc = general.AccumDict(accum=[])
     name2dic = {b'?': b'?'}
-    for gh3, arr, dic in smap:
-        name2dic.update(dic)
+    for gh3, arr in smap:
+        if 'NAME_2' in commonfields:
+            name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
                 TAGS[name].append(arr[name])
