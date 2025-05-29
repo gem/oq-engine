@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+    <calculations>
+        <calc sourceID="a" datastore="./out_a/calc_257.hdf5"/>
+        <calc sourceID="b" datastore="./out_b/calc_258.hdf5"/>
+        <calc sourceID="c" datastore="./out_c/calc_259.hdf5"/>
+        <calc sourceID="d" datastore="./out_d/calc_260.hdf5"/>
+    </calculations>
+
+    <uncertainties>
+        <logicTreeBranchSet uncertaintyType="setLowerSeismDepthAbsolute" 
+                branchSetID="bs1" logicTree="ssc">
+            <sourceIDs>b c</sourceIDs>
+            <branchSetID>bs3 bs4</branchSetID>
+        </logicTreeBranchSet>
+    </uncertainties>
+
+    <uncertainties>
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                logicTree="gmc">
+            <sourceIDs>a b</sourceIDs>
+            <branchSetID>bs1 bs1</branchSetID>
+        </logicTreeBranchSet>
+    </uncertainties>
+
+</nrml>
