@@ -21,6 +21,7 @@ import logging
 import operator
 import pandas
 import numpy
+import h5py
 from openquake.baselib import hdf5, sap, general
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
@@ -31,6 +32,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 B25 = (numpy.bytes_, 25)
+U25 = h5py.string_dtype('utf-8', 25)
 CONV = {n: F32 for n in '''
 BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD
 COST_STRUCTURAL_USD LATITUDE LONGITUDE OCCUPANTS_PER_ASSET
@@ -111,7 +113,11 @@ def store_tagcol(dstore):
             tagsizes.append(size)
             logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
             hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-            dstore['tagcol/' + name] = numpy.concatenate([[b'?'], uvals])
+            strings = [
+                x.decode('utf8') for x in numpy.concatenate([[b'?'], uvals])]
+            dset = dstore.create_dset('tagcol/' + name, hdf5.vstr,
+                                      (len(strings),))
+            dset[:] = strings
             if name == 'ID_0':
                 dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
                 arr = numpy.empty(len(uvals), dtlist)
@@ -202,7 +208,7 @@ def store(exposures_xml, wfp, dstore):
     num_assets = 0
     # NB: we need to keep everything in memory to make gzip efficient
     acc = general.AccumDict(accum=[])
-    name2dic = {}
+    name2dic = {b'?': b'?'}
     for gh3, arr, dic in smap:
         name2dic.update(dic)
         for name in commonfields:
@@ -221,13 +227,10 @@ def store(exposures_xml, wfp, dstore):
         logging.info(f'Storing assets/{name}')
         hdf5.extend(dstore['assets/' + name], arr)
     store_tagcol(dstore)
-    if name2dic:
-        ID2s = dstore['tagcol/ID_2'][1:]
-        dset = dstore.create_dset(
-            'ID2NAME2', [('ID_2', B25), ('NAME_2', B25)],
-            (len(ID2s),), fillvalue=None)
-        dset['ID_2'] = ID2s
-        dset['NAME_2'] = numpy.array([name2dic[id2] for id2 in ID2s])
+    if len(name2dic) > 1:
+        ID2s = dstore['tagcol/ID_2'][:]
+        dstore['NAME_2'] = numpy.array([name2dic[id2].decode('utf8')
+                                        for id2 in ID2s])
 
     # sanity check
     for name in commonfields:
