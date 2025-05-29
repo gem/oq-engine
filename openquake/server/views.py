@@ -1568,8 +1568,14 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 # NOTE: for backwards compatibility, read scalar
                 asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
+            asce07_key_mapping = {
+                'PGA': 'PGAm',
+            }
+            asce07 = {asce07_key_mapping[k]: v
+                      for k, v in asce07.items()
+                      if k in asce07_key_mapping}
             for key, value in asce07.items():
-                if key not in ('PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
+                if key not in ('PGAm', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value
@@ -1585,6 +1591,19 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 # NOTE: for backwards compatibility, read scalar
                 asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
+            asce41_key_mapping = {
+                'BSE2N_Ss': 'BSE2N_Sms',
+                'BSE2E_Ss': 'BSE2E_Sms',
+                'BSE1N_Ss': 'BSE1N_Sms',
+                'BSE1E_Ss': 'BSE1E_Sms',
+                'BSE2N_S1': 'BSE2N_Sm1',
+                'BSE2E_S1': 'BSE2E_Sm1',
+                'BSE1N_S1': 'BSE1N_Sm1',
+                'BSE1E_S1': 'BSE1E_Sm1',
+            }
+            asce41 = {asce41_key_mapping[k]: v
+                      for k, v in asce41.items()
+                      if k in asce41_key_mapping}
             for key, value in asce41.items():
                 if not key.startswith('BSE'):
                     continue
