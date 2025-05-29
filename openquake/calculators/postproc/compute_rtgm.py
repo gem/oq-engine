@@ -239,7 +239,7 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     return det, np.array(mag_dist_eps_sig, dt)
 
 
-def get_zero_hazard_asce07():
+def get_zero_hazard_asce07(ASCE_version, vs30):
     na = 'n.a.'
 
     if ASCE_version == 'ASCE7-16':
@@ -293,7 +293,7 @@ def get_zero_hazard_asce07():
     return asce07
 
 
-def get_zero_hazard_asce41():
+def get_zero_hazard_asce41(ASCE_version):
     na = 'n.a.'
     if ASCE_version == 'ASCE7-16':
         asce41 = {'BSE2N_Ss': na,
@@ -712,8 +712,8 @@ def main(dstore, csm):
                        'sid': [sid]*len(job_imts)}
             mce_df = pd.DataFrame(dic_mce)
             mce_dfs.append(mce_df)
-            asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
-            asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
+            asce07[sid] = hdf5.dumps(get_zero_hazard_asce07(ASCE_version, vs30))
+            asce41[sid] = hdf5.dumps(get_zero_hazard_asce41(ASCE_version))
             logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
                          loc.y, mce_df)
         elif warning.startswith(('The ASCE', 'Only probabilistic MCE')):
