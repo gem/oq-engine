@@ -21,7 +21,6 @@ import logging
 import operator
 import pandas
 import numpy
-import h5py
 from openquake.baselib import hdf5, sap, general
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
@@ -31,16 +30,16 @@ from openquake.risklib.asset import _get_exposure
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-B24 = (numpy.bytes_, 24)
+B25 = (numpy.bytes_, 25)
 CONV = {n: F32 for n in '''
 BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD
 COST_STRUCTURAL_USD LATITUDE LONGITUDE OCCUPANTS_PER_ASSET
 OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
-CONV['ASSET_ID'] = B24
+CONV['ASSET_ID'] = B25
 for f in (None, 'ID_1', 'ID_2'):
-    CONV[f] = B24
+    CONV[f] = B25
 TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [],
         'NAME_1': [], 'NAME_2': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
@@ -189,7 +188,7 @@ def store(exposures_xml, wfp, dstore):
     commonfields = sorted(files[0].fields & FIELDS)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
-        [('ASSET_ID', B24)]
+        [('ASSET_ID', B25)]
     for name, dt in dtlist:
         logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
@@ -225,7 +224,7 @@ def store(exposures_xml, wfp, dstore):
     if name2dic:
         ID2s = dstore['tagcol/ID_2'][1:]
         dset = dstore.create_dset(
-            'ID2NAME2', [('ID_2', B24), ('NAME_2', B24)],
+            'ID2NAME2', [('ID_2', B25), ('NAME_2', B25)],
             (len(ID2s),), fillvalue=None)
         dset['ID_2'] = ID2s
         dset['NAME_2'] = numpy.array([name2dic[id2] for id2 in ID2s])
