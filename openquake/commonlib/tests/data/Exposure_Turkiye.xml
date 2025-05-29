@@ -30,8 +30,8 @@
 
     <occupancyPeriods>day night transit</occupancyPeriods>
 
-    <tagNames>OCCUPANCY ID_0 ID_1 ID_2 NAME_0 NAME_1</tagNames>
-    <assets>grm_exposure.csv</assets>
+    <tagNames>OCCUPANCY ID_0 NAME_0 ID_1 NAME_1 ID_2 NAME_2 ID_3 ID_4 PLACE PLACE_TYPE MACRO_TAXONOMY</tagNames>
+    <assets>Exposure_Res_Turkiye.csv</assets>
   </exposureModel>
 
 </nrml>

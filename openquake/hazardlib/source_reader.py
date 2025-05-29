@@ -305,11 +305,9 @@ def get_csm(oq, full_lt, dstore=None):
     if out:
         dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
                   ('num_ruptures', int), ('mutex_weight', float)]
-        dstore.create_dset('src_mutex', numpy.array(out, dtlist),
-                           fillvalue=None)
+        dstore.create_dset('src_mutex', numpy.array(out, dtlist))
         lst = [('grp_id', int), ('probability', float)]
-        dstore.create_dset('grp_probability', numpy.array(probs, lst),
-                           fillvalue=None)
+        dstore.create_dset('grp_probability', numpy.array(probs, lst))
 
     # split multifault sources if there is a single site
     try:
