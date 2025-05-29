@@ -559,8 +559,12 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _pre_execute(self):
         oq = self.oqparam
+        if 'ilabel' in self.sitecol.array.dtype.names and not oq.site_labels:
+            logging.warning('The site model has a field `ilabel` but it will '
+                            'be ignored since site_labels is missing in %s',
+                            oq.inputs['job_ini'])
         if oq.disagg_by_src and oq.site_labels:
-            assert len(numpy.unique(self.sitecol.label)) == 1, \
+            assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
         sgs = self.datastore['source_groups']
         self.tiling = sgs.attrs['tiling']
