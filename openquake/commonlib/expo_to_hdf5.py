@@ -40,6 +40,7 @@ TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = (numpy.bytes_, 24)
 for f in (None, 'ID_1', 'ID_2'):
     CONV[f] = (numpy.bytes_, 24)
+S25 = h5py.string_dtype('ascii', 25)
 TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [],
         'NAME_1': [], 'NAME_2': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
@@ -188,7 +189,7 @@ def store(exposures_xml, wfp, dstore):
     commonfields = sorted(files[0].fields & FIELDS)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
-        [('ASSET_ID', h5py.string_dtype('ascii', 25))]
+        [('ASSET_ID', S25)]
     for name, dt in dtlist:
         logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
@@ -202,7 +203,7 @@ def store(exposures_xml, wfp, dstore):
     num_assets = 0
     # NB: we need to keep everything in memory to make gzip efficient
     acc = general.AccumDict(accum=[])
-    name2dic = {b'?': b'?'}
+    name2dic = {}
     for gh3, arr, dic in smap:
         name2dic.update(dic)
         for name in commonfields:
@@ -221,10 +222,13 @@ def store(exposures_xml, wfp, dstore):
         logging.info(f'Storing assets/{name}')
         hdf5.extend(dstore['assets/' + name], arr)
     store_tagcol(dstore)
-    #if len(name2dic) > 1:
-    #    ID2s = dstore['tagcol/ID_2'][:]
-    #    dstore.create_dset('NAME_2full', numpy.array(
-    #        [name2dic[id2] for id2 in ID2s]))
+    if name2dic:
+        ID2s = dstore['tagcol/ID_2'][1:]
+        dset = dstore.create_dset(
+            'ID2NAME2', [('ID_2', S25), ('NAME_2', S25)],
+            (len(ID2s),), fillvalue=None)
+        dset['ID_2'] = ID2s
+        dset['NAME_2'] = numpy.array([name2dic[id2] for id2 in ID2s])
 
     # sanity check
     for name in commonfields:
