@@ -34,6 +34,7 @@ import pandas as pd
 from glob import glob
 from openquake.man.tools.csv_output import read_hazard_curve_csv
 from openquake.commonlib.datastore import read
+from openquake.unc.bins import get_bins_from_params
 
 
 CORR_UNC = []
