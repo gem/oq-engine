@@ -313,6 +313,8 @@ class DataStore(collections.abc.MutableMapping):
                 compression, fillvalue, attrs)
             dset[:] = dtype
             return dset
+        if isinstance(shape, int):
+            shape = shape,
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 

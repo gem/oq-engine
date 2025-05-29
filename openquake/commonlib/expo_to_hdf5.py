@@ -199,7 +199,7 @@ def store(exposures_xml, wfp, dstore):
     dstore['exposure'] = exposure
     dstore.create_df('assets', dtlist, 'gzip')
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
-    dstore.create_dset('assets/slice_by_gh3', slc_dt, fillvalue=None)
+    dstore.create_dset('assets/slice_by_gh3', slc_dt)
     dstore.swmr_on()
     sa = os.environ.get('OQ_SAMPLE_ASSETS')
     smap = Starmap.apply(gen_tasks, (files, wfp, sa),
@@ -228,8 +228,8 @@ def store(exposures_xml, wfp, dstore):
     store_tagcol(dstore)
     if len(name2dic) > 1:
         ID2s = dstore['tagcol/ID_2'][:]
-        dstore['NAME_2'] = numpy.array([name2dic[id2].decode('utf8')
-                                        for id2 in ID2s])
+        dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
+            name2dic[id2].decode('utf8') for id2 in ID2s]
 
     # sanity check
     for name in commonfields:
