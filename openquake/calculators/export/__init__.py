@@ -52,7 +52,7 @@ DISPLAY_NAME = {
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
-    'mce': 'Maximum Considered Earthquake',
+    'mce': 'Response Spectrum',
     'median_spectra': 'Median Spectra per Site and PoE',
     'median_spectrum_disagg': 'Median Spectrum Disaggregation',
     'mmi_tags': 'Exposure grouped by Admin1 and MMI',

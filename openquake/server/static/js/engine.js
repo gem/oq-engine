@@ -655,7 +655,7 @@ function capitalizeFirstLetter(val) {
                 const $input_vs30 = $('input#vs30');
                 $site_class_select.empty();
                 if (asce_version === 'ASCE7-16') {
-                    $site_class_select.append($('<option>', {value: 760, text: 'B'}));
+                    $site_class_select.append($('<option>', {value: 760, text: 'BC'}));
                     $input_vs30.val($site_class_select.val());
                 } else if (asce_version === 'ASCE7-22') {
                     const items = [

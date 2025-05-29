@@ -109,7 +109,7 @@ AELO_FORM_LABELS = {
     'site_class': 'Site class',
     'vs30': 'Vs30 (m/s)',
     'siteid': 'Site name',
-    'asce_version': 'ASCE standard',
+    'asce_version': 'ASCE standards',
 }
 
 AELO_FORM_PLACEHOLDERS = {
@@ -117,7 +117,7 @@ AELO_FORM_PLACEHOLDERS = {
     'lat': 'max. 5 decimals',
     'vs30': 'float (150 - 3000)',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
-    'asce_version': 'ASCE standard',
+    'asce_version': 'ASCE standards',
 }
 
 HIDDEN_OUTPUTS = ['assetcol', 'job']
@@ -1559,6 +1559,15 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     asce41_with_units = {}
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        try:
+            asce_version = ds['oqparam'].asce_version
+        except AttributeError:
+            # for backwards compatibility on old calculations
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
+            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
         if is_model_preliminary(ds):
             warnings = PRELIMINARY_MODEL_WARNING
         if 'asce07' in ds:
@@ -1568,12 +1577,14 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 # NOTE: for backwards compatibility, read scalar
                 asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
-            asce07_key_mapping = {
-                'PGA': 'PGAm',
-            }
+            asce07_key_mapping = {}
+            if asce_version != 'ASCE7-16':
+                asce07_key_mapping = {
+                    'PGA': 'PGAm',
+                }
             asce07_m = {asce07_key_mapping.get(k, k): v for k, v in asce07.items()}
             for key, value in asce07_m.items():
-                if key not in ('PGAm', 'Ss', 'S1', 'Sms', 'Sm1'):
+                if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value
@@ -1589,16 +1600,18 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 # NOTE: for backwards compatibility, read scalar
                 asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
-            asce41_key_mapping = {
-                'BSE2N_Ss': 'BSE2N_Sms',
-                'BSE2E_Ss': 'BSE2E_Sms',
-                'BSE1N_Ss': 'BSE1N_Sms',
-                'BSE1E_Ss': 'BSE1E_Sms',
-                'BSE2N_S1': 'BSE2N_Sm1',
-                'BSE2E_S1': 'BSE2E_Sm1',
-                'BSE1N_S1': 'BSE1N_Sm1',
-                'BSE1E_S1': 'BSE1E_Sm1',
-            }
+            asce41_key_mapping = {}
+            if asce_version != 'ASCE7-16':
+                asce41_key_mapping = {
+                    'BSE2N_Ss': 'BSE2N_Sxs',
+                    'BSE2E_Ss': 'BSE2E_Sxs',
+                    'BSE1N_Ss': 'BSE1N_Sxs',
+                    'BSE1E_Ss': 'BSE1E_Sxs',
+                    'BSE2N_S1': 'BSE2N_Sx1',
+                    'BSE2E_S1': 'BSE2E_Sx1',
+                    'BSE1N_S1': 'BSE1N_Sx1',
+                    'BSE1E_S1': 'BSE1E_Sx1',
+                }
             asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
             for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
@@ -1612,15 +1625,6 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
-        try:
-            asce_version = ds['oqparam'].asce_version
-        except AttributeError:
-            # for backwards compatibility on old calculations
-            asce_version = oqvalidation.OqParam.asce_version.default
-        try:
-            calc_aelo_version = ds.get_attr('/', 'aelo_version')
-        except KeyError:
-            calc_aelo_version = '1.0.0'
         if 'warnings' in ds:
             ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
             if warnings is None:
