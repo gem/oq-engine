@@ -910,6 +910,10 @@ ALL_COST_TYPES = [
 VULN_TYPES = COST_TYPES + [
     'number', 'area', 'occupants', 'residents', 'affectedpop', 'injured']
 
+# mapping version -> corresponding display name
+ASCE_VERSIONS = {'ASCE7-16': 'ASCE 7-16 & 41-17',
+                 'ASCE7-22': 'ASCE 7-22 & 41-23'}
+
 
 def check_same_levels(imtls):
     """
@@ -994,7 +998,7 @@ class OqParam(valid.ParamSet):
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
     asce_version = valid.Param(
-        valid.Choice('ASCE7-16', 'ASCE7-22'), 'ASCE7-16')
+        valid.Choice(*ASCE_VERSIONS.keys()), 'ASCE7-16')
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)

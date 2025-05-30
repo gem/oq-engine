@@ -35,11 +35,11 @@
                   <tr>
                     <td>
                         <select class="aelo-select" name="asce_version" id="asce_version">
-                        {% for asce_version in asce_versions %}
+                        {% for asce_version, asce_version_label in asce_versions.items %}
                         {% if asce_version == default_asce_version %}
-                        <option value="{{ asce_version }}" selected>{{ asce_version }}</option>
+                        <option value="{{ asce_version }}" selected>{{ asce_version_label }}</option>
                         {% else %}
-                        <option value="{{ asce_version }}">{{ asce_version }}</option>
+                        <option value="{{ asce_version }}">{{ asce_version_label }}</option>
                         {% endif %}
                         {% endfor %}
                         </select>
