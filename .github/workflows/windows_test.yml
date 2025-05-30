@@ -88,7 +88,7 @@ jobs:
             else
             {
               Write-Host "Install on user mode on scheduled task"
-              Write-Host "python install.py devel --version master
+              Write-Host "python install.py devel --version master"
               python install.py devel --version master
             }
             C:\Users\runneradmin\openquake\Scripts\activate.ps1
