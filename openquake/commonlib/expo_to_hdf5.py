@@ -21,7 +21,6 @@ import logging
 import operator
 import pandas
 import numpy
-import h5py
 from openquake.baselib import hdf5, sap, general
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
@@ -31,15 +30,16 @@ from openquake.risklib.asset import _get_exposure
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+B30 = (numpy.bytes_, 30)
 CONV = {n: F32 for n in '''
 BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD
 COST_STRUCTURAL_USD LATITUDE LONGITUDE OCCUPANTS_PER_ASSET
 OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
-CONV['ASSET_ID'] = (numpy.bytes_, 24)
+CONV['ASSET_ID'] = B30
 for f in (None, 'ID_1', 'ID_2'):
-    CONV[f] = str
+    CONV[f] = B30
 TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [],
         'NAME_1': [], 'NAME_2': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
@@ -71,15 +71,16 @@ def fix(arr):
     # prepend the country to ASSET_ID and ID_1
     ID0 = arr['ID_0']
     ID1 = arr['ID_1']
-    arr['ASSET_ID'] = numpy.char.add(numpy.array(ID0, 'S3'), arr['ASSET_ID'])
+    country = numpy.array(ID0, 'S3')
+    arr['ASSET_ID'] = numpy.char.add(country, arr['ASSET_ID'])
     for i, (id0, id1) in enumerate(zip(ID0, ID1)):
         if not id1.startswith(id0):
-            ID1[i] = '%s-%s' % (id0, ID1[i])
+            ID1[i] = country[i] + ID1[i]
 
 
 def exposure_by_geohash(array, monitor):
     """
-    Yields pairs (geohash, array)
+    Yields triples (geohash, array, name2dic)
     """
     array = add_geohash3(array)
     fix(array)
@@ -106,7 +107,10 @@ def store_tagcol(dstore):
             tagsizes.append(size)
             logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
             hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-            dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
+            vals = numpy.concatenate([[b'?'], uvals])
+            dset = dstore.create_dset(
+                'tagcol/' + name, hdf5.vstr, (len(vals),))
+            dset[:] = [x.decode('utf8') for x in vals]
             if name == 'ID_0':
                 dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
                 arr = numpy.empty(len(uvals), dtlist)
@@ -151,12 +155,20 @@ def gen_tasks(files, wfp, sample_assets, monitor):
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
             array = numpy.zeros(len(df), dt)
             for col in df.columns:
-                array[col] = df[col].to_numpy()
+                arr = df[col].to_numpy()
+                if len(arr) and hasattr(arr[0], 'encode'):
+                    array[col] = [x.encode('utf8') for x in arr]
+                else:
+                    array[col] = arr
             if i == 0:
                 yield from exposure_by_geohash(array, monitor)
             else:
                 yield exposure_by_geohash, array
         print(os.path.basename(file.fname), nrows)
+
+
+def keep_wfp(csvfile):
+    return any(col.startswith('WFP_') for col in csvfile.header)
 
 
 def store(exposures_xml, wfp, dstore):
@@ -167,20 +179,21 @@ def store(exposures_xml, wfp, dstore):
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
         csvfiles.extend(exposure.datafiles)
-    files = hdf5.sniff(csvfiles, ',', IGNORE)
+    files = hdf5.sniff(csvfiles, ',', IGNORE,
+                       keep=keep_wfp if wfp else lambda csvfile: True)
     if wfp:
         files = [f for f in files if any(field.startswith('WFP_')
                                          for field in f.header)]
     commonfields = sorted(files[0].fields & FIELDS)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
-        [('ASSET_ID', h5py.string_dtype('ascii', 25))]
+        [('ASSET_ID', B30)]
     for name, dt in dtlist:
         logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
     dstore.create_df('assets', dtlist, 'gzip')
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
-    dstore.create_dset('assets/slice_by_gh3', slc_dt, fillvalue=None)
+    dstore.create_dset('assets/slice_by_gh3', slc_dt)
     dstore.swmr_on()
     sa = os.environ.get('OQ_SAMPLE_ASSETS')
     smap = Starmap.apply(gen_tasks, (files, wfp, sa),
@@ -188,7 +201,10 @@ def store(exposures_xml, wfp, dstore):
     num_assets = 0
     # NB: we need to keep everything in memory to make gzip efficient
     acc = general.AccumDict(accum=[])
+    name2dic = {b'?': b'?'}
     for gh3, arr in smap:
+        if 'NAME_2' in commonfields:
+            name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
                 TAGS[name].append(arr[name])
@@ -205,6 +221,10 @@ def store(exposures_xml, wfp, dstore):
         logging.info(f'Storing assets/{name}')
         hdf5.extend(dstore['assets/' + name], arr)
     store_tagcol(dstore)
+    if len(name2dic) > 1:
+        ID2s = dstore['tagcol/ID_2'][:]
+        dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
+            name2dic[id2].decode('utf8') for id2 in ID2s]
 
     # sanity check
     for name in commonfields:

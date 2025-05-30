@@ -69,8 +69,7 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         try:
             h5.create_df(
                 '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
-            hdf5.create(
-                h5, '_rates/slice_by_idx', getters.slice_dt, fillvalue=None)
+            hdf5.create(h5, '_rates/slice_by_idx', getters.slice_dt)
         except ValueError:  # already created
             offset = len(h5['_rates/sid'])
         else:

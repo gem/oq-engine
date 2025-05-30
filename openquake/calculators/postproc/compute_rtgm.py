@@ -148,7 +148,6 @@ def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     imts, facts = [], []
     for m, imt in enumerate(job_imts):
         afe = to_rates(hcurves[m], oq.investigation_time, minrate=1E-12)
-
         IMT = norm_imt(imt)
         imts.append(IMT)
         T = from_string(imt).period
@@ -476,19 +475,17 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
     :yields: (site, rtgm_df, warning)
     """
     for site in dstore['sitecol']:
-        sid = site.id
-        mrs = dstore['mean_rates_by_src'][sid]
-        mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
-
         oq = dstore['oqparam']
         imts = list(oq.imtls)
         sa02 = imts.index('SA(0.2)')
         sa10 = imts.index('SA(1.0)')
+        sid = site.id
+        mrs = dstore['mean_rates_by_src'][sid]
 
         stats = list(oq.hazard_stats())
         assert stats[0] == 'mean', stats[0]
         hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
-        site = list(dstore['sitecol'])[sid]
+        mean_rates = to_rates(hcurves)
         loc = site.location
         low_haz = ('Very low hazard: ASCE 7 and ASCE 41'
                    ' parameters cannot be computed. See User Guide.')

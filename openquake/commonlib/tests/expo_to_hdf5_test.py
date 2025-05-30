@@ -16,21 +16,89 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import numpy
 from openquake.commonlib.expo_to_hdf5 import store
 from openquake.commonlib.datastore import create_job_dstore
 
+ae = numpy.testing.assert_equal
+EXPECTED_ASSETS = sorted([
+    b'COLRes_89558',
+    b'HTIInd_124',
+    b'TWNRes_0',
+    b'TWNRes_1',
+    b'TWNRes_2',
+    b'TWNRes_3',
+    b'TWNRes_4',
+    b'TWNRes_5',
+    b'TWNRes_6',
+    b'TWNRes_7',
+    b'TWNRes_8',
+    b'TWNRes_9',
+    b'TURRes_971000',
+    b'COLRes_325763',
+    b'HTIInd_394',
+    b'HTIInd_2564',
+    b'HTIInd_2925',
+    b'HTIInd_2991',
+    b'TURRes_1867459',
+    b'COLRes_276440',
+    b'COLRes_256836',
+    b'COLRes_279883',
+    b'HTIInd_368',
+    b'HTIInd_2544',
+    b'HTIInd_2756',
+    b'TURRes_1425004',
+    b'TURRes_2265963',
+    b'COLRes_216273',
+    b'TURRes_2050206',
+    b'COLRes_13074'])
+
+EXPECTED_ID1s = sorted([
+    b'?',
+    b'COL903931.0',
+    b'COL903934.0',
+    b'COL903951.0',
+    b'COL903957.0',
+    b'COL903960.0',
+    b'HTI901001.0',
+    b'HTI901003.0',
+    b'HTI901004.0',
+    b'HTI901005.0',
+    b'HTI901007.0',
+    b'HTI901009.0',
+    b'TUR901304.0',
+    b'TUR901314.0',
+    b'TUR901328.0',
+    b'TUR901337.0',
+    b'TUR901347.0',
+    b'TWNA',
+    b'TWNB'])
+
+EXPECTED_NAME2s = [
+    '?', 'Saint-Marc', 'Çayiralan', 'Terrier Rouge', 'Türkeli', 'Acigöl',
+    'Kocasinan', 'Port-De-Paix', 'Antakya', 'Cap-Haitien',
+    'Croix-Des-Bouquets', 'Les Cayes', 'Bogotá, D.C.', 'Iles', 'Sincelejo',
+    'Cali', 'Arauquita', 'No_tag']
+
 
 def test_expo_to_hdf5():
-    expo_xml = os.path.join(os.path.dirname(__file__),
-                            'data', 'grm_exposure.xml')
+    expo1_xml = os.path.join(os.path.dirname(__file__),
+                             'data', 'Exposure_Taiwan.xml')
+    expo2_xml = os.path.join(os.path.dirname(__file__),
+                             'data', 'Exposure_Haiti.xml')
+    expo3_xml = os.path.join(os.path.dirname(__file__),
+                             'data', 'Exposure_Colombia.xml')
+    expo4_xml = os.path.join(os.path.dirname(__file__),
+                             'data', 'Exposure_Turkiye.xml')
     job, dstore = create_job_dstore()
     with job, dstore:
-        store([expo_xml], True, dstore)
-        assets = list(dstore['assets/ASSET_ID'])
-        assert assets == [b'TWNRes_0', b'TWNRes_1', b'TWNRes_2', b'TWNRes_3',
-                          b'TWNRes_4', b'TWNRes_5', b'TWNRes_6', b'TWNRes_7',
-                          b'TWNRes_8', b'TWNRes_9']
-        id1s = list(dstore['assets/ID_1'])
-        assert id1s == [1, 1, 1, 1, 2, 2, 2, 2, 2, 2]
+        store([expo1_xml, expo2_xml, expo3_xml, expo4_xml], True, dstore)
+        assets = sorted(dstore['assets/ASSET_ID'][:])
+        ae(assets, EXPECTED_ASSETS)
+        assert len(dstore['assets/ID_1']) == 30
 
+        ID1s = sorted(dstore['tagcol/ID_1'])
+        ae(ID1s, EXPECTED_ID1s)
 
+        NAME2s = dstore['NAME_2'][:]
+        assert [x.decode('utf8') for x in NAME2s] == EXPECTED_NAME2s
