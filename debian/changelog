@@ -4,7 +4,7 @@
     z1pt0 or z2pt5 relationship to estimate these site parameters, in
     effect preventing additional adjustment to GMM basin terms based
     on unknown site information. QA tests (classical case_89) + unit
-    tests added.
+    tests (`utils_infer_basin_params_test.py`) added.
   * Added validation checks for core site params (lon, lat, vs30, z1pt0
     and z2pt5) when building the site collection within a calculation.
 
