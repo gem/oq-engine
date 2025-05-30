@@ -4,8 +4,8 @@
       xmlns="http://openquake.org/xmlns/nrml/0.5">
 
     <calculations>
-        <calc sourceID="b" datastore="./out_b/calc_259.hdf5"/>
-        <calc sourceID="c" datastore="./out_c/calc_260.hdf5"/>
+        <calc sourceID="b" datastore="./out_b/calc_8510.hdf5"/>
+        <calc sourceID="c" datastore="./out_c/calc_8511.hdf5"/>
     </calculations>
 
     <uncertainties>

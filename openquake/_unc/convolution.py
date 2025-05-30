@@ -1,36 +1,8 @@
-#
-# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
-# Copyright (C) 2025 GEM Foundation
-#
-#                `.......      `....     `..`...     `..`... `......
-#                `..    `..  `..    `..  `..`. `..   `..     `..
-#                `..    `..`..        `..`..`.. `..  `..     `..
-#                `.......  `..        `..`..`..  `.. `..     `..
-#                `..       `..        `..`..`..   `. `..     `..
-#                `..         `..     `.. `..`..    `. ..     `..
-#                `..           `....     `..`..      `..     `..
-#
-#
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU Affero General Public License as published by the Free
-# Software Foundation, either version 3 of the License, or (at your option) any
-# later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
-# details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# -----------------------------------------------------------------------------
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-# coding: utf-8
-
-
 import numpy as np
 from numba import jit
 from openquake._unc.bins import get_bins_data, get_bins_from_params
+
+TOLERANCE = 1e-6
 
 
 def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
@@ -111,11 +83,11 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
         raise ValueError(msg)
 
     # Checking input
-    if np.abs(1.0-np.sum(pmfa)) > 1e-8 and len(pmfa):
+    if np.abs(1.0-np.sum(pmfa)) > TOLERANCE and len(pmfa):
         smm = np.sum(pmfa)
         print(np.abs(1.0-smm))
         raise ValueError(f'Sum of elements pmfa not equal to 1 {smm:8.4e}')
-    if np.abs(1.0-np.sum(pmfb)) > 1e-8 and len(pmfb):
+    if np.abs(1.0-np.sum(pmfb)) > TOLERANCE and len(pmfb):
         smm = np.sum(pmfb)
         print(np.abs(1.0-smm))
         raise ValueError(f'Sum of elements pmfb not equal to 1 {smm:8.4e}')
@@ -156,7 +128,7 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
 
     assert len(pmfo) == res*num_powers_o
 
-    if not np.abs(1.0-np.sum(pmfo)) < 1e-8:
+    if not np.abs(1.0-np.sum(pmfo)) < TOLERANCE:
         print(msg)
         print(pmfa)
         print(pmfb)

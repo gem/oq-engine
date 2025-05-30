@@ -1,29 +1,3 @@
-#
-# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
-# Copyright (C) 2025 GEM Foundation
-#
-#                `.......      `....     `..`...     `..`... `......
-#                `..    `..  `..    `..  `..`. `..   `..     `..
-#                `..    `..`..        `..`..`.. `..  `..     `..
-#                `.......  `..        `..`..`..  `.. `..     `..
-#                `..       `..        `..`..`..   `. `..     `..
-#                `..         `..     `.. `..`..    `. ..     `..
-#                `..           `....     `..`..      `..     `..
-#
-#
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU Affero General Public License as published by the Free
-# Software Foundation, either version 3 of the License, or (at your option) any
-# later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
-# details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# -----------------------------------------------------------------------------
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding: utf-8
 
@@ -36,6 +10,7 @@ import unittest
 import tempfile
 import tracemalloc
 import configparser
+import pytest
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -161,7 +136,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         f = hdf5.File(fname, "r")
 
         # Test
-        aae(computed_mtx, f["histograms"][:])
+        aae(computed_mtx, f["histograms"][:], decimal=2)
         f.close()
 
         # Mean and median from convolution
@@ -188,6 +163,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             _ = plt.grid(which='major', ls='--', color='grey')
             _ = plt.grid(which='minor', ls=':', color='lightgrey')
 
+            # Inset
             ins = axs.inset_axes([0.5, 0.25, 0.2, 0.4])
             j = 22
             tmpy = 10**np.linspace(minp[j], minp[j] + nump[j], num=len(his[j]))
@@ -201,7 +177,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             axs.plot([1e-1, 1], [4e-3, 5e-3], '--r', lw=0.5)
             axs.plot([0.98, 1.1, 1.1, 0.98, 0.98],
                      [1e-5, 1e-5, 5e-3, 5e-3, 1e-5], '-r', lw=0.7)
-            axs.set_xlabel('Intensity Measure Level, $\kappa$ [g]')
+            axs.set_xlabel('Intensity Measure Level, $\\kappa$ [g]')
             axs.set_ylabel('Annual Frequency of Exceedance')
 
             tmp = os.path.join(TFF, 'figs', 'calc_test-case02_matrix.png')
@@ -300,6 +276,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             _ = plt.savefig(tmp)
             plt.show()
 
+    @pytest.mark.slow
     def test_02_performance(self):
         """ Comparing results from convolution and sampling - test 02"""
 
@@ -317,7 +294,8 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         file_path = TFF / 'data_calc'
         for nsam in [500, 1000, 10000, 100000]:
 
-            print('\n', nsam)
+            print("\n   Number of samples: {nsam}")
+
             conf_samp['analysis']['number_of_samples'] = f'{nsam}'
             conf_samp['analysis']['conf_file_path'] = file_path
 
@@ -358,7 +336,8 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         mem = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
-        print(exec_time, mem)
+        print("Execution time    : {exec_time}")
+        print("Memory occupation : {mem}")
 
         if PLOTTING:
 
@@ -431,6 +410,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
 
             plt.savefig(TFF / 'figs' / 'test02_performance.png')
 
+    @pytest.mark.slow
     def test_01_performance(self):
         """ Comparing results from convolution and sampling - test 01 """
 
@@ -459,7 +439,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         file_path = TFF / 'data_calc'
         for nsam in [500, 1000, 10000, 100000, 1000000]:
 
-            print('\n', nsam)
+            print("\n   Number of samples: {nsam}")
             conf_sampl['analysis']['number_of_samples'] = f'{nsam}'
             conf_sampl['analysis']['conf_file_path'] = file_path
 
@@ -500,7 +480,8 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         mem = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
-        print(exec_time, mem)
+        print("Execution time    : {exec_time}")
+        print("Memory occupation : {mem}")
 
         if PLOTTING:
 

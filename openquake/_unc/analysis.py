@@ -1,41 +1,12 @@
-#
-# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
-# Copyright (C) 2025 GEM Foundation
-#
-#                `.......      `....     `..`...     `..`... `......
-#                `..    `..  `..    `..  `..`. `..   `..     `..
-#                `..    `..`..        `..`..`.. `..  `..     `..
-#                `.......  `..        `..`..`..  `.. `..     `..
-#                `..       `..        `..`..`..   `. `..     `..
-#                `..         `..     `.. `..`..    `. ..     `..
-#                `..           `....     `..`..      `..     `..
-#
-#
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU Affero General Public License as published by the Free
-# Software Foundation, either version 3 of the License, or (at your option) any
-# later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
-# details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# -----------------------------------------------------------------------------
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-# coding: utf-8
-
 """
 Module `openquake._unc.analysis`
 """
 
 import re
 import os
+import xml.etree.ElementTree as ET
 import logging
 import numpy as np
-import xml.etree.ElementTree as ET
 
 from openquake.commonlib import datastore
 from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore as afes_ds_mde
@@ -377,7 +348,7 @@ class Analysis:
                 fname = os.path.abspath(os.path.join(root_path, fname))
 
             tmp = os.path.basename(fname)
-            msg = f"Source : {key:s} - File: {tmp:s} "
+            msg = f"Source: {key:s} - File: {tmp:s} "
             logging.info(msg)
 
             # Create the datastore
@@ -442,7 +413,7 @@ class Analysis:
         return rlzs, poes, weights
 
 
-def get_patterns(rlzs: dict, an01: Analysis, verbose: bool = False):
+def get_patterns(rlzs: dict, an01: Analysis):
     """
     Computes the patterns needed to select realizations from a source-specific
     logic tree
@@ -455,9 +426,12 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose: bool = False):
     :param verbose:
         A boolean controlling the l
     :returns:
-        A tuple with one dictionary (key is the source ID) with a list of
-        regular expression patterns (one for each for each group of correlated
-        results)
+        A dictionary with key the ID of the branch set with correlated
+        uncertainties (IDs as defined in the `analysis.xml` input file) and
+        with value a dictionary with key the IDs of the sources with correlated
+        uncertainties and with values a list of patterns than can be used to
+        select the realizations belonging to each set of correlated
+        uncertainties.
     """
     patterns = {}
     for bsid in an01.bsets.keys():
@@ -466,7 +440,7 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose: bool = False):
         msg = f"Creating patterns for branch set {bsid:s}"
         logging.info(msg)
 
-        # Processing the sources in the the branchset bsid
+        # Processing the sources in the branchset bsid
         patterns[bsid] = {}
         for sid in an01.bsets[bsid]['data'].keys():
 
@@ -475,26 +449,32 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose: bool = False):
             logging.info(msg)
             logging.debug(rlzs[sid])
 
-            # Create the general pattern
+            # Create the general pattern. This will select everything
+            # e.g. '.+.+.+~.+'
             patterns[bsid][sid] = {}
             nssc = 1 if len(rlzs[sid][0].shape) == 1 else rlzs[sid][0].shape[1]
-            tmpssc = ''.join(['.+' for i in range(nssc)])
+            # tmpssc = ''.join(['.+' for i in range(nssc)])
+            tmpssc = '..' + ''.join(['.' for i in range(2, nssc)])
+
             ngmc = 1 if len(rlzs[sid][1].shape) == 1 else rlzs[sid][1].shape[1]
-            tmpgmc = ''.join(['.+' for i in range(ngmc)])
+            tmpgmc = ''.join(['.' for i in range(ngmc)])
             pattern = '^'+tmpssc+'~'+tmpgmc
 
+            # Find the index in the pattern where we replace the '.' with the
+            # ID of the branches that are correlated.
             ordinal = int(an01.bsets[bsid]['data'][sid]['ordinal'])
-            idx = ordinal*2 + 1
+            # + 1 for the initial ~
+            # + 1 for the first element (that uses two letters)
+            idx = ordinal + 1 + 1
             is_gmc = an01.bsets[bsid]['logictree'] == 'gmc'
-            idx = nssc*2 + idx + 1 if is_gmc else idx
+            idx = nssc + idx if is_gmc else idx
             itype = 1 if is_gmc else 0
-
             iii = (slice(None, None, None))
             if len(rlzs[sid][itype].shape) > 1:
-                iii = (slice(None, None, None), ordinal)
+                iii = (slice(None, None, None), ordinal+1)
             temp_patterns = []
             for key in np.unique(rlzs[sid][itype][iii]):
-                tmp = pattern[:idx] + key + pattern[idx+2:]
+                tmp = pattern[:idx] + key + pattern[idx+1:]
                 temp_patterns.append(tmp)
             patterns[bsid][sid] = temp_patterns
 

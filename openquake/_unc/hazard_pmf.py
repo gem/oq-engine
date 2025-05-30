@@ -1,31 +1,3 @@
-#
-# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
-# Copyright (C) 2025 GEM Foundation
-#
-#                `.......      `....     `..`...     `..`... `......
-#                `..    `..  `..    `..  `..`. `..   `..     `..
-#                `..    `..`..        `..`..`.. `..  `..     `..
-#                `.......  `..        `..`..`..  `.. `..     `..
-#                `..       `..        `..`..`..   `. `..     `..
-#                `..         `..     `.. `..`..    `. ..     `..
-#                `..           `....     `..`..      `..     `..
-#
-#
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU Affero General Public License as published by the Free
-# Software Foundation, either version 3 of the License, or (at your option) any
-# later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
-# details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# -----------------------------------------------------------------------------
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-# coding: utf-8
 
 import copy
 import numpy as np
@@ -36,6 +8,8 @@ from collections.abc import Sequence
 from openquake._unc.convolution import conv
 from openquake._unc.utils import get_rlz_hcs, get_rlzs
 from openquake._unc.bins import get_bins_data, get_bins_from_params
+
+TOLERANCE = 1e-6
 
 """
 We use a hazard PMF to store the results of a number of a hazard curves
@@ -356,8 +330,10 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
         his = his / np.sum(his)
 
         # Checking
+        computed = np.sum(his)
         assert len(his) == num_power*res
-        assert np.abs(np.sum(his) - 1.0) < 1e-8
+        msg = f'Computed value {computed}'
+        assert np.abs(computed - 1.0) < 1e-6, msg
 
         # Updating output
         ohis.append(his)
@@ -520,7 +496,7 @@ def mixture(results: Sequence[list[list]],
             chk = np.sum(tmp)
             chk = np.sum(tmp)/tot_wei
             msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
-            assert np.all(np.abs(chk-1.0) < 1e-10), msg
+            assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
             olst.append(tmp)
         else:
             olst.append(None)

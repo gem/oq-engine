@@ -1,30 +1,4 @@
-#
-# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
-# Copyright (C) 2025 GEM Foundation
-#
-#                `.......      `....     `..`...     `..`... `......
-#                `..    `..  `..    `..  `..`. `..   `..     `..
-#                `..    `..`..        `..`..`.. `..  `..     `..
-#                `.......  `..        `..`..`..  `.. `..     `..
-#                `..       `..        `..`..`..   `. `..     `..
-#                `..         `..     `.. `..`..    `. ..     `..
-#                `..           `....     `..`..      `..     `..
-#
-#
-# This program is free software: you can redistribute it and/or modify it under
-# the terms of the GNU Affero General Public License as published by the Free
-# Software Foundation, either version 3 of the License, or (at your option) any
-# later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
-# details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# -----------------------------------------------------------------------------
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#!/usr/bin/env python
 # coding: utf-8
 
 """
@@ -96,7 +70,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
         # correlated uncertainties
         if bset is not None:
 
-            # For each correlated branch set we draw a number of indexes of the
+            # For each correlated branch-set we draw a number of indexes of the
             # realizations
             bset_sampled_indexes = {}
             for bsid in sorted(bset):
@@ -119,13 +93,14 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
                 # 'bset_sampled_indexes' contains the indexes of the sampled
                 # set of correlated realisations
                 tmp = np.array(list(range(len(weights_per_group))))
+                weights_per_group = rounding(weights_per_group, 4)
                 bset_sampled_indexes[bsid] = np.random.choice(
                     tmp, size=nsam, p=weights_per_group)
 
             # Sample hazard curves for each source in this set
             for sid in sorted(sset):
 
-                print(sid)
+                print(f'Source ID: {sid}')
 
                 msg = f"   Source: {sid}"
                 logging.info(msg)
@@ -152,7 +127,11 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
                             # Get the sequence of indexes of the curves for the
                             # sampled set of correlated results
                             xx = bset_sampled_indexes[bsid][sam]
-                            tmp = grp_curves[bsid][sid][xx]
+                            try:
+                                tmp = grp_curves[bsid][sid][xx]
+                            except:
+                                print(bset_sampled_indexes[bsid][sam])
+                                breakpoint()
 
                             if i == 0:
                                 iii[sam] = set(tmp)
@@ -225,3 +204,14 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
         imls[key] = oqp.hazard_imtls[key]
 
     return imls, afes
+
+
+def rounding(weights_per_group, num):
+    out = []
+    for i in range(len(weights_per_group)-1):
+        wei = weights_per_group[i]
+        tmp = float(f"{wei:.{num}f}")
+        out.append(tmp)
+    out.append(1.0 - np.sum(out))
+    return np.array(out)
+
