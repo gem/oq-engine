@@ -20,6 +20,7 @@
 Module exports :class:`AbrahamsonSilva2008`.
 """
 import numpy as np
+import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
@@ -163,19 +164,25 @@ def _get_basin_term(C, ctx, region, imt, v1100=None):
     equation 1, page 74. The calculation of this term is explained in
     paragraph 'Soil Depth Model', page 79.
     """
+    z1pt0 = ctx.z1pt0.copy()
+    
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == -999
+    z1pt0[mask] = _compute_median_z1pt0(ctx.vs30[mask])
+    
     if v1100 is None:
         vs30 = ctx.vs30
     else:
         vs30 = v1100
-    a21 = _compute_a21_factor(C, imt, ctx.z1pt0, vs30)
+    a21 = _compute_a21_factor(C, imt, z1pt0, vs30)
     a22 = _compute_a22_factor(imt)
     median_z1pt0 = _compute_median_z1pt0(vs30)
 
-    soil_depth_term = a21 * np.log((ctx.z1pt0 + CONSTS['c2']) /
+    soil_depth_term = a21 * np.log((z1pt0 + CONSTS['c2']) /
                                    (median_z1pt0 + CONSTS['c2']))
 
-    idx = ctx.z1pt0 >= 200
-    soil_depth_term[idx] += a22 * np.log(ctx.z1pt0[idx] / 200)
+    idx = z1pt0 >= 200
+    soil_depth_term[idx] += a22 * np.log(z1pt0[idx] / 200)
 
     return soil_depth_term
 
@@ -389,7 +396,7 @@ def _compute_median_z1pt0(vs30):
     """
     Compute and return median z1pt0 (in m), equation 17, pqge 79.
     """
-    z1pt0_median = np.zeros_like(vs30) + 6.745
+    z1pt0_median = np.full_like(vs30, 6.745)
 
     idx = np.where((vs30 >= 180.0) & (vs30 <= 500.0))
     z1pt0_median[idx] = 6.745 - 1.35 * np.log(vs30[idx] / 180.0)

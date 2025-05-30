@@ -22,12 +22,14 @@ Module exports :class:`HassaniAtkinson2020SInter`
                :class:`HassaniAtkinson2020Asc`
 """
 import math
-
 import numpy as np
+import copy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA, PGV
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
+
 
 CONSTANTS = {"mlf0": 5.5, "mlf1": 7, "f1": 0, "f3": 98.1,
              "b1": -1.3, "b2": -0.5, "v0": 100, "v1": 250, "v2": 1000,
@@ -177,7 +179,13 @@ def _get_basin_term(C, ctx, region=None):
     """
     Z2pt5 factor.
     """
-    z2pt5 = ctx.z2pt5
+    z2pt5 = ctx.z2pt5.copy()
+
+    # No vs30 to z2pt5 relationship for this GMM (see pp. 959) so
+    # use the Campbell and Bozorgnia 2014 vs30 to z2pt5 for Japan
+    mask = z2pt5 == -999
+    z2pt5[mask] = _get_z2pt5_ref(SJ=True, vs30=ctx.vs30[mask])
+
     s = CONSTANTS
     fz2pt5 = np.where(z2pt5 >= 0, C['cz0'], 0)
 
@@ -224,6 +232,10 @@ def get_stddevs(suffix, C):
 class HassaniAtkinson2020SInter(GMPE):
     """
     Hassani Atkinson (2020) for Subduction Interface.
+
+    Hassani, B., and G. M. Atkinson (2021). Equivalent Point-Source
+    Ground-Motion Model for Subduction Earthquakes in Japan, Bull.
+    Seismol. Soc. Am. 111, 951–974, doi: 10.1785/0120200257
     """
     gmpe_table = None  # use split_by_mag
 
