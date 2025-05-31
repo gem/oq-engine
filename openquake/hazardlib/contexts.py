@@ -1130,7 +1130,7 @@ class ContextMaker(object):
         ctxs = self.from_srcs(srcs, sitecol)
         return self.get_pmap(ctxs, tom, rup_mutex).array
 
-    def _gen_poes(self, ctx):
+    def _gen_poes(self, ctx, get_tau=False):
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 
@@ -1157,11 +1157,23 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctx[slc])
                     else:  # regular case
                         set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
-            yield poes, mean_stdt[0, :, :, slc], mean_stdt[1, :, :, slc], slc
+            if not get_tau:
+                yield (poes,
+                       mean_stdt[0, :, :, slc],
+                       mean_stdt[1, :, :, slc],
+                       slc
+                       )
+            else:
+                yield (poes,
+                       mean_stdt[0, :, :, slc],
+                       mean_stdt[1, :, :, slc],
+                       mean_stdt[2, :, :, slc],
+                       slc
+                       )
         #cs,ms,ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
         #print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' % (cs, ms, ps, G))
 
-    def gen_poes(self, ctx):
+    def gen_poes(self, ctx, get_tau=False):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param rup_indep: rupture flag (false for mutex ruptures)
@@ -1171,10 +1183,17 @@ class ContextMaker(object):
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), 1]
-            for poes, mea, sig, slc in self._gen_poes(ctxt):
+
+            for tmp in self._gen_poes(ctxt, get_tau):
                 # NB: using directly 64 bit poes would be slower without reason
                 # since with astype(F64) the numbers are identical
-                yield poes.astype(F64), mea, sig, ctxt[slc]
+                if not get_tau:
+                    poes, mea, sig, slc = tmp[0], tmp[1], tmp[2], tmp[3]
+                    yield poes.astype(F64), mea, sig, ctxt[slc]
+                else:
+                    poes, mea, sig, tau = tmp[0], tmp[1], tmp[2], tmp[3]
+                    slc = tmp[4]
+                    yield [poes.astype(F64), mea, sig, tau, ctxt[slc]]
 
     # documented but not used in the engine
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
@@ -1940,7 +1959,7 @@ def read_full_lt_by_label(dstore):
         dic[label].gsim_lt = dstore['gsim_lt' + label]
     return dic
 
-    
+
 # used in event_based
 def read_cmaker(dstore, trt_smr):
     """
