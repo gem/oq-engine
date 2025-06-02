@@ -21,7 +21,6 @@ Module exports :class:`CampbellBozorgnia2008`, and
 :class:'CampbellBozorgnia2008Arbitrary'
 """
 import numpy as np
-import copy
 from math import log, exp
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

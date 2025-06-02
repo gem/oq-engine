@@ -22,7 +22,6 @@ Module exports :class:`BooreEtAl2014`,
                :class:`BooreEtAl2014LowQ`
 """
 import numpy as np
-import copy
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias

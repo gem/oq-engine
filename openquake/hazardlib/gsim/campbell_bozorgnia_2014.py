@@ -25,7 +25,6 @@ Module exports :class:`CampbellBozorgnia2014`
                :class:`CampbellBozorgnia2019LowQ`
 """
 import numpy as np
-import copy
 
 from numpy import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias

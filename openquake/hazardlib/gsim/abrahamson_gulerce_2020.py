@@ -22,7 +22,7 @@ Module exports :class:`AbrahamsonGulerce2020SInter`,
                :class:`AbrahamsonGulerce2020SSlab`
 """
 import numpy as np
-import copy
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA

@@ -25,7 +25,6 @@ Module exports :class:`AristeidouEtAl2023`
 """
 
 import numpy as np
-import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const

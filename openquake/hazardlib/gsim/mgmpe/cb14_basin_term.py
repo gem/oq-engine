@@ -19,7 +19,6 @@ Module :mod:`openquake.hazardlib.mgmpe.cb14_basin_term` implements
 :class:`~openquake.hazardlib.mgmpe.CB14BasinTerm`
 """
 import numpy as np
-import copy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, registry
