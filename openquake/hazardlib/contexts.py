@@ -1449,10 +1449,13 @@ class PmapMaker(object):
     """
     A class to compute the PoEs from a given source
     """
-    def __init__(self, cmaker, srcfilter, group):
+    def __init__(self, cmaker, sitecol, group):
         vars(self).update(vars(cmaker))
         self.cmaker = cmaker
-        self.srcfilter = srcfilter
+        if hasattr(sitecol, 'sitecol'):
+            self.srcfilter = sitecol
+        else:
+            self.srcfilter = SourceFilter(sitecol, cmaker.maximum_distance)
         self.N = len(self.srcfilter.sitecol.complete)
         try:
             self.sources = group.sources
