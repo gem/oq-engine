@@ -61,14 +61,14 @@ def get_mea_sig_wei(cmaker, ctx, uhs):
     # reduce the levels to P levels per IMT
     cmaker = set_imls(cmaker, uhs)
     weight = np.empty((G, M, C, P), np.float32)
-    mean = np.empty((G, M, C), np.float32)
+    mea_ = np.empty((G, M, C), np.float32)
     sig_ = np.empty((G, M, C), np.float32)
     tau_ = np.empty((G, M, C), np.float32)
     start = 0
     for poes, mea, sig, tau, ctxt in cmaker.gen_poes(ctx):
         c, _, _ = poes.shape  # L = M * P
         slc = slice(start, start + c)
-        mean[:, :, slc] = mea
+        mea_[:, :, slc] = mea
         sig_[:, :, slc] = sig
         tau_[:, :, slc] = tau
         start += c
@@ -81,7 +81,7 @@ def get_mea_sig_wei(cmaker, ctx, uhs):
             for p, poe in enumerate(cmaker.poes):
                 for m, imt in enumerate(cmaker.imtls):
                     weight[g, m, slc, p] = ocr * poes_g[:, m, p] / poe * w
-    return mean, sig_, tau_, weight
+    return mea_, sig_, tau_, weight
 
 
 def tr(arr):
