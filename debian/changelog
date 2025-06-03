@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Storing also `tau` in the mean spectrum calculator
+
   [Christopher Brooks]
   * Added ability to specify z1pt0 and z2pt5 as -999 within site model
     to inform (basin term considering) GMMs to use their own vs30 to
