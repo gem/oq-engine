@@ -463,7 +463,7 @@ class AssetCollection(object):
             array = self.array[contains_xy(geometry, self['lon'], self['lat'])]
         else:
             array = self.array
-        
+
         dic = {tagname: array[tagname] for tagname in allnames}
         for field in self.fields:
             dic[field] = array['value-' + field]
@@ -487,7 +487,7 @@ class AssetCollection(object):
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
 
-    def get_mmi_values(self, aggregate_by, mmi_file):
+    def get_mmi_values(self, aggregate_by, mmi_file, oq_inputs):
         """
         :param aggregate_by:
             a list of lists of tag names (i.e. [['NAME_1']])
@@ -512,9 +512,17 @@ class AssetCollection(object):
         _aggids, aggtags = self.build_aggids(aggregate_by)
         aggtags = numpy.array(aggtags)  # shape (K+1, T)
         dfs = []
+        if aggregate_by[0] == ['ID_2']:
+            exposure_hdf5 = oq_inputs['exposure'][0]
+            with hdf5.File(exposure_hdf5) as f:
+                name2dic = {id2: name2
+                            for (id2, name2) in zip(f['tagcol'].ID_2, f['NAME_2'])}
         for mmi in out:
             dic = {key: aggtags[:, k] for k, key in enumerate(aggregate_by[0])}
             dic.update({col: out[mmi][col] for col in out[mmi].dtype.names})
+            if aggregate_by[0] == ['ID_2']:
+                # __import__('pdb').set_trace()
+                dic['NAME_2'] = [name2dic[id2] for id2 in dic['ID_2']]
             df = pandas.DataFrame(dic)
             df['mmi'] = mmi
             dfs.append(df)
