@@ -65,7 +65,7 @@ def get_mea_sig_wei(cmaker, ctx, uhs):
     sigma = np.empty((G, M, C), np.float32)
     sigma_tau = np.empty((G, M, C), np.float32)
     start = 0
-    for poes, mea, sig, tau, ctxt in cmaker.gen_poes(ctx, get_tau=True):
+    for poes, mea, sig, tau, ctxt in cmaker.gen_poes(ctx):
         c, _, _ = poes.shape  # L = M * P
         slc = slice(start, start + c)
         mean[:, :, slc] = mea

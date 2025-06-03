@@ -1130,7 +1130,7 @@ class ContextMaker(object):
         ctxs = self.from_srcs(srcs, sitecol)
         return self.get_pmap(ctxs, tom, rup_mutex).array
 
-    def _gen_poes(self, ctx, get_tau=False):
+    def _gen_poes(self, ctx):
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 
@@ -1157,23 +1157,15 @@ class ContextMaker(object):
                         poes[:, :, g] = get_poes_site(ms, self, ctx[slc])
                     else:  # regular case
                         set_poes(gsim, ms, self, ctx, poes[:, :, g], slc)
-            if not get_tau:
-                yield (poes,
-                       mean_stdt[0, :, :, slc],
-                       mean_stdt[1, :, :, slc],
-                       slc
-                       )
-            else:
-                yield (poes,
-                       mean_stdt[0, :, :, slc],
-                       mean_stdt[1, :, :, slc],
-                       mean_stdt[2, :, :, slc],
-                       slc
-                       )
+            yield (poes,
+                   mean_stdt[0, :, :, slc],
+                   mean_stdt[1, :, :, slc],
+                   mean_stdt[2, :, :, slc],
+                   slc)
         #cs,ms,ps = ctx.nbytes/TWO20, mean_stdt.nbytes/TWO20, poes.nbytes/TWO20
         #print('C=%.1fM, mean_stds=%.1fM, poes=%.1fM, G=%d' % (cs, ms, ps, G))
 
-    def gen_poes(self, ctx, get_tau=False):
+    def gen_poes(self, ctx):
         """
         :param ctx: a vectorized context (recarray) of size N
         :param rup_indep: rupture flag (false for mutex ruptures)
@@ -1184,16 +1176,10 @@ class ContextMaker(object):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), 1]
 
-            for tmp in self._gen_poes(ctxt, get_tau):
+            for poes, mea, sig, tau, slc in self._gen_poes(ctxt):
                 # NB: using directly 64 bit poes would be slower without reason
                 # since with astype(F64) the numbers are identical
-                if not get_tau:
-                    poes, mea, sig, slc = tmp[0], tmp[1], tmp[2], tmp[3]
-                    yield poes.astype(F64), mea, sig, ctxt[slc]
-                else:
-                    poes, mea, sig, tau = tmp[0], tmp[1], tmp[2], tmp[3]
-                    slc = tmp[4]
-                    yield [poes.astype(F64), mea, sig, tau, ctxt[slc]]
+                yield poes.astype(F64), mea, sig, tau, ctxt[slc]
 
     # documented but not used in the engine
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
@@ -1228,7 +1214,7 @@ class ContextMaker(object):
         :param ctx: a context array
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
-        for poes, mea, sig, ctxt in self.gen_poes(ctx):
+        for poes, mea, sig, tau, ctxt in self.gen_poes(ctx):
             if rup_mutex:
                 pmap.update_mutex(poes, ctxt, self.tom.time_span, rup_mutex)
             elif self.cluster:
@@ -1444,7 +1430,7 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
         cm.poe_mon = Monitor()  # avoid double counts
         cm.gsims = gsim.gsims
         avgs = []
-        for poes, _mea, _sig, _ctx in cm.gen_poes(ctx[slc]):
+        for poes, _mea, _sig, _tau, _ctx in cm.gen_poes(ctx[slc]):
             # poes has shape N, L, G
             avgs.append(poes @ gsim.weights)
         out[:] = numpy.concatenate(avgs)
