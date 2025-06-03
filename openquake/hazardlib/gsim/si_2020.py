@@ -21,9 +21,12 @@ Module exports :class:`SiEtAl2020SInter`
                :class:`SiEtAl2020SSlab`
 """
 import numpy as np
+import copy
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
 
 
 def get_base_term(trt, C):
@@ -121,7 +124,14 @@ def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term (Eq. 3.10)
     """
-    return C["Cd"] + C["Dd"] * ctx.z2pt5
+    z2pt5 = ctx.z2pt5.copy()
+
+    # No vs30 to z2pt5 relationship for this GMM (see pp. 959) so
+    # use the Campbell and Bozorgnia 2014 vs30 to z2pt5 for Japan
+    mask = z2pt5 == -999
+    z2pt5[mask] = _get_z2pt5_ref(SJ=True, vs30=ctx.vs30[mask])
+
+    return C["Cd"] + C["Dd"] * z2pt5
 
 
 def _get_pga_rock(C, trt, imt, ctx):

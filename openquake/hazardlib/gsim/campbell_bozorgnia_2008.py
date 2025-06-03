@@ -21,17 +21,40 @@ Module exports :class:`CampbellBozorgnia2008`, and
 :class:'CampbellBozorgnia2008Arbitrary'
 """
 import numpy as np
+import copy
 from math import log, exp
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, PGD, CAV, SA
+from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
+
+
+METRES_PER_KM = 1000.
+
+
+def _get_cb07_z2pt5_ref(vs30):
+    """
+    Estimate unknown z2pt5 using the relationships described
+    in Campbell and Bozorgnia (2007). Returns z2pt5 in km.
+    """
+    # First get z1pt0 (in metres) using Chiou and Youngs (2008)
+    z1pt0 = _get_z1_ref(vs30)
+    
+    # Now use Campbell and Bozorgnia (2007) to get z2pt5 from z1pt0
+    z2pt5 = 519 + (3.595 * z1pt0)
+
+    return z2pt5 / METRES_PER_KM
 
 
 def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term (equation 12, page 146)
     """
-    z2pt5 = ctx.z2pt5
+    z2pt5 = ctx.z2pt5.copy()
+    # Use GMM's vs30 to z2pt5 for non-measured values
+    mask = z2pt5 == -999
+    z2pt5[mask] = _get_cb07_z2pt5_ref(ctx.vs30[mask])
     fsed = np.zeros_like(z2pt5, dtype=float)
     idx = z2pt5 < 1.0
     if np.any(idx):

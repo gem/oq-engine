@@ -1,3 +1,13 @@
+  [Christopher Brooks]
+  * Added ability to specify z1pt0 and z2pt5 as -999 within site model
+    to inform (basin term considering) GMMs to use their own vs30 to
+    z1pt0 or z2pt5 relationship to estimate these site parameters, in
+    effect preventing additional adjustment to GMM basin terms based
+    on unknown site information. QA tests (classical case_89) + unit
+    tests (`utils_infer_basin_params_test.py`) added
+  * Added validation checks for core site params (lon, lat, vs30, z1pt0
+    and z2pt5) when building the site collection within a calculation
+
   [Paolo Tormene]
   * In the API endpoint listing the outputs for a job, the first available
     export_type is specified in each output url
