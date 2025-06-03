@@ -487,7 +487,7 @@ class AssetCollection(object):
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
 
-    def get_mmi_values(self, aggregate_by, mmi_file, oq_inputs):
+    def get_mmi_values(self, aggregate_by, mmi_file, exposure_hdf5):
         """
         :param aggregate_by:
             a list of lists of tag names (i.e. [['NAME_1']])
@@ -513,7 +513,7 @@ class AssetCollection(object):
         aggtags = numpy.array(aggtags)  # shape (K+1, T)
         dfs = []
         if aggregate_by[0] == ['ID_2']:
-            exposure_hdf5 = oq_inputs['exposure'][0]
+            exposure_hdf5 = exposure_hdf5
             with hdf5.File(exposure_hdf5) as f:
                 name2dic = {id2: name2
                             for (id2, name2) in zip(f['tagcol'].ID_2, f['NAME_2'])}

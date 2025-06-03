@@ -675,7 +675,7 @@ class HazardCalculator(BaseCalculator):
             if oq.impact and 'mmi' in oq.inputs:
                 logging.info('Computing MMI-aggregated values')
                 mmi_df = self.assetcol.get_mmi_values(
-                    oq.aggregate_by, oq.inputs['mmi'], oq.inputs)
+                    oq.aggregate_by, oq.inputs['mmi'], oq.inputs['exposure'][0])
                 if len(mmi_df):
                     self.datastore.hdf5.create_df('mmi_tags', mmi_df)
 
