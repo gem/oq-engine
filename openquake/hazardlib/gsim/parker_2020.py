@@ -25,7 +25,6 @@ Module exports :class:`ParkerEtAl2020SInter`
 import os
 import numpy as np
 import pandas as pd
-import copy
 from scipy.special import erf
 
 from openquake.baselib.general import CallableDict

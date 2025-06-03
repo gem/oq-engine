@@ -26,7 +26,6 @@ Module exports :class:`NZNSHM2022_KuehnEtAl2020SInter`
 """
 
 import numpy as np
-import copy
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib.imt import PGA

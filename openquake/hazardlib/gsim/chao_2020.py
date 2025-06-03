@@ -23,7 +23,6 @@ Module exports :class:`ChaoEtAl2020SInter`
 """
 import math
 import numpy as np
-import copy
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib import const

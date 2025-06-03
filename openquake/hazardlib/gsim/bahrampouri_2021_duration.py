@@ -24,7 +24,6 @@ Module exports :class:`BahrampouriEtAldm2021`
                :class:`BahrampouriEtAldm2021SInter`
 """
 import numpy as np
-import copy
 
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const

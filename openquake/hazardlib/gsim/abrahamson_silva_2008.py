@@ -20,7 +20,6 @@
 Module exports :class:`AbrahamsonSilva2008`.
 """
 import numpy as np
-import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const

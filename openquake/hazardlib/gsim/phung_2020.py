@@ -23,7 +23,6 @@ Module exports :class:`PhungEtAl2020SInter`
 """
 import math
 import numpy as np
-import copy
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable

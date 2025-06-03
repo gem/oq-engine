@@ -25,7 +25,6 @@ Module exports :class:`BozorgniaCampbell2016`
                :class:`BozorgniaCampbell2016LowQJapanSite`
 """
 import numpy as np
-import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import (

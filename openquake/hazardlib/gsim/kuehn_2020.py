@@ -39,7 +39,6 @@ Module exports :class:`KuehnEtAl2020SInter`,
 import numpy as np
 import os
 import h5py
-import copy
 from scipy.interpolate import RegularGridInterpolator
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias

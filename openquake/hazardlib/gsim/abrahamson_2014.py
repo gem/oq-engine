@@ -22,7 +22,6 @@ Module exports :class:`AbrahamsonEtAl2014`
                :class:`AbrahamsonEtAl2014RegJPN`
                :class:`AbrahamsonEtAl2014RegTWN`
 """
-import copy
 import numpy as np
 
 from scipy import interpolate

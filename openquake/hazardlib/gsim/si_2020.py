@@ -21,7 +21,6 @@ Module exports :class:`SiEtAl2020SInter`
                :class:`SiEtAl2020SSlab`
 """
 import numpy as np
-import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const

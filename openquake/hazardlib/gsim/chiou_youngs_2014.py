@@ -23,7 +23,6 @@ Module exports :class:`ChiouYoungs2014`
 """
 import os
 import pathlib
-import copy
 import numpy as np
 
 from openquake.baselib.general import CallableDict

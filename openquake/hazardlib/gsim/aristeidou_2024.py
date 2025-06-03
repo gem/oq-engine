@@ -27,7 +27,6 @@ Module exports :class:`AristeidouEtAl2024`
 
 import pathlib
 import numpy as np
-import copy
 from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const

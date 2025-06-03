@@ -21,7 +21,6 @@ Module exports :class:`AfshariStewart2016`,
                :class:`AfshariStewart2016Japan`
 """
 import numpy as np
-import copy
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
