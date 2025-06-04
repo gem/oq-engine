@@ -523,8 +523,9 @@ class AssetCollection(object):
         for mmi in out:
             dic = {key: aggtags[:, k] for k, key in enumerate(aggregate_by[0])}
             dic.update({col: out[mmi][col] for col in out[mmi].dtype.names})
-            if id2s:
-                dic['NAME_2'] = [name2dic[id2] for id2 in dic['ID_2']]
+            if len(id2s):
+                dic['NAME_2'] = [name2dic[id2.encode('utf8')].decode('utf8')
+                                 for id2 in dic['ID_2']]
             df = pandas.DataFrame(dic)
             df['mmi'] = mmi
             dfs.append(df)
