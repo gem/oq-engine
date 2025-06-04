@@ -1,3 +1,7 @@
+  [Michele Simionato, Paolo Tormene]
+  * OQ-Impact: fixed aggregation by ID_2, which was using indices instead
+    of strings
+
   [Marco Pagani]
   * Storing also `tau` in the mean spectrum calculator
 
