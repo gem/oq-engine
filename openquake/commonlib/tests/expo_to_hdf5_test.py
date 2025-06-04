@@ -75,10 +75,9 @@ EXPECTED_ID1s = sorted([
     b'TWNB'])
 
 EXPECTED_NAME2s = [
-    '?', 'Saint-Marc', 'ÇAYIRALAN', 'le Trou-du-Nord', 'TÜRKELİ', 'ACIGÖL',
-    'KOCASİNAN', 'Port-de-Paix', 'ANTAKYA', 'le Cap-Haïtien',
-    'Croix-des-Bouquets', 'les Cayes', 'Taitung County', 'Bogota', 'Iles',
-    'Sincelejo', 'Cali', 'Arauquita', 'Taitung County']
+    '?', "L'Artibonite", 'YOZGAT', 'Nord-Est', 'SİNOP', 'NEVŞEHİR', 'KAYSERİ',
+    'Nord-Ouest', 'HATAY', 'Nord', 'Ouest', 'Sud', 'Taitung County', 'Bogota',
+    'Nariño', 'Sucre', 'Valle del Cauca', 'Arauca', 'Taitung County']
 
 
 def test_expo_to_hdf5():
