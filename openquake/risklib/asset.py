@@ -935,6 +935,12 @@ def impact_read_assets(h5, start, stop):
             'ID_1': numpy.array(decode(h5['tagcol/ID_1'][:])),
             'OCCUPANCY': numpy.array(decode(h5['tagcol/OCCUPANCY'][:])),
             'TAXONOMY': numpy.array(decode(h5['tagcol/taxonomy'][:]))}
+    try:
+        id2s = h5['tagcol/ID_2'][:]
+    except KeyError:
+        pass  # missing ID_2
+    else:
+        TAGS['ID_2'] = numpy.array(decode(id2s))
     for field in group:
         if field == field.upper():
             dic[field] = arr = group[field][start:stop]
