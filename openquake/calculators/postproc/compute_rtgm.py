@@ -40,6 +40,7 @@ import sys
 import logging
 import numpy as np
 import pandas as pd
+from collections import namedtuple
 from scipy.interpolate import RegularGridInterpolator
 try:
     import rtgmpy
@@ -94,6 +95,8 @@ AELO_WARNINGS = {
                   ' (e.g., Ss=0.11g and S1=0.04g). See User Guide.'),
     'only_prob_mce': 'Only probabilistic MCE',
 }
+
+AeloWarning = namedtuple('AeloWarning', ['name', 'text'])
 
 
 def get_DLLs(job_imts, vs30):
@@ -680,7 +683,7 @@ def to_array(dic):
 
 
 def warnings_to_array(dic):
-    return np.array([dic[sid][1] for sid in sorted(dic)])
+    return np.array([dic[sid].text for sid in sorted(dic)])
 
 
 def main(dstore, csm):
@@ -737,7 +740,7 @@ def main(dstore, csm):
             rtgm[sid] = rtgm_df
         if warning:
             # for each site id, collect warning id and warning text as a tuple
-            warnings[sid] = (warning,  AELO_WARNINGS[warning])
+            warnings[sid] = AeloWarning(name=warning, text=AELO_WARNINGS[warning])
             logging.warning('(%.1f,%.1f) ' + AELO_WARNINGS[warning], loc.x, loc.y)
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
@@ -761,7 +764,7 @@ def main(dstore, csm):
     plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and N == 1:  # and not warnings[sid]:
         sid = 0
-        if sid in warnings and not warnings[sid][0] in ['zero_hazard', 'low_hazard']:
+        if sid in warnings and not warnings[sid].name in ['zero_hazard', 'low_hazard']:
             plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
             plot_governing_mce(dstore, sid, update_dstore=True)
             if not warnings[sid]:
@@ -769,7 +772,7 @@ def main(dstore, csm):
 
     # if warnings are meaningful, and/or there are 2+ sites add them to the ds
     if len(warnings) == 1:
-        if not warnings[0][0] == 'only_prob_mce':
+        if not warnings[0].name == 'only_prob_mce':
             dstore['warnings'] = warnings_to_array(warnings)
     else:
         dstore['warnings'] = warnings_to_array(warnings)
