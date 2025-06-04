@@ -204,8 +204,6 @@ def store(exposures_xml, wfp, dstore):
     smap = Starmap.apply(gen_tasks, (files, wfp, sa),
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
     num_assets = 0
-    # NB: we need to keep everything in memory to make gzip efficient
-    acc = general.AccumDict(accum=[])
     name2dic = {b'?': b'?'}
     for gh3, arr in smap:
         name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
@@ -213,17 +211,12 @@ def store(exposures_xml, wfp, dstore):
             if name in TAGS:
                 TAGS[name].append(arr[name])
             else:
-                acc[name].append(arr[name])
+                hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
         slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
     Starmap.shutdown()
-    for name in sorted(acc):
-        lst = acc.pop(name)
-        arr = numpy.concatenate(lst, dtype=lst[0].dtype)
-        logging.info(f'Storing assets/{name}')
-        hdf5.extend(dstore['assets/' + name], arr)
     store_tagcol(dstore)
     ID2s = dstore['tagcol/ID_2'][:]
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
