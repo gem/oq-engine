@@ -487,6 +487,7 @@ class AssetCollection(object):
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
 
+    # tested in test_impact5
     def get_mmi_values(self, aggregate_by, mmi_file, exposure_hdf5):
         """
         :param aggregate_by:
@@ -512,16 +513,17 @@ class AssetCollection(object):
         _aggids, aggtags = self.build_aggids(aggregate_by)
         aggtags = numpy.array(aggtags)  # shape (K+1, T)
         dfs = []
-        if aggregate_by[0] == ['ID_2']:
-            exposure_hdf5 = exposure_hdf5
-            with hdf5.File(exposure_hdf5) as f:
-                name2dic = {id2: name2
-                            for (id2, name2) in zip(f['tagcol'].ID_2, f['NAME_2'])}
+        with hdf5.File(exposure_hdf5) as f:
+            if 'tagcol/ID_2' in f and aggregate_by[0] == ['ID_2']:
+                id2s = f['tagcol/ID_2'][:]
+                name2s = f['NAME_2'][:]
+                name2dic = {id2: name2 for id2, name2 in zip(id2s, name2s)}
+            else:
+                id2s = []
         for mmi in out:
             dic = {key: aggtags[:, k] for k, key in enumerate(aggregate_by[0])}
             dic.update({col: out[mmi][col] for col in out[mmi].dtype.names})
-            if aggregate_by[0] == ['ID_2']:
-                # __import__('pdb').set_trace()
+            if id2s:
                 dic['NAME_2'] = [name2dic[id2] for id2 in dic['ID_2']]
             df = pandas.DataFrame(dic)
             df['mmi'] = mmi
@@ -938,7 +940,7 @@ def impact_read_assets(h5, start, stop):
     try:
         id2s = h5['tagcol/ID_2'][:]
     except KeyError:
-        pass  # missing ID_2
+        pass
     else:
         TAGS['ID_2'] = numpy.array(decode(id2s))
     for field in group:
@@ -947,6 +949,8 @@ def impact_read_assets(h5, start, stop):
             if field in TAGS:
                 # go back from indices to strings
                 dic[field] = TAGS[field][arr]
+        if field in dic and len(dic[field]) == 0:
+            del dic[field]
     df = pandas.DataFrame(dic)
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
                            df.OCCUPANTS_PER_ASSET_NIGHT +
