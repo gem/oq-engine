@@ -764,11 +764,13 @@ def main(dstore, csm):
     plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and N == 1:  # and not warnings[sid]:
         sid = 0
-        if sid in warnings and not warnings[sid].name in ['zero_hazard', 'low_hazard']:
+        if not warnings:
             plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
             plot_governing_mce(dstore, sid, update_dstore=True)
-            if not warnings[sid]:
-                plot_disagg_by_src(dstore, sid, update_dstore=True)
+            plot_disagg_by_src(dstore, sid, update_dstore=True)
+        elif warnings[sid].name not in ['zero_hazard', 'low_hazard']:
+            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+            plot_governing_mce(dstore, sid, update_dstore=True)
 
     # if warnings are meaningful, and/or there are 2+ sites add them to the ds
     if len(warnings) == 1:
