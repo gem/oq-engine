@@ -23,6 +23,7 @@ Module exports :class:`PhungEtAl2020SInter`
 """
 import math
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
@@ -57,10 +58,14 @@ def _get_basin_term(C, ctx, region):
             phi6 = 300
         else:
             phi6 = 800
+    
+    z1pt0 = ctx.z1pt0.copy()
+    mask = z1pt0 == -999 # None-measured values
+    z1pt0[mask] = ez_1[mask]
 
-    d_z1 = ctx.z1pt0 - ez_1
+    d_z1 = z1pt0 - ez_1
     return np.where(
-        ctx.z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
+        z1pt0 < 0, 0, C['phi5' + region] * (1 - np.exp(-d_z1 / phi6)))
 
 
 def _distance_attenuation(s, region, aftershocks, C, mag, rrup, ztor):
@@ -275,15 +280,19 @@ def _fz1pt0(region, C, vs30, z1pt0):
     """
     Basin depth term.
     """
-    result = np.zeros_like(z1pt0)
-    idx = np.where(z1pt0 >= 0)
-
     if region == 'tw':
         ez_1 = np.exp(-3.96 / 2 * np.log((vs30 ** 2 + 352.7 ** 2)
                                          / (1750 ** 2 + 352.7 ** 2)))
     elif region == 'jptw':
         ez_1 = np.exp(-5.23 / 2 * np.log((vs30 ** 2 + 412.39 ** 2)
                                          / (1360 ** 2 + 412.39 ** 2)))
+
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == -999
+    z1pt0[mask] = ez_1[mask]
+
+    result = np.zeros_like(z1pt0)
+    idx = np.where(z1pt0 >= 0)
 
     result[idx] = C['a8' + region] * np.minimum(np.log(z1pt0[idx] / ez_1), 1)
     return result
@@ -366,7 +375,8 @@ class PhungEtAl2020SInter(GMPE):
             # non-linear component
             f_site = _fsite(s, self.region, C, vs30, pga_1000)
             # basin depth term
-            f_z1pt0 = _fz1pt0(self.region, C, vs30, ctx.z1pt0)
+            z1pt0 = ctx.z1pt0.copy()
+            f_z1pt0 = _fz1pt0(self.region, C, vs30, z1pt0)
 
             # median total and stddev
             mean[m] = f_mag + f_p + f_ztor + f_site + f_z1pt0

@@ -23,7 +23,7 @@ jobs:
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     strategy:
       matrix:
-        os: [windows-2022, windows-2019]
+        os: [windows-2022, windows-2025]
         python-version: ["3.10", "3.11", "3.12"]
     steps:
       - name: Check out the codebase.
@@ -88,7 +88,7 @@ jobs:
             else
             {
               Write-Host "Install on user mode on scheduled task"
-              Write-Host "python install.py devel --version master
+              Write-Host "python install.py devel --version master"
               python install.py devel --version master
             }
             C:\Users\runneradmin\openquake\Scripts\activate.ps1

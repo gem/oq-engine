@@ -1102,10 +1102,10 @@ class OqParam(valid.ParamSet):
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    reference_depth_to_1pt0km_per_sec = valid.Param(
-        valid.positivefloat, numpy.nan)
-    reference_depth_to_2pt5km_per_sec = valid.Param(
-        valid.positivefloat, numpy.nan)
+    reference_depth_to_1pt0km_per_sec = valid.Param( # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan) 
+    reference_depth_to_2pt5km_per_sec = valid.Param( # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'inferred')
     reference_vs30_value = valid.Param(

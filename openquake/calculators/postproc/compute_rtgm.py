@@ -251,46 +251,90 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     return det, np.array(mag_dist_eps_sig, dt)
 
 
-def get_zero_hazard_asce07():
+def get_zero_hazard_asce07(ASCE_version, vs30):
     na = 'n.a.'
-    asce07 = {
-             'PGA': 0,
-             'PGA_2_50': 0,
-             'PGA_84th': na,
-             'PGA_det': na,
 
-             'Ss': na,
-             'Ss_RT': na,
-             'CRs': na,
-             'Ss_84th': na,
+    if ASCE_version == 'ASCE7-16':
+        asce07 = {
+             'PGA': 0, 'PGA_2_50': 0,
+             'PGA_84th': na, 'PGA_det': na,
+
+             'Ss': na, 'Ss_RT': na,
+             'CRs': na, 'Ss_84th': na,
              'Ss_det': na,
              'Ss_seismicity': 'Low',
 
-             'S1': na,
-             'S1_RT': na,
-             'CR1': na,
-             'S1_84th': na,
+             'S1': na, 'S1_RT': na,
+             'CR1': na, 'S1_84th': na,
              'S1_det': na,
-             'S1_seismicity': 'Low',
+             'S1_seismicity': 'Low'
              }
+    else:
+
+        if vs30 == 760:
+            asce07 = {
+                 'PGA': 0, 'PGA_2_50': 0,
+                 'PGA_84th': na, 'PGA_det': na,
+                 'Ss': na, 'Sms': na,
+                 'Sds': na, 'Ss_RT': na,
+                 'CRs': na, 'Ss_84th': na,
+                 'Ss_det': na,
+                 'Ss_seismicity': 'Low',
+                 'S1': na, 'Sm1': na,
+                 'Sd1': na, 'S1_RT': na,
+                 'CR1': na, 'S1_84th': na,
+                 'S1_det': na,
+                 'S1_seismicity': 'Low'
+                 }
+        else:
+               asce07 = {
+                 'PGA': 0, 'PGA_2_50': 0,
+                 'PGA_84th': na, 'PGA_det': na,
+                 'Sms': na,
+                 'Sds': na, 'Ss_RT': na,
+                 'CRs': na, 'Ss_84th': na,
+                 'Ss_det': na,
+                 'Ss_seismicity': 'Low',
+                 'Sm1': na,
+                 'Sd1': na, 'S1_RT': na,
+                 'CR1': na, 'S1_84th': na,
+                 'S1_det': na,
+                 'S1_seismicity': 'Low'
+                 }
+
     return asce07
 
 
-def get_zero_hazard_asce41():
+def get_zero_hazard_asce41(ASCE_version):
     na = 'n.a.'
-    asce41 = {'BSE2N_Ss': na,
-              'BSE2E_Ss': na,
-              'Ss_5_50': na,
-              'BSE1N_Ss': na,
-              'BSE1E_Ss': na,
-              'Ss_20_50': na,
-              'BSE2N_S1': na,
-              'BSE2E_S1': na,
-              'S1_5_50': na,
-              'BSE1N_S1': na,
-              'BSE1E_S1': na,
-              'S1_20_50': na,
-              }
+    if ASCE_version == 'ASCE7-16':
+        asce41 = {'BSE2N_Ss': na,
+                  'BSE2E_Ss': na,
+                  'Ss_5_50': na,
+                  'BSE1N_Ss': na,
+                  'BSE1E_Ss': na,
+                  'Ss_20_50': na,
+                  'BSE2N_S1': na,
+                  'BSE2E_S1': na,
+                  'S1_5_50': na,
+                  'BSE1N_S1': na,
+                  'BSE1E_S1': na,
+                  'S1_20_50': na,
+                  }
+    else:
+        asce41 = {'BSE2N_Ss': na,
+                  'BSE2E_Ss': na,
+                  'Ss_5_50': na,
+                  'BSE1N_Ss': na,
+                  'BSE1E_Ss': na,
+                  'Ss_20_50': na,
+                  'BSE2N_S1': na,
+                  'BSE2E_S1': na,
+                  'S1_5_50': na,
+                  'BSE1N_S1': na,
+                  'BSE1E_S1': na,
+                  'S1_20_50': na,
+                  }
     return asce41
 
 
@@ -440,6 +484,7 @@ def get_asce41(dstore, mce, facts, sid):
     fact = dict(zip(mce, facts))
     hmap = dstore["hmaps-stats"][sid, 0]  # mean hazard, shape (M, P)
     oq = dstore['oqparam']
+    ASCE_version = oq.asce_version
     poes = oq.poes
     imts = list(oq.imtls)
     sa02 = imts.index('SA(0.2)')
@@ -464,19 +509,34 @@ def get_asce41(dstore, mce, facts, sid):
     BSE1N_S1 = 2/3 * BSE2N_S1
     S1_20_50 = hmap[sa10, poe20_50] * fact['SA(1.0)']
     BSE1E_S1 = min(S1_20_50, BSE1N_S1)
-    asce41 = {'BSE2N_Ss': BSE2N_Ss,
-              'BSE2E_Ss': BSE2E_Ss,
-              'Ss_5_50': Ss_5_50,
-              'BSE1N_Ss': BSE1N_Ss,
-              'BSE1E_Ss': BSE1E_Ss,
-              'Ss_20_50': Ss_20_50,
-              'BSE2N_S1': BSE2N_S1,
-              'BSE2E_S1': BSE2E_S1,
-              'S1_5_50': S1_5_50,
-              'BSE1N_S1': BSE1N_S1,
-              'BSE1E_S1': BSE1E_S1,
-              'S1_20_50': S1_20_50,
-              }
+    if ASCE_version == 'ASCE7-16':
+         asce41 = {'BSE2N_Ss': BSE2N_Ss,
+                  'BSE2E_Ss': BSE2E_Ss,
+                  'Ss_5_50': Ss_5_50,
+                  'BSE1N_Ss': BSE1N_Ss,
+                  'BSE1E_Ss': BSE1E_Ss,
+                  'Ss_20_50': Ss_20_50,
+                  'BSE2N_S1': BSE2N_S1,
+                  'BSE2E_S1': BSE2E_S1,
+                  'S1_5_50': S1_5_50,
+                  'BSE1N_S1': BSE1N_S1,
+                  'BSE1E_S1': BSE1E_S1,
+                  'S1_20_50': S1_20_50,
+                  }
+    else: # the below needs to be changed
+        asce41 = {'BSE2N_Ss': BSE2N_Ss,
+                  'BSE2E_Ss': BSE2E_Ss,
+                  'Ss_5_50': Ss_5_50,
+                  'BSE1N_Ss': BSE1N_Ss,
+                  'BSE1E_Ss': BSE1E_Ss,
+                  'Ss_20_50': Ss_20_50,
+                  'BSE2N_S1': BSE2N_S1,
+                  'BSE2E_S1': BSE2E_S1,
+                  'S1_5_50': S1_5_50,
+                  'BSE1N_S1': BSE1N_S1,
+                  'BSE1E_S1': BSE1E_S1,
+                  'S1_20_50': S1_20_50,
+                  }
     for key in asce41:
         asce41[key] = round(asce41[key], ASCE_DECIMALS)
     return asce41
@@ -487,19 +547,17 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
     :yields: (site, rtgm_df, warning)
     """
     for site in dstore['sitecol']:
-        sid = site.id
-        mrs = dstore['mean_rates_by_src'][sid]
-        mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
-
         oq = dstore['oqparam']
         imts = list(oq.imtls)
         sa02 = imts.index('SA(0.2)')
         sa10 = imts.index('SA(1.0)')
+        sid = site.id
+        mrs = dstore['mean_rates_by_src'][sid]
 
         stats = list(oq.hazard_stats())
         assert stats[0] == 'mean', stats[0]
         hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
-        site = list(dstore['sitecol'])[sid]
+        mean_rates = to_rates(hcurves)
         loc = site.location
         if mrs.sum() == 0:
             yield site, None, 'zero_hazard'
@@ -659,8 +717,8 @@ def main(dstore, csm):
                        'sid': [sid]*len(job_imts)}
             mce_df = pd.DataFrame(dic_mce)
             mce_dfs.append(mce_df)
-            asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
-            asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
+            asce07[sid] = hdf5.dumps(get_zero_hazard_asce07(ASCE_version, vs30))
+            asce41[sid] = hdf5.dumps(get_zero_hazard_asce41(ASCE_version))
             logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
                          loc.y, mce_df)
         elif warning in ['below_min', 'only_prob_mce']:

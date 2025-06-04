@@ -152,6 +152,9 @@ def gen_tasks(files, wfp, sample_assets, monitor):
                 df['ID_1'] = '???'
             if 'ID_2' not in df.columns:  # happens for many contries in Africa
                 df['ID_2'] = '???'
+            elif wfp:  # work around bad exposures with ID_2 ending with ".0"
+                df['ID_2'] = [x[:-2] if x.endswith(b'.0') else x
+                              for x in df['ID_2']]
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
             array = numpy.zeros(len(df), dt)
             for col in df.columns:
