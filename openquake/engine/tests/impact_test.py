@@ -71,7 +71,7 @@ def compare(dstore1, dstore2):
         avg2 = dstore2[f'avg_losses-stats/{ltype}'][:]
         aac(avg1, avg2, rtol=1e-5)
 
-# for the moment we are testing aggregate_by=ID_1 and not ID_2
+
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
