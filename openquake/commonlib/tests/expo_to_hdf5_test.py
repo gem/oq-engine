@@ -75,10 +75,10 @@ EXPECTED_ID1s = sorted([
     b'TWNB'])
 
 EXPECTED_NAME2s = [
-    '?', 'Saint-Marc', 'Çayiralan', 'Terrier Rouge', 'Türkeli', 'Acigöl',
-    'Kocasinan', 'Port-De-Paix', 'Antakya', 'Cap-Haitien',
-    'Croix-Des-Bouquets', 'Les Cayes', 'No_tag', 'Bogotá, D.C.', 'Iles',
-    'Sincelejo', 'Cali', 'Arauquita', 'No_tag']
+    '?', 'Saint-Marc', 'ÇAYIRALAN', 'le Trou-du-Nord', 'TÜRKELİ', 'ACIGÖL',
+    'KOCASİNAN', 'Port-de-Paix', 'ANTAKYA', 'le Cap-Haïtien',
+    'Croix-des-Bouquets', 'les Cayes', 'Taitung County', 'Bogota', 'Iles',
+    'Sincelejo', 'Cali', 'Arauquita', 'Taitung County']
 
 
 def test_expo_to_hdf5():

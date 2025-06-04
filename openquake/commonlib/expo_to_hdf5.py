@@ -150,8 +150,10 @@ def gen_tasks(files, wfp, sample_assets, monitor):
             nrows += len(df)
             if 'ID_1' not in df.columns:  # happens for many islands
                 df['ID_1'] = '???'
-            if 'ID_2' not in df.columns:  # happens for many contries in Africa
+            if 'ID_2' not in df.columns:  # happens for many contries
                 df['ID_2'] = df['ID_1']
+            if 'NAME_2' not in df.columns:  # happens in Taiwan
+                df['NAME_2'] = df['NAME_1']
             elif wfp:  # work around bad exposures with ID_2 ending with ".0"
                 df['ID_2'] = [x[:-2] if x.endswith(b'.0') else x
                               for x in df['ID_2']]
