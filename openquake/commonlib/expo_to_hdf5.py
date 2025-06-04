@@ -132,7 +132,7 @@ def gen_tasks(files, wfp, sample_assets, monitor):
     """
     for file in files:
         # read CSV in chunks
-        usecols = file.fields | ({'ID_2'} if file.admin2 else set())
+        usecols = file.fields | {'ID_2'}
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=usecols, skiprows=1, chunksize=1_000_000)
@@ -151,7 +151,7 @@ def gen_tasks(files, wfp, sample_assets, monitor):
             if 'ID_1' not in df.columns:  # happens for many islands
                 df['ID_1'] = '???'
             if 'ID_2' not in df.columns:  # happens for many contries in Africa
-                df['ID_2'] = '???'
+                df['ID_2'] = df['ID_1']
             elif wfp:  # work around bad exposures with ID_2 ending with ".0"
                 df['ID_2'] = [x[:-2] if x.endswith(b'.0') else x
                               for x in df['ID_2']]
@@ -224,10 +224,9 @@ def store(exposures_xml, wfp, dstore):
         logging.info(f'Storing assets/{name}')
         hdf5.extend(dstore['assets/' + name], arr)
     store_tagcol(dstore)
-    if len(name2dic) > 1:
-        ID2s = dstore['tagcol/ID_2'][:]
-        dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
-            name2dic[id2].decode('utf8') for id2 in ID2s]
+    ID2s = dstore['tagcol/ID_2'][:]
+    dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
+        name2dic[id2].decode('utf8') for id2 in ID2s]
 
     # sanity check
     for name in commonfields:

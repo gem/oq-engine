@@ -514,7 +514,7 @@ class AssetCollection(object):
         aggtags = numpy.array(aggtags)  # shape (K+1, T)
         dfs = []
         with hdf5.File(exposure_hdf5) as f:
-            if 'tagcol/ID_2' in f and aggregate_by[0] == ['ID_2']:
+            if aggregate_by[0] == ['ID_2']:
                 id2s = f['tagcol/ID_2'][:]
                 name2s = f['NAME_2'][:]
                 name2dic = {id2: name2 for id2, name2 in zip(id2s, name2s)}
@@ -935,22 +935,15 @@ def impact_read_assets(h5, start, stop):
     dic = {}
     TAGS = {'ID_0': numpy.array(decode(h5['tagcol/ID_0'][:])),
             'ID_1': numpy.array(decode(h5['tagcol/ID_1'][:])),
+            'ID_2': numpy.array(decode(h5['tagcol/ID_2'][:])),
             'OCCUPANCY': numpy.array(decode(h5['tagcol/OCCUPANCY'][:])),
             'TAXONOMY': numpy.array(decode(h5['tagcol/taxonomy'][:]))}
-    try:
-        id2s = h5['tagcol/ID_2'][:]
-    except KeyError:
-        pass
-    else:
-        TAGS['ID_2'] = numpy.array(decode(id2s))
     for field in group:
         if field == field.upper():
             dic[field] = arr = group[field][start:stop]
             if field in TAGS:
                 # go back from indices to strings
                 dic[field] = TAGS[field][arr]
-        if field in dic and len(dic[field]) == 0:
-            del dic[field]
     df = pandas.DataFrame(dic)
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
                            df.OCCUPANTS_PER_ASSET_NIGHT +
