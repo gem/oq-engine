@@ -77,8 +77,8 @@ EXPECTED_ID1s = sorted([
 EXPECTED_NAME2s = [
     '?', 'Saint-Marc', 'Çayiralan', 'Terrier Rouge', 'Türkeli', 'Acigöl',
     'Kocasinan', 'Port-De-Paix', 'Antakya', 'Cap-Haitien',
-    'Croix-Des-Bouquets', 'Les Cayes', 'Bogotá, D.C.', 'Iles', 'Sincelejo',
-    'Cali', 'Arauquita', 'No_tag']
+    'Croix-Des-Bouquets', 'Les Cayes', 'No_tag', 'Bogotá, D.C.', 'Iles',
+    'Sincelejo', 'Cali', 'Arauquita', 'No_tag']
 
 
 def test_expo_to_hdf5():

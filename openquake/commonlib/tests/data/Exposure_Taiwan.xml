@@ -30,7 +30,7 @@
 
     <occupancyPeriods>day night transit</occupancyPeriods>
 
-    <tagNames>OCCUPANCY ID_0 ID_1 ID_2 NAME_0 NAME_1 NAME_2</tagNames>
+    <tagNames>OCCUPANCY ID_0 ID_1 NAME_0 NAME_1</tagNames>
     <assets>Exposure_Res_Taiwan.csv</assets>
   </exposureModel>
 

@@ -132,7 +132,7 @@ def gen_tasks(files, wfp, sample_assets, monitor):
     """
     for file in files:
         # read CSV in chunks
-        usecols = file.fields | {'ID_2'}
+        usecols = file.fields | ({'ID_2', 'NAME_2'} if file.admin2 else set())
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=usecols, skiprows=1, chunksize=1_000_000)
@@ -187,7 +187,7 @@ def store(exposures_xml, wfp, dstore):
     if wfp:
         files = [f for f in files if any(field.startswith('WFP_')
                                          for field in f.header)]
-    commonfields = sorted(files[0].fields & FIELDS)
+    commonfields = sorted({'ID_2', 'NAME_2'} | files[0].fields & FIELDS)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
         [('ASSET_ID', B30)]
@@ -206,8 +206,7 @@ def store(exposures_xml, wfp, dstore):
     acc = general.AccumDict(accum=[])
     name2dic = {b'?': b'?'}
     for gh3, arr in smap:
-        if 'NAME_2' in commonfields:
-            name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
+        name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
                 TAGS[name].append(arr[name])
