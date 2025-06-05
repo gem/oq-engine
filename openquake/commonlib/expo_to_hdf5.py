@@ -25,7 +25,7 @@ from openquake.baselib import hdf5, sap, general, performance
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import create_job_dstore
-from openquake.risklib.asset import _get_exposure
+from openquake.risklib.asset import _get_exposure, Exposure
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -38,7 +38,7 @@ OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = B30
-for f in (None, 'ID_1', 'ID_2'):
+for f in (None, 'ID_1', 'ID_2', 'WFP_ID_1', 'WFP_ID_2'):
     CONV[f] = B30
 TAGS = ['TAXONOMY', 'ID_0', 'ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY']
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
@@ -224,6 +224,10 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         assert n == num_assets, (name, n, num_assets)
 
     logging.info('Stored {:_d} assets in {}'.format(n, dstore.filename))
+
+    # check readable around gh3=12396
+    exp = Exposure.read_around(dstore.filename, 12396)
+    assert len(exp.assets), exp
 
 
 def main(exposures_xml, wfp=False):

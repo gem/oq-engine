@@ -102,4 +102,9 @@ def test_expo_to_hdf5():
 
         NAME2s = dstore['NAME_2'][:]
         assert [x.decode('utf8') for x in NAME2s] == EXPECTED_NAME2s
+
+        slices = dstore['assets/slice_by_gh3'][:]
+        ae(slices['start'], [0, 10, 11, 12, 13, 14, 18, 19, 21, 24, 27, 28, 29])
+        ae(slices['stop'], [10, 11, 12, 13, 14, 18, 19, 21, 24, 27, 28, 29, 30])
+
     os.remove(dstore.tempname)
