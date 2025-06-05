@@ -97,25 +97,24 @@ def store_tagcol(dstore, h5tmp):
     tagnames = []
     for tagname in h5tmp:
         tagvalues = h5tmp[tagname][:]
-        if len(tagvalues):
-            name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
-            tagnames.append(name)
-            uvals, inv, counts = numpy.unique(
-                tagvalues, return_inverse=1, return_counts=1)
-            size = len(uvals) + 1
-            tagsizes.append(size)
-            logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-            hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-            vals = numpy.concatenate([[b'?'], uvals])
-            dset = dstore.create_dset(
-                'tagcol/' + name, hdf5.vstr, (len(vals),))
-            dset[:] = [x.decode('utf8') for x in vals]
-            if name == 'ID_0':
-                dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
-                arr = numpy.empty(len(uvals), dtlist)
-                arr['country'] = uvals
-                arr['counts'] = counts
-                dstore['assets_by_country'] = arr
+        name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
+        tagnames.append(name)
+        uvals, inv, counts = numpy.unique(
+            tagvalues, return_inverse=1, return_counts=1)
+        size = len(uvals) + 1
+        tagsizes.append(size)
+        logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
+        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
+        vals = numpy.concatenate([[b'?'], uvals])
+        dset = dstore.create_dset(
+            'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
+        dset[:] = [x.decode('utf8') for x in vals]
+        if name == 'ID_0':
+            dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
+            arr = numpy.empty(len(uvals), dtlist)
+            arr['country'] = uvals
+            arr['counts'] = counts
+            dstore['assets_by_country'] = arr
         else:
             logging.warning(f'No data for {tagname}')
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
@@ -175,7 +174,7 @@ def keep_wfp(csvfile):
     return any(col.startswith('WFP_') for col in csvfile.header)
 
 
-def store(exposures_xml, wfp, dstore):
+def store(exposures_xml, wfp, dstore, h5tmp):
     """
     Store the given exposures in the datastore
     """
@@ -195,7 +194,9 @@ def store(exposures_xml, wfp, dstore):
     for name, dt in dtlist:
         logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
-    dstore.create_df('assets', dtlist) # 'gzip'
+    for name, dt in dtlist:
+        hdf5.create(dstore.hdf5, f'assets/{name}', dt,
+                    compression='gzip' if name in TAGS else None)
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
     dstore.create_dset('assets/slice_by_gh3', slc_dt)
     dstore.swmr_on()
@@ -204,7 +205,6 @@ def store(exposures_xml, wfp, dstore):
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
     num_assets = 0
     name2dic = {b'?': b'?'}
-    h5tmp = hdf5.File(dstore.tempname, 'w')
     for tagname in TAGS:
         hdf5.create(h5tmp, tagname, hdf5.vstr)
     for gh3, arr in smap:
@@ -239,8 +239,9 @@ def main(exposures_xml, wfp=False):
     field names like LONGITUDE, LATITUDE, etc
     """
     log, dstore = create_job_dstore()
-    with dstore, log:
-        store(exposures_xml, wfp, dstore)
+    with dstore, log, hdf5.File(dstore.tempname, 'w') as h5tmp:
+        store(exposures_xml, wfp, dstore, h5tmp)
+    os.remove(dstore.tempname)
     return dstore.filename
 
 main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
