@@ -21,7 +21,7 @@ import logging
 import operator
 import pandas
 import numpy
-from openquake.baselib import hdf5, sap, general
+from openquake.baselib import hdf5, sap, general, performance
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import create_job_dstore
@@ -40,8 +40,7 @@ TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = B30
 for f in (None, 'ID_1', 'ID_2'):
     CONV[f] = B30
-TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [],
-        'NAME_1': [], 'NAME_2': [], 'OCCUPANCY': []}
+TAGS = ['TAXONOMY', 'ID_0', 'ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY']
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
@@ -88,7 +87,7 @@ def exposure_by_geohash(array, monitor):
         yield gh, array[array['geohash3']==gh]
 
 
-def store_tagcol(dstore):
+def store_tagcol(dstore, h5tmp):
     """
     A TagCollection is stored as arrays like taxonomy = [
     "?", "Adobe", "Concrete", "Stone-Masonry", "Unreinforced-Brick-Masonry",
@@ -96,29 +95,29 @@ def store_tagcol(dstore):
     """
     tagsizes = []
     tagnames = []
-    for tagname in TAGS:
-        if TAGS[tagname]:
-            name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
-            tagnames.append(name)
-            tagvalues = numpy.concatenate(TAGS[tagname])
+    mon = performance.Monitor(h5=dstore)
+    for tagname in h5tmp:
+        with mon('read tags', savemem=True):
+            tagvalues = h5tmp[tagname][:]
+        name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
+        tagnames.append(name)
+        with mon('unique tags', savemem=True):
             uvals, inv, counts = numpy.unique(
                 tagvalues, return_inverse=1, return_counts=1)
-            size = len(uvals) + 1
-            tagsizes.append(size)
-            logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-            hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-            vals = numpy.concatenate([[b'?'], uvals])
-            dset = dstore.create_dset(
-                'tagcol/' + name, hdf5.vstr, (len(vals),))
-            dset[:] = [x.decode('utf8') for x in vals]
-            if name == 'ID_0':
-                dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
-                arr = numpy.empty(len(uvals), dtlist)
-                arr['country'] = uvals
-                arr['counts'] = counts
-                dstore['assets_by_country'] = arr
-        else:
-            logging.warning(f'No data for {tagname}')
+        size = len(uvals) + 1
+        tagsizes.append(size)
+        logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
+        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
+        vals = numpy.concatenate([[b'?'], uvals])
+        dset = dstore.create_dset(
+            'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
+        dset[:] = [x.decode('utf8') for x in vals]
+        if name == 'ID_0':
+            dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
+            arr = numpy.empty(len(uvals), dtlist)
+            arr['country'] = uvals
+            arr['counts'] = counts
+            dstore['assets_by_country'] = arr
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(tagnames, hdf5.vstr),
                tagsizes=tagsizes)
@@ -176,7 +175,7 @@ def keep_wfp(csvfile):
     return any(col.startswith('WFP_') for col in csvfile.header)
 
 
-def store(exposures_xml, wfp, dstore):
+def store(exposures_xml, wfp, dstore, h5tmp):
     """
     Store the given exposures in the datastore
     """
@@ -196,7 +195,9 @@ def store(exposures_xml, wfp, dstore):
     for name, dt in dtlist:
         logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
-    dstore.create_df('assets', dtlist, 'gzip')
+    for name, dt in dtlist:
+        hdf5.create(dstore.hdf5, f'assets/{name}', dt,
+                    compression='gzip' if name in TAGS else None)
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
     dstore.create_dset('assets/slice_by_gh3', slc_dt)
     dstore.swmr_on()
@@ -204,27 +205,22 @@ def store(exposures_xml, wfp, dstore):
     smap = Starmap.apply(gen_tasks, (files, wfp, sa),
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
     num_assets = 0
-    # NB: we need to keep everything in memory to make gzip efficient
-    acc = general.AccumDict(accum=[])
     name2dic = {b'?': b'?'}
+    for tagname in TAGS:
+        hdf5.create(h5tmp, tagname, hdf5.vstr)
     for gh3, arr in smap:
         name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
-                TAGS[name].append(arr[name])
+                hdf5.extend(h5tmp[name], arr[name])
             else:
-                acc[name].append(arr[name])
+                hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
         slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
     Starmap.shutdown()
-    for name in sorted(acc):
-        lst = acc.pop(name)
-        arr = numpy.concatenate(lst, dtype=lst[0].dtype)
-        logging.info(f'Storing assets/{name}')
-        hdf5.extend(dstore['assets/' + name], arr)
-    store_tagcol(dstore)
+    store_tagcol(dstore, h5tmp)
     ID2s = dstore['tagcol/ID_2'][:]
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
         name2dic[id2].decode('utf8') for id2 in ID2s]
@@ -244,8 +240,9 @@ def main(exposures_xml, wfp=False):
     field names like LONGITUDE, LATITUDE, etc
     """
     log, dstore = create_job_dstore()
-    with dstore, log:
-        store(exposures_xml, wfp, dstore)
+    with dstore, log, hdf5.File(dstore.tempname, 'w') as h5tmp:
+        store(exposures_xml, wfp, dstore, h5tmp)
+    os.remove(dstore.tempname)
     return dstore.filename
 
 main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
