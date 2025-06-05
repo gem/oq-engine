@@ -80,7 +80,7 @@ def fix(arr):
 
 def exposure_by_geohash(array, monitor):
     """
-    Yields pairs (geohash, tempfname)
+    Yields (geohash, tempfname, id2, name2)
     """
     names = array.dtype.names
     array = add_geohash3(array)
@@ -91,7 +91,7 @@ def exposure_by_geohash(array, monitor):
             arr = array[array['geohash3']==gh]
             for name in names:
                 f[name] = arr[name]
-        yield gh, fname
+        yield gh, fname, arr['ID_2'], arr['NAME_2']
 
 
 def store_tagcol(dstore, tagname, tagvalues):
@@ -206,11 +206,8 @@ def store(exposures_xml, wfp, dstore, h5tmp):
     Starmap.shutdown()
     logging.info('Building name2dic and slice_by_gh3')
     name2dic = {b'?': b'?'}
-    for gh3, fname in pairs:
-        with hdf5.File(fname, 'r') as f:
-            id2 = f['ID_2'][:]
-            name2 = f['NAME_2'][:]
-            name2dic.update(zip(id2, name2))
+    for gh3, fname, id2, name2 in pairs:
+        name2dic.update(zip(id2, name2))
         n = len(id2)
         slc = numpy.array(
             [(gh3, num_assets, num_assets + n)], slc_dt)
@@ -221,7 +218,7 @@ def store(exposures_xml, wfp, dstore, h5tmp):
     logging.info('Storing assets/indices')
     for name in commonfields:
         arrays = []
-        for gh3, fname in pairs:
+        for gh3, fname, _, _ in pairs:
             with hdf5.File(fname, 'r') as f:
                 arr = f[name][:]
                 if name in TAGS:
@@ -231,7 +228,7 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         if name in TAGS:
             size = store_tagcol(dstore, name, numpy.concatenate(arrays))
             tagsizes.append(size)
-    for gh3, fname in pairs:
+    for gh3, fname, _, _ in pairs:
         os.remove(fname)
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(TAGS, hdf5.vstr),
