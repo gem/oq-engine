@@ -96,7 +96,7 @@ def get_tag_indices(tagname, tempname, monitor):
         vals = numpy.concatenate([[b'?'], uvals])
         return tagname, vals, inv, counts
 
-    
+
 def store_tagcol(dstore):
     """
     A TagCollection is stored as arrays like taxonomy = [
@@ -106,8 +106,8 @@ def store_tagcol(dstore):
     tagsizes = []
     tagnames = []
     smap = Starmap(get_tag_indices, h5=dstore)
-    smap.distribute = 'threadpool'
-    smap.pool = multiprocessing.dummy.Pool(len(TAGS))
+    smap.pool = multiprocessing.Pool(2)
+    smap.num_cores = 2
     for tagname in TAGS:
         smap.submit((tagname, dstore.tempname))
     for tagname, vals, inv, counts in smap:
@@ -228,8 +228,6 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
     Starmap.shutdown()
-    h5tmp.flush()
-    h5tmp.close()
     store_tagcol(dstore)
     ID2s = dstore['tagcol/ID_2'][:]
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
