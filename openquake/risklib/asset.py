@@ -945,7 +945,7 @@ def impact_read_assets(h5, start, stop):
             if field in TAGS:
                 # go back from indices to strings
                 dic[field] = TAGS[field][arr]
-        if len(dic.get(field, [])) == 0:
+        if field in dic and len(dic[field]) == 0:
             dic.pop(field)
     df = pandas.DataFrame(dic)
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
