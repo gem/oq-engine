@@ -97,11 +97,11 @@ def store_tagcol(dstore, h5tmp):
     tagnames = []
     mon = performance.Monitor(h5=dstore)
     for tagname in h5tmp:
-        with mon('read tags'):
+        with mon('read tags', savemem=True):
             tagvalues = h5tmp[tagname][:]
         name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
         tagnames.append(name)
-        with mon('unique tags'):
+        with mon('unique tags', savemem=True):
             uvals, inv, counts = numpy.unique(
                 tagvalues, return_inverse=1, return_counts=1)
         size = len(uvals) + 1
