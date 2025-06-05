@@ -85,7 +85,7 @@ def sanitize(value):
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
-           fillvalue=0, attrs=None):
+           fillvalue=None, attrs=None):
     """
     :param hdf5: a h5py.File object
     :param name: an hdf5 key string

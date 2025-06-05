@@ -40,8 +40,7 @@ TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = B30
 for f in (None, 'ID_1', 'ID_2'):
     CONV[f] = B30
-TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [],
-        'NAME_1': [], 'NAME_2': [], 'OCCUPANCY': []}
+TAGS = ['TAXONOMY', 'ID_0', 'ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY']
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
@@ -88,7 +87,7 @@ def exposure_by_geohash(array, monitor):
         yield gh, array[array['geohash3']==gh]
 
 
-def store_tagcol(dstore):
+def store_tagcol(dstore, h5tmp):
     """
     A TagCollection is stored as arrays like taxonomy = [
     "?", "Adobe", "Concrete", "Stone-Masonry", "Unreinforced-Brick-Masonry",
@@ -96,11 +95,11 @@ def store_tagcol(dstore):
     """
     tagsizes = []
     tagnames = []
-    for tagname in TAGS:
-        if TAGS[tagname]:
+    for tagname in h5tmp:
+        tagvalues = h5tmp[tagname][:]
+        if len(tagvalues):
             name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
             tagnames.append(name)
-            tagvalues = numpy.concatenate(TAGS[tagname])
             uvals, inv, counts = numpy.unique(
                 tagvalues, return_inverse=1, return_counts=1)
             size = len(uvals) + 1
@@ -205,11 +204,17 @@ def store(exposures_xml, wfp, dstore):
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
     num_assets = 0
     name2dic = {b'?': b'?'}
+    h5tmp = hdf5.File(dstore.tempname, 'w')
+    for tagname in TAGS:
+        hdf5.create(h5tmp, tagname, hdf5.vstr)
     for gh3, arr in smap:
         name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
-                TAGS[name].append(arr[name])
+                try:
+                    hdf5.extend(h5tmp[name], arr[name])
+                except:
+                    breakpoint()
             else:
                 hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
@@ -217,7 +222,7 @@ def store(exposures_xml, wfp, dstore):
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
     Starmap.shutdown()
-    store_tagcol(dstore)
+    store_tagcol(dstore, h5tmp)
     ID2s = dstore['tagcol/ID_2'][:]
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
         name2dic[id2].decode('utf8') for id2 in ID2s]
