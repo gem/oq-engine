@@ -87,6 +87,15 @@ def exposure_by_geohash(array, monitor):
         yield gh, array[array['geohash3']==gh]
 
 
+def get_indices(tagname, tempname, monitor):
+    with hdf5.File(tempname, 'r') as h5tmp:
+        tagvalues = h5tmp[tagname][:]
+        uvals, inv, counts = numpy.unique(
+            tagvalues, return_inverse=1, return_counts=1)
+        vals = numpy.concatenate([[b'?'], uvals])
+        return tagname, vals, inv, counts
+
+    
 def store_tagcol(dstore, h5tmp):
     """
     A TagCollection is stored as arrays like taxonomy = [
@@ -95,24 +104,23 @@ def store_tagcol(dstore, h5tmp):
     """
     tagsizes = []
     tagnames = []
+    smap = Starmap(get_indices)
     for tagname in h5tmp:
-        tagvalues = h5tmp[tagname][:]
+        smap.submit((tagname, dstore.tempname))
+    for tagname, vals, inv, counts in smap:
         name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
         tagnames.append(name)
-        uvals, inv, counts = numpy.unique(
-            tagvalues, return_inverse=1, return_counts=1)
-        size = len(uvals) + 1
+        size = len(vals)
         tagsizes.append(size)
         logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
         hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-        vals = numpy.concatenate([[b'?'], uvals])
         dset = dstore.create_dset(
             'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
         dset[:] = [x.decode('utf8') for x in vals]
         if name == 'ID_0':
             dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
-            arr = numpy.empty(len(uvals), dtlist)
-            arr['country'] = uvals
+            arr = numpy.empty(len(vals) - 1, dtlist)
+            arr['country'] = vals[1:]
             arr['counts'] = counts
             dstore['assets_by_country'] = arr
         else:
