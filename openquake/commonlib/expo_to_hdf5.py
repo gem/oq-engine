@@ -195,7 +195,7 @@ def store(exposures_xml, wfp, dstore):
     for name, dt in dtlist:
         logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
-    dstore.create_df('assets', dtlist, 'gzip')
+    dstore.create_df('assets', dtlist) # 'gzip'
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
     dstore.create_dset('assets/slice_by_gh3', slc_dt)
     dstore.swmr_on()
@@ -211,10 +211,7 @@ def store(exposures_xml, wfp, dstore):
         name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
-                try:
-                    hdf5.extend(h5tmp[name], arr[name])
-                except:
-                    breakpoint()
+                hdf5.extend(h5tmp[name], arr[name])
             else:
                 hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
