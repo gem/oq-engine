@@ -1015,8 +1015,9 @@ class Exposure(object):
                 impact_read_assets(f, start, stop)
                 for gh3, start, stop in slices)
             tagcol = f['tagcol']
-            # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
-            exp.tagcol = TagCollection(tagcol.tagnames)
+            # revert the tagnames so that taxonomy becomes the first field,
+            # ex. sorted_tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
+            exp.tagcol = TagCollection(sorted(tagcol.tagnames, reverse=True))
         rename = dict(exp.pairs)
         rename['TAXONOMY'] = 'taxonomy'
         for f in ANR_FIELDS:

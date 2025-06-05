@@ -25,7 +25,7 @@ from openquake.baselib import hdf5, sap, general, performance
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import create_job_dstore
-from openquake.risklib.asset import _get_exposure
+from openquake.risklib.asset import _get_exposure, Exposure
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -224,6 +224,10 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         assert n == num_assets, (name, n, num_assets)
 
     logging.info('Stored {:_d} assets in {}'.format(n, dstore.filename))
+
+    # check readable around gh3=12396
+    exp = Exposure.read_around(dstore.filename, 12396)
+    assert len(exp.assets), exp
 
 
 def main(exposures_xml, wfp=False):
