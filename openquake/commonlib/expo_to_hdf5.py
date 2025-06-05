@@ -38,7 +38,8 @@ OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = B30
-for f in (None, 'ID_1', 'ID_2'):
+for f in (None, 'ID_1', 'ID_2', 'NAME_1', 'NAME_2',
+          'WFP_ID_1', 'WFP_ID_2', 'WFP_NAME_1', 'WFP_NAME_2'):
     CONV[f] = B30
 TAGS = ['TAXONOMY', 'ID_0', 'ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY']
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
@@ -79,12 +80,18 @@ def fix(arr):
 
 def exposure_by_geohash(array, monitor):
     """
-    Yields triples (geohash, array, name2dic)
+    Yields pairs (geohash, tempfname)
     """
+    names = array.dtype.names
     array = add_geohash3(array)
     fix(array)
     for gh in numpy.unique(array['geohash3']):
-        yield gh, array[array['geohash3']==gh]
+        fname = general.gettemp(suffix='.hdf5')
+        with hdf5.File(fname, 'w') as f:
+            arr = array[array['geohash3']==gh]
+            for name in names:
+                f[name] = arr[name]
+        yield gh, fname
 
 
 def store_tagcol(dstore, h5tmp):
@@ -201,13 +208,20 @@ def store(exposures_xml, wfp, dstore, h5tmp):
     name2dic = {b'?': b'?'}
     for tagname in TAGS:
         hdf5.create(h5tmp, tagname, hdf5.vstr)
-    for gh3, arr in smap:
-        name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
-        for name in commonfields:
-            if name in TAGS:
-                hdf5.extend(h5tmp[name], arr[name])
-            else:
-                hdf5.extend(dstore['assets/' + name], arr[name])
+    for gh3, fname in smap:
+        with hdf5.File(fname, 'r') as f:
+            for name in commonfields:
+                if name == 'ID_2':
+                    arr = id2 = f['ID_2'][:]
+                elif name == 'NAME_2':
+                    arr = name2 = f['NAME_2'][:]
+                else:
+                    arr = f[name][:]
+                if name in TAGS:
+                    hdf5.extend(h5tmp[name], arr)
+                else:
+                    hdf5.extend(dstore['assets/' + name], arr)
+            name2dic.update(zip(id2, name2))
         n = len(arr)
         slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
