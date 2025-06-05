@@ -87,7 +87,7 @@ def exposure_by_geohash(array, monitor):
         yield gh, array[array['geohash3']==gh]
 
 
-def get_indices(tagname, tempname, monitor):
+def get_tag_indices(tagname, tempname, monitor):
     with hdf5.File(tempname, 'r') as h5tmp:
         tagvalues = h5tmp[tagname][:]
         uvals, inv, counts = numpy.unique(
@@ -104,7 +104,7 @@ def store_tagcol(dstore):
     """
     tagsizes = []
     tagnames = []
-    smap = Starmap(get_indices)
+    smap = Starmap(get_tag_indices, h5=dstore)
     for tagname in TAGS:
         smap.submit((tagname, dstore.tempname))
     for tagname, vals, inv, counts in smap:
@@ -227,6 +227,7 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
     Starmap.shutdown()
+    h5tmp.flush()
     h5tmp.close()
     store_tagcol(dstore)
     ID2s = dstore['tagcol/ID_2'][:]
