@@ -118,8 +118,6 @@ def store_tagcol(dstore, h5tmp):
             arr['country'] = uvals
             arr['counts'] = counts
             dstore['assets_by_country'] = arr
-        else:
-            logging.warning(f'No data for {tagname}')
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(tagnames, hdf5.vstr),
                tagsizes=tagsizes)
