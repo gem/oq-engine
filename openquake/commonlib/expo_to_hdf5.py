@@ -96,7 +96,7 @@ def get_indices(tagname, tempname, monitor):
         return tagname, vals, inv, counts
 
     
-def store_tagcol(dstore, h5tmp):
+def store_tagcol(dstore):
     """
     A TagCollection is stored as arrays like taxonomy = [
     "?", "Adobe", "Concrete", "Stone-Masonry", "Unreinforced-Brick-Masonry",
@@ -105,7 +105,7 @@ def store_tagcol(dstore, h5tmp):
     tagsizes = []
     tagnames = []
     smap = Starmap(get_indices)
-    for tagname in h5tmp:
+    for tagname in TAGS:
         smap.submit((tagname, dstore.tempname))
     for tagname, vals, inv, counts in smap:
         name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
@@ -227,7 +227,8 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
     Starmap.shutdown()
-    store_tagcol(dstore, h5tmp)
+    h5tmp.close()
+    store_tagcol(dstore)
     ID2s = dstore['tagcol/ID_2'][:]
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
         name2dic[id2].decode('utf8') for id2 in ID2s]
