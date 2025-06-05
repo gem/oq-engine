@@ -19,6 +19,7 @@
 import os
 import logging
 import operator
+import multiprocessing
 import pandas
 import numpy
 from openquake.baselib import hdf5, sap, general
@@ -105,6 +106,8 @@ def store_tagcol(dstore):
     tagsizes = []
     tagnames = []
     smap = Starmap(get_tag_indices, h5=dstore)
+    smap.distribute = 'threadpool'
+    smap.pool = multiprocessing.dummy.Pool(len(TAGS))
     for tagname in TAGS:
         smap.submit((tagname, dstore.tempname))
     for tagname, vals, inv, counts in smap:
