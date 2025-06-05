@@ -106,7 +106,7 @@ def store_tagcol(dstore):
     tagsizes = []
     tagnames = []
     smap = Starmap(get_tag_indices, h5=dstore)
-    smap.pool = multiprocessing.Pool(2)
+    smap.pool = multiprocessing.Pool(2)  # it uses 11G per core and we have 24G
     smap.num_cores = 2
     for tagname in TAGS:
         smap.submit((tagname, dstore.tempname))
