@@ -203,6 +203,7 @@ def store(exposures_xml, wfp, dstore, h5tmp):
     for tagname in TAGS:
         hdf5.create(h5tmp, tagname, hdf5.vstr)
     pairs = list(smap)
+    Starmap.shutdown()
     logging.info('Building name2dic and slice_by_gh3')
     name2dic = {b'?': b'?'}
     for gh3, fname in pairs:
@@ -230,7 +231,8 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         if name in TAGS:
             size = store_tagcol(dstore, name, numpy.concatenate(arrays))
             tagsizes.append(size)
-    Starmap.shutdown()
+    for gh3, fname in pairs:
+        os.remove(fname)
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(TAGS, hdf5.vstr),
                tagsizes=tagsizes)
