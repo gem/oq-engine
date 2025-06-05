@@ -94,7 +94,7 @@ def exposure_by_geohash(array, monitor):
         yield gh, fname
 
 
-def store_tagcol(dstore, h5tmp):
+def store_tagcol(dstore, tagname, tagvalues):
     """
     A TagCollection is stored as arrays like taxonomy = [
     "?", "Adobe", "Concrete", "Stone-Masonry", "Unreinforced-Brick-Masonry",
@@ -103,25 +103,20 @@ def store_tagcol(dstore, h5tmp):
     tagsizes = []
     tagnames = []
     mon = performance.Monitor(h5=dstore)
-    for tagname in h5tmp:
-        with mon('read tags', savemem=True):
-            tagvalues = h5tmp[tagname][:]
-        name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
-        tagnames.append(name)
-        with mon('unique tags', savemem=True):
-            uvals, inv = numpy.unique(tagvalues, return_inverse=1)
-        size = len(uvals) + 1
-        tagsizes.append(size)
-        logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-        vals = numpy.concatenate([[b'?'], uvals])
-        dset = dstore.create_dset(
-            'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
-        dset[:] = [x.decode('utf8') for x in vals]
-    dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
-               tagnames=numpy.array(tagnames, hdf5.vstr),
-               tagsizes=tagsizes)
-    dstore.getitem('tagcol').attrs.update(dic)
+
+    name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
+    tagnames.append(name)
+    with mon('unique tags', savemem=True):
+        uvals, inv = numpy.unique(tagvalues, return_inverse=1)
+    size = len(uvals) + 1
+    tagsizes.append(size)
+    logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
+    hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
+    vals = numpy.concatenate([[b'?'], uvals])
+    dset = dstore.create_dset(
+        'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
+    dset[:] = [x.decode('utf8') for x in vals]
+    return size
 
 
 # in parallel
@@ -205,29 +200,41 @@ def store(exposures_xml, wfp, dstore, h5tmp):
     smap = Starmap.apply(gen_tasks, (files, wfp, sa),
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
     num_assets = 0
-    name2dic = {b'?': b'?'}
     for tagname in TAGS:
         hdf5.create(h5tmp, tagname, hdf5.vstr)
-    for gh3, fname in smap:
+    pairs = list(smap)
+    logging.info('Building name2dic and slice_by_gh3')
+    name2dic = {b'?': b'?'}
+    for gh3, fname in pairs:
         with hdf5.File(fname, 'r') as f:
-            for name in commonfields:
-                if name == 'ID_2':
-                    arr = id2 = f['ID_2'][:]
-                elif name == 'NAME_2':
-                    arr = name2 = f['NAME_2'][:]
-                else:
-                    arr = f[name][:]
-                if name in TAGS:
-                    hdf5.extend(h5tmp[name], arr)
-                else:
-                    hdf5.extend(dstore['assets/' + name], arr)
+            id2 = f['ID_2'][:]
+            name2 = f['NAME_2'][:]
             name2dic.update(zip(id2, name2))
-        n = len(arr)
-        slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
+        n = len(id2)
+        slc = numpy.array(
+            [(gh3, num_assets, num_assets + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
+
+    tagsizes = []
+    logging.info('Storing assets/indices')
+    for name in commonfields:
+        arrays = []
+        for gh3, fname in pairs:
+            with hdf5.File(fname, 'r') as f:
+                arr = f[name][:]
+                if name in TAGS:
+                    arrays.append(arr)
+                else:
+                    hdf5.extend(dstore['assets/' + name], arr)
+        if name in TAGS:
+            size = store_tagcol(dstore, name, numpy.concatenate(arrays))
+            tagsizes.append(size)
     Starmap.shutdown()
-    store_tagcol(dstore, h5tmp)
+    dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
+               tagnames=numpy.array(TAGS, hdf5.vstr),
+               tagsizes=tagsizes)
+    dstore.getitem('tagcol').attrs.update(dic)
     ID2s = dstore['tagcol/ID_2'][:]
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
         name2dic[id2].decode('utf8') for id2 in ID2s]
