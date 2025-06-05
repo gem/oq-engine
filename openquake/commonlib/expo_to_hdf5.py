@@ -102,8 +102,7 @@ def store_tagcol(dstore, h5tmp):
         name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
         tagnames.append(name)
         with mon('unique tags', savemem=True):
-            uvals, inv, counts = numpy.unique(
-                tagvalues, return_inverse=1, return_counts=1)
+            uvals, inv = numpy.unique(tagvalues, return_inverse=1)
         size = len(uvals) + 1
         tagsizes.append(size)
         logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
@@ -112,12 +111,6 @@ def store_tagcol(dstore, h5tmp):
         dset = dstore.create_dset(
             'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
         dset[:] = [x.decode('utf8') for x in vals]
-        if name == 'ID_0':
-            dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
-            arr = numpy.empty(len(uvals), dtlist)
-            arr['country'] = uvals
-            arr['counts'] = counts
-            dstore['assets_by_country'] = arr
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(tagnames, hdf5.vstr),
                tagsizes=tagsizes)
