@@ -21,7 +21,7 @@ import logging
 import operator
 import pandas
 import numpy
-from openquake.baselib import hdf5, sap, general
+from openquake.baselib import hdf5, sap, general, performance
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import create_job_dstore
@@ -95,12 +95,15 @@ def store_tagcol(dstore, h5tmp):
     """
     tagsizes = []
     tagnames = []
+    mon = performance.Monitor(h5=dstore)
     for tagname in h5tmp:
-        tagvalues = h5tmp[tagname][:]
+        with mon('read tags'):
+            tagvalues = h5tmp[tagname][:]
         name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
         tagnames.append(name)
-        uvals, inv, counts = numpy.unique(
-            tagvalues, return_inverse=1, return_counts=1)
+        with mon('unique tags'):
+            uvals, inv, counts = numpy.unique(
+                tagvalues, return_inverse=1, return_counts=1)
         size = len(uvals) + 1
         tagsizes.append(size)
         logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
