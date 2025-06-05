@@ -215,7 +215,7 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         num_assets += n
 
     tagsizes = []
-    logging.info('Storing assets/indices')
+    logging.info('Storing assets (float32 values)')
     for name in commonfields:
         arrays = []
         for gh3, fname, _, _ in pairs:
