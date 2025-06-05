@@ -94,7 +94,7 @@ def get_tag_indices(tagname, tempname, monitor):
         uvals, inv, counts = numpy.unique(
             tagvalues, return_inverse=1, return_counts=1)
         vals = numpy.concatenate([[b'?'], uvals])
-        return tagname, vals, inv, counts
+        return tagname, vals, U32(inv), U32(counts)
 
 
 def store_tagcol(dstore):
