@@ -170,10 +170,7 @@ def gen_tasks(files, wfp, sample_assets, monitor):
                     array[col] = [x.encode('utf8') for x in arr]
                 else:
                     array[col] = arr
-            if i == 0:
-                yield from exposure_by_geohash(array, monitor)
-            else:
-                yield exposure_by_geohash, array
+            yield from exposure_by_geohash(array, monitor)
         # print(os.path.basename(file.fname), nrows)
 
 
