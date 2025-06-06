@@ -214,7 +214,6 @@ def store(exposures_xml, wfp, dstore):
         num_assets += n
 
     tagsizes = []
-    logging.info('Storing assets (float32 values)')
     for name in commonfields:
         arrays = []
         for gh3, fname, arraydic in triples:
@@ -224,6 +223,7 @@ def store(exposures_xml, wfp, dstore):
                 elif name in ('ID_2', 'NAME_2'):
                     arrays.append(arraydic[name])
                 else:
+                    logging.info('Storing assets/{name}')
                     hdf5.extend(dstore['assets/' + name], arraydic[name])
 
         if name in TAGS2:
