@@ -114,13 +114,12 @@ def store_tagcol(dstore, tagname, tagvalues):
         uvals, inv = numpy.unique(tagvalues, return_inverse=1)
     size = len(uvals) + 1
     tagsizes.append(size)
-    logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
     hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
     vals = numpy.concatenate([[b'?'], uvals])
     dset = dstore.create_dset(
         'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
     dset[:] = [x.decode('utf8') for x in vals]
-    return size
+    return size, len(inv)
 
 
 # in parallel
@@ -206,28 +205,30 @@ def store(exposures_xml, wfp, dstore):
     Starmap.shutdown()
     logging.info('Building name2dic and slice_by_gh3')
     name2dic = {b'?': b'?'}
+    tot = 0
     for gh3, fname, dic in triples:
+        tot += os.path.getsize(fname)
         name2dic.update(zip(dic['ID_2'], dic['NAME_2']))
         n = len(dic['ID_2'])
         slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
-
+    logging.info(f'Stored {general.humansize(tot)} of temporary files')
     tagsizes = []
     for name in commonfields:
         arrays = []
         for gh3, fname, arraydic in triples:
-            with hdf5.File(fname, 'r') as f:
-                if name in TAGS:
+            if name in TAGS:
+                with hdf5.File(fname, 'r') as f:
                     arrays.append(f[name][:])
-                elif name in ('ID_2', 'NAME_2'):
-                    arrays.append(arraydic[name])
-                else:
-                    logging.info('Storing assets/{name}')
-                    hdf5.extend(dstore['assets/' + name], arraydic[name])
-
+            elif name in ('ID_2', 'NAME_2'):
+                arrays.append(arraydic[name])
+            else:
+                logging.info('Storing assets/{name}')
+                hdf5.extend(dstore['assets/' + name], arraydic[name])
         if name in TAGS2:
-            size = store_tagcol(dstore, name, numpy.concatenate(arrays))
+            size, tot = store_tagcol(dstore, name, numpy.concatenate(arrays))
+            logging.info('Stored %s[%d/%d]', name, size, tot)
             tagsizes.append(size)
     for gh3, fname, _ in triples:
         os.remove(fname)
