@@ -96,7 +96,11 @@ def exposure_by_geohash(array, monitor):
             for name in names:
                 if name in TAGS:
                     a = arr[name]
-                    hdf5.create(f, f'{gh}/{name}', a.dtype, a.shape)[:] = a
+                    try:
+                        dset = hdf5.create(f, f'{gh}/{name}', a.dtype, (None,))
+                    except ValueError:  # already created
+                        pass
+                    hdf5.extend(dset, a)
                 else:
                     arraydic[name] = arr[name]
         yield gh, fname, arraydic
