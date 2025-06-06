@@ -99,8 +99,6 @@ def exposure_by_geohash(array, monitor):
                     try:
                         dset = hdf5.create(f, f'{gh}/{name}', a.dtype, (None,))
                     except ValueError:  # already created
-                        pass
-                    else:
                         dset = f[f'{gh}/{name}']
                     hdf5.extend(dset, a)
                 else:
