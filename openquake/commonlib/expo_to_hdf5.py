@@ -229,6 +229,7 @@ def store(exposures_xml, wfp, dstore):
                 hdf5.extend(dstore['assets/' + name], arraydic[name])
         if name in TAGS2:
             size, tot = store_tagcol(dstore, name, numpy.concatenate(arrays))
+            assert tot == num_assets, (tot, num_assets)
             logging.info('Stored %s[%d/%d]', name, size, tot)
             tagsizes.append(size)
         else:
