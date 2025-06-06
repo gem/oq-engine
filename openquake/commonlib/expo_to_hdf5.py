@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import shutil
 import logging
 import operator
 import pandas
@@ -231,8 +232,7 @@ def store(exposures_xml, wfp, dstore):
             size, tot = store_tagcol(dstore, name, numpy.concatenate(arrays))
             logging.info('Stored %s[%d/%d]', name, size, tot)
             tagsizes.append(size)
-    for gh3, fname, _ in triples:
-        os.remove(fname)
+    shutil.rmtree(scratch_dir(dstore.calc_id))
     TAGS2[0] = 'taxonomy'  # set lower case TAXONOMY
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(TAGS2, hdf5.vstr),
