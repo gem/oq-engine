@@ -226,12 +226,14 @@ def store(exposures_xml, wfp, dstore):
             elif name in ('ID_2', 'NAME_2'):
                 arrays.append(arraydic[name])
             else:
-                logging.info('Storing assets/{name}')
                 hdf5.extend(dstore['assets/' + name], arraydic[name])
         if name in TAGS2:
             size, tot = store_tagcol(dstore, name, numpy.concatenate(arrays))
             logging.info('Stored %s[%d/%d]', name, size, tot)
             tagsizes.append(size)
+        else:
+            logging.info(f'Stored assets/{name}')
+
     shutil.rmtree(scratch_dir(dstore.calc_id))
     TAGS2[0] = 'taxonomy'  # set lower case TAXONOMY
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
