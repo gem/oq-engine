@@ -196,7 +196,9 @@ def store(exposures_xml, wfp, dstore, h5tmp):
     dstore.swmr_on()
     sa = os.environ.get('OQ_SAMPLE_ASSETS')
     smap = Starmap.apply(gen_tasks, (files, wfp, sa),
-                         weight=operator.attrgetter('size'), h5=dstore.hdf5)
+                         concurrent_tasks=128,
+                         weight=operator.attrgetter('size'),
+                         h5=dstore.hdf5)
     num_assets = 0
     name2dic = {b'?': b'?'}
     for tagname in TAGS:
