@@ -22,7 +22,7 @@ import operator
 import pandas
 import numpy
 from openquake.baselib import hdf5, sap, general, performance
-from openquake.baselib.parallel import Starmap
+from openquake.baselib.parallel import Starmap, scratch_dir
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.risklib.asset import _get_exposure, Exposure
@@ -86,8 +86,9 @@ def exposure_by_geohash(array, monitor):
     names = array.dtype.names
     array = add_geohash3(array)
     fix(array)
+    scratch = scratch_dir(monitor.calc_id)
     for gh in numpy.unique(array['geohash3']):
-        fname = general.gettemp(suffix='.hdf5')
+        fname = f'{scratch}/{gh}_{monitor.task_no}.hdf5'
         arraydic = {}
         with hdf5.File(fname, 'w') as f:
             arr = array[array['geohash3']==gh]
