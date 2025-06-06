@@ -88,6 +88,7 @@ def exposure_by_geohash(array, monitor):
     array = add_geohash3(array)
     fix(array)
     scratch = scratch_dir(monitor.calc_id)
+    print(f'{monitor.task_no=}, {len(array)=}')
     for gh in numpy.unique(array['geohash3']):
         fname = f'{scratch}/{monitor.task_no}.hdf5'
         arraydic = {}
@@ -173,7 +174,7 @@ def gen_tasks(files, wfp, sample_assets, monitor):
                 yield from exposure_by_geohash(array, monitor)
             else:
                 yield exposure_by_geohash, array
-        print(os.path.basename(file.fname), nrows)
+        # print(os.path.basename(file.fname), nrows)
 
 
 def keep_wfp(csvfile):
