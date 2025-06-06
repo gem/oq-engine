@@ -21,7 +21,7 @@ import os
 import logging
 import pandas
 import numpy
-from openquake.baselib import sap, general, performance, hdf5
+from openquake.baselib import sap, general, performance
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.commonlib.datastore import create_job_dstore
@@ -197,7 +197,6 @@ def main(mosaic_dir, grm_dir, wfp=False):
             fnames = collect_exposures(grm_dir)
             expo_to_hdf5.store(fnames, wfp, dstore)
         logging.info(mon)
-        os.remove(dstore.tempname)
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.grm_dir = 'Directory containing the global risk model'

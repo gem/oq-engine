@@ -115,7 +115,7 @@ def store_tagcol(dstore, tagname, tagvalues):
     size = len(uvals) + 1
     tagsizes.append(size)
     logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-    hdf5.extend(dstore[f'assets/{name}'], inv + 1)  # indices from 1
+    hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
     vals = numpy.concatenate([[b'?'], uvals])
     dset = dstore.create_dset(
         'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
@@ -193,7 +193,6 @@ def store(exposures_xml, wfp, dstore):
         [('ASSET_ID', B30)]
     dstore['exposure'] = exposure
     for name, dt in dtlist:
-        name = 'taxonomy' if name == 'TAXONOMY' else name
         hdf5.create(dstore.hdf5, f'assets/{name}', dt,
                     compression='gzip' if name in TAGS else None)
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
@@ -243,7 +242,6 @@ def store(exposures_xml, wfp, dstore):
 
     # sanity check
     for name in commonfields:
-        name = 'taxonomy' if name == 'TAXONOMY' else name
         n = len(dstore['assets/' + name])
         assert n == num_assets, (name, n, num_assets)
 
@@ -263,7 +261,6 @@ def main(exposures_xml, wfp=False):
     log, dstore = create_job_dstore()
     with dstore, log:
         store(exposures_xml, wfp, dstore)
-    os.remove(dstore.tempname)
     return dstore.filename
 
 main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
