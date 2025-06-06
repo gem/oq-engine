@@ -121,7 +121,7 @@ def store_tagcol(dstore, tagname, tagvalues):
     dset = dstore.create_dset(
         'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
     dset[:] = [x.decode('utf8') for x in vals]
-    return size, len(inv)
+    return size, len(tagvalues)
 
 
 # in parallel
@@ -229,7 +229,7 @@ def store(exposures_xml, wfp, dstore):
                 hdf5.extend(dstore['assets/' + name], arraydic[name])
         if name in TAGS2:
             size, tot = store_tagcol(dstore, name, numpy.concatenate(arrays))
-            assert tot == num_assets, (tot, num_assets)
+            assert tot == num_assets, (name, tot, num_assets)
             logging.info('Stored %s[%d/%d]', name, size, tot)
             tagsizes.append(size)
         else:
