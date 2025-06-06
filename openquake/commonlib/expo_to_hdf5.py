@@ -89,14 +89,14 @@ def exposure_by_geohash(array, monitor):
     fix(array)
     scratch = scratch_dir(monitor.calc_id)
     for gh in numpy.unique(array['geohash3']):
-        fname = f'{scratch}/{gh}_{monitor.task_no}.hdf5'
+        fname = f'{scratch}/{monitor.task_no}.hdf5'
         arraydic = {}
-        with hdf5.File(fname, 'w') as f:
+        with hdf5.File(fname, 'a') as f:
             arr = array[array['geohash3']==gh]
             for name in names:
                 if name in TAGS:
                     a = arr[name]
-                    hdf5.create(f, name, a.dtype, a.shape)[:] = a
+                    hdf5.create(f, f'{gh}/{name}', a.dtype, a.shape)[:] = a
                 else:
                     arraydic[name] = arr[name]
         yield gh, fname, arraydic
@@ -223,7 +223,7 @@ def store(exposures_xml, wfp, dstore):
         for gh3, fname, arraydic in triples:
             if name in TAGS:
                 with hdf5.File(fname, 'r') as f:
-                    arrays.append(f[name][:])
+                    arrays.append(f[f'{gh3}/{name}'][:])
             elif name in ('ID_2', 'NAME_2'):
                 arrays.append(arraydic[name])
             else:
