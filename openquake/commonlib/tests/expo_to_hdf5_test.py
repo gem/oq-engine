@@ -91,8 +91,8 @@ def test_expo_to_hdf5():
     expo4_xml = os.path.join(os.path.dirname(__file__),
                              'data', 'Exposure_Turkiye.xml')
     job, dstore = create_job_dstore()
-    with job, dstore, hdf5.File(dstore.tempname, 'w') as h5tmp:
-        store([expo1_xml, expo2_xml, expo3_xml, expo4_xml], True, dstore, h5tmp)
+    with job, dstore:
+        store([expo1_xml, expo2_xml, expo3_xml, expo4_xml], True, dstore)
         assets = sorted(dstore['assets/ASSET_ID'][:])
         ae(assets, EXPECTED_ASSETS)
         assert len(dstore['assets/ID_1']) == 30

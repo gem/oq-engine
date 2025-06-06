@@ -25,7 +25,7 @@ from openquake.baselib import hdf5, sap, general, performance
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import create_job_dstore
-from openquake.risklib.asset import _get_exposure
+from openquake.risklib.asset import _get_exposure, Exposure
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -38,10 +38,10 @@ OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
 CONV['ASSET_ID'] = B30
-for f in (None, 'ID_1', 'ID_2', 'NAME_1', 'NAME_2',
-          'WFP_ID_1', 'WFP_ID_2', 'WFP_NAME_1', 'WFP_NAME_2'):
+for f in (None, 'ID_1', 'ID_2', 'WFP_ID_1', 'WFP_ID_2'):
     CONV[f] = B30
-TAGS = ['TAXONOMY', 'ID_0', 'ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY']
+TAGS = ['TAXONOMY', 'ID_0', 'ID_1', 'NAME_1', 'OCCUPANCY']
+TAGS2 = TAGS + ['ID_2', 'NAME_2']
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
@@ -80,18 +80,23 @@ def fix(arr):
 
 def exposure_by_geohash(array, monitor):
     """
-    Yields (geohash, tempfname, id2, name2)
+    Store the TAGS in temporary files, build an arraydic of non-TAGS
+    and then yield (geohash, tempfname, arraydic).
     """
     names = array.dtype.names
     array = add_geohash3(array)
     fix(array)
     for gh in numpy.unique(array['geohash3']):
         fname = general.gettemp(suffix='.hdf5')
+        arraydic = {}
         with hdf5.File(fname, 'w') as f:
             arr = array[array['geohash3']==gh]
             for name in names:
-                f[name] = arr[name]
-        yield gh, fname, arr['ID_2'], arr['NAME_2']
+                if name in TAGS:
+                    f[name] = arr[name]
+                else:
+                    arraydic[name] = arr[name]
+        yield gh, fname, arraydic
 
 
 def store_tagcol(dstore, tagname, tagvalues):
@@ -103,7 +108,6 @@ def store_tagcol(dstore, tagname, tagvalues):
     tagsizes = []
     tagnames = []
     mon = performance.Monitor(h5=dstore)
-
     name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
     tagnames.append(name)
     with mon('unique tags', savemem=True):
@@ -111,7 +115,7 @@ def store_tagcol(dstore, tagname, tagvalues):
     size = len(uvals) + 1
     tagsizes.append(size)
     logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-    hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
+    hdf5.extend(dstore[f'assets/{name}'], inv + 1)  # indices from 1
     vals = numpy.concatenate([[b'?'], uvals])
     dset = dstore.create_dset(
         'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
@@ -170,7 +174,7 @@ def keep_wfp(csvfile):
     return any(col.startswith('WFP_') for col in csvfile.header)
 
 
-def store(exposures_xml, wfp, dstore, h5tmp):
+def store(exposures_xml, wfp, dstore):
     """
     Store the given exposures in the datastore
     """
@@ -184,13 +188,12 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         files = [f for f in files if any(field.startswith('WFP_')
                                          for field in f.header)]
     commonfields = sorted({'ID_2', 'NAME_2'} | files[0].fields & FIELDS)
-    dtlist = [(t, U32) for t in TAGS] + \
-        [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
+    dtlist = [(t, U32) for t in TAGS2] + \
+        [(f, F32) for f in set(CONV)-set(TAGS2)-{'ASSET_ID', None}] + \
         [('ASSET_ID', B30)]
-    for name, dt in dtlist:
-        logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
     for name, dt in dtlist:
+        name = 'taxonomy' if name == 'TAXONOMY' else name
         hdf5.create(dstore.hdf5, f'assets/{name}', dt,
                     compression='gzip' if name in TAGS else None)
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
@@ -200,17 +203,14 @@ def store(exposures_xml, wfp, dstore, h5tmp):
     smap = Starmap.apply(gen_tasks, (files, wfp, sa),
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
     num_assets = 0
-    for tagname in TAGS:
-        hdf5.create(h5tmp, tagname, hdf5.vstr)
-    pairs = list(smap)
+    triples = list(smap)
     Starmap.shutdown()
     logging.info('Building name2dic and slice_by_gh3')
     name2dic = {b'?': b'?'}
-    for gh3, fname, id2, name2 in pairs:
-        name2dic.update(zip(id2, name2))
-        n = len(id2)
-        slc = numpy.array(
-            [(gh3, num_assets, num_assets + n)], slc_dt)
+    for gh3, fname, dic in triples:
+        name2dic.update(zip(dic['ID_2'], dic['NAME_2']))
+        n = len(dic['ID_2'])
+        slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
 
@@ -218,20 +218,23 @@ def store(exposures_xml, wfp, dstore, h5tmp):
     logging.info('Storing assets (float32 values)')
     for name in commonfields:
         arrays = []
-        for gh3, fname, _, _ in pairs:
+        for gh3, fname, arraydic in triples:
             with hdf5.File(fname, 'r') as f:
-                arr = f[name][:]
                 if name in TAGS:
-                    arrays.append(arr)
+                    arrays.append(f[name][:])
+                elif name in ('ID_2', 'NAME_2'):
+                    arrays.append(arraydic[name])
                 else:
-                    hdf5.extend(dstore['assets/' + name], arr)
-        if name in TAGS:
+                    hdf5.extend(dstore['assets/' + name], arraydic[name])
+
+        if name in TAGS2:
             size = store_tagcol(dstore, name, numpy.concatenate(arrays))
             tagsizes.append(size)
-    for gh3, fname, _, _ in pairs:
+    for gh3, fname, _ in triples:
         os.remove(fname)
+    TAGS2[0] = 'taxonomy'  # set lower case TAXONOMY
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
-               tagnames=numpy.array(TAGS, hdf5.vstr),
+               tagnames=numpy.array(TAGS2, hdf5.vstr),
                tagsizes=tagsizes)
     dstore.getitem('tagcol').attrs.update(dic)
     ID2s = dstore['tagcol/ID_2'][:]
@@ -240,10 +243,15 @@ def store(exposures_xml, wfp, dstore, h5tmp):
 
     # sanity check
     for name in commonfields:
+        name = 'taxonomy' if name == 'TAXONOMY' else name
         n = len(dstore['assets/' + name])
         assert n == num_assets, (name, n, num_assets)
 
     logging.info('Stored {:_d} assets in {}'.format(n, dstore.filename))
+
+    # check readable around gh3=12396
+    exp = Exposure.read_around(dstore.filename, 12396)
+    assert len(exp.assets), exp
 
 
 def main(exposures_xml, wfp=False):
@@ -253,8 +261,8 @@ def main(exposures_xml, wfp=False):
     field names like LONGITUDE, LATITUDE, etc
     """
     log, dstore = create_job_dstore()
-    with dstore, log, hdf5.File(dstore.tempname, 'w') as h5tmp:
-        store(exposures_xml, wfp, dstore, h5tmp)
+    with dstore, log:
+        store(exposures_xml, wfp, dstore)
     os.remove(dstore.tempname)
     return dstore.filename
 

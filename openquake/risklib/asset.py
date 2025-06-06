@@ -945,6 +945,8 @@ def impact_read_assets(h5, start, stop):
             if field in TAGS:
                 # go back from indices to strings
                 dic[field] = TAGS[field][arr]
+        if field in dic and len(dic[field]) == 0:
+            dic.pop(field)
     df = pandas.DataFrame(dic)
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
                            df.OCCUPANTS_PER_ASSET_NIGHT +
@@ -1015,8 +1017,9 @@ class Exposure(object):
                 impact_read_assets(f, start, stop)
                 for gh3, start, stop in slices)
             tagcol = f['tagcol']
-            # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
-            exp.tagcol = TagCollection(tagcol.tagnames)
+            # revert the tagnames so that taxonomy becomes the first field,
+            # ex. sorted_tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
+            exp.tagcol = TagCollection(sorted(tagcol.tagnames, reverse=True))
         rename = dict(exp.pairs)
         rename['TAXONOMY'] = 'taxonomy'
         for f in ANR_FIELDS:
