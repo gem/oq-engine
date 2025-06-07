@@ -150,7 +150,7 @@ def gen_tasks(files, wfp, sample_assets, monitor):
         usecols = file.fields | ({'ID_2'} if file.admin2 else set())
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
-            usecols=usecols, skiprows=1, chunksize=1_000_000)
+            usecols=usecols, skiprows=1, chunksize=500_000)
         nrows = 0
         for i, df in enumerate(dfs):
             if sample_assets:
