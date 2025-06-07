@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import time
 import logging
 import operator
 import pandas
@@ -172,6 +173,7 @@ def store(exposures_xml, wfp, dstore, h5tmp):
     """
     Store the given exposures in the datastore
     """
+    t0 = time.time()
     csvfiles = []
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
@@ -225,10 +227,12 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         n = len(dstore['assets/' + name])
         assert n == num_assets, (name, n, num_assets)
 
-    logging.info('Stored {:_d} assets in {}'.format(n, dstore.filename))
+    dt = time.time() - t0
+    logging.info('Stored {:_d} assets in {} in {:_d} seconds'.format(
+        n, dstore.filename, int(dt)))
 
-    # check readable around gh3=12396
-    exp = Exposure.read_around(dstore.filename, 12396)
+    # check readable
+    exp = Exposure.read_around(dstore.filename, gh3s=[12396])
     assert len(exp.assets), exp
 
 
