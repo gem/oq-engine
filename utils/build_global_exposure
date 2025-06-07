@@ -186,7 +186,7 @@ def main(mosaic_dir, grm_dir, wfp=False):
     if wfp:
         description += ' (only for WFP countries)'
     job, dstore = create_job_dstore(description=description)
-    with dstore, job, hdf5.File(dstore.tempname, 'w') as h5tmp:
+    with dstore, job:
         with mon:
             n = build_site_model_gsims(mosaic_dir, grm_dir, dstore)
             logging.info('Stored {:_d} sites'.format(n))
@@ -195,9 +195,8 @@ def main(mosaic_dir, grm_dir, wfp=False):
             n = read_world_tmap(grm_dir, dstore)
             logging.info('Read %d taxonomy mappings', n)
             fnames = collect_exposures(grm_dir)
-            expo_to_hdf5.store(fnames, wfp, dstore, h5tmp)
+            expo_to_hdf5.store(fnames, wfp, dstore)
         logging.info(mon)
-        os.remove(dstore.tempname)
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.grm_dir = 'Directory containing the global risk model'
