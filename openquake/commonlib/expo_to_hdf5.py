@@ -203,6 +203,8 @@ def store(exposures_xml, wfp, dstore):
     Store the given exposures in the datastore
     """
     t0 = time.time()
+    logging.info('Preallocating tag indices')
+    indexer = {tagname: Indexer(tagname) for tagname in TAGS}
     csvfiles = []
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
@@ -232,7 +234,6 @@ def store(exposures_xml, wfp, dstore):
                          h5=dstore.hdf5)
     num_assets = 0
     name2dic = {b'?': b'?'}
-    indexer = {tagname: Indexer(tagname) for tagname in TAGS}
     for gh3, arr in smap:
         name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
