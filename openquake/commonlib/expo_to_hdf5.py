@@ -53,10 +53,15 @@ FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
 
 
 class Indexer(object):
-    def __init__(self, name):
+    """
+    Class fine-tuned for our current world exposure containing ~72M assets
+    """
+    def __init__(self, name, maxsize=73_0000_000):
         self.name = name
+        self.maxsize = maxsize
         self.dic = {}
-        self.indices = []
+        self.indices = numpy.zeros(maxsize, U32)
+        self.size = 0
 
     def add1(self, value):
         try:
@@ -64,15 +69,17 @@ class Indexer(object):
         except KeyError:
             idx = len(self.dic)
             self.dic[value] = idx
-        self.indices.append(idx)
+        self.indices[self.size] = idx
+        self.size += 1
  
     def add(self, values):
         for value in values:
             self.add1(value)
+        assert self.size < self.maxsize
 
     def save(self, h5):
         tags = numpy.concatenate([[b'?'], numpy.array(list(self.dic))])
-        indices = U32(self.indices)
+        indices = self.indices[:self.size]
         name = 'taxonomy' if self.name == 'TAXONOMY' else self.name
         hdf5.create(
             h5, f'tagcol/{name}', hdf5.vstr, (len(tags),)
@@ -150,7 +157,7 @@ def gen_tasks(files, wfp, sample_assets, monitor):
         usecols = file.fields | ({'ID_2'} if file.admin2 else set())
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
-            usecols=usecols, skiprows=1, chunksize=500_000)
+            usecols=usecols, skiprows=1, chunksize=1_000_000)
         nrows = 0
         for i, df in enumerate(dfs):
             if sample_assets:
