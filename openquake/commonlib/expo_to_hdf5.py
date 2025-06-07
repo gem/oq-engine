@@ -22,7 +22,7 @@ import logging
 import operator
 import pandas
 import numpy
-from openquake.baselib import hdf5, sap, general
+from openquake.baselib import hdf5, sap, general, performance
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import create_job_dstore
@@ -56,7 +56,7 @@ class Indexer(object):
     """
     Class fine-tuned for our current world exposure containing ~72M assets
     """
-    def __init__(self, name, maxsize=73_0000_000):
+    def __init__(self, name, maxsize=99_000_000):
         self.name = name
         self.maxsize = maxsize
         self.dic = {}
@@ -75,7 +75,6 @@ class Indexer(object):
     def add(self, values):
         for value in values:
             self.add1(value)
-        assert self.size < self.maxsize
 
     def save(self, h5):
         tags = numpy.concatenate([[b'?'], numpy.array(list(self.dic))])
@@ -234,11 +233,13 @@ def store(exposures_xml, wfp, dstore):
                          h5=dstore.hdf5)
     num_assets = 0
     name2dic = {b'?': b'?'}
+    mon = performance.Monitor('tag indexing', h5=dstore)
     for gh3, arr in smap:
         name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
-                indexer[name].add(arr[name])
+                with mon:
+                    indexer[name].add(arr[name])
             else:
                 hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
