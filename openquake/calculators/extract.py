@@ -909,7 +909,7 @@ def extract_aggrisk_tags(dstore, what):
             name2s = f['NAME_2'][:]
             name2dic = {id2.decode('utf8'): name2.decode('utf8')
                         for id2, name2 in zip(id2s, name2s)}
-        df['NAME_2'] = df['ID_2'].map(name2dic).fillna('Unknown')
+        df['NAME_2'] = df['ID_2'].map(name2dic).fillna('n.a.')
     total_df = df.groupby('loss_type', as_index=False).sum()
     total_df[aggby] = '*total*'
     if aggby == ['ID_2']:
