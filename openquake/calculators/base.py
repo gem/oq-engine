@@ -1173,7 +1173,8 @@ class RiskCalculator(HazardCalculator):
         if len(self.crmodel.tmap_df) == 0:
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxidx = {taxo: i for i, taxo in enumerate(taxonomies, 1)}
-            self.crmodel.tmap_df = readinput.taxonomy_mapping(self.oqparam, taxidx)
+            self.crmodel.tmap_df = readinput.taxonomy_mapping(
+                self.oqparam, taxidx)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
