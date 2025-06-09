@@ -197,7 +197,7 @@ def keep_wfp(csvfile):
     return any(col.startswith('WFP_') for col in csvfile.header)
 
 
-def store(exposures_xml, wfp, dstore):
+def store(exposures_xml, wfp, dstore, sanity_check=True):
     """
     Store the given exposures in the datastore
     """
@@ -252,21 +252,21 @@ def store(exposures_xml, wfp, dstore):
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
         name2dic[id2].decode('utf8') for id2 in ID2s]
 
-    # sanity check
-    for name in commonfields:
-        n = len(dstore['assets/' + name])
-        assert n == num_assets, (name, n, num_assets)
-
     dt = time.time() - t0
     logging.info('Stored {:_d} assets in {} in {:_d} seconds'.format(
         n, dstore.filename, int(dt)))
 
-    # check readable
-    exp = Exposure.read_around(dstore.filename, gh3s=[12396])
-    assert len(exp.assets), exp
+    if sanity_check:
+        for name in commonfields:
+            n = len(dstore['assets/' + name])
+            assert n == num_assets, (name, n, num_assets)
+
+        # check readable
+        exp = Exposure.read_around(dstore.filename, gh3s=[12396])
+        assert len(exp.assets), exp
 
 
-def main(exposures_xml, wfp=False):
+def main(exposures_xml, wfp=False, sanity_check=False):
     """
     An utility to convert an exposure from XML+CSV format into HDF5.
     NB: works only for the exposures of the global risk model, having
@@ -274,11 +274,12 @@ def main(exposures_xml, wfp=False):
     """
     log, dstore = create_job_dstore()
     with dstore, log:
-        store(exposures_xml, wfp, dstore)
+        store(exposures_xml, wfp, dstore, sanity_check)
     return dstore.filename
 
 main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
-
+main.wfp = "WFP exposure"
+main.sanity_check = "Perform a sanity check"
 
 if __name__ == '__main__':
     # python -m openquake.commonlib.expo_to_hdf5 exposure.xml
