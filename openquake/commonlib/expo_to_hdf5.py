@@ -52,6 +52,43 @@ FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'LATITUDE', 'ID_0', 'ID_1', 'ID_2'}
 
 
+class Indexer(object):
+    """
+    Class fine-tuned for our current world exposure containing ~72M assets
+    """
+    def __init__(self, name, maxsize=99_000_000):
+        self.name = name
+        self.maxsize = maxsize
+        self.dic = {}
+        self.indices = numpy.zeros(maxsize, U32)
+        self.size = 0
+
+    def add1(self, value):
+        try:
+            idx = self.dic[value]
+        except KeyError:
+            idx = len(self.dic)
+            self.dic[value] = idx
+        self.indices[self.size] = idx
+        self.size += 1
+ 
+    def add(self, values):
+        for value in values:
+            self.add1(value)
+
+    def save(self, h5):
+        tags = numpy.concatenate([[b'?'], numpy.array(list(self.dic))])
+        indices = self.indices[:self.size]
+        name = 'taxonomy' if self.name == 'TAXONOMY' else self.name
+        hdf5.create(
+            h5, f'tagcol/{name}', hdf5.vstr, (len(tags),)
+        )[:] = [x.decode('utf8') for x in tags]
+        hdf5.extend(h5[f'assets/{self.name}'], indices)
+
+    def __repr__(self):
+        return f'<Indexer[{self.name}]>'
+
+
 def add_geohash3(array):
     """
     Add field "geohash3" to a structured array
@@ -88,7 +125,7 @@ def exposure_by_geohash(array, monitor):
         yield gh, array[array['geohash3']==gh]
 
 
-def store_tagcol(dstore, h5tmp):
+def store_tagcol(dstore, indexer):
     """
     A TagCollection is stored as arrays like taxonomy = [
     "?", "Adobe", "Concrete", "Stone-Masonry", "Unreinforced-Brick-Masonry",
@@ -96,22 +133,13 @@ def store_tagcol(dstore, h5tmp):
     """
     tagsizes = []
     tagnames = []
-    mon = performance.Monitor(h5=dstore)
-    for tagname in h5tmp:
-        with mon('read tags', savemem=True):
-            tagvalues = h5tmp[tagname][:]
-        name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
-        tagnames.append(name)
-        with mon('unique tags', savemem=True):
-            uvals, inv = numpy.unique(tagvalues, return_inverse=1)
-        size = len(uvals) + 1
-        tagsizes.append(size)
-        logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-        vals = numpy.concatenate([[b'?'], uvals])
-        dset = dstore.create_dset(
-            'tagcol/' + name, hdf5.vstr, len(vals), 'gzip')
-        dset[:] = [x.decode('utf8') for x in vals]
+    for idx in indexer.values():
+        idx.save(dstore.hdf5)
+        tagsizes.append(len(idx.dic) + 1)
+        if idx.name == 'TAXONOMY':
+            tagnames.append('taxonomy')
+        else:
+            tagnames.append(idx.name)
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(tagnames, hdf5.vstr),
                tagsizes=tagsizes)
@@ -169,11 +197,13 @@ def keep_wfp(csvfile):
     return any(col.startswith('WFP_') for col in csvfile.header)
 
 
-def store(exposures_xml, wfp, dstore, h5tmp):
+def store(exposures_xml, wfp, dstore, sanity_check=True):
     """
     Store the given exposures in the datastore
     """
     t0 = time.time()
+    logging.info('Preallocating tag indices')
+    indexer = {tagname: Indexer(tagname) for tagname in TAGS}
     csvfiles = []
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
@@ -203,13 +233,13 @@ def store(exposures_xml, wfp, dstore, h5tmp):
                          h5=dstore.hdf5)
     num_assets = 0
     name2dic = {b'?': b'?'}
-    for tagname in TAGS:
-        hdf5.create(h5tmp, tagname, hdf5.vstr)
+    mon = performance.Monitor('tag indexing', h5=dstore)
     for gh3, arr in smap:
         name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
-                hdf5.extend(h5tmp[name], arr[name])
+                with mon:
+                    indexer[name].add(arr[name])
             else:
                 hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
@@ -217,39 +247,39 @@ def store(exposures_xml, wfp, dstore, h5tmp):
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
     Starmap.shutdown()
-    store_tagcol(dstore, h5tmp)
+    store_tagcol(dstore, indexer)
     ID2s = dstore['tagcol/ID_2'][:]
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
         name2dic[id2].decode('utf8') for id2 in ID2s]
-
-    # sanity check
-    for name in commonfields:
-        n = len(dstore['assets/' + name])
-        assert n == num_assets, (name, n, num_assets)
 
     dt = time.time() - t0
     logging.info('Stored {:_d} assets in {} in {:_d} seconds'.format(
         n, dstore.filename, int(dt)))
 
-    # check readable
-    exp = Exposure.read_around(dstore.filename, gh3s=[12396])
-    assert len(exp.assets), exp
+    if sanity_check:
+        for name in commonfields:
+            n = len(dstore['assets/' + name])
+            assert n == num_assets, (name, n, num_assets)
+
+        # check readable
+        exp = Exposure.read_around(dstore.filename, gh3s=[12396])
+        assert len(exp.assets), exp
 
 
-def main(exposures_xml, wfp=False):
+def main(exposures_xml, wfp=False, sanity_check=False):
     """
     An utility to convert an exposure from XML+CSV format into HDF5.
     NB: works only for the exposures of the global risk model, having
     field names like LONGITUDE, LATITUDE, etc
     """
     log, dstore = create_job_dstore()
-    with dstore, log, hdf5.File(dstore.tempname, 'w') as h5tmp:
-        store(exposures_xml, wfp, dstore, h5tmp)
-    os.remove(dstore.tempname)
+    with dstore, log:
+        store(exposures_xml, wfp, dstore, sanity_check)
     return dstore.filename
 
 main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
-
+main.wfp = "WFP exposure"
+main.sanity_check = "Perform a sanity check"
 
 if __name__ == '__main__':
     # python -m openquake.commonlib.expo_to_hdf5 exposure.xml
