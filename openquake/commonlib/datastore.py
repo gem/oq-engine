@@ -149,6 +149,9 @@ def read_hc_id(hdf5):
     return oq.hazard_calculation_id
 
 
+# NB: the way to store utf8-strings is
+# dstore.create_dset(name, hdf5.vstr, len(strings))[:] = strings
+
 class DataStore(collections.abc.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the

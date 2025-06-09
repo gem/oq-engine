@@ -149,6 +149,7 @@ def print_peril(what):
 
 def print_geohash(what):
     lon, lat = lon_lat(what.split(':')[1])
+    # print(geo.utils.geohash3(F32([lon]), F32([lat])))
     arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
     gh = b''.join([row.tobytes() for row in arr])
     print(gh.decode('ascii'))

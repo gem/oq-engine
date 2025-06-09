@@ -21,7 +21,7 @@ import os
 import logging
 import pandas
 import numpy
-from openquake.baselib import sap, general, performance
+from openquake.baselib import sap, general, performance, hdf5
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.commonlib.datastore import create_job_dstore
