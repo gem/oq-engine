@@ -33,11 +33,7 @@ def critical_accel(
     :returns: 
         crit_accel: critical acceleration in g units
     """    
-
     crit_accel = (factor_of_safety - 1) * np.sin(np.arctan(slope))
-    print(factor_of_safety)
-    print(crit_accel)
-    print("crit_accel")
     if np.isscalar(crit_accel):
         return max([crit_accel_threshold, crit_accel])
     else:
@@ -102,7 +98,8 @@ def jibson_2007_model_a(
             accel_ratio == accel_ratio_threshold
     else:
         accel_ratio[accel_ratio > 1.0] = 1.0
-        accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
+        accel_ratio[accel_ratio <= accel_ratio_threshold] = \
+            accel_ratio_threshold
 
     pow_1 = (1 - accel_ratio) ** c2
     pow_2 = accel_ratio**c3

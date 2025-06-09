@@ -1708,6 +1708,12 @@ class OqParam(valid.ParamSet):
             if any(sec_imt.endswith(imt) for sec_imt in sec_imts):
                 self.raise_invalid('you forgot to set secondary_perils =')
 
+        seco_imts = {sec_imt.split('_')[1] for sec_imt in self.sec_imts}
+        risk_imts = set(self.risk_imtls)
+        for imt in risk_imts - seco_imts:
+            logging.warning(f'The risk functions contain {imt} which is not '
+                            f'in the secondary IMTs {seco_imts}')
+
         risk_perils = sorted(set(getattr(rf, 'peril', 'groundshaking')
                                  for rf in risklist))
         return risk_perils
