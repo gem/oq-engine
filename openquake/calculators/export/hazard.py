@@ -204,13 +204,19 @@ def export_hcurves_by_imt_csv(
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
-            lst.append(('poe-%.7f' % iml, F32))
+            if imt.startswith(('PGA', 'PGV', 'SA')):
+                lst.append(('poe-%.7f' % iml, F32))
+            else:
+                lst.append(('poe-%.5e' % iml, F32))
         custom = 'custom_site_id' in sitecol.array.dtype.names
         if custom:
             lst.insert(0, ('custom_site_id', 'S8'))
         array = extract(
             dstore, 'hcurves?kind=%s&imt=%s' % (kind, imt))[kind]
-        hcurves = numpy.zeros(nsites, lst)
+        try:
+            hcurves = numpy.zeros(nsites, lst)
+        except:
+            breakpoint()
         if custom:
             for sid, csi, lon, lat, dep in zip(
                     range(nsites), sitecol.custom_site_id,
@@ -247,7 +253,7 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     comment = dstore.metadata
     hmap_dt = oq.hmap_dt()
-    for kind in oq.get_kinds(kind, R):
+    for kind in oq.get_kinds(kind, R):  # usually kind == 'mean'
         fname = hazard_curve_name(dstore, (key, fmt), kind)
         comment.update(kind=kind, investigation_time=oq.investigation_time)
         if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
