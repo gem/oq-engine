@@ -523,7 +523,6 @@ class EventBasedTestCase(CalculatorTestCase):
                           'JibsonEtAl2000Landslides_DispProb',
                           'custom_site_id'))
 
-
     def test_case_26_liq(self):
         # cali liquefaction simplified
         self.run_calc(case_26.__file__, 'job_liq.ini')
