@@ -762,7 +762,7 @@ def main(dstore, csm):
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
     plot_sites(dstore, update_dstore=True)
-    if rtgm_dfs and N == 1:  # and not warnings[sid]:
+    if rtgm_dfs and N == 1:
         sid = 0
         if not warnings:
             plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
