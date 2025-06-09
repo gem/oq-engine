@@ -1729,8 +1729,9 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite dtype (imt, poe)
         """
+        imts = list(self.imtls) + self.sec_imts
         return numpy.dtype([('%s-%s' % (imt, poe), F32)
-                            for imt in self.imtls for poe in self.poes])
+                            for imt in imts for poe in self.poes])
 
     def uhs_dt(self):  # used for CSV and NPZ export
         """
