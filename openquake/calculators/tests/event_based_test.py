@@ -536,7 +536,7 @@ class EventBasedTestCase(CalculatorTestCase):
         hcurves = export(('hcurves', 'csv'), self.calc.datastore)
         for hcurve in hcurves:
             imt = hcurve.split('_')[-2]
-            self.assertEqualFiles(f'expected/hcurve-{imt}.csv', hcurve)        
+            self.assertEqualFiles(f'expected/hcurve-{imt}.csv', hcurve)
 
     def test_case_27(self):
         # splitting ruptures + gmf1 + gmf2

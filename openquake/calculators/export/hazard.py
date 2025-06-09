@@ -213,10 +213,7 @@ def export_hcurves_by_imt_csv(
             lst.insert(0, ('custom_site_id', 'S8'))
         array = extract(
             dstore, 'hcurves?kind=%s&imt=%s' % (kind, imt))[kind]
-        try:
-            hcurves = numpy.zeros(nsites, lst)
-        except:
-            breakpoint()
+        hcurves = numpy.zeros(nsites, lst)
         if custom:
             for sid, csi, lon, lat, dep in zip(
                     range(nsites), sitecol.custom_site_id,
