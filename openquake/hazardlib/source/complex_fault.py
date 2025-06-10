@@ -292,7 +292,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         if self.num_ruptures:
             return self.num_ruptures
         if not hasattr(self, '_nr'):
-            self._nr = list(self._iter_ruptures(count=True))
+            self._nr = list(self._iter_ruptures(count=True))[0]
             self.num_ruptures = numpy.sum(self._nr)
         return self.num_ruptures
 
