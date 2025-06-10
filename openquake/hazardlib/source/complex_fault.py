@@ -175,7 +175,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         sfc = ComplexFaultSurface.from_fault_data(self.edges, 2.0)
         return sfc.get_area()
 
-    def iter_ruptures(self):
+    def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
@@ -183,7 +183,7 @@ class ComplexFaultSource(ParametricSeismicSource):
         Uses :func:`_float_ruptures` for finding possible rupture locations
         on the whole fault surface.
         """
-        for r in self._iter_ruptures():
+        for r in self._iter_ruptures(**kwargs):
             yield r
 
     def _iter_ruptures(self, **kwargs):
@@ -293,7 +293,7 @@ class ComplexFaultSource(ParametricSeismicSource):
             return self.num_ruptures
         if not hasattr(self, '_nr'):
             self._nr = list(self._iter_ruptures(count=True))
-            self.num_ruptures = sum(self._nr)
+            self.num_ruptures = numpy.sum(self._nr)
         return self.num_ruptures
 
     def modify_set_geometry(self, edges, spacing):
@@ -366,5 +366,3 @@ def _get_lengths(msr, mag, eps_ar_low, eps_ar_upp, num_bins, rupture_area):
     rup_lens = numpy.sqrt(rupture_area * asrs)
 
     return rup_lens, pmf
-
-
