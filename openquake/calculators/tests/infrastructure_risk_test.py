@@ -60,6 +60,9 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
 
     def test_case_2(self):
         # infrastructure risk for structural, liquefaction and landslides
+        with self.assertRaises(ValueError):
+            # DispProb is not in the secondary IMTs 
+            self.run_calc(case_2.__file__, 'job_err.ini', exports='csv')
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv')
         [agg_csv, aggparent_csv] = out[('aggrisk', 'csv')]
         self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
@@ -70,7 +73,8 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
         outputs_list = (
             'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
             ' dem_cl').split()
-        self._check_csv_outputs(outputs_list, self.calc.datastore, demand_supply)
+        self._check_csv_outputs(
+            outputs_list, self.calc.datastore, demand_supply)
 
     def test_directed(self):
         self.run_calc(directed.__file__, 'job.ini')

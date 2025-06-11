@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Added a warning for risk IMTs not covered as secondary IMTs
+  * Raised an error for risk IMTs not covered by the secondary IMTs
   * Optimized build_global_exposure
 
   [Michele Simionato, Paolo Tormene]
