@@ -31,16 +31,17 @@ from openquake.risklib.asset import _get_exposure, Exposure
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-B30 = (numpy.bytes_, 30)
+B32 = (numpy.bytes_, 32)
 CONV = {n: F32 for n in '''
 BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD
 COST_STRUCTURAL_USD LATITUDE LONGITUDE OCCUPANTS_PER_ASSET
 OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
-CONV['ASSET_ID'] = B30
-for f in (None, 'ID_1', 'ID_2', 'WFP_ID_1', 'WFP_ID_2'):
-    CONV[f] = B30
+CONV['ASSET_ID'] = B32
+for f in (None, 'ID_1', 'ID_2', 'ID_3', 'ID_4', 'BARRIO_ID', 'PARROQUIA_ID',
+          'ZONA_ID', 'NAME_3', 'NAME_4_LGD', 'WFP_ID_1', 'WFP_ID_2'):
+    CONV[f] = B32
 TAGS = ['TAXONOMY', 'ID_0', 'ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY']
 IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
@@ -71,7 +72,7 @@ class Indexer(object):
             self.dic[value] = idx
         self.indices[self.size] = idx
         self.size += 1
- 
+
     def add(self, values):
         for value in values:
             self.add1(value)
@@ -80,9 +81,10 @@ class Indexer(object):
         tags = numpy.concatenate([[b'?'], numpy.array(list(self.dic))])
         indices = self.indices[:self.size]
         name = 'taxonomy' if self.name == 'TAXONOMY' else self.name
+        # NOTE: with errors='ignore' NAME_2 values with len > 32 will be truncated
         hdf5.create(
             h5, f'tagcol/{name}', hdf5.vstr, (len(tags),)
-        )[:] = [x.decode('utf8') for x in tags]
+        )[:] = [x.decode('utf8', errors='ignore') for x in tags]
         hdf5.extend(h5[f'assets/{self.name}'], indices)
 
     def __repr__(self):
@@ -122,7 +124,7 @@ def exposure_by_geohash(array, monitor):
     array = add_geohash3(array)
     fix(array)
     for gh in numpy.unique(array['geohash3']):
-        yield gh, array[array['geohash3']==gh]
+        yield gh, array[array['geohash3'] == gh]
 
 
 def store_tagcol(dstore, indexer):
@@ -153,7 +155,12 @@ def gen_tasks(files, wfp, sample_assets, monitor):
     """
     for file in files:
         # read CSV in chunks
-        usecols = file.fields | ({'ID_2'} if file.admin2 else set())
+        if file.admin2 and 'NAME_2' in file.header:
+            usecols = file.fields | {'ID_2', 'NAME_2'}
+        elif file.admin2:
+            usecols = file.fields | {'ID_2'}
+        else:
+            usecols = file.fields
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=usecols, skiprows=1, chunksize=1_000_000)
@@ -183,9 +190,14 @@ def gen_tasks(files, wfp, sample_assets, monitor):
             for col in df.columns:
                 arr = df[col].to_numpy()
                 if len(arr) and hasattr(arr[0], 'encode'):
-                    array[col] = [x.encode('utf8') for x in arr]
+                    try:
+                        array[col] = [x.encode('utf8') for x in arr]
+                    except AttributeError:
+                        raise ValueError(f'{file.fname=}: {col=}')
                 else:
                     array[col] = arr
+            if b'No_tag' in array['ID_2'] and b'Amap\xc3\xa1' in array['NAME_2']:
+                raise ValueError(f'{file.fname=}')
             if i == 0:
                 yield from exposure_by_geohash(array, monitor)
             else:
@@ -216,7 +228,7 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
     commonfields = sorted({'ID_2', 'NAME_2'} | files[0].fields & FIELDS)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
-        [('ASSET_ID', B30)]
+        [('ASSET_ID', B32)]
     for name, dt in dtlist:
         logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
@@ -249,8 +261,9 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
     Starmap.shutdown()
     store_tagcol(dstore, indexer)
     ID2s = dstore['tagcol/ID_2'][:]
+    # NOTE: with errors='ignore' NAME_2 values with len > 32 will be truncated
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
-        name2dic[id2].decode('utf8') for id2 in ID2s]
+        name2dic[id2].decode('utf8', errors='ignore') for id2 in ID2s]
 
     dt = time.time() - t0
     logging.info('Stored {:_d} assets in {} in {:_d} seconds'.format(
@@ -276,6 +289,7 @@ def main(exposures_xml, wfp=False, sanity_check=False):
     with dstore, log:
         store(exposures_xml, wfp, dstore, sanity_check)
     return dstore.filename
+
 
 main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
 main.wfp = "WFP exposure"
