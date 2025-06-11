@@ -442,8 +442,8 @@ def convert_nonParametricSeismicSource(fname, node, rup_spacing=5.0):
     if fname:
         path = os.path.splitext(fname)[0] + '.hdf5'
         hdf5_fname = path if os.path.exists(path) else None
-        if hdf5_fname is None:
-            logging.warning(f'Could not find {path}')
+        if hdf5_fname is None and node.text is None:
+            raise OSError(f'Could not find {path}')
         elif node.text is None:
             # gridded source, read the rupture data from the HDF5 file
             with hdf5.File(hdf5_fname, 'r') as h:
@@ -1153,8 +1153,8 @@ class SourceConverter(RuptureConverter):
             faults = {}
             nodes = node.nodes  # all the nodes contain ruptures
 
-        if hdf5_fname is None:
-            logging.warning(f'Could not find {path}')
+        if hdf5_fname is None and not nodes:
+            raise OSError(f'Could not find {path}')
         elif not nodes:
             # read the rupture data from the HDF5 file
             with hdf5.File(hdf5_fname, 'r') as h:
