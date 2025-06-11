@@ -81,7 +81,8 @@ class Indexer(object):
         tags = numpy.concatenate([[b'?'], numpy.array(list(self.dic))])
         indices = self.indices[:self.size]
         name = 'taxonomy' if self.name == 'TAXONOMY' else self.name
-        # NOTE: with errors='ignore' NAME_2 values with len > 32 will be truncated
+        # NOTE: with errors='ignore' encoding errors in the NAME_2 values due to the
+        # truncation to 32 bytes will be ignored
         hdf5.create(
             h5, f'tagcol/{name}', hdf5.vstr, (len(tags),)
         )[:] = [x.decode('utf8', errors='ignore') for x in tags]
@@ -261,7 +262,8 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
     Starmap.shutdown()
     store_tagcol(dstore, indexer)
     ID2s = dstore['tagcol/ID_2'][:]
-    # NOTE: with errors='ignore' NAME_2 values with len > 32 will be truncated
+    # NOTE: with errors='ignore' encoding errors in the NAME_2 values due to the
+    # truncation to 32 bytes will be ignored
     dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
         name2dic[id2].decode('utf8', errors='ignore') for id2 in ID2s]
 
