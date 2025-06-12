@@ -1708,6 +1708,15 @@ class OqParam(valid.ParamSet):
             if any(sec_imt.endswith(imt) for sec_imt in sec_imts):
                 self.raise_invalid('you forgot to set secondary_perils =')
 
+        seco_imts = {sec_imt.split('_')[1] for sec_imt in self.sec_imts}
+        risk_imts = set(self.risk_imtls)
+        for imt in risk_imts - seco_imts:
+            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI')):
+                pass  # ground shaking IMT
+            else:
+                raise ValueError(f'The risk functions contain {imt} which is '
+                                 f'not in the secondary IMTs {seco_imts}')
+
         risk_perils = sorted(set(getattr(rf, 'peril', 'groundshaking')
                                  for rf in risklist))
         return risk_perils
@@ -1723,8 +1732,9 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite dtype (imt, poe)
         """
+        imts = list(self.imtls) + self.sec_imts
         return numpy.dtype([('%s-%s' % (imt, poe), F32)
-                            for imt in self.imtls for poe in self.poes])
+                            for imt in imts for poe in self.poes])
 
     def uhs_dt(self):  # used for CSV and NPZ export
         """

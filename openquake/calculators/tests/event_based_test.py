@@ -520,7 +520,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(arr.dtype.names,
                          ('event_id', 'gmv_IA',
                           'JibsonEtAl2000Landslides_Disp',
-                          'JibsonEtAl2000Landslides_DispProb', 'custom_site_id'))
+                          'JibsonEtAl2000Landslides_DispProb',
+                          'custom_site_id'))
 
     def test_case_26_liq(self):
         # cali liquefaction simplified
@@ -528,7 +529,17 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('avg_gmf.csv', fname)
 
-        # TODO: export hcurves and hmaps
+        # check hazard maps and hazard curves, as requested by Catarina
+        [hmap] = export(('hmaps', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_map-mean.csv', hmap,
+                              delta=.03)  # very different AMD vs Intel
+
+        '''# commmented since the headers are slightly different AMD va Intel
+        hcurves = export(('hcurves', 'csv'), self.calc.datastore)
+        for hcurve in hcurves:
+            imt = hcurve.split('_')[-2]
+            self.assertEqualFiles(f'expected/hcurve-{imt}.csv', hcurve)
+        '''
 
     def test_case_27(self):
         # splitting ruptures + gmf1 + gmf2
