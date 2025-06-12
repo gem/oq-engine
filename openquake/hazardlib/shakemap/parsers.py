@@ -1215,7 +1215,9 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
             if rupture_file:
                 rupture_file_xml = gettemp(prefix='rup_', suffix='.xml')
                 try:
-                    # replacing the input json file with the output xml
+                    # replacing the input json file with the output xml if possible
+                    # NOTE: in case of failure, returns the input rupture_file
+                    # (e.g. in case of a Point rupture)
                     rupture_file = convert_to_openquake_xml(
                         rupture_file, rupture_file_xml)
                 except ValueError as exc:
@@ -1248,6 +1250,14 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
+    elif (not rup and len(rup_data['features']) == 1
+            and rup_data['features'][0]['geometry']['type'] == 'Point'):
+        # TODO: we can remove this when OQ can handle xml with Point ruptures
+        rupdic['msr'] = 'PointMSR'
+        try:
+            rup = build_planar_rupture_from_dict(rupdic)
+        except ValueError as exc:
+            rupture_issue = {"status": "failed", "error_msg": str(exc)}
     if rupture_issue and user.level > 1:  # in parsers_test for us6000jllz
         # NOTE: hiding rupture-related issues to level 1 users
         rupdic['rupture_issue'] = rupture_issue['error_msg']
