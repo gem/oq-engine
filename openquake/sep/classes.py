@@ -159,6 +159,7 @@ class HazusDeformation(SecondaryPeril):
     """
     Computes PGDMax or PGDGeomMean from PGA
     """
+    outputs = ["PGDMax"]
 
     def __init__(
         self,

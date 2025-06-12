@@ -4,14 +4,14 @@
 		<description>Road Network landslide FF</description>
 		<limitStates>slight moderate extensive complete</limitStates>
 		<fragilityFunction id="connection" format="discrete">
-			<imls imt="LSE" noDamageLimit="0">0 0.3 0.6 1</imls>
+			<imls imt="Disp" noDamageLimit="0">0 0.3 0.6 1</imls>
 			<poes ls="slight">0 0 0 1</poes>
 			<poes ls="moderate">0 0 0 1</poes>
 			<poes ls="extensive">0 0 0 1</poes>
 			<poes ls="complete">0 0 0 1</poes>
 		</fragilityFunction>
 		<fragilityFunction id="bridge1" format="discrete">
-			<imls imt="LSE" noDamageLimit="0">0 0.3 0.6 1</imls>
+			<imls imt="Disp" noDamageLimit="0">0 0.3 0.6 1</imls>
 			<poes ls="slight">0 1 1 1</poes>
 			<poes ls="moderate">0 1 1 1</poes>
 			<poes ls="extensive">0 1 1 1</poes>

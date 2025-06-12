@@ -66,7 +66,8 @@ def get_risk_files(inputs):
             rfs['groundshaking/fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
             del inputs['fragility']
-        elif key.endswith(('_fragility', '_vulnerability', '_vulnerability_retrofitted')):
+        elif key.endswith(('_fragility', '_vulnerability',
+                           '_vulnerability_retrofitted')):
             match = RISK_TYPE_REGEX.match(key)
             if match:
                 kind = match.group(2)  # fragility or vulnerability
@@ -240,6 +241,17 @@ class PerilDict(dict):
             return dict.__getitem__(self, ('groundshaking', lt))
 
 
+def corresponds(col, peril):
+    """
+    True if the column in gmf_data corresponds to the peril
+    """
+    if col.startswith('HazusDeformation'):
+        return peril == 'groundshaking'  # TODO: this looks wrong
+    elif peril == 'groundshaking':
+        return True
+    return peril in col.lower()
+
+
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -374,7 +386,8 @@ class RiskModel(object):
             for i, asset in enumerate(assets.to_records())]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def classical_damage(self, peril, loss_type, assets, hazard_curve, rng=None):
+    def classical_damage(
+            self, peril, loss_type, assets, hazard_curve, rng=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -428,11 +441,11 @@ class RiskModel(object):
         """
         imt = self.imt_by_lt[loss_type, peril]
         for col in gmf_df.columns:
-            if col.endswith(imt):
+            if corresponds(col, peril) and col.endswith(imt):
                 gmvs = gmf_df[col].to_numpy()
                 break
         else:
-            raise NameError(f'Missing {imt} in gmf_data')
+            raise NameError(f'Missing {peril}:{imt} in gmf_data')
         ffs = self.risk_functions[peril][loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
