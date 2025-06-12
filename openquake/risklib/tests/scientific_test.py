@@ -742,10 +742,11 @@ class RiskComputerTestCase(unittest.TestCase):
                  'risk_functions':
                  {'groundshaking#structural#Wood':
                   {'openquake.risklib.scientific.FragilityFunctionList': {
-                      'array': [[0.0, 0.5, 0.861, 0.957, 0.985, 0.994, 0.997, 0.999],
-                                [0.0, 0.204, 0.6, 0.813, 0.909, 0.954, 0.976, 0.986],
-                                [0.0, 0.041, 0.255, 0.49, 0.664, 0.78, 0.855, 0.903],
-                                [0.0, 0.007, 0.088, 0.236, 0.394, 0.532, 0.642, 0.728]],
+                      'array':
+                      [[0.0, 0.5, 0.861, 0.957, 0.985, 0.994, 0.997, 0.999],
+                       [0.0, 0.204, 0.6, 0.813, 0.909, 0.954, 0.976, 0.986],
+                       [0.0, 0.041, 0.255, 0.49, 0.664, 0.78, 0.855, 0.903],
+                       [0.0, 0.007, 0.088, 0.236, 0.394, 0.532, 0.642, 0.728]],
                       'format': 'discrete',
                       'id': 'Wood',
                       'imls': [1e-10, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4],
@@ -782,7 +783,7 @@ class RiskComputerTestCase(unittest.TestCase):
             'eid': [0, 1],
             'sid': [0, 0],
             'PGA': [.098234, .165975],
-            'DispProb': [.335, .335]})
+            'LandslidesDispProb': [.335, .335]})
         dd5 = rc.get_dd5(asset_df, gmf_df)  # (P, A, E, L, D)
         dd0 = dd5[0, 0, 0, 0, 1:]
         dd1 = dd5[0, 0, 1, 0, 1:]

@@ -20,6 +20,7 @@ import os
 import filecmp
 import difflib
 import unittest
+import collections
 import numpy
 from openquake.baselib.general import DictArray, gettemp
 from openquake.hazardlib import (
@@ -422,8 +423,6 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
         self.assertEqual(paths, ['BC.H', 'BADI', 'CB.J', 'EADG', 'BAEG',
                                  'CAEH', 'BB.H', 'CAEG', 'AC.I', 'BAEH'])
 
-
-
     def test_build3(self):
         # test with applyToSources for the BCHydro project
         clt = lt.build(
@@ -492,3 +491,16 @@ class CompositeLogicTreeTestCase(unittest.TestCase):
                 msg += line
                 msg += '\n'
         self.assertTrue(filecmp.cmp(expected, fname, shallow=True), msg)
+
+    def test_zero_weight(self):
+        # check that branches with zero weight are not sampled
+        clt = lt.build(['sourceModel', [],
+                        ['A', 'common1', 0.65],
+                        ['B', 'common2', 0.35],
+                        ['C', 'dummy', 0.0]])
+        clt.num_samples = 100
+        rlzs = list(clt)
+        paths = [''.join(rlz.lt_path) for rlz in rlzs]
+        cnt = collections.Counter(paths)
+        assert cnt == {'A': 68, 'B': 32}
+

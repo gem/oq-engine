@@ -25,16 +25,18 @@ Module exports :class:`AristeidouEtAl2024`
                :class:`AristeidouEtAl2024RotD100`
 """
 
-from pathlib import Path
+import pathlib
 import numpy as np
 from scipy.interpolate import interp1d
+
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import (
     RSD575, RSD595, Sa_avg2, Sa_avg3, SA, PGA, PGV, PGD, FIV3)
 from openquake.hazardlib.gsim.base import GMPE
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
 import h5py
 
-ASSET_DIR = Path(__file__).resolve().parent / "aristeidou_2024_assets"
+ASSET_DIR = pathlib.Path(__file__).resolve().parent / "aristeidou_2024_assets"
 
 
 def load_hdf5_to_list(group):
@@ -336,11 +338,14 @@ class AristeidouEtAl2024(GMPE):
         vs30 = np.array(ctx.vs30).reshape(-1, 1)
         rake = np.array(ctx.rake).reshape(-1, 1)
         mechanism = _get_style_of_faulting_term(rake)
+        z2pt5 = ctx.z2pt5.copy()
+        # Use non-Japan CB14 vs30 to z2pt5 relationship for none-measured values
+        mask = z2pt5 == -999
+        z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
         # Transform z2pt5 to [m]
-        z2pt5 = np.array(ctx.z2pt5).reshape(-1, 1) * 1000
+        z2pt5 = np.array(z2pt5).reshape(-1, 1) * 1000
         rx = np.array(ctx.rx).reshape(-1, 1)
         ztor = np.array(ctx.ztor).reshape(-1, 1)
-
         ctx_params = np.column_stack([
             rjb, rrup, d_hyp, mag, vs30, mechanism, z2pt5, rx, ztor
         ])

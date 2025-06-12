@@ -198,7 +198,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         tiling = oq.tiling
 
     # store source_groups
-    dstore.create_dset('source_groups', data, fillvalue=None,
+    dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')

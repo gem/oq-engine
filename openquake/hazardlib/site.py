@@ -116,13 +116,13 @@ class TileGetter:
         self.tileno = tileno
         self.ntiles = ntiles
 
-    def __call__(self, complete, label=None):
-        if self.ntiles == 1 and label is None:
+    def __call__(self, complete, ilabel=None):
+        if self.ntiles == 1 and ilabel is None:
             return complete
         sc = SiteCollection.__new__(SiteCollection)
         array = complete.array[complete.sids % self.ntiles == self.tileno]
-        if label is not None:
-            sc.array = array[array['label'] == label]
+        if ilabel is not None:
+            sc.array = array[array['ilabel'] == ilabel]
         else:
             sc.array = array
         sc.complete = complete
@@ -147,7 +147,11 @@ class Site(object):
         start to propagate with a speed above 2.5 km/sec, in km.
 
     :raises ValueError:
-        If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
+        If ``vs30`` is zero or negative
+        OR
+        ``z1pt0`` or ``z2pt5`` is zero or negative AND not -999 (a value of
+        -999 informs basin param using GMMs to estimate values for such sites
+        with median value from GMM's own vs30 to z1pt0 or z2pt5 relationship).
 
     .. note::
 
@@ -158,10 +162,10 @@ class Site(object):
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
-        if not numpy.isnan(z1pt0) and z1pt0 <= 0:
-            raise ValueError('z1pt0 must be positive')
-        if not numpy.isnan(z2pt5) and z2pt5 <= 0:
-            raise ValueError('z2pt5 must be positive')
+        if not numpy.isnan(z1pt0) and z1pt0 <= 0 and z1pt0 != -999:
+            raise ValueError('z1pt0 must be positive or set to -999')
+        if not numpy.isnan(z2pt5) and z2pt5 <= 0 and z2pt5 != -999:
+            raise ValueError('z2pt5 must be positive or set to -999')
 
         self.location = location
         self.vs30 = vs30
@@ -223,7 +227,7 @@ site_param_dt = {
     'z2pt5': numpy.float64,
     'z_sed': numpy.float64,
     'siteclass': (numpy.bytes_, 1),
-    'label': numpy.uint8,
+    'ilabel': numpy.uint8,
     'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc

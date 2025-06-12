@@ -202,7 +202,7 @@ to manage multiple perils, and all risk calculators have been
 refactored. During this process we removed the XML format for
 consequences, which has been deprecated for over 4 years.
 The method computing the consequences (`compute_csq`) has been
-vectorized by asset which a good speedup.
+vectorized by asset with a good speedup.
 
 Multi-peril calculations are still not ready for prime time and
 more work will follow in the near future.

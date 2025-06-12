@@ -675,7 +675,7 @@ class HazardCalculator(BaseCalculator):
             if oq.impact and 'mmi' in oq.inputs:
                 logging.info('Computing MMI-aggregated values')
                 mmi_df = self.assetcol.get_mmi_values(
-                    oq.aggregate_by, oq.inputs['mmi'])
+                    oq.aggregate_by, oq.inputs['mmi'], oq.inputs['exposure'][0])
                 if len(mmi_df):
                     self.datastore.hdf5.create_df('mmi_tags', mmi_df)
 
@@ -1173,7 +1173,8 @@ class RiskCalculator(HazardCalculator):
         if len(self.crmodel.tmap_df) == 0:
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxidx = {taxo: i for i, taxo in enumerate(taxonomies, 1)}
-            self.crmodel.tmap_df = readinput.taxonomy_mapping(self.oqparam, taxidx)
+            self.crmodel.tmap_df = readinput.taxonomy_mapping(
+                self.oqparam, taxidx)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent

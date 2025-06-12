@@ -73,9 +73,7 @@ We continued the refactoring of the
 [multi-peril risk framework](https://github.com/gem/oq-engine/issues/10162)
 initiated in the previous release. The documentation about the obsolete format
 for the consequence files has been removed and we updated the
-consequence files in all of our tests. We also added a script
-`utils/fix_consequences` which is able to fix old consequence files
-using risk IDs instead of taxonomies (this happens in the presence of a taxonomy mapping).
+consequence files in all of our tests.
 
 Many consistency checks were added to the consequence files to make
 sure that they contains taxonomy strings consistent with the exposure and

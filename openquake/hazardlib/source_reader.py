@@ -305,11 +305,9 @@ def get_csm(oq, full_lt, dstore=None):
     if out:
         dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
                   ('num_ruptures', int), ('mutex_weight', float)]
-        dstore.create_dset('src_mutex', numpy.array(out, dtlist),
-                           fillvalue=None)
+        dstore.create_dset('src_mutex', numpy.array(out, dtlist))
         lst = [('grp_id', int), ('probability', float)]
-        dstore.create_dset('grp_probability', numpy.array(probs, lst),
-                           fillvalue=None)
+        dstore.create_dset('grp_probability', numpy.array(probs, lst))
 
     # split multifault sources if there is a single site
     try:
@@ -736,12 +734,12 @@ class CompositeSourceModel:
                     # point sources are far away as determined in preclassical
                     continue
                 if len(cmakers) > 1:  # has labels
-                    sites = sitecol.filter(sitecol.label == idx)
+                    sites = sitecol.filter(sitecol.ilabel == idx)
                 else:
                     sites = sitecol
                 if sites:
                     if with_labels:
-                        cmaker.label = idx
+                        cmaker.ilabel = idx
                     yield self._split(
                         cmaker, sites, max_weight, num_chunks, tiling)
 

@@ -1760,8 +1760,8 @@ class RiskComputer(dict):
                     dic = ast.literal_eval(hdf5.obj_to_json(rf))
                     if getattr(rf, 'retro', False):
                         retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
-                        dic['openquake.risklib.scientific.VulnerabilityFunction'][
-                            'retro'] = retro
+                        dic['openquake.risklib.scientific.'
+                            'VulnerabilityFunction']['retro'] = retro
                     rfdic['%s#%s#%s' % (rf.peril, lt, rf.id)] = dic
         dic = dict(risk_functions=rfdic, calculation_mode=self.calculation_mode)
         if any(mal for mal in self.minimum_asset_loss.values()):

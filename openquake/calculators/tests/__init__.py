@@ -40,9 +40,9 @@ class DifferentFiles(Exception):
     pass
 
 
-def strip_calc_id(fname):
+def strip_calc_id(fname, suffix=''):
     name = os.path.basename(fname)
-    return re.sub(r'_\d+', '', name)
+    return re.sub(r'_\d+', suffix, name)
 
 
 def ignore_gsd_fields(header, lines):

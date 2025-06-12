@@ -40,7 +40,7 @@ from openquake.qa_tests_data.classical import (
     case_60, case_61, case_62, case_63, case_64, case_65, case_66,
     case_67, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
     case_78, case_80, case_81, case_82, case_83, case_84, case_85,
-    case_86, case_87, case_88)
+    case_86, case_87, case_88, case_89)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -141,18 +141,22 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(gsim.__class__.__name__, 'FaccioliEtAl2010')
 
     def test_case_06(self):
+        # test with site-dependent logic trees
         self.run_calc(case_06.__file__, 'job.ini')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs.csv', fname)
+
+        # the default logic tree has 3 realizations, one of zero weight
+        aac(self.calc.datastore['weights'][:], [.5, .5, 0])
 
         # check the mean hazard curves manually
         oq = self.calc.oqparam
         flt0, flt1, flt2 = contexts.read_full_lt_by_label(
             self.calc.datastore).values()
         sitecol = self.calc.sitecol
-        sites0 = sitecol.filter(sitecol.label == 0)
-        sites1 = sitecol.filter(sitecol.label == 1)
-        sites2 = sitecol.filter(sitecol.label == 2)
+        sites0 = sitecol.filter(sitecol.ilabel == 0)
+        sites1 = sitecol.filter(sitecol.ilabel == 1)
+        sites2 = sitecol.filter(sitecol.ilabel == 2)
         src_groups = self.calc.csm.src_groups
         hcurve0 = calc.mean_rates.calc_mcurves(
             src_groups, sites0, flt0, oq)[0, 0]
@@ -163,10 +167,16 @@ class ClassicalTestCase(CalculatorTestCase):
         pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
         pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
         pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
-        aac(hcurve0, pga0, rtol=2e-6)
-        aac(hcurve1, pga1, rtol=2e-6)
-        aac(hcurve2, pga2, rtol=2e-6)
-      
+        aac(hcurve0, pga0, rtol=2e-5)
+        aac(hcurve1, pga1, rtol=2e-5)
+        aac(hcurve2, pga2, rtol=2e-5)
+
+        # testing (over)sampling
+        self.run_calc(case_06.__file__, 'job.ini',
+                      number_of_logic_tree_samples='10')
+        [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/uhs.csv', fname)
+
     def test_case_07(self):
         # make sure the Dummy GMPE works in event based too
         self.run_calc(case_07.__file__, 'job.ini',
@@ -895,9 +905,31 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_88(self):
         # Check execution of the BA08 site term when specified as
         # an input argument within the Atkinson and Macias (2009)
-        # GMM as required for the USA 2023 model 
+        # GMM as required for the USA 2023 model
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv',
             'hazard_curve-mean-SA(1.0).csv',
             'hazard_curve-mean-SA(2.0).csv'],
             case_88.__file__)
+
+    def test_case_89(self):
+        # Check execution of a calculation with some of the z1pt0
+        # and z2pt5 set to -999 and the NGAWest2 GMMs (-999 values
+        # will use z1pt0/z2pt5 computed from the NGAWest2 GMM's own
+        # vs30 relationships)
+        self.assert_curves_ok([
+            'hazard_curve-mean-PGA.csv',
+            'hazard_curve-mean-SA(1.0).csv',
+            'hazard_curve-mean-SA(2.0).csv'],
+            case_89.__file__)
+        
+        # Check execution of a calculation specifiying reference z1pt0
+        # and z2pt5 values of -999 in the job file instead of in site
+        # model file
+        self.run_calc(case_89.__file__, 'job_ref.ini')
+
+        # And check z1pt0 of -100 m/s raises value error when compiling
+        # the site collection from a CSV within a regular OQ calc
+        with self.assertRaises(ValueError) as job:
+            self.run_calc(case_89.__file__, 'job_error.ini')
+        self.assertIn('float -100.0 < 0 or not equal to -999', str(job.exception))

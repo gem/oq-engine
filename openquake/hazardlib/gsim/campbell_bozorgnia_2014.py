@@ -25,6 +25,7 @@ Module exports :class:`CampbellBozorgnia2014`
                :class:`CampbellBozorgnia2019LowQ`
 """
 import numpy as np
+
 from numpy import exp, radians, cos
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
@@ -96,10 +97,10 @@ def _basin_term(C, imt, z2pt5, SJ, cy):
     return fb
 
 
-def _select_basin_model(SJ, vs30):
+def _get_z2pt5_ref(SJ, vs30):
     """
     Select the preferred basin model (California or Japan) to scale
-    basin depth with respect to Vs30
+    basin depth with respect to Vs30. Returns z2pt5 in km
     """
     if SJ:
         # Japan Basin Model - Equation 34 of Campbell & Bozorgnia (2014)
@@ -117,12 +118,15 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     apply any required adjustments.
     """
     # Get reference basin depth
-    z_ref = _select_basin_model(SJ, 1100.0) * np.ones_like(ctx.vs30)
+    z_ref = _get_z2pt5_ref(SJ, 1100.0) * np.ones_like(ctx.vs30)
     z_ref_term = _basin_term(C, imt, z_ref, SJ, False)
 
     # Get basin term
     if isinstance(a1100, np.ndarray): # Site model defined
-        z2pt5 = ctx.z2pt5
+        z2pt5 = ctx.z2pt5.copy()
+        # Use GMM's vs30 to z2pt5 for non-measured values
+        mask = z2pt5 == -999
+        z2pt5[mask] = _get_z2pt5_ref(SJ, ctx.vs30[mask])
     else:
         z2pt5 = z_ref
     z2pt5_term = _basin_term(C, imt, z2pt5, SJ, cy)
@@ -130,7 +134,7 @@ def _get_basin_term(C, ctx, region, imt, SJ, a1100,
     # Apply USGS basin scaling model if required
     if usgs_bs:
         # Get the scaling factor per site
-        usgs_baf = _get_z2pt5_usgs_basin_scaling(ctx.z2pt5, imt.period)
+        usgs_baf = _get_z2pt5_usgs_basin_scaling(z2pt5, imt.period)
         z_scaled = z_ref_term * (1.0 - usgs_baf) + z2pt5_term * usgs_baf
         # Apply additional CyberShake (CY_CSIM) adjustment if required
         if cy and imt.period > 1.9:
