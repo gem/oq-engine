@@ -17,13 +17,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import csv
 import os
 import logging
 import pandas
 import numpy
-from openquake.baselib import sap, general, performance, hdf5
+from openquake.baselib import sap, general, performance
 from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
+from openquake.risklib.asset import _get_exposure
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import expo_to_hdf5
@@ -119,7 +121,7 @@ def discard_dupl(records):
             acc[lonlat] = rec
     return numpy.array(list(acc.values()), dtype=rec.dtype)
 
-    
+
 def build_site_model(grm_dir):
     """
     Build the global site model starting from the CSV files in the
@@ -177,10 +179,56 @@ def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
     return len(smodel)
 
 
-def main(mosaic_dir, grm_dir, wfp=False):
+def find_long_strings_and_export(csv_paths, fieldname, output_csv_path, min_length=32):
+    results = []
+    for file_path in csv_paths:
+        try:
+            with open(file_path, newline='', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                headers = next(reader, None)
+                if not headers or fieldname not in headers:
+                    continue  # skip if the field is missing
+                field_index = headers.index(fieldname)
+                for i, row in enumerate(reader, start=2):  # skip header
+                    if len(row) > field_index:
+                        value = row[field_index]
+                        if len(value) > min_length:
+                            results.append({
+                                "filename": file_path,
+                                "linenumber": i,
+                                fieldname: value,
+                                f"{fieldname}_len": len(value)
+                            })
+        except Exception as e:
+            print(f"Error reading {file_path}: {e}")
+    if results:
+        with open(output_csv_path, 'w', newline='', encoding='utf-8') as out_csv:
+            fieldnames = ["filename", "linenumber", fieldname, f"{fieldname}_len"]
+            writer = csv.DictWriter(out_csv, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in results:
+                writer.writerow(row)
+        print(f"Results saved to {output_csv_path}")
+    else:
+        print("No strings longer than {} characters found.".format(min_length))
+
+
+def main(mosaic_dir, grm_dir, wfp=False, find_long_strings_for_field=None):
     """
     Storing global exposure
     """
+
+    if find_long_strings_for_field:
+        fieldname = find_long_strings_for_field
+        exposures_xml = collect_exposures(grm_dir)
+        csv_files = []
+        for xml in exposures_xml:
+            exposure, _ = _get_exposure(xml)
+            csv_files.extend(exposure.datafiles)
+        output_file = "long_strings.csv"
+        find_long_strings_and_export(csv_files, fieldname, output_file)
+        return
+
     mon = performance.Monitor(measuremem=True)
     description = 'Storing global exposure to hdf5'
     if wfp:
@@ -198,9 +246,13 @@ def main(mosaic_dir, grm_dir, wfp=False):
             expo_to_hdf5.store(fnames, wfp, dstore)
         logging.info(mon)
 
+
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.grm_dir = 'Directory containing the global risk model'
 main.wfp = 'If true, consider only 7 countries for the World Food Program'
+main.find_long_strings_for_field = (
+    'Produces long_strings.csv summarizing filename, line number, value and length'
+    ' of strings above 32 characters in the given field')
 
 if __name__ == '__main__':
     sap.run(main)
