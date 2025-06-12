@@ -1057,11 +1057,11 @@ def _get_shakemap_array(xml_file):
            if f['name'] in SHAKEMAP_FIELDS}
     out = {name: [] for name in idx}
     uncertainty = any(imt.startswith('STD') for imt in out)
-    missing = sorted(REQUIRED_IMTS - set(out))
-    if 'PSA06' in missing:  # old shakemap
+    if 'PSA06' not in idx:  # old shakemap
         fieldmap = {f: FIELDMAP[f] for f in FIELDMAP if f != 'PSA06'}
     else:  # new shakemap
         fieldmap = FIELDMAP
+        missing = REQUIRED_IMTS - set(idx)
         if not uncertainty and missing:
             raise RuntimeError('Missing %s in %s' % (missing, fname))
     for name in idx:
