@@ -27,7 +27,9 @@ from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.risklib.asset import _get_exposure, Exposure
+from openquake.qa_tests_data import mosaic
 
+MOSAIC_DIR = os.path.dirname(mosaic.__file__)
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -292,7 +294,32 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
         assert len(exp.assets), exp
 
 
-def main(exposures_xml, wfp=False, sanity_check=False):
+def read_world_tmap(grm_dir, dstore):
+    """
+    Store the world taxonomy mapping
+    """
+    # get the names of the files to read
+    summary = os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv')
+    tmap_df = pandas.read_csv(summary, index_col=['country'])
+    dic = {}
+    for fname, df in tmap_df.groupby('fname'):
+        dic[fname] = '_'.join(sorted(df.index))
+    n = len(dic)
+    assert len(set(dic.values())) == n, sorted(dic.values())
+    for cwd, dirs, files in os.walk(grm_dir):
+        for f in files:
+            if f in dic:
+                df = pandas.read_csv(os.path.join(cwd, f))
+                try:
+                    dstore.create_df('tmap/' + dic[f], df)
+                except ValueError:  # exists already
+                    print('Repeated %s' % dic[f])
+            elif f.startswith('taxonomy_mapping'):
+                raise NameError(f'{f} is not listed in {summary}')
+    return n
+
+
+def main(exposures_xml, grm_dir='', wfp=False, sanity_check=False):
     """
     An utility to convert an exposure from XML+CSV format into HDF5.
     NB: works only for the exposures of the global risk model, having
@@ -300,11 +327,15 @@ def main(exposures_xml, wfp=False, sanity_check=False):
     """
     log, dstore = create_job_dstore()
     with dstore, log:
+        if grm_dir:
+            n = read_world_tmap(grm_dir, dstore)
+            logging.info('Read %d taxonomy mappings', n)
         store(exposures_xml, wfp, dstore, sanity_check)
     return dstore.filename
 
 
 main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
+main.grm_dir = 'Global risk model directory'
 main.wfp = "WFP exposure"
 main.sanity_check = "Perform a sanity check"
 
