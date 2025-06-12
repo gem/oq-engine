@@ -632,7 +632,8 @@ class Jibson2007ALandslides(SecondaryPeril):
 
     outputs = ["Disp"]
 
-    def __init__(self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
+    def __init__(
+            self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
         self.c1 = c1
         self.c2 = c2
         self.c3 = c3
@@ -1012,8 +1013,8 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
 
 class JibsonEtAl2000Landslides(SecondaryPeril):
     '''
-    Computes earthquake-induced displacements and related probability according to
-    Jibson et al. (2000) as function of arias intensity.
+    Computes earthquake-induced displacements and related probability according
+    to Jibson et al. (2000) as function of arias intensity.
     '''
     outputs = ["Disp", "DispProb"]
 
