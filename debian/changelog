@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Raised an error if the ShakeMap does not contain SA(0.6) when required
   * Fixed the multi-peril implementation (imt_by_lt)
   * Raised an error for risk IMTs not covered by the secondary IMTs
   * Optimized build_global_exposure
