@@ -241,15 +241,16 @@ class PerilDict(dict):
             return dict.__getitem__(self, ('groundshaking', lt))
 
 
-def corresponds(col, peril):
+def corresponds(col, peril, imt):
     """
-    True if the column in gmf_data corresponds to the peril
+    True if the column in gmf_data corresponds to the peril for the given imt
     """
     if col.startswith('HazusDeformation'):
-        return peril == 'groundshaking'  # TODO: this looks wrong
+        # TODO: this looks wrong, it should be liquefaction
+        return peril == 'groundshaking' and col.endswith(imt)
     elif peril == 'groundshaking':
-        return True
-    return peril in col.lower()
+        return col == imt
+    return peril in col.lower() and col.endswith(imt)
 
 
 class RiskModel(object):
@@ -441,7 +442,7 @@ class RiskModel(object):
         """
         imt = self.imt_by_lt[loss_type, peril]
         for col in gmf_df.columns:
-            if corresponds(col, peril) and col.endswith(imt):
+            if corresponds(col, peril, imt):
                 gmvs = gmf_df[col].to_numpy()
                 break
         else:
