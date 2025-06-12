@@ -149,6 +149,18 @@ def store_tagcol(dstore, indexer):
     dstore.getitem('tagcol').attrs.update(dic)
 
 
+def save_by_country(dstore):
+    from openquake.calculators.views import text_table
+    logging.info('Computing/storing assets_by_country')
+    countries = dstore['tagcol/ID_0'][:]
+    id0s, counts = numpy.unique(dstore['assets/ID_0'][:], return_counts=1)
+    abc = numpy.zeros(len(id0s), [('country', 'S3'), ('counts', U32)])
+    abc['country'] = countries[id0s + 1]
+    abc['counts'] = counts
+    dstore['assets_by_country'] = abc
+    print(text_table(abc, ext='org'))
+
+
 # in parallel
 def gen_tasks(files, wfp, sample_assets, monitor):
     """
@@ -197,8 +209,6 @@ def gen_tasks(files, wfp, sample_assets, monitor):
                         raise ValueError(f'{file.fname=}: {col=}')
                 else:
                     array[col] = arr
-            if b'No_tag' in array['ID_2'] and b'Amap\xc3\xa1' in array['NAME_2']:
-                raise ValueError(f'{file.fname=}')
             if i == 0:
                 yield from exposure_by_geohash(array, monitor)
             else:
@@ -261,6 +271,7 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
         num_assets += n
     Starmap.shutdown()
     store_tagcol(dstore, indexer)
+    save_by_country(dstore)
     ID2s = dstore['tagcol/ID_2'][:]
     # NOTE: with errors='ignore' encoding errors in the NAME_2 values due to the
     # truncation to 32 bytes will be ignored

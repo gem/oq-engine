@@ -246,7 +246,8 @@ def view_high_hazard(token, dstore):
     """
     oq = dstore['oqparam']
     max_poe= max(oq.poes)
-    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
+    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]
+    # NSML1 -> NM
     high = (max_hazard > max_poe).all(axis=1)
     return max_hazard[high]
 
