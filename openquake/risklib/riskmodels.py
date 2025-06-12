@@ -270,10 +270,11 @@ class RiskModel(object):
                     vf.retro.mean_loss_ratios_with_steps(steps))
 
         # set imt_by_lt
-        self.imt_by_lt = {}  # dictionary loss_type -> imt
-        for lt, rf in risk_functions['groundshaking'].items():
-            if rf.kind in ('vulnerability', 'fragility'):
-                self.imt_by_lt[lt] = rf.imt
+        self.imt_by_lt = {}  # dictionary loss_type, peril -> imt
+        for peril in risk_functions:
+            for lt, rf in risk_functions[peril].items():
+                if rf.kind in ('vulnerability', 'fragility'):
+                    self.imt_by_lt[lt, peril] = rf.imt
 
     @property
     def loss_types(self):
@@ -398,7 +399,7 @@ class RiskModel(object):
         """
         :returns: a DataFrame with columns eid, eid, loss
         """
-        imt = self.imt_by_lt[loss_type]
+        imt = self.imt_by_lt[loss_type, peril]
         sid = assets['site_id']
         if loss_type in 'occupants injured':
             val = assets['occupants_%s' % self.time_event].to_numpy()
@@ -425,7 +426,7 @@ class RiskModel(object):
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        imt = self.imt_by_lt[loss_type]
+        imt = self.imt_by_lt[loss_type, peril]
         for col in gmf_df.columns:
             if col.endswith(imt):
                 gmvs = gmf_df[col].to_numpy()
@@ -650,7 +651,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     if len(self.tmap_df.peril.unique()) == 1:
                         risk_ids = self.tmap_df.risk_id
                     else:
-                        risk_ids = self.tmap_df[self.tmap_df.peril==peril].risk_id
+                        risk_ids = self.tmap_df[
+                            self.tmap_df.peril==peril].risk_id
                     for risk_id in risk_ids.unique():
                         rms.append(self._riskmodels[risk_id])
                 else:
@@ -660,7 +662,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     # area, number, occupants, residents
                     for lt in self.loss_types:
                         try:
-                            rm.imt_by_lt[lt]
+                            rm.imt_by_lt[lt, peril]
                         except KeyError:
                             key = '%s/%s/%s' % (peril, kinds[0], lt)
                             fname = self.oqparam._risk_files[key]
