@@ -536,10 +536,10 @@ function capitalizeFirstLetter(val) {
             if (data.shakemap_versions_issue) {
                 $select.append(`<option value="error">${data.shakemap_versions_issue}</option>`);
             } else {
-                $select.append('<option value="latest">Use latest</option>');
                 if (data.shakemap_versions.length > 0) {
                     data.shakemap_versions.forEach(function (shakemap_version) {
-                        $select.append(`<option value="${shakemap_version.id}">${shakemap_version.utc_date_time}</option>`);
+                        var usgs_preferred = shakemap_version.id == data.usgs_preferred_version ? " (USGS preferred)" : "";
+                        $select.append(`<option value="${shakemap_version.id}">v${shakemap_version.number}: ${shakemap_version.utc_date_time}${usgs_preferred}</option>`);
                     });
                 } else {
                     $select.append('<option value="">No versions available</option>');
@@ -637,13 +637,55 @@ function capitalizeFirstLetter(val) {
                                setTimer();
                            });
 
+            $('select#site_class').on('change', function() {
+                const site_class = $(this).val();
+                const $input_vs30 = $('input#vs30');
+                if (site_class === 'custom') {
+                    $input_vs30.prop('disabled', false);
+                    $input_vs30.val('');
+                } else {
+                    $input_vs30.prop('disabled', true);
+                    $input_vs30.val($(this).val());
+                }
+            });
+
             $('#asce_version').on('change', function() {
                 const asce_version = $(this).val();
+                const $site_class_select = $('select#site_class');
+                const $input_vs30 = $('input#vs30');
+                $site_class_select.empty();
                 if (asce_version === 'ASCE7-16') {
-                    // NOTE: if vs30 is empty, it is read as 760 and the placeholder is displayed (see below)
-                    $('#vs30').prop('readonly', true).attr('placeholder', 'fixed at 760 m/s').val('');
+                    $site_class_select.append($('<option>', {value: 760, text: 'BC'}));
+                    $input_vs30.val($site_class_select.val());
                 } else if (asce_version === 'ASCE7-22') {
-                    $('#vs30').prop('readonly', false).attr('placeholder', 'm/s');
+                    const items = [
+                        {value: 1500, text: 'A - Hard Rock'},
+                        {value: 1080, text: 'B - Rock' },
+                        {value: 760, text: 'BC' },
+                        {value: 530, text: 'C - Very Dense Soil and Soft Rock' },
+                        {value: 365, text: 'CD' },
+                        {value: 260, text: 'D - Stiff Soil' },
+                        {value: 185, text: 'DE ' },
+                        {value: 150, text: 'E - Soft Clay Soil' },
+                        {value: 'custom', text: 'Specify Vs30'},
+                    ];
+                    const default_site_class = 'BC';
+                    items.forEach(item => {
+                        $site_class_select.append(
+                            $("<option>", {
+                                value: item.value,
+                                text: item.text,
+                                selected: item.text === default_site_class
+                            })
+                        );
+                    });
+                }
+                if ($site_class_select.val() === 'custom') {
+                    $input_vs30.prop('disabled', false);
+                    $input_vs30.val('');
+                } else {
+                    $input_vs30.prop('disabled', true);
+                    $input_vs30.val($site_class_select.val());
                 }
             });
 
@@ -653,7 +695,7 @@ function capitalizeFirstLetter(val) {
                 var formData = {
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
-                    vs30: $("#vs30").val().trim() === '' ? '760' : $("#vs30").val(),
+                    vs30: parseFloat($("input#vs30").val()),
                     siteid: $("#siteid").val(),
                     asce_version: $("#asce_version").val()
                 };
@@ -687,19 +729,20 @@ function capitalizeFirstLetter(val) {
 
             // IMPACT
 
-            set_shakemap_version_selector();
-
-            $.ajax({
-                url:  "/v1/get_impact_form_defaults",
-                method: "GET",
-                dataType: "json",
-                success: function(data) {
-                    impact_form_defaults = data;
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error loading impact_from_defaults:", error);
-                }
-            });
+            if (window.application_mode === 'ARISTOTLE') {
+                set_shakemap_version_selector();
+                $.ajax({
+                    url:  "/v1/get_impact_form_defaults",
+                    method: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        impact_form_defaults = data;
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error loading impact_from_defaults:", error);
+                    }
+                });
+            }
 
             function toggleRunCalcBtnState() {
                 var lonValue = $('#lon').val();
@@ -810,6 +853,8 @@ function capitalizeFirstLetter(val) {
                     encode: true,
                 }).done(function (data) {
                     // console.log(data);
+                    $('.impact_time_grp').css('display', 'inline-block');
+                    $('div.impact_time_grp').css('display', 'block');
                     $('#lon').val(data.lon);
                     toggleRunCalcBtnState();
                     $('#lat').val(data.lat);
@@ -941,6 +986,7 @@ function capitalizeFirstLetter(val) {
                 var formData = new FormData();
                 const usgs_id = $.trim($("#usgs_id").val());
                 formData.append('usgs_id', usgs_id);
+                formData.append('shakemap_version', $("#shakemap_version").val());
                 $.ajax({
                     type: "POST",
                     url: gem_oq_server_url + "/v1/impact_get_stations_from_usgs",

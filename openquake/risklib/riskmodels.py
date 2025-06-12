@@ -66,7 +66,8 @@ def get_risk_files(inputs):
             rfs['groundshaking/fragility/structural'] = inputs[
                 'structural_fragility'] = inputs[key]
             del inputs['fragility']
-        elif key.endswith(('_fragility', '_vulnerability', '_vulnerability_retrofitted')):
+        elif key.endswith(('_fragility', '_vulnerability',
+                           '_vulnerability_retrofitted')):
             match = RISK_TYPE_REGEX.match(key)
             if match:
                 kind = match.group(2)  # fragility or vulnerability
@@ -240,6 +241,18 @@ class PerilDict(dict):
             return dict.__getitem__(self, ('groundshaking', lt))
 
 
+def corresponds(col, peril, imt):
+    """
+    True if the column in gmf_data corresponds to the peril for the given imt
+    """
+    if col.startswith('HazusDeformation'):
+        # TODO: this looks wrong, it should be liquefaction
+        return peril == 'groundshaking' and col.endswith(imt)
+    elif peril == 'groundshaking':
+        return col == imt
+    return peril in col.lower() and col.endswith(imt)
+
+
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -270,10 +283,11 @@ class RiskModel(object):
                     vf.retro.mean_loss_ratios_with_steps(steps))
 
         # set imt_by_lt
-        self.imt_by_lt = {}  # dictionary loss_type -> imt
-        for lt, rf in risk_functions['groundshaking'].items():
-            if rf.kind in ('vulnerability', 'fragility'):
-                self.imt_by_lt[lt] = rf.imt
+        self.imt_by_lt = {}  # dictionary loss_type, peril -> imt
+        for peril in risk_functions:
+            for lt, rf in risk_functions[peril].items():
+                if rf.kind in ('vulnerability', 'fragility'):
+                    self.imt_by_lt[lt, peril] = rf.imt
 
     @property
     def loss_types(self):
@@ -373,7 +387,8 @@ class RiskModel(object):
             for i, asset in enumerate(assets.to_records())]
         return list(zip(eal_original, eal_retrofitted, bcr_results))
 
-    def classical_damage(self, peril, loss_type, assets, hazard_curve, rng=None):
+    def classical_damage(
+            self, peril, loss_type, assets, hazard_curve, rng=None):
         """
         :param loss_type: the loss type
         :param assets: a list of N assets of the same taxonomy
@@ -398,7 +413,7 @@ class RiskModel(object):
         """
         :returns: a DataFrame with columns eid, eid, loss
         """
-        imt = self.imt_by_lt[loss_type]
+        imt = self.imt_by_lt[loss_type, peril]
         sid = assets['site_id']
         if loss_type in 'occupants injured':
             val = assets['occupants_%s' % self.time_event].to_numpy()
@@ -408,8 +423,9 @@ class RiskModel(object):
             val = assets['value-' + loss_type].to_numpy()
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[peril][loss_type]
-        return vf(asset_df, gmf_df, imt, rndgen,
-                  self.minimum_asset_loss.get(loss_type, 0.))
+        df = vf(asset_df, gmf_df, imt, rndgen,
+                self.minimum_asset_loss.get(loss_type, 0.))
+        return df
 
     scenario = ebrisk = scenario_risk = event_based_risk
 
@@ -424,13 +440,13 @@ class RiskModel(object):
         where N is the number of points, E the number of events
         and D the number of damage states.
         """
-        imt = self.imt_by_lt[loss_type]
+        imt = self.imt_by_lt[loss_type, peril]
         for col in gmf_df.columns:
-            if col.endswith(imt):
+            if corresponds(col, peril, imt):
                 gmvs = gmf_df[col].to_numpy()
                 break
         else:
-            raise NameError(f'Missing {imt} in gmf_data')
+            raise NameError(f'Missing {peril}:{imt} in gmf_data')
         ffs = self.risk_functions[peril][loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
@@ -649,7 +665,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     if len(self.tmap_df.peril.unique()) == 1:
                         risk_ids = self.tmap_df.risk_id
                     else:
-                        risk_ids = self.tmap_df[self.tmap_df.peril==peril].risk_id
+                        risk_ids = self.tmap_df[
+                            self.tmap_df.peril==peril].risk_id
                     for risk_id in risk_ids.unique():
                         rms.append(self._riskmodels[risk_id])
                 else:
@@ -659,7 +676,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     # area, number, occupants, residents
                     for lt in self.loss_types:
                         try:
-                            rm.imt_by_lt[lt]
+                            rm.imt_by_lt[lt, peril]
                         except KeyError:
                             key = '%s/%s/%s' % (peril, kinds[0], lt)
                             fname = self.oqparam._risk_files[key]

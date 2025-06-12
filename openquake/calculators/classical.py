@@ -31,7 +31,7 @@ from openquake.baselib import parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, groupby, humansize, block_splitter)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.map_array import (
@@ -69,8 +69,7 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         try:
             h5.create_df(
                 '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
-            hdf5.create(
-                h5, '_rates/slice_by_idx', getters.slice_dt, fillvalue=None)
+            hdf5.create(h5, '_rates/slice_by_idx', getters.slice_dt)
         except ValueError:  # already created
             offset = len(h5['_rates/sid'])
         else:
@@ -166,11 +165,12 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         for srcs in groupby(sources, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
             result['rmap'].gid = cmaker.gid
+            result['rmap'].wei = cmaker.wei
             yield result
         return
 
     for tileno, tileget in enumerate(tilegetters):
-        result = hazclassical(sources, tileget(sitecol), cmaker)
+        result = hazclassical(sources, tileget(sitecol, cmaker.ilabel), cmaker)
         if tileno:
             # source_data has keys src_id, grp_id, nsites, esites, nrupts,
             # weight, ctimes, taskno
@@ -195,6 +195,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         elif rmap.size_mb:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
+            result['rmap'].wei = cmaker.wei
         yield result
 
 
@@ -207,7 +208,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
         arr = dstore.getitem('_csm')[cmaker.grp_id]
         sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
-    result = hazclassical(sources, tilegetter(sitecol), cmaker)
+    result = hazclassical(sources, tilegetter(sitecol, cmaker.ilabel), cmaker)
     rmap = result.pop('rmap').remove_zeros()
     if config.directory.custom_tmp:
         rates = rmap.to_array(cmaker.gid)
@@ -219,6 +220,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
 
 # for instance for New Zealand G~1000 while R[full_enum]~1_000_000
 # i.e. passing the gweights reduces the data transfer by 1000 times
+# NB: fast_mean is used only if there are no site_labels
 def fast_mean(pgetter, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
@@ -301,10 +303,13 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc[:, r].reshape(M, L1))
             if hstats:
+                if len(pgetter.ilabels):
+                    weights = pgetter.weights[pgetter.ilabels[sid]]
+                else:
+                    weights = pgetter.weights[0]
                 for s, (statname, stat) in enumerate(hstats.items()):
                     sc = getters.build_stat_curve(
-                        pc, imtls, stat, pgetter.weights, wget,
-                        pgetter.use_rates)
+                        pc, imtls, stat, weights, wget, pgetter.use_rates)
                     arr = sc.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
@@ -341,47 +346,28 @@ def make_hmap_png(hmap, lons, lats):
     return dict(img=Image.open(bio), m=hmap['m'], p=hmap['p'])
 
 
-class Hazard:
+# used in in disagg_by_src
+def get_rates(pmap, grp_id, M, itime):
     """
-    Helper class for storing the rates
+    :param pmap: a MapArray
+    :returns: an array of rates of shape (N, M, L1)
     """
-    def __init__(self, dstore, srcidx, gids):
-        self.datastore = dstore
-        oq = dstore['oqparam']
-        self.itime = oq.investigation_time
-        self.weig = dstore['gweights'][:]
-        self.imtls = oq.imtls
-        self.sids = dstore['sitecol/sids'][:]
-        self.srcidx = srcidx
-        self.gids = gids
-        self.N = len(dstore['sitecol/sids'])
-        self.M = len(oq.imtls)
-        self.L = oq.imtls.size
-        self.L1 = self.L // self.M
-        self.acc = AccumDict(accum={})
+    rates = pmap.array @ pmap.wei / itime
+    return rates.reshape((len(rates), M, -1))
 
-    # used in in disagg_by_src
-    def get_rates(self, pmap, grp_id):
-        """
-        :param pmap: a MapArray
-        :returns: an array of rates of shape (N, M, L1)
-        """
-        gids = self.gids[grp_id]
-        rates = pmap.array @ self.weig[gids] / self.itime
-        return rates.reshape((self.N, self.M, self.L1))
 
-    def store_mean_rates_by_src(self, dic):
-        """
-        Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
-        """
-        mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
-        for key, rates in dic.items():
-            if isinstance(key, str):
-                # in case of mean_rates_by_src key is a source ID
-                idx = self.srcidx[valid.corename(key)]
-                mean_rates_by_src[..., idx] += rates
-        self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
-        return mean_rates_by_src
+def store_mean_rates_by_src(dstore, srcidx, dic):
+    """
+    Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
+    """
+    mean_rates_by_src = dstore['mean_rates_by_src/array'][()]
+    for key, rates in dic.items():
+        if isinstance(key, str):
+            # in case of mean_rates_by_src key is a source ID
+            idx = srcidx[valid.corename(key)]
+            mean_rates_by_src[..., idx] += rates
+    dstore['mean_rates_by_src/array'][:] = mean_rates_by_src
+    return mean_rates_by_src
 
 
 @base.calculators.add('classical')
@@ -422,7 +408,9 @@ class ClassicalCalculator(base.HazardCalculator):
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
             # accumulate the rates for the given source
-            acc[source_id] += self.haz.get_rates(rmap, grp_id)
+            oq = self.oqparam
+            M = len(oq.imtls)
+            acc[source_id] += get_rates(rmap, grp_id, M, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
             pass
@@ -441,9 +429,10 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
-        for cm in self.cmakers:
-            params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
-            params.update(cm.REQUIRES_DISTANCES)
+        for label, cmakers in self.cmakers.items():
+            for cm in cmakers:
+                params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
+                params.update(cm.REQUIRES_DISTANCES)
         if self.few_sites:
             descr = []  # (param, dt)
             for param in sorted(params):
@@ -466,13 +455,22 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def init_poes(self):
         oq = self.oqparam
-        self.cmakers = read_cmakers(self.datastore, self.csm)
+        full_lt_by_label = read_full_lt_by_label(self.datastore)
+        trt_smrs = self.datastore['trt_smrs'][:]
+        self.cmakers = {label: get_cmakers(trt_smrs, full_lt, oq)
+                        for label, full_lt in full_lt_by_label.items()}
+        if 'delta_rates' in self.datastore:  # aftershock
+            drgetter = getters.DeltaRatesGetter(self.datastore)
+            for cmakers in self.cmakers.values():
+                for cmaker in cmakers:
+                    cmaker.deltagetter = drgetter
+
         parent = self.datastore.parent
         if parent:
             # tested in case_43
-            self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
+            self.req_gb, self.max_weight, self.trt_rlzs = \
                 preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol, self.cmakers))
+                    self.datastore, self.csm, self.sitecol, self.cmakers)
 
         self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -531,10 +529,10 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.fastmean:
             logging.info('Will use the fast_mean algorithm')
         if not hasattr(self, 'trt_rlzs'):
-            self.max_gb, self.trt_rlzs, self.gids = getters.get_pmaps_gb(
+            self.max_gb, self.trt_rlzs = getters.get_pmaps_gb(
                 self.datastore, self.full_lt)
-        srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
-        self.haz = Hazard(self.datastore, srcidx, self.gids)
+        self.srcidx = {
+            name: i for i, name in enumerate(self.csm.get_basenames())}
         rlzs = self.R == 1 or oq.individual_rlzs
         if not rlzs and not oq.hazard_stats():
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
@@ -560,6 +558,13 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _pre_execute(self):
         oq = self.oqparam
+        if 'ilabel' in self.sitecol.array.dtype.names and not oq.site_labels:
+            logging.warning('The site model has a field `ilabel` but it will '
+                            'be ignored since site_labels is missing in %s',
+                            oq.inputs['job_ini'])
+        if oq.disagg_by_src and oq.site_labels:
+            assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
+                'disagg_by_src not supported on splittable site collection'
         sgs = self.datastore['source_groups']
         self.tiling = sgs.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
@@ -598,7 +603,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        gids = get_heavy_gids(sgs, self.cmakers)
+        gids = get_heavy_gids(sgs, self.cmakers['Default'])
         self.rmap = RateMap(self.sitecol.sids, L, gids)
 
         self.datastore.swmr_on()  # must come before the Starmap
@@ -658,7 +663,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 _store(rates, self.num_chunks, self.datastore)
         del self.rmap
         if oq.disagg_by_src:
-            mrs = self.haz.store_mean_rates_by_src(acc)
+            mrs = store_mean_rates_by_src(self.datastore, self.srcidx, acc)
             if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
 
@@ -823,7 +828,8 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # check numerical stability of the hmaps around the poes
             if self.N <= oq.max_sites_disagg and not self.amplifier:
-                mean_hcurves = self.datastore.sel('hcurves-stats', stat='mean')[:, 0]
+                mean_hcurves = self.datastore.sel(
+                    'hcurves-stats', stat='mean')[:, 0]
                 check_hmaps(mean_hcurves, oq.imtls, oq.poes)
 
     def plot_hmaps(self):

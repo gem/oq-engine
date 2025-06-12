@@ -25,7 +25,7 @@ import h5py
 from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.point import grid_point_sources
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -162,6 +162,8 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         N = 0
     else:
         N = len(sitecol)
+    if isinstance(cmakers, dict):
+        cmakers = cmakers['Default']
     oq = cmakers[0].oq
     fac = oq.imtls.size * N * 4 / 1024**3
     max_weight = csm.get_max_weight(oq)
@@ -178,7 +180,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # determine light groups and tiling
     light, = numpy.where(data['blocks'] == 1)
-    req_gb, trt_rlzs, gids = getters.get_pmaps_gb(dstore, csm.full_lt)
+    req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
     mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
     if len(light):
         logging.info('mem_gb = %.2f with %d light groups out of %d',
@@ -196,11 +198,11 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         tiling = oq.tiling
 
     # store source_groups
-    dstore.create_dset('source_groups', data, fillvalue=None,
+    dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
-    return req_gb, max_weight, trt_rlzs, gids
+    return req_gb, max_weight, trt_rlzs
 
 
 @base.calculators.add('preclassical')
@@ -234,8 +236,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         logging.info('Building cmakers')
-        self.cmakers = read_cmakers(self.datastore, csm)
         trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
+        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
@@ -243,10 +245,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         L = oq.imtls.size
         Gfull = self.full_lt.gfull(trt_smrs)
-        gweights = numpy.concatenate([cm.wei for cm in self.cmakers])
-        self.datastore['gweights'] = gweights
-
-        Gt = len(gweights)
+        Gt = sum(len(cm.gsims) for cm in self.cmakers)
         extra = f'<{Gfull}' if Gt < Gfull else ''
         if sites is not None:
             nbytes = 4 * len(self.sitecol) * L * Gt
@@ -414,9 +413,8 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # save 'source_groups'
         if self.sitecol is not None:
-            self.req_gb, self.max_weight, self.trt_rlzs, self.gids = (
-                store_tiles(self.datastore, self.csm,
-                            self.sitecol, self.cmakers))
+            self.req_gb, self.max_weight, self.trt_rlzs = store_tiles(
+                self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims
         toml = []

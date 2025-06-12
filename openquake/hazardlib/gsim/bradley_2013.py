@@ -35,6 +35,7 @@ import shapely
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
+from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 
@@ -47,7 +48,11 @@ cbd_polygon = shapely.geometry.Polygon(
 
 
 def _get_basin_term(C, ctx, region=None):
-    z1pt0 = ctx.z1pt0
+    z1pt0 = ctx.z1pt0.copy()
+    # Use GMM's vs30 to z1pt0 for non-measured values
+    mask = z1pt0 == -999
+    z1pt0[mask] = _get_z1_ref(ctx.vs30[mask]) # pp.1805 states CY08 vs30 vs z2pt5
+
     fb1 = C['phi5'] * (1.0 - 1.0 / np.cosh(
         C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
     fb2 = C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))

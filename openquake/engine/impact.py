@@ -66,7 +66,7 @@ def main_cmd(usgs_id, rupture_file=None,
              maximum_distance_stations='',
              msr='WC1994', approach='use_shakemap_from_usgs',
              loglevel='warn',
-             userlevel=2):
+             userlevel=1):  # with userlevel=1 use shakemap, else rupture
     """
     This script is meant to be called from the command-line
     """
@@ -92,7 +92,8 @@ def main_cmd(usgs_id, rupture_file=None,
         return
 
     # in  testing mode create new job contexts
-    [job] = engine.create_jobs([oqparams], loglevel, None, getpass.getuser(), None)
+    [job] = engine.create_jobs([oqparams], loglevel, None,
+                               getpass.getuser(), None)
     with job:
         # store performance info about the download/validate phase
         monitor.log_data()

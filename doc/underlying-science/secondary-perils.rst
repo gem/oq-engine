@@ -445,7 +445,8 @@ the effective friction angle with typical values ranging from :math:`30^\circ` t
 Note that the units of the input parameters reported in this document corresponds to the format required by the Engine 
 to produce correct results. The first and second term of the the equation corresponds to the cohesive and 
 frictional components of the strength, while the third component accounts for the strength reduction due to pore 
-pressure.
+pressure. The :math:`slope` in the site model must be provided in :math:`m/m` (rise/run). The code will internally convert this value to degrees, which are the units 
+originally used by the landslide model.
 
 A variety of regression equations can be used to estimate the earthquake-induced displacements of landslides within the engine. Note that
 some of the equations below may return displacements in cm (:math:`Disp_{cm}`); however, OQ  always converts them to m (:math:`Disp`).
@@ -627,6 +628,8 @@ Slope stability is further controlled by the composite strength of the soil-vege
 available at 300-m resolution and separated into 20 classes has been used. More details on this database is available in 
 `Arino et al. (2012) <https://doi.pangaea.de/10.1594/PANGAEA.787668>`_. Finally, the Compound Topographic Index, :math:`CTI`, 
 has been used to characterise the wetness of the material. 
+Note: The :math:`slope` in the site model must be provided in :math:`m/m` (rise/run). The code will internally convert this 
+value to degrees, which are the units originally used by the landslide model.
 
 Explanatory variable :math:`X` is calculated as:
 
@@ -664,6 +667,8 @@ and compound topographic index at :math:`CTI = 19`. To exclude high probabilitie
 the combination of other predictor variables, areas with slopes less than :math:`2^\circ` are excluded.  Zero probability is 
 heuristically assigned if :math:`PGA < 0.02 \, \text{g}`. The model also adopts the USGS recommendation for modifying the 
 regression coefficient for unconsolidated sediments. The new proposed value is set to :math:`-1.36`. 
+Note: The :math:`slope` in the site model must be provided in :math:`m/m` (rise/run). The code will internally convert this 
+value to degrees, which are the units originally used by the landslide model.
 
 
 Reference

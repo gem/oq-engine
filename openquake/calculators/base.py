@@ -42,6 +42,7 @@ from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor, idx_start_stop
 from openquake.hazardlib import (
     InvalidFile, geo, site, stats, logictree, source_reader)
+from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -559,6 +560,10 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
+                if oq.site_labels:
+                    dic = GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
+                    for label in list(dic)[1:]:
+                        self.datastore['gsim_lt' + label] = dic[label]
                 oq.mags_by_trt = csm.get_mags_by_trt(oq.maximum_distance)
                 assert oq.mags_by_trt, 'Filtered out all magnitudes!'
                 for trt in oq.mags_by_trt:
@@ -670,7 +675,7 @@ class HazardCalculator(BaseCalculator):
             if oq.impact and 'mmi' in oq.inputs:
                 logging.info('Computing MMI-aggregated values')
                 mmi_df = self.assetcol.get_mmi_values(
-                    oq.aggregate_by, oq.inputs['mmi'])
+                    oq.aggregate_by, oq.inputs['mmi'], oq.inputs['exposure'][0])
                 if len(mmi_df):
                     self.datastore.hdf5.create_df('mmi_tags', mmi_df)
 
@@ -1008,7 +1013,8 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
-                if oq.prefer_global_site_params:
+                if oq.prefer_global_site_params and not numpy.isnan(
+                        oq.reference_vs30_value):
                     self.sitecol.set_global_params(oq)
                 else:
                     # use the site model parameters
@@ -1167,7 +1173,8 @@ class RiskCalculator(HazardCalculator):
         if len(self.crmodel.tmap_df) == 0:
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxidx = {taxo: i for i, taxo in enumerate(taxonomies, 1)}
-            self.crmodel.tmap_df = readinput.taxonomy_mapping(self.oqparam, taxidx)
+            self.crmodel.tmap_df = readinput.taxonomy_mapping(
+                self.oqparam, taxidx)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent

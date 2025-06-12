@@ -433,7 +433,7 @@ REGION_SET = ["USNZ", "JP", "TW", "CH", "WA", "TRGR", "WMT", "NWE"]
 
 def _get_basin_term(C, ctx, region=None):
     """
-    Get basin amplification term
+    Get basin amplification term.
     """
     return C["b2"] * np.log(ctx.z1pt0)
 
@@ -480,12 +480,19 @@ class SandikkayaDinsever2018(GMPE):
     "A Site Amplification Model for Crustal Earthquakes", Geosciences, 264(8),
     doi:10.3390/geosciences8070264
 
-    Note that the nonlinear amplification model has its own standard deviation,
+    NOTE: The nonlinear amplification model has its own standard deviation,
     which should be applied with the phi0 model of the original GMPE. This
     is not defined for all GMPEs in the literature, nor is the retrieval
     of it consistently applied in OpenQuake. Therefore we allow the user
     to define manually the input phi0 model, and if this is not possible a
     "default" phi0 is taken by reducing the original GMPE's phi by 15 %.
+
+    NOTE: Unknown (-999) z1pt0 values (which can be estimated from an
+    underlying GSIM's vs30 to z1pt0 relationship when computing a basin
+    term) are not permitted in the site model used with this amplification
+    model to avoid inconsistency between the z1pt0 used here inside the
+    ``_get_basin_term`` function and the z1pt0 (potentially) estimated by
+    the underlying GSIM to compute the mean ground-motion on bedrock.
 
     The amplification model is compatible only with GMPEs with separate
     inter- and intra-event standard deviation, otherwise an error is raised.
@@ -573,6 +580,11 @@ class SandikkayaDinsever2018(GMPE):
         """
         Returns the mean and standard deviations
         """
+        # Check no unknown z1pt0 in the site model
+        if any(ctx.z1pt0 == -999):
+            raise ValueError("z1pt0 must be provided for each site in the " \
+            "site model (i.e. no -999 z1pt0 values) used with the " \
+            "SandikkayaDinsever2018 GSIM")
         ctx_r = copy.copy(ctx)
         ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
         rock = contexts.get_mean_stds(self.gsim, ctx_r, imts)

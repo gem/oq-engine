@@ -1,3 +1,69 @@
+  [Michele Simionato]
+  * Fixed the multi-peril implementation (imt_by_lt)
+  * Raised an error for risk IMTs not covered by the secondary IMTs
+  * Optimized build_global_exposure
+
+  [Michele Simionato, Paolo Tormene]
+  * OQ-Impact: fixed aggregation by ID_2, which was using indices instead
+    of strings
+
+  [Marco Pagani]
+  * Storing also `tau` in the mean spectrum calculator
+
+  [Christopher Brooks]
+  * Added ability to specify z1pt0 and z2pt5 as -999 within site model
+    to inform (basin term considering) GMMs to use their own vs30 to
+    z1pt0 or z2pt5 relationship to estimate these site parameters, in
+    effect preventing additional adjustment to GMM basin terms based
+    on unknown site information. QA tests (classical case_89) + unit
+    tests (`utils_infer_basin_params_test.py`) added
+  * Added validation checks for core site params (lon, lat, vs30, z1pt0
+    and z2pt5) when building the site collection within a calculation
+
+  [Paolo Tormene]
+  * In the API endpoint listing the outputs for a job, the first available
+    export_type is specified in each output url
+
+  [Michele Simionato]
+  * Added a new uncertainty `abMaxMagAbsolute` to the logic tree
+  * Internal: refactored lt.Branch, lt.BranchSet and lt.CompositeLogicTree
+  * Avoided out of memory in calculations starting from the global SES
+
+  [Lana Todorovic]
+  * Updated units of slope (in m/m) in site model.
+
+  [Michele Simionato]
+  * Improved the validation of area source polygons
+  * Internal: added method `CompositeLogicTree.apply_all`
+  * Fixed downloading of uncertainty.xml in OQImpact calculations
+
+  [Michele Simionato, Paolo Tormene]
+  * Added a route /v1/calc/XXX/job_zip and a button to download the archive
+    from the WebUI, visible only in OQImpact for level 2 users
+  * Fixed an error in `oq plot examples`
+
+  [Baran Güryuva, Christopher Brooks]
+  * Implemented the EMME24 backbone GMC for crustal
+    earthquakes (emme24.py)
+
+  [Marco Pagani, Michele Simionato]
+  * Added uncertainties for area geometry and seismogenic depths
+
+  [Michele Simionato]
+  * Added a check on duplicate branches in the source model logic tree
+  * Internal: added methods `CompositeLogicTree.to_node` and
+    `CompositeLogicTree.to_nrml`
+
+  [Paolo Tormene, Michele Simionato]
+  * Added extractor for 'damages-stats'
+
+  [Kendra Johnson]
+  * Updated the mosaic geometries for AELO year 4
+
+  [Matteo Nastasi]
+  * Allow free mapping between standlone apps and their url path prefix
+    (regardless of their name)
+
   [Claudia Mascandola]
   * Added GMPEs of ambraseys_1996 and sabetta_pugliese_1996
 
@@ -76,6 +142,8 @@
 
   [Marco Pagani, Valeria Cascone]
   * Added an get_width and get_length methods to Strasser et al. (2010) MSR
+  * Added methods get_length and get_width to the Thingbaijam et al. scaling
+    relationship
   * Fixed a bug in the Thingbaijam et al. (2017) MSR
 
   [Michele Simionato]
@@ -3535,7 +3603,7 @@ python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
   [Daniele Viganò]
   * `celery-status` script converted into `oq celery status` command
   * Removed Django < 1.10 backward compatibility
-  * Updated Python dependices (numpy 1.14, scipy 1.0.1,
+  * Updated Python dependencies (numpy 1.14, scipy 1.0.1,
     Django 1.10+, Celery 4+)
 
   [Michele Simionato]

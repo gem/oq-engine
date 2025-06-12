@@ -149,6 +149,9 @@ def read_hc_id(hdf5):
     return oq.hazard_calculation_id
 
 
+# NB: the way to store utf8-strings is
+# dstore.create_dset(name, hdf5.vstr, len(strings))[:] = strings
+
 class DataStore(collections.abc.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
@@ -296,7 +299,7 @@ class DataStore(collections.abc.MutableMapping):
         return dict(dset.attrs)
 
     def create_dset(self, key, dtype, shape=(None,), compression=None,
-                    fillvalue=0, attrs=None):
+                    fillvalue=None, attrs=None):
         """
         Create a one-dimensional HDF5 dataset.
 
@@ -313,6 +316,8 @@ class DataStore(collections.abc.MutableMapping):
                 compression, fillvalue, attrs)
             dset[:] = dtype
             return dset
+        if isinstance(shape, int):
+            shape = shape,
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 

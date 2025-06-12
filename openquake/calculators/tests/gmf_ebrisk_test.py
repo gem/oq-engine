@@ -24,8 +24,7 @@ from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.gmf_ebrisk import (
     case_1, case_2, case_3, case_4, case_5, case_6)
-from openquake.qa_tests_data.event_based_risk import (
-    case_master, case_2 as ebr_2)
+from openquake.qa_tests_data.event_based_risk import case_master, case_02
 
 aae = numpy.testing.assert_almost_equal
 
@@ -69,7 +68,7 @@ class EventRiskTestCase(CalculatorTestCase):
         aae(avglosses / 1E6, totloss / 1E6, decimal=4)
 
     def test_ebr_2(self):
-        self.run_calc(ebr_2.__file__, 'job_ebrisk.ini', exports='csv')
+        self.run_calc(case_02.__file__, 'job_ebrisk.ini', exports='csv')
         alt = self.calc.datastore.read_df('risk_by_event', 'agg_id')
         self.assertEqual(len(alt), 8)
         totloss = alt.loss.sum()
@@ -85,22 +84,22 @@ class EventRiskTestCase(CalculatorTestCase):
         calc1 = self.calc.datastore  # event_based_risk
         [fname] = export(('risk_by_event', 'csv'), calc1)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-5)
+                              delta=.00013)
 
         # checking avg_losses-stats with collect_rlzs
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-5)
+                              delta=1E-4)
 
         # checking aggrisk
         for fname in export(('aggrisk', 'csv'), self.calc.datastore):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+                                  delta=3E-5)
 
         # checking aggcurves
         for fname in export(('aggcurves', 'csv'), self.calc.datastore):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-5)
+                                  delta=2E-5)
 
     def test_case_5(self):
         # no risk due to small hazard

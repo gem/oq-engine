@@ -26,6 +26,7 @@ urlpatterns = [
     re_path(r'^(\d+)/status$', views.calc_list),
     re_path(r'^(\d+)$', views.calc),
     re_path(r'^(\d+)/datastore$', views.calc_datastore),
+    re_path(r'^(\d+)/job_zip$', views.calc_zip),
     re_path(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
     re_path(r'^(\d+)/results$', views.calc_results, name="results"),
     re_path(r'^(\d+)/download_png/([-/_\.\(\)\w]+)$', views.download_png),

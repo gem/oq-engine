@@ -159,6 +159,7 @@ class HazusDeformation(SecondaryPeril):
     """
     Computes PGDMax or PGDGeomMean from PGA
     """
+    outputs = ["PGDMax"]
 
     def __init__(
         self,
@@ -632,7 +633,8 @@ class Jibson2007ALandslides(SecondaryPeril):
 
     outputs = ["Disp"]
 
-    def __init__(self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
+    def __init__(
+            self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
         self.c1 = c1
         self.c2 = c2
         self.c3 = c3
@@ -1012,8 +1014,8 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
 
 class JibsonEtAl2000Landslides(SecondaryPeril):
     '''
-    Computes earthquake-induced displacements and related probability according to
-    Jibson et al. (2000) as function of arias intensity.
+    Computes earthquake-induced displacements and related probability according
+    to Jibson et al. (2000) as function of arias intensity.
     '''
     outputs = ["Disp", "DispProb"]
 
@@ -1211,7 +1213,7 @@ def wkt2peril(fname, name, sitecol):
         if not text.startswith('"'):
             raise ValueError('The geometry must be quoted in %s : "%s..."' %
                              (fname, text.split('(')[0]))
-        geom = wkt.loads(text.strip('"'))  # strip quotes
+        geom = wkt.loads(text.strip('"\n'))  # strip quotes and newlines
     peril = numpy.zeros(len(sitecol), float)
     for sid, lon, lat in sitecol.complete.array[['sids', 'lon', 'lat']]:
         peril[sid] = geometry.Point(lon, lat).within(geom)

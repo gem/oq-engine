@@ -28,16 +28,12 @@ def critical_accel(
         Static Factor of Safety 
 
     :param slope:
-        slope angle in degrees.
+        slope angle in m/m.
 
     :returns: 
         crit_accel: critical acceleration in g units
     """    
-
-    crit_accel = (factor_of_safety - 1) * np.sin(np.radians(slope)) * g
-    print(factor_of_safety)
-    print(crit_accel)
-    print("crit_accel")
+    crit_accel = (factor_of_safety - 1) * np.sin(np.arctan(slope))
     if np.isscalar(crit_accel):
         return max([crit_accel_threshold, crit_accel])
     else:
@@ -102,7 +98,8 @@ def jibson_2007_model_a(
             accel_ratio == accel_ratio_threshold
     else:
         accel_ratio[accel_ratio > 1.0] = 1.0
-        accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
+        accel_ratio[accel_ratio <= accel_ratio_threshold] = \
+            accel_ratio_threshold
 
     pow_1 = (1 - accel_ratio) ** c2
     pow_2 = accel_ratio**c3

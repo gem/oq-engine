@@ -8,9 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "00 19 * * *"
-  push:
-    branches: [windows-all-tests]
+    - cron: "0 */12 * * *" # At minute 0 past every 12th hour
 
 jobs:
   install_oq:
@@ -19,22 +17,23 @@ jobs:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR: ${{ github.event.repository.default_branch }}
       GITHUB_REF: ${{ github.ref }}
-      GITHUB_HD_REF: ${{ github.head_ref }}
-      GITHUB_BS_REF: ${{ github.base_ref }}
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      GITHUB_BASE_REF: ${{ github.base_ref }}
       BRANCH: ${{ github.event.inputs.git-ref }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     strategy:
-      fail-fast: false
       matrix:
-        os: [windows-2022, windows-2019]
-        python-version: ["3.11", "3.12"]
-
+        os: [windows-2022, windows-2025]
+        python-version: ["3.10", "3.11", "3.12"]
     steps:
       - name: Check out the codebase.
         uses: actions/checkout@v4
       # This Checkout use git-ref keyword from dispatch
-      - name: Clone Repository (Master)
+      - name: Clone Repository (Master or PR)
         uses: actions/checkout@v4
         if: github.event.inputs.git-ref == ''
+        with:
+          ref: ${{ github.head_ref }}
       - name: Clone Repository (Custom Ref)
         uses: actions/checkout@v4
         if: github.event.inputs.git-ref != ''
@@ -48,6 +47,7 @@ jobs:
       - name: Display Python version and check OS, after install OQ and test
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
         run: |
           $need_to_run = 0
           @"
@@ -88,12 +88,44 @@ jobs:
             else
             {
               Write-Host "Install on user mode on scheduled task"
-              Write-Host "python install.py devel "
-              python install.py devel
+              Write-Host "python install.py devel --version master"
+              python install.py devel --version master
             }
             C:\Users\runneradmin\openquake\Scripts\activate.ps1
             python -m pip install pytest pyshp flake8
           }
+      - name: Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
+        if: always() && env.to_run == 0
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          cd D:\a\oq-engine\oq-engine\openquake
+          pytest baselib/tests/pyproj_wheel_test.py
+          pytest hazardlib/tests/pyproj_wheel_test.py
+      - name: Run oq calcs, webui console and curl for the standalone tools
+        timeout-minutes: 5
+        if: always() && env.to_run == 0
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq.exe --version
+          ping 127.0.0.1 -n 3 > null
+          Start-Job -ScriptBlock{& oq.exe webui start 127.0.0.1:8800 -s 2>&1 > "$env:LOCALAPPDATA\Temp\webui.log" }
+          ping 127.0.0.1 -n 6 > null
+          do {
+             Write-Host "waiting..."
+             sleep 2
+          } until(Test-NetConnection 127.0.0.1 -Port 8800 | ? { $_.TcpTestSucceeded } )
+          Get-Job
+          Write-Host "Test webui and tools Web pages"
+          ping 127.0.0.1 -n 6 > null
+          Write-Host "curl.exe -I --fail -G http://127.0.0.1:8800/engine"
+          curl.exe -I --fail -G http://127.0.0.1:8800/engine
+          ping 127.0.0.1 -n 6 > null
+          Write-Host "curl.exe -X HEAD -I --fail http://127.0.0.1:8800/ipt/"
+          curl.exe -X HEAD -I --fail http://127.0.0.1:8800/ipt/
+          ping 127.0.0.1 -n 6 > null
+          Write-Host "curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/"
+          curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/
+          ping 127.0.0.1 -n 6 > null
       - name: Run tests for calculators
         if: always() && env.to_run == 0
         run: |
@@ -138,7 +170,7 @@ jobs:
           pytest -v openquake\server\tests\test_read_only_mode.py
 
       - name: Run all demos
-        if: env.to_run == 0
+        if: always() && env.to_run == 0
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version

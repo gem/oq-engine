@@ -520,6 +520,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
             sm = get_poor_site_model(fname)
 
     sm_fieldsets[fname] = set(sm.dtype.names)
+
     # make sure site_id starts from 0, if given
     if 'site_id' in sm.dtype.names:
         if (sm['site_id'] != numpy.arange(len(sm))).any():
@@ -534,17 +535,36 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
         raise InvalidFile(
             'Found duplicate sites %s in %s' % (dupl, fname))
 
-    # used global parameters is local ones are missing
+    # used global parameters if local ones are missing
     params = sorted(set(sm.dtype.names) | set(oqparam.req_site_params))
     z = numpy.zeros(
         len(sm), [(p, site.site_param_dt[p]) for p in params])
-    for name in z.dtype.names:
-        try:
-            z[name] = sm[name]
-        except ValueError:  # missing, use the global parameter
+    for name in z.dtype.names:    
+        if name in sm.dtype.names:
+            vals = sm[name]
+            # Get param from site model and if "core"
+            # then validate the associated values
+            if name in ['lon', 'lat']:
+                coos = ','.join(str(x) for x in vals)
+                if name == "lat":
+                    z[name] = valid.latitudes(coos)
+                else:
+                    z[name] = valid.longitudes(coos)
+            elif name in ["vs30", "z1pt0", "z2pt5"]:
+                pars = ' '.join(str(x) for x in vals)
+                if name == 'vs30':
+                    z[name] = valid.positivefloats(pars)
+                else:
+                    z[name] = valid.positivefloatsorsentinels(pars)
+            else:
+                z[name] = vals # None-core site parameter
+
+        else:
+            # If missing use the global parameter
             if name != 'backarc':  # backarc has default zero
                 # exercised in the test classical/case_28_bis
                 z[name] = check_site_param(oqparam, name)
+
     arrays.append(z)
 
 
@@ -643,6 +663,7 @@ def get_site_model(oqparam, h5=None):
     sm = numpy.concatenate(arrays, dtype=arrays[0].dtype)
     if h5:
         h5['site_model'] = sm
+
     return sm
 
 
@@ -689,8 +710,9 @@ def get_site_collection(oqparam, h5=None):
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         if oqparam.calculation_mode != 'preclassical':
-            raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
-                              % oqparam.inputs['job_ini'])
+            raise InvalidFile(
+                'You are missing sites.csv or site_model.csv in %s'
+                % oqparam.inputs['job_ini'])
         return None
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
@@ -805,6 +827,8 @@ def get_gsim_lt(oqparam, trts=('*',)):
             oqparam.gsim, oqparam.inputs['job_ini'])
     gsim_file = os.path.join(
         oqparam.base_path, oqparam.inputs['gsim_logic_tree'])
+    if len(oqparam.site_labels) > 1:
+        logictree.GsimLogicTree.check_multiple(gsim_file, trts)
     gsim_lt = logictree.GsimLogicTree(gsim_file, trts)
     gmfcorr = oqparam.correl_model
     for trt, gsims in gsim_lt.values.items():
@@ -869,6 +893,8 @@ def get_source_model_lt(oqparam):
         instance
     """
     smlt = get_smlt(vars(oqparam))
+    for bset in smlt.branchsets:
+        bset.check_duplicates(smlt.filename)
     srcids = set(smlt.source_data['source'])
     for src in oqparam.reqv_ignore_sources:
         if src not in srcids:
@@ -1356,7 +1382,8 @@ def _taxonomy_mapping(filename, taxidx):
     assert set(tmap_df) == {'country', 'peril', 'taxonomy',
                             'risk_id', 'weight'}, set(tmap_df)
     taxos = set()
-    for (taxo, per), df in tmap_df.groupby(['taxonomy', 'peril']):
+    for (taxo, country, per), df in tmap_df.groupby(
+            ['taxonomy', 'country', 'peril']):
         taxos.add(taxo)
         if abs(df.weight.sum() - 1.) > pmf.PRECISION:
             raise InvalidFile('%s: the weights do not sum up to 1 for %s' %

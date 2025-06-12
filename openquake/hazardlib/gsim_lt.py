@@ -34,7 +34,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import Node as N, context
 from openquake.baselib.general import (
-    duplicated, BASE183, group_array, cached_property)
+    duplicated, BASE183, group_array, cached_property, AccumDict)
 from openquake.hazardlib import valid, nrml, pmf, lt, InvalidFile
 from openquake.hazardlib.gsim.mgmpe.avg_poe_gmpe import AvgPoeGMPE
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -218,6 +218,24 @@ class GsimLogicTree(object):
                 fname, tectonic_region_types, ltnode)
         return dic
 
+    @classmethod
+    def check_multiple(cls, fname, tectonic_region_types=['*']):
+        """
+        If the file contains multiple logic trees, make sure that all
+        have the same number of branches per tectonic region type.
+        """
+        msg = ('The logic trees are inconsistent, the solution is to add '
+               'Dummy GMMs with zero weight.\n')
+        dic = cls.read_dict(fname, tectonic_region_types)
+        num_branches = AccumDict(accum=[])
+        for label, gsim_lt in dic.items():
+            for trt, gsims in gsim_lt.values.items():
+                num_branches[trt].append(len(gsims))
+        for trt, nb in num_branches.items():
+            if len(set(nb)) > 1:
+                lst = [f'{trt}.{label}: {nb[i]}' for i, label in enumerate(dic)]
+                raise ValueError(msg + '\n'.join(lst))
+        
     def __init__(self, fname, tectonic_region_types=['*'], ltnode=None):
         # tectonic_region_types usually comes from the source models
         self.filename = fname

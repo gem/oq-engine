@@ -48,8 +48,8 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.map_array import MapArray
+from openquake.hazardlib.calc import filters
 from openquake.hazardlib.contexts import ContextMaker, PmapMaker
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 
 
@@ -63,17 +63,16 @@ def classical(group, sitecol, cmaker):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
     trts = set()
     for src in group:
         if not src.num_ruptures:
-            # src.num_ruptures may not be set, so it is set here
+            # not be set in hazardlib, but always in the engine
             src.num_ruptures = src.count_ruptures()
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
         assert trt == cmaker.trt, (trt, cmaker.trt)
-    dic = PmapMaker(cmaker, src_filter, group).make()
+    dic = PmapMaker(cmaker, sitecol, group).make()
     return dic
 
 
@@ -170,6 +169,5 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     trt = src.tectonic_region_type
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
-    srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    rmap = PmapMaker(cmaker, srcfilter, [src]).make()['rmap']
+    rmap = PmapMaker(cmaker, site1, [src]).make()['rmap']
     return 1. - numpy.exp(-rmap.array[0])

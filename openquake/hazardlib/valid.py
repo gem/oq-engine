@@ -539,7 +539,7 @@ def longitude(value):
     >>> longitude('0.123456')
     0.12346
     """
-    lon = numpy.round(float_(value), 5)
+    lon = round(float_(value), 5)
     if lon > 180.:
         raise ValueError('longitude %s > 180' % lon)
     elif lon < -180.:
@@ -557,7 +557,7 @@ def latitude(value):
     >>> latitude('-0.123456')
     -0.12346
     """
-    lat = numpy.round(float_(value), 5)
+    lat = round(float_(value), 5)
     if lat > 90.:
         raise ValueError('latitude %s > 90' % lat)
     elif lat < -90.:
@@ -694,6 +694,30 @@ def positivefloats(value):
     """
     values = value.strip('[]').split()
     floats = list(map(positivefloat, values))
+    return floats
+
+
+def positivefloatorsentinel(value):
+    """
+    :param value: input string
+    :returns: positive float or -999 (sentinel)
+    """
+    f = float(not_empty(value))
+    if f < 0 and f!= -999:
+        msg = 'float %s < 0 or not equal to -999' % f
+        raise ValueError(msg)
+    return f
+
+
+def positivefloatsorsentinels(value):
+    """
+    :param value:
+        string of whitespace separated floats
+    :returns:
+        a list of positive floats or -999 (sentinel) values
+    """
+    values = value.strip('[]').split()
+    floats = list(map(positivefloatorsentinel, values))
     return floats
 
 

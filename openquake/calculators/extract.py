@@ -888,14 +888,12 @@ def extract_aggrisk_tags(dstore, what):
     for (agg_id, loss_id), loss in sorted(lossdic.items()):
         lt = LOSSTYPE[loss_id]
         if lt in oq.loss_types:
-            if lt == 'occupants':
-                continue  # replaced by injured
             for agg_key, key in zip(aggby, keys[agg_id]):
                 acc[agg_key].append(key)
             acc['loss_type'].append(lt)
             if lt == 'affectedpop':
                 lt = 'residents'
-            elif lt == 'injured':
+            elif lt in ['occupants', 'injured']:
                 lt = 'occupants_' + oq.time_event
             acc['value'].append(values[agg_id][lt])
             acc['lossmea'].append(loss)
@@ -904,10 +902,19 @@ def extract_aggrisk_tags(dstore, what):
                 for qfield, qvalue in zip(qfields, qvalues):
                     acc[qfield].append(qvalue)
     df = pandas.DataFrame(acc)
+    if aggby == ['ID_2']:
+        exposure_hdf5 = oq.inputs['exposure'][0]
+        with hdf5.File(exposure_hdf5) as f:
+            id2s = f['tagcol/ID_2'][:]
+            name2s = f['NAME_2'][:]
+            name2dic = {id2.decode('utf8'): name2.decode('utf8')
+                        for id2, name2 in zip(id2s, name2s)}
+        df['NAME_2'] = df['ID_2'].map(name2dic).fillna('n.a.')
     total_df = df.groupby('loss_type', as_index=False).sum()
     total_df[aggby] = '*total*'
+    if aggby == ['ID_2']:
+        total_df['NAME_2'] = '*total*'
     df = pandas.concat([df, total_df], ignore_index=True)
-
     return df
 
 
@@ -1193,7 +1200,7 @@ def build_damage_dt(dstore):
 
 
 @extract.add('damages-rlzs')
-def extract_damages_npz(dstore, what):
+def extract_damages_rlzs_npz(dstore, what):
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
     if oq.collect_rlzs:
@@ -1202,6 +1209,15 @@ def extract_damages_npz(dstore, what):
     assets = util.get_assets(dstore)
     for r in range(R):
         yield 'rlz-%03d' % r, util.compose_arrays(assets, data[:, r])
+
+
+@extract.add('damages-stats')
+def extract_damages_stats_npz(dstore, what):
+    data = dstore['damages-stats']
+    attrs = json.loads(data.attrs['json'])
+    assets = util.get_assets(dstore)
+    for s, stat in enumerate(attrs['stat']):
+        yield stat, util.compose_arrays(assets, data[:, s])
 
 
 # tested on oq-risk-tests event_based/etna

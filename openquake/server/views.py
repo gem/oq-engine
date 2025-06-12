@@ -29,11 +29,10 @@ import subprocess
 import traceback
 import signal
 import zlib
-import urllib.parse as urlparse
 import re
 import psutil
 from datetime import datetime, timezone
-from urllib.parse import unquote_plus
+from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
@@ -84,6 +83,7 @@ NOT_IMPLEMENTED = 501
 XML = 'application/xml'
 JSON = 'application/json'
 HDF5 = 'application/x-hdf'
+ZIP = 'application/x-zip'
 
 #: For exporting calculation outputs, the client can request a specific format
 #: (xml, geojson, csv, etc.). If the client does not specify give them (NRML)
@@ -106,17 +106,18 @@ ENGINE = "python -m openquake.engine.engine".split()
 AELO_FORM_LABELS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
-    'vs30': 'Vs30',
+    'site_class': 'Site class',
+    'vs30': 'Vs30 (m/s)',
     'siteid': 'Site name',
-    'asce_version': 'ASCE version',
+    'asce_version': 'ASCE standards',
 }
 
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': 'fixed at 760 m/s',
+    'vs30': 'float (150 - 3000)',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
-    'asce_version': 'ASCE version',
+    'asce_version': 'ASCE standards',
 }
 
 HIDDEN_OUTPUTS = ['assetcol', 'job']
@@ -178,6 +179,23 @@ def store(request_files, ini, calc_id):
     if not inifiles:
         raise NotFound('There are no %s files in the archive' % ini)
     return inifiles[0]
+
+
+def stream_response(fname, content_type, exportname=''):
+    """
+    Stream a file stored in a temporary directory via Django
+    """
+    ext = os.path.splitext(fname)[-1]
+    exportname = exportname or os.path.basename(fname)
+    tmpdir = os.path.dirname(fname)
+    stream = FileWrapper(open(fname, 'rb'))  # 'b' is needed on Windows
+    response = FileResponse(stream, content_type=content_type)
+    response['Content-Disposition'] = 'attachment; filename=%s' % exportname
+    response['Content-Length'] = str(os.path.getsize(fname))
+    stream.close = lambda: (
+        FileWrapper.close(stream),
+        os.remove(fname) if ext == '.npz' else shutil.rmtree(tmpdir))
+    return response
 
 
 @csrf_exempt
@@ -407,7 +425,8 @@ def calc(request, calc_id):
     """
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name'], info['status']):
+        if not utils.user_has_permission(
+                request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -439,7 +458,7 @@ def calc_list(request, id=None):
          parent_id, size_mb, host, start_time) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
-        url = urlparse.urljoin(base_url, 'v1/calc/%d' % hc_id)
+        url = urljoin(base_url, 'v1/calc/%d' % hc_id)
         abortable = False
         if is_running:
             try:
@@ -701,16 +720,18 @@ def impact_callback(
     exclude_from_print = []
     if 'shakemap_uri' in params:
         exclude_from_print = [
-            'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
-            'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type', 'gsim',
-            'shakemap_uri', 'rupture_file', 'rupture_from_usgs', 'title', 'mmi_file',
+            'station_data_file', 'station_data_issue',
+            'station_data_file_from_usgs',
+            'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type',
+            'gsim', 'shakemap_uri', 'rupture_file', 'rupture_from_usgs',
+            'title', 'mmi_file',
             'rake']
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
             if key == 'rupture_dict':
-                # NOTE: params['rupture_dict'] is a string representation of a Python
-                # dictionary, not a valid JSON string, so we can't use json.loads
+                # NOTE: params['rupture_dict'] is a string representation of a
+                # dictionary, not a JSON string, so we can't use json.loads
                 rupdic = ast.literal_eval(params['rupture_dict'])
                 for rupkey, rupval in rupdic.items():
                     if rupkey not in exclude_from_print:
@@ -718,10 +739,12 @@ def impact_callback(
             elif key not in exclude_from_print:
                 params_to_print += f'{key}: {val}\n'
     if 'station_data' in params['inputs']:
-        with open(params['inputs']['station_data'], 'r', encoding='utf-8') as file:
+        with open(params['inputs']['station_data'], 'r',
+                  encoding='utf-8') as file:
             n_stations = sum(1 for line in file) - 1  # excluding the header
-        params_to_print += (f'{n_stations} seismic stations were loaded (please see'
-                            f'in the calculation log if any of them were discarded)\n')
+        params_to_print += (
+            f'{n_stations} seismic stations were loaded (please see'
+            f'in the calculation log if any of them were discarded)\n')
     else:
         params_to_print += 'No seismic stations were considered\n'
 
@@ -750,8 +773,8 @@ def impact_get_rupture_data(request):
     Retrieve rupture parameters corresponding to a given usgs id
 
     :param request:
-        a `django.http.HttpRequest` object containing usgs_id, approach, rupture_file,
-        use_shakemap
+        a `django.http.HttpRequest` object containing usgs_id, approach,
+        rupture_file, use_shakemap
     """
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     rup, rupdic, _oqparams, err = impact_validate(
@@ -760,7 +783,8 @@ def impact_get_rupture_data(request):
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if rupdic.get('shakemap_array', None) is not None:
         shakemap_array = rupdic['shakemap_array']
-        figsize = (6.2, 6.2)  # fitting in a single row in the template without resizing
+        figsize = (6.3, 6.3)
+        # fitting in a single row in the template without resizing
         rupdic['pga_map_png'] = plot_shakemap(
             shakemap_array, 'PGA', backend='Agg', figsize=figsize,
             with_cities=False, return_base64=True, rupture=rup)
@@ -786,8 +810,9 @@ def impact_get_stations_from_usgs(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
+    shakemap_version = request.POST.get('shakemap_version')
     station_data_file, n_stations, err = get_stations_from_usgs(
-        usgs_id, user=request.user)
+        usgs_id, user=request.user, shakemap_version=shakemap_version)
     station_data_issue = None
     if err:
         station_data_issue = err['error_msg']
@@ -808,12 +833,13 @@ def impact_get_shakemap_versions(request):
         a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
-    shakemap_versions, err = get_shakemap_versions(usgs_id)
+    shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(usgs_id)
     if err:
         shakemap_versions_issue = err['error_msg']
     else:
         shakemap_versions_issue = None
     response_data = dict(shakemap_versions=shakemap_versions,
+                         usgs_preferred_version=usgs_preferred_version,
                          shakemap_versions_issue=shakemap_versions_issue)
     return JsonResponse(response_data)
 
@@ -830,7 +856,8 @@ def get_uploaded_file_path(request, filename):
 
 def create_impact_job(request, params):
     [jobctx] = engine.create_jobs(
-        [params], config.distribution.log_level, user_name=utils.get_user(request))
+        [params], config.distribution.log_level,
+        user_name=utils.get_user(request))
 
     job_owner_email = request.user.email
     response_data = dict()
@@ -888,7 +915,13 @@ def impact_run(request):
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
-    station_data_file_from_usgs = request.POST.get('station_data_file_from_usgs', '')
+    station_data_file_from_usgs = request.POST.get(
+        'station_data_file_from_usgs', '')
+    station_source = None
+    if station_data_file:
+        station_source = 'user-provided'
+    elif station_data_file_from_usgs:
+        station_source = 'USGS'
     # giving priority to the user-uploaded stations
     if not station_data_file and station_data_file_from_usgs:
         station_data_file = station_data_file_from_usgs
@@ -896,6 +929,8 @@ def impact_run(request):
         request.POST, request.user, rupture_path, station_data_file)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    if station_source is not None:
+        params['station_source'] = station_source
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
@@ -908,7 +943,8 @@ def impact_run_with_shakemap(request):
     Run an impact calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing a usgs_id
+        a `django.http.HttpRequest` object containing a usgs_id and
+        optionally the time of the day ('day', 'night' or 'transit')
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
@@ -919,6 +955,8 @@ def impact_run_with_shakemap(request):
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     post = {key: str(val) for key, val in rupdic.items()
             if key != 'shakemap_array'}
+    if 'time_event' in request.POST:
+        post['time_event'] = request.POST['time_event']
     post['approach'] = 'use_shakemap_from_usgs'
     post['use_shakemap'] = 'true'
     for field in IMPACT_FORM_DEFAULTS:
@@ -933,6 +971,7 @@ def impact_run_with_shakemap(request):
 def aelo_validate(request):
     validation_errs = {}
     invalid_inputs = []
+    validate_vs30 = valid.FloatRange(150, 3000, 'vs30')
     try:
         lon = valid.longitude(request.POST.get('lon'))
     except Exception as exc:
@@ -944,7 +983,7 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
-        vs30 = valid.positivefloat(request.POST.get('vs30'))
+        vs30 = validate_vs30(request.POST.get('vs30'))
     except Exception as exc:
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
@@ -1127,7 +1166,8 @@ def calc_results(request, calc_id):
     # throw back a 404.
     try:
         info = logs.dbcmd('calc_info', calc_id)
-        if not utils.user_has_permission(request, info['user_name'], info['status']):
+        if not utils.user_has_permission(
+                request, info['user_name'], info['status']):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1150,10 +1190,18 @@ def calc_results(request, calc_id):
             outtypes = [ot for ot in output_types[rtype] if ot != 'txt']
         except KeyError:
             continue  # non-exportable outputs should not be shown
-        url = urlparse.urljoin(base_url, 'v1/calc/result/%d' % result.id)
+        path = f'v1/calc/result/{result.id}'
+        url = urljoin(base_url, path)
+        # NOTE: in case of multiple available export types, we provide only the url to
+        # download the data in the first of the types. We may want to expose multiple
+        # urls, one per export type, or a single url with the "preferred" type, that
+        # may depend from the kind of output
+        query_params = {'export_type': outtypes[0]}
+        parsed_url = urlparse(url)
+        url_with_query = urlunparse(parsed_url._replace(query=urlencode(query_params)))
         datum = dict(
             id=result.id, name=result.display_name, type=rtype,
-            outtypes=outtypes, url=url, size_mb=result.size_mb)
+            outtypes=outtypes, url=url_with_query, size_mb=result.size_mb)
         response_data.append(datum)
 
     return HttpResponse(content=json.dumps(response_data))
@@ -1239,14 +1287,7 @@ def calc_result(request, result_id):
         export_type, DEFAULT_CONTENT_TYPE)
 
     fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
-    stream = FileWrapper(open(exported, 'rb'))  # 'b' is needed on Windows
-    stream.close = lambda: (
-        FileWrapper.close(stream), shutil.rmtree(tmpdir))
-    response = FileResponse(stream, content_type=content_type)
-    response['Content-Disposition'] = (
-        'attachment; filename=%s' % os.path.basename(fname))
-    response['Content-Length'] = str(os.path.getsize(exported))
-    return response
+    return stream_response(exported, content_type, fname)
 
 
 @cross_domain_ajax
@@ -1349,13 +1390,7 @@ def extract(request, calc_id, what):
             content_type='text/plain', status=500)
 
     # stream the data back
-    stream = FileWrapper(open(fname, 'rb'))
-    stream.close = lambda: (FileWrapper.close(stream), os.remove(fname))
-    response = FileResponse(stream, content_type='application/octet-stream')
-    response['Content-Disposition'] = (
-        'attachment; filename=%s' % os.path.basename(fname))
-    response['Content-Length'] = str(os.path.getsize(fname))
-    return response
+    return stream_response(fname, ZIP)
 
 
 @cross_domain_ajax
@@ -1372,6 +1407,9 @@ def calc_datastore(request, job_id):
         A `django.http.HttpResponse` containing the content
         of the requested artifact, if present, else throws a 404
     """
+    user_level = get_user_level(request)
+    if user_level < 2:
+        return HttpResponseForbidden()
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
         return HttpResponseNotFound()
@@ -1387,6 +1425,42 @@ def calc_datastore(request, job_id):
     return response
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_zip(request, job_id):
+    """
+    Download job.zip file
+
+    :param request:
+        `django.http.HttpRequest` object.
+    :param job_id:
+        The id of the requested datastore
+    :returns:
+        A `django.http.HttpResponse` containing the content
+        of the requested artifact, if present, else throws a 404
+    """
+    if get_user_level(request) < 2:
+        return HttpResponseForbidden()
+    job = logs.dbcmd('get_job', int(job_id))
+    if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
+        return HttpResponseNotFound()
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            exported = export(('job', 'zip'), ds)
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s in %s\n%s' %
+            (exc.__class__.__name__, exc, 'job_zip', tb),
+            content_type='text/plain', status=400)
+    # zipping the files
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    tmpdir = tempfile.mkdtemp(dir=temp_dir)
+    archname = f'job_{job_id}.zip'
+    zipfiles(exported, os.path.join(tmpdir, archname))
+    return stream_response(os.path.join(tmpdir, archname), ZIP)
+
+
 def web_engine(request, **kwargs):
     application_mode = settings.APPLICATION_MODE
     # NOTE: application_mode is already added by the context processor
@@ -1394,8 +1468,7 @@ def web_engine(request, **kwargs):
     if application_mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
-        params['asce_versions'] = (
-            oqvalidation.OqParam.asce_version.validator.choices)
+        params['asce_versions'] = oqvalidation.ASCE_VERSIONS
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
@@ -1403,7 +1476,7 @@ def web_engine(request, **kwargs):
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
 
-        # this is usually '' but it can be set in the local settings for debugging
+        # this is usually ''; can be set in the local settings for debugging
         params['impact_default_usgs_id'] = \
             settings.IMPACT_DEFAULT_USGS_ID
 
@@ -1431,9 +1504,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
-            site = 'site.png' in ds['png']
         else:
-            hmaps = assets = hcurves = governing_mce = site = False
+            hmaps = assets = hcurves = governing_mce = False
             avg_gmf = []
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
@@ -1447,14 +1519,13 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
-                       site=site,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
                   )
 
 
 def is_model_preliminary(ds):
-    # TODO: it would be better having the model written explicitly into the
-    # datastore
+    # NOTE: recently the mosaic_model has been added as an attribute of oqparam, but we
+    # are getting it from base_path for backwards compatibility
     model = ds['oqparam'].base_path.split(os.path.sep)[-2]
     if model in PRELIMINARY_MODELS:
         return True
@@ -1482,11 +1553,20 @@ def get_disp_val(val):
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce07 = asce41 = None
+    asce07 = asce41 = site = None
     asce07_with_units = {}
     asce41_with_units = {}
     warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        try:
+            asce_version = ds['oqparam'].asce_version
+        except AttributeError:
+            # for backwards compatibility on old calculations
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
+            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
         if is_model_preliminary(ds):
             warnings = PRELIMINARY_MODEL_WARNING
         if 'asce07' in ds:
@@ -1496,8 +1576,14 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 # NOTE: for backwards compatibility, read scalar
                 asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
-            for key, value in asce07.items():
-                if key not in ('PGA', 'Ss', 'S1'):
+            asce07_key_mapping = {}
+            if asce_version != 'ASCE7-16':
+                asce07_key_mapping = {
+                    'PGA': 'PGAm',
+                }
+            asce07_m = {asce07_key_mapping.get(k, k): v for k, v in asce07.items()}
+            for key, value in asce07_m.items():
+                if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value
@@ -1513,25 +1599,31 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 # NOTE: for backwards compatibility, read scalar
                 asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
-            for key, value in asce41.items():
+            asce41_key_mapping = {}
+            if asce_version != 'ASCE7-16':
+                asce41_key_mapping = {
+                    'BSE2N_Ss': 'BSE2N_Sxs',
+                    'BSE2E_Ss': 'BSE2E_Sxs',
+                    'BSE1N_Ss': 'BSE1N_Sxs',
+                    'BSE1E_Ss': 'BSE1E_Sxs',
+                    'BSE2N_S1': 'BSE2N_Sx1',
+                    'BSE2E_S1': 'BSE2E_Sx1',
+                    'BSE1N_S1': 'BSE1N_Sx1',
+                    'BSE1E_S1': 'BSE1E_Sx1',
+                }
+            asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
+            for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
                     continue
                 if not isinstance(value, float):
                     asce41_with_units[key] = value
                 else:
                     asce41_with_units[key + ' (g)'] = get_disp_val(value)
+        if 'png' in ds:
+            site = 'site.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
-        try:
-            asce_version = ds['oqparam'].asce_version
-        except AttributeError:
-            # for backwards compatibility on old calculations
-            asce_version = oqvalidation.OqParam.asce_version.default
-        try:
-            calc_aelo_version = ds.get_attr('/', 'aelo_version')
-        except KeyError:
-            calc_aelo_version = '1.0.0'
         if 'warnings' in ds:
             ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
             if warnings is None:
@@ -1541,7 +1633,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name, site=site,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version,
                        warnings=warnings))
