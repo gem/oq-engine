@@ -209,6 +209,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
             print(f'Reading {xml}')
             exposure, _ = _get_exposure(xml, stop='asset')
             csv_files.extend(exposure.datafiles)
+        print(f'Zipping {len(exposures_xml) + len(csv_files)} files')
         a = general.zipfiles(exposures_xml + csv_files, 'exposures.zip')
         print(f'Saved {a} [{general.humansize(os.getsize(a))}]')
         return
