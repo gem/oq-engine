@@ -943,6 +943,7 @@ def impact_read_assets(h5, start, stop):
         if field == field.upper():
             dic[field] = arr = group[field][start:stop]
             if field in TAGS:
+                arr += 1  # shifted by 1 because the first element is "?"
                 # go back from indices to strings
                 dic[field] = TAGS[field][arr]
         if field in dic and len(dic[field]) == 0:
