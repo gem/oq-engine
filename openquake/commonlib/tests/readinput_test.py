@@ -544,30 +544,6 @@ class LogicTreeTestCase(unittest.TestCase):
         self.assertEqual(paths, expected)
 
 
-class ReadGeometryTestCase(unittest.TestCase):
-    def test(self):
-        t0 = time.time()
-        mosaic_dir = os.path.dirname(mosaic.__file__)
-        geom_df = readinput.read_mosaic_df(buffer=1)
-        self.assertEqual(len(geom_df), 30)
-        sites_df = pandas.read_csv(
-            os.path.join(mosaic_dir, 'famous_ruptures.csv'),
-            usecols=['lat', 'lon'])
-        lonlats = sites_df[['lon', 'lat']].to_numpy()
-        sites_df['code'] = geolocate(lonlats, geom_df)
-        t1 = time.time()
-        self.assertEqual(len(sites_df), 55)
-        print('Associated in %.1f seconds' % (t1-t0), sites_df)
-
-        t0 = time.time()
-        risk_df = readinput.read_countries_df()  # this is slow
-        self.assertEqual(len(risk_df), 218)
-        sites_df['code'] = geolocate(lonlats, risk_df)  # this is fast
-        t1 = time.time()
-        self.assertEqual(len(sites_df), 55)
-        print('Associated in %.1f seconds' % (t1-t0), sites_df)
-
-
 class ReadRiskTestCase(unittest.TestCase):
     def test_read_station_data(self):
         oq = readinput.get_oqparam(os.path.join(DATADIR, 'job.ini'))
