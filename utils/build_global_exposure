@@ -211,7 +211,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
             csv_files.extend(exposure.datafiles)
         print(f'Zipping {len(exposures_xml) + len(csv_files)} files')
         a = general.zipfiles(exposures_xml + csv_files, 'exposures.zip')
-        print(f'Saved {a} [{general.humansize(os.getsize(a))}]')
+        print(f'Saved {a} [{general.humansize(os.path.getsize(a))}]')
         return
 
     mon = performance.Monitor(measuremem=True)
