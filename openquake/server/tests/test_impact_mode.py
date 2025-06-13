@@ -190,10 +190,10 @@ class EngineServerTestCase(django.test.TestCase):
 
 
     def impact_run_then_remove(
-            self, data, expected_error=None):
+            self, endpoint, data, expected_error=None):
         with tempfile.TemporaryDirectory() as email_dir:
             with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
-                resp = self.post('impact_run', data=data)
+                resp = self.post(endpoint, data=data)
                 if resp.status_code == 400:
                     self.assertIsNotNone(expected_error)
                     content = json.loads(resp.content)
@@ -245,7 +245,7 @@ class EngineServerTestCase(django.test.TestCase):
             raise RuntimeError(
                 'Unable to remove job %s:\n%s' % (job_id, ret))
 
-    def test_run_by_usgs_id_then_remove_calc(self):
+    def test_run_by_usgs_id_then_remove_calc_failure(self):
         data = dict(usgs_id='us6000jllz',
                     approach='use_shakemap_from_usgs',
                     shakemap_version='preferred',
@@ -260,7 +260,11 @@ class EngineServerTestCase(django.test.TestCase):
                     local_timestamp='2023-02-06 04:17:34+03:00',
                     maximum_distance_stations='')
         expected_error = 'IMT SA(0.6) is required'
-        self.impact_run_then_remove(data, expected_error)
+        self.impact_run_then_remove('impact_run', data, expected_error)
+
+    def test_run_by_usgs_id_then_remove_calc_success(self):
+        data = dict(usgs_id='us7000n05d')
+        self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     # check that the URL 'run' cannot be accessed in ARISTOTLE mode
     def test_can_not_run_normal_calc(self):
