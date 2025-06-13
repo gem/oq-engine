@@ -203,14 +203,16 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
         find_long_strings_and_export(csv_files, fieldname, output_file)
         return
     elif action == 'zip':
+        tmaps = sorted(expo_to_hdf5.read_world_tmap(grm_dir))
         exposures_xml = collect_exposures(grm_dir)
         csv_files = []
         for xml in exposures_xml:
             print(f'Reading {xml}')
             exposure, _ = _get_exposure(xml, stop='asset')
             csv_files.extend(exposure.datafiles)
-        print(f'Zipping {len(exposures_xml) + len(csv_files)} files')
-        a = general.zipfiles(exposures_xml + csv_files, 'exposures.zip')
+        n = len(tmaps) + len(exposures_xml) + len(csv_files)
+        print(f'Zipping {n} files')
+        a = general.zipfiles(tmaps + exposures_xml + csv_files, 'exposures.zip')
         print(f'Saved {a} [{general.humansize(os.path.getsize(a))}]')
         return
 
