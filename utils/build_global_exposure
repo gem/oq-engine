@@ -197,7 +197,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
         exposures_xml = collect_exposures(grm_dir)
         csv_files = []
         for xml in exposures_xml:
-            exposure, _ = _get_exposure(xml)
+            exposure, _ = _get_exposure(xml, stop='asset')
             csv_files.extend(exposure.datafiles)
         output_file = "long_strings.csv"
         find_long_strings_and_export(csv_files, fieldname, output_file)
@@ -207,7 +207,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
         csv_files = []
         for xml in exposures_xml:
             print(f'Reading {xml}')
-            exposure, _ = _get_exposure(xml)
+            exposure, _ = _get_exposure(xml, stop='asset')
             csv_files.extend(exposure.datafiles)
         a = general.zipfiles(exposures_xml + csv_files, 'exposures.zip')
         print(f'Saved {a} [{general.humansize(os.getsize(a))}]')
