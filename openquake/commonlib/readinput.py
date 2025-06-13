@@ -51,7 +51,7 @@ from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.calc.filters import getdefault
+from openquake.hazardlib.calc.filters import getdefault, get_distances
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
@@ -489,11 +489,12 @@ def filter_site_array_around(array, rup, dist):
     idxs.sort()
 
     # then fine filtering
-    array = array[idxs]
-    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
-    if len(idxs) < len(array):
-        logging.info('Filtered %d/%d sites', len(idxs), len(array))
-    return array[idxs]
+    r_sites = site.SiteCollection.from_(array[idxs])
+    dists = get_distances(rup, r_sites, 'rrup')
+    ids, = numpy.where(dists < dist)
+    if len(ids) < len(idxs):
+        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
+    return r_sites.array[ids]
 
 
 def get_site_model_around(site_model_hdf5, rup, dist):

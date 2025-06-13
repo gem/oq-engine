@@ -323,6 +323,16 @@ class SiteCollection(object):
     req_site_params = ()
 
     @classmethod
+    def from_(cls, array):
+        """
+        Build a site collection from a site model array
+        """
+        self = object.__new__(cls)
+        self.array = array
+        self.complete = self
+        return self
+
+    @classmethod
     def from_usgs_shakemap(cls, shakemap_array):
         """
         Build a site collection from a shakemap array
@@ -828,8 +838,13 @@ class SiteCollection(object):
         return self.array[sid]
 
     def __getattr__(self, name):
-        if name in ('lons', 'lats', 'depths'):  # legacy names
+        if name in ('lons', 'lats'):  # legacy names
             return self.array[name[:-1]]
+        if name == 'depths':
+            try:
+                return self.array['depth']
+            except ValueError:  # missing depth
+                return numpy.zeros_like(self.array['lon'])
         if name not in site_param_dt:
             raise AttributeError(name)
         return self.array[name]
