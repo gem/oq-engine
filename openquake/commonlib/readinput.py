@@ -491,10 +491,10 @@ def filter_site_array_around(array, rup, dist):
     # then fine filtering
     r_sites = site.SiteCollection.from_(array[idxs])
     dists = get_distances(rup, r_sites, 'rrup')
-    idxs, = numpy.where(dists < dist)
-    if len(idxs) < len(array):
-        logging.info('Filtered %d/%d sites', len(idxs), len(array))
-    return r_sites.array[idxs]
+    ids, = numpy.where(dists < dist)
+    if len(ids) < len(idxs):
+        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
+    return r_sites.array[ids]
 
 
 def get_site_model_around(site_model_hdf5, rup, dist):
