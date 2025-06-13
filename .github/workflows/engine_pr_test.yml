@@ -228,4 +228,4 @@ jobs:
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
-          pytest -v openquake/server/tests/test_impact_mode.py
+          pytest -vs openquake/server/tests/test_impact_mode.py
