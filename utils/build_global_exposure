@@ -206,6 +206,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
         exposures_xml = collect_exposures(grm_dir)
         csv_files = []
         for xml in exposures_xml:
+            print(f'Reading {xml}')
             exposure, _ = _get_exposure(xml)
             csv_files.extend(exposure.datafiles)
         a = general.zipfiles(exposures_xml + csv_files, 'exposures.zip')
