@@ -1,108 +1,155 @@
 | ID_2                    | loss_type     | value      | lossmea   | lossq05   | lossq95   | NAME_2            |
 |-------------------------+---------------+------------+-----------+-----------+-----------+-------------------|
-| 21501139226             | contents      | 328_670    | 9_657     | 463.8     | 26_119    | Victoria          |
-| 21501139226             | nonstructural | 402_630    | 14_471    | 466.7     | 40_904    | Victoria          |
-| 21501139226             | structural    | 652_294    | 35_399    | 1_250     | 108_750   | Victoria          |
-| 21501139226             | occupants     | 366.8      | 0.0747    | 1.003E-06 | 0.2023    | Victoria          |
-| 21501139226             | area          | 7_486      | 201.0     | 0.9363    | 616.6     | Victoria          |
-| 21501139226             | number        | 67.0000    | 1.7688    | 0.0132    | 3.7141    | Victoria          |
-| 21501139226             | residents     | 470.8      | 24.8973   | 0.3111    | 61.6246   | Victoria          |
-| 21501139226             | affectedpop   | 470.8      | 46.3264   | 3.1926    | 86.6771   | Victoria          |
-| 21501139226             | injured       | 366.8      | 0.3352    | 9.056E-07 | 1.0077    | Victoria          |
-| 453                     | contents      | 553_473    | 332.3     | 0.0       | 1_037     | Nieuwkoop         |
-| 453                     | nonstructural | 694_490    | 53.7135   | 0.0       | 113.4254  | Nieuwkoop         |
-| 453                     | structural    | 846_554    | 1_110     | 0.0       | 5_538     | Nieuwkoop         |
-| 453                     | occupants     | 651.0      | 0.0032    | 0.0       | 0.0123    | Nieuwkoop         |
-| 453                     | area          | 10_802     | 2.9242    | 0.0       | 10.4010   | Nieuwkoop         |
-| 453                     | number        | 155.0000   | 0.0133    | 0.0       | 0.0473    | Nieuwkoop         |
-| 453                     | injured       | 651.0      | 0.0104    | 0.0       | 0.0085    | Nieuwkoop         |
-| 59                      | contents      | 10_203_206 | 782.7     | 0.3913    | 3_082     | Moselle           |
-| 59                      | nonstructural | 12_663_548 | 544.3     | 0.0076    | 2_058     | Moselle           |
-| 59                      | structural    | 26_374_970 | 1_362     | 0.2549    | 6_490     | Moselle           |
-| 59                      | occupants     | 12_397     | 0.0012    | 9.973E-07 | 0.0042    | Moselle           |
-| 59                      | area          | 335_577    | 3.3184    | 1.349E-05 | 10.8543   | Moselle           |
-| 59                      | number        | 5_384      | 0.0519    | 9.000E-08 | 0.1719    | Moselle           |
-| 59                      | residents     | 25_558     | 0.5606    | 4.800E-08 | 2.0682    | Moselle           |
-| 59                      | affectedpop   | 25_558     | 3.1637    | 4.800E-08 | 12.4414   | Moselle           |
-| 59                      | injured       | 12_397     | 0.0097    | 9.973E-07 | 0.0426    | Moselle           |
-| EGY-ADM1-1590546715-B18 | contents      | 1_575_449  | 249_964   | 328.9     | 1_336_523 | Giza Governorate  |
-| EGY-ADM1-1590546715-B18 | nonstructural | 2_070_279  | 365_725   | 904.5     | 1_766_836 | Giza Governorate  |
-| EGY-ADM1-1590546715-B18 | structural    | 1_656_214  | 378_206   | 776.4     | 1_338_276 | Giza Governorate  |
-| EGY-ADM1-1590546715-B18 | occupants     | 1_176      | 0.8003    | 0.0045    | 3.7315    | Giza Governorate  |
-| EGY-ADM1-1590546715-B18 | area          | 32_256     | 3_714     | 42.1759   | 17_297    | Giza Governorate  |
-| EGY-ADM1-1590546715-B18 | number        | 526.0      | 61.8969   | 0.7029    | 288.3     | Giza Governorate  |
-| EGY-ADM1-1590546715-B18 | residents     | 2_483      | 422.7     | 6.7076    | 1_652     | Giza Governorate  |
-| EGY-ADM1-1590546715-B18 | affectedpop   | 2_483      | 561.9     | 1.8324    | 2_181     | Giza Governorate  |
-| EGY-ADM1-1590546715-B18 | injured       | 1_176      | 0.8362    | 4.505E-08 | 5.8352    | Giza Governorate  |
-| FSM.1_1                 | contents      | 115_738    | 47.0440   | 0.0       | 232.1     | Chuuk             |
-| FSM.1_1                 | nonstructural | 236_827    | 76.8169   | 0.0       | 265.1     | Chuuk             |
-| FSM.1_1                 | structural    | 475_786    | 89.6483   | 0.0       | 558.3     | Chuuk             |
-| FSM.1_1                 | occupants     | 266.7      | 2.673E-04 | 0.0       | 0.0013    | Chuuk             |
-| FSM.1_1                 | area          | 5_149      | 0.7514    | 0.0       | 3.3085    | Chuuk             |
-| FSM.1_1                 | number        | 50.0000    | 0.0125    | 0.0       | 0.0551    | Chuuk             |
-| FSM.1_1                 | residents     | 290.9      | 0.1681    | 0.0       | 0.6978    | Chuuk             |
-| FSM.1_1                 | affectedpop   | 290.9      | 0.6683    | 0.0       | 3.6099    | Chuuk             |
-| FSM.1_1                 | injured       | 266.7      | 4.758E-05 | 0.0       | 3.215E-04 | Chuuk             |
-| FSM.2_1                 | contents      | 18_592     | 191.9     | 0.0       | 838.2     | Kosrae            |
-| FSM.2_1                 | nonstructural | 25_220     | 209.3     | 0.0       | 882.0     | Kosrae            |
-| FSM.2_1                 | structural    | 54_805     | 638.0     | 0.0       | 2_332     | Kosrae            |
-| FSM.2_1                 | occupants     | 30.6333    | 0.0032    | 0.0       | 0.0136    | Kosrae            |
-| FSM.2_1                 | area          | 763.1      | 8.1495    | 0.0       | 34.0296   | Kosrae            |
-| FSM.2_1                 | number        | 10.0000    | 0.1358    | 0.0       | 0.5672    | Kosrae            |
-| FSM.2_1                 | residents     | 61.3000    | 1.1574    | 0.0       | 4.3515    | Kosrae            |
-| FSM.2_1                 | affectedpop   | 61.3000    | 1.8316    | 0.0       | 6.0990    | Kosrae            |
-| FSM.2_1                 | injured       | 30.6333    | 0.0263    | 0.0       | 0.1234    | Kosrae            |
-| GNQ-ADM1-1590546715-B4  | contents      | 213_912    | 14_278    | 2_669     | 23_583    | Litoral Province  |
-| GNQ-ADM1-1590546715-B4  | nonstructural | 273_023    | 18_665    | 2_528     | 31_233    | Litoral Province  |
-| GNQ-ADM1-1590546715-B4  | structural    | 577_867    | 49_935    | 10_101    | 79_461    | Litoral Province  |
-| GNQ-ADM1-1590546715-B4  | occupants     | 463.1      | 0.3529    | 0.1311    | 0.5706    | Litoral Province  |
-| GNQ-ADM1-1590546715-B4  | area          | 8_352      | 827.2     | 288.9     | 1_305     | Litoral Province  |
-| GNQ-ADM1-1590546715-B4  | number        | 113.0000   | 13.4406   | 3.6509    | 21.1438   | Litoral Province  |
-| GNQ-ADM1-1590546715-B4  | residents     | 717.2      | 100.5843  | 34.6294   | 143.8619  | Litoral Province  |
-| GNQ-ADM1-1590546715-B4  | affectedpop   | 717.2      | 126.7599  | 15.4202   | 169.2191  | Litoral Province  |
-| GNQ-ADM1-1590546715-B4  | injured       | 463.1      | 1.5346    | 0.0114    | 4.5090    | Litoral Province  |
-| LBR-ADM1-1590546715-B10 | contents      | 119_595    | 4.771E-04 | 4.148E-04 | 4.840E-04 | Maryland          |
-| LBR-ADM1-1590546715-B10 | nonstructural | 154_414    | 3.7710    | 9.219E-05 | 28.0958   | Maryland          |
-| LBR-ADM1-1590546715-B10 | structural    | 225_563    | 0.3212    | 4.148E-04 | 0.1043    | Maryland          |
-| LBR-ADM1-1590546715-B10 | occupants     | 89.0333    | 1.426E-07 | 1.230E-07 | 1.437E-07 | Maryland          |
-| LBR-ADM1-1590546715-B10 | area          | 3_013      | 7.272E-04 | 6.045E-06 | 7.053E-06 | Maryland          |
-| LBR-ADM1-1590546715-B10 | number        | 44.0000    | 7.214E-06 | 6.000E-08 | 7.000E-08 | Maryland          |
-| LBR-ADM1-1590546715-B10 | residents     | 211.8      | 1.762E-04 | 2.930E-07 | 4.607E-04 | Maryland          |
-| LBR-ADM1-1590546715-B10 | affectedpop   | 211.8      | 6.895E-04 | 2.930E-07 | 0.0014    | Maryland          |
-| LBR-ADM1-1590546715-B10 | injured       | 89.0333    | 1.426E-07 | 1.230E-07 | 1.437E-07 | Maryland          |
-| SDN-ADM1-1590546715-B3  | contents      | 3_786_838  | 3_562     | 48.9825   | 8_807     | West Darfur State |
-| SDN-ADM1-1590546715-B3  | nonstructural | 4_779_078  | 2_892     | 57.6707   | 9_373     | West Darfur State |
-| SDN-ADM1-1590546715-B3  | structural    | 7_843_942  | 4_562     | 93.5708   | 10_603    | West Darfur State |
-| SDN-ADM1-1590546715-B3  | occupants     | 3_579      | 0.0196    | 7.913E-07 | 0.0770    | West Darfur State |
-| SDN-ADM1-1590546715-B3  | area          | 101_971    | 22.1869   | 0.0226    | 104.1898  | West Darfur State |
-| SDN-ADM1-1590546715-B3  | number        | 1_521      | 0.2660    | 3.763E-04 | 0.8838    | West Darfur State |
-| SDN-ADM1-1590546715-B3  | residents     | 7_202      | 1.7560    | 4.289E-04 | 6.5413    | West Darfur State |
-| SDN-ADM1-1590546715-B3  | affectedpop   | 7_202      | 4.1067    | 0.0023    | 15.2746   | West Darfur State |
-| SDN-ADM1-1590546715-B3  | injured       | 3_579      | 0.0690    | 7.318E-07 | 0.3494    | West Darfur State |
-| SSD-ADM1-1590546715-B6  | contents      | 156_399    | 2_408     | 79.1195   | 11_033    | Unity             |
-| SSD-ADM1-1590546715-B6  | nonstructural | 203_153    | 3_572     | 37.8597   | 14_393    | Unity             |
-| SSD-ADM1-1590546715-B6  | structural    | 319_678    | 8_981     | 45.3169   | 28_490    | Unity             |
-| SSD-ADM1-1590546715-B6  | occupants     | 226.6      | 0.0326    | 4.387E-07 | 0.1535    | Unity             |
-| SSD-ADM1-1590546715-B6  | area          | 4_460      | 90.4964   | 1.380E-05 | 424.4     | Unity             |
-| SSD-ADM1-1590546715-B6  | number        | 59.0000    | 1.4171    | 1.700E-07 | 7.0436    | Unity             |
-| SSD-ADM1-1590546715-B6  | residents     | 347.3      | 12.7858   | 0.0125    | 56.4007   | Unity             |
-| SSD-ADM1-1590546715-B6  | affectedpop   | 347.3      | 20.6235   | 0.0146    | 77.2991   | Unity             |
-| SSD-ADM1-1590546715-B6  | injured       | 226.6      | 0.1308    | 4.107E-07 | 0.8829    | Unity             |
-| ZAF-ADM1-1590546715-B9  | contents      | 4_447_954  | 24_481    | 5_276     | 42_243    | Mpumalanga        |
-| ZAF-ADM1-1590546715-B9  | nonstructural | 5_353_186  | 30_875    | 3_777     | 79_243    | Mpumalanga        |
-| ZAF-ADM1-1590546715-B9  | structural    | 9_896_343  | 58_683    | 2_838     | 138_277   | Mpumalanga        |
-| ZAF-ADM1-1590546715-B9  | occupants     | 4_884      | 0.2169    | 0.0151    | 0.4097    | Mpumalanga        |
-| ZAF-ADM1-1590546715-B9  | area          | 127_608    | 507.6     | 65.5051   | 1_208     | Mpumalanga        |
-| ZAF-ADM1-1590546715-B9  | number        | 1_666      | 7.5157    | 0.9658    | 18.7821   | Mpumalanga        |
-| ZAF-ADM1-1590546715-B9  | residents     | 7_856      | 56.6428   | 5.7070    | 122.6096  | Mpumalanga        |
-| ZAF-ADM1-1590546715-B9  | affectedpop   | 7_856      | 118.7325  | 7.7718    | 221.9     | Mpumalanga        |
-| ZAF-ADM1-1590546715-B9  | injured       | 4_884      | 1.0698    | 0.0126    | 4.4033    | Mpumalanga        |
-| *total*                 | affectedpop   | 45_198     | 884.1     | 28.2338   | 2_773     | *total*           |
-| *total*                 | area          | 637_436    | 5_377     | 397.6     | 21_014    | *total*           |
-| *total*                 | contents      | 21_519_828 | 305_702   | 8_866     | 1_453_497 | *total*           |
-| *total*                 | injured       | 24_129     | 4.0219    | 0.0240    | 17.1624   | *total*           |
-| *total*                 | nonstructural | 26_855_848 | 437_088   | 7_772     | 1_945_328 | *total*           |
-| *total*                 | number        | 9_595      | 86.5185   | 5.3331    | 340.7     | *total*           |
-| *total*                 | occupants     | 24_129     | 1.5048    | 0.1507    | 5.1760    | *total*           |
-| *total*                 | residents     | 45_198     | 621.2     | 47.3680   | 2_050     | *total*           |
-| *total*                 | structural    | 48_924_016 | 538_966   | 15_104    | 1_718_775 | *total*           |
+| 175                     | contents      | 582_756    | 2_531     | 0.0       | 6_205     | Dve Mogili        |
+| 175                     | nonstructural | 724_958    | 10_206    | 0.0       | 35_853    | Dve Mogili        |
+| 175                     | structural    | 1_104_610  | 21_364    | 0.0       | 72_662    | Dve Mogili        |
+| 175                     | occupants     | 855.4      | 0.0591    | 0.0       | 0.2579    | Dve Mogili        |
+| 175                     | area          | 13_446     | 152.0970  | 0.0       | 655.3     | Dve Mogili        |
+| 175                     | number        | 152.0000   | 1.5185    | 0.0       | 6.5085    | Dve Mogili        |
+| 175                     | residents     | 821.5      | 15.5440   | 0.0       | 64.1655   | Dve Mogili        |
+| 175                     | affectedpop   | 821.5      | 36.4108   | 0.0       | 110.8187  | Dve Mogili        |
+| 175                     | injured       | 855.4      | 0.1450    | 0.0       | 0.5025    | Dve Mogili        |
+| 21501139226             | contents      | 328_670    | 9_114     | 290.0     | 35_370    | Victoria          |
+| 21501139226             | nonstructural | 402_630    | 16_431    | 986.7     | 51_522    | Victoria          |
+| 21501139226             | structural    | 652_294    | 45_574    | 3_757     | 129_677   | Victoria          |
+| 21501139226             | occupants     | 366.8      | 0.0781    | 0.0024    | 0.2209    | Victoria          |
+| 21501139226             | area          | 7_486      | 231.1     | 9.2678    | 653.2     | Victoria          |
+| 21501139226             | number        | 67.0000    | 1.8562    | 0.0615    | 5.8800    | Victoria          |
+| 21501139226             | residents     | 470.8      | 26.9997   | 1.8457    | 72.4506   | Victoria          |
+| 21501139226             | affectedpop   | 470.8      | 43.8181   | 3.5161    | 88.7451   | Victoria          |
+| 21501139226             | injured       | 366.8      | 0.2166    | 4.956E-04 | 0.6039    | Victoria          |
+| 453                     | contents      | 594_539    | 2_005     | 22.1627   | 5_089     | Nieuwkoop         |
+| 453                     | nonstructural | 741_842    | 1_968     | 5.5261    | 6_361     | Nieuwkoop         |
+| 453                     | structural    | 947_544    | 5_930     | 5.0778    | 19_083    | Nieuwkoop         |
+| 453                     | occupants     | 731.4      | 0.0331    | 5.117E-07 | 0.1150    | Nieuwkoop         |
+| 453                     | area          | 12_127     | 71.4864   | 0.4376    | 287.3     | Nieuwkoop         |
+| 453                     | number        | 169.0000   | 1.1159    | 0.0069    | 4.7889    | Nieuwkoop         |
+| 453                     | residents     | 967.9      | 8.6678    | 0.0       | 32.4091   | Nieuwkoop         |
+| 453                     | affectedpop   | 967.9      | 11.0194   | 0.0       | 36.4000   | Nieuwkoop         |
+| 453                     | injured       | 731.4      | 0.1969    | 7.110E-14 | 1.4168    | Nieuwkoop         |
+| 59                      | contents      | 11_294_204 | 1_082     | 0.4346    | 3_493     | Moselle           |
+| 59                      | nonstructural | 14_009_579 | 1_374     | 0.9517    | 5_279     | Moselle           |
+| 59                      | structural    | 29_100_968 | 2_444     | 4.7910    | 4_098     | Moselle           |
+| 59                      | occupants     | 13_756     | 0.0035    | 9.120E-07 | 0.0243    | Moselle           |
+| 59                      | area          | 370_277    | 5.9285    | 7.498E-06 | 28.9467   | Moselle           |
+| 59                      | number        | 5_912      | 0.0728    | 3.000E-08 | 0.4411    | Moselle           |
+| 59                      | residents     | 28_043     | 0.7887    | 4.800E-08 | 4.3413    | Moselle           |
+| 59                      | affectedpop   | 28_043     | 4.2540    | 7.721E-20 | 19.3296   | Moselle           |
+| 59                      | injured       | 13_756     | 0.0065    | 9.120E-07 | 0.0070    | Moselle           |
+| BEN-ADM1-1590546715-B9  | contents      | 139_750    | 123.1488  | 0.0       | 774.4     | Atlantique        |
+| BEN-ADM1-1590546715-B9  | nonstructural | 134_151    | 265.8     | 0.0       | 1_737     | Atlantique        |
+| BEN-ADM1-1590546715-B9  | structural    | 287_521    | 148.2388  | 0.0       | 738.5     | Atlantique        |
+| BEN-ADM1-1590546715-B9  | occupants     | 374.1      | 2.489E-04 | 0.0       | 0.0021    | Atlantique        |
+| BEN-ADM1-1590546715-B9  | area          | 3_001      | 0.6099    | 0.0       | 4.9777    | Atlantique        |
+| BEN-ADM1-1590546715-B9  | number        | 26.0000    | 0.0102    | 0.0       | 0.0830    | Atlantique        |
+| BEN-ADM1-1590546715-B9  | residents     | 86.0000    | 0.1117    | 0.0       | 0.8728    | Atlantique        |
+| BEN-ADM1-1590546715-B9  | affectedpop   | 86.0000    | 0.0923    | 0.0       | 0.1995    | Atlantique        |
+| BEN-ADM1-1590546715-B9  | injured       | 374.1      | 0.0024    | 0.0       | 4.487E-04 | Atlantique        |
+| EGY-ADM1-1590546715-B18 | contents      | 1_575_449  | 412_034   | 355.7     | 1_344_287 | Giza Governorate  |
+| EGY-ADM1-1590546715-B18 | nonstructural | 2_070_279  | 436_944   | 552.7     | 1_785_812 | Giza Governorate  |
+| EGY-ADM1-1590546715-B18 | structural    | 1_656_214  | 318_221   | 3_020     | 1_349_147 | Giza Governorate  |
+| EGY-ADM1-1590546715-B18 | occupants     | 1_176      | 0.9862    | 0.0049    | 3.6025    | Giza Governorate  |
+| EGY-ADM1-1590546715-B18 | area          | 32_256     | 4_584     | 19.7530   | 16_703    | Giza Governorate  |
+| EGY-ADM1-1590546715-B18 | number        | 526.0      | 76.4082   | 0.3292    | 278.4     | Giza Governorate  |
+| EGY-ADM1-1590546715-B18 | residents     | 2_483      | 498.9     | 3.0614    | 1_614     | Giza Governorate  |
+| EGY-ADM1-1590546715-B18 | affectedpop   | 2_483      | 737.5     | 1.7393    | 2_217     | Giza Governorate  |
+| EGY-ADM1-1590546715-B18 | injured       | 1_176      | 4.0873    | 3.688E-04 | 8.8895    | Giza Governorate  |
+| FSM.1_1                 | contents      | 278_140    | 42.5428   | 0.0       | 180.5     | Chuuk             |
+| FSM.1_1                 | nonstructural | 440_534    | 115.1139  | 0.0       | 507.7     | Chuuk             |
+| FSM.1_1                 | structural    | 872_107    | 368.3     | 0.0       | 2_028     | Chuuk             |
+| FSM.1_1                 | occupants     | 549.2      | 0.0019    | 0.0       | 0.0074    | Chuuk             |
+| FSM.1_1                 | area          | 9_458      | 4.8690    | 0.0       | 18.4570   | Chuuk             |
+| FSM.1_1                 | number        | 94.0000    | 0.0812    | 0.0       | 0.3076    | Chuuk             |
+| FSM.1_1                 | residents     | 577.3      | 0.7343    | 0.0       | 2.7857    | Chuuk             |
+| FSM.1_1                 | affectedpop   | 577.3      | 1.4176    | 0.0       | 6.0558    | Chuuk             |
+| FSM.1_1                 | injured       | 549.2      | 0.0122    | 0.0       | 0.0427    | Chuuk             |
+| FSM.2_1                 | contents      | 60_619     | 184.7     | 0.0       | 745.3     | Kosrae            |
+| FSM.2_1                 | nonstructural | 77_983     | 232.2     | 0.0       | 1_038     | Kosrae            |
+| FSM.2_1                 | structural    | 146_100    | 622.8     | 0.0       | 2_326     | Kosrae            |
+| FSM.2_1                 | occupants     | 108.6333   | 0.0029    | 0.0       | 0.0092    | Kosrae            |
+| FSM.2_1                 | area          | 1_872      | 7.4008    | 0.0       | 23.0860   | Kosrae            |
+| FSM.2_1                 | number        | 23.0000    | 0.1233    | 0.0       | 0.3848    | Kosrae            |
+| FSM.2_1                 | residents     | 136.0000   | 1.0876    | 0.0       | 3.2941    | Kosrae            |
+| FSM.2_1                 | affectedpop   | 136.0000   | 1.5276    | 0.0       | 6.0999    | Kosrae            |
+| FSM.2_1                 | injured       | 108.6333   | 0.0496    | 0.0       | 0.2089    | Kosrae            |
+| GNQ-ADM1-1590546715-B2  | contents      | 445_846    | 3_293     | 0.0       | 17_225    | Bioko Norte       |
+| GNQ-ADM1-1590546715-B2  | nonstructural | 600_980    | 4_401     | 0.0       | 19_687    | Bioko Norte       |
+| GNQ-ADM1-1590546715-B2  | structural    | 1_201_431  | 4_767     | 0.0       | 22_735    | Bioko Norte       |
+| GNQ-ADM1-1590546715-B2  | occupants     | 783.3      | 0.0538    | 0.0       | 0.2896    | Bioko Norte       |
+| GNQ-ADM1-1590546715-B2  | area          | 15_593     | 137.4982  | 0.0       | 724.1     | Bioko Norte       |
+| GNQ-ADM1-1590546715-B2  | number        | 218.0      | 2.2916    | 0.0       | 12.0689   | Bioko Norte       |
+| GNQ-ADM1-1590546715-B2  | residents     | 1_305      | 21.9503   | 0.0       | 102.4032  | Bioko Norte       |
+| GNQ-ADM1-1590546715-B2  | affectedpop   | 1_305      | 32.4528   | 0.0       | 173.1017  | Bioko Norte       |
+| GNQ-ADM1-1590546715-B2  | injured       | 783.3      | 0.4760    | 0.0       | 1.9630    | Bioko Norte       |
+| GNQ-ADM1-1590546715-B4  | contents      | 213_912    | 19_131    | 6_424     | 26_171    | Litoral Province  |
+| GNQ-ADM1-1590546715-B4  | nonstructural | 273_023    | 20_464    | 4_569     | 29_918    | Litoral Province  |
+| GNQ-ADM1-1590546715-B4  | structural    | 577_867    | 53_797    | 20_678    | 71_629    | Litoral Province  |
+| GNQ-ADM1-1590546715-B4  | occupants     | 463.1      | 0.4479    | 0.0900    | 0.6286    | Litoral Province  |
+| GNQ-ADM1-1590546715-B4  | area          | 8_352      | 1_041     | 218.4     | 1_563     | Litoral Province  |
+| GNQ-ADM1-1590546715-B4  | number        | 113.0000   | 16.8454   | 3.5963    | 25.3462   | Litoral Province  |
+| GNQ-ADM1-1590546715-B4  | residents     | 717.2      | 117.0383  | 37.9435   | 155.5112  | Litoral Province  |
+| GNQ-ADM1-1590546715-B4  | affectedpop   | 717.2      | 142.6433  | 56.5938   | 168.4039  | Litoral Province  |
+| GNQ-ADM1-1590546715-B4  | injured       | 463.1      | 1.0849    | 0.0228    | 2.3746    | Litoral Province  |
+| LBR-ADM1-1590546715-B10 | contents      | 119_595    | 4.114E-04 | 0.0       | 4.840E-04 | Maryland          |
+| LBR-ADM1-1590546715-B10 | nonstructural | 154_414    | 7.6538    | 0.0       | 13.9579   | Maryland          |
+| LBR-ADM1-1590546715-B10 | structural    | 225_563    | 7.8069    | 0.0       | 0.7299    | Maryland          |
+| LBR-ADM1-1590546715-B10 | occupants     | 89.0333    | 1.283E-07 | 0.0       | 1.437E-07 | Maryland          |
+| LBR-ADM1-1590546715-B10 | area          | 3_013      | 0.0041    | 0.0       | 7.053E-06 | Maryland          |
+| LBR-ADM1-1590546715-B10 | number        | 44.0000    | 4.040E-05 | 0.0       | 7.000E-08 | Maryland          |
+| LBR-ADM1-1590546715-B10 | residents     | 211.8      | 7.609E-04 | 0.0       | 3.420E-07 | Maryland          |
+| LBR-ADM1-1590546715-B10 | affectedpop   | 211.8      | 0.0050    | 0.0       | 3.420E-07 | Maryland          |
+| LBR-ADM1-1590546715-B10 | injured       | 89.0333    | 1.283E-07 | 0.0       | 1.437E-07 | Maryland          |
+| MAR-ADM1-1590546715-B11 | contents      | 391_772    | 2_344     | 0.0       | 9_578     | Fez-Meknes        |
+| MAR-ADM1-1590546715-B11 | nonstructural | 440_295    | 2_394     | 0.0       | 9_154     | Fez-Meknes        |
+| MAR-ADM1-1590546715-B11 | structural    | 718_720    | 7_240     | 0.0       | 29_429    | Fez-Meknes        |
+| MAR-ADM1-1590546715-B11 | occupants     | 513.4      | 0.0312    | 0.0       | 0.1270    | Fez-Meknes        |
+| MAR-ADM1-1590546715-B11 | area          | 9_257      | 77.5806   | 0.0       | 317.7     | Fez-Meknes        |
+| MAR-ADM1-1590546715-B11 | number        | 103.0000   | 1.2827    | 0.0       | 5.2955    | Fez-Meknes        |
+| MAR-ADM1-1590546715-B11 | residents     | 607.6      | 11.9039   | 0.0       | 44.3817   | Fez-Meknes        |
+| MAR-ADM1-1590546715-B11 | affectedpop   | 607.6      | 22.1046   | 0.0       | 78.7991   | Fez-Meknes        |
+| MAR-ADM1-1590546715-B11 | injured       | 513.4      | 0.0657    | 0.0       | 0.2906    | Fez-Meknes        |
+| SDN-ADM1-1590546715-B12 | contents      | 1_758_197  | 25_988    | 0.0       | 101_660   | Khartoum State    |
+| SDN-ADM1-1590546715-B12 | nonstructural | 2_130_812  | 14_577    | 0.0       | 86_311    | Khartoum State    |
+| SDN-ADM1-1590546715-B12 | structural    | 4_266_648  | 50_685    | 0.0       | 246_907   | Khartoum State    |
+| SDN-ADM1-1590546715-B12 | occupants     | 2_742      | 0.3838    | 0.0       | 1.5940    | Khartoum State    |
+| SDN-ADM1-1590546715-B12 | area          | 54_332     | 951.3     | 0.0       | 3_987     | Khartoum State    |
+| SDN-ADM1-1590546715-B12 | number        | 652.0      | 15.8046   | 0.0       | 66.4432   | Khartoum State    |
+| SDN-ADM1-1590546715-B12 | residents     | 3_902      | 140.7502  | 0.0       | 519.2     | Khartoum State    |
+| SDN-ADM1-1590546715-B12 | affectedpop   | 3_902      | 223.9     | 0.0       | 770.0     | Khartoum State    |
+| SDN-ADM1-1590546715-B12 | injured       | 2_742      | 1.4365    | 0.0       | 8.6443    | Khartoum State    |
+| SDN-ADM1-1590546715-B3  | contents      | 13_569_579 | 17_850    | 248.4     | 114_494   | West Darfur State |
+| SDN-ADM1-1590546715-B3  | nonstructural | 17_024_786 | 20_707    | 280.7     | 41_270    | West Darfur State |
+| SDN-ADM1-1590546715-B3  | structural    | 31_813_662 | 33_681    | 474.0     | 161_972   | West Darfur State |
+| SDN-ADM1-1590546715-B3  | occupants     | 11_579     | 0.1037    | 1.738E-06 | 0.3607    | West Darfur State |
+| SDN-ADM1-1590546715-B3  | area          | 410_807    | 287.7     | 0.5682    | 856.4     | West Darfur State |
+| SDN-ADM1-1590546715-B3  | number        | 5_127      | 4.6773    | 0.0075    | 14.2568   | West Darfur State |
+| SDN-ADM1-1590546715-B3  | residents     | 24_689     | 37.5764   | 0.1020    | 109.1443  | West Darfur State |
+| SDN-ADM1-1590546715-B3  | affectedpop   | 24_689     | 68.3470   | 0.0553    | 160.2072  | West Darfur State |
+| SDN-ADM1-1590546715-B3  | injured       | 11_579     | 0.9223    | 1.679E-06 | 3.9701    | West Darfur State |
+| SSD-ADM1-1590546715-B6  | contents      | 293_532    | 3_894     | 28.3773   | 12_687    | Unity             |
+| SSD-ADM1-1590546715-B6  | nonstructural | 376_695    | 4_194     | 153.0458  | 12_753    | Unity             |
+| SSD-ADM1-1590546715-B6  | structural    | 630_670    | 13_699    | 154.1241  | 42_054    | Unity             |
+| SSD-ADM1-1590546715-B6  | occupants     | 434.8      | 0.0592    | 4.940E-07 | 0.1670    | Unity             |
+| SSD-ADM1-1590546715-B6  | area          | 8_210      | 162.4410  | 0.4077    | 462.4     | Unity             |
+| SSD-ADM1-1590546715-B6  | number        | 104.0000   | 2.5856    | 0.0053    | 7.6807    | Unity             |
+| SSD-ADM1-1590546715-B6  | residents     | 608.4      | 22.3250   | 0.1354    | 65.3789   | Unity             |
+| SSD-ADM1-1590546715-B6  | affectedpop   | 608.4      | 32.3176   | 0.0306    | 105.2884  | Unity             |
+| SSD-ADM1-1590546715-B6  | injured       | 434.8      | 0.1236    | 4.660E-07 | 0.5523    | Unity             |
+| ZAF-ADM1-1590546715-B9  | contents      | 6_170_456  | 31_614    | 1_434     | 88_449    | Mpumalanga        |
+| ZAF-ADM1-1590546715-B9  | nonstructural | 7_913_026  | 28_903    | 4_174     | 54_782    | Mpumalanga        |
+| ZAF-ADM1-1590546715-B9  | structural    | 15_134_627 | 82_497    | 4_961     | 294_937   | Mpumalanga        |
+| ZAF-ADM1-1590546715-B9  | occupants     | 6_755      | 0.3028    | 0.0126    | 0.7220    | Mpumalanga        |
+| ZAF-ADM1-1590546715-B9  | area          | 188_368    | 742.5     | 48.2502   | 1_991     | Mpumalanga        |
+| ZAF-ADM1-1590546715-B9  | number        | 2_391      | 11.1623   | 0.7881    | 32.9161   | Mpumalanga        |
+| ZAF-ADM1-1590546715-B9  | residents     | 11_608     | 79.8772   | 1.6150    | 259.9     | Mpumalanga        |
+| ZAF-ADM1-1590546715-B9  | affectedpop   | 11_608     | 142.4357  | 6.3437    | 381.7     | Mpumalanga        |
+| ZAF-ADM1-1590546715-B9  | injured       | 6_755      | 0.7559    | 0.0067    | 2.3364    | Mpumalanga        |
+| *total*                 | affectedpop   | 77_235     | 1_500     | 68.2787   | 4_323     | *total*           |
+| *total*                 | area          | 1_147_854  | 8_457     | 297.1     | 28_277    | *total*           |
+| *total*                 | contents      | 37_817_016 | 531_230   | 8_803     | 1_766_410 | *total*           |
+| *total*                 | injured       | 41_278     | 9.5814    | 0.0303    | 31.8031   | *total*           |
+| *total*                 | nonstructural | 47_515_988 | 563_184   | 10_723    | 2_141_997 | *total*           |
+| *total*                 | number        | 15_721     | 135.8360  | 4.7948    | 460.8     | *total*           |
+| *total*                 | occupants     | 41_278     | 2.5474    | 0.1100    | 8.1284    | *total*           |
+| *total*                 | residents     | 77_235     | 984.2     | 44.7030   | 3_050     | *total*           |
+| *total*                 | structural    | 89_336_544 | 641_046   | 33_053    | 2_449_425 | *total*           |
