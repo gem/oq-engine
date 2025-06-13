@@ -41,7 +41,7 @@ from openquake.engine.engine import create_jobs
 #       otherwise it would raise:
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
 
-CALC_RUN_TIMEOUT = 30
+CALC_RUN_TIMEOUT = 60
 
 
 django.setup()
