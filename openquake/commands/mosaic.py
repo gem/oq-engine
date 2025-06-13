@@ -314,14 +314,13 @@ def impact(exposure_hdf5='', *,
     ses_seed = '42'
     t0 = time.time()
     if rupfname.endswith('.csv'):
-        rupture_file = None
         df = pandas.read_csv(rupfname)
         for i, row in df.iterrows():
             usgs_id = row['usgs_id']
             print('###################### %s [%d/%d] #######################' %
                   (usgs_id, i + 1, len(df)))
             main_cmd(
-                usgs_id, rupture_file, callback,
+                usgs_id, None, callback,
                 maximum_distance=maximum_distance,
                 mosaic_model=mosaic_model,
                 trt=trt, truncation_level=truncation_level,
