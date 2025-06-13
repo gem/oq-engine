@@ -192,7 +192,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
     """
     Storing global exposure
     """
-    if action.startwith('find_long'):  # i.e. find_long_NAME_2
+    if action.startswith('find_long'):  # i.e. find_long_NAME_2
         fieldname = action[10:]
         exposures_xml = collect_exposures(grm_dir)
         csv_files = []
