@@ -294,29 +294,39 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
         assert len(exp.assets), exp
 
 
-def read_world_tmap(grm_dir, dstore):
+def read_world_tmap(grm_dir):
     """
-    Store the world taxonomy mapping
+    :returns: a dict pathname -> longname
     """
-    # get the names of the files to read
     summary = os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv')
     tmap_df = pandas.read_csv(summary, index_col=['country'])
     dic = {}
     for fname, df in tmap_df.groupby('fname'):
         dic[fname] = '_'.join(sorted(df.index))
     n = len(dic)
+    out = {}
     assert len(set(dic.values())) == n, sorted(dic.values())
     for cwd, dirs, files in os.walk(grm_dir):
         for f in files:
             if f in dic:
-                df = pandas.read_csv(os.path.join(cwd, f))
-                try:
-                    dstore.create_df('tmap/' + dic[f], df)
-                except ValueError:  # exists already
-                    print('Repeated %s' % dic[f])
+                out[os.path.join(cwd, f)] = dic[f]
             elif f.startswith('taxonomy_mapping'):
                 raise NameError(f'{f} is not listed in {summary}')
-    return n
+    return out
+
+
+def store_world_tmap(grm_dir, dstore):
+    """
+    Store the world taxonomy mapping
+    """
+    dic = read_world_tmap(grm_dir)
+    for f, name in dic.items():
+        df = pandas.read_csv(f)
+        try:
+            dstore.create_df('tmap/' + name, df)
+        except ValueError:  # exists already
+            print('Repeated %s' % name)
+    return len(dic)
 
 
 def main(exposures_xml, grm_dir='', wfp=False, sanity_check=False):
@@ -328,8 +338,8 @@ def main(exposures_xml, grm_dir='', wfp=False, sanity_check=False):
     log, dstore = create_job_dstore()
     with dstore, log:
         if grm_dir:
-            n = read_world_tmap(grm_dir, dstore)
-            logging.info('Read %d taxonomy mappings', n)
+            n = store_world_tmap(grm_dir, dstore)
+            logging.info('Stored %d taxonomy mappings', n)
         store(exposures_xml, wfp, dstore, sanity_check)
     return dstore.filename
 
