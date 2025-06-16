@@ -190,7 +190,9 @@ def find_long_strings_and_export(csv_paths, fieldname, output_csv_path,
 
 def main(mosaic_dir, grm_dir, wfp=False, action='build'):
     """
-    Storing global exposure
+    If action='build' (the default) stores the global exposure and tmap.
+    If action='zip' zips the global exposure in a single file exposures.zip
+    If action='find_long_XXX' find the fields XXX longer than 32 chars
     """
     if action.startswith('find_long'):  # i.e. find_long_NAME_2
         fieldname = action[10:]
