@@ -1,550 +1,712 @@
-| ID_2                       | loss_type     | value         | lossmea   | lossq05   | lossq95   | NAME_2               |
-|----------------------------+---------------+---------------+-----------+-----------+-----------+----------------------|
-| 1001                       | contents      | 3_304_230     | 17.3639   | 0.0       | 0.0330    | Autauga County       |
-| 1001                       | nonstructural | 4_956_346     | 81.0221   | 0.0       | 0.0496    | Autauga County       |
-| 1001                       | structural    | 2_753_525     | 145.3829  | 0.0       | 0.0275    | Autauga County       |
-| 1001                       | occupants     | 97.6127       | 1.695E-07 | 0.0       | 9.761E-07 | Autauga County       |
-| 1001                       | area          | 10_286        | 0.1045    | 0.0       | 1.029E-04 | Autauga County       |
-| 1001                       | number        | 42.0000       | 5.013E-04 | 0.0       | 4.200E-07 | Autauga County       |
-| 1001                       | residents     | 183.0         | 0.0052    | 0.0       | 1.830E-06 | Autauga County       |
-| 1001                       | affectedpop   | 183.0         | 3.789E-05 | 0.0       | 1.830E-06 | Autauga County       |
-| 1001                       | injured       | 97.6127       | 1.695E-07 | 0.0       | 9.761E-07 | Autauga County       |
-| 1005                       | contents      | 1_326_682     | 0.4529    | 0.0       | 0.0133    | Division No.  5      |
-| 1005                       | nonstructural | 1_990_024     | 52.5781   | 0.0       | 0.0199    | Division No.  5      |
-| 1005                       | structural    | 1_105_569     | 15.0184   | 0.0       | 0.0111    | Division No.  5      |
-| 1005                       | occupants     | 32.7605       | 1.419E-07 | 0.0       | 3.276E-07 | Division No.  5      |
-| 1005                       | area          | 4_130         | 0.0255    | 0.0       | 4.130E-05 | Division No.  5      |
-| 1005                       | number        | 30.0000       | 1.853E-04 | 0.0       | 3.000E-07 | Division No.  5      |
-| 1005                       | residents     | 61.4260       | 8.745E-04 | 0.0       | 6.143E-07 | Division No.  5      |
-| 1005                       | affectedpop   | 61.4260       | 0.0053    | 0.0       | 6.143E-07 | Division No.  5      |
-| 1005                       | injured       | 32.7605       | 1.015E-06 | 0.0       | 3.276E-07 | Division No.  5      |
-| 1009                       | contents      | 9_311_594     | 35_512    | 0.0       | 189_776   | Blount County        |
-| 1009                       | nonstructural | 13_967_391    | 53_309    | 0.0       | 365_583   | Blount County        |
-| 1009                       | structural    | 7_759_662     | 20_065    | 0.0       | 92_309    | Blount County        |
-| 1009                       | occupants     | 144.0923      | 4.680E-07 | 0.0       | 1.441E-06 | Blount County        |
-| 1009                       | area          | 28_987        | 2.2384    | 0.0       | 22.5045   | Blount County        |
-| 1009                       | number        | 186.0         | 0.0144    | 0.0       | 0.1444    | Blount County        |
-| 1009                       | residents     | 270.2         | 0.0805    | 0.0       | 0.8748    | Blount County        |
-| 1009                       | affectedpop   | 270.2         | 0.5149    | 0.0       | 2.0014    | Blount County        |
-| 1009                       | injured       | 144.0923      | 4.680E-07 | 0.0       | 1.441E-06 | Blount County        |
-| 101                        | contents      | 13_401_212    | 1_237     | 0.0       | 2_935     | Perugia              |
-| 101                        | nonstructural | 20_101_818    | 868.5     | 0.0       | 192.9     | Perugia              |
-| 101                        | structural    | 11_167_677    | 85.6429   | 0.0       | 87.4824   | Perugia              |
-| 101                        | occupants     | 247.2         | 4.228E-07 | 0.0       | 2.472E-06 | Perugia              |
-| 101                        | area          | 33_039        | 5.650E-05 | 0.0       | 3.304E-04 | Perugia              |
-| 101                        | number        | 212.0         | 3.625E-07 | 0.0       | 2.120E-06 | Perugia              |
-| 101                        | residents     | 463.5         | 0.0020    | 0.0       | 4.635E-06 | Perugia              |
-| 101                        | affectedpop   | 463.5         | 0.0437    | 0.0       | 0.0017    | Perugia              |
-| 101                        | injured       | 247.2         | 4.228E-07 | 0.0       | 2.472E-06 | Perugia              |
-| 1014                       | contents      | 58_406        | 175.0307  | 0.0       | 696.9     | Peniche              |
-| 1014                       | nonstructural | 102_211       | 253.8     | 0.0       | 135.2430  | Peniche              |
-| 1014                       | structural    | 131_414       | 542.7     | 0.0       | 1_988     | Peniche              |
-| 1014                       | occupants     | 2.2187        | 2.281E-06 | 0.0       | 2.219E-08 | Peniche              |
-| 1014                       | area          | 311.7         | 0.1280    | 0.0       | 0.1803    | Peniche              |
-| 1014                       | number        | 2.0000        | 8.213E-04 | 0.0       | 0.0012    | Peniche              |
-| 1014                       | residents     | 4.1601        | 0.0043    | 0.0       | 0.0082    | Peniche              |
-| 1014                       | affectedpop   | 4.1601        | 0.0092    | 0.0       | 0.0352    | Peniche              |
-| 1014                       | injured       | 2.2187        | 5.941E-07 | 0.0       | 2.219E-08 | Peniche              |
-| 1015                       | contents      | 1_076_936     | 3_350     | 0.0       | 173.2212  | Calhoun County       |
-| 1015                       | nonstructural | 1_615_403     | 4_592     | 0.0       | 4_486     | Calhoun County       |
-| 1015                       | structural    | 897_446       | 645.3     | 0.0       | 1_021     | Calhoun County       |
-| 1015                       | occupants     | 22.1563       | 1.685E-04 | 0.0       | 2.216E-07 | Calhoun County       |
-| 1015                       | area          | 2_655         | 2.1516    | 0.0       | 0.6100    | Calhoun County       |
-| 1015                       | number        | 13.0000       | 0.0103    | 0.0       | 0.0029    | Calhoun County       |
-| 1015                       | residents     | 41.5431       | 0.0533    | 0.0       | 0.0287    | Calhoun County       |
-| 1015                       | affectedpop   | 41.5431       | 0.0890    | 0.0       | 0.1030    | Calhoun County       |
-| 1015                       | injured       | 22.1563       | 0.0017    | 0.0       | 2.216E-07 | Calhoun County       |
-| 109                        | contents      | 1_404_947     | 6.520E-04 | 0.0       | 0.0140    | Santa Ana            |
-| 109                        | nonstructural | 2_107_420     | 0.1315    | 0.0       | 0.0211    | Santa Ana            |
-| 109                        | structural    | 1_170_789     | 0.0649    | 0.0       | 0.0117    | Santa Ana            |
-| 109                        | occupants     | 52.1686       | 2.421E-08 | 0.0       | 5.217E-07 | Santa Ana            |
-| 109                        | area          | 4_374         | 2.030E-06 | 0.0       | 4.374E-05 | Santa Ana            |
-| 109                        | number        | 21.0000       | 9.745E-09 | 0.0       | 2.100E-07 | Santa Ana            |
-| 109                        | residents     | 97.8161       | 4.539E-08 | 0.0       | 9.782E-07 | Santa Ana            |
-| 109                        | affectedpop   | 97.8161       | 4.539E-08 | 0.0       | 9.782E-07 | Santa Ana            |
-| 109                        | injured       | 52.1686       | 2.421E-08 | 0.0       | 5.217E-07 | Santa Ana            |
-| 1102                       | contents      | 8_235_254     | 6_538     | 0.0       | 3_362     | ACIPAYAM             |
-| 1102                       | nonstructural | 14_411_695    | 20_229    | 0.0       | 48_755    | ACIPAYAM             |
-| 1102                       | structural    | 18_529_322    | 44_845    | 0.0       | 191_946   | ACIPAYAM             |
-| 1102                       | occupants     | 258.7         | 1.847E-06 | 0.0       | 2.587E-06 | ACIPAYAM             |
-| 1102                       | area          | 43_948        | 5.6474    | 0.0       | 10.5392   | ACIPAYAM             |
-| 1102                       | number        | 282.0         | 0.0362    | 0.0       | 0.0676    | ACIPAYAM             |
-| 1102                       | residents     | 485.0         | 0.1847    | 0.0       | 0.4420    | ACIPAYAM             |
-| 1102                       | affectedpop   | 485.0         | 0.4746    | 0.0       | 0.7577    | ACIPAYAM             |
-| 1102                       | injured       | 258.7         | 1.846E-06 | 0.0       | 2.587E-06 | ACIPAYAM             |
-| 1203                       | contents      | 2_676_498     | 3_532     | 0.0       | 16_121    | BORNOVA              |
-| 1203                       | nonstructural | 4_683_872     | 17_723    | 0.0       | 34_177    | BORNOVA              |
-| 1203                       | structural    | 6_022_122     | 18_010    | 0.0       | 58_858    | BORNOVA              |
-| 1203                       | occupants     | 105.3980      | 3.020E-04 | 0.0       | 1.054E-06 | BORNOVA              |
-| 1203                       | area          | 12_941        | 5.1467    | 0.0       | 4.2432    | BORNOVA              |
-| 1203                       | number        | 94.0000       | 0.0374    | 0.0       | 0.0308    | BORNOVA              |
-| 1203                       | residents     | 197.6         | 0.2012    | 0.0       | 0.3027    | BORNOVA              |
-| 1203                       | affectedpop   | 197.6         | 0.7173    | 0.0       | 4.7033    | BORNOVA              |
-| 1203                       | injured       | 105.3980      | 7.400E-05 | 0.0       | 1.054E-06 | BORNOVA              |
-| 1210                       | contents      | 8_171_581     | 84.5526   | 0.0       | 0.0817    | BOZÜYÜK              |
-| 1210                       | nonstructural | 3_404_826     | 241.0     | 0.0       | 0.0340    | BOZÜYÜK              |
-| 1210                       | structural    | 2_042_895     | 4.8800    | 0.0       | 0.0204    | BOZÜYÜK              |
-| 1210                       | occupants     | 50.0500       | 2.558E-07 | 0.0       | 5.005E-07 | BOZÜYÜK              |
-| 1210                       | area          | 9_014         | 0.0078    | 0.0       | 9.014E-05 | BOZÜYÜK              |
-| 1210                       | number        | 15.3720       | 1.322E-05 | 0.0       | 1.537E-07 | BOZÜYÜK              |
-| 1210                       | injured       | 50.0500       | 2.966E-07 | 0.0       | 5.005E-07 | BOZÜYÜK              |
-| 1301                       | contents      | 133_804       | 3.2845    | 0.0       | 0.8608    | Hebei                |
-| 1301                       | nonstructural | 200_707       | 159.6797  | 0.0       | 2_816     | Hebei                |
-| 1301                       | structural    | 111_504       | 68.2077   | 0.0       | 2_233     | Hebei                |
-| 1301                       | occupants     | 2.3432        | 2.296E-06 | 0.0       | 2.343E-08 | Hebei                |
-| 1301                       | area          | 416.5         | 0.0563    | 0.0       | 0.8344    | Hebei                |
-| 1301                       | number        | 2.0000        | 2.705E-04 | 0.0       | 0.0040    | Hebei                |
-| 1301                       | residents     | 4.3935        | 0.0012    | 0.0       | 0.0221    | Hebei                |
-| 1301                       | affectedpop   | 4.3935        | 0.0077    | 0.0       | 0.0243    | Hebei                |
-| 1301                       | injured       | 2.3432        | 1.213E-05 | 0.0       | 2.343E-08 | Hebei                |
-| 1303                       | contents      | 450_561       | 68.9761   | 0.0       | 1_270     | Sunbury              |
-| 1303                       | nonstructural | 675_842       | 16.3715   | 0.0       | 719.2     | Sunbury              |
-| 1303                       | structural    | 375_468       | 11.9936   | 0.0       | 67.5000   | Sunbury              |
-| 1303                       | occupants     | 7.5554        | 3.829E-09 | 0.0       | 7.555E-08 | Sunbury              |
-| 1303                       | area          | 1_403         | 4.100E-04 | 0.0       | 9.505E-04 | Sunbury              |
-| 1303                       | number        | 9.0000        | 2.631E-06 | 0.0       | 6.099E-06 | Sunbury              |
-| 1303                       | residents     | 14.1664       | 7.049E-05 | 0.0       | 1.614E-04 | Sunbury              |
-| 1303                       | affectedpop   | 14.1664       | 8.100E-04 | 0.0       | 0.0278    | Sunbury              |
-| 1303                       | injured       | 7.5554        | 3.829E-09 | 0.0       | 7.555E-08 | Sunbury              |
-| 1502                       | contents      | 66_902        | 108.3102  | 0.0       | 45.5895   | Nei Mongol           |
-| 1502                       | nonstructural | 100_353       | 74.5439   | 0.0       | 48.2635   | Nei Mongol           |
-| 1502                       | structural    | 55_752        | 73.7227   | 0.0       | 446.1     | Nei Mongol           |
-| 1502                       | occupants     | 1.4901        | 3.494E-05 | 0.0       | 1.490E-08 | Nei Mongol           |
-| 1502                       | area          | 208.3         | 0.0997    | 0.0       | 0.1655    | Nei Mongol           |
-| 1502                       | number        | 1.0000        | 4.789E-04 | 0.0       | 7.947E-04 | Nei Mongol           |
-| 1502                       | residents     | 2.7939        | 0.0026    | 0.0       | 0.0069    | Nei Mongol           |
-| 1502                       | affectedpop   | 2.7939        | 0.0087    | 0.0       | 0.0206    | Nei Mongol           |
-| 1502                       | injured       | 1.4901        | 1.521E-05 | 0.0       | 1.490E-08 | Nei Mongol           |
-| 1604                       | contents      | 6_942_971     | 0.0032    | 0.0       | 0.0694    | SARIYER              |
-| 1604                       | nonstructural | 10_414_457    | 0.3038    | 0.0       | 0.1041    | SARIYER              |
-| 1604                       | structural    | 5_785_809     | 0.0025    | 0.0       | 0.0579    | SARIYER              |
-| 1604                       | occupants     | 234.6         | 1.089E-07 | 0.0       | 2.346E-06 | SARIYER              |
-| 1604                       | area          | 21_613        | 1.003E-05 | 0.0       | 2.161E-04 | SARIYER              |
-| 1604                       | number        | 157.0000      | 7.285E-08 | 0.0       | 1.570E-06 | SARIYER              |
-| 1604                       | residents     | 439.9         | 2.041E-07 | 0.0       | 4.399E-06 | SARIYER              |
-| 1604                       | affectedpop   | 439.9         | 1.870E-07 | 0.0       | 4.399E-06 | SARIYER              |
-| 1604                       | injured       | 234.6         | 1.089E-07 | 0.0       | 2.346E-06 | SARIYER              |
-| 1607                       | contents      | 234_158       | 475.1     | 0.0       | 5_078     | SASON                |
-| 1607                       | nonstructural | 409_776       | 1_440     | 0.0       | 10_328    | SASON                |
-| 1607                       | structural    | 526_855       | 1_334     | 0.0       | 5_598     | SASON                |
-| 1607                       | occupants     | 13.3289       | 1.959E-04 | 0.0       | 0.0019    | SASON                |
-| 1607                       | area          | 1_250         | 1.0530    | 0.0       | 10.0683   | SASON                |
-| 1607                       | number        | 6.0000        | 0.0051    | 0.0       | 0.0483    | SASON                |
-| 1607                       | residents     | 24.9917       | 0.0742    | 0.0       | 0.8201    | SASON                |
-| 1607                       | affectedpop   | 24.9917       | 1.3322    | 0.0       | 21.5644   | SASON                |
-| 1607                       | injured       | 13.3289       | 0.0074    | 0.0       | 0.0014    | SASON                |
-| 1802                       | contents      | 3_792_100     | 29.4786   | 0.0       | 0.0379    | TANGGAMUS Regency    |
-| 1802                       | nonstructural | 6_636_176     | 126.4369  | 0.0       | 22.8459   | TANGGAMUS Regency    |
-| 1802                       | structural    | 8_532_226     | 7_116     | 0.0       | 44_894    | TANGGAMUS Regency    |
-| 1802                       | occupants     | 90.1723       | 8.542E-08 | 0.0       | 9.017E-07 | TANGGAMUS Regency    |
-| 1802                       | area          | 20_237        | 0.0991    | 0.0       | 2.024E-04 | TANGGAMUS Regency    |
-| 1802                       | number        | 147.0000      | 7.197E-04 | 0.0       | 1.470E-06 | TANGGAMUS Regency    |
-| 1802                       | residents     | 169.0731      | 0.0029    | 0.0       | 1.691E-06 | TANGGAMUS Regency    |
-| 1802                       | affectedpop   | 169.0731      | 0.0392    | 0.0       | 1.691E-06 | TANGGAMUS Regency    |
-| 1802                       | injured       | 90.1723       | 8.542E-08 | 0.0       | 9.017E-07 | TANGGAMUS Regency    |
-| 1809                       | contents      | 398_005       | 2.179E-04 | 0.0       | 0.0040    | İSCEHİSAR            |
-| 1809                       | nonstructural | 597_007       | 0.6190    | 0.0       | 0.0060    | İSCEHİSAR            |
-| 1809                       | structural    | 331_671       | 0.2237    | 0.0       | 0.0033    | İSCEHİSAR            |
-| 1809                       | occupants     | 0.9045        | 4.986E-10 | 0.0       | 9.045E-09 | İSCEHİSAR            |
-| 1809                       | area          | 1_239         | 1.542E-04 | 0.0       | 1.239E-05 | İSCEHİSAR            |
-| 1809                       | number        | 9.0000        | 1.120E-06 | 0.0       | 9.000E-08 | İSCEHİSAR            |
-| 1809                       | residents     | 1.6960        | 6.225E-07 | 0.0       | 1.696E-08 | İSCEHİSAR            |
-| 1809                       | affectedpop   | 1.6960        | 2.665E-07 | 0.0       | 1.696E-08 | İSCEHİSAR            |
-| 1809                       | injured       | 0.9045        | 4.986E-10 | 0.0       | 9.045E-09 | İSCEHİSAR            |
-| 1811                       | contents      | 808_873       | 10.1152   | 0.0       | 1.8419    | DEMRE                |
-| 1811                       | nonstructural | 1_415_528     | 4.9223    | 0.0       | 11.7335   | DEMRE                |
-| 1811                       | structural    | 1_819_965     | 174.4588  | 0.0       | 9_608     | DEMRE                |
-| 1811                       | occupants     | 30.9291       | 2.669E-08 | 0.0       | 3.093E-07 | DEMRE                |
-| 1811                       | area          | 3_911         | 0.0046    | 0.0       | 3.911E-05 | DEMRE                |
-| 1811                       | number        | 4.0000        | 4.713E-06 | 0.0       | 4.000E-08 | DEMRE                |
-| 1811                       | residents     | 57.9921       | 1.996E-04 | 0.0       | 5.799E-07 | DEMRE                |
-| 1811                       | affectedpop   | 57.9921       | 6.461E-04 | 0.0       | 0.0135    | DEMRE                |
-| 1811                       | injured       | 30.9291       | 2.657E-08 | 0.0       | 3.093E-07 | DEMRE                |
-| 1813                       | contents      | 87_609        | 1.776E-04 | 0.0       | 8.761E-04 | KARAMANLI            |
-| 1813                       | nonstructural | 153_316       | 0.0024    | 0.0       | 0.0015    | KARAMANLI            |
-| 1813                       | structural    | 197_120       | 3.551E-04 | 0.0       | 0.0020    | KARAMANLI            |
-| 1813                       | occupants     | 1.1887        | 4.678E-10 | 0.0       | 1.189E-08 | KARAMANLI            |
-| 1813                       | area          | 467.5         | 1.840E-07 | 0.0       | 4.675E-06 | KARAMANLI            |
-| 1813                       | number        | 3.0000        | 1.180E-09 | 0.0       | 3.000E-08 | KARAMANLI            |
-| 1813                       | residents     | 2.2288        | 8.770E-10 | 0.0       | 2.229E-08 | KARAMANLI            |
-| 1813                       | affectedpop   | 2.2288        | 8.770E-10 | 0.0       | 2.229E-08 | KARAMANLI            |
-| 1813                       | injured       | 1.1887        | 4.678E-10 | 0.0       | 1.189E-08 | KARAMANLI            |
-| 203                        | contents      | 66_902        | 0.0904    | 0.0       | 6.690E-04 | Cuxhaven             |
-| 203                        | nonstructural | 100_353       | 0.2957    | 0.0       | 0.0010    | Cuxhaven             |
-| 203                        | structural    | 55_752        | 1.3807    | 0.0       | 5.575E-04 | Cuxhaven             |
-| 203                        | occupants     | 0.7431        | 7.811E-10 | 0.0       | 7.431E-09 | Cuxhaven             |
-| 203                        | area          | 208.3         | 1.588E-04 | 0.0       | 2.083E-06 | Cuxhaven             |
-| 203                        | number        | 1.0000        | 7.622E-07 | 0.0       | 1.000E-08 | Cuxhaven             |
-| 203                        | residents     | 1.3932        | 3.163E-06 | 0.0       | 1.393E-08 | Cuxhaven             |
-| 203                        | affectedpop   | 1.3932        | 7.529E-07 | 0.0       | 1.393E-08 | Cuxhaven             |
-| 203                        | injured       | 0.7431        | 7.811E-10 | 0.0       | 7.431E-09 | Cuxhaven             |
-| 22211                      | contents      | 40_191        | 22.0897   | 0.0       | 571.9     | Iwata-shi            |
-| 22211                      | nonstructural | 100_477       | 28.0089   | 0.0       | 344.9     | Iwata-shi            |
-| 22211                      | structural    | 60_286        | 15.1210   | 0.0       | 155.2631  | Iwata-shi            |
-| 22211                      | occupants     | 1.2333        | 7.003E-07 | 0.0       | 1.233E-08 | Iwata-shi            |
-| 22211                      | area          | 149.2000      | 0.0074    | 0.0       | 0.0260    | Iwata-shi            |
-| 22211                      | number        | 1.0000        | 4.954E-05 | 0.0       | 1.744E-04 | Iwata-shi            |
-| 22211                      | residents     | 2.2000        | 3.054E-04 | 0.0       | 0.0018    | Iwata-shi            |
-| 22211                      | affectedpop   | 2.2000        | 6.385E-04 | 0.0       | 0.0085    | Iwata-shi            |
-| 22211                      | injured       | 1.2333        | 3.947E-08 | 0.0       | 1.233E-08 | Iwata-shi            |
-| 28209                      | contents      | 10_941_112    | 3_984     | 0.0       | 107_537   | Toyooka-shi          |
-| 28209                      | nonstructural | 22_319_906    | 1_850     | 0.0       | 36_362    | Toyooka-shi          |
-| 28209                      | structural    | 13_391_943    | 1_356     | 0.0       | 65_590    | Toyooka-shi          |
-| 28209                      | occupants     | 417.3         | 7.411E-04 | 0.0       | 0.0020    | Toyooka-shi          |
-| 28209                      | area          | 32_454        | 1.7088    | 0.0       | 15.4474   | Toyooka-shi          |
-| 28209                      | number        | 35.4771       | 0.0012    | 0.0       | 0.0097    | Toyooka-shi          |
-| 28209                      | residents     | 609.4         | 0.0123    | 0.0       | 0.8957    | Toyooka-shi          |
-| 28209                      | affectedpop   | 609.4         | 0.0639    | 0.0       | 3.3863    | Toyooka-shi          |
-| 28209                      | injured       | 417.3         | 1.209E-04 | 0.0       | 3.362E-06 | Toyooka-shi          |
-| 302                        | contents      | 11_743_833    | 4_372     | 0.0       | 24_821    | Bernkastel-Wittlich  |
-| 302                        | nonstructural | 17_615_750    | 4_487     | 0.0       | 5_484     | Bernkastel-Wittlich  |
-| 302                        | structural    | 9_786_528     | 2_170     | 0.0       | 8_078     | Bernkastel-Wittlich  |
-| 302                        | occupants     | 267.2         | 5.756E-05 | 0.0       | 2.672E-06 | Bernkastel-Wittlich  |
-| 302                        | area          | 33_122        | 1.2060    | 0.0       | 3.312E-04 | Bernkastel-Wittlich  |
-| 302                        | number        | 28.0000       | 0.0010    | 0.0       | 2.800E-07 | Bernkastel-Wittlich  |
-| 302                        | residents     | 500.9         | 0.0634    | 0.0       | 5.009E-06 | Bernkastel-Wittlich  |
-| 302                        | affectedpop   | 500.9         | 0.3756    | 0.0       | 0.0196    | Bernkastel-Wittlich  |
-| 302                        | injured       | 267.2         | 1.722E-05 | 0.0       | 2.672E-06 | Bernkastel-Wittlich  |
-| 31390                      | contents      | 431_981_568   | 911.6     | 0.0       | 10_793    | Hoki-cho             |
-| 31390                      | nonstructural | 1_061_315_520 | 2_460     | 0.0       | 26_610    | Hoki-cho             |
-| 31390                      | structural    | 636_789_248   | 965.5     | 0.0       | 13_267    | Hoki-cho             |
-| 31390                      | occupants     | 18_253        | 2.287E-05 | 0.0       | 1.803E-04 | Hoki-cho             |
-| 31390                      | area          | 1_571_046     | 0.1367    | 0.0       | 2.1906    | Hoki-cho             |
-| 31390                      | number        | 7_827         | 9.008E-04 | 0.0       | 0.0199    | Hoki-cho             |
-| 31390                      | residents     | 32_967        | 0.0107    | 0.0       | 0.1523    | Hoki-cho             |
-| 31390                      | affectedpop   | 32_967        | 0.0903    | 0.0       | 1.7135    | Hoki-cho             |
-| 31390                      | injured       | 18_253        | 1.923E-05 | 0.0       | 1.803E-04 | Hoki-cho             |
-| 32386                      | contents      | 5_809_910     | 1_793     | 0.0       | 10_530    | Iinan-cho            |
-| 32386                      | nonstructural | 14_119_530    | 1_146     | 0.0       | 5_863     | Iinan-cho            |
-| 32386                      | structural    | 8_471_717     | 649.7     | 0.0       | 3_948     | Iinan-cho            |
-| 32386                      | occupants     | 231.0         | 8.050E-05 | 0.0       | 2.638E-07 | Iinan-cho            |
-| 32386                      | area          | 22_850        | 0.6440    | 0.0       | 1.3353    | Iinan-cho            |
-| 32386                      | number        | 197.2         | 0.0022    | 0.0       | 0.0012    | Iinan-cho            |
-| 32386                      | residents     | 414.0         | 0.0156    | 0.0       | 0.0080    | Iinan-cho            |
-| 32386                      | affectedpop   | 414.0         | 0.0765    | 0.0       | 0.1718    | Iinan-cho            |
-| 32386                      | injured       | 231.0         | 2.535E-04 | 0.0       | 7.472E-06 | Iinan-cho            |
-| 3461                       | contents      | 57_129_668    | 260_945   | 0.0035    | 1_135_517 | Ravne na Koroskem    |
-| 3461                       | nonstructural | 34_277_804    | 50_324    | 4.525E-12 | 212_830   | Ravne na Koroskem    |
-| 3461                       | structural    | 22_851_866    | 60_381    | 0.0014    | 319_293   | Ravne na Koroskem    |
-| 3461                       | occupants     | 1_417         | 0.0101    | 7.967E-08 | 0.0890    | Ravne na Koroskem    |
-| 3461                       | area          | 48_068        | 49.5777   | 3.366E-06 | 341.6     | Ravne na Koroskem    |
-| 3461                       | number        | 106.6000      | 0.1880    | 7.938E-09 | 1.5529    | Ravne na Koroskem    |
-| 3461                       | injured       | 1_417         | 0.0187    | 7.967E-08 | 0.0798    | Ravne na Koroskem    |
-| 35                         | contents      | 135_917       | 1.021E-04 | 0.0       | 0.0014    | Loir-et-Cher         |
-| 35                         | nonstructural | 56_632        | 4.771E-04 | 0.0       | 5.663E-04 | Loir-et-Cher         |
-| 35                         | structural    | 33_979        | 2.554E-05 | 0.0       | 3.398E-04 | Loir-et-Cher         |
-| 35                         | occupants     | 1.6900        | 1.270E-09 | 0.0       | 1.690E-08 | Loir-et-Cher         |
-| 35                         | area          | 149.9360      | 1.127E-07 | 0.0       | 1.499E-06 | Loir-et-Cher         |
-| 35                         | number        | 0.2557        | 1.922E-10 | 0.0       | 2.557E-09 | Loir-et-Cher         |
-| 35                         | injured       | 1.6900        | 1.270E-09 | 0.0       | 1.690E-08 | Loir-et-Cher         |
-| 35203                      | contents      | 3_665_928     | 2_571     | 0.0       | 22_660    | Yamaguchi-shi        |
-| 35203                      | nonstructural | 3_410_494     | 5_108     | 0.0       | 24_083    | Yamaguchi-shi        |
-| 35203                      | structural    | 2_046_296     | 3_812     | 0.0       | 16_725    | Yamaguchi-shi        |
-| 35203                      | occupants     | 73.2600       | 3.179E-04 | 0.0       | 0.0013    | Yamaguchi-shi        |
-| 35203                      | area          | 5_976         | 2.0996    | 0.0       | 11.6965   | Yamaguchi-shi        |
-| 35203                      | number        | 21.8165       | 0.0131    | 0.0       | 0.0696    | Yamaguchi-shi        |
-| 35203                      | residents     | 73.9000       | 0.1058    | 0.0       | 0.8176    | Yamaguchi-shi        |
-| 35203                      | affectedpop   | 73.9000       | 0.5895    | 0.0       | 6.2501    | Yamaguchi-shi        |
-| 35203                      | injured       | 73.2600       | 0.0017    | 0.0       | 0.0110    | Yamaguchi-shi        |
-| 39212                      | contents      | 4_699_411     | 7.6302    | 0.0       | 117.8692  | Kami-shi             |
-| 39212                      | nonstructural | 4_885_896     | 342.0     | 0.0       | 4_613     | Kami-shi             |
-| 39212                      | structural    | 2_931_538     | 20.0839   | 0.0       | 247.7     | Kami-shi             |
-| 39212                      | occupants     | 121.1933      | 9.486E-07 | 0.0       | 8.133E-06 | Kami-shi             |
-| 39212                      | area          | 8_017         | 0.0282    | 0.0       | 0.3146    | Kami-shi             |
-| 39212                      | number        | 36.2582       | 2.325E-04 | 0.0       | 0.0030    | Kami-shi             |
-| 39212                      | residents     | 108.8000      | 0.0013    | 0.0       | 0.0196    | Kami-shi             |
-| 39212                      | affectedpop   | 108.8000      | 0.0015    | 0.0       | 0.0011    | Kami-shi             |
-| 39212                      | injured       | 121.1933      | 4.516E-05 | 0.0       | 7.937E-08 | Kami-shi             |
-| 40215                      | contents      | 744_214       | 1_513     | 0.0       | 8_701     | Nakama-shi           |
-| 40215                      | nonstructural | 1_527_298     | 2_548     | 0.0       | 4_552     | Nakama-shi           |
-| 40215                      | structural    | 916_379       | 1_358     | 0.0       | 5_002     | Nakama-shi           |
-| 40215                      | occupants     | 27.7133       | 1.135E-04 | 0.0       | 1.328E-07 | Nakama-shi           |
-| 40215                      | area          | 2_258         | 0.6990    | 0.0       | 0.4399    | Nakama-shi           |
-| 40215                      | number        | 10.1047       | 0.0023    | 0.0       | 0.0022    | Nakama-shi           |
-| 40215                      | residents     | 45.8000       | 0.0235    | 0.0       | 0.0635    | Nakama-shi           |
-| 40215                      | affectedpop   | 45.8000       | 0.1281    | 0.0       | 0.1249    | Nakama-shi           |
-| 40215                      | injured       | 27.7133       | 1.029E-04 | 0.0       | 1.328E-07 | Nakama-shi           |
-| 4801                       | contents      | 200_707       | 0.4142    | 0.0       | 0.0020    | Division No.  1      |
-| 4801                       | nonstructural | 301_060       | 12.7148   | 0.0       | 0.0030    | Division No.  1      |
-| 4801                       | structural    | 167_256       | 18.0801   | 0.0       | 0.0017    | Division No.  1      |
-| 4801                       | occupants     | 6.2510        | 1.086E-08 | 0.0       | 6.251E-08 | Division No.  1      |
-| 4801                       | area          | 624.8         | 0.0078    | 0.0       | 6.248E-06 | Division No.  1      |
-| 4801                       | number        | 3.0000        | 3.758E-05 | 0.0       | 3.000E-08 | Division No.  1      |
-| 4801                       | residents     | 11.7207       | 4.067E-04 | 0.0       | 1.172E-07 | Division No.  1      |
-| 4801                       | affectedpop   | 11.7207       | 2.840E-04 | 0.0       | 1.172E-07 | Division No.  1      |
-| 4801                       | injured       | 6.2510        | 1.086E-08 | 0.0       | 6.251E-08 | Division No.  1      |
-| 502                        | contents      | 210_348       | 152.1326  | 0.0       | 3_465     | Nicoya               |
-| 502                        | nonstructural | 315_522       | 423.4     | 0.0       | 13_733    | Nicoya               |
-| 502                        | structural    | 175_290       | 106.1300  | 0.0       | 1_659     | Nicoya               |
-| 502                        | occupants     | 3.2283        | 1.792E-06 | 0.0       | 7.875E-06 | Nicoya               |
-| 502                        | area          | 654.8         | 0.0625    | 0.0       | 1.1766    | Nicoya               |
-| 502                        | number        | 1.0000        | 9.540E-05 | 0.0       | 0.0018    | Nicoya               |
-| 502                        | residents     | 6.0530        | 0.0021    | 0.0       | 0.0442    | Nicoya               |
-| 502                        | affectedpop   | 6.0530        | 0.0602    | 0.0       | 2.5778    | Nicoya               |
-| 502                        | injured       | 3.2283        | 8.838E-05 | 0.0       | 0.0062    | Nicoya               |
-| 503                        | contents      | 2_263_526     | 14_379    | 0.0       | 80_361    | Santa Cruz           |
-| 503                        | nonstructural | 3_961_170     | 4_925     | 0.0       | 36_204    | Santa Cruz           |
-| 503                        | structural    | 5_092_933     | 13_716    | 0.0       | 83_772    | Santa Cruz           |
-| 503                        | occupants     | 42.0377       | 8.641E-05 | 0.0       | 4.204E-07 | Santa Cruz           |
-| 503                        | area          | 12_079        | 1.9062    | 0.0       | 8.2578    | Santa Cruz           |
-| 503                        | number        | 58.0000       | 0.0092    | 0.0       | 0.0397    | Santa Cruz           |
-| 503                        | residents     | 78.8206       | 0.0551    | 0.0       | 0.3296    | Santa Cruz           |
-| 503                        | affectedpop   | 78.8206       | 1.9897    | 0.0       | 32.6084   | Santa Cruz           |
-| 503                        | injured       | 42.0377       | 0.0017    | 0.0       | 4.438E-04 | Santa Cruz           |
-| 504                        | contents      | 531_209       | 203.1     | 0.0       | 4_178     | Fundão               |
-| 504                        | nonstructural | 796_814       | 116.8291  | 0.0       | 1_208     | Fundão               |
-| 504                        | structural    | 442_674       | 160.1160  | 0.0       | 672.2     | Fundão               |
-| 504                        | occupants     | 6.0522        | 7.129E-09 | 0.0       | 6.052E-08 | Fundão               |
-| 504                        | area          | 1_310         | 0.0043    | 0.0       | 0.0821    | Fundão               |
-| 504                        | number        | 2.0000        | 6.550E-06 | 0.0       | 1.253E-04 | Fundão               |
-| 504                        | residents     | 11.3479       | 2.267E-04 | 0.0       | 0.0060    | Fundão               |
-| 504                        | affectedpop   | 11.3479       | 0.0059    | 0.0       | 0.0015    | Fundão               |
-| 504                        | injured       | 6.0522        | 7.129E-09 | 0.0       | 6.052E-08 | Fundão               |
-| 509                        | contents      | 116_812       | 268.2     | 0.0       | 966.2     | Sertã                |
-| 509                        | nonstructural | 204_421       | 85.5710   | 0.0       | 690.9     | Sertã                |
-| 509                        | structural    | 262_827       | 657.5     | 0.0       | 1_152     | Sertã                |
-| 509                        | occupants     | 2.7994        | 9.448E-05 | 0.0       | 2.799E-08 | Sertã                |
-| 509                        | area          | 623.4         | 0.3536    | 0.0       | 0.4760    | Sertã                |
-| 509                        | number        | 4.0000        | 0.0023    | 0.0       | 0.0031    | Sertã                |
-| 509                        | residents     | 5.2489        | 0.0062    | 0.0       | 0.0141    | Sertã                |
-| 509                        | affectedpop   | 5.2489        | 0.0076    | 0.0       | 0.0633    | Sertã                |
-| 509                        | injured       | 2.7994        | 4.039E-06 | 0.0       | 2.799E-08 | Sertã                |
-| 58                         | contents      | 210_348       | 17.1323   | 0.0       | 80.9738   | Meuse                |
-| 58                         | nonstructural | 315_522       | 182.9     | 0.0       | 735.4     | Meuse                |
-| 58                         | structural    | 175_290       | 161.6895  | 0.0       | 3_198     | Meuse                |
-| 58                         | occupants     | 6.0165        | 5.212E-09 | 0.0       | 6.016E-08 | Meuse                |
-| 58                         | area          | 654.8         | 0.0020    | 0.0       | 6.548E-06 | Meuse                |
-| 58                         | number        | 1.0000        | 3.069E-06 | 0.0       | 1.000E-08 | Meuse                |
-| 58                         | residents     | 11.2809       | 2.496E-04 | 0.0       | 0.0030    | Meuse                |
-| 58                         | affectedpop   | 11.2809       | 0.0075    | 0.0       | 0.0863    | Meuse                |
-| 58                         | injured       | 6.0165        | 5.450E-09 | 0.0       | 6.016E-08 | Meuse                |
-| 601                        | contents      | 1_503_573     | 1_213     | 0.0       | 59_727    | Puntarenas           |
-| 601                        | nonstructural | 2_255_360     | 2_171     | 0.0       | 53_070    | Puntarenas           |
-| 601                        | structural    | 1_252_978     | 1_210     | 0.0       | 44_303    | Puntarenas           |
-| 601                        | occupants     | 24.3561       | 5.329E-06 | 0.0       | 2.436E-07 | Puntarenas           |
-| 601                        | area          | 4_681         | 0.3819    | 0.0       | 9.1251    | Puntarenas           |
-| 601                        | number        | 34.0000       | 0.0028    | 0.0       | 0.0663    | Puntarenas           |
-| 601                        | residents     | 45.6678       | 0.0132    | 0.0       | 0.3311    | Puntarenas           |
-| 601                        | affectedpop   | 45.6678       | 0.1906    | 0.0       | 2.4844    | Puntarenas           |
-| 601                        | injured       | 24.3561       | 4.679E-07 | 0.0       | 2.436E-07 | Puntarenas           |
-| 603                        | contents      | 154_780       | 6.7111    | 0.0       | 0.0134    | Coimbra              |
-| 603                        | nonstructural | 270_864       | 141.4080  | 0.0       | 242.6     | Coimbra              |
-| 603                        | structural    | 348_254       | 168.6852  | 0.0       | 1_004     | Coimbra              |
-| 603                        | occupants     | 3.0482        | 8.776E-07 | 0.0       | 3.048E-08 | Coimbra              |
-| 603                        | area          | 826.0         | 0.0335    | 0.0       | 0.0933    | Coimbra              |
-| 603                        | number        | 6.0000        | 2.432E-04 | 0.0       | 6.779E-04 | Coimbra              |
-| 603                        | residents     | 5.7153        | 4.896E-04 | 0.0       | 0.0027    | Coimbra              |
-| 603                        | affectedpop   | 5.7153        | 0.0013    | 0.0       | 0.0017    | Coimbra              |
-| 603                        | injured       | 3.0482        | 1.591E-07 | 0.0       | 3.048E-08 | Coimbra              |
-| 610                        | contents      | 396_592       | 88.4863   | 0.0       | 456.5     | Chudnivs'kyi         |
-| 610                        | nonstructural | 627_134       | 275.5     | 0.0       | 1_424     | Chudnivs'kyi         |
-| 610                        | structural    | 513_219       | 468.3     | 0.0       | 3_224     | Chudnivs'kyi         |
-| 610                        | occupants     | 12.7725       | 6.705E-06 | 0.0       | 1.277E-07 | Chudnivs'kyi         |
-| 610                        | area          | 1_521         | 0.0979    | 0.0       | 0.2966    | Chudnivs'kyi         |
-| 610                        | number        | 9.0000        | 5.001E-04 | 0.0       | 0.0014    | Chudnivs'kyi         |
-| 610                        | residents     | 23.9484       | 0.0036    | 0.0       | 0.0166    | Chudnivs'kyi         |
-| 610                        | affectedpop   | 23.9484       | 0.0095    | 0.0       | 0.0217    | Chudnivs'kyi         |
-| 610                        | injured       | 12.7725       | 5.261E-06 | 0.0       | 1.277E-07 | Chudnivs'kyi         |
-| 615                        | contents      | 28_473        | 0.0292    | 0.0       | 2.847E-04 | Soure                |
-| 615                        | nonstructural | 49_828        | 1.1587    | 0.0       | 0.5311    | Soure                |
-| 615                        | structural    | 64_065        | 0.1375    | 0.0       | 0.0209    | Soure                |
-| 615                        | occupants     | 0.7350        | 5.376E-08 | 0.0       | 7.350E-09 | Soure                |
-| 615                        | area          | 137.6656      | 0.0016    | 0.0       | 1.377E-06 | Soure                |
-| 615                        | number        | 1.0000        | 1.187E-05 | 0.0       | 1.000E-08 | Soure                |
-| 615                        | residents     | 1.3782        | 2.935E-05 | 0.0       | 1.378E-08 | Soure                |
-| 615                        | affectedpop   | 1.3782        | 5.422E-05 | 0.0       | 1.378E-08 | Soure                |
-| 615                        | injured       | 0.7350        | 1.363E-09 | 0.0       | 7.350E-09 | Soure                |
-| 616                        | contents      | 642_467       | 3.6971    | 0.0       | 0.0064    | Luhyns'kyi           |
-| 616                        | nonstructural | 1_124_317     | 105.0693  | 0.0       | 209.7     | Luhyns'kyi           |
-| 616                        | structural    | 1_445_550     | 61.1645   | 0.0       | 681.1     | Luhyns'kyi           |
-| 616                        | occupants     | 18.3280       | 1.119E-08 | 0.0       | 1.833E-07 | Luhyns'kyi           |
-| 616                        | area          | 3_429         | 0.0208    | 0.0       | 3.429E-05 | Luhyns'kyi           |
-| 616                        | number        | 22.0000       | 1.332E-04 | 0.0       | 2.200E-07 | Luhyns'kyi           |
-| 616                        | residents     | 34.3649       | 6.335E-04 | 0.0       | 0.0028    | Luhyns'kyi           |
-| 616                        | affectedpop   | 34.3649       | 0.0033    | 0.0       | 0.1429    | Luhyns'kyi           |
-| 616                        | injured       | 18.3280       | 1.510E-07 | 0.0       | 1.833E-07 | Luhyns'kyi           |
-| 701                        | contents      | 1_677_690     | 361.1     | 0.0       | 16_469    | Alandroal            |
-| 701                        | nonstructural | 2_516_536     | 1_416     | 0.0       | 23_095    | Alandroal            |
-| 701                        | structural    | 1_398_075     | 2_313     | 0.0       | 9_417     | Alandroal            |
-| 701                        | occupants     | 46.7349       | 4.748E-05 | 0.0       | 4.673E-07 | Alandroal            |
-| 701                        | area          | 4_732         | 1.1007    | 0.0       | 28.3391   | Alandroal            |
-| 701                        | number        | 4.0000        | 9.305E-04 | 0.0       | 0.0240    | Alandroal            |
-| 701                        | residents     | 87.6279       | 0.0477    | 0.0       | 1.3843    | Alandroal            |
-| 701                        | affectedpop   | 87.6279       | 0.0980    | 0.0       | 4.4932    | Alandroal            |
-| 701                        | injured       | 46.7349       | 5.363E-05 | 0.0       | 4.673E-07 | Alandroal            |
-| 704                        | contents      | 1_109_254     | 823.3     | 0.0       | 7_604     | Talamanca            |
-| 704                        | nonstructural | 1_941_194     | 4_808     | 0.0       | 8_152     | Talamanca            |
-| 704                        | structural    | 2_495_821     | 2_276     | 0.0       | 5_278     | Talamanca            |
-| 704                        | occupants     | 33.2014       | 1.686E-05 | 0.0       | 3.320E-07 | Talamanca            |
-| 704                        | area          | 5_920         | 0.4995    | 0.0       | 0.0217    | Talamanca            |
-| 704                        | number        | 43.0000       | 0.0036    | 0.0       | 1.577E-04 | Talamanca            |
-| 704                        | residents     | 62.2526       | 0.0170    | 0.0       | 0.0281    | Talamanca            |
-| 704                        | affectedpop   | 62.2526       | 0.0621    | 0.0       | 0.1120    | Talamanca            |
-| 704                        | injured       | 33.2014       | 2.661E-05 | 0.0       | 3.320E-07 | Talamanca            |
-| 712                        | contents      | 1_556_821     | 82.0821   | 0.0       | 0.0156    | Vendas Novas         |
-| 712                        | nonstructural | 648_675       | 0.0181    | 0.0       | 0.0065    | Vendas Novas         |
-| 712                        | structural    | 389_205       | 4.0928    | 0.0       | 0.0039    | Vendas Novas         |
-| 712                        | occupants     | 6.8133        | 1.699E-08 | 0.0       | 6.813E-08 | Vendas Novas         |
-| 712                        | area          | 1_636         | 4.079E-06 | 0.0       | 1.636E-05 | Vendas Novas         |
-| 712                        | number        | 2.7893        | 6.955E-09 | 0.0       | 2.789E-08 | Vendas Novas         |
-| 712                        | injured       | 6.8133        | 1.699E-08 | 0.0       | 6.813E-08 | Vendas Novas         |
-| ARE-ADM1-1590546715-B1     | contents      | 12_832_977    | 274.6     | 0.0       | 158.7435  | Abu Dhabi            |
-| ARE-ADM1-1590546715-B1     | nonstructural | 41_302_968    | 1_592     | 0.0       | 3_186     | Abu Dhabi            |
-| ARE-ADM1-1590546715-B1     | structural    | 37_205_532    | 1_766     | 0.0       | 9_407     | Abu Dhabi            |
-| ARE-ADM1-1590546715-B1     | occupants     | 6_544         | 0.0013    | 0.0       | 5.109E-06 | Abu Dhabi            |
-| ARE-ADM1-1590546715-B1     | area          | 294_893       | 3.5055    | 0.0       | 4.3245    | Abu Dhabi            |
-| ARE-ADM1-1590546715-B1     | number        | 2_944         | 0.0457    | 0.0       | 0.0678    | Abu Dhabi            |
-| ARE-ADM1-1590546715-B1     | residents     | 12_537        | 0.3488    | 0.0       | 0.8563    | Abu Dhabi            |
-| ARE-ADM1-1590546715-B1     | affectedpop   | 12_537        | 0.3371    | 0.0       | 0.2748    | Abu Dhabi            |
-| ARE-ADM1-1590546715-B1     | injured       | 6_544         | 0.0180    | 0.0       | 5.109E-06 | Abu Dhabi            |
-| AREA # 22133               | contents      | 934_305       | 205.7     | 0.0       | 0.8650    | Quitilipi            |
-| AREA # 22133               | nonstructural | 1_294_484     | 82.1835   | 0.0       | 209.2     | Quitilipi            |
-| AREA # 22133               | structural    | 2_296_433     | 239.3     | 0.0       | 1_036     | Quitilipi            |
-| AREA # 22133               | occupants     | 1_215         | 0.0030    | 0.0       | 7.047E-06 | Quitilipi            |
-| AREA # 22133               | area          | 16_920        | 0.4516    | 0.0       | 0.7370    | Quitilipi            |
-| AREA # 22133               | number        | 213.0         | 0.0037    | 0.0       | 0.0066    | Quitilipi            |
-| AREA # 22133               | residents     | 787.3         | 0.0058    | 0.0       | 0.0124    | Quitilipi            |
-| AREA # 22133               | affectedpop   | 787.3         | 0.0275    | 0.0       | 0.0191    | Quitilipi            |
-| AREA # 22133               | injured       | 1_215         | 0.0014    | 0.0       | 7.040E-06 | Quitilipi            |
-| AREA # 50063               | contents      | 3_355_969     | 55.1723   | 0.0       | 326.7     | Luján de Cuyo        |
-| AREA # 50063               | nonstructural | 5_853_940     | 92.5508   | 0.0       | 251.0     | Luján de Cuyo        |
-| AREA # 50063               | structural    | 8_032_166     | 158.4620  | 0.0       | 951.0     | Luján de Cuyo        |
-| AREA # 50063               | occupants     | 2_836         | 2.340E-05 | 0.0       | 8.633E-06 | Luján de Cuyo        |
-| AREA # 50063               | area          | 68_620        | 0.1556    | 0.0       | 0.2726    | Luján de Cuyo        |
-| AREA # 50063               | number        | 740.0         | 0.0015    | 0.0       | 0.0027    | Luján de Cuyo        |
-| AREA # 50063               | residents     | 3_588         | 0.0160    | 0.0       | 0.0473    | Luján de Cuyo        |
-| AREA # 50063               | affectedpop   | 3_588         | 0.0500    | 0.0       | 0.3439    | Luján de Cuyo        |
-| AREA # 50063               | injured       | 2_836         | 3.173E-05 | 0.0       | 9.780E-06 | Luján de Cuyo        |
-| AREA # 50098               | contents      | 19_109_828    | 2_063     | 0.0       | 3_621     | San Martín           |
-| AREA # 50098               | nonstructural | 31_811_914    | 2_532     | 0.0       | 10_118    | San Martín           |
-| AREA # 50098               | structural    | 55_200_376    | 35_265    | 0.0       | 56_912    | San Martín           |
-| AREA # 50098               | occupants     | 7_591         | 0.0029    | 0.0       | 0.0061    | San Martín           |
-| AREA # 50098               | area          | 317_709       | 16.1442   | 0.0       | 18.4765   | San Martín           |
-| AREA # 50098               | number        | 3_163         | 0.2354    | 0.0       | 0.2169    | San Martín           |
-| AREA # 50098               | residents     | 14_452        | 1.9807    | 0.0       | 2.7723    | San Martín           |
-| AREA # 50098               | affectedpop   | 14_452        | 4.4118    | 0.0       | 5.7552    | San Martín           |
-| AREA # 50098               | injured       | 7_591         | 0.0047    | 0.0       | 2.464E-04 | San Martín           |
-| AREA # 66007               | contents      | 2_404_440     | 0.4632    | 0.0       | 18.4745   | Anta                 |
-| AREA # 66007               | nonstructural | 3_266_270     | 17.8047   | 0.0       | 302.3     | Anta                 |
-| AREA # 66007               | structural    | 7_083_611     | 26.8261   | 0.0       | 432.0     | Anta                 |
-| AREA # 66007               | occupants     | 2_075         | 3.595E-06 | 0.0       | 8.653E-07 | Anta                 |
-| AREA # 66007               | area          | 58_495        | 0.0561    | 0.0       | 0.1316    | Anta                 |
-| AREA # 66007               | number        | 917.0         | 5.563E-04 | 0.0       | 0.0013    | Anta                 |
-| AREA # 66007               | residents     | 4_015         | 0.0056    | 0.0       | 0.0210    | Anta                 |
-| AREA # 66007               | affectedpop   | 4_015         | 0.0196    | 0.0       | 0.0279    | Anta                 |
-| AREA # 66007               | injured       | 2_075         | 8.535E-06 | 0.0       | 8.653E-07 | Anta                 |
-| AREA # 66133               | contents      | 4_703_102     | 104.5367  | 0.0       | 449.2     | Rivadavia            |
-| AREA # 66133               | nonstructural | 6_347_992     | 467.4     | 0.0       | 1_738     | Rivadavia            |
-| AREA # 66133               | structural    | 13_665_438    | 1_294     | 0.0       | 6_174     | Rivadavia            |
-| AREA # 66133               | occupants     | 2_877         | 5.762E-04 | 0.0       | 5.067E-04 | Rivadavia            |
-| AREA # 66133               | area          | 114_329       | 1.5806    | 0.0       | 3.0386    | Rivadavia            |
-| AREA # 66133               | number        | 1_257         | 0.0153    | 0.0       | 0.0322    | Rivadavia            |
-| AREA # 66133               | residents     | 5_294         | 0.1336    | 0.0       | 0.4136    | Rivadavia            |
-| AREA # 66133               | affectedpop   | 5_294         | 0.3170    | 0.0       | 1.3711    | Rivadavia            |
-| AREA # 66133               | injured       | 2_877         | 0.0040    | 0.0       | 1.057E-04 | Rivadavia            |
-| BD-55                      | contents      | 104_766       | 1.3407    | 0.0       | 46.9781   | Rangpur              |
-| BD-55                      | nonstructural | 239_415       | 35.9656   | 0.0       | 676.9     | Rangpur              |
-| BD-55                      | structural    | 489_527       | 12.8851   | 0.0       | 482.7     | Rangpur              |
-| BD-55                      | occupants     | 128.8000      | 5.413E-07 | 0.0       | 5.541E-07 | Rangpur              |
-| BD-55                      | area          | 3_500         | 0.0053    | 0.0       | 0.0544    | Rangpur              |
-| BD-55                      | number        | 31.0000       | 5.252E-05 | 0.0       | 5.399E-04 | Rangpur              |
-| BD-55                      | residents     | 132.8000      | 9.937E-04 | 0.0       | 0.0258    | Rangpur              |
-| BD-55                      | affectedpop   | 132.8000      | 0.0061    | 0.0       | 0.0499    | Rangpur              |
-| BD-55                      | injured       | 128.8000      | 2.295E-08 | 0.0       | 5.541E-07 | Rangpur              |
-| ESP.1.3_1                  | contents      | 7_017_295     | 9_230     | 0.0       | 75_403    | Cordoba              |
-| ESP.1.3_1                  | nonstructural | 15_962_029    | 15_520    | 0.0       | 110_458   | Cordoba              |
-| ESP.1.3_1                  | structural    | 9_577_218     | 16_019    | 0.0       | 74_812    | Cordoba              |
-| ESP.1.3_1                  | occupants     | 317.6         | 6.517E-04 | 0.0       | 0.0023    | Cordoba              |
-| ESP.1.3_1                  | area          | 22_878        | 2.8347    | 0.0       | 19.9550   | Cordoba              |
-| ESP.1.3_1                  | number        | 78.5166       | 0.0097    | 0.0       | 0.0557    | Cordoba              |
-| ESP.1.3_1                  | residents     | 490.1         | 0.1532    | 0.0       | 0.8973    | Cordoba              |
-| ESP.1.3_1                  | affectedpop   | 490.1         | 1.9596    | 0.0       | 21.4163   | Cordoba              |
-| ESP.1.3_1                  | injured       | 317.6         | 0.0023    | 0.0       | 0.0011    | Cordoba              |
-| ESP.1.4_1                  | contents      | 11_287_321    | 1_711     | 0.0       | 41_963    | Granada              |
-| ESP.1.4_1                  | nonstructural | 27_588_980    | 37_429    | 0.0       | 2_331_994 | Granada              |
-| ESP.1.4_1                  | structural    | 16_553_386    | 3_044     | 0.0       | 76_081    | Granada              |
-| ESP.1.4_1                  | occupants     | 378.0         | 1.053E-04 | 0.0       | 3.728E-06 | Granada              |
-| ESP.1.4_1                  | area          | 40_912        | 0.8470    | 0.0       | 18.2587   | Granada              |
-| ESP.1.4_1                  | number        | 185.2         | 0.0015    | 0.0       | 0.0611    | Granada              |
-| ESP.1.4_1                  | residents     | 676.1         | 0.0554    | 0.0       | 1.2844    | Granada              |
-| ESP.1.4_1                  | affectedpop   | 676.1         | 0.8310    | 0.0       | 20.5270   | Granada              |
-| ESP.1.4_1                  | injured       | 378.0         | 2.603E-04 | 0.0       | 0.0017    | Granada              |
-| ESP.4.4_1                  | contents      | 53_876        | 1.2689    | 0.0       | 5.388E-04 | Guadalajara          |
-| ESP.4.4_1                  | nonstructural | 134_690       | 1.5102    | 0.0       | 179.6928  | Guadalajara          |
-| ESP.4.4_1                  | structural    | 80_814        | 0.1647    | 0.0       | 8.081E-04 | Guadalajara          |
-| ESP.4.4_1                  | occupants     | 1.5000        | 1.654E-08 | 0.0       | 1.500E-08 | Guadalajara          |
-| ESP.4.4_1                  | area          | 200.0         | 4.555E-04 | 0.0       | 2.000E-06 | Guadalajara          |
-| ESP.4.4_1                  | number        | 1.0000        | 2.278E-06 | 0.0       | 1.000E-08 | Guadalajara          |
-| ESP.4.4_1                  | residents     | 2.8000        | 1.356E-05 | 0.0       | 2.800E-08 | Guadalajara          |
-| ESP.4.4_1                  | affectedpop   | 2.8000        | 3.282E-05 | 0.0       | 2.800E-08 | Guadalajara          |
-| ESP.4.4_1                  | injured       | 1.5000        | 3.007E-10 | 0.0       | 1.500E-08 | Guadalajara          |
-| GIN-ADM1-1590546715-B8     | contents      | 20_280_922    | 1_031     | 0.0       | 0.2028    | Nzerekore            |
-| GIN-ADM1-1590546715-B8     | nonstructural | 35_491_616    | 1_379     | 0.0       | 0.3549    | Nzerekore            |
-| GIN-ADM1-1590546715-B8     | structural    | 45_632_076    | 208.6     | 0.0       | 0.4563    | Nzerekore            |
-| GIN-ADM1-1590546715-B8     | occupants     | 530.0         | 1.654E-06 | 0.0       | 5.300E-06 | Nzerekore            |
-| GIN-ADM1-1590546715-B8     | area          | 85_714        | 0.2731    | 0.0       | 8.571E-04 | Nzerekore            |
-| GIN-ADM1-1590546715-B8     | number        | 550.0         | 0.0018    | 0.0       | 5.500E-06 | Nzerekore            |
-| GIN-ADM1-1590546715-B8     | residents     | 993.7         | 0.0075    | 0.0       | 9.937E-06 | Nzerekore            |
-| GIN-ADM1-1590546715-B8     | affectedpop   | 993.7         | 0.0355    | 0.0       | 9.937E-06 | Nzerekore            |
-| GIN-ADM1-1590546715-B8     | injured       | 530.0         | 1.652E-06 | 0.0       | 5.300E-06 | Nzerekore            |
-| LA0608                     | contents      | 7_413_316     | 366.6     | 0.0       | 0.0741    | Phonxay              |
-| LA0608                     | nonstructural | 3_088_882     | 14.7653   | 0.0       | 0.0309    | Phonxay              |
-| LA0608                     | structural    | 1_853_329     | 2.0232    | 0.0       | 0.0185    | Phonxay              |
-| LA0608                     | occupants     | 66.9367       | 2.185E-07 | 0.0       | 6.694E-07 | Phonxay              |
-| LA0608                     | area          | 8_178         | 0.0076    | 0.0       | 8.178E-05 | Phonxay              |
-| LA0608                     | number        | 13.9456       | 1.298E-05 | 0.0       | 1.395E-07 | Phonxay              |
-| LA0608                     | injured       | 66.9367       | 2.196E-07 | 0.0       | 6.694E-07 | Phonxay              |
-| MAR-ADM1-1590546715-B10    | contents      | 917_535       | 83.0389   | 0.0       | 446.1     | Rabat-Sal�-Kenitra   |
-| MAR-ADM1-1590546715-B10    | nonstructural | 1_976_129     | 54.6392   | 0.0       | 353.1     | Rabat-Sal�-Kenitra   |
-| MAR-ADM1-1590546715-B10    | structural    | 3_993_391     | 50.8855   | 0.0       | 66.0176   | Rabat-Sal�-Kenitra   |
-| MAR-ADM1-1590546715-B10    | occupants     | 1_242         | 8.233E-07 | 0.0       | 3.777E-07 | Rabat-Sal�-Kenitra   |
-| MAR-ADM1-1590546715-B10    | area          | 29_966        | 0.2287    | 0.0       | 0.6954    | Rabat-Sal�-Kenitra   |
-| MAR-ADM1-1590546715-B10    | number        | 331.0         | 0.0018    | 0.0       | 0.0054    | Rabat-Sal�-Kenitra   |
-| MAR-ADM1-1590546715-B10    | residents     | 1_482         | 4.020E-04 | 0.0       | 0.0152    | Rabat-Sal�-Kenitra   |
-| MAR-ADM1-1590546715-B10    | affectedpop   | 1_482         | 5.334E-04 | 0.0       | 0.0240    | Rabat-Sal�-Kenitra   |
-| MAR-ADM1-1590546715-B10    | injured       | 1_242         | 0.0028    | 0.0       | 0.0014    | Rabat-Sal�-Kenitra   |
-| NZL-ADM2-1590671490-B43    | contents      | 14_569_444    | 548.2     | 0.0       | 385.9     | Tasman District      |
-| NZL-ADM2-1590671490-B43    | nonstructural | 25_496_528    | 9_736     | 0.0       | 4_224     | Tasman District      |
-| NZL-ADM2-1590671490-B43    | structural    | 32_781_250    | 3_335     | 0.0       | 5_674     | Tasman District      |
-| NZL-ADM2-1590671490-B43    | occupants     | 323.9         | 2.299E-05 | 0.0       | 3.207E-06 | Tasman District      |
-| NZL-ADM2-1590671490-B43    | area          | 70_442        | 1.4823    | 0.0       | 6.966E-04 | Tasman District      |
-| NZL-ADM2-1590671490-B43    | number        | 452.0         | 0.0095    | 0.0       | 4.470E-06 | Tasman District      |
-| NZL-ADM2-1590671490-B43    | residents     | 607.3         | 0.0295    | 0.0       | 6.013E-06 | Tasman District      |
-| NZL-ADM2-1590671490-B43    | affectedpop   | 607.3         | 0.1172    | 0.0       | 3.014E-04 | Tasman District      |
-| NZL-ADM2-1590671490-B43    | injured       | 323.9         | 3.189E-05 | 0.0       | 3.207E-06 | Tasman District      |
-| NZL-ADM2-1590671490-B45    | contents      | 1_401_745     | 0.0253    | 0.0       | 0.0140    | Marlborough District |
-| NZL-ADM2-1590671490-B45    | nonstructural | 2_453_054     | 4.2351    | 0.0       | 0.0245    | Marlborough District |
-| NZL-ADM2-1590671490-B45    | structural    | 3_153_927     | 0.3334    | 0.0       | 0.0315    | Marlborough District |
-| NZL-ADM2-1590671490-B45    | occupants     | 34.8285       | 1.419E-07 | 0.0       | 3.483E-07 | Marlborough District |
-| NZL-ADM2-1590671490-B45    | area          | 7_481         | 3.049E-05 | 0.0       | 7.481E-05 | Marlborough District |
-| NZL-ADM2-1590671490-B45    | number        | 48.0000       | 1.956E-07 | 0.0       | 4.800E-07 | Marlborough District |
-| NZL-ADM2-1590671490-B45    | residents     | 65.3035       | 5.796E-06 | 0.0       | 6.530E-07 | Marlborough District |
-| NZL-ADM2-1590671490-B45    | affectedpop   | 65.3035       | 5.318E-05 | 0.0       | 6.530E-07 | Marlborough District |
-| NZL-ADM2-1590671490-B45    | injured       | 34.8285       | 1.419E-07 | 0.0       | 3.483E-07 | Marlborough District |
-| RUS-ADM1-28173009B80707933 | contents      | 189_640       | 77.9693   | 0.0       | 523.1     | Sakha Republic       |
-| RUS-ADM1-28173009B80707933 | nonstructural | 284_460       | 67.0403   | 0.0       | 11.9059   | Sakha Republic       |
-| RUS-ADM1-28173009B80707933 | structural    | 158_033       | 12.6862   | 0.0       | 4.5702    | Sakha Republic       |
-| RUS-ADM1-28173009B80707933 | occupants     | 2.4309        | 2.953E-09 | 0.0       | 2.431E-08 | Sakha Republic       |
-| RUS-ADM1-28173009B80707933 | area          | 467.5         | 0.0063    | 0.0       | 4.675E-06 | Sakha Republic       |
-| RUS-ADM1-28173009B80707933 | number        | 3.0000        | 4.051E-05 | 0.0       | 3.000E-08 | Sakha Republic       |
-| RUS-ADM1-28173009B80707933 | residents     | 4.5580        | 2.467E-04 | 0.0       | 4.558E-08 | Sakha Republic       |
-| RUS-ADM1-28173009B80707933 | affectedpop   | 4.5580        | 9.026E-04 | 0.0       | 1.517E-05 | Sakha Republic       |
-| RUS-ADM1-28173009B80707933 | injured       | 2.4309        | 2.948E-09 | 0.0       | 2.431E-08 | Sakha Republic       |
-| TZA-ADM1-1590546715-B6     | contents      | 2_003_562     | 1_102     | 0.0       | 2_853     | Mbeya                |
-| TZA-ADM1-1590546715-B6     | nonstructural | 5_008_904     | 8_461     | 0.0       | 38_117    | Mbeya                |
-| TZA-ADM1-1590546715-B6     | structural    | 3_005_343     | 4_547     | 0.0       | 11_310    | Mbeya                |
-| TZA-ADM1-1590546715-B6     | occupants     | 64.5000       | 2.094E-04 | 0.0       | 2.185E-05 | Mbeya                |
-| TZA-ADM1-1590546715-B6     | area          | 7_533         | 2.2181    | 0.0       | 1.5971    | Mbeya                |
-| TZA-ADM1-1590546715-B6     | number        | 11.0000       | 0.0016    | 0.0       | 0.0089    | Mbeya                |
-| TZA-ADM1-1590546715-B6     | residents     | 116.7000      | 0.1052    | 0.0       | 0.0973    | Mbeya                |
-| TZA-ADM1-1590546715-B6     | affectedpop   | 116.7000      | 0.8871    | 0.0       | 3.2970    | Mbeya                |
-| TZA-ADM1-1590546715-B6     | injured       | 64.5000       | 6.461E-04 | 0.0       | 0.0061    | Mbeya                |
-| *total*                    | affectedpop   | 82_875        | 16.0062   | 0.0       | 136.6286  | *total*              |
-| *total*                    | area          | 3_111_793     | 107.1401  | 3.366E-06 | 537.6     | *total*              |
-| *total*                    | contents      | 708_023_616   | 361_715   | 0.0035    | 1_840_212 | *total*              |
-| *total*                    | injured       | 48_648        | 0.0659    | 7.967E-08 | 0.1096    | *total*              |
-| *total*                    | nonstructural | 1_470_604_544 | 259_617   | 4.525E-12 | 3_428_603 | *total*              |
-| *total*                    | number        | 20_630        | 0.6634    | 7.938E-09 | 2.5549    | *total*              |
-| *total*                    | occupants     | 48_648        | 0.0212    | 7.967E-08 | 0.1035    | *total*              |
-| *total*                    | residents     | 82_875        | 3.8360    | 0.0       | 13.0698   | *total*              |
-| *total*                    | structural    | 1_021_637_632 | 251_169   | 0.0014    | 1_239_061 | *total*              |
+| ID_2                       | loss_type     | value         | lossmea   | lossq05   | lossq95   | NAME_2                          |
+|----------------------------+---------------+---------------+-----------+-----------+-----------+---------------------------------|
+| 1001                       | contents      | 3_304_230     | 24.8447   | 0.0       | 0.0330    | Autauga County                  |
+| 1001                       | nonstructural | 4_956_346     | 41.5022   | 0.0       | 0.0496    | Autauga County                  |
+| 1001                       | structural    | 2_753_525     | 80.5480   | 0.0       | 1.1746    | Autauga County                  |
+| 1001                       | occupants     | 97.6127       | 1.159E-06 | 0.0       | 9.761E-07 | Autauga County                  |
+| 1001                       | area          | 10_286        | 0.0389    | 0.0       | 1.029E-04 | Autauga County                  |
+| 1001                       | number        | 42.0000       | 1.854E-04 | 0.0       | 4.200E-07 | Autauga County                  |
+| 1001                       | residents     | 183.0         | 0.0019    | 0.0       | 1.830E-06 | Autauga County                  |
+| 1001                       | affectedpop   | 183.0         | 4.389E-04 | 0.0       | 1.830E-06 | Autauga County                  |
+| 1001                       | injured       | 97.6127       | 1.445E-07 | 0.0       | 9.761E-07 | Autauga County                  |
+| 1005                       | contents      | 1_326_682     | 453.9     | 0.0       | 0.0133    | Division No.  5                 |
+| 1005                       | nonstructural | 1_990_024     | 1_046     | 0.0       | 0.0199    | Division No.  5                 |
+| 1005                       | structural    | 1_105_569     | 250.1     | 0.0       | 0.0111    | Division No.  5                 |
+| 1005                       | occupants     | 32.7605       | 1.150E-07 | 0.0       | 3.276E-07 | Division No.  5                 |
+| 1005                       | area          | 4_130         | 0.3243    | 0.0       | 4.130E-05 | Division No.  5                 |
+| 1005                       | number        | 30.0000       | 0.0024    | 0.0       | 3.000E-07 | Division No.  5                 |
+| 1005                       | residents     | 61.4260       | 0.0101    | 0.0       | 6.143E-07 | Division No.  5                 |
+| 1005                       | affectedpop   | 61.4260       | 0.0086    | 0.0       | 6.143E-07 | Division No.  5                 |
+| 1005                       | injured       | 32.7605       | 2.866E-06 | 0.0       | 3.276E-07 | Division No.  5                 |
+| 1009                       | contents      | 9_311_594     | 13_851    | 0.0       | 88_959    | Blount County                   |
+| 1009                       | nonstructural | 13_967_391    | 23_593    | 0.0       | 164_735   | Blount County                   |
+| 1009                       | structural    | 7_759_662     | 7_091     | 0.0       | 80_520    | Blount County                   |
+| 1009                       | occupants     | 144.0923      | 3.633E-04 | 0.0       | 1.441E-06 | Blount County                   |
+| 1009                       | area          | 28_987        | 15.7737   | 0.0       | 1.9562    | Blount County                   |
+| 1009                       | number        | 186.0         | 0.1012    | 0.0       | 0.0126    | Blount County                   |
+| 1009                       | residents     | 270.2         | 0.3478    | 0.0       | 0.1722    | Blount County                   |
+| 1009                       | affectedpop   | 270.2         | 2.4251    | 0.0       | 0.9511    | Blount County                   |
+| 1009                       | injured       | 144.0923      | 1.727E-06 | 0.0       | 1.441E-06 | Blount County                   |
+| 101                        | contents      | 13_401_212    | 1_364     | 0.0       | 1_353     | Perugia                         |
+| 101                        | nonstructural | 20_101_818    | 1_868     | 0.0       | 664.6     | Perugia                         |
+| 101                        | structural    | 11_167_677    | 2_772     | 0.0       | 41.2172   | Perugia                         |
+| 101                        | occupants     | 247.2         | 1.209E-05 | 0.0       | 2.472E-06 | Perugia                         |
+| 101                        | area          | 33_039        | 0.3543    | 0.0       | 3.304E-04 | Perugia                         |
+| 101                        | number        | 212.0         | 0.0023    | 0.0       | 2.120E-06 | Perugia                         |
+| 101                        | residents     | 463.5         | 0.0138    | 0.0       | 4.635E-06 | Perugia                         |
+| 101                        | affectedpop   | 463.5         | 0.1066    | 0.0       | 0.0144    | Perugia                         |
+| 101                        | injured       | 247.2         | 5.285E-04 | 0.0       | 2.472E-06 | Perugia                         |
+| 1014                       | contents      | 58_406        | 191.5     | 0.0       | 199.3     | Peniche                         |
+| 1014                       | nonstructural | 102_211       | 459.0     | 0.0       | 1_561     | Peniche                         |
+| 1014                       | structural    | 131_414       | 679.8     | 0.0       | 3_878     | Peniche                         |
+| 1014                       | occupants     | 2.2187        | 3.694E-06 | 0.0       | 2.219E-08 | Peniche                         |
+| 1014                       | area          | 311.7         | 0.1402    | 0.0       | 0.0593    | Peniche                         |
+| 1014                       | number        | 2.0000        | 8.995E-04 | 0.0       | 3.804E-04 | Peniche                         |
+| 1014                       | residents     | 4.1601        | 0.0043    | 0.0       | 0.0030    | Peniche                         |
+| 1014                       | affectedpop   | 4.1601        | 0.0194    | 0.0       | 0.0194    | Peniche                         |
+| 1014                       | injured       | 2.2187        | 2.860E-06 | 0.0       | 2.219E-08 | Peniche                         |
+| 1015                       | contents      | 1_076_936     | 553.5     | 0.0       | 1_024     | Calhoun County                  |
+| 1015                       | nonstructural | 1_615_403     | 1_732     | 0.0       | 8_832     | Calhoun County                  |
+| 1015                       | structural    | 897_446       | 1_556     | 0.0       | 17_377    | Calhoun County                  |
+| 1015                       | occupants     | 22.1563       | 1.012E-04 | 0.0       | 2.216E-07 | Calhoun County                  |
+| 1015                       | area          | 2_655         | 1.4318    | 0.0       | 11.1218   | Calhoun County                  |
+| 1015                       | number        | 13.0000       | 0.0069    | 0.0       | 0.0534    | Calhoun County                  |
+| 1015                       | residents     | 41.5431       | 0.0414    | 0.0       | 0.4083    | Calhoun County                  |
+| 1015                       | affectedpop   | 41.5431       | 0.2156    | 0.0       | 0.8392    | Calhoun County                  |
+| 1015                       | injured       | 22.1563       | 2.324E-04 | 0.0       | 2.216E-07 | Calhoun County                  |
+| 107                        | contents      | 233_624       | 1.227E-04 | 0.0       | 0.0023    | Treviso                         |
+| 107                        | nonstructural | 408_842       | 1.2757    | 0.0       | 0.0041    | Treviso                         |
+| 107                        | structural    | 525_654       | 0.0153    | 0.0       | 0.0053    | Treviso                         |
+| 107                        | occupants     | 4.4098        | 2.324E-09 | 0.0       | 4.410E-08 | Treviso                         |
+| 107                        | area          | 1_247         | 6.571E-07 | 0.0       | 1.247E-05 | Treviso                         |
+| 107                        | number        | 8.0000        | 4.216E-09 | 0.0       | 8.000E-08 | Treviso                         |
+| 107                        | residents     | 8.2684        | 4.358E-09 | 0.0       | 8.268E-08 | Treviso                         |
+| 107                        | affectedpop   | 8.2684        | 4.342E-09 | 0.0       | 8.268E-08 | Treviso                         |
+| 107                        | injured       | 4.4098        | 2.324E-09 | 0.0       | 4.410E-08 | Treviso                         |
+| 109                        | contents      | 1_404_947     | 2.3459    | 0.0       | 0.0140    | Santa Ana                       |
+| 109                        | nonstructural | 2_107_420     | 5.5898    | 0.0       | 1.3021    | Santa Ana                       |
+| 109                        | structural    | 1_170_789     | 1.0430    | 0.0       | 0.0117    | Santa Ana                       |
+| 109                        | occupants     | 52.1686       | 2.993E-08 | 0.0       | 5.217E-07 | Santa Ana                       |
+| 109                        | area          | 4_374         | 0.0542    | 0.0       | 4.374E-05 | Santa Ana                       |
+| 109                        | number        | 21.0000       | 2.603E-04 | 0.0       | 2.100E-07 | Santa Ana                       |
+| 109                        | residents     | 97.8161       | 0.0034    | 0.0       | 9.782E-07 | Santa Ana                       |
+| 109                        | affectedpop   | 97.8161       | 3.863E-04 | 0.0       | 9.782E-07 | Santa Ana                       |
+| 109                        | injured       | 52.1686       | 2.993E-08 | 0.0       | 5.217E-07 | Santa Ana                       |
+| 1102                       | contents      | 8_235_254     | 1_710     | 0.0       | 1_397     | ACIPAYAM                        |
+| 1102                       | nonstructural | 14_411_695    | 13_434    | 0.0       | 13_588    | ACIPAYAM                        |
+| 1102                       | structural    | 18_529_322    | 8_402     | 0.0       | 7_397     | ACIPAYAM                        |
+| 1102                       | occupants     | 258.7         | 1.780E-06 | 0.0       | 2.587E-06 | ACIPAYAM                        |
+| 1102                       | area          | 43_948        | 1.3133    | 0.0       | 4.395E-04 | ACIPAYAM                        |
+| 1102                       | number        | 282.0         | 0.0084    | 0.0       | 2.820E-06 | ACIPAYAM                        |
+| 1102                       | residents     | 485.0         | 0.0493    | 0.0       | 0.0349    | ACIPAYAM                        |
+| 1102                       | affectedpop   | 485.0         | 0.1652    | 0.0       | 1.897E-05 | ACIPAYAM                        |
+| 1102                       | injured       | 258.7         | 1.779E-06 | 0.0       | 2.587E-06 | ACIPAYAM                        |
+| 1203                       | contents      | 2_676_498     | 6_172     | 0.0       | 13_263    | BORNOVA                         |
+| 1203                       | nonstructural | 4_683_872     | 9_193     | 0.0       | 39_384    | BORNOVA                         |
+| 1203                       | structural    | 6_022_122     | 15_262    | 0.0       | 33_704    | BORNOVA                         |
+| 1203                       | occupants     | 105.3980      | 5.192E-04 | 0.0       | 1.054E-06 | BORNOVA                         |
+| 1203                       | area          | 12_941        | 7.4798    | 0.0       | 0.5690    | BORNOVA                         |
+| 1203                       | number        | 94.0000       | 0.0543    | 0.0       | 0.0041    | BORNOVA                         |
+| 1203                       | residents     | 197.6         | 0.2535    | 0.0       | 0.1165    | BORNOVA                         |
+| 1203                       | affectedpop   | 197.6         | 0.2252    | 0.0       | 0.6301    | BORNOVA                         |
+| 1203                       | injured       | 105.3980      | 0.0033    | 0.0       | 1.054E-06 | BORNOVA                         |
+| 1210                       | contents      | 8_171_581     | 17_776    | 0.0       | 0.0817    | BOZÜYÜK                         |
+| 1210                       | nonstructural | 3_404_826     | 7_028     | 0.0       | 0.0340    | BOZÜYÜK                         |
+| 1210                       | structural    | 2_042_895     | 100.7815  | 0.0       | 0.0204    | BOZÜYÜK                         |
+| 1210                       | occupants     | 50.0500       | 2.397E-06 | 0.0       | 5.005E-07 | BOZÜYÜK                         |
+| 1210                       | area          | 9_014         | 0.2599    | 0.0       | 9.014E-05 | BOZÜYÜK                         |
+| 1210                       | number        | 15.3720       | 4.432E-04 | 0.0       | 1.537E-07 | BOZÜYÜK                         |
+| 1210                       | injured       | 50.0500       | 1.158E-06 | 0.0       | 5.005E-07 | BOZÜYÜK                         |
+| 1301                       | contents      | 133_804       | 1.9770    | 0.0       | 0.0072    | Hebei                           |
+| 1301                       | nonstructural | 200_707       | 29.9030   | 0.0       | 1_122     | Hebei                           |
+| 1301                       | structural    | 111_504       | 3.1855    | 0.0       | 32.1661   | Hebei                           |
+| 1301                       | occupants     | 2.3432        | 8.256E-08 | 0.0       | 2.343E-08 | Hebei                           |
+| 1301                       | area          | 416.5         | 0.0034    | 0.0       | 0.0458    | Hebei                           |
+| 1301                       | number        | 2.0000        | 1.645E-05 | 0.0       | 2.201E-04 | Hebei                           |
+| 1301                       | residents     | 4.3935        | 1.084E-04 | 0.0       | 0.0020    | Hebei                           |
+| 1301                       | affectedpop   | 4.3935        | 5.093E-04 | 0.0       | 0.0158    | Hebei                           |
+| 1301                       | injured       | 2.3432        | 3.807E-09 | 0.0       | 2.343E-08 | Hebei                           |
+| 1303                       | contents      | 450_561       | 38.9848   | 0.0       | 2_052     | Sunbury                         |
+| 1303                       | nonstructural | 675_842       | 10.0098   | 0.0       | 66.2680   | Sunbury                         |
+| 1303                       | structural    | 375_468       | 25.3216   | 0.0       | 30.9094   | Sunbury                         |
+| 1303                       | occupants     | 7.5554        | 5.313E-09 | 0.0       | 7.555E-08 | Sunbury                         |
+| 1303                       | area          | 1_403         | 6.509E-04 | 0.0       | 1.403E-05 | Sunbury                         |
+| 1303                       | number        | 9.0000        | 4.176E-06 | 0.0       | 9.000E-08 | Sunbury                         |
+| 1303                       | residents     | 14.1664       | 4.716E-05 | 0.0       | 1.417E-07 | Sunbury                         |
+| 1303                       | affectedpop   | 14.1664       | 1.024E-04 | 0.0       | 5.399E-06 | Sunbury                         |
+| 1303                       | injured       | 7.5554        | 5.313E-09 | 0.0       | 7.555E-08 | Sunbury                         |
+| 1309                       | contents      | 1_151_434     | 78.9201   | 0.0       | 2_966     | ERCİŞ                           |
+| 1309                       | nonstructural | 1_727_150     | 936.1     | 0.0       | 33_205    | ERCİŞ                           |
+| 1309                       | structural    | 959_528       | 767.6     | 0.0       | 35_858    | ERCİŞ                           |
+| 1309                       | occupants     | 22.7120       | 9.604E-07 | 0.0       | 2.271E-07 | ERCİŞ                           |
+| 1309                       | area          | 3_584         | 0.0568    | 0.0       | 0.6088    | ERCİŞ                           |
+| 1309                       | number        | 23.0000       | 3.645E-04 | 0.0       | 0.0039    | ERCİŞ                           |
+| 1309                       | residents     | 42.5849       | 0.0024    | 0.0       | 0.0377    | ERCİŞ                           |
+| 1309                       | affectedpop   | 42.5849       | 0.0502    | 0.0       | 3.8032    | ERCİŞ                           |
+| 1309                       | injured       | 22.7120       | 9.211E-06 | 0.0       | 2.271E-07 | ERCİŞ                           |
+| 14366                      | contents      | 431_181       | 393.7     | 0.0       | 25_143    | Kaisei-machi                    |
+| 14366                      | nonstructural | 1_077_952     | 810.1     | 0.0       | 19_501    | Kaisei-machi                    |
+| 14366                      | structural    | 646_772       | 501.1     | 0.0       | 6_604     | Kaisei-machi                    |
+| 14366                      | occupants     | 10.7667       | 7.552E-06 | 0.0       | 9.400E-08 | Kaisei-machi                    |
+| 14366                      | area          | 1_601         | 0.0668    | 0.0       | 0.0389    | Kaisei-machi                    |
+| 14366                      | number        | 9.0000        | 3.339E-04 | 0.0       | 1.942E-04 | Kaisei-machi                    |
+| 14366                      | residents     | 19.4000       | 0.0033    | 0.0       | 0.0108    | Kaisei-machi                    |
+| 14366                      | affectedpop   | 19.4000       | 0.1043    | 0.0       | 2.6905    | Kaisei-machi                    |
+| 14366                      | injured       | 10.7667       | 2.412E-06 | 0.0       | 2.161E-05 | Kaisei-machi                    |
+| 1502                       | contents      | 66_902        | 473.7     | 0.0       | 55.5099   | Nei Mongol                      |
+| 1502                       | nonstructural | 100_353       | 348.8     | 0.0       | 142.2519  | Nei Mongol                      |
+| 1502                       | structural    | 55_752        | 55.7678   | 0.0       | 145.3389  | Nei Mongol                      |
+| 1502                       | occupants     | 1.4901        | 8.659E-05 | 0.0       | 1.490E-08 | Nei Mongol                      |
+| 1502                       | area          | 208.3         | 0.2374    | 0.0       | 0.2037    | Nei Mongol                      |
+| 1502                       | number        | 1.0000        | 0.0011    | 0.0       | 9.781E-04 | Nei Mongol                      |
+| 1502                       | residents     | 2.7939        | 0.0060    | 0.0       | 0.0084    | Nei Mongol                      |
+| 1502                       | affectedpop   | 2.7939        | 0.0170    | 0.0       | 0.0048    | Nei Mongol                      |
+| 1502                       | injured       | 1.4901        | 4.377E-06 | 0.0       | 1.490E-08 | Nei Mongol                      |
+| 15209                      | contents      | 852_322       | 264.7     | 0.0       | 2_456     | Kamo-shi                        |
+| 15209                      | nonstructural | 2_130_804     | 1_055     | 0.0       | 15_525    | Kamo-shi                        |
+| 15209                      | structural    | 1_278_483     | 1_324     | 0.0       | 38_397    | Kamo-shi                        |
+| 15209                      | occupants     | 33.7333       | 4.397E-07 | 0.0       | 3.373E-07 | Kamo-shi                        |
+| 15209                      | area          | 3_450         | 0.1037    | 0.0       | 5.4454    | Kamo-shi                        |
+| 15209                      | number        | 18.0000       | 5.185E-04 | 0.0       | 0.0272    | Kamo-shi                        |
+| 15209                      | residents     | 61.1000       | 0.0065    | 0.0       | 0.3436    | Kamo-shi                        |
+| 15209                      | affectedpop   | 61.1000       | 0.0628    | 0.0       | 5.3057    | Kamo-shi                        |
+| 15209                      | injured       | 33.7333       | 4.109E-06 | 0.0       | 3.274E-05 | Kamo-shi                        |
+| 1604                       | contents      | 6_942_971     | 0.0032    | 0.0       | 0.0694    | SARIYER                         |
+| 1604                       | nonstructural | 10_414_457    | 0.0048    | 0.0       | 0.1041    | SARIYER                         |
+| 1604                       | structural    | 5_785_809     | 0.0027    | 0.0       | 0.0579    | SARIYER                         |
+| 1604                       | occupants     | 234.6         | 1.080E-07 | 0.0       | 2.346E-06 | SARIYER                         |
+| 1604                       | area          | 21_613        | 9.948E-06 | 0.0       | 2.161E-04 | SARIYER                         |
+| 1604                       | number        | 157.0000      | 7.226E-08 | 0.0       | 1.570E-06 | SARIYER                         |
+| 1604                       | residents     | 439.9         | 2.025E-07 | 0.0       | 4.399E-06 | SARIYER                         |
+| 1604                       | affectedpop   | 439.9         | 2.025E-07 | 0.0       | 4.399E-06 | SARIYER                         |
+| 1604                       | injured       | 234.6         | 1.080E-07 | 0.0       | 2.346E-06 | SARIYER                         |
+| 1607                       | contents      | 234_158       | 665.2     | 0.0       | 9_265     | SASON                           |
+| 1607                       | nonstructural | 409_776       | 1_079     | 0.0       | 6_370     | SASON                           |
+| 1607                       | structural    | 526_855       | 1_660     | 0.0       | 7_403     | SASON                           |
+| 1607                       | occupants     | 13.3289       | 4.993E-05 | 0.0       | 1.333E-07 | SASON                           |
+| 1607                       | area          | 1_250         | 0.3077    | 0.0       | 0.9217    | SASON                           |
+| 1607                       | number        | 6.0000        | 0.0015    | 0.0       | 0.0044    | SASON                           |
+| 1607                       | residents     | 24.9917       | 0.0239    | 0.0       | 0.1117    | SASON                           |
+| 1607                       | affectedpop   | 24.9917       | 0.4823    | 0.0       | 2.9690    | SASON                           |
+| 1607                       | injured       | 13.3289       | 3.140E-04 | 0.0       | 5.335E-05 | SASON                           |
+| 1609                       | contents      | 401_413       | 11.6103   | 0.0       | 0.0040    | OGAN KOMERING ULU TIMUR Regency |
+| 1609                       | nonstructural | 602_120       | 71.1787   | 0.0       | 524.3     | OGAN KOMERING ULU TIMUR Regency |
+| 1609                       | structural    | 334_511       | 17.2302   | 0.0       | 157.9926  | OGAN KOMERING ULU TIMUR Regency |
+| 1609                       | occupants     | 7.2614        | 2.618E-07 | 0.0       | 7.261E-08 | OGAN KOMERING ULU TIMUR Regency |
+| 1609                       | area          | 1_250         | 0.0153    | 0.0       | 1.250E-05 | OGAN KOMERING ULU TIMUR Regency |
+| 1609                       | number        | 6.0000        | 7.345E-05 | 0.0       | 6.000E-08 | OGAN KOMERING ULU TIMUR Regency |
+| 1609                       | residents     | 13.6151       | 4.054E-04 | 0.0       | 0.0012    | OGAN KOMERING ULU TIMUR Regency |
+| 1609                       | affectedpop   | 13.6151       | 0.0036    | 0.0       | 0.0119    | OGAN KOMERING ULU TIMUR Regency |
+| 1609                       | injured       | 7.2614        | 2.363E-06 | 0.0       | 7.261E-08 | OGAN KOMERING ULU TIMUR Regency |
+| 1610                       | contents      | 2_103_480     | 94.0339   | 0.0       | 679.8     | OGAN ILIR Regency               |
+| 1610                       | nonstructural | 3_155_221     | 1_234     | 0.0       | 54_816    | OGAN ILIR Regency               |
+| 1610                       | structural    | 1_752_900     | 568.1     | 0.0       | 25_687    | OGAN ILIR Regency               |
+| 1610                       | occupants     | 69.1488       | 6.302E-06 | 0.0       | 6.915E-07 | OGAN ILIR Regency               |
+| 1610                       | area          | 6_548         | 0.0757    | 0.0       | 6.548E-05 | OGAN ILIR Regency               |
+| 1610                       | number        | 10.0000       | 1.156E-04 | 0.0       | 1.000E-07 | OGAN ILIR Regency               |
+| 1610                       | residents     | 129.6539      | 0.0046    | 0.0       | 0.0340    | OGAN ILIR Regency               |
+| 1610                       | affectedpop   | 129.6539      | 0.0204    | 0.0       | 0.5258    | OGAN ILIR Regency               |
+| 1610                       | injured       | 69.1488       | 3.195E-04 | 0.0       | 6.915E-07 | OGAN ILIR Regency               |
+| 17205                      | contents      | 77_880        | 2.3797    | 0.0       | 1.9206    | Suzu-shi                        |
+| 17205                      | nonstructural | 159_403       | 86.1655   | 0.0       | 3_458     | Suzu-shi                        |
+| 17205                      | structural    | 95_642        | 18.4538   | 0.0       | 870.7     | Suzu-shi                        |
+| 17205                      | occupants     | 1.6833        | 1.097E-07 | 0.0       | 1.300E-08 | Suzu-shi                        |
+| 17205                      | area          | 265.7         | 0.0027    | 0.0       | 0.0451    | Suzu-shi                        |
+| 17205                      | number        | 2.0111        | 2.000E-05 | 0.0       | 3.005E-04 | Suzu-shi                        |
+| 17205                      | residents     | 2.3000        | 1.192E-04 | 0.0       | 0.0030    | Suzu-shi                        |
+| 17205                      | affectedpop   | 2.3000        | 0.0066    | 0.0       | 0.0277    | Suzu-shi                        |
+| 17205                      | injured       | 1.6833        | 5.103E-06 | 0.0       | 1.455E-05 | Suzu-shi                        |
+| 1802                       | contents      | 3_792_100     | 113.3683  | 0.0       | 119.8767  | TANGGAMUS Regency               |
+| 1802                       | nonstructural | 6_636_176     | 83.2644   | 0.0       | 399.5     | TANGGAMUS Regency               |
+| 1802                       | structural    | 8_532_226     | 1_004     | 0.0       | 36_619    | TANGGAMUS Regency               |
+| 1802                       | occupants     | 90.1723       | 5.689E-08 | 0.0       | 9.017E-07 | TANGGAMUS Regency               |
+| 1802                       | area          | 20_237        | 0.0244    | 0.0       | 2.024E-04 | TANGGAMUS Regency               |
+| 1802                       | number        | 147.0000      | 1.773E-04 | 0.0       | 1.470E-06 | TANGGAMUS Regency               |
+| 1802                       | residents     | 169.0731      | 7.407E-04 | 0.0       | 1.691E-06 | TANGGAMUS Regency               |
+| 1802                       | affectedpop   | 169.0731      | 0.0061    | 0.0       | 0.0067    | TANGGAMUS Regency               |
+| 1802                       | injured       | 90.1723       | 5.689E-08 | 0.0       | 9.017E-07 | TANGGAMUS Regency               |
+| 1809                       | contents      | 398_005       | 9.922E-04 | 0.0       | 0.0040    | İSCEHİSAR                       |
+| 1809                       | nonstructural | 597_007       | 1.0935    | 0.0       | 0.0060    | İSCEHİSAR                       |
+| 1809                       | structural    | 331_671       | 54.4136   | 0.0       | 0.0033    | İSCEHİSAR                       |
+| 1809                       | occupants     | 0.9045        | 5.589E-10 | 0.0       | 9.045E-09 | İSCEHİSAR                       |
+| 1809                       | area          | 1_239         | 0.0049    | 0.0       | 1.239E-05 | İSCEHİSAR                       |
+| 1809                       | number        | 9.0000        | 3.582E-05 | 0.0       | 9.000E-08 | İSCEHİSAR                       |
+| 1809                       | residents     | 1.6960        | 1.763E-05 | 0.0       | 1.696E-08 | İSCEHİSAR                       |
+| 1809                       | affectedpop   | 1.6960        | 2.332E-05 | 0.0       | 1.696E-08 | İSCEHİSAR                       |
+| 1809                       | injured       | 0.9045        | 5.589E-10 | 0.0       | 9.045E-09 | İSCEHİSAR                       |
+| 1811                       | contents      | 808_873       | 16.5162   | 0.0       | 16.1526   | DEMRE                           |
+| 1811                       | nonstructural | 1_415_528     | 24.9394   | 0.0       | 0.0539    | DEMRE                           |
+| 1811                       | structural    | 1_819_965     | 680.8     | 0.0       | 10_573    | DEMRE                           |
+| 1811                       | occupants     | 30.9291       | 2.221E-08 | 0.0       | 3.093E-07 | DEMRE                           |
+| 1811                       | area          | 3_911         | 0.0034    | 0.0       | 3.911E-05 | DEMRE                           |
+| 1811                       | number        | 4.0000        | 3.462E-06 | 0.0       | 4.000E-08 | DEMRE                           |
+| 1811                       | residents     | 57.9921       | 2.153E-04 | 0.0       | 5.799E-07 | DEMRE                           |
+| 1811                       | affectedpop   | 57.9921       | 7.350E-05 | 0.0       | 5.799E-07 | DEMRE                           |
+| 1811                       | injured       | 30.9291       | 2.216E-08 | 0.0       | 3.093E-07 | DEMRE                           |
+| 1812                       | contents      | 2_090_599     | 476.8     | 0.0       | 12_459    | KARAÇOBAN                       |
+| 1812                       | nonstructural | 3_245_534     | 379.1     | 0.0       | 18_130    | KARAÇOBAN                       |
+| 1812                       | structural    | 2_363_434     | 1_208     | 0.0       | 48_457    | KARAÇOBAN                       |
+| 1812                       | occupants     | 21.7127       | 6.273E-07 | 0.0       | 2.171E-07 | KARAÇOBAN                       |
+| 1812                       | area          | 7_483         | 0.0481    | 0.0       | 1.1465    | KARAÇOBAN                       |
+| 1812                       | number        | 50.0000       | 3.089E-04 | 0.0       | 0.0074    | KARAÇOBAN                       |
+| 1812                       | residents     | 40.7114       | 8.427E-04 | 0.0       | 0.0263    | KARAÇOBAN                       |
+| 1812                       | affectedpop   | 40.7114       | 0.0027    | 0.0       | 0.0260    | KARAÇOBAN                       |
+| 1812                       | injured       | 21.7127       | 9.908E-06 | 0.0       | 2.171E-07 | KARAÇOBAN                       |
+| 1813                       | contents      | 87_609        | 4.636E-04 | 0.0       | 8.761E-04 | KARAMANLI                       |
+| 1813                       | nonstructural | 153_316       | 0.2014    | 0.0       | 0.0015    | KARAMANLI                       |
+| 1813                       | structural    | 197_120       | 0.1499    | 0.0       | 0.0020    | KARAMANLI                       |
+| 1813                       | occupants     | 1.1887        | 8.118E-10 | 0.0       | 1.189E-08 | KARAMANLI                       |
+| 1813                       | area          | 467.5         | 3.193E-07 | 0.0       | 4.675E-06 | KARAMANLI                       |
+| 1813                       | number        | 3.0000        | 2.049E-09 | 0.0       | 3.000E-08 | KARAMANLI                       |
+| 1813                       | residents     | 2.2288        | 1.199E-07 | 0.0       | 2.229E-08 | KARAMANLI                       |
+| 1813                       | affectedpop   | 2.2288        | 1.789E-09 | 0.0       | 2.229E-08 | KARAMANLI                       |
+| 1813                       | injured       | 1.1887        | 8.118E-10 | 0.0       | 1.189E-08 | KARAMANLI                       |
+| 203                        | contents      | 66_902        | 0.0044    | 0.0       | 6.690E-04 | Cuxhaven                        |
+| 203                        | nonstructural | 100_353       | 1.8351    | 0.0       | 0.0010    | Cuxhaven                        |
+| 203                        | structural    | 55_752        | 3.0774    | 0.0       | 5.575E-04 | Cuxhaven                        |
+| 203                        | occupants     | 0.7431        | 1.028E-09 | 0.0       | 7.431E-09 | Cuxhaven                        |
+| 203                        | area          | 208.3         | 6.220E-05 | 0.0       | 2.083E-06 | Cuxhaven                        |
+| 203                        | number        | 1.0000        | 2.986E-07 | 0.0       | 1.000E-08 | Cuxhaven                        |
+| 203                        | residents     | 1.3932        | 2.179E-06 | 0.0       | 1.393E-08 | Cuxhaven                        |
+| 203                        | affectedpop   | 1.3932        | 3.714E-06 | 0.0       | 1.393E-08 | Cuxhaven                        |
+| 203                        | injured       | 0.7431        | 1.028E-09 | 0.0       | 7.431E-09 | Cuxhaven                        |
+| 22211                      | contents      | 14_526_324    | 709.9     | 0.0       | 10_827    | Iwata-shi                       |
+| 22211                      | nonstructural | 30_322_046    | 9_257     | 0.0       | 499_162   | Iwata-shi                       |
+| 22211                      | structural    | 18_193_228    | 5_229     | 0.0       | 83_195    | Iwata-shi                       |
+| 22211                      | occupants     | 463.5         | 1.547E-06 | 0.0       | 3.646E-06 | Iwata-shi                       |
+| 22211                      | area          | 50_368        | 0.4741    | 0.0       | 15.3238   | Iwata-shi                       |
+| 22211                      | number        | 339.0         | 0.0020    | 0.0       | 0.0840    | Iwata-shi                       |
+| 22211                      | residents     | 730.1         | 0.0267    | 0.0       | 0.8835    | Iwata-shi                       |
+| 22211                      | affectedpop   | 730.1         | 0.1556    | 0.0       | 6.7838    | Iwata-shi                       |
+| 22211                      | injured       | 463.5         | 8.371E-05 | 0.0       | 0.0039    | Iwata-shi                       |
+| 28209                      | contents      | 10_941_112    | 4_490     | 0.0       | 73_721    | Toyooka-shi                     |
+| 28209                      | nonstructural | 22_319_906    | 4_047     | 0.0       | 127_528   | Toyooka-shi                     |
+| 28209                      | structural    | 13_391_943    | 2_701     | 0.0       | 56_967    | Toyooka-shi                     |
+| 28209                      | occupants     | 417.3         | 2.070E-05 | 0.0       | 4.044E-06 | Toyooka-shi                     |
+| 28209                      | area          | 32_454        | 0.2272    | 0.0       | 5.4283    | Toyooka-shi                     |
+| 28209                      | number        | 35.4771       | 2.118E-04 | 0.0       | 0.0038    | Toyooka-shi                     |
+| 28209                      | residents     | 609.4         | 0.0097    | 0.0       | 0.4077    | Toyooka-shi                     |
+| 28209                      | affectedpop   | 609.4         | 0.0970    | 0.0       | 1.5746    | Toyooka-shi                     |
+| 28209                      | injured       | 417.3         | 0.0013    | 0.0       | 4.152E-06 | Toyooka-shi                     |
+| 283                        | contents      | 583_701       | 22.6329   | 0.0       | 1_356     | Rhein-Erft-Kreis                |
+| 283                        | nonstructural | 1_459_253     | 274.9     | 0.0       | 9_863     | Rhein-Erft-Kreis                |
+| 283                        | structural    | 875_552       | 135.9454  | 0.0       | 7_387     | Rhein-Erft-Kreis                |
+| 283                        | occupants     | 14.2333       | 3.628E-09 | 0.0       | 6.167E-08 | Rhein-Erft-Kreis                |
+| 283                        | area          | 2_300         | 0.0070    | 0.0       | 0.1039    | Rhein-Erft-Kreis                |
+| 283                        | number        | 18.0000       | 3.524E-05 | 0.0       | 5.194E-04 | Rhein-Erft-Kreis                |
+| 283                        | residents     | 25.7000       | 3.763E-04 | 0.0       | 0.0075    | Rhein-Erft-Kreis                |
+| 283                        | affectedpop   | 25.7000       | 0.0041    | 0.0       | 0.1293    | Rhein-Erft-Kreis                |
+| 283                        | injured       | 14.2333       | 2.609E-07 | 0.0       | 6.167E-08 | Rhein-Erft-Kreis                |
+| 302                        | contents      | 11_743_833    | 4_386     | 0.0       | 72_450    | Bernkastel-Wittlich             |
+| 302                        | nonstructural | 17_615_750    | 10_536    | 0.0       | 115_830   | Bernkastel-Wittlich             |
+| 302                        | structural    | 9_786_528     | 3_700     | 0.0       | 7_870     | Bernkastel-Wittlich             |
+| 302                        | occupants     | 267.2         | 6.400E-06 | 0.0       | 2.672E-06 | Bernkastel-Wittlich             |
+| 302                        | area          | 33_122        | 0.7771    | 0.0       | 0.4900    | Bernkastel-Wittlich             |
+| 302                        | number        | 28.0000       | 6.569E-04 | 0.0       | 4.143E-04 | Bernkastel-Wittlich             |
+| 302                        | residents     | 500.9         | 0.0465    | 0.0       | 0.1657    | Bernkastel-Wittlich             |
+| 302                        | affectedpop   | 500.9         | 0.3055    | 0.0       | 4.4771    | Bernkastel-Wittlich             |
+| 302                        | injured       | 267.2         | 2.390E-04 | 0.0       | 2.672E-06 | Bernkastel-Wittlich             |
+| 303                        | contents      | 750_935       | 244.4     | 0.0       | 3_701     | Birkenfeld                      |
+| 303                        | nonstructural | 1_126_402     | 386.2     | 0.0       | 23_381    | Birkenfeld                      |
+| 303                        | structural    | 625_779       | 421.5     | 0.0       | 13_180    | Birkenfeld                      |
+| 303                        | occupants     | 10.7734       | 5.438E-09 | 0.0       | 1.077E-07 | Birkenfeld                      |
+| 303                        | area          | 2_338         | 0.0298    | 0.0       | 1.4190    | Birkenfeld                      |
+| 303                        | number        | 15.0000       | 1.912E-04 | 0.0       | 0.0091    | Birkenfeld                      |
+| 303                        | residents     | 20.2002       | 0.0011    | 0.0       | 0.0510    | Birkenfeld                      |
+| 303                        | affectedpop   | 20.2002       | 4.539E-04 | 0.0       | 0.0105    | Birkenfeld                      |
+| 303                        | injured       | 10.7734       | 5.438E-09 | 0.0       | 1.077E-07 | Birkenfeld                      |
+| 308                        | contents      | 2_408_632     | 4_601     | 0.0       | 73_514    | Pozega                          |
+| 308                        | nonstructural | 4_073_666     | 2_386     | 0.0       | 43_234    | Pozega                          |
+| 308                        | structural    | 5_207_262     | 9_026     | 0.0       | 147_020   | Pozega                          |
+| 308                        | occupants     | 141.3185      | 3.457E-04 | 0.0       | 9.584E-04 | Pozega                          |
+| 308                        | area          | 12_405        | 2.2904    | 0.0       | 45.0772   | Pozega                          |
+| 308                        | number        | 59.1996       | 0.0110    | 0.0       | 0.2164    | Pozega                          |
+| 308                        | residents     | 252.2         | 0.1759    | 0.0       | 4.5829    | Pozega                          |
+| 308                        | affectedpop   | 252.2         | 3.4864    | 0.0       | 112.3445  | Pozega                          |
+| 308                        | injured       | 141.3185      | 0.0117    | 0.0       | 0.0041    | Pozega                          |
+| 31390                      | contents      | 431_981_568   | 5_366     | 0.0       | 79_807    | Hoki-cho                        |
+| 31390                      | nonstructural | 1_061_315_520 | 193_665   | 0.0       | 32_806    | Hoki-cho                        |
+| 31390                      | structural    | 636_789_248   | 23_362    | 0.0       | 8_593     | Hoki-cho                        |
+| 31390                      | occupants     | 18_253        | 1.982E-05 | 0.0       | 1.801E-04 | Hoki-cho                        |
+| 31390                      | area          | 1_571_046     | 9.8193    | 0.0       | 2.3602    | Hoki-cho                        |
+| 31390                      | number        | 7_827         | 0.0498    | 0.0       | 0.0185    | Hoki-cho                        |
+| 31390                      | residents     | 32_967        | 0.6739    | 0.0       | 0.1731    | Hoki-cho                        |
+| 31390                      | affectedpop   | 32_967        | 0.0915    | 0.0       | 1.2306    | Hoki-cho                        |
+| 31390                      | injured       | 18_253        | 1.580E-05 | 0.0       | 1.801E-04 | Hoki-cho                        |
+| 32386                      | contents      | 5_809_910     | 6_511     | 0.0       | 60_899    | Iinan-cho                       |
+| 32386                      | nonstructural | 14_119_530    | 1_435     | 0.0       | 4_017     | Iinan-cho                       |
+| 32386                      | structural    | 8_471_717     | 1_833     | 0.0       | 8_885     | Iinan-cho                       |
+| 32386                      | occupants     | 231.0         | 1.548E-04 | 0.0       | 0.0015    | Iinan-cho                       |
+| 32386                      | area          | 22_850        | 1.3974    | 0.0       | 13.2376   | Iinan-cho                       |
+| 32386                      | number        | 197.2         | 0.0019    | 0.0       | 0.0099    | Iinan-cho                       |
+| 32386                      | residents     | 414.0         | 0.0114    | 0.0       | 0.0112    | Iinan-cho                       |
+| 32386                      | affectedpop   | 414.0         | 0.1095    | 0.0       | 0.3280    | Iinan-cho                       |
+| 32386                      | injured       | 231.0         | 6.846E-04 | 0.0       | 1.471E-04 | Iinan-cho                       |
+| 3461                       | contents      | 73_229_528    | 267_647   | 1_718     | 1_095_300 | Ravne na Koroskem               |
+| 3461                       | nonstructural | 43_937_720    | 63_829    | 0.0013    | 243_320   | Ravne na Koroskem               |
+| 3461                       | structural    | 29_291_812    | 47_110    | 0.0474    | 214_120   | Ravne na Koroskem               |
+| 3461                       | occupants     | 1_806         | 0.0083    | 3.496E-07 | 0.0582    | Ravne na Koroskem               |
+| 3461                       | area          | 62_153        | 30.4266   | 1.113E-05 | 209.3     | Ravne na Koroskem               |
+| 3461                       | number        | 148.4000      | 0.1164    | 4.112E-08 | 0.9712    | Ravne na Koroskem               |
+| 3461                       | injured       | 1_806         | 0.0166    | 3.531E-07 | 0.0579    | Ravne na Koroskem               |
+| 35                         | contents      | 135_917       | 0.1485    | 0.0       | 0.0014    | Loir-et-Cher                    |
+| 35                         | nonstructural | 56_632        | 0.6005    | 0.0       | 5.663E-04 | Loir-et-Cher                    |
+| 35                         | structural    | 33_979        | 2.378E-05 | 0.0       | 3.398E-04 | Loir-et-Cher                    |
+| 35                         | occupants     | 1.6900        | 1.195E-09 | 0.0       | 1.690E-08 | Loir-et-Cher                    |
+| 35                         | area          | 149.9360      | 4.407E-06 | 0.0       | 1.499E-06 | Loir-et-Cher                    |
+| 35                         | number        | 0.2557        | 7.516E-09 | 0.0       | 2.557E-09 | Loir-et-Cher                    |
+| 35                         | injured       | 1.6900        | 1.195E-09 | 0.0       | 1.690E-08 | Loir-et-Cher                    |
+| 35203                      | contents      | 3_665_928     | 2_948     | 0.0       | 13_024    | Yamaguchi-shi                   |
+| 35203                      | nonstructural | 3_410_494     | 12_231    | 0.0       | 104_241   | Yamaguchi-shi                   |
+| 35203                      | structural    | 2_046_296     | 6_659     | 0.0       | 47_714    | Yamaguchi-shi                   |
+| 35203                      | occupants     | 73.2600       | 5.699E-04 | 0.0       | 0.0057    | Yamaguchi-shi                   |
+| 35203                      | area          | 5_976         | 3.7206    | 0.0       | 36.0854   | Yamaguchi-shi                   |
+| 35203                      | number        | 21.8165       | 0.0225    | 0.0       | 0.2108    | Yamaguchi-shi                   |
+| 35203                      | residents     | 73.9000       | 0.1857    | 0.0       | 1.5083    | Yamaguchi-shi                   |
+| 35203                      | affectedpop   | 73.9000       | 0.8746    | 0.0       | 6.2927    | Yamaguchi-shi                   |
+| 35203                      | injured       | 73.2600       | 0.0012    | 0.0       | 0.0052    | Yamaguchi-shi                   |
+| 39212                      | contents      | 4_699_411     | 5.7486    | 0.0       | 11.2364   | Kami-shi                        |
+| 39212                      | nonstructural | 4_885_896     | 77.6808   | 0.0       | 25.2869   | Kami-shi                        |
+| 39212                      | structural    | 2_931_538     | 80.5154   | 0.0       | 49.8559   | Kami-shi                        |
+| 39212                      | occupants     | 121.1933      | 1.956E-06 | 0.0       | 7.937E-08 | Kami-shi                        |
+| 39212                      | area          | 8_017         | 0.0315    | 0.0       | 0.0076    | Kami-shi                        |
+| 39212                      | number        | 36.2582       | 3.031E-04 | 0.0       | 5.365E-06 | Kami-shi                        |
+| 39212                      | residents     | 108.8000      | 0.0013    | 0.0       | 0.0094    | Kami-shi                        |
+| 39212                      | affectedpop   | 108.8000      | 0.0063    | 0.0       | 0.0100    | Kami-shi                        |
+| 39212                      | injured       | 121.1933      | 3.613E-08 | 0.0       | 7.937E-08 | Kami-shi                        |
+| 40215                      | contents      | 744_214       | 2_036     | 0.0       | 6_678     | Nakama-shi                      |
+| 40215                      | nonstructural | 1_527_298     | 3_277     | 0.0       | 4_257     | Nakama-shi                      |
+| 40215                      | structural    | 916_379       | 2_690     | 0.0       | 4_164     | Nakama-shi                      |
+| 40215                      | occupants     | 27.7133       | 2.073E-04 | 0.0       | 1.328E-07 | Nakama-shi                      |
+| 40215                      | area          | 2_258         | 1.3353    | 0.0       | 0.7164    | Nakama-shi                      |
+| 40215                      | number        | 10.1047       | 0.0058    | 0.0       | 9.389E-04 | Nakama-shi                      |
+| 40215                      | residents     | 45.8000       | 0.0397    | 0.0       | 0.0455    | Nakama-shi                      |
+| 40215                      | affectedpop   | 45.8000       | 0.1405    | 0.0       | 1.4899    | Nakama-shi                      |
+| 40215                      | injured       | 27.7133       | 8.489E-04 | 0.0       | 1.328E-07 | Nakama-shi                      |
+| 4801                       | contents      | 200_707       | 8.2772    | 0.0       | 0.0020    | Division No.  1                 |
+| 4801                       | nonstructural | 301_060       | 7.7103    | 0.0       | 0.0030    | Division No.  1                 |
+| 4801                       | structural    | 167_256       | 4.0014    | 0.0       | 0.0017    | Division No.  1                 |
+| 4801                       | occupants     | 6.2510        | 8.949E-08 | 0.0       | 6.251E-08 | Division No.  1                 |
+| 4801                       | area          | 624.8         | 0.0029    | 0.0       | 6.248E-06 | Division No.  1                 |
+| 4801                       | number        | 3.0000        | 1.388E-05 | 0.0       | 3.000E-08 | Division No.  1                 |
+| 4801                       | residents     | 11.7207       | 1.516E-04 | 0.0       | 1.172E-07 | Division No.  1                 |
+| 4801                       | affectedpop   | 11.7207       | 1.145E-04 | 0.0       | 1.172E-07 | Division No.  1                 |
+| 4801                       | injured       | 6.2510        | 1.904E-08 | 0.0       | 6.251E-08 | Division No.  1                 |
+| 502                        | contents      | 210_348       | 96.4386   | 0.0       | 1_154     | Nicoya                          |
+| 502                        | nonstructural | 315_522       | 67.9101   | 0.0       | 106.4759  | Nicoya                          |
+| 502                        | structural    | 175_290       | 25.3747   | 0.0       | 26.4533   | Nicoya                          |
+| 502                        | occupants     | 3.2283        | 3.395E-07 | 0.0       | 3.228E-08 | Nicoya                          |
+| 502                        | area          | 654.8         | 0.0126    | 0.0       | 6.548E-06 | Nicoya                          |
+| 502                        | number        | 1.0000        | 1.931E-05 | 0.0       | 1.000E-08 | Nicoya                          |
+| 502                        | residents     | 6.0530        | 4.298E-04 | 0.0       | 6.053E-08 | Nicoya                          |
+| 502                        | affectedpop   | 6.0530        | 0.0088    | 0.0       | 0.0376    | Nicoya                          |
+| 502                        | injured       | 3.2283        | 8.002E-07 | 0.0       | 3.228E-08 | Nicoya                          |
+| 503                        | contents      | 2_263_526     | 13_492    | 0.0       | 272_981   | Santa Cruz                      |
+| 503                        | nonstructural | 3_961_170     | 16_959    | 0.0       | 349_827   | Santa Cruz                      |
+| 503                        | structural    | 5_092_933     | 23_518    | 0.0       | 380_013   | Santa Cruz                      |
+| 503                        | occupants     | 42.0377       | 4.078E-04 | 0.0       | 0.0123    | Santa Cruz                      |
+| 503                        | area          | 12_079        | 6.6875    | 0.0       | 192.1     | Santa Cruz                      |
+| 503                        | number        | 58.0000       | 0.0321    | 0.0       | 0.9226    | Santa Cruz                      |
+| 503                        | residents     | 78.8206       | 0.1577    | 0.0       | 4.4818    | Santa Cruz                      |
+| 503                        | affectedpop   | 78.8206       | 2.4423    | 0.0       | 76.4852   | Santa Cruz                      |
+| 503                        | injured       | 42.0377       | 0.0088    | 0.0       | 0.0704    | Santa Cruz                      |
+| 504                        | contents      | 531_209       | 108.0371  | 0.0       | 3_839     | Fundão                          |
+| 504                        | nonstructural | 796_814       | 200.9     | 0.0       | 3_146     | Fundão                          |
+| 504                        | structural    | 442_674       | 47.3437   | 0.0       | 1_370     | Fundão                          |
+| 504                        | occupants     | 6.0522        | 5.849E-07 | 0.0       | 6.052E-08 | Fundão                          |
+| 504                        | area          | 1_310         | 0.0147    | 0.0       | 1.310E-05 | Fundão                          |
+| 504                        | number        | 2.0000        | 2.240E-05 | 0.0       | 2.000E-08 | Fundão                          |
+| 504                        | residents     | 11.3479       | 3.173E-04 | 0.0       | 1.135E-07 | Fundão                          |
+| 504                        | affectedpop   | 11.3479       | 0.0015    | 0.0       | 0.1171    | Fundão                          |
+| 504                        | injured       | 6.0522        | 5.551E-09 | 0.0       | 6.052E-08 | Fundão                          |
+| 509                        | contents      | 116_812       | 394.7     | 0.0       | 9_730     | Sertã                           |
+| 509                        | nonstructural | 204_421       | 249.3     | 0.0       | 10_023    | Sertã                           |
+| 509                        | structural    | 262_827       | 378.9     | 0.0       | 11_899    | Sertã                           |
+| 509                        | occupants     | 2.7994        | 1.563E-04 | 0.0       | 0.0034    | Sertã                           |
+| 509                        | area          | 623.4         | 0.5625    | 0.0       | 11.8004   | Sertã                           |
+| 509                        | number        | 4.0000        | 0.0036    | 0.0       | 0.0757    | Sertã                           |
+| 509                        | residents     | 5.2489        | 0.0116    | 0.0       | 0.2394    | Sertã                           |
+| 509                        | affectedpop   | 5.2489        | 0.0293    | 0.0       | 0.7407    | Sertã                           |
+| 509                        | injured       | 2.7994        | 3.713E-04 | 0.0       | 0.0097    | Sertã                           |
+| 58                         | contents      | 210_348       | 121.3898  | 0.0       | 2_949     | Meuse                           |
+| 58                         | nonstructural | 315_522       | 121.1196  | 0.0       | 2_563     | Meuse                           |
+| 58                         | structural    | 175_290       | 213.6     | 0.0       | 1_019     | Meuse                           |
+| 58                         | occupants     | 6.0165        | 4.641E-07 | 0.0       | 6.016E-08 | Meuse                           |
+| 58                         | area          | 654.8         | 0.0110    | 0.0       | 0.0039    | Meuse                           |
+| 58                         | number        | 1.0000        | 1.681E-05 | 0.0       | 5.990E-06 | Meuse                           |
+| 58                         | residents     | 11.2809       | 7.909E-04 | 0.0       | 0.0039    | Meuse                           |
+| 58                         | affectedpop   | 11.2809       | 0.0096    | 0.0       | 0.0041    | Meuse                           |
+| 58                         | injured       | 6.0165        | 1.220E-08 | 0.0       | 6.016E-08 | Meuse                           |
+| 601                        | contents      | 1_503_573     | 3_087     | 0.0       | 17_048    | Puntarenas                      |
+| 601                        | nonstructural | 2_255_360     | 4_769     | 0.0       | 30_262    | Puntarenas                      |
+| 601                        | structural    | 1_252_978     | 2_293     | 0.0       | 17_775    | Puntarenas                      |
+| 601                        | occupants     | 24.3561       | 6.943E-06 | 0.0       | 2.436E-07 | Puntarenas                      |
+| 601                        | area          | 4_681         | 0.5205    | 0.0       | 3.5144    | Puntarenas                      |
+| 601                        | number        | 34.0000       | 0.0038    | 0.0       | 0.0255    | Puntarenas                      |
+| 601                        | residents     | 45.6678       | 0.0181    | 0.0       | 0.1422    | Puntarenas                      |
+| 601                        | affectedpop   | 45.6678       | 0.1072    | 0.0       | 0.2528    | Puntarenas                      |
+| 601                        | injured       | 24.3561       | 3.625E-06 | 0.0       | 2.436E-07 | Puntarenas                      |
+| 603                        | contents      | 154_780       | 131.5353  | 0.0       | 2.7469    | Coimbra                         |
+| 603                        | nonstructural | 270_864       | 536.3     | 0.0       | 5_746     | Coimbra                         |
+| 603                        | structural    | 348_254       | 397.6     | 0.0       | 4_845     | Coimbra                         |
+| 603                        | occupants     | 3.0482        | 1.313E-05 | 0.0       | 3.048E-08 | Coimbra                         |
+| 603                        | area          | 826.0         | 0.3785    | 0.0       | 0.7703    | Coimbra                         |
+| 603                        | number        | 6.0000        | 0.0027    | 0.0       | 0.0056    | Coimbra                         |
+| 603                        | residents     | 5.7153        | 0.0049    | 0.0       | 0.0143    | Coimbra                         |
+| 603                        | affectedpop   | 5.7153        | 0.0079    | 0.0       | 0.0795    | Coimbra                         |
+| 603                        | injured       | 3.0482        | 5.876E-05 | 0.0       | 3.048E-08 | Coimbra                         |
+| 610                        | contents      | 396_592       | 436.0     | 0.0       | 216.5     | Chudnivs'kyi                    |
+| 610                        | nonstructural | 627_134       | 1_312     | 0.0       | 3_091     | Chudnivs'kyi                    |
+| 610                        | structural    | 513_219       | 571.6     | 0.0       | 2_001     | Chudnivs'kyi                    |
+| 610                        | occupants     | 12.7725       | 1.010E-04 | 0.0       | 1.277E-07 | Chudnivs'kyi                    |
+| 610                        | area          | 1_521         | 1.1080    | 0.0       | 0.2788    | Chudnivs'kyi                    |
+| 610                        | number        | 9.0000        | 0.0054    | 0.0       | 0.0017    | Chudnivs'kyi                    |
+| 610                        | residents     | 23.9484       | 0.0336    | 0.0       | 0.0155    | Chudnivs'kyi                    |
+| 610                        | affectedpop   | 23.9484       | 0.1443    | 0.0       | 0.1162    | Chudnivs'kyi                    |
+| 610                        | injured       | 12.7725       | 3.943E-04 | 0.0       | 1.277E-07 | Chudnivs'kyi                    |
+| 615                        | contents      | 28_473        | 0.3111    | 0.0       | 2.847E-04 | Soure                           |
+| 615                        | nonstructural | 49_828        | 16.9372   | 0.0       | 3.7394    | Soure                           |
+| 615                        | structural    | 64_065        | 5.2855    | 0.0       | 0.1847    | Soure                           |
+| 615                        | occupants     | 0.7350        | 1.144E-09 | 0.0       | 7.350E-09 | Soure                           |
+| 615                        | area          | 137.6656      | 0.0046    | 0.0       | 9.717E-04 | Soure                           |
+| 615                        | number        | 1.0000        | 3.335E-05 | 0.0       | 7.058E-06 | Soure                           |
+| 615                        | residents     | 1.3782        | 1.136E-04 | 0.0       | 1.826E-04 | Soure                           |
+| 615                        | affectedpop   | 1.3782        | 1.182E-05 | 0.0       | 1.378E-08 | Soure                           |
+| 615                        | injured       | 0.7350        | 1.116E-09 | 0.0       | 7.350E-09 | Soure                           |
+| 616                        | contents      | 642_467       | 0.2586    | 0.0       | 0.7233    | Luhyns'kyi                      |
+| 616                        | nonstructural | 1_124_317     | 496.1     | 0.0       | 7_671     | Luhyns'kyi                      |
+| 616                        | structural    | 1_445_550     | 252.8     | 0.0       | 2_105     | Luhyns'kyi                      |
+| 616                        | occupants     | 18.3280       | 1.291E-08 | 0.0       | 1.833E-07 | Luhyns'kyi                      |
+| 616                        | area          | 3_429         | 0.0195    | 0.0       | 3.429E-05 | Luhyns'kyi                      |
+| 616                        | number        | 22.0000       | 1.251E-04 | 0.0       | 2.200E-07 | Luhyns'kyi                      |
+| 616                        | residents     | 34.3649       | 7.730E-04 | 0.0       | 0.0054    | Luhyns'kyi                      |
+| 616                        | affectedpop   | 34.3649       | 1.618E-04 | 0.0       | 4.230E-04 | Luhyns'kyi                      |
+| 616                        | injured       | 18.3280       | 1.291E-08 | 0.0       | 1.833E-07 | Luhyns'kyi                      |
+| 701                        | contents      | 1_677_690     | 75.9786   | 0.0       | 37.4393   | Alandroal                       |
+| 701                        | nonstructural | 2_516_536     | 833.1     | 0.0       | 2_192     | Alandroal                       |
+| 701                        | structural    | 1_398_075     | 1_339     | 0.0       | 555.0     | Alandroal                       |
+| 701                        | occupants     | 46.7349       | 7.512E-06 | 0.0       | 4.673E-07 | Alandroal                       |
+| 701                        | area          | 4_732         | 0.6053    | 0.0       | 0.1261    | Alandroal                       |
+| 701                        | number        | 4.0000        | 5.117E-04 | 0.0       | 1.066E-04 | Alandroal                       |
+| 701                        | residents     | 87.6279       | 0.0284    | 0.0       | 0.0253    | Alandroal                       |
+| 701                        | affectedpop   | 87.6279       | 0.0997    | 0.0       | 0.0048    | Alandroal                       |
+| 701                        | injured       | 46.7349       | 1.511E-05 | 0.0       | 4.673E-07 | Alandroal                       |
+| 704                        | contents      | 1_109_254     | 1_983     | 0.0       | 7_580     | Talamanca                       |
+| 704                        | nonstructural | 1_941_194     | 9_326     | 0.0       | 41_403    | Talamanca                       |
+| 704                        | structural    | 2_495_821     | 8_531     | 0.0       | 31_968    | Talamanca                       |
+| 704                        | occupants     | 33.2014       | 2.207E-05 | 0.0       | 3.320E-07 | Talamanca                       |
+| 704                        | area          | 5_920         | 0.8989    | 0.0       | 2.5056    | Talamanca                       |
+| 704                        | number        | 43.0000       | 0.0065    | 0.0       | 0.0182    | Talamanca                       |
+| 704                        | residents     | 62.2526       | 0.0331    | 0.0       | 0.1195    | Talamanca                       |
+| 704                        | affectedpop   | 62.2526       | 0.2200    | 0.0       | 0.3920    | Talamanca                       |
+| 704                        | injured       | 33.2014       | 2.550E-06 | 0.0       | 3.320E-07 | Talamanca                       |
+| 712                        | contents      | 1_556_821     | 0.0056    | 0.0       | 0.0156    | Vendas Novas                    |
+| 712                        | nonstructural | 648_675       | 8.977E-04 | 0.0       | 0.0065    | Vendas Novas                    |
+| 712                        | structural    | 389_205       | 0.0018    | 0.0       | 0.0039    | Vendas Novas                    |
+| 712                        | occupants     | 6.8133        | 8.422E-09 | 0.0       | 6.813E-08 | Vendas Novas                    |
+| 712                        | area          | 1_636         | 2.022E-06 | 0.0       | 1.636E-05 | Vendas Novas                    |
+| 712                        | number        | 2.7893        | 3.448E-09 | 0.0       | 2.789E-08 | Vendas Novas                    |
+| 712                        | injured       | 6.8133        | 8.422E-09 | 0.0       | 6.813E-08 | Vendas Novas                    |
+| ARE-ADM1-1590546715-B1     | contents      | 12_832_977    | 401.4     | 0.0       | 504.4     | Abu Dhabi                       |
+| ARE-ADM1-1590546715-B1     | nonstructural | 41_302_968    | 2_019     | 0.0       | 6_127     | Abu Dhabi                       |
+| ARE-ADM1-1590546715-B1     | structural    | 37_205_532    | 2_649     | 0.0       | 8_211     | Abu Dhabi                       |
+| ARE-ADM1-1590546715-B1     | occupants     | 6_544         | 0.0013    | 0.0       | 5.109E-06 | Abu Dhabi                       |
+| ARE-ADM1-1590546715-B1     | area          | 294_893       | 6.7974    | 0.0       | 10.1761   | Abu Dhabi                       |
+| ARE-ADM1-1590546715-B1     | number        | 2_944         | 0.1087    | 0.0       | 0.1669    | Abu Dhabi                       |
+| ARE-ADM1-1590546715-B1     | residents     | 12_537        | 0.9372    | 0.0       | 2.0051    | Abu Dhabi                       |
+| ARE-ADM1-1590546715-B1     | affectedpop   | 12_537        | 2.0300    | 0.0       | 2.0874    | Abu Dhabi                       |
+| ARE-ADM1-1590546715-B1     | injured       | 6_544         | 0.0050    | 0.0       | 5.109E-06 | Abu Dhabi                       |
+| AREA # 22133               | contents      | 934_305       | 43.4361   | 0.0       | 10.8458   | Quitilipi                       |
+| AREA # 22133               | nonstructural | 1_294_484     | 88.1087   | 0.0       | 927.9     | Quitilipi                       |
+| AREA # 22133               | structural    | 2_296_433     | 834.0     | 0.0       | 595.5     | Quitilipi                       |
+| AREA # 22133               | occupants     | 1_215         | 6.895E-04 | 0.0       | 7.129E-06 | Quitilipi                       |
+| AREA # 22133               | area          | 16_920        | 0.2565    | 0.0       | 1.2634    | Quitilipi                       |
+| AREA # 22133               | number        | 213.0         | 0.0023    | 0.0       | 0.0145    | Quitilipi                       |
+| AREA # 22133               | residents     | 787.3         | 0.0095    | 0.0       | 0.0361    | Quitilipi                       |
+| AREA # 22133               | affectedpop   | 787.3         | 0.0514    | 0.0       | 0.4306    | Quitilipi                       |
+| AREA # 22133               | injured       | 1_215         | 4.258E-05 | 0.0       | 7.064E-06 | Quitilipi                       |
+| AREA # 50063               | contents      | 3_355_969     | 43.3038   | 0.0       | 611.4     | Luján de Cuyo                   |
+| AREA # 50063               | nonstructural | 5_853_940     | 158.5153  | 0.0       | 1_721     | Luján de Cuyo                   |
+| AREA # 50063               | structural    | 8_032_166     | 299.6     | 0.0       | 4_126     | Luján de Cuyo                   |
+| AREA # 50063               | occupants     | 2_836         | 3.155E-04 | 0.0       | 0.0020    | Luján de Cuyo                   |
+| AREA # 50063               | area          | 68_620        | 0.5168    | 0.0       | 6.6126    | Luján de Cuyo                   |
+| AREA # 50063               | number        | 740.0         | 0.0042    | 0.0       | 0.0651    | Luján de Cuyo                   |
+| AREA # 50063               | residents     | 3_588         | 0.0376    | 0.0       | 0.4319    | Luján de Cuyo                   |
+| AREA # 50063               | affectedpop   | 3_588         | 0.0875    | 0.0       | 0.4254    | Luján de Cuyo                   |
+| AREA # 50063               | injured       | 2_836         | 0.0076    | 0.0       | 0.0905    | Luján de Cuyo                   |
+| AREA # 50098               | contents      | 19_109_828    | 23_096    | 0.0       | 4_262     | San Martín                      |
+| AREA # 50098               | nonstructural | 31_811_914    | 18_042    | 0.0       | 7_184     | San Martín                      |
+| AREA # 50098               | structural    | 55_200_376    | 9_339     | 0.0       | 12_175    | San Martín                      |
+| AREA # 50098               | occupants     | 7_591         | 0.0108    | 0.0       | 0.0039    | San Martín                      |
+| AREA # 50098               | area          | 317_709       | 60.0707   | 0.0       | 26.0263   | San Martín                      |
+| AREA # 50098               | number        | 3_163         | 0.6581    | 0.0       | 0.2509    | San Martín                      |
+| AREA # 50098               | residents     | 14_452        | 4.8494    | 0.0       | 3.0523    | San Martín                      |
+| AREA # 50098               | affectedpop   | 14_452        | 11.4056   | 0.0       | 29.7210   | San Martín                      |
+| AREA # 50098               | injured       | 7_591         | 0.0144    | 0.0       | 3.422E-04 | San Martín                      |
+| AREA # 66007               | contents      | 2_497_625     | 1.5463    | 0.0       | 21.4594   | Anta                            |
+| AREA # 66007               | nonstructural | 3_439_955     | 29.7643   | 0.0       | 338.3     | Anta                            |
+| AREA # 66007               | structural    | 7_446_107     | 104.9883  | 0.0       | 1_643     | Anta                            |
+| AREA # 66007               | occupants     | 2_187         | 2.972E-06 | 0.0       | 1.107E-06 | Anta                            |
+| AREA # 66007               | area          | 61_071        | 0.0373    | 0.0       | 0.3063    | Anta                            |
+| AREA # 66007               | number        | 940.0         | 3.765E-04 | 0.0       | 0.0031    | Anta                            |
+| AREA # 66007               | residents     | 4_112         | 0.0045    | 0.0       | 0.0464    | Anta                            |
+| AREA # 66007               | affectedpop   | 4_112         | 0.0202    | 0.0       | 0.1313    | Anta                            |
+| AREA # 66007               | injured       | 2_187         | 2.982E-06 | 0.0       | 1.107E-06 | Anta                            |
+| AREA # 66133               | contents      | 4_703_102     | 223.6     | 0.0       | 392.5     | Rivadavia                       |
+| AREA # 66133               | nonstructural | 6_347_992     | 658.7     | 0.0       | 2_012     | Rivadavia                       |
+| AREA # 66133               | structural    | 13_665_438    | 914.5     | 0.0       | 4_043     | Rivadavia                       |
+| AREA # 66133               | occupants     | 2_877         | 0.0017    | 0.0       | 0.0028    | Rivadavia                       |
+| AREA # 66133               | area          | 114_329       | 2.0678    | 0.0       | 14.2463   | Rivadavia                       |
+| AREA # 66133               | number        | 1_257         | 0.0168    | 0.0       | 0.0635    | Rivadavia                       |
+| AREA # 66133               | residents     | 5_294         | 0.1379    | 0.0       | 0.5684    | Rivadavia                       |
+| AREA # 66133               | affectedpop   | 5_294         | 0.3037    | 0.0       | 1.0501    | Rivadavia                       |
+| AREA # 66133               | injured       | 2_877         | 0.0091    | 0.0       | 0.0030    | Rivadavia                       |
+| BD-55                      | contents      | 107_993       | 3.2321    | 0.0       | 90.7803   | Rangpur                         |
+| BD-55                      | nonstructural | 243_448       | 13.8337   | 0.0       | 405.5     | Rangpur                         |
+| BD-55                      | structural    | 498_402       | 115.4727  | 0.0       | 2_117     | Rangpur                         |
+| BD-55                      | occupants     | 135.2667      | 8.806E-06 | 0.0       | 7.280E-07 | Rangpur                         |
+| BD-55                      | area          | 3_680         | 0.0554    | 0.0       | 1.3073    | Rangpur                         |
+| BD-55                      | number        | 34.0000       | 6.374E-04 | 0.0       | 0.0145    | Rangpur                         |
+| BD-55                      | residents     | 145.7000      | 0.0073    | 0.0       | 0.1718    | Rangpur                         |
+| BD-55                      | affectedpop   | 145.7000      | 0.0335    | 0.0       | 0.6997    | Rangpur                         |
+| BD-55                      | injured       | 135.2667      | 1.562E-05 | 0.0       | 3.518E-05 | Rangpur                         |
+| ESP.1.3_1                  | contents      | 7_017_295     | 8_726     | 0.0       | 87_815    | Cordoba                         |
+| ESP.1.3_1                  | nonstructural | 15_962_029    | 26_416    | 0.0       | 246_541   | Cordoba                         |
+| ESP.1.3_1                  | structural    | 9_577_218     | 21_734    | 0.0       | 232_826   | Cordoba                         |
+| ESP.1.3_1                  | occupants     | 317.6         | 0.0028    | 0.0       | 0.0258    | Cordoba                         |
+| ESP.1.3_1                  | area          | 22_878        | 12.8311   | 0.0       | 68.4253   | Cordoba                         |
+| ESP.1.3_1                  | number        | 78.5166       | 0.0713    | 0.0       | 0.1833    | Cordoba                         |
+| ESP.1.3_1                  | residents     | 490.1         | 0.5232    | 0.0       | 2.1903    | Cordoba                         |
+| ESP.1.3_1                  | affectedpop   | 490.1         | 2.4950    | 0.0       | 44.3677   | Cordoba                         |
+| ESP.1.3_1                  | injured       | 317.6         | 0.0176    | 0.0       | 0.1011    | Cordoba                         |
+| ESP.1.4_1                  | contents      | 13_313_235    | 2_982     | 0.0       | 50_845    | Granada                         |
+| ESP.1.4_1                  | nonstructural | 30_654_746    | 12_438    | 0.0       | 106_690   | Granada                         |
+| ESP.1.4_1                  | structural    | 18_392_846    | 10_105    | 0.0       | 201_824   | Granada                         |
+| ESP.1.4_1                  | occupants     | 438.7         | 1.197E-04 | 0.0       | 4.105E-04 | Granada                         |
+| ESP.1.4_1                  | area          | 45_761        | 1.9670    | 0.0       | 25.9776   | Granada                         |
+| ESP.1.4_1                  | number        | 187.8         | 0.0073    | 0.0       | 0.0095    | Granada                         |
+| ESP.1.4_1                  | residents     | 756.4         | 0.1093    | 0.0       | 1.8070    | Granada                         |
+| ESP.1.4_1                  | affectedpop   | 756.4         | 1.5653    | 0.0       | 26.6985   | Granada                         |
+| ESP.1.4_1                  | injured       | 438.7         | 0.0026    | 0.0       | 0.0420    | Granada                         |
+| ESP.12.1_1                 | contents      | 29_658_068    | 14_819    | 0.0       | 389_458   | A Coruna                        |
+| ESP.12.1_1                 | nonstructural | 72_830_496    | 39_204    | 0.0       | 670_621   | A Coruna                        |
+| ESP.12.1_1                 | structural    | 43_698_300    | 111_352   | 0.0       | 5_619_942 | A Coruna                        |
+| ESP.12.1_1                 | occupants     | 1_102         | 2.187E-04 | 0.0       | 1.089E-05 | A Coruna                        |
+| ESP.12.1_1                 | area          | 98_726        | 4.9495    | 0.0       | 128.0726  | A Coruna                        |
+| ESP.12.1_1                 | number        | 42.1120       | 0.0021    | 0.0       | 0.0545    | A Coruna                        |
+| ESP.12.1_1                 | residents     | 1_977         | 0.4119    | 0.0       | 13.0634   | A Coruna                        |
+| ESP.12.1_1                 | affectedpop   | 1_977         | 12.8179   | 0.0       | 618.7     | A Coruna                        |
+| ESP.12.1_1                 | injured       | 1_102         | 0.0271    | 0.0       | 0.0013    | A Coruna                        |
+| ESP.12.2_1                 | contents      | 8_445_994     | 987.4     | 0.0       | 59_778    | Lugo                            |
+| ESP.12.2_1                 | nonstructural | 5_312_712     | 8_572     | 0.0       | 182_064   | Lugo                            |
+| ESP.12.2_1                 | structural    | 3_187_628     | 1_308     | 0.0       | 43_923    | Lugo                            |
+| ESP.12.2_1                 | occupants     | 99.1733       | 6.022E-04 | 0.0       | 0.0059    | Lugo                            |
+| ESP.12.2_1                 | area          | 10_309        | 4.5286    | 0.0       | 45.8445   | Lugo                            |
+| ESP.12.2_1                 | number        | 14.8527       | 0.0030    | 0.0       | 0.0339    | Lugo                            |
+| ESP.12.2_1                 | residents     | 38.8000       | 0.1010    | 0.0       | 1.3160    | Lugo                            |
+| ESP.12.2_1                 | affectedpop   | 38.8000       | 0.3201    | 0.0       | 16.6249   | Lugo                            |
+| ESP.12.2_1                 | injured       | 99.1733       | 0.0061    | 0.0       | 0.0631    | Lugo                            |
+| ESP.4.4_1                  | contents      | 18_002_066    | 239.4     | 0.0       | 1_586     | Guadalajara                     |
+| ESP.4.4_1                  | nonstructural | 41_711_436    | 1_591     | 0.0       | 42_967    | Guadalajara                     |
+| ESP.4.4_1                  | structural    | 25_026_864    | 484.8     | 0.0       | 7_453     | Guadalajara                     |
+| ESP.4.4_1                  | occupants     | 482.8         | 1.718E-06 | 0.0       | 2.417E-06 | Guadalajara                     |
+| ESP.4.4_1                  | area          | 61_283        | 0.0550    | 0.0       | 0.3363    | Guadalajara                     |
+| ESP.4.4_1                  | number        | 256.1         | 3.229E-04 | 0.0       | 0.0018    | Guadalajara                     |
+| ESP.4.4_1                  | residents     | 862.9         | 0.0023    | 0.0       | 0.0249    | Guadalajara                     |
+| ESP.4.4_1                  | affectedpop   | 862.9         | 0.0414    | 0.0       | 0.8453    | Guadalajara                     |
+| ESP.4.4_1                  | injured       | 482.8         | 6.068E-06 | 0.0       | 3.535E-06 | Guadalajara                     |
+| ESP.4.5_1                  | contents      | 3_736_328     | 1_793     | 0.0       | 42_997    | Toledo                          |
+| ESP.4.5_1                  | nonstructural | 8_186_839     | 282.1     | 0.0       | 8_689     | Toledo                          |
+| ESP.4.5_1                  | structural    | 4_912_104     | 1_139     | 0.0       | 54_257    | Toledo                          |
+| ESP.4.5_1                  | occupants     | 148.4333      | 4.597E-06 | 0.0       | 7.653E-07 | Toledo                          |
+| ESP.4.5_1                  | area          | 9_195         | 0.0883    | 0.0       | 2.1454    | Toledo                          |
+| ESP.4.5_1                  | number        | 44.3797       | 1.900E-04 | 0.0       | 0.0100    | Toledo                          |
+| ESP.4.5_1                  | residents     | 252.5         | 0.0050    | 0.0       | 0.1565    | Toledo                          |
+| ESP.4.5_1                  | affectedpop   | 252.5         | 0.3653    | 0.0       | 19.4257   | Toledo                          |
+| ESP.4.5_1                  | injured       | 148.4333      | 3.596E-05 | 0.0       | 8.350E-07 | Toledo                          |
+| GIN-ADM1-1590546715-B8     | contents      | 20_280_922    | 3.1990    | 0.0       | 0.2028    | Nzerekore                       |
+| GIN-ADM1-1590546715-B8     | nonstructural | 35_491_616    | 108.3915  | 0.0       | 0.3549    | Nzerekore                       |
+| GIN-ADM1-1590546715-B8     | structural    | 45_632_076    | 0.5307    | 0.0       | 0.4563    | Nzerekore                       |
+| GIN-ADM1-1590546715-B8     | occupants     | 530.0         | 1.784E-06 | 0.0       | 5.300E-06 | Nzerekore                       |
+| GIN-ADM1-1590546715-B8     | area          | 85_714        | 2.885E-04 | 0.0       | 8.571E-04 | Nzerekore                       |
+| GIN-ADM1-1590546715-B8     | number        | 550.0         | 1.851E-06 | 0.0       | 5.500E-06 | Nzerekore                       |
+| GIN-ADM1-1590546715-B8     | residents     | 993.7         | 3.344E-06 | 0.0       | 9.937E-06 | Nzerekore                       |
+| GIN-ADM1-1590546715-B8     | affectedpop   | 993.7         | 3.308E-06 | 0.0       | 9.937E-06 | Nzerekore                       |
+| GIN-ADM1-1590546715-B8     | injured       | 530.0         | 1.784E-06 | 0.0       | 5.300E-06 | Nzerekore                       |
+| LA0608                     | contents      | 7_413_316     | 0.0334    | 0.0       | 0.0741    | Phonxay                         |
+| LA0608                     | nonstructural | 3_088_882     | 34.0942   | 0.0       | 0.0309    | Phonxay                         |
+| LA0608                     | structural    | 1_853_329     | 0.0083    | 0.0       | 0.0185    | Phonxay                         |
+| LA0608                     | occupants     | 66.9367       | 3.017E-07 | 0.0       | 6.694E-07 | Phonxay                         |
+| LA0608                     | area          | 8_178         | 3.687E-05 | 0.0       | 8.178E-05 | Phonxay                         |
+| LA0608                     | number        | 13.9456       | 6.287E-08 | 0.0       | 1.395E-07 | Phonxay                         |
+| LA0608                     | injured       | 66.9367       | 3.017E-07 | 0.0       | 6.694E-07 | Phonxay                         |
+| MAR-ADM1-1590546715-B10    | contents      | 917_535       | 63.8318   | 0.0       | 642.6     | Rabat-Sal�-Kenitra              |
+| MAR-ADM1-1590546715-B10    | nonstructural | 1_976_129     | 102.7542  | 0.0       | 372.3     | Rabat-Sal�-Kenitra              |
+| MAR-ADM1-1590546715-B10    | structural    | 3_993_391     | 309.6     | 0.0       | 1_778     | Rabat-Sal�-Kenitra              |
+| MAR-ADM1-1590546715-B10    | occupants     | 1_242         | 1.069E-06 | 0.0       | 3.777E-07 | Rabat-Sal�-Kenitra              |
+| MAR-ADM1-1590546715-B10    | area          | 29_966        | 0.2346    | 0.0       | 0.7073    | Rabat-Sal�-Kenitra              |
+| MAR-ADM1-1590546715-B10    | number        | 331.0         | 0.0019    | 0.0       | 0.0055    | Rabat-Sal�-Kenitra              |
+| MAR-ADM1-1590546715-B10    | residents     | 1_482         | 0.0030    | 0.0       | 0.0900    | Rabat-Sal�-Kenitra              |
+| MAR-ADM1-1590546715-B10    | affectedpop   | 1_482         | 0.0064    | 0.0       | 0.1130    | Rabat-Sal�-Kenitra              |
+| MAR-ADM1-1590546715-B10    | injured       | 1_242         | 0.0030    | 0.0       | 4.596E-04 | Rabat-Sal�-Kenitra              |
+| MAR-ADM1-1590546715-B12    | contents      | 113_639       | 44.9615   | 0.0       | 1_574     | B�ni Mellal-Kh�nifra            |
+| MAR-ADM1-1590546715-B12    | nonstructural | 159_986       | 29.5483   | 0.0       | 271.0     | B�ni Mellal-Kh�nifra            |
+| MAR-ADM1-1590546715-B12    | structural    | 345_820       | 123.5599  | 0.0       | 2_924     | B�ni Mellal-Kh�nifra            |
+| MAR-ADM1-1590546715-B12    | occupants     | 123.0667      | 1.596E-08 | 0.0       | 1.720E-07 | B�ni Mellal-Kh�nifra            |
+| MAR-ADM1-1590546715-B12    | area          | 2_521         | 0.0059    | 0.0       | 0.0901    | B�ni Mellal-Kh�nifra            |
+| MAR-ADM1-1590546715-B12    | number        | 23.0000       | 8.664E-06 | 0.0       | 1.330E-04 | B�ni Mellal-Kh�nifra            |
+| MAR-ADM1-1590546715-B12    | residents     | 125.2000      | 0.0016    | 0.0       | 0.0297    | B�ni Mellal-Kh�nifra            |
+| MAR-ADM1-1590546715-B12    | affectedpop   | 125.2000      | 0.0133    | 0.0       | 0.2187    | B�ni Mellal-Kh�nifra            |
+| MAR-ADM1-1590546715-B12    | injured       | 123.0667      | 1.811E-05 | 0.0       | 1.720E-07 | B�ni Mellal-Kh�nifra            |
+| NZL-ADM2-1590671490-B1     | contents      | 8_278_732     | 1.8874    | 0.0       | 6.6207    | Far North District              |
+| NZL-ADM2-1590671490-B1     | nonstructural | 12_418_098    | 2.7899    | 0.0       | 3.3106    | Far North District              |
+| NZL-ADM2-1590671490-B1     | structural    | 6_898_944     | 0.0321    | 0.0       | 0.1334    | Far North District              |
+| NZL-ADM2-1590671490-B1     | occupants     | 177.6841      | 1.068E-07 | 0.0       | 1.777E-06 | Far North District              |
+| NZL-ADM2-1590671490-B1     | area          | 20_410        | 1.227E-05 | 0.0       | 2.041E-04 | Far North District              |
+| NZL-ADM2-1590671490-B1     | number        | 98.0000       | 5.893E-08 | 0.0       | 9.800E-07 | Far North District              |
+| NZL-ADM2-1590671490-B1     | residents     | 333.2         | 7.590E-04 | 0.0       | 0.0026    | Far North District              |
+| NZL-ADM2-1590671490-B1     | affectedpop   | 333.2         | 1.707E-07 | 0.0       | 3.332E-06 | Far North District              |
+| NZL-ADM2-1590671490-B1     | injured       | 177.6841      | 1.068E-07 | 0.0       | 1.777E-06 | Far North District              |
+| NZL-ADM2-1590671490-B43    | contents      | 14_569_444    | 867.7     | 0.0       | 32.6776   | Tasman District                 |
+| NZL-ADM2-1590671490-B43    | nonstructural | 25_496_528    | 10_061    | 0.0       | 35_490    | Tasman District                 |
+| NZL-ADM2-1590671490-B43    | structural    | 32_781_250    | 8_563     | 0.0       | 13_363    | Tasman District                 |
+| NZL-ADM2-1590671490-B43    | occupants     | 323.9         | 2.033E-06 | 0.0       | 3.207E-06 | Tasman District                 |
+| NZL-ADM2-1590671490-B43    | area          | 70_442        | 0.8105    | 0.0       | 6.966E-04 | Tasman District                 |
+| NZL-ADM2-1590671490-B43    | number        | 452.0         | 0.0052    | 0.0       | 4.470E-06 | Tasman District                 |
+| NZL-ADM2-1590671490-B43    | residents     | 607.3         | 0.0294    | 0.0       | 0.1204    | Tasman District                 |
+| NZL-ADM2-1590671490-B43    | affectedpop   | 607.3         | 0.0456    | 0.0       | 0.0082    | Tasman District                 |
+| NZL-ADM2-1590671490-B43    | injured       | 323.9         | 2.033E-06 | 0.0       | 3.207E-06 | Tasman District                 |
+| NZL-ADM2-1590671490-B45    | contents      | 1_401_745     | 59.1971   | 0.0       | 0.0140    | Marlborough District            |
+| NZL-ADM2-1590671490-B45    | nonstructural | 2_453_054     | 176.6114  | 0.0       | 0.0245    | Marlborough District            |
+| NZL-ADM2-1590671490-B45    | structural    | 3_153_927     | 2.6130    | 0.0       | 0.0315    | Marlborough District            |
+| NZL-ADM2-1590671490-B45    | occupants     | 34.8285       | 1.153E-07 | 0.0       | 3.483E-07 | Marlborough District            |
+| NZL-ADM2-1590671490-B45    | area          | 7_481         | 0.0036    | 0.0       | 7.481E-05 | Marlborough District            |
+| NZL-ADM2-1590671490-B45    | number        | 48.0000       | 2.286E-05 | 0.0       | 4.800E-07 | Marlborough District            |
+| NZL-ADM2-1590671490-B45    | residents     | 65.3035       | 8.694E-05 | 0.0       | 6.530E-07 | Marlborough District            |
+| NZL-ADM2-1590671490-B45    | affectedpop   | 65.3035       | 2.386E-05 | 0.0       | 6.530E-07 | Marlborough District            |
+| NZL-ADM2-1590671490-B45    | injured       | 34.8285       | 1.153E-07 | 0.0       | 3.483E-07 | Marlborough District            |
+| NZL-ADM2-1590671490-B9     | contents      | 110_623       | 1.808E-05 | 0.0       | 0.0011    | Waipa District                  |
+| NZL-ADM2-1590671490-B9     | nonstructural | 193_591       | 2.8670    | 0.0       | 0.0019    | Waipa District                  |
+| NZL-ADM2-1590671490-B9     | structural    | 248_902       | 1.266E-04 | 0.0       | 0.0025    | Waipa District                  |
+| NZL-ADM2-1590671490-B9     | occupants     | 3.8771        | 7.773E-10 | 0.0       | 3.877E-08 | Waipa District                  |
+| NZL-ADM2-1590671490-B9     | area          | 467.5         | 9.373E-08 | 0.0       | 4.675E-06 | Waipa District                  |
+| NZL-ADM2-1590671490-B9     | number        | 3.0000        | 6.014E-10 | 0.0       | 3.000E-08 | Waipa District                  |
+| NZL-ADM2-1590671490-B9     | residents     | 7.2696        | 1.457E-09 | 0.0       | 7.270E-08 | Waipa District                  |
+| NZL-ADM2-1590671490-B9     | affectedpop   | 7.2696        | 1.457E-09 | 0.0       | 7.270E-08 | Waipa District                  |
+| NZL-ADM2-1590671490-B9     | injured       | 3.8771        | 7.773E-10 | 0.0       | 3.877E-08 | Waipa District                  |
+| RUS-ADM1-28173009B58607289 | contents      | 7_484_948     | 901.9     | 0.0       | 36_916    | Ryazan Oblast                   |
+| RUS-ADM1-28173009B58607289 | nonstructural | 11_583_998    | 1_465     | 0.0       | 46_917    | Ryazan Oblast                   |
+| RUS-ADM1-28173009B58607289 | structural    | 13_450_545    | 1_788     | 0.0       | 72_095    | Ryazan Oblast                   |
+| RUS-ADM1-28173009B58607289 | occupants     | 227.2         | 1.417E-06 | 0.0       | 1.946E-06 | Ryazan Oblast                   |
+| RUS-ADM1-28173009B58607289 | area          | 30_489        | 0.1605    | 0.0       | 1.6289    | Ryazan Oblast                   |
+| RUS-ADM1-28173009B58607289 | number        | 195.7         | 0.0011    | 0.0       | 0.0118    | Ryazan Oblast                   |
+| RUS-ADM1-28173009B58607289 | residents     | 424.8         | 0.0099    | 0.0       | 0.1404    | Ryazan Oblast                   |
+| RUS-ADM1-28173009B58607289 | affectedpop   | 424.8         | 0.0235    | 0.0       | 0.8546    | Ryazan Oblast                   |
+| RUS-ADM1-28173009B58607289 | injured       | 227.2         | 2.998E-07 | 0.0       | 1.946E-06 | Ryazan Oblast                   |
+| RUS-ADM1-28173009B80707933 | contents      | 189_640       | 119.8639  | 0.0       | 429.7     | Sakha Republic                  |
+| RUS-ADM1-28173009B80707933 | nonstructural | 284_460       | 426.3     | 0.0       | 1_489     | Sakha Republic                  |
+| RUS-ADM1-28173009B80707933 | structural    | 158_033       | 71.7484   | 0.0       | 863.0     | Sakha Republic                  |
+| RUS-ADM1-28173009B80707933 | occupants     | 2.4309        | 3.575E-09 | 0.0       | 2.431E-08 | Sakha Republic                  |
+| RUS-ADM1-28173009B80707933 | area          | 467.5         | 0.0275    | 0.0       | 0.0313    | Sakha Republic                  |
+| RUS-ADM1-28173009B80707933 | number        | 3.0000        | 1.764E-04 | 0.0       | 2.006E-04 | Sakha Republic                  |
+| RUS-ADM1-28173009B80707933 | residents     | 4.5580        | 9.642E-04 | 0.0       | 0.0025    | Sakha Republic                  |
+| RUS-ADM1-28173009B80707933 | affectedpop   | 4.5580        | 0.0200    | 0.0       | 0.0723    | Sakha Republic                  |
+| RUS-ADM1-28173009B80707933 | injured       | 2.4309        | 3.489E-09 | 0.0       | 2.431E-08 | Sakha Republic                  |
+| TZA-ADM1-1590546715-B6     | contents      | 2_003_562     | 1_331     | 0.0       | 25_407    | Mbeya                           |
+| TZA-ADM1-1590546715-B6     | nonstructural | 5_008_904     | 13_065    | 0.0       | 237_698   | Mbeya                           |
+| TZA-ADM1-1590546715-B6     | structural    | 3_005_343     | 5_313     | 0.0       | 83_040    | Mbeya                           |
+| TZA-ADM1-1590546715-B6     | occupants     | 64.5000       | 1.292E-04 | 0.0       | 6.380E-07 | Mbeya                           |
+| TZA-ADM1-1590546715-B6     | area          | 7_533         | 1.4149    | 0.0       | 8.0347    | Mbeya                           |
+| TZA-ADM1-1590546715-B6     | number        | 11.0000       | 4.378E-04 | 0.0       | 0.0022    | Mbeya                           |
+| TZA-ADM1-1590546715-B6     | residents     | 116.7000      | 0.0775    | 0.0       | 0.6406    | Mbeya                           |
+| TZA-ADM1-1590546715-B6     | affectedpop   | 116.7000      | 0.9177    | 0.0       | 8.8880    | Mbeya                           |
+| TZA-ADM1-1590546715-B6     | injured       | 64.5000       | 0.0029    | 0.0       | 2.842E-04 | Mbeya                           |
+| *total*                    | affectedpop   | 88_428        | 44.8290   | 0.0       | 1_002     | *total*                         |
+| *total*                    | area          | 3_459_373     | 186.4     | 1.113E-05 | 904.1     | *total*                         |
+| *total*                    | contents      | 827_593_664   | 420_388   | 1_718     | 2_671_617 | *total*                         |
+| *total*                    | injured       | 52_378        | 0.1425    | 3.531E-07 | 0.4539    | *total*                         |
+| *total*                    | nonstructural | 1_685_158_272 | 535_833   | 0.0013    | 3_644_252 | *total*                         |
+| *total*                    | number        | 21_932        | 1.3318    | 4.112E-08 | 3.5814    | *total*                         |
+| *total*                    | occupants     | 52_378        | 0.0303    | 3.496E-07 | 0.1230    | *total*                         |
+| *total*                    | residents     | 88_428        | 9.4962    | 0.0       | 40.1035   | *total*                         |
+| *total*                    | structural    | 1_160_775_168 | 361_162   | 0.0474    | 7_773_673 | *total*                         |
