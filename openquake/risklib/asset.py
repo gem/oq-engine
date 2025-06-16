@@ -943,9 +943,9 @@ def impact_read_assets(h5, start, stop):
         if field == field.upper():
             dic[field] = arr = group[field][start:stop]
             if field in TAGS:
-                arr += 1  # shifted by 1 because the first value for those fields is "?"
                 # go back from indices to strings
-                dic[field] = TAGS[field][arr]
+                # NB: arr + 1 because the first value for the tags is "?"
+                dic[field] = TAGS[field][arr + 1]
         if field in dic and len(dic[field]) == 0:
             dic.pop(field)
     df = pandas.DataFrame(dic)

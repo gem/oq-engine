@@ -188,20 +188,34 @@ def find_long_strings_and_export(csv_paths, fieldname, output_csv_path,
         print("No strings longer than {} characters found.".format(min_length))
 
 
-def main(mosaic_dir, grm_dir, wfp=False, find_long_strings_for_field=None):
+def main(mosaic_dir, grm_dir, wfp=False, action='build'):
     """
-    Storing global exposure
+    If action='build' (the default) stores the global exposure and tmap.
+    If action='zip' zips the global exposure in a single file exposures.zip
+    If action='find_long_XXX' find the fields XXX longer than 32 chars
     """
-
-    if find_long_strings_for_field:
-        fieldname = find_long_strings_for_field
+    if action.startswith('find_long'):  # i.e. find_long_NAME_2
+        fieldname = action[10:]
         exposures_xml = collect_exposures(grm_dir)
         csv_files = []
         for xml in exposures_xml:
-            exposure, _ = _get_exposure(xml)
+            exposure, _ = _get_exposure(xml, stop='asset')
             csv_files.extend(exposure.datafiles)
         output_file = "long_strings.csv"
         find_long_strings_and_export(csv_files, fieldname, output_file)
+        return
+    elif action == 'zip':
+        tmaps = sorted(expo_to_hdf5.read_world_tmap(grm_dir))
+        exposures_xml = collect_exposures(grm_dir)
+        csv_files = []
+        for xml in exposures_xml:
+            print(f'Reading {xml}')
+            exposure, _ = _get_exposure(xml, stop='asset')
+            csv_files.extend(exposure.datafiles)
+        n = len(tmaps) + len(exposures_xml) + len(csv_files)
+        print(f'Zipping {n} files')
+        a = general.zipfiles(tmaps + exposures_xml + csv_files, 'exposures.zip')
+        print(f'Saved {a} [{general.humansize(os.path.getsize(a))}]')
         return
 
     mon = performance.Monitor(measuremem=True)
@@ -223,9 +237,7 @@ def main(mosaic_dir, grm_dir, wfp=False, find_long_strings_for_field=None):
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.grm_dir = 'Directory containing the global risk model'
 main.wfp = 'If true, consider only 7 countries for the World Food Program'
-main.find_long_strings_for_field = (
-    'Produces long_strings.csv summarizing filename, line number, value and '
-    'length of strings above 32 characters in the given field')
+main.action = 'Perform an action (build, zip, find_long_<FIELD>)'
 
 if __name__ == '__main__':
     sap.run(main)

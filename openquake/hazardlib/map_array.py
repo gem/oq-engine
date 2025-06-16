@@ -168,10 +168,10 @@ def check_hmaps(hcurves, imtls, poes):
                 if  rel_err > .05:
                     lows.append(sid)
             if zeros:
-                logging.error(
+                logging.warning(
                     f'There are {imt} zero-curves for sids=%s, {poe=}', zeros)
             elif lows:
-                logging.error(
+                logging.warning(
                     f'The {imt} hazard curve for sids=%s cannot '
                     f'be inverted reliably around {poe=}', lows)
 
