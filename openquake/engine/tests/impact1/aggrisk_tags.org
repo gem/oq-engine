@@ -21,7 +21,7 @@
 | 01110   | structural    | 4_956_446     | 0.0270     | 0.0       | 0.0496      | Sapporo-shi Kiyota-ku    |
 | 01110   | occupants     | 128.8000      | 7.921E-07  | 0.0       | 1.288E-06   | Sapporo-shi Kiyota-ku    |
 | 01110   | area          | 8_519         | 5.239E-05  | 0.0       | 8.519E-05   | Sapporo-shi Kiyota-ku    |
-| 01110   | number        | 55.0000       | 3.383E-07  | 0.0       | 5.500E-07   | Sapporo-shi Kiyota-ku    |
+| 01110   | number        | 55.0000       | 3.382E-07  | 0.0       | 5.500E-07   | Sapporo-shi Kiyota-ku    |
 | 01110   | residents     | 251.1         | 1.544E-06  | 0.0       | 2.511E-06   | Sapporo-shi Kiyota-ku    |
 | 01110   | affectedpop   | 251.1         | 0.2012     | 0.0       | 1.1986      | Sapporo-shi Kiyota-ku    |
 | 01110   | injured       | 128.8000      | 7.921E-07  | 0.0       | 1.288E-06   | Sapporo-shi Kiyota-ku    |
@@ -135,7 +135,7 @@
 | 01397   | number        | 13.0000       | 6.305E-08  | 0.0       | 1.300E-07   | Rusutsu-mura             |
 | 01397   | residents     | 25.5000       | 1.237E-07  | 0.0       | 2.550E-07   | Rusutsu-mura             |
 | 01397   | affectedpop   | 25.5000       | 1.237E-07  | 0.0       | 2.550E-07   | Rusutsu-mura             |
-| 01397   | injured       | 13.1000       | 6.353E-08  | 0.0       | 1.310E-07   | Rusutsu-mura             |
+| 01397   | injured       | 13.1000       | 6.354E-08  | 0.0       | 1.310E-07   | Rusutsu-mura             |
 | 01400   | contents      | 551_578       | 607.6      | 0.0       | 1_850       | Kutchan-cho              |
 | 01400   | nonstructural | 330_947       | 1_354      | 0.0       | 1_680       | Kutchan-cho              |
 | 01400   | structural    | 220_631       | 43.6981    | 0.0       | 252.2       | Kutchan-cho              |
@@ -317,7 +317,7 @@
 | 03301   | contents      | 173_044       | 3_720      | 0.0       | 540.6       | Shizukuishi-cho          |
 | 03301   | nonstructural | 103_826       | 445.5      | 0.0       | 3_027       | Shizukuishi-cho          |
 | 03301   | structural    | 69_218        | 778.2      | 0.0       | 5_992       | Shizukuishi-cho          |
-| 03301   | occupants     | 1.7000        | 1.538E-08  | 0.0       | 1.700E-08   | Shizukuishi-cho          |
+| 03301   | occupants     | 1.7000        | 1.539E-08  | 0.0       | 1.700E-08   | Shizukuishi-cho          |
 | 03301   | area          | 135.2000      | 0.5006     | 0.0       | 1.4342      | Shizukuishi-cho          |
 | 03301   | number        | 1.0000        | 0.0037     | 0.0       | 0.0106      | Shizukuishi-cho          |
 | 03301   | residents     | 3.3000        | 0.0295     | 0.0       | 0.1117      | Shizukuishi-cho          |
@@ -730,8 +730,8 @@
 | 09201   | area          | 5_307         | 0.2164     | 2.653E-05 | 0.3258      | Utsunomiya-shi           |
 | 09201   | number        | 1.0000        | 4.077E-05  | 5.000E-09 | 6.139E-05   | Utsunomiya-shi           |
 | 09201   | injured       | 96.4333       | 1.129E-06  | 4.822E-07 | 9.643E-07   | Utsunomiya-shi           |
-| 09202   | contents      | 42_615_616    | 4_960_436  | 12_539    | 11_486_540  | Ashikaga-shi             |
-| 09202   | nonstructural | 37_040_280    | 5_599_850  | 124_709   | 13_652_015  | Ashikaga-shi             |
+| 09202   | contents      | 42_615_616    | 4_960_437  | 12_539    | 11_486_540  | Ashikaga-shi             |
+| 09202   | nonstructural | 37_040_280    | 5_599_849  | 124_709   | 13_652_015  | Ashikaga-shi             |
 | 09202   | structural    | 16_655_850    | 3_495_480  | 30_092    | 7_549_114   | Ashikaga-shi             |
 | 09202   | occupants     | 396.9         | 0.3026     | 3.744E-06 | 0.6201      | Ashikaga-shi             |
 | 09202   | area          | 29_134        | 4_082      | 35.1715   | 8_381       | Ashikaga-shi             |
@@ -814,7 +814,7 @@
 | 10211   | residents     | 34.8000       | 7.0588     | 0.0195    | 28.3751     | Annaka-shi               |
 | 10211   | affectedpop   | 34.8000       | 10.2078    | 3.226E-05 | 34.7959     | Annaka-shi               |
 | 10211   | injured       | 17.8333       | 0.0359     | 1.047E-10 | 0.2530      | Annaka-shi               |
-| 10212   | contents      | 153_598_032   | 12_960_574 | 0.0065    | 71_364_613  | Midori-shi               |
+| 10212   | contents      | 153_598_032   | 12_960_575 | 0.0065    | 71_364_613  | Midori-shi               |
 | 10212   | nonstructural | 92_158_824    | 14_869_288 | 2.1416    | 72_228_333  | Midori-shi               |
 | 10212   | structural    | 61_439_216    | 7_631_371  | 159.9955  | 28_316_567  | Midori-shi               |
 | 10212   | occupants     | 1_338         | 1.338E-05  | 1.338E-05 | 1.338E-05   | Midori-shi               |
@@ -874,7 +874,7 @@
 | 11211   | affectedpop   | 131.6000      | 26.9191    | 2.101E-09 | 84.1432     | Honjo-shi                |
 | 11211   | injured       | 67.5000       | 0.0036     | 5.470E-15 | 0.0128      | Honjo-shi                |
 | 11212   | contents      | 13_041_436    | 1_597_896  | 0.0873    | 9_451_638   | Higashimatsuyama-shi     |
-| 11212   | nonstructural | 7_831_220     | 1_450_642  | 0.0525    | 7_766_870   | Higashimatsuyama-shi     |
+| 11212   | nonstructural | 7_831_220     | 1_450_641  | 0.0525    | 7_766_870   | Higashimatsuyama-shi     |
 | 11212   | structural    | 5_231_412     | 1_132_549  | 0.0277    | 5_176_943   | Higashimatsuyama-shi     |
 | 11212   | occupants     | 125.6333      | 1.256E-06  | 1.251E-06 | 1.256E-06   | Higashimatsuyama-shi     |
 | 11212   | area          | 10_172        | 1_391      | 1.017E-04 | 6_286       | Higashimatsuyama-shi     |
@@ -892,7 +892,7 @@
 | 11218   | affectedpop   | 8.5000        | 1.4117     | 2.989E-25 | 8.4903      | Fukaya-shi               |
 | 11218   | injured       | 4.3667        | 3.693E-04  | 1.907E-20 | 9.977E-04   | Fukaya-shi               |
 | 11234   | contents      | 12_019_864    | 123_426    | 0.0026    | 584_368     | Yashio-shi               |
-| 11234   | nonstructural | 8_013_243     | 429_168    | 0.0534    | 1_112_481   | Yashio-shi               |
+| 11234   | nonstructural | 8_013_243     | 429_167    | 0.0534    | 1_112_481   | Yashio-shi               |
 | 11234   | structural    | 6_677_702     | 203_931    | 1.588E-05 | 911_621     | Yashio-shi               |
 | 11234   | occupants     | 193.3         | 1.875E-06  | 1.289E-06 | 1.933E-06   | Yashio-shi               |
 | 11234   | area          | 11_477        | 230.8      | 7.652E-05 | 1_121       | Yashio-shi               |
@@ -1018,7 +1018,7 @@
 | 13101   | area          | 15_365        | 75.4269    | 1.537E-04 | 85.3060     | Chiyoda-ku               |
 | 13101   | number        | 18.0000       | 0.0884     | 1.800E-07 | 0.0999      | Chiyoda-ku               |
 | 13101   | injured       | 964.9         | 4.375E-04  | 9.649E-06 | 9.649E-06   | Chiyoda-ku               |
-| 13107   | contents      | 256_345_680   | 2_802_750  | 0.6409    | 12_659_400  | Emanuel County           |
+| 13107   | contents      | 256_345_680   | 2_802_751  | 0.6409    | 12_659_400  | Emanuel County           |
 | 13107   | nonstructural | 192_259_264   | 5_450_601  | 0.8014    | 23_031_536  | Emanuel County           |
 | 13107   | structural    | 64_086_420    | 2_760_187  | 0.3433    | 9_982_706   | Emanuel County           |
 | 13107   | occupants     | 2_686         | 0.1732     | 2.014E-05 | 0.8312      | Emanuel County           |
@@ -1027,7 +1027,7 @@
 | 13107   | injured       | 2_686         | 2.1007     | 6.714E-06 | 9.0607      | Emanuel County           |
 | 13109   | contents      | 81_340_744    | 1_502_970  | 2.728E-19 | 7_391_250   | Evans County             |
 | 13109   | nonstructural | 54_227_164    | 652_790    | 0.2711    | 2_689_423   | Evans County             |
-| 13109   | structural    | 45_189_304    | 585_246    | 1.110E-04 | 3_885_076   | Evans County             |
+| 13109   | structural    | 45_189_304    | 585_247    | 1.110E-04 | 3_885_076   | Evans County             |
 | 13109   | occupants     | 647.8         | 6.478E-06  | 6.478E-06 | 6.478E-06   | Evans County             |
 | 13109   | area          | 77_669        | 439.8      | 7.767E-04 | 2_472       | Evans County             |
 | 13109   | number        | 65.0000       | 0.3681     | 6.500E-07 | 2.0691      | Evans County             |
@@ -1125,7 +1125,7 @@
 | 14153   | injured       | 1_872         | 0.0718     | 8.557E-06 | 0.1406      | Sagamihara-shi Minami-ku |
 | 14201   | contents      | 40_717_960    | 527_634    | 9.282E-22 | 3_246_869   | Yokosuka-shi             |
 | 14201   | nonstructural | 19_001_716    | 385_963    | 4.709E-04 | 2_071_698   | Yokosuka-shi             |
-| 14201   | structural    | 8_143_592     | 307_036    | 1.460E-08 | 1_054_181   | Yokosuka-shi             |
+| 14201   | structural    | 8_143_592     | 307_035    | 1.460E-08 | 1_054_181   | Yokosuka-shi             |
 | 14201   | occupants     | 378.2         | 0.0447     | 3.782E-06 | 0.3071      | Yokosuka-shi             |
 | 14201   | area          | 16_157        | 189.2      | 1.616E-04 | 1_181       | Yokosuka-shi             |
 | 14201   | number        | 1.0000        | 0.0117     | 1.000E-08 | 0.0731      | Yokosuka-shi             |
@@ -1208,7 +1208,7 @@
 | 15211   | affectedpop   | 9.8000        | 3.583E-04  | 8.098E-12 | 1.704E-04   | Mitsuke-shi              |
 | 15211   | injured       | 5.0000        | 5.000E-08  | 5.000E-08 | 5.000E-08   | Mitsuke-shi              |
 | 15218   | contents      | 38_276_920    | 1_300_306  | 0.0025    | 8_195_406   | Gosen-shi                |
-| 15218   | nonstructural | 22_966_152    | 3_049_382  | 2.1751    | 17_658_334  | Gosen-shi                |
+| 15218   | nonstructural | 22_966_152    | 3_049_381  | 2.1751    | 17_658_334  | Gosen-shi                |
 | 15218   | structural    | 15_310_767    | 1_462_070  | 0.0025    | 7_308_862   | Gosen-shi                |
 | 15218   | occupants     | 358.7         | 3.587E-06  | 3.587E-06 | 3.587E-06   | Gosen-shi                |
 | 15218   | area          | 29_904        | 1_603      | 2.990E-04 | 4_521       | Gosen-shi                |
@@ -1434,7 +1434,7 @@
 | 20203   | nonstructural | 26_207_168    | 152_549    | 0.1310    | 695_185     | Ueda-shi                 |
 | 20203   | structural    | 12_247_185    | 438_437    | 6.239E-04 | 2_040_623   | Ueda-shi                 |
 | 20203   | occupants     | 286.4         | 8.005E-04  | 2.864E-06 | 0.0041      | Ueda-shi                 |
-| 20203   | area          | 28_480        | 69.0154    | 2.848E-04 | 272.5       | Ueda-shi                 |
+| 20203   | area          | 28_480        | 69.0155    | 2.848E-04 | 272.5       | Ueda-shi                 |
 | 20203   | number        | 28.0000       | 0.0649     | 2.800E-07 | 0.2545      | Ueda-shi                 |
 | 20203   | residents     | 82.6000       | 1.0409     | 8.260E-07 | 4.5337      | Ueda-shi                 |
 | 20203   | affectedpop   | 82.6000       | 4.6170     | 4.130E-07 | 18.6902     | Ueda-shi                 |
@@ -1547,7 +1547,7 @@
 | 22103   | affectedpop   | 40.6000       | 0.8474     | 3.957E-07 | 3.0907      | St. Tammany Parish       |
 | 22103   | injured       | 20.8333       | 0.0011     | 1.923E-07 | 0.0052      | St. Tammany Parish       |
 | 22131   | contents      | 219_535_088   | 4_892_400  | 7.536E-15 | 9_133_512   | Hamamatsu-shi Naka-ku    |
-| 22131   | nonstructural | 250_897_248   | 11_459_386 | 0.6691    | 46_395_770  | Hamamatsu-shi Naka-ku    |
+| 22131   | nonstructural | 250_897_248   | 11_459_387 | 0.6691    | 46_395_770  | Hamamatsu-shi Naka-ku    |
 | 22131   | structural    | 156_810_784   | 5_260_142  | 5.988E-04 | 25_992_385  | Hamamatsu-shi Naka-ku    |
 | 22131   | occupants     | 1_818         | 0.2085     | 1.212E-05 | 0.5940      | Hamamatsu-shi Naka-ku    |
 | 22131   | area          | 242_683       | 4_478      | 0.0016    | 12_295      | Hamamatsu-shi Naka-ku    |
@@ -1775,8 +1775,8 @@
 | 26108   | occupants     | 26.8000       | 4.690E-08  | 0.0       | 2.680E-07   | Kyoto-shi Ukyo-ku        |
 | 26108   | area          | 2_871         | 5.025E-06  | 0.0       | 2.871E-05   | Kyoto-shi Ukyo-ku        |
 | 26108   | number        | 12.0000       | 2.100E-08  | 0.0       | 1.200E-07   | Kyoto-shi Ukyo-ku        |
-| 26108   | residents     | 52.3000       | 9.153E-08  | 0.0       | 5.230E-07   | Kyoto-shi Ukyo-ku        |
-| 26108   | affectedpop   | 52.3000       | 9.153E-08  | 0.0       | 5.230E-07   | Kyoto-shi Ukyo-ku        |
+| 26108   | residents     | 52.3000       | 9.152E-08  | 0.0       | 5.230E-07   | Kyoto-shi Ukyo-ku        |
+| 26108   | affectedpop   | 52.3000       | 9.152E-08  | 0.0       | 5.230E-07   | Kyoto-shi Ukyo-ku        |
 | 26108   | injured       | 26.8000       | 4.690E-08  | 0.0       | 2.680E-07   | Kyoto-shi Ukyo-ku        |
 | 26201   | contents      | 41_550_744    | 0.1429     | 0.0       | 0.4142      | Fukuchiyama-shi          |
 | 26201   | nonstructural | 25_003_318    | 0.0857     | 0.0       | 0.2485      | Fukuchiyama-shi          |
@@ -2013,7 +2013,7 @@
 | 30201   | structural    | 10_761_093    | 65.2439    | 0.0       | 440.0       | Wakayama-shi             |
 | 30201   | occupants     | 226.5         | 1.072E-06  | 0.0       | 2.265E-06   | Wakayama-shi             |
 | 30201   | area          | 16_017        | 7.613E-05  | 0.0       | 1.602E-04   | Wakayama-shi             |
-| 30201   | number        | 9.0000        | 4.128E-08  | 0.0       | 9.000E-08   | Wakayama-shi             |
+| 30201   | number        | 9.0000        | 4.127E-08  | 0.0       | 9.000E-08   | Wakayama-shi             |
 | 30201   | residents     | 136.3000      | 8.314E-07  | 0.0       | 1.363E-06   | Wakayama-shi             |
 | 30201   | affectedpop   | 136.3000      | 6.929E-05  | 0.0       | 1.363E-06   | Wakayama-shi             |
 | 30201   | injured       | 226.5         | 1.072E-06  | 0.0       | 2.265E-06   | Wakayama-shi             |
@@ -2081,7 +2081,7 @@
 | 33101   | structural    | 20_101_050    | 0.0403     | 0.0       | 0.1404      | Okayama-shi Kita-ku      |
 | 33101   | occupants     | 339.3         | 6.780E-07  | 0.0       | 2.428E-06   | Okayama-shi Kita-ku      |
 | 33101   | area          | 38_468        | 7.691E-05  | 0.0       | 2.743E-04   | Okayama-shi Kita-ku      |
-| 33101   | number        | 255.0         | 5.077E-07  | 0.0       | 1.860E-06   | Okayama-shi Kita-ku      |
+| 33101   | number        | 255.0         | 5.078E-07  | 0.0       | 1.860E-06   | Okayama-shi Kita-ku      |
 | 33101   | residents     | 661.6         | 1.322E-06  | 0.0       | 4.735E-06   | Okayama-shi Kita-ku      |
 | 33101   | affectedpop   | 661.6         | 1.322E-06  | 0.0       | 4.735E-06   | Okayama-shi Kita-ku      |
 | 33101   | injured       | 339.3         | 6.780E-07  | 0.0       | 2.428E-06   | Okayama-shi Kita-ku      |
@@ -2242,8 +2242,8 @@
 | *total* | area          | 5_880_121     | 34_729     | 47.2834   | 135_962     | *total*                  |
 | *total* | contents      | 7_889_546_752 | 54_074_324 | 24_775    | 247_471_407 | *total*                  |
 | *total* | injured       | 79_090        | 6.8956     | 1.548E-04 | 27.6965     | *total*                  |
-| *total* | nonstructural | 5_485_417_984 | 84_966_824 | 139_673   | 394_176_605 | *total*                  |
+| *total* | nonstructural | 5_485_417_984 | 84_966_819 | 139_673   | 394_176_605 | *total*                  |
 | *total* | number        | 21_262        | 137.8523   | 0.0435    | 587.8       | *total*                  |
 | *total* | occupants     | 79_090        | 0.8576     | 2.975E-04 | 2.9571      | *total*                  |
 | *total* | residents     | 90_901        | 1_013      | 2.4588    | 4_017       | *total*                  |
-| *total* | structural    | 3_385_285_376 | 42_594_880 | 57_140    | 182_586_471 | *total*                  |
+| *total* | structural    | 3_385_285_376 | 42_594_878 | 57_140    | 182_586_471 | *total*                  |
