@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5" xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel name="Case 02">
+        <sourceGroup name="group 1" tectonicRegion="Stable Continental Crust">
+            <simpleFaultSource id="d" name="Simple Fault Source">
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            2.0 -0.3 2.0 0.3 
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip> 90.0 </dip>
+                    <upperSeismoDepth> 0.0 </upperSeismoDepth>
+                    <lowerSeismoDepth> 20.0 </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel> WC1994 </magScaleRel>
+                <ruptAspectRatio> 2.0000000E+00 </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.0" bValue="0.9" maxMag="8.0" minMag="6.5"/>
+                <rake> 90.0 </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
