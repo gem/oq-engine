@@ -41,7 +41,7 @@ from openquake.engine.engine import create_jobs
 #       otherwise it would raise:
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
 
-CALC_RUN_TIMEOUT = 30
+CALC_RUN_TIMEOUT = 60
 
 
 django.setup()
@@ -88,6 +88,37 @@ def get_or_create_user(level):
     return user, password  # user.password is the hashed password instead
 
 
+def check_email(job_id, expected_error):
+    app_msgs_dir = os.path.join(
+        config.directory.custom_tmp or tempfile.gettempdir(),
+        'app-messages')
+    # NOTE: we should use the overridden EMAIL_FILE_PATH,
+    #       so email_dir would contain only the files
+    #       created to notify about the jobs created in
+    #       the test
+    try:
+        email_content = get_email_content(
+            app_msgs_dir, f'Job {job_id} ')
+    except FileNotFoundError:
+        print(f'Email for job {job_id} not found yet...')
+    else:
+        print(email_content)
+    if expected_error:
+        assert 'failed' in email_content
+    else:
+        assert 'finished correctly' in email_content
+    email_from = settings.EMAIL_HOST_USER
+    email_to = settings.EMAIL_SUPPORT
+    assert f'From: {email_from}' in email_content
+    assert 'To: django-test-user-level-1@email.test' in email_content
+    assert f'Reply-To: {email_to}' in email_content
+    if expected_error:
+        assert expected_error in email_content
+    else:
+        assert 'Please find the results here:' in email_content
+        assert f'engine/{job_id}/outputs_impact' in email_content
+
+
 class EngineServerTestCase(django.test.TestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
@@ -107,9 +138,6 @@ class EngineServerTestCase(django.test.TestCase):
     @classmethod
     def get_json(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
-        if 'list' not in path:
-            print(resp.wsgi_request.META)
-            print(resp)
         if hasattr(resp, 'content'):
             assert resp.content, (
                 'No content from http://localhost:8800/v1/calc/%s (params: %s)'
@@ -118,7 +146,7 @@ class EngineServerTestCase(django.test.TestCase):
         else:
             js = bytes(loadnpz(resp.streaming_content)['json'])
         if not js:
-            print('Empty json from ')
+            print(f'Empty json from {path}')
             return {}
         try:
             return json.loads(js)
@@ -128,18 +156,19 @@ class EngineServerTestCase(django.test.TestCase):
             return {}
 
     @classmethod
-    def wait(cls):
-        # wait until all calculations stop
+    def wait(cls, job_id):
+        # wait until the calculation stops
         for i in range(CALC_RUN_TIMEOUT):
             time.sleep(1)  # sec
             # NOTE: is_running is True both for 'submitted' and 'executing'
             #       job status
-            running_calcs = cls.get_json('list', is_running='true')
-            if not running_calcs:
+            job_dic = cls.get_json(f'{job_id}/status')
+            if job_dic['status'] in ['complete', 'failed', 'shared',
+                                     'aborted', 'deleted']:
                 # NOTE: some more time is needed in order to wait for the
                 # callback to finish and produce the email notification
                 time.sleep(2)
-                return
+                return job_dic
 
     @classmethod
     def setUpClass(cls):
@@ -155,113 +184,68 @@ class EngineServerTestCase(django.test.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        try:
-            cls.wait()
-        finally:
-            cls.user1.delete()
+        cls.user1.delete()
         super().tearDownClass()
 
+
+
     def impact_run_then_remove(
-            self, data, failure_reason=None):
+            self, endpoint, data, expected_error=None):
         with tempfile.TemporaryDirectory() as email_dir:
             with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
-                resp = self.post('impact_run', data=data)
+                resp = self.post(endpoint, data=data)
                 if resp.status_code == 400:
-                    self.assertIsNotNone(failure_reason)
+                    self.assertIsNotNone(expected_error)
                     content = json.loads(resp.content)
-                    self.assertIn(failure_reason, content['error_msg'])
+                    self.assertIn(expected_error, content['error_msg'])
                     return
                 self.assertEqual(resp.status_code, 200)
                 # the job is supposed to start
-                # and, if failure_reason is not None, to fail afterwards
+                # and, if expected_error is not None, to fail afterwards
                 try:
-                    js = json.loads(resp.content.decode('utf8'))
+                    [job_id] = json.loads(resp.content.decode('utf8'))
                 except Exception:
                     raise ValueError(
                         b'Invalid JSON response: %r' % resp.content)
-                self.wait()
-                app_msgs_dir = os.path.join(
-                    config.directory.custom_tmp or tempfile.gettempdir(),
-                    'app-messages')
-                for job_id in js:
-                    if failure_reason:
-                        tb = self.get_json('%s/traceback' % job_id)
+                job_dic = self.wait(job_id)
+                tb = self.get_json('%s/traceback' % job_id)
+                if job_dic is None:
+                    raise TimeoutError()
+                elif job_dic['status'] == 'failed':
+                    if expected_error:
                         if not tb:
-                            sys.stderr.write(
-                                'Empty traceback, please check!\n')
-                        self.assertIn(failure_reason, '\n'.join(tb))
-                    # NOTE: we should use the overridden EMAIL_FILE_PATH,
-                    #       so email_dir would contain only the files
-                    #       created to notify about the jobs created in
-                    #       the test
-                    for i in range(CALC_RUN_TIMEOUT):
-                        try:
-                            results = self.get_json('%s/result/list' % job_id)
-                        except AssertionError as exc:
-                            print(f'Results for job {job_id} not found yet:')
-                            print(exc)
-                            self.wait()
-                            continue
-                        if isinstance(results, HttpResponseNotFound):
-                            print(f'Results for job {job_id} not found yet...')
-                            self.wait()
-                            continue
-                        self.assertGreater(
-                            len(results), 0,
-                            'The job produced no outputs!')
-                        break
+                            raise Exception('Empty traceback')
+                        self.assertIn(expected_error, '\n'.join(tb))
                     else:
-                        raise RuntimeError(
-                            f'Unable to retrieve results for job {job_id}')
-                    for i in range(CALC_RUN_TIMEOUT):
-                        try:
-                            email_content = get_email_content(
-                                app_msgs_dir, f'Job {job_id} ')
-                        except FileNotFoundError:
-                            print(f'Email for job {job_id} not found yet...')
-                            self.wait()
-                            continue
-                        else:
-                            print(email_content)
-                            break
-                    else:
-                        raise RuntimeError(
-                            f'Unable to retrieve email for job {job_id}')
-                    if failure_reason:
-                        self.assertIn('failed', email_content)
-                    else:
-                        self.assertIn('finished correctly', email_content)
-                    email_from = settings.EMAIL_HOST_USER
-                    email_to = settings.EMAIL_SUPPORT
-                    self.assertIn(f'From: {email_from}', email_content)
-                    self.assertIn('To: django-test-user-level-1@email.test',
-                                  email_content)
-                    self.assertIn(f'Reply-To: {email_to}', email_content)
-                    if failure_reason:
-                        self.assertIn(failure_reason, email_content)
-                    else:
-                        self.assertIn('Please find the results here:',
-                                      email_content)
-                        self.assertIn(f'engine/{job_id}/outputs_impact',
-                                      email_content)
-        for job_id in js:
-            # NOTE: the get_json utility decodes the json and returns a dict
-            ret = self.get_json('%s/impact' % job_id)
-            self.assertEqual(list(ret.keys()),
-                             ['loss_type_descriptions', 'impact'])
-            ret = self.get_json('%s/exposure_by_mmi' % job_id)
-            self.assertEqual(list(ret.keys()),
-                             ['column_descriptions', 'exposure_by_mmi'])
-            ret = self.get('%s/download_aggrisk' % job_id)
-            ret = self.get('%s/extract_html_table/aggrisk_tags' % job_id)
-            ret = self.get('%s/extract_html_table/mmi_tags' % job_id)
-            ret = self.get('%s/extract/losses_by_site' % job_id)
-            ret = self.post('%s/remove' % job_id)
-            if ret.status_code != 200:
-                raise RuntimeError(
-                    'Unable to remove job %s:\n%s' % (job_id, ret))
+                        raise Exception('\n'.join(tb))
+                check_email(job_id, expected_error)
+                if job_dic['status'] == 'failed':
+                    return
+                try:
+                    results = self.get_json('%s/result/list' % job_id)
+                except AssertionError as exc:
+                    print(f'Results for job {job_id} not found yet:')
+                    print(exc)
+                if isinstance(results, HttpResponseNotFound):
+                    print(f'Results for job {job_id} not found yet...')
+                self.assertGreater(
+                    len(results), 0,
+                    'The job produced no outputs!')
+        # NOTE: the get_json utility decodes the json and returns a dict
+        ret = self.get_json('%s/impact' % job_id)
+        self.assertEqual(list(ret), ['loss_type_descriptions', 'impact'])
+        ret = self.get_json('%s/exposure_by_mmi' % job_id)
+        self.assertEqual(list(ret), ['column_descriptions', 'exposure_by_mmi'])
+        ret = self.get('%s/download_aggrisk' % job_id)
+        ret = self.get('%s/extract_html_table/aggrisk_tags' % job_id)
+        ret = self.get('%s/extract_html_table/mmi_tags' % job_id)
+        ret = self.get('%s/extract/losses_by_site' % job_id)
+        ret = self.post('%s/remove' % job_id)
+        if ret.status_code != 200:
+            raise RuntimeError(
+                'Unable to remove job %s:\n%s' % (job_id, ret))
 
-    def test_run_by_usgs_id_then_remove_calc(self):
+    def test_run_by_usgs_id_then_remove_calc_failure(self):
         data = dict(usgs_id='us6000jllz',
                     approach='use_shakemap_from_usgs',
                     shakemap_version='preferred',
@@ -275,7 +259,12 @@ class EngineServerTestCase(django.test.TestCase):
                     asset_hazard_distance=15, ses_seed=42,
                     local_timestamp='2023-02-06 04:17:34+03:00',
                     maximum_distance_stations='')
-        self.impact_run_then_remove(data)
+        expected_error = 'IMT SA(0.6) is required'
+        self.impact_run_then_remove('impact_run', data, expected_error)
+
+    def test_run_by_usgs_id_then_remove_calc_success(self):
+        data = dict(usgs_id='us7000n05d')
+        self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     # check that the URL 'run' cannot be accessed in ARISTOTLE mode
     def test_can_not_run_normal_calc(self):

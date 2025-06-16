@@ -51,7 +51,7 @@ from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
-from openquake.hazardlib.calc.filters import getdefault
+from openquake.hazardlib.calc.filters import getdefault, get_distances
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
@@ -465,7 +465,7 @@ def rup_radius(rup):
     """
     hypo = rup.hypocenter
     xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
-    radius = cdist(rup.surface.mesh.xyz, xyz).min(axis=0)
+    radius = cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
     return radius
 
 
@@ -489,11 +489,12 @@ def filter_site_array_around(array, rup, dist):
     idxs.sort()
 
     # then fine filtering
-    array = array[idxs]
-    idxs, = numpy.where(get_dist(xyz_all[idxs], xyz) < dist)
-    if len(idxs) < len(array):
-        logging.info('Filtered %d/%d sites', len(idxs), len(array))
-    return array[idxs]
+    r_sites = site.SiteCollection.from_(array[idxs])
+    dists = get_distances(rup, r_sites, 'rrup')
+    ids, = numpy.where(dists < dist)
+    if len(ids) < len(idxs):
+        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
+    return r_sites.array[ids]
 
 
 def get_site_model_around(site_model_hdf5, rup, dist):
@@ -539,7 +540,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
     params = sorted(set(sm.dtype.names) | set(oqparam.req_site_params))
     z = numpy.zeros(
         len(sm), [(p, site.site_param_dt[p]) for p in params])
-    for name in z.dtype.names:    
+    for name in z.dtype.names:
         if name in sm.dtype.names:
             vals = sm[name]
             # Get param from site model and if "core"

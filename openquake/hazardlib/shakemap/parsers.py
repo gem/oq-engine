@@ -1072,7 +1072,8 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
         err = {'status': 'failed', 'error_msg': str(exc)}
         return None, n_stations, err
     contents, _properties, _shakemap, _shakemap_desc, err = \
-        _contents_properties_shakemap(usgs_id, user, False, monitor, shakemap_version)
+        _contents_properties_shakemap(usgs_id, user, False, monitor,
+                                      shakemap_version)
     if err:
         return None, n_stations, err
     with monitor('Downloading stations'):
@@ -1126,21 +1127,28 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
     return shakemap_versions, usgs_preferred_version, err
 
 
-def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferred',
-                rupture_file=None, monitor=performance.Monitor()):
+def get_rup_dic(dic, user=User(), use_shakemap=False,
+                shakemap_version='preferred', rupture_file=None,
+                monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
     the ShakeMap ID, else build the rupture locally with the given usgs_id.
 
-    NOTE: this function is called twice by impact_validate: first when retrieving
-    rupture data, then when running the job.
+    NOTE: this function is called twice by impact_validate: first when
+    retrieving rupture data, then when running the job.
 
-    :param dic: dictionary with ShakeMap ID and other parameters
-    :param user: User instance
-    :param use_shakemap: download the ShakeMap only if True
-    :param shakemap_version: id of the ShakeMap to be used (if the ShakeMap is used)
-    :param rupture_file: None
-    :returns: (rupture object or None, rupture dictionary, error dictionary or {})
+    :param dic:
+        dictionary with ShakeMap ID and other parameters
+    :param user:
+       User instance
+    :param use_shakemap:
+        download the ShakeMap only if True
+    :param shakemap_version:
+        id of the ShakeMap to be used (if the ShakeMap is used)
+    :param rupture_file:
+        None
+    :returns:
+        (rupture object or None, rupture dictionary, error dictionary or {})
     """
     rupdic = {}
     rup_data = {}
@@ -1169,7 +1177,8 @@ def get_rup_dic(dic, user=User(), use_shakemap=False, shakemap_version='preferre
                 err = {"status": "failed", "error_msg": str(exc)}
                 return rup, rupdic, err
         if rupture_file.endswith('.xml'):
-            rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
+            rup, rupdic, err = _get_rup_dic_from_xml(
+                usgs_id, user, rupture_file)
         elif rupture_file.endswith('.csv'):
             rup, rupdic, err = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
         elif rupture_file.endswith('.json') and usgs_id != 'FromFile':
@@ -1338,11 +1347,13 @@ def _get_shakemap_array(xml_file):
            if f['name'] in SHAKEMAP_FIELDS}
     out = {name: [] for name in idx}
     uncertainty = any(imt.startswith('STD') for imt in out)
-    missing = sorted(REQUIRED_IMTS - set(out))
-    if 'PSA06' in missing:  # old shakemap
+    if (uncertainty and 'STDPSA06' not in idx) or (
+            not uncertainty and 'PSA06' not in idx):
+        # old shakemap
         fieldmap = {f: FIELDMAP[f] for f in FIELDMAP if f != 'PSA06'}
     else:  # new shakemap
         fieldmap = FIELDMAP
+        missing = REQUIRED_IMTS - set(idx)
         if not uncertainty and missing:
             raise RuntimeError('Missing %s in %s' % (missing, fname))
     for name in idx:

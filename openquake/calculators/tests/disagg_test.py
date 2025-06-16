@@ -228,10 +228,10 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_14(self):
         # check non-invertible hazard curve
-        with mock.patch('logging.error') as err:
-            self.run_calc(case_14.__file__, 'job.ini')
+        with mock.patch('logging.warning') as warn:
+            self.run_calc(case_14.__file__, 'job.ini', calculation_mode='classical')
         self.assertIn('cannot be inverted reliably around poe=0.000404',
-                      err.call_args[0][0])
+                      warn.call_args[0][0])
 
     # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
     # in particular it has very different values between 2 and 16 cores(!)
