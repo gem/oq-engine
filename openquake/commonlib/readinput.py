@@ -465,7 +465,7 @@ def rup_radius(rup):
     """
     hypo = rup.hypocenter
     xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
-    radius = cdist(rup.surface.mesh.xyz, xyz).min(axis=0)
+    radius = cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
     return radius
 
 
@@ -540,7 +540,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
     params = sorted(set(sm.dtype.names) | set(oqparam.req_site_params))
     z = numpy.zeros(
         len(sm), [(p, site.site_param_dt[p]) for p in params])
-    for name in z.dtype.names:    
+    for name in z.dtype.names:
         if name in sm.dtype.names:
             vals = sm[name]
             # Get param from site model and if "core"
