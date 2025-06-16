@@ -132,7 +132,7 @@ def get_array(**kw):
         return get_array_usgs_xml(kind, kw['grid_url'],
                                   kw.get('uncertainty_url'))
     elif kind == 'usgs_id':
-        return get_array_usgs_id(kind, kw['id'])
+        return get_array_usgs_id(kind, kw['id'], _contents(kw['id']))
     elif kind == 'file_npy':
         return get_array_file_npy(kind, kw['fname'])
     else:
@@ -684,6 +684,15 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     return rupdic
 
 
+def _contents(usgs_id):
+    # returns the _contents dictionary
+    text = urlopen(SHAKEMAP_URL.format(usgs_id)).read()
+    properties = json.loads(text)['properties']
+    shakemaps = properties['products']['shakemap']
+    shakemap = _get_usgs_preferred_item(shakemaps)
+    return shakemap['contents']
+
+
 def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
                                   shakemap_version='preferred'):
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
@@ -936,13 +945,15 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
             return rup, rupdic, err
     assert usgs_id
     get_grid = user.level == 1 or use_shakemap
-    contents, properties, shakemap, shakemap_desc, err = _contents_properties_shakemap(
-        usgs_id, user, get_grid, monitor, shakemap_version)
+    contents, properties, shakemap, shakemap_desc, err = \
+        _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
+                                      shakemap_version)
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
         if dic.get('lon') is None:  # don't override user-inserted values
-            rupdic, err = load_rupdic_from_origin(usgs_id, properties['products'])
+            rupdic, err = load_rupdic_from_origin(
+                usgs_id, properties['products'])
             for key in dic:
                 if dic[key] is not None:
                     rupdic[key] = dic[key]
