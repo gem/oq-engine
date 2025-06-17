@@ -460,6 +460,8 @@ class AssetCollection(object):
             self.tagcol.get_aggkey(aggregate_by))}
         K = len(aggkey)
         if geometry:
+            # from openquake.calculators.postproc.plots import plot_geom
+            # plot_geom(geometry, self['lon'], self['lat'])
             array = self.array[contains_xy(geometry, self['lon'], self['lat'])]
         else:
             array = self.array
