@@ -190,7 +190,7 @@ class GsimLogicTree(object):
             alldata = f['model_trt_gsim_weight'][:]
         data = alldata[alldata['model'] == mosaic_model.encode('utf8')]
         dat = data[data['trt'] == trt]
-        assert len(dat) > 0, f'No gsims for {trt}, use {set(data['trt'])}'
+        assert len(dat) > 0, f'No gsims for {trt}, use {set(data["trt"])}'
         trt = decode(trt)
         gsims = decode(dat['gsim'])
         weights = decode(dat['weight'])
