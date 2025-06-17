@@ -549,7 +549,9 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
     G = cleanup_graph(G_original, event_damage_df, g_type)
     # Checking if there is a path between any souce to each demand node.
     # Some demand nodes and source nodes may have been eliminated from
-    # the network due to damage, so we do not need to check their functionalities
+    # the network due to damage, so we do not need to check their 
+    # functionalities
+    
     extant_source_nodes = set(source_nodes) & set(G.nodes)
     extant_demand_nodes = sorted(set(demand_nodes) & set(G.nodes))
     extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
