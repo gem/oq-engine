@@ -458,7 +458,7 @@ function capitalizeFirstLetter(val) {
             'running': 'Retrieving rupture data...'},
         'build_rup_from_usgs': {
             'initial': 'Build rupture',
-            'running': 'Building rupture...'},
+            'running': 'Building rupture...',
             'retrieving_nodal_planes': 'Retrieving nodal planes...'},
         'use_shakemap_fault_rup_from_usgs': {
             'initial': 'Retrieve ShakeMap fault rupture',
