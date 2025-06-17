@@ -426,7 +426,8 @@ def calc_efficiency(graph, N, att, eff_table, eff):
     # Important: If the weight is not provided, then the weight of each edges
     # is considered to be one.
     if N > max_nodes_network:
-        eff_table = pd.DataFrame([[np.nan, np.nan, np.nan]], columns=['Eff0', 'Eff', 'EL'])
+        eff_table = pd.DataFrame([[np.nan, np.nan, np.nan]],
+                                 columns=['Eff0', 'Eff', 'EL'])
         eff_table.index.names = ['id']
     else:
         for node in graph:
@@ -442,13 +443,14 @@ def calc_efficiency(graph, N, att, eff_table, eff):
             eff_table.at[node, eff] = eff_node
         if eff == 'Eff':
             if N > max_nodes_network:
-                eff_table = pd.DataFrame([[np.nan, np.nan, np.nan]], columns=['Eff0', 'Eff', 'EL'])
+                eff_table = pd.DataFrame([[np.nan, np.nan, np.nan]],
+                                         columns=['Eff0', 'Eff', 'EL'])
                 eff_table.index.names = ['id']
             else:
             # This is done so that if the initial graph has a node disconnected,
             # will raise an error when calculating the efficiency loss
-                eff_table['EL'] = (
-                     eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
+                eff_table['EL'] = (eff_table.Eff0 - eff_table.Eff) / \
+                    eff_table.Eff0.replace({0: np.nan})
                 eff_table['EL'] = eff_table['EL'].fillna(0)
     
     return eff_table
@@ -595,6 +597,18 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
         # Calculation of Efficiency loss
         Glo_effloss_per_event = (
             Glo_eff0_per_event - Glo_eff_per_event) / Glo_eff0_per_event
+
+    _update_demand(o, event_id, CCL_per_event, PCL_mean_per_event,
+                   WCL_mean_per_event, Glo_effloss_per_event)
+        
+    if N <= max_nodes_network:
+        eff_table1 = o.eff_table.drop(columns=['Eff0', 'Eff'])
+        o.node_el = pd.concat((o.node_el, eff_table1.reset_index())).groupby(
+            'id', as_index=False).sum()
+
+
+def _update_demand(o, event_id, CCL_per_event, PCL_mean_per_event,
+                   WCL_mean_per_event, Glo_effloss_per_event):
     # Storing the value of performance indicators for each event
     o.event_connectivity_loss_ccl = pd.concat(
         [o.event_connectivity_loss_ccl, pd.DataFrame.from_records(
@@ -626,11 +640,6 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
     wcl_table1 = o.wcl_table.drop(columns=['WS0', 'WS'])
     o.cl = pd.concat((o.cl, wcl_table1.reset_index())).groupby(
         'id', as_index=False).sum()
-        
-    if N <= max_nodes_network:
-        eff_table1 = o.eff_table.drop(columns=['Eff0', 'Eff'])
-        o.node_el = pd.concat((o.node_el, eff_table1.reset_index())).groupby(
-            'id', as_index=False).sum()
 
 
 def update_taz(o, event_id, event_damage_df, G_original, g_type,
