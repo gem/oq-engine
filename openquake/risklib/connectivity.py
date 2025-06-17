@@ -547,18 +547,14 @@ def ELWCLPCLCCL_demand(expo_df, G_original, eff_nodes, demand_nodes,
 def update_demand(o, event_id, event_damage_df, G_original, g_type,
                   source_nodes, demand_nodes, eff_nodes, N, att):
     G = cleanup_graph(G_original, event_damage_df, g_type)
-
     # Checking if there is a path between any souce to each demand node.
     # Some demand nodes and source nodes may have been eliminated from
-    # the network due to damage, so we do not need to check their
-    # functionalities
+    # the network due to damage, so we do not need to check their functionalities
     extant_source_nodes = set(source_nodes) & set(G.nodes)
     extant_demand_nodes = sorted(set(demand_nodes) & set(G.nodes))
     extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
-
     # If demand nodes are damaged itself (Example, building collapsed where
     # demand node is considered)
-
     o.ccl_table.loc[~o.ccl_table.index.isin(extant_demand_nodes), 'CNS'] = 0
     o.pcl_table.loc[~o.pcl_table.index.isin(extant_demand_nodes), 'NS'] = 0
     o.wcl_table.loc[~o.wcl_table.index.isin(extant_demand_nodes), 'WS'] = 0
@@ -574,11 +570,9 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
     o.pcl_table.loc[extant_demand_nodes, 'NS'] = [
         sum(nx.has_path(G, j, i) for j in extant_source_nodes)
         for i in extant_demand_nodes]
-
     o.wcl_table = calc_weighted_connectivity_loss(
         G, att, extant_source_nodes, extant_demand_nodes, o.wcl_table,
         o.pcl_table, 'WS', 'NS')
-
     o.eff_table = calc_efficiency(G, N, att, o.eff_table, 'Eff')
 
     # Connectivity Loss for each node
@@ -599,7 +593,6 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
         # Calculation of Efficiency loss
         Glo_effloss_per_event = (
             Glo_eff0_per_event - Glo_eff_per_event) / Glo_eff0_per_event
-
     # Storing the value of performance indicators for each event
     o.event_connectivity_loss_ccl = pd.concat(
         [o.event_connectivity_loss_ccl, pd.DataFrame.from_records(
@@ -617,7 +610,6 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
         [o.event_connectivity_loss_eff, pd.DataFrame.from_records(
             [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
         ignore_index=True)
-
     # To store the sum of performance indicator at nodal level to calulate
     # the average afterwards
     o.ccl_table['Isolation_node'] = 1 - o.ccl_table['CNS']
@@ -632,7 +624,7 @@ def update_demand(o, event_id, event_damage_df, G_original, g_type,
     wcl_table1 = o.wcl_table.drop(columns=['WS0', 'WS'])
     o.cl = pd.concat((o.cl, wcl_table1.reset_index())).groupby(
         'id', as_index=False).sum()
- 
+        
     if N <= max_nodes_network:
         eff_table1 = o.eff_table.drop(columns=['Eff0', 'Eff'])
         o.node_el = pd.concat((o.node_el, eff_table1.reset_index())).groupby(
