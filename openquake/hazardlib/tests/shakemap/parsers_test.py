@@ -20,7 +20,8 @@ import os
 import unittest
 import csv
 from openquake.hazardlib.shakemap.parsers import (
-    get_rup_dic, User, utc_to_local_time, get_stations_from_usgs, get_shakemap_versions)
+    get_rup_dic, User, utc_to_local_time, get_stations_from_usgs,
+    get_shakemap_versions, get_nodal_planes_for_shakemap)
 from openquake.hazardlib.source.rupture import BaseRupture
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
@@ -156,28 +157,52 @@ class ShakemapParsersTestCase(unittest.TestCase):
                          '3 stations were found, but none of them are seismic')
 
     def test_7(self):
+        usgs_id = 'us6000jllz'
+        expected_nodal_planes = {
+            'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
+            'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}
+        }
+
+        # retrieving nodal planes together with the rest of rupture information
         dic_in = {
-            'usgs_id': 'us6000jllz', 'lon': None, 'lat': None, 'dep': None,
+            'usgs_id': usgs_id, 'lon': None, 'lat': None, 'dep': None,
             'mag': None, 'msr': '', 'aspect_ratio': 2, 'rake': None,
             'dip': None, 'strike': None, 'approach': 'build_rup_from_usgs'}
         _rup, dic, _err = get_rup_dic(dic_in, user=user, use_shakemap=True)
-        self.assertEqual(
-            dic['nodal_planes'],
-            {'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
-             'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}})
+        self.assertEqual(dic['nodal_planes'], expected_nodal_planes)
+
+        # retrieving nodal planes directly, given usgs_id and shakemap_version
+        shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(
+            usgs_id, user=user)
+        shakemap_version = shakemap_versions[0]['id']
+        nodal_planes, _err = get_nodal_planes_for_shakemap(
+            usgs_id, shakemap_version, user=user)
+        self.assertEqual(dic['nodal_planes'], expected_nodal_planes)
 
     def test_7b(self):
         # Case reading nodal planes first from the moment-tensor (not found)
         # then falling back to reading them from the focal-mechanism
+        usgs_id = 'usp0001ccb'
+        expected_nodal_planes = {
+            'NP1': {'dip': 37.0, 'rake': -64.0, 'strike': 285.0},
+            'NP2': {'dip': 57.0, 'rake': -109.0, 'strike': 73.0}
+        }
+
+        # retrieving nodal planes together with the rest of rupture information
         dic_in = {
-            'usgs_id': 'usp0001ccb', 'lon': None, 'lat': None, 'dep': None,
+            'usgs_id': usgs_id, 'lon': None, 'lat': None, 'dep': None,
             'mag': None, 'msr': '', 'aspect_ratio': 2, 'rake': None,
             'dip': None, 'strike': None, 'approach': 'build_rup_from_usgs'}
         _rup, dic, _err = get_rup_dic(dic_in, user=user, use_shakemap=True)
-        self.assertEqual(
-            dic['nodal_planes'],
-            {'NP1': {'dip': 37.0, 'rake': -64.0, 'strike': 285.0},
-             'NP2': {'dip': 57.0, 'rake': -109.0, 'strike': 73.0}})
+        self.assertEqual(dic['nodal_planes'], expected_nodal_planes)
+
+        # retrieving nodal planes directly, given usgs_id and shakemap_version
+        shakemap_versions, usgs_preferred_version, err = get_shakemap_versions(
+            usgs_id, user=user)
+        shakemap_version = shakemap_versions[0]['id']
+        nodal_planes, _err = get_nodal_planes_for_shakemap(
+            usgs_id, shakemap_version, user=user)
+        self.assertEqual(dic['nodal_planes'], expected_nodal_planes)
 
     def test_8(self):
         dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256,

@@ -743,17 +743,21 @@ def contents_properties_shakemap(usgs_id, user, get_grid, monitor,
 def get_nodal_planes_for_shakemap(usgs_id, shakemap_version, user=User(),
                                   monitor=performance.Monitor()):
     """
-    FIXME
+    Retrieve the nodal planes for the given USGS id and ShakeMap version
+
+    :param usgs_id: ShakeMap ID
+    :param shakemap_version: ID of the ShakeMap version
+    :returns (a dictionary with nodal planes information, error dictionary or {})
     """
     _contents, properties, _shakemap, _shakemap_desc, err = \
         contents_properties_shakemap(usgs_id, user, False, monitor, shakemap_version)
     if err:
         return None, err
-    nodal_planes, err = get_nodal_planes(properties)
+    nodal_planes, err = _get_nodal_planes(properties)
     return nodal_planes, err
 
 
-def get_nodal_planes(properties):
+def _get_nodal_planes(properties):
     # in parsers_test
     nodal_planes = {}
     err = {}
@@ -971,7 +975,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
             if err:
                 return None, None, err
             if approach == 'build_rup_from_usgs':
-                rupdic['nodal_planes'], err = get_nodal_planes(properties)
+                rupdic['nodal_planes'], err = _get_nodal_planes(properties)
                 if err:
                     return None, None, err
                 else:
