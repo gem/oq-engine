@@ -72,8 +72,7 @@ def compare(dstore1, dstore2):
         aac(avg1, avg2, rtol=1e-5)
 
 
-# removed impact4 since the hazard is too small
-@pytest.mark.parametrize('n', [1, 2, 3])
+@pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_impact(n):
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
     if not os.path.exists(expo := cd.parent.parent.parent / 'exposure.hdf5'):
