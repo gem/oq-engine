@@ -459,6 +459,7 @@ function capitalizeFirstLetter(val) {
         'build_rup_from_usgs': {
             'initial': 'Build rupture',
             'running': 'Building rupture...'},
+            'retrieving_nodal_planes': 'Retrieving nodal planes...'},
         'use_shakemap_fault_rup_from_usgs': {
             'initial': 'Retrieve ShakeMap fault rupture',
             'running': 'Retrieving ShakeMap fault rupture...'},
@@ -502,7 +503,7 @@ function capitalizeFirstLetter(val) {
         return selected_approach;
     }
 
-    function set_retrieve_data_btn_txt(state) { // state can be 'initial' or 'running'
+    function set_retrieve_data_btn_txt(state) { // state can be 'initial', 'running', 'retrieving_nodal_planes'
         const approach = get_selected_approach();
         const btn_txt = retrieve_data_btn_txt_map[approach][state];
         $('#submit_impact_get_rupture').text(btn_txt);
@@ -545,6 +546,7 @@ function capitalizeFirstLetter(val) {
                         var usgs_preferred = shakemap_version.id == data.usgs_preferred_version ? " (USGS preferred)" : "";
                         $select.append(`<option value="${shakemap_version.id}">v${shakemap_version.number}: ${shakemap_version.utc_date_time}${usgs_preferred}</option>`);
                     });
+                    $select.trigger('change');
                 } else {
                     $select.append('<option value="">No versions available</option>');
                 }
@@ -579,6 +581,23 @@ function capitalizeFirstLetter(val) {
         $('#time_event').val(impact_form_defaults['time_event']);
         $('#rupture-map').hide();
         $('#shakemap-image-row').hide();
+    }
+
+    function populate_nodal_plane_selector(nodal_planes) {
+        const $select = $('select#nodal_plane');
+        $select.empty();
+        $.each(nodal_planes, function(key, values) {
+            const optionText = `${key} (Dip: ${values.dip}, Rake: ${values.rake}, Strike: ${values.strike})`;
+            const $option = $('<option>')
+                .val(key) // Use the key as the value
+                .text(optionText) // Display the formatted text
+                .data('details', values); // Attach the object as data
+            $select.append($option);
+        });
+        const nodal_plane = $select.find(':selected').data('details');
+        $('#rake').val(nodal_plane.rake);
+        $('#dip').val(nodal_plane.dip);
+        $('#strike').val(nodal_plane.strike);
     }
 
     /* classic event management */
@@ -810,6 +829,40 @@ function capitalizeFirstLetter(val) {
                 }
             });
 
+            $('select#shakemap_version').change(function () {
+                if ($('input[name="impact_approach"]:checked').val() != 'build_rup_from_usgs') {
+                    // retrieve nodal planes only when building rupture from USGS nodal plane solutions
+                    return;
+                }
+                var formData = {
+                    usgs_id: $.trim($("#usgs_id").val()),
+                    shakemap_version: $("#shakemap_version").val()
+                };
+                $('#submit_impact_get_rupture').prop('disabled', true);
+                $('input[name="impact_approach"]').prop('disabled', true);
+                set_retrieve_data_btn_txt('retrieving_nodal_planes');
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/impact_get_nodal_planes",
+                    data: formData,
+                    dataType: "json",
+                    encode: true,
+                }).done(function (data) {
+                    if ('nodal_planes' in data) {
+                        populate_nodal_plane_selector(data.nodal_planes);
+                    }
+                    if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
+                        diaerror.show(false, "Note", data.nodal_planes_issue);
+                    }
+                }).error(function (data) {
+                    diaerror.show(false, "Error", "Unable to retrieve nodal planes");
+                }).always(function (data) {
+                    $('#submit_impact_get_rupture').prop('disabled', false);
+                    $('input[name="impact_approach"]').prop('disabled', false);
+                    set_retrieve_data_btn_txt('initial');
+                });
+            });
+
             $('select#nodal_plane').change(function () {
                 const nodal_plane = $(this).find(':selected').data('details');
                 $('#rake').val(nodal_plane.rake);
@@ -884,21 +937,7 @@ function capitalizeFirstLetter(val) {
                         diaerror.show(false, "Note", conversion_issues);
                     }
                     if ('nodal_planes' in data) {
-                        const nodal_planes = data.nodal_planes;
-                        const $select = $('select#nodal_plane');
-                        $select.empty();
-                        $.each(nodal_planes, function(key, values) {
-                            const optionText = `${key} (Dip: ${values.dip}, Rake: ${values.rake}, Strike: ${values.strike})`;
-                            const $option = $('<option>')
-                                .val(key) // Use the key as the value
-                                .text(optionText) // Display the formatted text
-                                .data('details', values); // Attach the object as data
-                            $select.append($option);
-                        });
-                        const nodal_plane = $select.find(':selected').data('details');
-                        $('#rake').val(nodal_plane.rake);
-                        $('#dip').val(nodal_plane.dip);
-                        $('#strike').val(nodal_plane.strike);
+                        populate_nodal_plane_selector(data.nodal_planes);
                     }
                     $('#mosaic_model').empty();
                     $.each(data.mosaic_models, function(index, mosaic_model) {

@@ -991,6 +991,23 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
     return contents, properties, shakemap_array, shakemap_desc, err
 
 
+def get_nodal_planes_for_shakemap(usgs_id, shakemap_version, user=User(),
+                                  monitor=performance.Monitor()):
+    """
+    Retrieve the nodal planes for the given USGS id and ShakeMap version
+
+    :param usgs_id: ShakeMap ID
+    :param shakemap_version: ID of the ShakeMap version
+    :returns (a dictionary with nodal planes information, error dictionary or {})
+    """
+    _contents, properties, _shakemap, _shakemap_desc, err = \
+        _contents_properties_shakemap(usgs_id, user, False, monitor, shakemap_version)
+    if err:
+        return None, err
+    nodal_planes, err = _get_nodal_planes(properties)
+    return nodal_planes, err
+
+
 def _get_nodal_planes(properties):
     # in parsers_test
     nodal_planes = {}
@@ -1081,8 +1098,7 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
         err = {'status': 'failed', 'error_msg': str(exc)}
         return None, n_stations, err
     contents, _properties, _shakemap, _shakemap_desc, err = \
-        _contents_properties_shakemap(usgs_id, user, False, monitor,
-                                      shakemap_version)
+        _contents_properties_shakemap(usgs_id, user, False, monitor, shakemap_version)
     if err:
         return None, n_stations, err
     with monitor('Downloading stations'):
