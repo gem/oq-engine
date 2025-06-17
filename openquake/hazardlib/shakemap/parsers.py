@@ -693,8 +693,8 @@ def _contents(usgs_id):
     return shakemap['contents']
 
 
-def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
-                                  shakemap_version='preferred'):
+def contents_properties_shakemap(usgs_id, user, get_grid, monitor,
+                                 shakemap_version='preferred'):
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
     #     url = SHAKEMAP_URL.format(usgs_id)
     #     f.write(urlopen(url).read())
@@ -740,7 +740,20 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
     return contents, properties, shakemap_array, shakemap_desc, err
 
 
-def _get_nodal_planes(properties):
+def get_nodal_planes_for_shakemap(usgs_id, shakemap_version, user=User(),
+                                  monitor=performance.Monitor()):
+    """
+    FIXME
+    """
+    _contents, properties, _shakemap, _shakemap_desc, err = \
+        contents_properties_shakemap(usgs_id, user, False, monitor, shakemap_version)
+    if err:
+        return None, err
+    nodal_planes, err = get_nodal_planes(properties)
+    return nodal_planes, err
+
+
+def get_nodal_planes(properties):
     # in parsers_test
     nodal_planes = {}
     err = {}
@@ -837,8 +850,7 @@ def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
         err = {'status': 'failed', 'error_msg': str(exc)}
         return None, n_stations, err
     contents, _properties, _shakemap, _shakemap_desc, err = \
-        _contents_properties_shakemap(usgs_id, user, False, monitor,
-                                      shakemap_version)
+        contents_properties_shakemap(usgs_id, user, False, monitor, shakemap_version)
     if err:
         return None, n_stations, err
     with monitor('Downloading stations'):
@@ -946,8 +958,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
     assert usgs_id
     get_grid = user.level == 1 or use_shakemap
     contents, properties, shakemap, shakemap_desc, err = \
-        _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
-                                      shakemap_version)
+        contents_properties_shakemap(usgs_id, user, get_grid, monitor, shakemap_version)
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
@@ -960,7 +971,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
             if err:
                 return None, None, err
             if approach == 'build_rup_from_usgs':
-                rupdic['nodal_planes'], err = _get_nodal_planes(properties)
+                rupdic['nodal_planes'], err = get_nodal_planes(properties)
                 if err:
                     return None, None, err
                 else:

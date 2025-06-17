@@ -51,7 +51,7 @@ from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
     IMPACT_FORM_DEFAULTS)
 from openquake.hazardlib.shakemap.parsers import (
-    get_stations_from_usgs, get_shakemap_versions)
+    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_for_shakemap)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -841,6 +841,28 @@ def impact_get_shakemap_versions(request):
     response_data = dict(shakemap_versions=shakemap_versions,
                          usgs_preferred_version=usgs_preferred_version,
                          shakemap_versions_issue=shakemap_versions_issue)
+    return JsonResponse(response_data)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_get_nodal_planes(request):
+    """
+    Return a list of nodal planes for the given usgs_id and shakemap_version
+
+    :param request:
+        a `django.http.HttpRequest` object containing usgs_id and shakemap_version
+    """
+    usgs_id = request.POST.get('usgs_id')
+    shakemap_version = request.POST.get('shakemap_version')
+    nodal_planes, err = get_nodal_planes_for_shakemap(usgs_id, shakemap_version)
+    if err:
+        nodal_planes_issue = err['error_msg']
+    else:
+        nodal_planes_issue = None
+    response_data = dict(nodal_planes=nodal_planes,
+                         nodal_planes_issue=nodal_planes_issue)
     return JsonResponse(response_data)
 
 
