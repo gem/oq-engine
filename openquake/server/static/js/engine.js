@@ -844,12 +844,11 @@ function capitalizeFirstLetter(val) {
                     dataType: "json",
                     encode: true,
                 }).done(function (data) {
-                    console.log(data);
                     if ('nodal_planes' in data) {
                         populate_nodal_plane_selector(data.nodal_planes);
                     }
-                    if ('nodal_planes_issue' in data) {
-                        diaerror.show(false, "Note", nodal_planes_issue);
+                    if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
+                        diaerror.show(false, "Note", data.nodal_planes_issue);
                     }
                 }).error(function (data) {
                     diaerror.show(false, "Error", "Unable to retrieve nodal planes");
