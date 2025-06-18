@@ -1573,6 +1573,35 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         calc.datastore['weights'] = numpy.ones(1)
 
 
+def assoc_to_shakemap(oq, dstore, haz_sitecol, assetcol):
+    """
+    Download the shakemap, reduce the assetcol and returns a reduced sitecol
+    """
+    imtls = oq.imtls or dstore.parent['oqparam'].imtls
+    oq.risk_imtls = {imt: list(imls) for imt, imls in imtls.items()}
+    logging.info('Getting/reducing shakemap')
+    # for instance for the test case_shakemap the haz_sitecol
+    # has sids in range(0, 26) while sitecol.sids is
+    # [8, 9, 10, 11, 13, 15, 16, 17, 18];
+    # the total assetcol has 26 assets on the total sites
+    # and the reduced assetcol has 9 assets on the reduced sites
+    if oq.shakemap_id:
+        uridict = {'kind': 'usgs_id', 'id': oq.shakemap_id}
+    elif 'shakemap' in oq.inputs:
+        uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
+    else:
+        uridict = oq.shakemap_uri
+    sitecol, shakemap, discarded = get_sitecol_shakemap(
+        uridict, oq.risk_imtls, haz_sitecol,
+        oq.asset_hazard_distance['default'])
+    if len(discarded):
+        dstore['discarded'] = discarded
+    assetcol.reduce_also(sitecol)
+    dstore['assetcol'] = assetcol
+    logging.info('Extracted %d assets', len(assetcol))
+    return sitecol, shakemap
+
+    
 def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     """
     Enabled only if there is a shakemap parameter in the job.ini.
@@ -1581,30 +1610,9 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     and stored in the datastore.
     """
     oq = calc.oqparam
-    imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
-    oq.risk_imtls = {imt: list(imls) for imt, imls in imtls.items()}
-    logging.info('Getting/reducing shakemap')
     with calc.monitor('getting/reducing shakemap'):
-        # for instance for the test case_shakemap the haz_sitecol
-        # has sids in range(0, 26) while sitecol.sids is
-        # [8, 9, 10, 11, 13, 15, 16, 17, 18];
-        # the total assetcol has 26 assets on the total sites
-        # and the reduced assetcol has 9 assets on the reduced sites
-        if oq.shakemap_id:
-            uridict = {'kind': 'usgs_id', 'id': oq.shakemap_id}
-        elif 'shakemap' in oq.inputs:
-            uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
-        else:
-            uridict = oq.shakemap_uri
-        sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict, oq.risk_imtls, haz_sitecol,
-            oq.asset_hazard_distance['default'])
-        if len(discarded):
-            calc.datastore['discarded'] = discarded
-        assetcol.reduce_also(sitecol)
-        calc.datastore['assetcol'] = assetcol
-        logging.info('Extracted %d assets', len(assetcol))
-
+        sitecol, shakemap = assoc_to_shakemap(
+            oq, calc.datastore, haz_sitecol, assetcol)
     # assemble dictionary to decide on the calculation method for the gmfs
     if 'MMI' in oq.imtls:
         # calculations with MMI should be executed
