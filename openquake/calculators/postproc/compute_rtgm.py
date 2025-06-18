@@ -85,14 +85,17 @@ MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 
 AELO_WARNINGS = {
-    'zero_hazard': ('Zero hazard: there are no ruptures close to the site.'
-                    ' ASCE 7 and ASCE 41 parameters cannot be computed.'
-                    ' See User Guide.'),
-    'low_hazard': ('Very low hazard: ASCE 7 and ASCE 41'
-                   ' parameters cannot be computed. See User Guide.'),
-    'below_min': ('The ASCE 7 and/or ASCE 41 parameter values at the site are very low.'
-                  ' User may need to increase the values to user-specified minimums'
-                  ' (e.g., Ss=0.11g and S1=0.04g). See User Guide.'),
+    'zero_hazard': (
+        'Zero hazard: there are no ruptures close to the site.'
+        ' ASCE 7 and ASCE 41 parameters cannot be computed.'
+        ' See User Guide.'),
+    'low_hazard': (
+        'Very low hazard: ASCE 7 and ASCE 41'
+        ' parameters cannot be computed. See User Guide.'),
+    'below_min': (
+        'The ASCE 7 and/or ASCE 41 parameter values at the site are very low.'
+        ' User may need to increase the values to user-specified minimums'
+        ' (e.g., Ss=0.11g and S1=0.04g). See User Guide.'),
     'only_prob_mce': 'Only probabilistic MCE',
 }
 
@@ -740,8 +743,10 @@ def main(dstore, csm):
             rtgm[sid] = rtgm_df
         if warning:
             # for each site id, collect warning id and warning text as a tuple
-            warnings[sid] = AeloWarning(name=warning, text=AELO_WARNINGS[warning])
-            logging.warning('(%.1f,%.1f) ' + AELO_WARNINGS[warning], loc.x, loc.y)
+            warnings[sid] = AeloWarning(
+                name=warning, text=AELO_WARNINGS[warning])
+            logging.warning(
+                '(%.1f,%.1f) ' + AELO_WARNINGS[warning], loc.x, loc.y)
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
 
@@ -774,7 +779,8 @@ def main(dstore, csm):
 
     # if warnings are meaningful, and/or there are 2+ sites add them to the ds
     if len(warnings) == 1:
-        if not warnings[0].name == 'only_prob_mce':
+        [warning] = warnings.values()
+        if not warning.name == 'only_prob_mce':
             dstore['warnings'] = warnings_to_array(warnings)
     else:
         dstore['warnings'] = warnings_to_array(warnings)
