@@ -48,7 +48,6 @@ from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
@@ -1581,30 +1580,10 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     and stored in the datastore.
     """
     oq = calc.oqparam
-    imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
-    oq.risk_imtls = {imt: list(imls) for imt, imls in imtls.items()}
-    logging.info('Getting/reducing shakemap')
     with calc.monitor('getting/reducing shakemap'):
-        # for instance for the test case_shakemap the haz_sitecol
-        # has sids in range(0, 26) while sitecol.sids is
-        # [8, 9, 10, 11, 13, 15, 16, 17, 18];
-        # the total assetcol has 26 assets on the total sites
-        # and the reduced assetcol has 9 assets on the reduced sites
-        if oq.shakemap_id:
-            uridict = {'kind': 'usgs_id', 'id': oq.shakemap_id}
-        elif 'shakemap' in oq.inputs:
-            uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
-        else:
-            uridict = oq.shakemap_uri
-        sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict, oq.risk_imtls, haz_sitecol,
-            oq.asset_hazard_distance['default'])
-        if len(discarded):
-            calc.datastore['discarded'] = discarded
-        assetcol.reduce_also(sitecol)
+        sitecol, shakemap = readinput.assoc_to_shakemap(
+            oq, haz_sitecol, assetcol)  # also reducing assetcol
         calc.datastore['assetcol'] = assetcol
-        logging.info('Extracted %d assets', len(assetcol))
-
     # assemble dictionary to decide on the calculation method for the gmfs
     if 'MMI' in oq.imtls:
         # calculations with MMI should be executed
