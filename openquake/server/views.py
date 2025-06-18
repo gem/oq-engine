@@ -455,7 +455,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id, size_mb, host, start_time) in calc_data:
+         parent_id, size_mb, host, start_time, relevant) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
@@ -474,7 +474,7 @@ def calc_list(request, id=None):
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
                  parent_id=parent_id, abortable=abortable, size_mb=size_mb,
-                 start_time=start_time_str))
+                 start_time=start_time_str, relevant=relevant))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
