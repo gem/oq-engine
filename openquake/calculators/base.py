@@ -677,6 +677,9 @@ class HazardCalculator(BaseCalculator):
                     oq.aggregate_by, oq.inputs['mmi'], oq.inputs['exposure'][0])
                 if len(mmi_df):
                     self.datastore.hdf5.create_df('mmi_tags', mmi_df)
+                else:
+                    logging.info('Missing mmi_tags, there are no assets in '
+                                 'the MMI geometries provided by the ShakeMap')
 
     def pre_execute_from_parent(self):
         """
