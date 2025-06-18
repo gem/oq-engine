@@ -132,8 +132,8 @@ def get_array(**kw):
         return get_array_usgs_xml(kind, kw['grid_url'],
                                   kw.get('uncertainty_url'))
     elif kind == 'usgs_id':
-        # FIXME: _get_contents shuold pass the shakemap version as parameter, otherwise
-        # it would always use 'preferred' by default
+        # NOTE: _get_contents uses the 'preferred' ShakeMap version by default
+        # This is called when there is the shakemap_id inside the job.ini
         contents, err = _get_contents(kw['id'])
         if err:
             raise RuntimeError(err['error_msg'])
