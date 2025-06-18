@@ -1571,7 +1571,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         calc.datastore['weights'] = numpy.ones(1)
 
-    
+
 def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     """
     Enabled only if there is a shakemap parameter in the job.ini.

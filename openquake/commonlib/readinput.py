@@ -1261,7 +1261,7 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
     Download the shakemap, reduce the assetcol and returns a reduced sitecol
     """
     oq.risk_imtls = {imt: list(imls) for imt, imls in oq.imtls.items()}
-    logging.info('Getting/reducing shakemap')
+    logging.info('Getting/reducing shakemap, sitecol, assetcol')
     # for instance for the test case_shakemap the haz_sitecol
     # has sids in range(0, 26) while sitecol.sids is
     # [8, 9, 10, 11, 13, 15, 16, 17, 18];
