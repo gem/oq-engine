@@ -691,8 +691,11 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
 
 def _get_properties(usgs_id, user=User(), monitor=performance.Monitor()):
     # returns the properties for the usgs_id event or an error dictionary
+    properties = {}
     usgs_event_data, err = _get_usgs_event_data(usgs_id, user, monitor)
-    return usgs_event_data['properties'], err
+    if usgs_event_data:
+        properties = usgs_event_data['properties']
+    return properties, err
 
 
 def _get_contents(usgs_id, shakemap_version='preferred',

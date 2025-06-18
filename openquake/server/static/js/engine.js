@@ -790,10 +790,14 @@ function capitalizeFirstLetter(val) {
                         dataType: "json",
                         encode: true,
                     }).done(function (data) {
-                        if ('nodal_planes' in data) {
+                        if ('nodal_planes' in data && data.nodal_planes) {
                             populate_nodal_plane_selector(data.nodal_planes);
                         }
                         if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
+                            $nodal_plane = $('select#nodal_plane');
+                            $nodal_plane.empty();
+                            const $option = $('<option>').val('').text('Unable to retrieve nodal planes');
+                            $nodal_plane.append($option);
                             diaerror.show(false, "Note", data.nodal_planes_issue);
                         }
                     }).error(function (data) {
