@@ -51,6 +51,7 @@ from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
+from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.calc.filters import getdefault, get_distances
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
@@ -465,7 +466,7 @@ def rup_radius(rup):
     """
     hypo = rup.hypocenter
     xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
-    radius = cdist(rup.surface.mesh.xyz, xyz).min(axis=0)
+    radius = cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
     return radius
 
 
@@ -540,7 +541,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
     params = sorted(set(sm.dtype.names) | set(oqparam.req_site_params))
     z = numpy.zeros(
         len(sm), [(p, site.site_param_dt[p]) for p in params])
-    for name in z.dtype.names:    
+    for name in z.dtype.names:
         if name in sm.dtype.names:
             vals = sm[name]
             # Get param from site model and if "core"
@@ -1255,6 +1256,31 @@ def get_station_data(oqparam, sitecol, duplicates_strategy='error'):
     return station_data, imts
 
 
+def assoc_to_shakemap(oq, haz_sitecol, assetcol):
+    """
+    Download the shakemap, reduce the assetcol and returns a reduced sitecol
+    """
+    oq.risk_imtls = {imt: list(imls) for imt, imls in oq.imtls.items()}
+    logging.info('Getting/reducing shakemap, sitecol, assetcol')
+    # for instance for the test case_shakemap the haz_sitecol
+    # has sids in range(0, 26) while sitecol.sids is
+    # [8, 9, 10, 11, 13, 15, 16, 17, 18];
+    # the total assetcol has 26 assets on the total sites
+    # and the reduced assetcol has 9 assets on the reduced sites
+    if oq.shakemap_id:
+        uridict = {'kind': 'usgs_id', 'id': oq.shakemap_id}
+    elif 'shakemap' in oq.inputs:
+        uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
+    else:
+        uridict = oq.shakemap_uri
+    sitecol, shakemap, discarded = get_sitecol_shakemap(
+        uridict, oq.risk_imtls, haz_sitecol,
+        oq.asset_hazard_distance['default'])
+    assetcol.reduce_also(sitecol)
+    logging.info('Extracted %d assets', len(assetcol))
+    return sitecol, shakemap
+
+
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     """
     :param oqparam: calculation parameters
@@ -1787,8 +1813,8 @@ def read_countries_df(buffer=0.1):
 def read_cities_df(lon_field='longitude', lat_field='latitude',
                              label_field='name'):
     """
-    Reading from a 'worldcities.csv' file in the mosaic_dir, if present, or returning
-    None otherwise
+    Reading from a 'worldcities.csv' file in the mosaic_dir, if present,
+    or returning None otherwise
 
     :returns: a DataFrame of coordinates and names of populated places
     """
@@ -1808,7 +1834,8 @@ def read_source_models(fnames, hdf5path='', **converterparams):
     smodels = list(nrml.read_source_models(fnames, converter))
     smdict = dict(zip(fnames, smodels))
     src_groups = [sg for sm in smdict.values() for sg in sm.src_groups]
-    secparams = source_reader.fix_geometry_sections(smdict, src_groups, hdf5path)
+    secparams = source_reader.fix_geometry_sections(
+        smdict, src_groups, hdf5path)
     for smodel in smodels:
         for sg in smodel.src_groups:
             for src in sg:

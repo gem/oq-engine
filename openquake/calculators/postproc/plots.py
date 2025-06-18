@@ -287,6 +287,16 @@ def plot_rupture_3d(rup):
     return plt
 
 
+# useful for plotting mmi_tags
+def plot_geom(multipol, lons, lats):
+    plt = import_plt()
+    ax = plt.figure().add_subplot(111)
+    for pol in list(multipol.geoms):
+        ax.add_patch(PolygonPatch(pol, alpha=0.1))
+    plt.scatter(lons, lats, marker='.', color='green')
+    plt.show()
+
+    
 def get_assetcol(calc_id):
     try:
         dstore = datastore.read(calc_id)
