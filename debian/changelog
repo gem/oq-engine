@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * When a job is deleted, also the corresponding calc_CALCID_tmp.hdf5 file is
+    removed, if present
+
   [Astha Poudel, Catarina Costa]
   * Modified infrastructure risk to avoid calculating efficiency loss for
     large networks
