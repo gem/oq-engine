@@ -204,7 +204,10 @@ def export_hcurves_by_imt_csv(
         dest = add_imt(fname, imt)
         lst = [('lon', F32), ('lat', F32), ('depth', F32)]
         for iml in imls:
-            lst.append(('poe-%.7f' % iml, F32))
+            if imt.startswith(('PGA', 'PGV', 'SA')):
+                lst.append(('poe-%.7f' % iml, F32))
+            else:
+                lst.append(('poe-%.5e' % iml, F32))
         custom = 'custom_site_id' in sitecol.array.dtype.names
         if custom:
             lst.insert(0, ('custom_site_id', 'S8'))
@@ -247,7 +250,7 @@ def export_hcurves_csv(ekey, dstore):
     fnames = []
     comment = dstore.metadata
     hmap_dt = oq.hmap_dt()
-    for kind in oq.get_kinds(kind, R):
+    for kind in oq.get_kinds(kind, R):  # usually kind == 'mean'
         fname = hazard_curve_name(dstore, (key, fmt), kind)
         comment.update(kind=kind, investigation_time=oq.investigation_time)
         if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
@@ -369,12 +372,12 @@ def export_median_spectrum_disagg(ekey, dstore):
         for m, imt in enumerate(oq.imtls):
             arr = numpy.empty(len(array), dtlist)
             for col in arr.dtype.names:
-                if col.startswith(('mea', 'sig', 'wei')):
+                if col.startswith(('mea', 'sig', 'tau', 'wei')):
                     arr[col] = array[col][:, m]
                 else:
                     arr[col] = array[col]
                 if col.startswith('wei'):
-                    totw[imt] += arr[col].sum()        
+                    totw[imt] += arr[col].sum()
             comment = dstore.metadata.copy()
             comment['site_id'] = 0
             comment['lon'] = sitecol.lons[0]
@@ -755,7 +758,7 @@ def export_mce(ekey, dstore):
 
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
-    sitecol = dstore['sitecol']    
+    sitecol = dstore['sitecol']
     for s, site in enumerate(sitecol):
         js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)

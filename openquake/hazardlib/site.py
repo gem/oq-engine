@@ -147,7 +147,11 @@ class Site(object):
         start to propagate with a speed above 2.5 km/sec, in km.
 
     :raises ValueError:
-        If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
+        If ``vs30`` is zero or negative
+        OR
+        ``z1pt0`` or ``z2pt5`` is zero or negative AND not -999 (a value of
+        -999 informs basin param using GMMs to estimate values for such sites
+        with median value from GMM's own vs30 to z1pt0 or z2pt5 relationship).
 
     .. note::
 
@@ -158,10 +162,10 @@ class Site(object):
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
-        if not numpy.isnan(z1pt0) and z1pt0 <= 0:
-            raise ValueError('z1pt0 must be positive')
-        if not numpy.isnan(z2pt5) and z2pt5 <= 0:
-            raise ValueError('z2pt5 must be positive')
+        if not numpy.isnan(z1pt0) and z1pt0 <= 0 and z1pt0 != -999:
+            raise ValueError('z1pt0 must be positive or set to -999')
+        if not numpy.isnan(z2pt5) and z2pt5 <= 0 and z2pt5 != -999:
+            raise ValueError('z2pt5 must be positive or set to -999')
 
         self.location = location
         self.vs30 = vs30
@@ -317,6 +321,16 @@ class SiteCollection(object):
                     for item in sorted(site_param_dt.items())
                     if item[0] not in ('lon', 'lat'))
     req_site_params = ()
+
+    @classmethod
+    def from_(cls, array):
+        """
+        Build a site collection from a site model array
+        """
+        self = object.__new__(cls)
+        self.array = array
+        self.complete = self
+        return self
 
     @classmethod
     def from_usgs_shakemap(cls, shakemap_array):
@@ -824,8 +838,13 @@ class SiteCollection(object):
         return self.array[sid]
 
     def __getattr__(self, name):
-        if name in ('lons', 'lats', 'depths'):  # legacy names
+        if name in ('lons', 'lats'):  # legacy names
             return self.array[name[:-1]]
+        if name == 'depths':
+            try:
+                return self.array['depth']
+            except ValueError:  # missing depth
+                return numpy.zeros_like(self.array['lon'])
         if name not in site_param_dt:
             raise AttributeError(name)
         return self.array[name]

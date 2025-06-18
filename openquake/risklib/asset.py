@@ -460,10 +460,12 @@ class AssetCollection(object):
             self.tagcol.get_aggkey(aggregate_by))}
         K = len(aggkey)
         if geometry:
+            # from openquake.calculators.postproc.plots import plot_geom
+            # plot_geom(geometry, self['lon'], self['lat'])
             array = self.array[contains_xy(geometry, self['lon'], self['lat'])]
         else:
             array = self.array
-        
+
         dic = {tagname: array[tagname] for tagname in allnames}
         for field in self.fields:
             dic[field] = array['value-' + field]
@@ -487,7 +489,8 @@ class AssetCollection(object):
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
 
-    def get_mmi_values(self, aggregate_by, mmi_file):
+    # tested in test_impact5
+    def get_mmi_values(self, aggregate_by, mmi_file, exposure_hdf5):
         """
         :param aggregate_by:
             a list of lists of tag names (i.e. [['NAME_1']])
@@ -512,9 +515,19 @@ class AssetCollection(object):
         _aggids, aggtags = self.build_aggids(aggregate_by)
         aggtags = numpy.array(aggtags)  # shape (K+1, T)
         dfs = []
+        with hdf5.File(exposure_hdf5) as f:
+            if aggregate_by[0] == ['ID_2']:
+                id2s = f['tagcol/ID_2'][:]
+                name2s = f['NAME_2'][:]
+                name2dic = {id2: name2 for id2, name2 in zip(id2s, name2s)}
+            else:
+                id2s = []
         for mmi in out:
             dic = {key: aggtags[:, k] for k, key in enumerate(aggregate_by[0])}
             dic.update({col: out[mmi][col] for col in out[mmi].dtype.names})
+            if len(id2s):
+                dic['NAME_2'] = [name2dic[id2.encode('utf8')].decode('utf8')
+                                 for id2 in dic['ID_2']]
             df = pandas.DataFrame(dic)
             df['mmi'] = mmi
             dfs.append(df)
@@ -925,6 +938,7 @@ def impact_read_assets(h5, start, stop):
     dic = {}
     TAGS = {'ID_0': numpy.array(decode(h5['tagcol/ID_0'][:])),
             'ID_1': numpy.array(decode(h5['tagcol/ID_1'][:])),
+            'ID_2': numpy.array(decode(h5['tagcol/ID_2'][:])),
             'OCCUPANCY': numpy.array(decode(h5['tagcol/OCCUPANCY'][:])),
             'TAXONOMY': numpy.array(decode(h5['tagcol/taxonomy'][:]))}
     for field in group:
@@ -932,7 +946,10 @@ def impact_read_assets(h5, start, stop):
             dic[field] = arr = group[field][start:stop]
             if field in TAGS:
                 # go back from indices to strings
-                dic[field] = TAGS[field][arr]
+                # NB: arr + 1 because the first value for the tags is "?"
+                dic[field] = TAGS[field][arr + 1]
+        if field in dic and len(dic[field]) == 0:
+            dic.pop(field)
     df = pandas.DataFrame(dic)
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
                            df.OCCUPANTS_PER_ASSET_NIGHT +
@@ -1003,8 +1020,9 @@ class Exposure(object):
                 impact_read_assets(f, start, stop)
                 for gh3, start, stop in slices)
             tagcol = f['tagcol']
-            # tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
-            exp.tagcol = TagCollection(tagcol.tagnames)
+            # revert the tagnames so that taxonomy becomes the first field,
+            # ex. sorted_tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
+            exp.tagcol = TagCollection(sorted(tagcol.tagnames, reverse=True))
         rename = dict(exp.pairs)
         rename['TAXONOMY'] = 'taxonomy'
         for f in ANR_FIELDS:

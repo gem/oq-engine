@@ -910,6 +910,10 @@ ALL_COST_TYPES = [
 VULN_TYPES = COST_TYPES + [
     'number', 'area', 'occupants', 'residents', 'affectedpop', 'injured']
 
+# mapping version -> corresponding display name
+ASCE_VERSIONS = {'ASCE7-16': 'ASCE 7-16 & 41-17',
+                 'ASCE7-22': 'ASCE 7-22 & 41-23'}
+
 
 def check_same_levels(imtls):
     """
@@ -994,7 +998,7 @@ class OqParam(valid.ParamSet):
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
     asce_version = valid.Param(
-        valid.Choice('ASCE7-16', 'ASCE7-22'), 'ASCE7-16')
+        valid.Choice(*ASCE_VERSIONS.keys()), 'ASCE7-16')
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
@@ -1098,10 +1102,10 @@ class OqParam(valid.ParamSet):
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    reference_depth_to_1pt0km_per_sec = valid.Param(
-        valid.positivefloat, numpy.nan)
-    reference_depth_to_2pt5km_per_sec = valid.Param(
-        valid.positivefloat, numpy.nan)
+    reference_depth_to_1pt0km_per_sec = valid.Param( # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan) 
+    reference_depth_to_2pt5km_per_sec = valid.Param( # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'inferred')
     reference_vs30_value = valid.Param(
@@ -1704,6 +1708,15 @@ class OqParam(valid.ParamSet):
             if any(sec_imt.endswith(imt) for sec_imt in sec_imts):
                 self.raise_invalid('you forgot to set secondary_perils =')
 
+        seco_imts = {sec_imt.split('_')[1] for sec_imt in self.sec_imts}
+        risk_imts = set(self.risk_imtls)
+        for imt in risk_imts - seco_imts:
+            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI')):
+                pass  # ground shaking IMT
+            else:
+                raise ValueError(f'The risk functions contain {imt} which is '
+                                 f'not in the secondary IMTs {seco_imts}')
+
         risk_perils = sorted(set(getattr(rf, 'peril', 'groundshaking')
                                  for rf in risklist))
         return risk_perils
@@ -1719,8 +1732,9 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite dtype (imt, poe)
         """
+        imts = list(self.imtls) + self.sec_imts
         return numpy.dtype([('%s-%s' % (imt, poe), F32)
-                            for imt in self.imtls for poe in self.poes])
+                            for imt in imts for poe in self.poes])
 
     def uhs_dt(self):  # used for CSV and NPZ export
         """

@@ -21,8 +21,9 @@ import pathlib
 import unittest
 import pytest
 import numpy
+from openquake.calculators.views import text_table
 from openquake.calculators.base import expose_outputs
-from openquake.calculators.checkers import check
+from openquake.calculators.checkers import check, assert_close
 from openquake.calculators.export import export
 
 cd = pathlib.Path(__file__).parent
@@ -93,4 +94,11 @@ def test_impact5():
         raise unittest.SkipTest(f'Missing {expo}')
 
     # importing the exposure around Nepal and aggregating it
-    check(cd / 'impact5/job.ini')
+    calc, _log = check(cd / 'impact5/job.ini')
+    calc.assetcol.array['lon'] = 64.22
+    calc.assetcol.array['lat'] = 32.82
+    inp = calc.oqparam.inputs
+    df = calc.assetcol.get_mmi_values(calc.oqparam.aggregate_by,
+                                      inp['mmi'], inp['exposure'][0])
+    tt = text_table(df, ext='org')
+    assert_close(tt, cd / 'impact5/exposure_by_mmi.org')
