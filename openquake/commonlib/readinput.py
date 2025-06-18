@@ -872,6 +872,7 @@ def get_rupture(oqparam):
     rup = None
 
     if rupture_model and rupture_model.endswith('.json'):
+        # converting rupture_model from json to an oq-compatible xml
         rupture_model = convert_to_oq_xml(rupture_model, rupture_model)
     if rupture_model and rupture_model.endswith('.xml'):
         [rup_node] = nrml.read(rupture_model)
