@@ -423,7 +423,7 @@ def add_multipolygon_elements(nrml, metadata, coordinates):
         add_complex_fault_elements(nrml, metadata, polygons)
 
 
-def convert_to_openquake_xml(input_json_file, output_xml_file):
+def convert_to_oq_xml(input_json_file, output_xml_file):
     with open(input_json_file, "r") as f:
         data = json.load(f)
 
@@ -458,34 +458,6 @@ def convert_to_openquake_xml(input_json_file, output_xml_file):
     with open(output_xml_file, "w", encoding="utf-8") as f:
         f.write(pretty_xml)
     return output_xml_file
-
-
-def convert_to_oq_rupture(rup_json):
-    """
-    Convert USGS json (output of download_shakemap_rupture_data) into
-    a hazardlib rupture
-
-    :returns: a openquake.hazardlib.source.rupture.BaseRupture object if convertible and
-        an error message if not convertible
-    """
-    ftype = rup_json['features'][0]['geometry']['type']
-    multicoords = rup_json['features'][0]['geometry']['coordinates'][0]
-    if (ftype == 'MultiPolygon' and is_matrix(multicoords) and len(multicoords[0]) == 5
-            and multicoords[0][0] == multicoords[0][4]):
-        # convert only if there are 4 vertices (the fifth coordinate closes the loop)
-        hyp_depth = rup_json['metadata']['depth']
-        rake = rup_json['metadata'].get('rake', 0)
-        trt = 'Active Shallow Crust' if hyp_depth < 50 else 'Subduction IntraSlab'
-        mag = rup_json['metadata']['mag']
-        rup = get_multiplanar(multicoords, mag, rake, trt)
-        return rup, None
-    else:
-        if ftype != 'MultiPolygon':
-            reason = f'only MultiPolygon geometries are accepted (not {ftype})'
-        else:
-            reason = 'at least one surface is not rectangular'
-        err_msg = f'Unable to convert the rupture from the USGS format: {reason}'
-        return None, err_msg
 
 
 def utc_to_local_time(utc_timestamp, lon, lat):
@@ -1220,7 +1192,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                 # replacing the input json file with the output xml if possible
                 # NOTE: in case of failure, returns the input rupture_file (e.g. in case
                 # of a Point rupture)
-                rupture_file = convert_to_openquake_xml(rupture_file, rupture_file_xml)
+                rupture_file = convert_to_oq_xml(rupture_file, rupture_file_xml)
             except ValueError as exc:
                 err = {"status": "failed", "error_msg": str(exc)}
                 return rup, rupdic, err
@@ -1271,7 +1243,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                     # replacing the input json file with the output xml if possible
                     # NOTE: in case of failure, returns the input rupture_file
                     # (e.g. in case of a Point rupture)
-                    rupture_file = convert_to_openquake_xml(
+                    rupture_file = convert_to_oq_xml(
                         rupture_file, rupture_file_xml)
                 except ValueError as exc:
                     err = {"status": "failed", "error_msg": str(exc)}
