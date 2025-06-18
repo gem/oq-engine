@@ -78,7 +78,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['rupture_file'], None)
         self.assertIsNotNone(dic['mmi_file'])
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIsNone(station_data_file)
         self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'], 'No stations were found')
@@ -104,7 +104,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIn('Unable to convert the rupture from the USGS format',
                       dic['rupture_issue'])
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIn('stations', station_data_file)
         self.assertEqual(n_stations, 1)
         self.assertEqual(station_err, {})
@@ -112,7 +112,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
     def test_3e(self):
         usgs_id = 'us7000pn9s'
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIn('stations', station_data_file)
         self.assertEqual(n_stations, 1)
         self.assertEqual(station_err, {})
@@ -150,7 +150,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
             user=user, use_shakemap=True)
         self.assertEqual(dic['mag'], 6.7)
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIsNone(station_data_file)
         self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'],
@@ -258,7 +258,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
     def test_13(self):
         usgs_id = 'us7000n7n8'
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIsNone(station_data_file)
         self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'],

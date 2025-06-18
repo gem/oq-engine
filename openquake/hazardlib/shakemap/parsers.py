@@ -132,7 +132,7 @@ def get_array(**kw):
         return get_array_usgs_xml(kind, kw['grid_url'],
                                   kw.get('uncertainty_url'))
     elif kind == 'usgs_id':
-        # NOTE: _get_contents uses the 'preferred' ShakeMap version by default
+        # NOTE: _get_contents uses the 'usgs_preferred' ShakeMap version by default
         # This is called when there is the shakemap_id inside the job.ini
         contents, err = _get_contents(kw['id'])
         if err:
@@ -698,12 +698,12 @@ def _get_properties(usgs_id, user=User(), monitor=performance.Monitor()):
     return properties, err
 
 
-def _get_contents(usgs_id, shakemap_version='preferred',
+def _get_contents(usgs_id, shakemap_version='usgs_preferred',
                   user=User(), monitor=performance.Monitor()):
     # returns the _contents dictionary or an error dictionary
     properties, err = _get_properties(usgs_id, user, monitor)
     shakemaps = properties['products']['shakemap']
-    if shakemap_version == 'preferred':
+    if shakemap_version == 'usgs_preferred':
         shakemap = _get_usgs_preferred_item(shakemaps)
     else:
         [shakemap] = [shm for shm in shakemaps if shm['id'] == shakemap_version]
@@ -736,7 +736,7 @@ def _get_usgs_event_data(usgs_id, user=User(), monitor=performance.Monitor()):
 
 
 def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
-                                  shakemap_version='preferred'):
+                                  shakemap_version='usgs_preferred'):
     err = {}
     usgs_event_data, err = _get_usgs_event_data(usgs_id, user, monitor)
     if err:
@@ -746,7 +746,7 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
 
     # NB: currently we cannot find a case with missing shakemap
     shakemaps = properties['products']['shakemap']
-    if shakemap_version == 'preferred':
+    if shakemap_version == 'usgs_preferred':
         shakemap = _get_usgs_preferred_item(shakemaps)
     else:
         [shakemap] = [shm for shm in shakemaps if shm['id'] == shakemap_version]
@@ -868,7 +868,7 @@ def _get_rup_from_json(usgs_id, rupture_file):
 
 
 def get_stations_from_usgs(usgs_id, user=User(), monitor=performance.Monitor(),
-                           shakemap_version='preferred'):
+                           shakemap_version='usgs_preferred'):
     err = {}
     n_stations = 0
     try:
@@ -932,7 +932,7 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
 
 
 def get_rup_dic(dic, user=User(), use_shakemap=False,
-                shakemap_version='preferred', rupture_file=None,
+                shakemap_version='usgs_preferred', rupture_file=None,
                 monitor=performance.Monitor()):
     """
     If the rupture_file is None, download a rupture from the USGS site given
