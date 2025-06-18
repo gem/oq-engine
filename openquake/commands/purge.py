@@ -113,5 +113,5 @@ def main(what, force=False):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-main.what = 'a calculation ID or the string "failed"'
+main.what = 'a calculation ID or the string "failed" or "old"'
 main.force = 'ignore dependent calculations'

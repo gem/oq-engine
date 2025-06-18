@@ -546,7 +546,6 @@ function capitalizeFirstLetter(val) {
                         var usgs_preferred = shakemap_version.id == data.usgs_preferred_version ? " (USGS preferred)" : "";
                         $select.append(`<option value="${shakemap_version.id}">v${shakemap_version.number}: ${shakemap_version.utc_date_time}${usgs_preferred}</option>`);
                     });
-                    $select.trigger('change');
                 } else {
                     $select.append('<option value="">No versions available</option>');
                 }
@@ -779,6 +778,40 @@ function capitalizeFirstLetter(val) {
             $('input[name="usgs_id"]').on('input', function() {
                 reset_rupture_form_inputs();
                 set_shakemap_version_selector();
+                if ($('input[name="impact_approach"]:checked').val() === 'build_rup_from_usgs') {
+                    // retrieve nodal planes only when building rupture from USGS nodal plane solutions
+                    var formData = {
+                        usgs_id: $.trim($("#usgs_id").val()),
+                        shakemap_version: $("#shakemap_version").val()
+                    };
+                    $('#submit_impact_get_rupture').prop('disabled', true);
+                    $('input[name="impact_approach"]').prop('disabled', true);
+                    set_retrieve_data_btn_txt('retrieving_nodal_planes');
+                    $.ajax({
+                        type: "POST",
+                        url: gem_oq_server_url + "/v1/impact_get_nodal_planes",
+                        data: formData,
+                        dataType: "json",
+                        encode: true,
+                    }).done(function (data) {
+                        if ('nodal_planes' in data && data.nodal_planes) {
+                            populate_nodal_plane_selector(data.nodal_planes);
+                        }
+                        if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
+                            $nodal_plane = $('select#nodal_plane');
+                            $nodal_plane.empty();
+                            const $option = $('<option>').val('').text('Unable to retrieve nodal planes');
+                            $nodal_plane.append($option);
+                            diaerror.show(false, "Note", data.nodal_planes_issue);
+                        }
+                    }).error(function (data) {
+                        diaerror.show(false, "Error", "Unable to retrieve nodal planes");
+                    }).always(function (data) {
+                        $('#submit_impact_get_rupture').prop('disabled', false);
+                        $('input[name="impact_approach"]').prop('disabled', false);
+                        set_retrieve_data_btn_txt('initial');
+                    });
+                }
             });
 
             $('input[name="impact_approach"]').change(function () {
@@ -827,40 +860,6 @@ function capitalizeFirstLetter(val) {
                         $('.usgs_id_grp').addClass('hidden');
                     }
                 }
-            });
-
-            $('select#shakemap_version').change(function () {
-                if ($('input[name="impact_approach"]:checked').val() != 'build_rup_from_usgs') {
-                    // retrieve nodal planes only when building rupture from USGS nodal plane solutions
-                    return;
-                }
-                var formData = {
-                    usgs_id: $.trim($("#usgs_id").val()),
-                    shakemap_version: $("#shakemap_version").val()
-                };
-                $('#submit_impact_get_rupture').prop('disabled', true);
-                $('input[name="impact_approach"]').prop('disabled', true);
-                set_retrieve_data_btn_txt('retrieving_nodal_planes');
-                $.ajax({
-                    type: "POST",
-                    url: gem_oq_server_url + "/v1/impact_get_nodal_planes",
-                    data: formData,
-                    dataType: "json",
-                    encode: true,
-                }).done(function (data) {
-                    if ('nodal_planes' in data) {
-                        populate_nodal_plane_selector(data.nodal_planes);
-                    }
-                    if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
-                        diaerror.show(false, "Note", data.nodal_planes_issue);
-                    }
-                }).error(function (data) {
-                    diaerror.show(false, "Error", "Unable to retrieve nodal planes");
-                }).always(function (data) {
-                    $('#submit_impact_get_rupture').prop('disabled', false);
-                    $('input[name="impact_approach"]').prop('disabled', false);
-                    set_retrieve_data_btn_txt('initial');
-                });
             });
 
             $('select#nodal_plane').change(function () {
@@ -935,9 +934,6 @@ function capitalizeFirstLetter(val) {
                     }
                     if (conversion_issues != '') {
                         diaerror.show(false, "Note", conversion_issues);
-                    }
-                    if ('nodal_planes' in data) {
-                        populate_nodal_plane_selector(data.nodal_planes);
                     }
                     $('#mosaic_model').empty();
                     $.each(data.mosaic_models, function(index, mosaic_model) {
