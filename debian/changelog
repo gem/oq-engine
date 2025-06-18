@@ -1,3 +1,7 @@
+  [Astha Poudel, Catarina Costa]
+  * Modified infrastructure risk to avoid calculating efficiency loss for
+    large networks
+  
   [Michele Simionato]
   * OQImpact: reading the sites around the rupture and not around the hypocenter
   * Raised an error if the ShakeMap does not contain SA(0.6) when required
