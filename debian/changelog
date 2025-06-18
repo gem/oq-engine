@@ -1,3 +1,7 @@
+  [Astha Poudel, Catarina Costa]
+  * Modified infrastructure risk to avoid calculating efficiency loss for
+    large networks
+
   [Paolo Tormene]
   * AELO: the management of warnings was made more robust
 
