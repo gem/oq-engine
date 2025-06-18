@@ -132,7 +132,12 @@ def get_array(**kw):
         return get_array_usgs_xml(kind, kw['grid_url'],
                                   kw.get('uncertainty_url'))
     elif kind == 'usgs_id':
-        return get_array_usgs_id(kind, kw['id'], _contents(kw['id']))
+        # FIXME: _get_contents shuold pass the shakemap version as parameter, otherwise
+        # it would always use 'preferred' by default
+        contents, err = _get_contents(kw['id'])
+        if err:
+            raise RuntimeError(err['error_msg'])
+        return get_array_usgs_id(kind, kw['id'], contents)
     elif kind == 'file_npy':
         return get_array_file_npy(kind, kw['fname'])
     else:
@@ -684,17 +689,25 @@ def convert_rup_data(rup_data, usgs_id, rup_path, shakemap_array=None):
     return rupdic
 
 
-def _contents(usgs_id):
-    # returns the _contents dictionary
-    text = urlopen(SHAKEMAP_URL.format(usgs_id)).read()
-    properties = json.loads(text)['properties']
+def _get_properties(usgs_id, user=User(), monitor=performance.Monitor()):
+    # returns the properties for the usgs_id event or an error dictionary
+    usgs_event_data, err = _get_usgs_event_data(usgs_id, user, monitor)
+    return usgs_event_data['properties'], err
+
+
+def _get_contents(usgs_id, shakemap_version='preferred',
+                  user=User(), monitor=performance.Monitor()):
+    # returns the _contents dictionary or an error dictionary
+    properties, err = _get_properties(usgs_id, user, monitor)
     shakemaps = properties['products']['shakemap']
-    shakemap = _get_usgs_preferred_item(shakemaps)
-    return shakemap['contents']
+    if shakemap_version == 'preferred':
+        shakemap = _get_usgs_preferred_item(shakemaps)
+    else:
+        [shakemap] = [shm for shm in shakemaps if shm['id'] == shakemap_version]
+    return shakemap['contents'], err
 
 
-def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
-                                  shakemap_version='preferred'):
+def _get_usgs_event_data(usgs_id, user=User(), monitor=performance.Monitor()):
     # with open(f'/tmp/{usgs_id}.json', 'wb') as f:
     #     url = SHAKEMAP_URL.format(usgs_id)
     #     f.write(urlopen(url).read())
@@ -714,9 +727,19 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
             # in parsers_test
             err_msg = f'Unable to download from {url}: {exc}'
             err = {"status": "failed", "error_msg": err_msg}
-            return None, None, None, None, err
+            return None, err
+    usgs_event_data = json.loads(text)
+    return usgs_event_data, err
 
-    properties = json.loads(text)['properties']
+
+def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
+                                  shakemap_version='preferred'):
+    err = {}
+    usgs_event_data, err = _get_usgs_event_data(usgs_id, user, monitor)
+    if err:
+        return None, None, None, None, err
+
+    properties = usgs_event_data['properties']
 
     # NB: currently we cannot find a case with missing shakemap
     shakemaps = properties['products']['shakemap']
@@ -740,24 +763,21 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
     return contents, properties, shakemap_array, shakemap_desc, err
 
 
-def get_nodal_planes_for_shakemap(usgs_id, shakemap_version, user=User(),
-                                  monitor=performance.Monitor()):
+def get_nodal_planes(usgs_id, user=User(), monitor=performance.Monitor()):
     """
-    Retrieve the nodal planes for the given USGS id and ShakeMap version
+    Retrieve the nodal planes for the given USGS id
 
     :param usgs_id: ShakeMap ID
-    :param shakemap_version: ID of the ShakeMap version
     :returns (a dictionary with nodal planes information, error dictionary or {})
     """
-    _contents, properties, _shakemap, _shakemap_desc, err = \
-        _contents_properties_shakemap(usgs_id, user, False, monitor, shakemap_version)
+    properties, err = _get_properties(usgs_id, user, monitor)
     if err:
         return None, err
-    nodal_planes, err = _get_nodal_planes(properties)
+    nodal_planes, err = _get_nodal_planes_from_properties(properties)
     return nodal_planes, err
 
 
-def _get_nodal_planes(properties):
+def _get_nodal_planes_from_properties(properties):
     # in parsers_test
     nodal_planes = {}
     err = {}
@@ -975,12 +995,6 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                     rupdic[key] = dic[key]
             if err:
                 return None, None, err
-            if approach == 'build_rup_from_usgs':
-                rupdic['nodal_planes'], err = _get_nodal_planes(properties)
-                if err:
-                    return None, None, err
-                else:
-                    rupdic.update(rupdic['nodal_planes']['NP1'])
         else:
             rupdic = dic.copy()
     elif 'download/rupture.json' not in contents:

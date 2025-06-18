@@ -51,7 +51,7 @@ from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
     IMPACT_FORM_DEFAULTS)
 from openquake.hazardlib.shakemap.parsers import (
-    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_for_shakemap)
+    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -855,8 +855,7 @@ def impact_get_nodal_planes(request):
         a `django.http.HttpRequest` object containing usgs_id and shakemap_version
     """
     usgs_id = request.POST.get('usgs_id')
-    shakemap_version = request.POST.get('shakemap_version')
-    nodal_planes, err = get_nodal_planes_for_shakemap(usgs_id, shakemap_version)
+    nodal_planes, err = get_nodal_planes(usgs_id)
     if err:
         nodal_planes_issue = err['error_msg']
     else:
