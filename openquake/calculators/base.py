@@ -949,6 +949,13 @@ class HazardCalculator(BaseCalculator):
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)
+            manysites = (oq.calculation_mode=='event_based' and oq.ground_motion_fields
+                         and len(self.sitecol) > oq.max_sites_disagg)
+            if manysites and not oq.minimum_magnitude:
+                oq.raise_invalid('missing minimum_magnitude, suggested 5')
+            if manysites and not oq.minimum_intensity:
+                oq.raise_invalid('missing minimum_intensity, suggested .05')
+
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
                 self.N > 1000 and len(oq.min_iml) == 0):
             oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
