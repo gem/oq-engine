@@ -494,7 +494,7 @@ max_potential_paths:
 max_sites_correl:
   Maximum number of sites for GMF-correlation.
   Example: *max_sites_correl = 2000*
-  Default: 1000
+  Default: 1200
 
 max_sites_disagg:
   Maximum number of sites for which to store rupture information.
@@ -1084,7 +1084,7 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    max_sites_correl = valid.Param(valid.positiveint, 1000)
+    max_sites_correl = valid.Param(valid.positiveint, 1200)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     mosaic_model = valid.Param(valid.three_letters, '')
     std = valid.Param(valid.boolean, False)
