@@ -537,6 +537,10 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
+        if (oq.ground_motion_correlation_model and
+                len(self.sitecol) > oq.max_sites_correl):
+            raise ValueError('You cannot use a correlation model with '
+                             f'{self.N} sites [{oq.max_sites_correl=}]')
         if hasattr(self, 'assetcol'):
             self.check_consequences()
         self.check_overflow()  # check if self.sitecol is too large

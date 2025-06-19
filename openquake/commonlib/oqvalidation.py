@@ -1079,6 +1079,7 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
+    max_sites_correl = valid.Param(valid.positiveint, 1000)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     mosaic_model = valid.Param(valid.three_letters, '')
     std = valid.Param(valid.boolean, False)

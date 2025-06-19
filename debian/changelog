@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Forbidden GMF correlation with more then `max_sites_correl=1000`
+  * Made `minimum_intensity` and `minimum_magnitude` mandatory with event based
+    calculations with many sites
+
   [Paolo Tormene]
   * When a job is deleted, also the corresponding calc_CALCID_tmp.hdf5 file is
     removed, if present
