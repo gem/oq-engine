@@ -38,7 +38,7 @@ from xml.parsers.expat import ExpatError
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from shapely.geometry import shape
+from shapely.geometry import shape, Point, Polygon
 import pandas as pd
 import numpy
 import fiona
@@ -1038,6 +1038,18 @@ def _get_nodal_planes_from_product(product):
     return nodal_planes
 
 
+def _adjust_hypocenter(rup):
+    # if the hypocenter is outside the surface of the rupture, reposition it to the
+    # middle of the surface
+    surf_lons, surf_lats = rup.surface.get_surface_boundaries()
+    boundary_coords = list(zip(surf_lons, surf_lats))
+    surface_polygon = Polygon(boundary_coords)
+    hypocenter_point = Point(rup.hypocenter.x, rup.hypocenter.y)
+    if not surface_polygon.contains(hypocenter_point):
+        rup.hypocenter = rup.surface.get_middle_point()
+    return rup
+
+
 def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
     err = {}
     try:
@@ -1055,6 +1067,7 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
                "error_msg": f'Unable to convert the rupture: {exc}'}
         return None, {}, err
     rup.tectonic_region_type = '*'
+    rup = _adjust_hypocenter(rup)
     hp = rup.hypocenter
     rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
                   mag=float(rup.mag), rake=float(rup.rake),
