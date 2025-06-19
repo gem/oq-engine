@@ -1039,8 +1039,8 @@ def _get_nodal_planes_from_product(product):
 
 
 def _adjust_hypocenter(rup):
-    # if the hypocenter is outside the surface of the rupture, reposition it to the
-    # middle of the surface
+    # if the hypocenter is outside the surface of the rupture (e.g. us7000pwkn v6),
+    # reposition it to the middle of the surface
     surf_lons, surf_lats = rup.surface.get_surface_boundaries()
     boundary_coords = list(zip(surf_lons, surf_lats))
     surface_polygon = Polygon(boundary_coords)
