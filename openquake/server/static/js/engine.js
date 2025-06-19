@@ -515,6 +515,7 @@ function capitalizeFirstLetter(val) {
         for (field of rupture_form_fields) {
             $('input#' + field).val(impact_form_defaults[field]);
         }
+        $('input#rupture_from_usgs_loaded').val('');
         // nodal planes are re-populated when loading rupture data; msrs are populated only once
         $('select#nodal_plane').empty();
         $('select#msr').val('WC1994');
