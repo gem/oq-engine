@@ -1189,13 +1189,13 @@ def _convert_rupture_file(rupture_file, usgs_id, user):
             err = {"status": "failed", "error_msg": str(exc)}
             return rup, rupdic, err
     if rupture_file.endswith('.xml'):
-        rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
+        rup, rupdic, rupture_issue = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
     elif rupture_file.endswith('.csv'):
-        rup, rupdic, err = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
+        rup, rupdic, rupture_issue = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
     elif rupture_file.endswith('.json') and usgs_id != 'FromFile':
         with open(rupture_file) as f:
             rup_data = json.load(f)
-    return rup, rupdic, rup_data, err
+    return rup, rupdic, rup_data, rupture_issue
 
 
 def get_rup_dic(dic, user=User(), use_shakemap=False,
@@ -1237,9 +1237,10 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
     if rupture_file:
-        rup, rupdic, rup_data, err = _convert_rupture_file(rupture_file, usgs_id, user)
-        if err or usgs_id == 'FromFile':
-            return rup, rupdic, err
+        rup, rupdic, rup_data, rupture_issue = _convert_rupture_file(
+            rupture_file, usgs_id, user)
+        if rupture_issue or usgs_id == 'FromFile':
+            return rup, rupdic, rupture_issue
     assert usgs_id
     get_grid = user.level == 1 or use_shakemap
     contents, properties, shakemap, shakemap_desc, err = \
@@ -1268,25 +1269,11 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                                          'build_rup_from_usgs']:
         if approach in ['use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs']:
             with monitor('Downloading rupture json'):
-                # FIXME approach
                 rup_data, rupture_file = download_shakemap_rupture_data(
                     usgs_id, contents, user)
             if rupture_file:
-                rupture_file_xml = gettemp(prefix='rup_', suffix='.xml')
-                try:
-                    # replacing the input json file with the output xml if possible
-                    # NOTE: in case of failure, returns the input rupture_file
-                    # (e.g. in case of a Point rupture)
-                    rupture_file = convert_to_oq_xml(rupture_file, rupture_file_xml)
-                except ValueError as exc:
-                    err = {"status": "failed", "error_msg": str(exc)}
-                    return rup, rupdic, err
-                if rupture_file.endswith('.xml'):
-                    rup, rupdic, rupture_issue = _get_rup_dic_from_xml(
-                        usgs_id, user, rupture_file)
-                elif rupture_file.endswith('.json'):
-                    with open(rupture_file) as f:
-                        rup_data = json.load(f)
+                rup, rupdic, rup_data, rupture_issue = _convert_rupture_file(
+                    rupture_file, usgs_id, user)
             elif approach in ('use_shakemap_fault_rup_from_usgs',
                               'use_finite_fault_model_from_usgs'):
                 err = {"status": "failed",
