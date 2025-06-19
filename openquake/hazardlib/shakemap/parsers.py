@@ -1178,6 +1178,7 @@ def _convert_rupture_file(rupture_file, usgs_id, user):
     rup = None
     rupdic = {}
     rup_data = {}
+    rupture_issue = {}
     if rupture_file.endswith('.json'):
         rupture_file_xml = gettemp(prefix='rup_', suffix='.xml')
         try:
@@ -1234,8 +1235,8 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
         try:
             rup = build_planar_rupture_from_dict(rupdic)
         except ValueError as exc:
-            err = {"status": "failed", "error_msg": str(exc)}
-        return rup, rupdic, err
+            rupture_issue = {"status": "failed", "error_msg": str(exc)}
+        return rup, rupdic, rupture_issue
     if rupture_file:
         rup, rupdic, rup_data, rupture_issue = _convert_rupture_file(
             rupture_file, usgs_id, user)
