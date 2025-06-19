@@ -1021,21 +1021,22 @@ class HazardCalculator(BaseCalculator):
                 else:
                     # use the site model parameters
                     self.sitecol.assoc(sm, assoc_dist)
-                if oq.override_vs30:
-                    # override vs30, z1pt0 and z2pt5
-                    names = self.sitecol.array.dtype.names
-                    self.sitecol.array['vs30'] = oq.override_vs30
-                    if 'z1pt0' in names:
-                        self.sitecol.calculate_z1pt0()
-                    if 'z2pt5' in names:
-                        self.sitecol.calculate_z2pt5()
 
-                self.datastore['sitecol'] = self.sitecol
-                if self.sitecol is not self.sitecol.complete:
-                    self.datastore['complete'] = self.sitecol.complete
-                elif 'complete' in self.datastore.parent:
-                    # fix: the sitecol is not complete
-                    self.sitecol.complete = self.datastore.parent['complete']
+            if oq.override_vs30:
+                # override vs30, z1pt0 and z2pt5
+                names = self.sitecol.array.dtype.names
+                self.sitecol = self.sitecol.multiply(oq.override_vs30)
+                if 'z1pt0' in names:
+                    self.sitecol.calculate_z1pt0()
+                if 'z2pt5' in names:
+                    self.sitecol.calculate_z2pt5()
+
+            self.datastore['sitecol'] = self.sitecol
+            if self.sitecol is not self.sitecol.complete:
+                self.datastore['complete'] = self.sitecol.complete
+            elif 'complete' in self.datastore.parent:
+                # fix: the sitecol is not complete
+                self.sitecol.complete = self.datastore.parent['complete']
 
         # store amplification functions if any
         if 'amplification' in oq.inputs:

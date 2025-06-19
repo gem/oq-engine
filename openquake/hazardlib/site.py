@@ -491,6 +491,28 @@ class SiteCollection(object):
         new.complete = self.complete
         return new
 
+    def multiply(self, vs30s):
+        """
+        Multiply a site collection with the given vs30 values.
+        """
+        n = len(vs30s)
+        N = len(self)
+        dt = self.array.dtype
+        array = numpy.empty(N * n, dt)
+        for i, rec in enumerate(array):
+            orig_rec = self.array[i // n]
+            for name in dt.names:
+                if name == 'vs30':
+                    rec[name] = vs30s[i % n]
+                elif name == 'sids':
+                    rec[name] = i
+                else:
+                    rec[name] = orig_rec[name]
+        new = object.__new__(self.__class__)
+        new.array = array
+        new.complete = new
+        return new
+
     def reduce(self, nsites):
         """
         :returns: a filtered SiteCollection with around nsites (if nsites<=N)
