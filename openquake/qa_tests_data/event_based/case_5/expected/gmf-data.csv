@@ -1,4 +1,4 @@
-#,,"generated_by='OpenQuake engine 3.20.0-git6a5db97d59', start_date='2024-06-03T09:30:44', checksum=4169731798"
+#,,"generated_by='OpenQuake engine 3.24.0-git6089a55ead', start_date='2025-06-19T09:08:03', checksum=2651395934"
 event_id,gmv_PGA,custom_site_id
 0,4.76127E-03,u0t89txf
 0,1.78977E-03,u0t99cyr
@@ -28,8 +28,6 @@ event_id,gmv_PGA,custom_site_id
 9,5.56818E-03,u2bd71x6
 9,6.72340E-03,u2bee64v
 10,5.40451E-03,u2bq3cn0
-10,8.63216E-04,u2bd71x6
 10,2.10066E-03,u2bee64v
 11,2.55600E-03,u2bq3cn0
-11,3.39708E-04,u2bd71x6
 11,3.61658E-03,u2bee64v
