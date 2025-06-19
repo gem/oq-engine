@@ -876,6 +876,30 @@ class HazardCalculator(BaseCalculator):
         logging.info(f'Saving {fig_path} into the datastore')
         self.datastore[fig_path] = Image.open(bio)
 
+    def _read_no_exposure(self, haz_sitecol):
+        oq = self.oqparam
+        if oq.hazard_calculation_id:
+            # NB: this is tested in event_based case_27 and case_31
+            child = readinput.get_site_collection(oq, self.datastore.hdf5)
+            assoc_dist = (oq.region_grid_spacing * 1.414
+                          if oq.region_grid_spacing else 5)  # Graeme's 5km
+            # keep the sites of the parent close to the sites of the child
+            self.sitecol, _array, _discarded = geo.utils.assoc(
+                child, haz_sitecol, assoc_dist, 'filter')
+            self.datastore['sitecol'] = self.sitecol
+        else:  # base case
+            self.sitecol = haz_sitecol
+        if self.sitecol and oq.imtls:
+            logging.info('Read N=%d hazard sites and L=%d hazard levels',
+                         len(self.sitecol), oq.imtls.size)
+        manysites = (oq.calculation_mode=='event_based' and oq.ground_motion_fields
+                     and len(self.sitecol) > oq.max_sites_disagg)
+        if manysites and not oq.minimum_magnitude:
+            oq.raise_invalid('missing minimum_magnitude, suggested 5')
+        if manysites and not oq.minimum_intensity:
+            oq.raise_invalid('missing minimum_intensity, suggested .05')
+
+        
     def _read_risk1(self):
         # read the risk model (if any) and then the site collection,
         # possibly extracted from the exposure
@@ -935,27 +959,7 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.add_tagname('site_id')
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
-            if oq.hazard_calculation_id:
-                # NB: this is tested in event_based case_27 and case_31
-                child = readinput.get_site_collection(oq, self.datastore.hdf5)
-                assoc_dist = (oq.region_grid_spacing * 1.414
-                              if oq.region_grid_spacing else 5)  # Graeme's 5km
-                # keep the sites of the parent close to the sites of the child
-                self.sitecol, _array, _discarded = geo.utils.assoc(
-                    child, haz_sitecol, assoc_dist, 'filter')
-                self.datastore['sitecol'] = self.sitecol
-            else:  # base case
-                self.sitecol = haz_sitecol
-            if self.sitecol and oq.imtls:
-                logging.info('Read N=%d hazard sites and L=%d hazard levels',
-                             len(self.sitecol), oq.imtls.size)
-            manysites = (oq.calculation_mode=='event_based' and oq.ground_motion_fields
-                         and len(self.sitecol) > oq.max_sites_disagg)
-            if manysites and not oq.minimum_magnitude:
-                oq.raise_invalid('missing minimum_magnitude, suggested 5')
-            if manysites and not oq.minimum_intensity:
-                oq.raise_invalid('missing minimum_intensity, suggested .05')
-
+            self._read_no_exposure(haz_sitecol)
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
                 self.N > 1000 and len(oq.min_iml) == 0):
             oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
