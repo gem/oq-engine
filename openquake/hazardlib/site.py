@@ -504,6 +504,8 @@ class SiteCollection(object):
             for name in dt.names:
                 if name == 'vs30':
                     rec[name] = vs30s[i % n]
+                elif name == 'sids':
+                    rec[name] = i
                 else:
                     rec[name] = orig_rec[name]
         new = object.__new__(self.__class__)
