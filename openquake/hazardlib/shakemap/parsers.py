@@ -1273,8 +1273,10 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                 rup_data, rupture_file = download_shakemap_rupture_data(
                     usgs_id, contents, user)
             if rupture_file:
-                rup, rupdic, rup_data, rupture_issue = _convert_rupture_file(
+                rup, rupdic, updated_rup_data, rupture_issue = _convert_rupture_file(
                     rupture_file, usgs_id, user)
+                if updated_rup_data:
+                    rup_data = updated_rup_data
             elif approach in ('use_shakemap_fault_rup_from_usgs',
                               'use_finite_fault_model_from_usgs'):
                 err = {"status": "failed",
