@@ -933,6 +933,9 @@ function capitalizeFirstLetter(val) {
                         conversion_issues += '<p>' + data.rupture_issue + '</p>';
                         $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
                     }
+                    if ('warning_msg' in data) {
+                        conversion_issues += '<p>' + data.warning_msg + '</p>';
+                    }
                     if (conversion_issues != '') {
                         diaerror.show(false, "Note", conversion_issues);
                     }

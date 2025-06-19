@@ -52,7 +52,7 @@ from openquake.baselib.general import gettemp
 from openquake.baselib.node import node_from_xml
 from openquake.hazardlib import nrml, sourceconverter, valid
 from openquake.hazardlib.source.rupture import (
-    get_multiplanar, is_matrix, build_planar_rupture_from_dict, get_ruptures)
+    build_planar_rupture_from_dict, get_ruptures)
 
 NOT_FOUND = 'No file with extension \'.%s\' file found'
 US_GOV = 'https://earthquake.usgs.gov'
@@ -1041,13 +1041,25 @@ def _get_nodal_planes_from_product(product):
 def _adjust_hypocenter(rup):
     # if the hypocenter is outside the surface of the rupture (e.g. us7000pwkn v6),
     # reposition it to the middle of the surface
+    initial_hypocenter = rup.hypocenter
     surf_lons, surf_lats = rup.surface.get_surface_boundaries()
     boundary_coords = list(zip(surf_lons, surf_lats))
     surface_polygon = Polygon(boundary_coords)
     hypocenter_point = Point(rup.hypocenter.x, rup.hypocenter.y)
+    warn = None
     if not surface_polygon.contains(hypocenter_point):
-        rup.hypocenter = rup.surface.get_middle_point()
-    return rup
+        surface_middle_point = rup.surface.get_middle_point()
+        rup.hypocenter = surface_middle_point
+        # removing '<' and '>' to avoid problems rendering the string in html
+        initial_hypocenter_str = str(
+            initial_hypocenter).replace('<','').replace('>', '')
+        surface_middle_point_str = str(
+            surface_middle_point).replace('<','').replace('>', '')
+        warn = (f'The hypocenter ({initial_hypocenter_str}) was outside the surface'
+                f' of the rupture, so it was moved to the middle point of the surface'
+                f' ({surface_middle_point_str})')
+        logging.warning(warn)
+    return rup, warn
 
 
 def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
@@ -1067,7 +1079,7 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
                "error_msg": f'Unable to convert the rupture: {exc}'}
         return None, {}, err
     rup.tectonic_region_type = '*'
-    rup = _adjust_hypocenter(rup)
+    rup, hypocenter_warning = _adjust_hypocenter(rup)
     hp = rup.hypocenter
     rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
                   mag=float(rup.mag), rake=float(rup.rake),
@@ -1075,6 +1087,8 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
                   dip=float(rup.surface.get_dip()),
                   usgs_id=usgs_id,
                   rupture_file=rupture_file)
+    if hypocenter_warning:
+        rupdic['warning_msg'] = hypocenter_warning
     return rup, rupdic, err
 
 

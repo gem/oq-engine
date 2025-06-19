@@ -224,9 +224,11 @@ class ShakemapParsersTestCase(unittest.TestCase):
         rup, dic, _err = get_rup_dic(
             dic_in, user=user, use_shakemap=False, rupture_file=rupture_file_path)
         self.assertIsInstance(rup, BaseRupture)
-        self.assertEqual(dic['lon'], 84.4)
-        self.assertEqual(dic['lat'], 27.6)
-        self.assertEqual(dic['dep'], 30.0)
+        # hypocenter was outside the rupture surface and it is moved to the
+        # center of the surface
+        self.assertAlmostEqual(dic['lon'], 84.67005814)
+        self.assertAlmostEqual(dic['lat'], 28.0419600)
+        self.assertAlmostEqual(dic['dep'], 35.0)
         self.assertEqual(dic['mag'], 7.0)
         self.assertEqual(dic['rake'], 90.0)
         self.assertAlmostEqual(dic['strike'], 295.2473184)
