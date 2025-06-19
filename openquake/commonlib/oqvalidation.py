@@ -491,6 +491,11 @@ max_potential_paths:
   Example: *max_potential_paths = 200*.
   Default: 15_000
 
+max_sites_correl:
+  Maximum number of sites for GMF-correlation.
+  Example: *max_sites_correl = 2000*
+  Default: 1000
+
 max_sites_disagg:
   Maximum number of sites for which to store rupture information.
   In disaggregation calculations with many sites you may be forced to raise
