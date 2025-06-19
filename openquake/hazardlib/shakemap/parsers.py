@@ -1052,9 +1052,9 @@ def _adjust_hypocenter(rup):
         rup.hypocenter = surface_middle_point
         # removing '<' and '>' to avoid problems rendering the string in html
         initial_hypocenter_str = str(
-            initial_hypocenter).replace('<','').replace('>', '')
+            initial_hypocenter).replace('<', '').replace('>', '')
         surface_middle_point_str = str(
-            surface_middle_point).replace('<','').replace('>', '')
+            surface_middle_point).replace('<', '').replace('>', '')
         warn = (f'The hypocenter ({initial_hypocenter_str}) was outside the surface'
                 f' of the rupture, so it was moved to the middle point of the surface'
                 f' ({surface_middle_point_str})')
