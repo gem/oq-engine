@@ -20,7 +20,8 @@ import os
 import unittest
 import csv
 from openquake.hazardlib.shakemap.parsers import (
-    get_rup_dic, User, utc_to_local_time, get_stations_from_usgs, get_shakemap_versions)
+    get_rup_dic, User, utc_to_local_time, get_stations_from_usgs,
+    get_shakemap_versions, get_nodal_planes)
 from openquake.hazardlib.source.rupture import BaseRupture
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
@@ -77,7 +78,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['rupture_file'], None)
         self.assertIsNotNone(dic['mmi_file'])
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIsNone(station_data_file)
         self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'], 'No stations were found')
@@ -103,7 +104,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertIn('Unable to convert the rupture from the USGS format',
                       dic['rupture_issue'])
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIn('stations', station_data_file)
         self.assertEqual(n_stations, 1)
         self.assertEqual(station_err, {})
@@ -111,7 +112,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
     def test_3e(self):
         usgs_id = 'us7000pn9s'
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIn('stations', station_data_file)
         self.assertEqual(n_stations, 1)
         self.assertEqual(station_err, {})
@@ -149,35 +150,31 @@ class ShakemapParsersTestCase(unittest.TestCase):
             user=user, use_shakemap=True)
         self.assertEqual(dic['mag'], 6.7)
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIsNone(station_data_file)
         self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'],
                          '3 stations were found, but none of them are seismic')
 
     def test_7(self):
-        dic_in = {
-            'usgs_id': 'us6000jllz', 'lon': None, 'lat': None, 'dep': None,
-            'mag': None, 'msr': '', 'aspect_ratio': 2, 'rake': None,
-            'dip': None, 'strike': None, 'approach': 'build_rup_from_usgs'}
-        _rup, dic, _err = get_rup_dic(dic_in, user=user, use_shakemap=True)
-        self.assertEqual(
-            dic['nodal_planes'],
-            {'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
-             'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}})
+        usgs_id = 'us6000jllz'
+        expected_nodal_planes = {
+            'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
+            'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}
+        }
+        nodal_planes, _err = get_nodal_planes(usgs_id, user=user)
+        self.assertEqual(nodal_planes, expected_nodal_planes)
 
     def test_7b(self):
         # Case reading nodal planes first from the moment-tensor (not found)
         # then falling back to reading them from the focal-mechanism
-        dic_in = {
-            'usgs_id': 'usp0001ccb', 'lon': None, 'lat': None, 'dep': None,
-            'mag': None, 'msr': '', 'aspect_ratio': 2, 'rake': None,
-            'dip': None, 'strike': None, 'approach': 'build_rup_from_usgs'}
-        _rup, dic, _err = get_rup_dic(dic_in, user=user, use_shakemap=True)
-        self.assertEqual(
-            dic['nodal_planes'],
-            {'NP1': {'dip': 37.0, 'rake': -64.0, 'strike': 285.0},
-             'NP2': {'dip': 57.0, 'rake': -109.0, 'strike': 73.0}})
+        usgs_id = 'usp0001ccb'
+        expected_nodal_planes = {
+            'NP1': {'dip': 37.0, 'rake': -64.0, 'strike': 285.0},
+            'NP2': {'dip': 57.0, 'rake': -109.0, 'strike': 73.0}
+        }
+        nodal_planes, _err = get_nodal_planes(usgs_id, user=user)
+        self.assertEqual(nodal_planes, expected_nodal_planes)
 
     def test_8(self):
         dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256,
@@ -261,7 +258,7 @@ class ShakemapParsersTestCase(unittest.TestCase):
     def test_13(self):
         usgs_id = 'us7000n7n8'
         station_data_file, n_stations, station_err = get_stations_from_usgs(
-            usgs_id, user=user, shakemap_version='preferred')
+            usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIsNone(station_data_file)
         self.assertEqual(n_stations, 0)
         self.assertEqual(station_err['error_msg'],
