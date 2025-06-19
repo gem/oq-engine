@@ -1174,6 +1174,30 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
     return shakemap_versions, usgs_preferred_version, err
 
 
+def _convert_rupture_file(rupture_file, usgs_id, user):
+    rup = None
+    rupdic = {}
+    rup_data = {}
+    if rupture_file.endswith('.json'):
+        rupture_file_xml = gettemp(prefix='rup_', suffix='.xml')
+        try:
+            # replacing the input json file with the output xml if possible
+            # NOTE: in case of failure, returns the input rupture_file (e.g. in case
+            # of a Point rupture)
+            rupture_file = convert_to_oq_xml(rupture_file, rupture_file_xml)
+        except ValueError as exc:
+            err = {"status": "failed", "error_msg": str(exc)}
+            return rup, rupdic, err
+    if rupture_file.endswith('.xml'):
+        rup, rupdic, err = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
+    elif rupture_file.endswith('.csv'):
+        rup, rupdic, err = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
+    elif rupture_file.endswith('.json') and usgs_id != 'FromFile':
+        with open(rupture_file) as f:
+            rup_data = json.load(f)
+    return rup, rupdic, rup_data, err
+
+
 def get_rup_dic(dic, user=User(), use_shakemap=False,
                 shakemap_version='usgs_preferred', rupture_file=None,
                 monitor=performance.Monitor()):
@@ -1213,24 +1237,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
             err = {"status": "failed", "error_msg": str(exc)}
         return rup, rupdic, err
     if rupture_file:
-        if rupture_file.endswith('.json'):
-            rupture_file_xml = gettemp(prefix='rup_', suffix='.xml')
-            try:
-                # replacing the input json file with the output xml if possible
-                # NOTE: in case of failure, returns the input rupture_file (e.g. in case
-                # of a Point rupture)
-                rupture_file = convert_to_oq_xml(rupture_file, rupture_file_xml)
-            except ValueError as exc:
-                err = {"status": "failed", "error_msg": str(exc)}
-                return rup, rupdic, err
-        if rupture_file.endswith('.xml'):
-            rup, rupdic, err = _get_rup_dic_from_xml(
-                usgs_id, user, rupture_file)
-        elif rupture_file.endswith('.csv'):
-            rup, rupdic, err = _get_rup_dic_from_csv(usgs_id, user, rupture_file)
-        elif rupture_file.endswith('.json') and usgs_id != 'FromFile':
-            with open(rupture_file) as f:
-                rup_data = json.load(f)
+        rup, rupdic, rup_data, err = _convert_rupture_file(rupture_file, usgs_id, user)
         if err or usgs_id == 'FromFile':
             return rup, rupdic, err
     assert usgs_id
@@ -1270,8 +1277,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                     # replacing the input json file with the output xml if possible
                     # NOTE: in case of failure, returns the input rupture_file
                     # (e.g. in case of a Point rupture)
-                    rupture_file = convert_to_oq_xml(
-                        rupture_file, rupture_file_xml)
+                    rupture_file = convert_to_oq_xml(rupture_file, rupture_file_xml)
                 except ValueError as exc:
                     err = {"status": "failed", "error_msg": str(exc)}
                     return rup, rupdic, err
