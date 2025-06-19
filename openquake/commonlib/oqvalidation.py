@@ -983,7 +983,7 @@ class OqParam(valid.ParamSet):
                'max_hazard_curves': 'max'}
 
     hazard_imtls = {}
-    override_vs30 = valid.Param(valid.positivefloat, None)
+    override_vs30 = valid.Param(valid.positivefloats, ())
     aggregate_by = valid.Param(valid.namelists, [])
     aggregate_loss_curves_types = valid.Param(
         # accepting all comma-separated permutations of 1, 2 or 3 elements
