@@ -498,6 +498,7 @@ class SiteCollection(object):
                  soil_values=F64([152, 213, 305, 442, 640, 914, 1500])):
         """
         Multiply a site collection with the given vs30 values.
+        NB: only the sites with vs30 = -999. are multiplied.
         """
         classes = general.find_among(soil_classes, soil_values, vs30s)
         n = len(vs30s)
@@ -513,22 +514,38 @@ class SiteCollection(object):
             names.insert(0, 'custom_site_id')
         else:
             new_csi = False
-        array = numpy.empty(N * n, dt)
-        for i, rec in enumerate(array):
-            orig_rec = self.array[i // n]
-            for name in names:
-                if name == 'custom_site_id' and new_csi:
-                    # tested in classical/case_08
-                    rec[name] = classes[i % n]
-                elif name == 'custom_site_id':
-                    # tested in classical/case_38
-                    rec[name] = orig_rec[name] + classes[i % n]
-                elif name == 'vs30':
-                    rec[name] = vs30s[i % n]
-                elif name == 'sids':
-                    rec[name] = i
-                else:
-                    rec[name] = orig_rec[name]
+        ok = self['vs30'] == -999.
+        sites_to_multiply = ok.sum()
+        tot = sites_to_multiply * n + (N - sites_to_multiply)
+        array = numpy.empty(tot, dt)
+        j = 0
+        for i, orig_rec in enumerate(self.array):
+            if not ok[i]:  # do not multiply
+                rec = array[j]
+                for name in names:
+                    if name == 'custom_site_id':
+                        rec[name] = (f'{j}'.encode('ascii') if new_csi
+                                     else orig_rec[name])
+                    else:
+                        rec[name] = orig_rec[name]
+                j += 1
+                continue
+            for cl, vs30 in zip(classes, vs30s):
+                rec = array[j]
+                for name in names:
+                    if name == 'custom_site_id' and new_csi:
+                        # tested in classical/case_08
+                        rec[name] = cl
+                    elif name == 'custom_site_id':
+                        # tested in classical/case_38
+                        rec[name] = orig_rec[name] + cl
+                    elif name == 'vs30':
+                        rec[name] = vs30
+                    elif name == 'sids':
+                        rec[name] = j
+                    else:
+                        rec[name] = orig_rec[name]
+                j += 1
         new = object.__new__(self.__class__)
         new.array = array
         new.complete = new
