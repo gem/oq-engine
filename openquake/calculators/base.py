@@ -537,6 +537,10 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
+        if (oq.ground_motion_correlation_model and
+                len(self.sitecol) > oq.max_sites_correl):
+            raise ValueError('You cannot use a correlation model with '
+                             f'{self.N} sites [{oq.max_sites_correl=}]')
         if hasattr(self, 'assetcol'):
             self.check_consequences()
         self.check_overflow()  # check if self.sitecol is too large
@@ -876,6 +880,30 @@ class HazardCalculator(BaseCalculator):
         logging.info(f'Saving {fig_path} into the datastore')
         self.datastore[fig_path] = Image.open(bio)
 
+    def _read_no_exposure(self, haz_sitecol):
+        oq = self.oqparam
+        if oq.hazard_calculation_id:
+            # NB: this is tested in event_based case_27 and case_31
+            child = readinput.get_site_collection(oq, self.datastore.hdf5)
+            assoc_dist = (oq.region_grid_spacing * 1.414
+                          if oq.region_grid_spacing else 5)  # Graeme's 5km
+            # keep the sites of the parent close to the sites of the child
+            self.sitecol, _array, _discarded = geo.utils.assoc(
+                child, haz_sitecol, assoc_dist, 'filter')
+            self.datastore['sitecol'] = self.sitecol
+        else:  # base case
+            self.sitecol = haz_sitecol
+        if self.sitecol and oq.imtls:
+            logging.info('Read N=%d hazard sites and L=%d hazard levels',
+                         len(self.sitecol), oq.imtls.size)
+        manysites = (oq.calculation_mode=='event_based' and oq.ground_motion_fields
+                     and len(self.sitecol) > oq.max_sites_disagg)
+        if manysites and not oq.minimum_magnitude:
+            oq.raise_invalid('missing minimum_magnitude, suggested 5')
+        if manysites and not oq.minimum_intensity:
+            oq.raise_invalid('missing minimum_intensity, suggested .05')
+
+        
     def _read_risk1(self):
         # read the risk model (if any) and then the site collection,
         # possibly extracted from the exposure
@@ -892,7 +920,8 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol, _ = site.merge_sitecols(
                     oq.inputs['gmfs'], oq.mosaic_model, check_gmfs=True)
             else:
-                haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
+                haz_sitecol = readinput.get_site_collection(
+                    oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
@@ -935,20 +964,7 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.add_tagname('site_id')
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
-            if oq.hazard_calculation_id:
-                # NB: this is tested in event_based case_27 and case_31
-                child = readinput.get_site_collection(oq, self.datastore.hdf5)
-                assoc_dist = (oq.region_grid_spacing * 1.414
-                              if oq.region_grid_spacing else 5)  # Graeme's 5km
-                # keep the sites of the parent close to the sites of the child
-                self.sitecol, _array, _discarded = geo.utils.assoc(
-                    child, haz_sitecol, assoc_dist, 'filter')
-                self.datastore['sitecol'] = self.sitecol
-            else:  # base case
-                self.sitecol = haz_sitecol
-            if self.sitecol and oq.imtls:
-                logging.info('Read N=%d hazard sites and L=%d hazard levels',
-                             len(self.sitecol), oq.imtls.size)
+            self._read_no_exposure(haz_sitecol)
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
                 self.N > 1000 and len(oq.min_iml) == 0):
             oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
@@ -1025,7 +1041,11 @@ class HazardCalculator(BaseCalculator):
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5
                 names = self.sitecol.array.dtype.names
-                self.sitecol = self.sitecol.multiply(oq.override_vs30)
+                if len(self.sitecol) == 1 and len(oq.override_vs30) == 1:
+                    self.sitecol.array['vs30'] = oq.override_vs30[0]
+                else:
+                    # tested in classical/case_08
+                    self.sitecol = self.sitecol.multiply(oq.override_vs30)
                 if 'z1pt0' in names:
                     self.sitecol.calculate_z1pt0()
                 if 'z2pt5' in names:
