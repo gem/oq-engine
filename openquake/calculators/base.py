@@ -1041,8 +1041,11 @@ class HazardCalculator(BaseCalculator):
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5
                 names = self.sitecol.array.dtype.names
-                # tested in classical/case_08
-                self.sitecol = self.sitecol.multiply(oq.override_vs30)
+                if len(self.sitecol) == 1 and len(oq.override_vs30) == 1:
+                    self.sitecol.array['vs30'] = oq.override_vs30[0]
+                else:
+                    # tested in classical/case_08
+                    self.sitecol = self.sitecol.multiply(oq.override_vs30)
                 if 'z1pt0' in names:
                     self.sitecol.calculate_z1pt0()
                 if 'z2pt5' in names:
