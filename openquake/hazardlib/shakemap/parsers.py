@@ -1284,8 +1284,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                     rupture_file, usgs_id, user)
                 if updated_rup_data:
                     rup_data = updated_rup_data
-            elif approach in ('use_shakemap_fault_rup_from_usgs',
-                              'use_finite_fault_model_from_usgs'):
+            elif approach == 'use_shakemap_fault_rup_from_usgs':
                 err = {"status": "failed",
                        "error_msg": 'Unable to retrieve rupture geometries'}
                 return None, None, err
