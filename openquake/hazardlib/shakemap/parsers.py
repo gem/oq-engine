@@ -878,6 +878,172 @@ def download_shakemap_rupture_data(usgs_id, shakemap_contents, user):
     return rup_data, gettemp(text, prefix='rup_', suffix='.json')
 
 
+def extract_event_details(ffm):
+    # Extract event details from the geojson metadata
+    # and return a data object with the event details
+    epicenter = ffm["metadata"]["epicenter"]
+    mag = epicenter.get("mag")
+    lon = epicenter.get("lon")
+    lat = epicenter.get("lat")
+    dep = epicenter.get("depth")
+    event_details = {
+        "mag": mag,
+        "lon": lon,
+        "lat": lat,
+        "dep": dep,
+    }
+    return event_details
+
+
+def parse_basic_inversion_params(basic_inversion):
+    # Extract fault segment data
+    fault_segments = []
+    segment = None
+    for line in basic_inversion.split('\n'):
+        if line.startswith("#Fault_segment"):
+            if segment:
+                fault_segments.append(segment)
+            segment = {"vertices": [], "strike": None, "dip": None}
+        elif line.startswith("#Boundary of Fault_segment"):
+            continue
+        elif line.strip().startswith("#Lat. Lon. depth"):
+            continue
+        elif line.strip().startswith("#"):
+            continue
+        elif segment is not None:
+            parts = line.split()
+            if len(parts) == 3:  # Vertex line
+                lon, lat, depth = map(float, parts)
+                segment["vertices"].append({"lon": lon, "lat": lat, "depth": depth})
+            elif len(parts) >= 8:  # Strike and dip line
+                segment["strike"] = float(parts[5])
+                segment["dip"] = float(parts[6])
+    if segment:
+        fault_segments.append(segment)
+    return fault_segments
+
+
+def create_rupture_xml_from_ffm(event_details, fault_segments, output_filepath):
+    # create an OpenQuake rupture XML file from FFM data
+    nrml = Element(
+        "nrml",
+        xmlns="http://openquake.org/xmlns/nrml/0.4",
+        attrib={"xmlns:gml": "http://www.opengis.net/gml"},
+    )
+    if len(fault_segments) == 1:
+        multi_planes_rupture = SubElement(nrml, "singlePlaneRupture")
+    else:
+        multi_planes_rupture = SubElement(nrml, "multiPlanesRupture")
+
+    mag = event_details["mag"]
+    lon = event_details["lon"]
+    lat = event_details["lat"]
+    dep = event_details["dep"]
+
+    SubElement(multi_planes_rupture, "magnitude").text = str(mag)
+    rake = 0
+    SubElement(multi_planes_rupture, "rake").text = str(rake)
+    SubElement(
+        multi_planes_rupture, "hypocenter", lat=str(lat), lon=str(lon), depth=str(dep)
+    )
+
+    for segment in fault_segments:
+        planar_surface = SubElement(
+            multi_planes_rupture,
+            "planarSurface",
+            strike=str(segment["strike"]),
+            dip=str(segment["dip"]),
+        )
+        if len(segment["vertices"]) >= 4:
+            # Remove the last vertex if it is a duplicate of the first vertex
+            if segment["vertices"][-1] == segment["vertices"][0]:
+                segment["vertices"].pop()
+
+            # Sort vertices by depth (ascending)
+            sorted_vertices = sorted(segment["vertices"], key=lambda v: v["depth"])
+
+            # Top edge: vertices with lower depth
+            top_vertices = sorted_vertices[:2]
+            # Bottom edge: vertices with higher depth
+            bottom_vertices = sorted_vertices[2:]
+
+            # Ensure clockwise order
+            if top_vertices[0]["lon"] > top_vertices[1]["lon"]:
+                top_vertices.reverse()
+            if bottom_vertices[0]["lon"] > bottom_vertices[1]["lon"]:
+                bottom_vertices.reverse()
+
+            # Assign vertices
+            SubElement(
+                planar_surface,
+                "topLeft",
+                lon=str(top_vertices[0]["lon"]),
+                lat=str(top_vertices[0]["lat"]),
+                depth=str(top_vertices[0]["depth"]),
+            )
+            SubElement(
+                planar_surface,
+                "topRight",
+                lon=str(top_vertices[1]["lon"]),
+                lat=str(top_vertices[1]["lat"]),
+                depth=str(top_vertices[1]["depth"]),
+            )
+            SubElement(
+                planar_surface,
+                "bottomRight",
+                lon=str(bottom_vertices[1]["lon"]),
+                lat=str(bottom_vertices[1]["lat"]),
+                depth=str(bottom_vertices[1]["depth"]),
+            )
+            SubElement(
+                planar_surface,
+                "bottomLeft",
+                lon=str(bottom_vertices[0]["lon"]),
+                lat=str(bottom_vertices[0]["lat"]),
+                depth=str(bottom_vertices[0]["depth"]),
+            )
+
+    xml_str = tostring(nrml, encoding="utf-8")
+    pretty_xml_str = minidom.parseString(xml_str).toprettyxml(indent="  ")
+
+    with open(output_filepath, "w", encoding="utf-8") as file:
+        file.write(pretty_xml_str)
+    return output_filepath
+
+
+def download_finite_fault_rupture(usgs_id, user, monitor):
+    properties, err = _get_properties(usgs_id, user, monitor)
+    finite_fault = _get_usgs_preferred_item(properties['products']['finite-fault'])
+    ffm_url = finite_fault['contents']['FFM.geojson']['url']
+    basic_inversion_url = finite_fault['contents']['basic_inversion.param']['url']
+    # fname = os.path.join(user, f'{usgs_id}-ffm.geojson')
+    # with open(fname, 'wb') as f:
+    #     f.write(urlopen(ffm_url).read())
+    # fname = os.path.join(user, f'{usgs_id}-basic_inversion.param')
+    # with open(fname, 'wb') as f:
+    #     f.write(urlopen(basic_inversion_url).read())
+    if user.testdir:
+        ffm_fname = os.path.join(user.testdir, f'{usgs_id}-ffm.geojson')
+        ffm_str = open(ffm_fname, 'rb').read()
+        basic_inversion_fname = os.path.join(
+            user.testdir, f'{usgs_id}-basic_inversion.param')
+        basic_inversion_bytes = open(basic_inversion_fname, 'rb').read()
+    else:
+        logging.info('Downloading FFM.geojson')
+        ffm_str = urlopen(ffm_url).read()
+        logging.info('Downloading basic_inversion.param')
+        basic_inversion_bytes = urlopen(basic_inversion_url).read()
+    ffm = json.loads(ffm_str)
+    basic_inversion_str = basic_inversion_bytes.decode('utf8')
+
+    event_details = extract_event_details(ffm)
+    fault_segments = parse_basic_inversion_params(basic_inversion_str)
+    output_rupture_xml = gettemp(suffix='.xml')
+    output_rupture_xml = create_rupture_xml_from_ffm(
+        event_details, fault_segments, output_rupture_xml)
+    return output_rupture_xml
+
+
 def download_mmi(usgs_id, shakemap_contents, user):
     shape = shakemap_contents.get('download/shape.zip')
     if shape is None:
@@ -1275,10 +1441,16 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
             return None, None, err
     if not rup_data and approach not in ['use_pnt_rup_from_usgs',
                                          'build_rup_from_usgs']:
-        if approach in ['use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs']:
-            with monitor('Downloading rupture json'):
-                rup_data, rupture_file = download_shakemap_rupture_data(
-                    usgs_id, contents, user)
+        if approach in ['use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs',
+                        'use_finite_fault_model_from_usgs']:
+            if approach == 'use_finite_fault_model_from_usgs':
+                with monitor('Download finite fault rupture'):
+                    rupture_file = download_finite_fault_rupture(
+                        usgs_id, user, monitor)
+            else:
+                with monitor('Downloading rupture json'):
+                    rup_data, rupture_file = download_shakemap_rupture_data(
+                        usgs_id, contents, user)
             if rupture_file:
                 rup, rupdic, updated_rup_data, rupture_issue = _convert_rupture_file(
                     rupture_file, usgs_id, user)
