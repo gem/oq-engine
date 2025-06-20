@@ -702,6 +702,9 @@ class EventBasedCalculator(base.HazardCalculator):
             [(trt_smr, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_dic().items()
             trt = trts[trt_smr // TWO24]
             rup = readinput.get_rupture(oq)
+            # If the hypocenter is outside the rupture surface, relocate it to the
+            # middle of the surface (in case, it logs a warning indicating the original
+            # and the translated coordinates)
             rup, _warn = adjust_hypocenter(rup)
             oq.mags_by_trt = {trt: [magstr(rup.mag)]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
