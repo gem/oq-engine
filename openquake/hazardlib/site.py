@@ -518,9 +518,11 @@ class SiteCollection(object):
             orig_rec = self.array[i // n]
             for name in names:
                 if name == 'custom_site_id' and new_csi:
+                    # tested in classical/case_08
                     rec[name] = classes[i % n]
                 elif name == 'custom_site_id':
-                    rec[name] += classes[i % n]
+                    # tested in classical/case_38
+                    rec[name] = orig_rec[name] + classes[i % n]
                 elif name == 'vs30':
                     rec[name] = vs30s[i % n]
                 elif name == 'sids':
@@ -594,7 +596,7 @@ class SiteCollection(object):
         Build a complete SiteCollection from a list of Site objects
         """
         extra = [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
-                 if p in site_param_dt]
+                 if p in site_param_dt and p != 'depth']
         dtlist = [(p, site_param_dt[p])
                   for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
