@@ -24,7 +24,7 @@ import numpy
 import pandas
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
@@ -33,6 +33,7 @@ from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
+F64 = numpy.float64
 ampcode_dt = (numpy.bytes_, 4)
 param = dict(
     vs30measured='reference_vs30_type',
@@ -491,18 +492,38 @@ class SiteCollection(object):
         new.complete = self.complete
         return new
 
-    def multiply(self, vs30s):
+    def multiply(self, vs30s,
+                 soil_classes=numpy.array(
+                     [b'E', b'DE', b'D', b'CD', b'C', b'BC', b'B', b'A']),
+                 soil_values=F64([152, 213, 305, 442, 640, 914, 1500])):
         """
         Multiply a site collection with the given vs30 values.
         """
+        classes = general.find_among(soil_classes, soil_values, vs30s)
         n = len(vs30s)
         N = len(self)
         dt = self.array.dtype
+        names = list(dt.names)
+        try:
+            dt['custom_site_id']
+        except KeyError:
+            new_csi = True
+            dt = [('custom_site_id', site_param_dt['custom_site_id'])] + [
+                (n, dt[n]) for n in names]
+            names.insert(0, 'custom_site_id')
+        else:
+            new_csi = False
         array = numpy.empty(N * n, dt)
         for i, rec in enumerate(array):
             orig_rec = self.array[i // n]
-            for name in dt.names:
-                if name == 'vs30':
+            for name in names:
+                if name == 'custom_site_id' and new_csi:
+                    # tested in classical/case_08
+                    rec[name] = classes[i % n]
+                elif name == 'custom_site_id':
+                    # tested in classical/case_38
+                    rec[name] = orig_rec[name] + classes[i % n]
+                elif name == 'vs30':
                     rec[name] = vs30s[i % n]
                 elif name == 'sids':
                     rec[name] = i
@@ -575,7 +596,7 @@ class SiteCollection(object):
         Build a complete SiteCollection from a list of Site objects
         """
         extra = [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
-                 if p in site_param_dt]
+                 if p in site_param_dt and p != 'depth']
         dtlist = [(p, site_param_dt[p])
                   for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
