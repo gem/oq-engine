@@ -23,6 +23,7 @@ from openquake.hazardlib.shakemap.parsers import (
     get_rup_dic, User, utc_to_local_time, get_stations_from_usgs,
     get_shakemap_versions, get_nodal_planes)
 from openquake.hazardlib.source.rupture import BaseRupture
+from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
@@ -85,13 +86,13 @@ class ShakemapParsersTestCase(unittest.TestCase):
 
     def test_3b(self):
         rup, _dic, _err = get_rup_dic(
-            {'usgs_id': 'usp0001ccb', 'approach': 'use_finite_rup_from_usgs'},
+            {'usgs_id': 'usp0001ccb', 'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIsInstance(rup, BaseRupture)
 
     def test_3c(self):
         _rup, _dic, err = get_rup_dic(
-            {'usgs_id': 'us6000f65h', 'approach': 'use_finite_rup_from_usgs'},
+            {'usgs_id': 'us6000f65h', 'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
         self.assertIn('Unable to retrieve rupture geometries', err['error_msg'])
 
@@ -99,10 +100,9 @@ class ShakemapParsersTestCase(unittest.TestCase):
         # TODO: make it possible to convert this kind of geometries
         usgs_id = 'us6000jllz'
         _rup, dic, _err = get_rup_dic(
-            {'usgs_id': usgs_id, 'approach': 'use_finite_rup_from_usgs'},
+            {'usgs_id': usgs_id, 'approach': 'use_shakemap_fault_rup_from_usgs'},
             user=user, use_shakemap=True)
-        self.assertIn('Unable to convert the rupture from the USGS format',
-                      dic['rupture_issue'])
+        self.assertIn('Unable to convert the rupture', dic['rupture_issue'])
         station_data_file, n_stations, station_err = get_stations_from_usgs(
             usgs_id, user=user, shakemap_version='usgs_preferred')
         self.assertIn('stations', station_data_file)
@@ -133,15 +133,11 @@ class ShakemapParsersTestCase(unittest.TestCase):
         self.assertEqual(dic['dep'], 10.)
 
     def test_5(self):
-        for approach in ['use_finite_rup_from_usgs', 'use_shakemap_from_usgs']:
-            # 12 vertices instead of 4 in rupture.json
-            rup, dic, _err = get_rup_dic(
+        for approach in ['use_shakemap_fault_rup_from_usgs', 'use_shakemap_from_usgs']:
+            rup, _dic, _err = get_rup_dic(
                 {'usgs_id': 'us20002926', 'approach': approach},
                 user=user, use_shakemap=True)
-            self.assertIsNone(rup)
-            rupture_issue = ('Unable to convert the rupture from the USGS format: '
-                             'at least one surface is not rectangular')
-            self.assertEqual(dic['rupture_issue'], rupture_issue)
+            self.assertIsInstance(rup.surface, ComplexFaultSurface)
 
     def test_6(self):
         usgs_id = 'usp0001ccb'
@@ -228,9 +224,11 @@ class ShakemapParsersTestCase(unittest.TestCase):
         rup, dic, _err = get_rup_dic(
             dic_in, user=user, use_shakemap=False, rupture_file=rupture_file_path)
         self.assertIsInstance(rup, BaseRupture)
-        self.assertEqual(dic['lon'], 84.4)
-        self.assertEqual(dic['lat'], 27.6)
-        self.assertEqual(dic['dep'], 30.0)
+        # hypocenter was outside the rupture surface and it is moved to the
+        # center of the surface
+        self.assertAlmostEqual(dic['lon'], 84.67005814)
+        self.assertAlmostEqual(dic['lat'], 28.0419600)
+        self.assertAlmostEqual(dic['dep'], 35.0)
         self.assertEqual(dic['mag'], 7.0)
         self.assertEqual(dic['rake'], 90.0)
         self.assertAlmostEqual(dic['strike'], 295.2473184)

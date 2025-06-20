@@ -60,7 +60,8 @@ class AristotleParam:
             self.exposure_hdf5 = os.path.join(MOSAIC_DIR, 'exposure.hdf5')
         inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
         rupdic = self.rupture_dict
-        if not self.rupture_file and 'rupture_file' in rupdic:
+        if (not self.rupture_file and 'rupture_file' in rupdic
+                and 'rupture_issue' not in rupdic):
             self.rupture_file = rupdic['rupture_file']
         if self.rupture_file:
             inputs['rupture_model'] = self.rupture_file
@@ -219,7 +220,8 @@ validators = {
     'approach': valid.Choice('use_shakemap_from_usgs',
                              'use_pnt_rup_from_usgs',
                              'build_rup_from_usgs',
-                             'use_finite_rup_from_usgs',
+                             'use_shakemap_fault_rup_from_usgs',
+                             # TODO: 'use_finite_fault_model_from_usgs',
                              'provide_rup',
                              'provide_rup_params'),
     'usgs_id': valid.simple_id,
@@ -338,8 +340,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     else:
         shakemap_version = 'usgs_preferred'
 
-    rup, rupdic, err = get_rup_dic(dic, user, use_shakemap, shakemap_version,
-                                   rupture_file, monitor)
+    rup, rupdic, err = get_rup_dic(
+        dic, user, use_shakemap, shakemap_version, rupture_file, monitor)
     if err:
         return None, None, None, err
     # round floats

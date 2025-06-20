@@ -103,10 +103,12 @@ class AristotleValidateTestCase(unittest.TestCase):
             _rup, rupdic, params, err = impact_validate(
                 POST, user, rupture_file, stations)
             expected = {
-                'dep': 30.0,
+                # hypocenter was outside the rupture surface and it is moved to the
+                # center of the surface
+                'dep': 35.0,
+                'lat': 28.04196,
+                'lon': 84.67006,
                 'dip': 30.08335,
-                'lat': 27.6,
-                'lon': 84.4,
                 'mag': 7.0,
                 'mosaic_models': ['CHN', 'IND'],
                 'rake': 90.0,

@@ -445,7 +445,8 @@ function capitalizeFirstLetter(val) {
         'use_shakemap_from_usgs',
         'use_pnt_rup_from_usgs',
         'build_rup_from_usgs',
-        'use_finite_rup_from_usgs'
+        'use_shakemap_fault_rup_from_usgs',
+        'use_finite_fault_model_from_usgs'
     ];
 
     const retrieve_data_btn_txt_map = {
@@ -458,10 +459,13 @@ function capitalizeFirstLetter(val) {
         'build_rup_from_usgs': {
             'initial': 'Build rupture',
             'running': 'Building rupture...',
-            'retrieving_nodal_planes': 'Retrieving nodal planes'},
-        'use_finite_rup_from_usgs': {
-            'initial': 'Retrieve finite rupture',
-            'running': 'Retrieving finite rupture...'},
+            'retrieving_nodal_planes': 'Retrieving nodal planes...'},
+        'use_shakemap_fault_rup_from_usgs': {
+            'initial': 'Retrieve ShakeMap fault rupture',
+            'running': 'Retrieving ShakeMap fault rupture...'},
+        'use_finite_fault_model_from_usgs': {
+            'initial': 'Retrieve finite fault model',
+            'running': 'Retrieving finite fault model...'},
         'provide_rup': {
             'initial': 'Retrieve rupture data',
             'running': 'Retrieving rupture data...'},
@@ -511,6 +515,7 @@ function capitalizeFirstLetter(val) {
         for (field of rupture_form_fields) {
             $('input#' + field).val(impact_form_defaults[field]);
         }
+        $('input#rupture_from_usgs_loaded').val('');
         // nodal planes are re-populated when loading rupture data; msrs are populated only once
         $('select#nodal_plane').empty();
         $('select#msr').val('WC1994');
@@ -819,7 +824,7 @@ function capitalizeFirstLetter(val) {
                 } else {
                     $('.usgs_id_grp').addClass('hidden');
                 }
-                if (selected_approach == 'use_finite_rup_from_usgs') {
+                if (['use_shakemap_fault_rup_from_usgs', 'use_finite_fault_model_from_usgs'].includes(selected_approach)) {
                     $('#rupture_from_usgs_grp').removeClass('hidden');
                 } else {
                     $('#rupture_from_usgs_grp').addClass('hidden');
@@ -927,6 +932,9 @@ function capitalizeFirstLetter(val) {
                     if ('rupture_issue' in data) {
                         conversion_issues += '<p>' + data.rupture_issue + '</p>';
                         $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
+                    }
+                    if ('warning_msg' in data) {
+                        conversion_issues += '<p>' + data.warning_msg + '</p>';
                     }
                     if (conversion_issues != '') {
                         diaerror.show(false, "Note", conversion_issues);
