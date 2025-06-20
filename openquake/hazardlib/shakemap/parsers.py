@@ -114,6 +114,7 @@ def path2url(url):
     If a relative path is given for the file, parse it so it can be
     read with 'urlopen'.
     :param url: path/url to be parsed
+    :returns: the parsed url
     """
     if not url.startswith('file:') and not url.startswith('http'):
         file = pathlib.Path(url)
@@ -127,7 +128,7 @@ def path2url(url):
 def get_array(**kw):
     """
     :param kw: a dictionary with a key 'kind' and various parameters
-    :returs: ShakeMap as a numpy array, dowloaded or read in various ways
+    :returns: ShakeMap as a numpy array, dowloaded or read in various ways
     """
     kind = kw['kind']
     if kind == 'shapefile':
@@ -1038,9 +1039,15 @@ def _get_nodal_planes_from_product(product):
     return nodal_planes
 
 
-def _adjust_hypocenter(rup):
-    # if the hypocenter is outside the surface of the rupture (e.g. us7000pwkn v6),
-    # reposition it to the middle of the surface
+def adjust_hypocenter(rup):
+    """
+    If the hypocenter is outside the surface of the rupture (e.g. us7000pwkn v6),
+    reposition it to the middle of the surface
+
+    :param rup: an instance of openquake.hazardlib.source.rupture.BaseRupture
+    :returns: (the rupture with possibly adjusted hypocenter, a warning message if the
+    hypocenter was moved to the middle of the surface (or None))
+    """
     initial_hypocenter = rup.hypocenter
     surf_lons, surf_lats = rup.surface.get_surface_boundaries()
     boundary_coords = list(zip(surf_lons, surf_lats))
@@ -1079,7 +1086,7 @@ def _get_rup_dic_from_xml(usgs_id, user, rupture_file):
                "error_msg": f'Unable to convert the rupture: {exc}'}
         return None, {}, err
     rup.tectonic_region_type = '*'
-    rup, hypocenter_warning = _adjust_hypocenter(rup)
+    rup, hypocenter_warning = adjust_hypocenter(rup)
     hp = rup.hypocenter
     rupdic = dict(lon=float(hp.x), lat=float(hp.y), dep=float(hp.z),
                   mag=float(rup.mag), rake=float(rup.rake),

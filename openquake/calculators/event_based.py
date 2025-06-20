@@ -41,6 +41,7 @@ from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures_aw)
+from openquake.hazardlib.shakemap.parsers import adjust_hypocenter
 from openquake.commonlib import util, logs, readinput, datastore
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
@@ -449,7 +450,7 @@ def set_mags(oq, dstore):
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
     elif oq.ruptures_hdf5:
-        pass                
+        pass
     elif 'ruptures' in dstore:
         # scenario
         trts = dstore['full_lt'].trts
@@ -701,6 +702,7 @@ class EventBasedCalculator(base.HazardCalculator):
             [(trt_smr, rlzs_by_gsim)] = gsim_lt.get_rlzs_by_gsim_dic().items()
             trt = trts[trt_smr // TWO24]
             rup = readinput.get_rupture(oq)
+            rup, _warn = adjust_hypocenter(rup)
             oq.mags_by_trt = {trt: [magstr(rup.mag)]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
