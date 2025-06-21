@@ -223,6 +223,21 @@ class WeightedSequence(MutableSequence):
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
 
+def find_among(strings, sortedvalues, value):
+    """
+    >>> find_among('ABCD', [.1, .2, .3], .0)
+    'A'
+    >>> find_among('ABCD', [.1, .2, .3], .19)
+    'B'
+    >>> find_among('ABCD', [.1, .2, .3], .3)
+    'C'
+    >>> find_among('ABCD', [.1, .2, .3], .4)
+    'D'
+    """
+    assert len(strings) == len(sortedvalues) + 1, (
+        len(strings), len(sortedvalues))
+    return strings[numpy.searchsorted(sortedvalues, value)]
+
 
 def distinct(keys):
     """
@@ -1029,7 +1044,7 @@ def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
     """
     >>> values = numpy.arange(10)
     >>> for group in groupby_bin(values, 3):
-    ...     print(group)
+    ...     print([int(x) for x in group])
     [0, 1, 2]
     [3, 4, 5]
     [6, 7, 8, 9]
@@ -1208,11 +1223,11 @@ def not_equal(array_or_none1, array_or_none2):
     >>> a1 = numpy.array([1])
     >>> a2 = numpy.array([2])
     >>> a3 = numpy.array([2, 3])
-    >>> not_equal(a1, a2)
+    >>> bool(not_equal(a1, a2))
     True
-    >>> not_equal(a1, a3)
+    >>> bool(not_equal(a1, a3))
     True
-    >>> not_equal(a1, None)
+    >>> bool(not_equal(a1, None))
     True
     """
     if array_or_none1 is None and array_or_none2 is None:
@@ -1341,13 +1356,13 @@ def random_histogram(counts, nbins_or_binweights, seed):
     bins and a faster algorithm will be used. Otherwise pass the weights.
     Here are a few examples:
 
-    >>> list(random_histogram(1, 2, seed=42))
+    >>> [int(x) for x in random_histogram(1, 2, seed=42)]
     [0, 1]
-    >>> list(random_histogram(100, 5, seed=42))
+    >>> [int(x) for x in random_histogram(100, 5, seed=42)]
     [22, 17, 21, 26, 14]
-    >>> list(random_histogram(10000, 5, seed=42))
+    >>> [int(x) for x in random_histogram(10000, 5, seed=42)]
     [2034, 2000, 2014, 1998, 1954]
-    >>> list(random_histogram(1000, [.3, .3, .4], seed=42))
+    >>> [int(x) for x in random_histogram(1000, [.3, .3, .4], seed=42)]
     [308, 295, 397]
     """
     rng = numpy.random.default_rng(seed)
@@ -1589,8 +1604,9 @@ def get_nbytes_msg(sizedict, size=8):
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
 
-    >>> get_nbytes_msg(dict(nsites=2, nbins=5))
-    (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
+    >>> nbytes, msg = get_nbytes_msg(dict(nsites=2, nbins=5))
+    >>> assert nbytes == 80
+    >>> assert msg == '(nsites=2) * (nbins=5) * 8 bytes = 80 B'
     """
     nbytes = numpy.prod(list(sizedict.values())) * size
     prod = ' * '.join('({}={:_d})'.format(k, int(v))
@@ -1655,8 +1671,7 @@ class RecordBuilder(object):
     >>> rb = RecordBuilder(a=numpy.int64(0), b=1., c="2")
     >>> rb.dtype
     dtype([('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
-    >>> rb()
-    (0, 1., b'2')
+    >>> assert tuple(rb()) == (0, 1, b'2')
     """
     def __init__(self, **defaults):
         self.names = []

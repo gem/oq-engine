@@ -537,7 +537,8 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
-        if (oq.ground_motion_correlation_model and
+        if (oq.calculation_mode == 'event_based' and
+                oq.ground_motion_correlation_model and
                 len(self.sitecol) > oq.max_sites_correl):
             raise ValueError('You cannot use a correlation model with '
                              f'{self.N} sites [{oq.max_sites_correl=}]')
@@ -920,7 +921,8 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol, _ = site.merge_sitecols(
                     oq.inputs['gmfs'], oq.mosaic_model, check_gmfs=True)
             else:
-                haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
+                haz_sitecol = readinput.get_site_collection(
+                    oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
@@ -1040,7 +1042,11 @@ class HazardCalculator(BaseCalculator):
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5
                 names = self.sitecol.array.dtype.names
-                self.sitecol = self.sitecol.multiply(oq.override_vs30)
+                if len(self.sitecol) == 1 and len(oq.override_vs30) == 1:
+                    self.sitecol.array['vs30'] = oq.override_vs30[0]
+                else:
+                    # tested in classical/case_08
+                    self.sitecol = self.sitecol.multiply(oq.override_vs30)
                 if 'z1pt0' in names:
                     self.sitecol.calculate_z1pt0()
                 if 'z2pt5' in names:

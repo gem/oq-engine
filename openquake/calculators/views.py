@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import sys
 import ast
 import html
 import json
@@ -1649,7 +1650,10 @@ def view_asce(token, dstore):
     res = numpy.zeros(len(dics), dtlist)
     for i, dic in enumerate(dics):
         for k in header:
-            res[i][k] = dic[k]
+            try:
+                res[i][k] = dic[k]
+            except ValueError as err:
+                print(f'{err}: {i=}{k=}{dic=}', file=sys.stderr)
     return res
 
 
