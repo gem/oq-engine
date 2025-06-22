@@ -1631,7 +1631,7 @@ def asce_fix(asce, siteid):
 @view.add('asce')
 def view_asce(token, dstore):
     """
-    Returns asce:41 and asce:07 arrays
+    Returns asce:41 and asce:07 tables
     """
     key = token.replace(':', '')
     array = dstore[key][:]
@@ -1640,20 +1640,12 @@ def view_asce(token, dstore):
     if len(siteids) != len(array):
         siteids = [f'SITE{i}' for i in range(len(array))]
     dics = [asce_fix(a, siteid) for siteid, a in zip(siteids, array)]
-    header = dics[0]
-    dtlist = []
-    for k in header:
-        if isinstance(header[k], str):
-            dtlist.append((k, object))
-        else:
-            dtlist.append((k, float))
-    res = numpy.zeros(len(dics), dtlist)
-    for i, dic in enumerate(dics):
-        for k in header:
-            try:
-                res[i][k] = dic[k]
-            except ValueError as err:
-                print(f'{err}: {i=}{k=}{dic=}', file=sys.stderr)
+    header = list(dics[0])
+    res = [header] + [[None]*len(header)] * len(dics)
+    for i, dic in enumerate(dics, 1):
+        row = list(dic.values())
+        for k in range(len(header)):
+            res[i][k] = row[k]
     return res
 
 
