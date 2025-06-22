@@ -49,18 +49,6 @@ def engine_profile(jobctx, nrows):
 
 # ########################## run_site ############################## #
 
-def append_empty(lst):
-    """
-    Append empty result to the list, assuming lst is not empty
-    """
-    try:
-        arr = lst[-1]
-    except IndexError:
-        return
-    for k in arr.dtype.names:
-        arr[k] = numpy.nan
-    lst.append(arr)
-
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
 def from_file(fname, mosaic_dir, concurrent_jobs):
@@ -136,14 +124,13 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             count_errors += 1
         dstore = datastore.read(logctx.calc_id)
         try:
-            a07s.append(views.view('asce:07', dstore))
-            a41s.append(views.view('asce:41', dstore))
+            a07s.extend(views.view('asce:07', dstore))
+            a41s.extend(views.view('asce:41', dstore))
         except KeyError:
+            raise
             # AELO results could not be computed due to some error,
             # so the asce data is missing in the datastore
-            # NB: assume the lists are not empty, i.e. the first site is OK
-            append_empty(a07s)
-            append_empty(a41s)
+            pass
 
     # printing/saving results
     print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
@@ -152,11 +139,10 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     if not a07s or not a41s:
         # serious problem to debug
         breakpoint()
-    for name, arrays in zip(['asce07', 'asce41'], [a07s, a41s]):
-        arr = numpy.concatenate(arrays, dtype=arrays[0].dtype)
+    for name, table in zip(['asce07', 'asce41'], [a07s, a41s]):
         fname = os.path.abspath(name + '.org')
         with open(fname, 'w') as f:
-            print(views.text_table(arr, ext='org'), file=f)
+            print(views.text_table(table, ext='org'), file=f)
         print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
