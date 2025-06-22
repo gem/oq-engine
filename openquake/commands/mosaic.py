@@ -127,7 +127,6 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             a07s.extend(views.view('asce:07', dstore))
             a41s.extend(views.view('asce:41', dstore))
         except KeyError:
-            raise
             # AELO results could not be computed due to some error,
             # so the asce data is missing in the datastore
             pass
