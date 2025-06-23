@@ -1012,8 +1012,13 @@ def create_rupture_xml_from_ffm(event_details, fault_segments, output_filepath):
 
 
 def download_finite_fault_rupture(usgs_id, user, monitor):
+    err = {}
     properties, err = _get_properties(usgs_id, user, monitor)
-    finite_fault = _get_usgs_preferred_item(properties['products']['finite-fault'])
+    try:
+        finite_fault = _get_usgs_preferred_item(properties['products']['finite-fault'])
+    except KeyError:
+        err = {"status": "failed", "error_msg": 'The finite-fault was not found'}
+        return None, err
     ffm_url = finite_fault['contents']['FFM.geojson']['url']
     basic_inversion_url = finite_fault['contents']['basic_inversion.param']['url']
 
@@ -1043,7 +1048,7 @@ def download_finite_fault_rupture(usgs_id, user, monitor):
     output_rupture_xml = gettemp(suffix='.xml')
     output_rupture_xml = create_rupture_xml_from_ffm(
         event_details, fault_segments, output_rupture_xml)
-    return output_rupture_xml
+    return output_rupture_xml, err
 
 
 def download_mmi(usgs_id, shakemap_contents, user):
@@ -1447,8 +1452,10 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                         'use_finite_fault_model_from_usgs']:
             if approach == 'use_finite_fault_model_from_usgs':
                 with monitor('Download finite fault rupture'):
-                    rupture_file = download_finite_fault_rupture(
+                    rupture_file, err = download_finite_fault_rupture(
                         usgs_id, user, monitor)
+                    if err:
+                        return None, None, err
             else:  # 'use_shakemap_from_usgs' or 'use_shakemap_fault_rup_from_usgs'
                 with monitor('Downloading rupture json'):
                     rup_data, rupture_file = download_shakemap_rupture_data(
