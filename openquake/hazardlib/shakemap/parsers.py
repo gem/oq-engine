@@ -1222,10 +1222,10 @@ def adjust_hypocenter(rup):
     hypocenter was moved to the middle of the surface (or None))
     """
     initial_hypocenter = rup.hypocenter
-    surf_lons, surf_lats = rup.surface.get_surface_boundaries()
-    boundary_coords = list(zip(surf_lons, surf_lats))
+    surf_lons, surf_lats, surf_depths = rup.surface.get_surface_boundaries_3d()
+    boundary_coords = list(zip(surf_lons, surf_lats, surf_depths))
     surface_polygon = Polygon(boundary_coords)
-    hypocenter_point = Point(rup.hypocenter.x, rup.hypocenter.y)
+    hypocenter_point = Point(rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z)
     warn = None
     if not surface_polygon.contains(hypocenter_point):
         surface_middle_point = rup.surface.get_middle_point()
