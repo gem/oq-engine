@@ -34,6 +34,7 @@ Module exports :class:`EMME24BB_GMM1SGM1`
                :class:`EMME24BB_GMM5SGM3`
 """
 import numpy as np
+import warnings
 
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
@@ -122,7 +123,9 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
     EMME24 backbone model for active shallow crustal earthquakes. This class
     is the lower range, lower sigma model branch. This backbone GMM adjusts
     the Chiou and Youngs (2014) GMPE using the corrections described within
-    the journal paper "PLACEHOLDER"
+    the journal paper "PLACEHOLDER".
+
+    This model is only applicable for sites with a Vs30 of 800 m/s.
     """
     experimental = True
 
@@ -132,6 +135,13 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        # Warn user if any sites GMM is being applied
+        # to have vs30s which are not 800 m/s
+        if not np.all((ctx.vs30 >= 760) & (ctx.vs30 <= 840)):
+            warnings.warn("The EMME24 active shallow crustal" \
+                          "backbone should only be applied to " \
+                          "sites with a Vs30 of approx. 800 m/s.")
+
         # First get pre-adjusted mean and GMM sigma from CY14
         super().compute(ctx, imts, mean, sig, tau, phi) 
 
