@@ -122,8 +122,12 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
     EMME24 backbone model for active shallow crustal earthquakes. This class
     is the lower range, lower sigma model branch. This backbone GMM adjusts
     the Chiou and Youngs (2014) GMPE using the corrections described within
-    the journal paper "PLACEHOLDER"
+    the journal paper "PLACEHOLDER".
+
+    This model is only applicable for sites with a Vs30 of 800 m/s.
     """
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
+
     experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
