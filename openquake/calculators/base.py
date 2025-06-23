@@ -537,6 +537,7 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
+
         if (oq.calculation_mode == 'event_based' and
                 oq.ground_motion_correlation_model and
                 len(self.sitecol) > oq.max_sites_correl):
@@ -897,14 +898,14 @@ class HazardCalculator(BaseCalculator):
         if self.sitecol and oq.imtls:
             logging.info('Read N=%d hazard sites and L=%d hazard levels',
                          len(self.sitecol), oq.imtls.size)
-        manysites = (oq.calculation_mode=='event_based' and oq.ground_motion_fields
+        manysites = (oq.calculation_mode=='event_based'
+                     and oq.ground_motion_fields
                      and len(self.sitecol) > oq.max_sites_disagg)
         if manysites and not oq.minimum_magnitude:
             oq.raise_invalid('missing minimum_magnitude, suggested 5')
         if manysites and not oq.minimum_intensity:
             oq.raise_invalid('missing minimum_intensity, suggested .05')
 
-        
     def _read_risk1(self):
         # read the risk model (if any) and then the site collection,
         # possibly extracted from the exposure
