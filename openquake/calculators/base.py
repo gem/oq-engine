@@ -432,9 +432,9 @@ def check_amplification(ampl_df, sitecol):
 def delta(vs30, vs30ref):
     """
     >>> print(round(delta(760, 800), 3))
-    0.026
+    0.051
     """
-    return (numpy.abs(vs30 - vs30ref) / (vs30 + vs30ref)).max()
+    return 2 * (numpy.abs(vs30 - vs30ref) / (vs30 + vs30ref)).max()
 
 
 class HazardCalculator(BaseCalculator):
@@ -607,7 +607,7 @@ class HazardCalculator(BaseCalculator):
                 if self.sitecol and getattr(
                         gsim, 'DEFINED_FOR_REFERENCE_VELOCITY', None):
                     vs30ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
-                    if delta(self.sitecol.vs30, vs30ref) > .05:
+                    if delta(self.sitecol.vs30, vs30ref) > .10:
                         logging.warning(
                             f'{gsim.__class__.__name__}.'
                             f'DEFINED_FOR_REFERENCE_VELOCITY={vs30ref} '

@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Print a warning if there are vs30 values distant more than 5% from
+  * Print a warning if there are vs30 values distant more than 10% from
     DEFINED_FOR_REFERENCE_VELOCITY
 
   [Anirudh Rao]
