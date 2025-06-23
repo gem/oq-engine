@@ -651,7 +651,7 @@ def download_station_data_file(usgs_id, contents, user):
     err = {}
     if 'download/stationlist.json' in contents:
         stationlist_url = contents.get('download/stationlist.json')['url']
-        # fname = os.path.join(user, f'{usgs_id}-stations.json')
+        # fname = os.path.join(user.testdir, f'{usgs_id}-stations.json')
         # with open(fname, 'wb') as f:
         #     f.write(urlopen(stationlist_url).read())
         if user.testdir:
@@ -1016,12 +1016,14 @@ def download_finite_fault_rupture(usgs_id, user, monitor):
     finite_fault = _get_usgs_preferred_item(properties['products']['finite-fault'])
     ffm_url = finite_fault['contents']['FFM.geojson']['url']
     basic_inversion_url = finite_fault['contents']['basic_inversion.param']['url']
-    # fname = os.path.join(user, f'{usgs_id}-ffm.geojson')
+
+    # fname = os.path.join(user.testdir, f'{usgs_id}-ffm.geojson')
     # with open(fname, 'wb') as f:
     #     f.write(urlopen(ffm_url).read())
-    # fname = os.path.join(user, f'{usgs_id}-basic_inversion.param')
+    # fname = os.path.join(user.testdir, f'{usgs_id}-basic_inversion.param')
     # with open(fname, 'wb') as f:
     #     f.write(urlopen(basic_inversion_url).read())
+
     if user.testdir:
         ffm_fname = os.path.join(user.testdir, f'{usgs_id}-ffm.geojson')
         ffm_str = open(ffm_fname, 'rb').read()
