@@ -136,7 +136,7 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
         for spec of input and result values.
         """
         # Warn user if any sites GMM is being applied
-        # to have vs30s which are not 800 m/s
+        # to have vs30s which are not approx. 800 m/s
         if not np.all((ctx.vs30 >= 760) & (ctx.vs30 <= 840)):
             warnings.warn("The EMME24 active shallow crustal" \
                           "backbone should only be applied to " \
