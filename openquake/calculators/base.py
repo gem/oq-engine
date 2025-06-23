@@ -429,6 +429,14 @@ def check_amplification(ampl_df, sitecol):
                          decode('utf8'))
 
 
+def delta(vs30, vs30ref):
+    """
+    >>> print(round(delta(760, 800), 3))
+    0.026
+    """
+    return (numpy.abs(vs30 - vs30ref) / (vs30 + vs30ref)).max()
+
+
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
@@ -587,11 +595,23 @@ class HazardCalculator(BaseCalculator):
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
-        if self.amplifier:
+        if hasattr(self, 'full_lt'):
+            gsim_lt = self.full_lt.gsim_lt
+        else:
             gsim_lt = readinput.get_gsim_lt(oq)
+        if self.amplifier:            
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
-
+        for trt, gsims in gsim_lt.values.items():
+            for gsim in gsims:
+                if self.sitecol and getattr(
+                        gsim, 'DEFINED_FOR_REFERENCE_VELOCITY', None):
+                    vs30ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
+                    if delta(self.sitecol.vs30, vs30ref) > .05:
+                        logging.warning(
+                            f'{trt}: {gsim.__class__.__name__}.'
+                            f'DEFINED_FOR_REFERENCE_VELOCITY={vs30ref} '
+                            'is not satisfied, please check the vs30s')
 
     def import_perils(self):  # called in pre_execute
         """
