@@ -1643,9 +1643,7 @@ def view_asce(token, dstore):
     header = list(dics[0])
     res = [header] + [[None]*len(header)] * len(dics)
     for i, dic in enumerate(dics, 1):
-        row = list(dic.values())
-        for k in range(len(header)):
-            res[i][k] = row[k]
+        res[i] = list(dic.values())
     return res
 
 
