@@ -1380,6 +1380,7 @@ def _convert_rupture_file(rupture_file, usgs_id, user):
 
 
 def make_rup_from_dic(dic, rupture_file):
+    rup = None
     rupture_issue = None
     rupdic = dic.copy()
     rupdic.update(rupture_file=rupture_file)
