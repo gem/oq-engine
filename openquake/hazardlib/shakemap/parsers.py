@@ -1379,6 +1379,17 @@ def _convert_rupture_file(rupture_file, usgs_id, user):
     return rup, rupdic, rup_data, rupture_issue
 
 
+def make_rup_from_dic(dic, rupture_file):
+    rupture_issue = None
+    rupdic = dic.copy()
+    rupdic.update(rupture_file=rupture_file)
+    try:
+        rup = build_planar_rupture_from_dict(rupdic)
+    except ValueError as exc:
+        rupture_issue = {"status": "failed", "error_msg": str(exc)}
+    return rup, rupdic, rupture_issue
+
+
 def get_rup_dic(dic, user=User(), use_shakemap=False,
                 shakemap_version='usgs_preferred', rupture_file=None,
                 monitor=performance.Monitor()):
@@ -1410,13 +1421,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
     rup = None
     rupture_issue = None
     if approach == 'provide_rup_params':
-        rupdic = dic.copy()
-        rupdic.update(rupture_file=rupture_file)
-        try:
-            rup = build_planar_rupture_from_dict(rupdic)
-        except ValueError as exc:
-            rupture_issue = {"status": "failed", "error_msg": str(exc)}
-        return rup, rupdic, rupture_issue
+        return make_rup_from_dic(dic, rupture_file)
     if rupture_file:
         rup, rupdic, rup_data, rupture_issue = _convert_rupture_file(
             rupture_file, usgs_id, user)
