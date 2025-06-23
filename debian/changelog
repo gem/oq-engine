@@ -1,3 +1,7 @@
+  [Rao Anirudh]
+  * Fixed a bug when generating the aggregate curves for `affectedpop` and
+    `injured` loss types, due to missing units
+
   [Michele Simionato]
   * Extended `override_vs30` to multiple values
   * Forbidden GMF correlation with more then `max_sites_correl=1000`
@@ -186,7 +190,7 @@
     GrantEtAl2016RockSlopeFailure, NowickiJessee2018Landslides
 
   [Michele Simionato]
-  * Extended the output loss types to `affected` and `injured`
+  * Extended the output loss types to `affectedpop` and `injured`
   * Fixed `oq plot?hcurves`: the disaggregation PoEs were plotted in linear
     scale and not in logarithmic scale
   * Internal: introduced parameter `config.memory.gmf_data_rows`
