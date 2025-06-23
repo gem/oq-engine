@@ -602,14 +602,14 @@ class HazardCalculator(BaseCalculator):
         if self.amplifier:            
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
-        for trt, gsims in gsim_lt.values.items():
+        for gsims in gsim_lt.values.values():
             for gsim in gsims:
                 if self.sitecol and getattr(
                         gsim, 'DEFINED_FOR_REFERENCE_VELOCITY', None):
                     vs30ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
                     if delta(self.sitecol.vs30, vs30ref) > .05:
                         logging.warning(
-                            f'{trt}: {gsim.__class__.__name__}.'
+                            f'{gsim.__class__.__name__}.'
                             f'DEFINED_FOR_REFERENCE_VELOCITY={vs30ref} '
                             'is not satisfied, please check the vs30s')
 
