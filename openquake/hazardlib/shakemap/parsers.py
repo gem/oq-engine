@@ -1227,7 +1227,7 @@ def adjust_hypocenter(rup):
     surface_polygon = Polygon(boundary_coords)
     hypocenter_point = Point(rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z)
     warn = None
-    if not surface_polygon.contains(hypocenter_point):
+    if not surface_polygon.covers(hypocenter_point):
         surface_middle_point = rup.surface.get_middle_point()
         rup.hypocenter = surface_middle_point
         # removing '<' and '>' to avoid problems rendering the string in html
