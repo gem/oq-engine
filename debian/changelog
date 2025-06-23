@@ -1,3 +1,13 @@
+  [Paolo Tormene]
+  * The OQ-Impact workflow option 'Use finite rupture from the USGS' was
+    replaced by two options 'Use ShakeMap fault rupture from the USGS'
+    and 'Use finite-fault model from the USGS', making it possible to convert
+    a wider set of ruptures from the USGS data
+  * A sanity check was added to make sure that the hypocenter is inside the
+    surface of the rupture. Otherwise, it is relocated to the middle point of
+    the surface and a warning indicates the original and translated
+    coordinates.
+
   [Michele Simionato]
   * Print a warning if there are vs30 values distant more than 10% from
     DEFINED_FOR_REFERENCE_VELOCITY
