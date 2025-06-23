@@ -69,8 +69,9 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_2b(self):
         POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs',
                 'msr': 'WC1994'}
-        _rup, rupdic, _params, err = impact_validate(POST, user)
-        self.assertEqual(rupdic['rupture_from_usgs'], True)
+        rup, rupdic, _params, err = impact_validate(POST, user)
+        self.assertIsInstance(rup, BaseRupture)
+        self.assertEqual(rupdic['rupture_was_loaded'], True)
         self.assertEqual(rupdic['mosaic_models'], ['SAM'])
         self.assertEqual(err, {})
 
@@ -113,7 +114,7 @@ class AristotleValidateTestCase(unittest.TestCase):
                 'mosaic_models': ['CHN', 'IND'],
                 'rake': 90.0,
                 'rupture_file': rupture_file,
-                'rupture_from_usgs': True,
+                'rupture_was_loaded': True,
                 'strike': 295.24732,
                 'trts': {'CHN': ['Active Shallow Crust',
                                  'Himalayan Thrust',

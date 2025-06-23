@@ -122,7 +122,6 @@ class ShakemapParsersTestCase(unittest.TestCase):
             pga_value = float(row['PGA_VALUE'])
             self.assertEqual(pga_value, 0.62308)
 
-
     def test_4(self):
         # point_rup
         _rup, dic, _err = get_rup_dic(

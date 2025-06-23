@@ -206,7 +206,7 @@ IMPACT_FORM_DEFAULTS = {
     'station_data_file': '',
     'maximum_distance_stations': '',
     'msr': 'WC1994',
-    'rupture_from_usgs_loaded': '',
+    'rupture_was_loaded': '',
     'rupture_file_input': '',
     'station_data_file_input': '',
     'station_data_file_loaded': '',
@@ -359,7 +359,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rupture_file
-    rupdic['rupture_from_usgs_loaded'] = rup is not None
+    rupdic['rupture_was_loaded'] = rup is not None
     if 'description' in dic and dic['description']:
         params['description'] = dic['description']
     if len(params) > 1:  # called by impact_run

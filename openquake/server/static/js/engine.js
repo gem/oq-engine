@@ -515,7 +515,7 @@ function capitalizeFirstLetter(val) {
         for (field of rupture_form_fields) {
             $('input#' + field).val(impact_form_defaults[field]);
         }
-        $('input#rupture_from_usgs_loaded').val('');
+        $('input#rupture_was_loaded').val('');
         // nodal planes are re-populated when loading rupture data; msrs are populated only once
         $('select#nodal_plane').empty();
         $('select#msr').val('WC1994');
@@ -927,11 +927,11 @@ function capitalizeFirstLetter(val) {
                     //       therefore we can not pre-populate the rupture_file_input with the rupture_file
                     //       obtained converting the USGS rupture.json, and we use a separate field referencing it
                     $('#rupture_from_usgs').val(data.rupture_file);
-                    $('#rupture_from_usgs_loaded').val(data.rupture_from_usgs_loaded ? 'Loaded' : 'N.A.');
+                    $('#rupture_was_loaded').val(data.rupture_was_loaded ? 'Loaded' : 'N.A.');
                     var conversion_issues = '';
                     if ('rupture_issue' in data) {
                         conversion_issues += '<p>' + data.rupture_issue + '</p>';
-                        $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
+                        $('#rupture_was_loaded').val('N.A. (conversion issue)');
                     }
                     if ('warning_msg' in data) {
                         conversion_issues += '<p>' + data.warning_msg + '</p>';
