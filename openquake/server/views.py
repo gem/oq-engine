@@ -935,6 +935,8 @@ def impact_run(request):
     if request.user.level == 0:
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    if not rupture_path:
+        rupture_path = request.POST.get('rupture_from_usgs', '')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
     station_data_file_from_usgs = request.POST.get(
         'station_data_file_from_usgs', '')

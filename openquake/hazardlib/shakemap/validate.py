@@ -358,7 +358,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         trts[mosaic_model] = get_trts_around(mosaic_model, expo)
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
-    rupdic['rupture_from_usgs'] = rup is not None
+    rupdic['rupture_from_usgs'] = rupture_file
+    rupdic['rupture_from_usgs_loaded'] = rup is not None
     if 'description' in dic and dic['description']:
         params['description'] = dic['description']
     if len(params) > 1:  # called by impact_run

@@ -926,8 +926,8 @@ function capitalizeFirstLetter(val) {
                     //       set a specific file in an HTML file input element using JavaScript or jQuery,
                     //       therefore we can not pre-populate the rupture_file_input with the rupture_file
                     //       obtained converting the USGS rupture.json, and we use a separate field referencing it
-                    $('#rupture_from_usgs').val(data.rupture_from_usgs);
-                    $('#rupture_from_usgs_loaded').val(data.rupture_from_usgs ? 'Loaded' : 'N.A.');
+                    $('#rupture_from_usgs').val(data.rupture_file);
+                    $('#rupture_from_usgs_loaded').val(data.rupture_from_usgs_loaded ? 'Loaded' : 'N.A.');
                     var conversion_issues = '';
                     if ('rupture_issue' in data) {
                         conversion_issues += '<p>' + data.rupture_issue + '</p>';

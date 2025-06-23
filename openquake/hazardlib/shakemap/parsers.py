@@ -1447,8 +1447,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                 with monitor('Download finite fault rupture'):
                     rupture_file = download_finite_fault_rupture(
                         usgs_id, user, monitor)
-                    # FIXME: check why the hypocenter is different after the calc runs
-            else:
+            else:  # 'use_shakemap_from_usgs' or 'use_shakemap_fault_rup_from_usgs'
                 with monitor('Downloading rupture json'):
                     rup_data, rupture_file = download_shakemap_rupture_data(
                         usgs_id, contents, user)
@@ -1470,7 +1469,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
         rupdic['shakemap_array'] = shakemap
     rupdic['title'] = properties['title']
     rupdic['shakemap_desc'] = shakemap_desc
-    if not rup_data:  # in parsers_test
+    if not rup and not rup_data:  # in parsers_test
         if approach == 'use_pnt_rup_from_usgs':
             rupdic['msr'] = 'PointMSR'
         try:
