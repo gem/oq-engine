@@ -778,8 +778,11 @@ function capitalizeFirstLetter(val) {
 
             $('input[name="usgs_id"]').on('input', function() {
                 reset_rupture_form_inputs();
-                set_shakemap_version_selector();
-                if ($('input[name="impact_approach"]:checked').val() === 'build_rup_from_usgs') {
+                var selected_approach = $('input[name="impact_approach"]:checked').val();
+                if (['use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs'].includes(selected_approach)) {
+                    set_shakemap_version_selector();
+                }
+                if (selected_approach === 'build_rup_from_usgs') {
                     // retrieve nodal planes only when building rupture from USGS nodal plane solutions
                     var formData = {
                         usgs_id: $.trim($("#usgs_id").val()),
@@ -860,6 +863,11 @@ function capitalizeFirstLetter(val) {
                     if (!approaches_requiring_usgs_id.includes(selected_approach)) {
                         $('.usgs_id_grp').addClass('hidden');
                     }
+                }
+                if (['use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs'].includes(selected_approach)) {
+                    $('div#shakemap_version_grp').removeClass('hidden');
+                } else {
+                    $('div#shakemap_version_grp').addClass('hidden');
                 }
             });
 
