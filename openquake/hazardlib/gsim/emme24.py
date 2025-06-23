@@ -126,6 +126,8 @@ class EMME24BB_GMM1SGM1(ChiouYoungs2014):
 
     This model is only applicable for sites with a Vs30 of 800 m/s.
     """
+    DEFINED_FOR_REFERENCE_VELOCITY = 800.
+
     experimental = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
