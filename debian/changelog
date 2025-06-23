@@ -1,4 +1,4 @@
-  [Rao Anirudh]
+  [Anirudh Rao]
   * Fixed a bug when generating the aggregate curves for `affectedpop` and
     `injured` loss types, due to missing units
 
