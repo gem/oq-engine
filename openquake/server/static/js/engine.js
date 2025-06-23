@@ -449,6 +449,11 @@ function capitalizeFirstLetter(val) {
         'use_finite_fault_model_from_usgs'
     ];
 
+    const approaches_requiring_shakemap_version = [
+        'use_shakemap_from_usgs',
+        'use_shakemap_fault_rup_from_usgs',
+    ]
+
     const retrieve_data_btn_txt_map = {
         'use_shakemap_from_usgs': {
             'initial': 'Retrieve ShakeMap data',
@@ -779,14 +784,13 @@ function capitalizeFirstLetter(val) {
             $('input[name="usgs_id"]').on('input', function() {
                 reset_rupture_form_inputs();
                 var selected_approach = $('input[name="impact_approach"]:checked').val();
-                if (['use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs'].includes(selected_approach)) {
+                if (approaches_requiring_shakemap_version.includes(selected_approach)) {
                     set_shakemap_version_selector();
                 }
                 if (selected_approach === 'build_rup_from_usgs') {
                     // retrieve nodal planes only when building rupture from USGS nodal plane solutions
                     var formData = {
                         usgs_id: $.trim($("#usgs_id").val()),
-                        shakemap_version: $("#shakemap_version").val()
                     };
                     $('#submit_impact_get_rupture').prop('disabled', true);
                     $('input[name="impact_approach"]').prop('disabled', true);
@@ -864,7 +868,7 @@ function capitalizeFirstLetter(val) {
                         $('.usgs_id_grp').addClass('hidden');
                     }
                 }
-                if (['use_shakemap_from_usgs', 'use_shakemap_fault_rup_from_usgs'].includes(selected_approach)) {
+                if (approaches_requiring_shakemap_version.includes(selected_approach)) {
                     $('div#shakemap_version_grp').removeClass('hidden');
                 } else {
                     $('div#shakemap_version_grp').addClass('hidden');
@@ -891,7 +895,9 @@ function capitalizeFirstLetter(val) {
                 if (require_usgs_id() || get_selected_approach() == 'provide_rup_params') {
                     // when providing rupture parameters, usgs_id is set to 'UserProvided'
                     formData.append('usgs_id', usgs_id);
-                    formData.append('shakemap_version', $("#shakemap_version").val());
+                    if (approaches_requiring_shakemap_version.includes(selected_approach)) {
+                        formData.append('shakemap_version', $("#shakemap_version").val());
+                    }
                 }
                 formData.append('use_shakemap', use_shakemap());
                 if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
@@ -1092,7 +1098,9 @@ function capitalizeFirstLetter(val) {
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
-                formData.append('shakemap_version', $("#shakemap_version").val());
+                if (approaches_requiring_shakemap_version.includes(selected_approach)) {
+                    formData.append('shakemap_version', $("#shakemap_version").val());
+                }
                 formData.append('use_shakemap', use_shakemap());
                 formData.append('lon', $("#lon").val());
                 formData.append('lat', $("#lat").val());
