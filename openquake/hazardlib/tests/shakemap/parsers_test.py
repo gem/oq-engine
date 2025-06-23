@@ -288,6 +288,27 @@ class ShakemapParsersTestCase(unittest.TestCase):
                 user=user, use_shakemap=True, shakemap_version=first_version['id'])
         self.assertIsNotNone(dic['shakemap_array'])
 
+    def test_16(self):
+        _rup, _dic, err = get_rup_dic(
+            {'usgs_id': 'usp0001ccb', 'approach': 'use_finite_fault_model_from_usgs'},
+            user=user, use_shakemap=True)
+        self.assertIn('The finite-fault was not found', err['error_msg'])
+
+    def test_17(self):
+        rup, dic, _err = get_rup_dic(
+            {'usgs_id': 'us6000jllz', 'approach': 'use_finite_fault_model_from_usgs'},
+            user=user, use_shakemap=True)
+        self.assertIsInstance(rup, BaseRupture)
+        # ignoring file paths
+        expected_dic = {
+            'lon': 37.0485, 'lat': 37.25841, 'dep': 14.0, 'mag': 7.899000177543584,
+            'rake': 0.0, 'strike': 41.59611892700195, 'dip': 80.92811584472656,
+            'usgs_id': 'us6000jllz',
+            'title': 'M 7.8 - Pazarcik earthquake, Kahramanmaras earthquake sequence',
+            'shakemap_desc': 'v17: 2023-04-14 18:07:22'}
+        for key in expected_dic:
+            self.assertEqual(dic[key], expected_dic[key])
+
 
 """
 NB: to profile a test you can use
