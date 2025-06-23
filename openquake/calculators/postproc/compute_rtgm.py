@@ -46,7 +46,7 @@ try:
     import rtgmpy
 except ImportError:
     rtgmpy = None
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
@@ -554,17 +554,22 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
     """
     :yields: (site, rtgm_df, warning)
     """
+    sites = general.AccumDict(accum=[])
     for site in dstore['sitecol']:
-        oq = dstore['oqparam']
-        imts = list(oq.imtls)
-        sa02 = imts.index('SA(0.2)')
-        sa10 = imts.index('SA(1.0)')
+        sites[site.location.x, site.location.y].append(site)
+    oq = dstore['oqparam']
+    imts = list(oq.imtls)
+    sa02 = imts.index('SA(0.2)')
+    sa10 = imts.index('SA(1.0)')
+    stats = list(oq.hazard_stats())
+    assert stats[0] == 'mean', stats[0]
+    hcurves_all = dstore['hcurves-stats'][:]
+    mrs_all = dstore['mean_rates_by_src'][:]
+    for sites in sites.values():
+        [site] = sites
         sid = site.id
-        mrs = dstore['mean_rates_by_src'][sid]
-
-        stats = list(oq.hazard_stats())
-        assert stats[0] == 'mean', stats[0]
-        hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
+        mrs = mrs_all[sid]
+        hcurves = hcurves_all[sid, 0]  # shape ML1
         mean_rates = to_rates(hcurves)
         loc = site.location
         if mrs.sum() == 0:
