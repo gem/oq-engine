@@ -849,7 +849,8 @@ def impact_get_shakemap_versions(request):
 @require_http_methods(['POST'])
 def impact_get_nodal_planes_and_info(request):
     """
-    Return a list of nodal planes, lon, lat, dep and mag, for the given usgs_id
+    Return a list of nodal planes and a dict with lon, lat, dep and mag,
+    for the given usgs_id
 
     :param request:
         a `django.http.HttpRequest` object containing usgs_id

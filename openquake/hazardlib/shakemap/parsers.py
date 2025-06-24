@@ -1165,10 +1165,13 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
 
 def get_nodal_planes_and_info(usgs_id, user=User(), monitor=performance.Monitor()):
     """
-    Retrieve the nodal planes for the given USGS id
+    Retrieve the nodal planes and a dict with lon, lat, dep and mag,
+    for the given USGS id
 
     :param usgs_id: ShakeMap ID
-    :returns (a dictionary with nodal planes information, error dictionary or {})
+    :returns (a dictionary with nodal planes information,
+              a dictionary with lon, lat, dep and mag,
+              error dictionary or {})
     """
     properties, err = _get_properties(usgs_id, user, monitor)
     if err:
