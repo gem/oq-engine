@@ -745,7 +745,7 @@ def impact_callback(
         params_to_print += (
             f'{n_stations} seismic stations were loaded (please see'
             f'in the calculation log if any of them were discarded)\n')
-    else:
+    elif 'shakemap_uri' not in params:
         params_to_print += 'No seismic stations were considered\n'
 
     from_email = settings.EMAIL_HOST_USER
