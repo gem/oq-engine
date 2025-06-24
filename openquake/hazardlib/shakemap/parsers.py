@@ -1163,7 +1163,7 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
     return contents, properties, shakemap_array, shakemap_desc, err
 
 
-def get_nodal_planes(usgs_id, user=User(), monitor=performance.Monitor()):
+def get_nodal_planes_and_info(usgs_id, user=User(), monitor=performance.Monitor()):
     """
     Retrieve the nodal planes for the given USGS id
 
@@ -1174,7 +1174,16 @@ def get_nodal_planes(usgs_id, user=User(), monitor=performance.Monitor()):
     if err:
         return None, err
     nodal_planes, err = _get_nodal_planes_from_properties(properties)
-    return nodal_planes, err
+    info = _get_earthquake_info_from_properties(properties)
+    return nodal_planes, info, err
+
+
+def _get_earthquake_info_from_properties(properties):
+    origin = _get_usgs_preferred_item(properties['products']['origin'])
+    props = origin['properties']
+    info = dict(lon=props['longitude'], lat=props['latitude'], dep=props['depth'],
+                mag=props['magnitude'])
+    return info
 
 
 def _get_nodal_planes_from_properties(properties):

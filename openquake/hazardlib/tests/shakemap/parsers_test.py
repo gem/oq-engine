@@ -21,7 +21,7 @@ import unittest
 import csv
 from openquake.hazardlib.shakemap.parsers import (
     get_rup_dic, User, utc_to_local_time, get_stations_from_usgs,
-    get_shakemap_versions, get_nodal_planes)
+    get_shakemap_versions, get_nodal_planes_and_info)
 from openquake.hazardlib.source.rupture import BaseRupture
 from openquake.hazardlib.geo.surface.complex_fault import ComplexFaultSurface
 
@@ -157,8 +157,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
             'NP1': {'dip': 88.71, 'rake': -179.18, 'strike': 317.63},
             'NP2': {'dip': 89.18, 'rake': -1.29, 'strike': 227.61}
         }
-        nodal_planes, _err = get_nodal_planes(usgs_id, user=user)
+        expected_info = {'lon': '37.0143', 'lat': '37.2256', 'dep': '10', 'mag': '7.8'}
+        nodal_planes, info, _err = get_nodal_planes_and_info(usgs_id, user=user)
         self.assertEqual(nodal_planes, expected_nodal_planes)
+        self.assertEqual(info, expected_info)
 
     def test_7b(self):
         # Case reading nodal planes first from the moment-tensor (not found)
@@ -168,8 +170,10 @@ class ShakemapParsersTestCase(unittest.TestCase):
             'NP1': {'dip': 37.0, 'rake': -64.0, 'strike': 285.0},
             'NP2': {'dip': 57.0, 'rake': -109.0, 'strike': 73.0}
         }
-        nodal_planes, _err = get_nodal_planes(usgs_id, user=user)
+        expected_info = {'lon': '22.934', 'lat': '38.222', 'dep': '33', 'mag': '6.7'}
+        nodal_planes, info, _err = get_nodal_planes_and_info(usgs_id, user=user)
         self.assertEqual(nodal_planes, expected_nodal_planes)
+        self.assertEqual(info, expected_info)
 
     def test_8(self):
         dic_in = {'usgs_id': 'us6000jllz', 'lon': 37.0143, 'lat': 37.2256,

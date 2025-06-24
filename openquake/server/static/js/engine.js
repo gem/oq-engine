@@ -797,13 +797,17 @@ function capitalizeFirstLetter(val) {
                     set_retrieve_data_btn_txt('retrieving_nodal_planes');
                     $.ajax({
                         type: "POST",
-                        url: gem_oq_server_url + "/v1/impact_get_nodal_planes",
+                        url: gem_oq_server_url + "/v1/impact_get_nodal_planes_and_info",
                         data: formData,
                         dataType: "json",
                         encode: true,
                     }).done(function (data) {
                         if ('nodal_planes' in data && data.nodal_planes) {
                             populate_nodal_plane_selector(data.nodal_planes);
+                            $('input#lon').val(data.info.lon);
+                            $('input#lat').val(data.info.lat);
+                            $('input#dep').val(data.info.dep);
+                            $('input#mag').val(data.info.mag);
                         }
                         if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
                             $nodal_plane = $('select#nodal_plane');
