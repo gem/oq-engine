@@ -184,8 +184,16 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     # avg_losses and the calculation may hang; if too large, run out of memory
     slices = performance.split_slices(
         df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+    avg = {}
     for s0, s1 in slices:
-        yield event_based_risk(df[s0:s1], oqparam, monitor)
+        dic = event_based_risk(df[s0:s1], oqparam, monitor)
+        if not avg:
+            avg.update(dic.pop('avg'))
+        else:
+            for ln, arr in dic.pop('avg').items():
+                avg[ln] += arr
+        yield dic
+    yield dict(avg=avg)
 
 
 def event_based_risk(df, oqparam, monitor):
@@ -493,18 +501,19 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         if not dic:
             return
-        self.gmf_bytes += dic.pop('gmf_bytes')
+        self.gmf_bytes += dic.pop('gmf_bytes', 0)
         self.oqparam.ground_motion_fields = False  # hack
-        with self.monitor('saving risk_by_event'):
-            alt = dic.pop('alt')
-            if alt is not None:
+        if 'alt' in dic:
+            with self.monitor('saving risk_by_event'):
+                alt = dic.pop('alt')
                 for name in alt.columns:
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
-        with self.monitor('saving avg_losses'):
-            for ln, csr in dic.pop('avg').items():
-                coo = csr.tocoo()
-                self.avg_losses[ln][coo.row, coo.col] += coo.data
+        if self.oqparam.avg_losses and 'avg' in dic:
+            with self.monitor('saving avg_losses'):
+                for ln, csr in dic.pop('avg').items():
+                    coo = csr.tocoo()
+                    self.avg_losses[ln][coo.row, coo.col] += coo.data
 
     def post_execute(self, dummy):
         """
