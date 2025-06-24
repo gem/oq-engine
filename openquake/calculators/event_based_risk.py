@@ -387,7 +387,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         ELT = len(oq.ext_loss_types)
         if oq.calculation_mode == 'event_based_risk' and oq.avg_losses:
             R = 1 if oq.collect_rlzs else self.R
-            logging.info('Transfering %s per core in avg_losses',
+            logging.info('Transfering %s per task in avg_losses',
                          general.humansize(A * ELT * 8 * R))
             if A * ELT * 8 > int(config.memory.avg_losses_max):
                 raise ValueError('For large exposures you must set '
