@@ -449,10 +449,8 @@ function capitalizeFirstLetter(val) {
         'use_finite_fault_model_from_usgs'
     ];
 
-    const approaches_requiring_shakemap_version = [
-        'use_shakemap_from_usgs',
-        'use_shakemap_fault_rup_from_usgs',
-    ]
+    // The ShakeMap version is needed to download stations accordingly
+    const approaches_requiring_shakemap_version = approaches_requiring_usgs_id
 
     const retrieve_data_btn_txt_map = {
         'use_shakemap_from_usgs': {
