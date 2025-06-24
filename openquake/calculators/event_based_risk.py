@@ -142,7 +142,8 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                     for c, col in enumerate(['variance', 'loss']):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
-    return loss_by_AR, pandas.DataFrame(dic)
+    avg = {ln: sum(ls) for ln, ls in loss_by_AR.items() if ls}
+    return avg, pandas.DataFrame(dic)
 
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
@@ -501,9 +502,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
         with self.monitor('saving avg_losses'):
-            for ln, ls in dic.pop('avg').items():
-                for coo in ls:
-                    self.avg_losses[ln][coo.row, coo.col] += coo.data
+            for ln, csr in dic.pop('avg').items():
+                coo = csr.tocoo()
+                self.avg_losses[ln][coo.row, coo.col] += coo.data
 
     def post_execute(self, dummy):
         """
