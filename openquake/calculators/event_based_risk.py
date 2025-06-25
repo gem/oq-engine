@@ -142,14 +142,6 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                     for c, col in enumerate(['variance', 'loss']):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
-    for ln in list(loss_by_AR):
-        if loss_by_AR[ln]['aids']:
-            aids = numpy.concatenate(loss_by_AR[ln]['aids'])
-            rlzs = numpy.concatenate(loss_by_AR[ln]['rlzs'])
-            loss = numpy.concatenate(loss_by_AR[ln]['loss'])
-            loss_by_AR[ln] = sparse.coo_matrix((loss, (aids, rlzs)), (A, R))
-        else:
-            del loss_by_AR[ln]
     return loss_by_AR, pandas.DataFrame(dic)
 
 
@@ -191,9 +183,35 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     # avg_losses and the calculation may hang; if too large, run out of memory
     slices = performance.split_slices(
         df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+    avg = {}
+    alts = []
+    gmf_bytes = 0
+    monitor.fix_avg = False
     for s0, s1 in slices:
-        yield event_based_risk(df[s0:s1], oqparam, monitor)
+        dic = event_based_risk(df[s0:s1], oqparam, monitor)
+        alts.append(dic['alt'])
+        gmf_bytes += dic['gmf_bytes']
+        if not avg:
+            avg.update(dic['avg'])
+        else:
+            for ln in dic['avg']:
+                for k, arr in dic['avg'][ln].items():
+                    avg[ln][k].append(arr)
+    return dict(avg=fix_avg(avg, oqparam.A, dic['R']),
+                alt=pandas.concat(alts),
+                gmf_bytes=gmf_bytes)
 
+
+def fix_avg(avg, A, R):
+    out = {}
+    for ln in list(avg):
+        if avg[ln]['aids']:
+            aids = numpy.concatenate(avg[ln]['aids'])
+            rlzs = numpy.concatenate(avg[ln]['rlzs'])
+            loss = numpy.concatenate(avg[ln]['loss'])
+            out[ln] = sparse.coo_matrix((loss, (aids, rlzs)), (A, R))
+    return out
+    
 
 def event_based_risk(df, oqparam, monitor):
     """
@@ -211,7 +229,8 @@ def event_based_risk(df, oqparam, monitor):
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
 
-    ARK = (oqparam.A, len(weights), oqparam.K)
+    R = len(weights)
+    ARK = (oqparam.A, R, oqparam.K)
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -221,7 +240,9 @@ def event_based_risk(df, oqparam, monitor):
     outs = gen_outputs(df, crmodel, rng, monitor)
     avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(),
                       monitor)
-    return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
+    if getattr(monitor, 'fix_avg', True):
+        avg = fix_avg(avg, oqparam.A, R)
+    return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum(), R=R)
 
 
 def gen_outputs(df, crmodel, rng, monitor):
