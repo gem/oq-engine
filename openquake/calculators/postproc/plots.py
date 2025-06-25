@@ -124,20 +124,18 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
                       cmap='jet', s=markersize)
     plt.colorbar(coll)
-    ax = add_borders(ax, alpha=0.2)
-    min_x = shakemap_array['lon'].min()
-    max_x = shakemap_array['lon'].max()
-    min_y = shakemap_array['lat'].min()
-    max_y = shakemap_array['lat'].max()
     if rupture is not None:
-        ax, rup_min_x, rup_min_y, rup_max_x, rup_max_y = add_rupture(
+        ax = add_rupture(
             ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
             surf_facecolor='none', surf_linestyle='--')
-        min_x = min(min_x, rup_min_x)
-        max_x = max(max_x, rup_max_x)
-        min_y = min(min_y, rup_min_y)
-        max_y = max(max_y, rup_max_y)
-    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
+    ax.set_xlim(auto=True)
+    ax.set_ylim(auto=True)
+    ax.relim()
+    ax.autoscale_view()
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    ax = add_borders(ax, alpha=0.2)
+    xlim, ylim = adjust_limits(xlim[0], xlim[1], ylim[0], ylim[1])
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     if with_cities:
@@ -171,14 +169,16 @@ def plot_avg_gmf(ex, imt):
                       s=markersize)
     plt.colorbar(coll)
 
+    ax.set_xlim(auto=True)
+    ax.set_ylim(auto=True)
+    ax.relim()
+    ax.autoscale_view()
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+
     ax = add_borders(ax)
 
-    minx = avg_gmf['lons'].min()
-    maxx = avg_gmf['lons'].max()
-    miny = avg_gmf['lats'].min()
-    maxy = avg_gmf['lats'].max()
-
-    xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
+    xlim, ylim = adjust_limits(xlim[0], xlim[1], ylim[0], ylim[1])
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     return plt
@@ -193,38 +193,24 @@ def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
     if facecolor is not None:
         fill_params['facecolor'] = facecolor
     ax.fill(*surface.get_surface_boundaries(), **fill_params)
-    return surface.get_bounding_box()
+    return ax
 
 
 def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
                 surf_facecolor=None, surf_linestyle='-'):
     if hasattr(rup.surface, 'surfaces'):
-        min_x = 180
-        max_x = -180
-        min_y = 90
-        max_y = -90
         for surf_idx, surface in enumerate(rup.surface.surfaces):
-            min_x_, max_x_, max_y_, min_y_ = add_surface(
+            ax = add_surface(
                 ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
                 facecolor=surf_facecolor, linestyle=surf_linestyle)
-            min_x = min(min_x, min_x_)
-            max_x = max(max_x, max_x_)
-            min_y = min(min_y, min_y_)
-            max_y = max(max_y, max_y_)
     else:
-        min_x, max_x, max_y, min_y = add_surface(
+        ax = add_surface(
             ax, rup.surface, 'Surface', alpha=surf_alpha,
             facecolor=surf_facecolor, linestyle=surf_linestyle)
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
-    # Make sure to display the hypocenter if it is outside all surfaces
-    # (it may be useful for debugging purposes)
-    min_x = min(min_x, rup.hypocenter.x)
-    max_x = max(max_x, rup.hypocenter.x)
-    min_y = min(min_y, rup.hypocenter.y)
-    max_y = max(max_y, rup.hypocenter.y)
-    return ax, min_x, min_y, max_x, max_y
+    return ax
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
@@ -243,10 +229,16 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     ax.set_title(title)
     ax.set_aspect('equal')
     ax.grid(True)
-    ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
+    ax, add_rupture(ax, rup)
+    ax.set_xlim(auto=True)
+    ax.set_ylim(auto=True)
+    ax.relim()
+    ax.autoscale_view()
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
     if with_borders:
         ax = add_borders(ax)
-    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
+    xlim, ylim = adjust_limits(xlim[0], xlim[1], ylim[0], ylim[1])
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
     if with_cities:
@@ -264,6 +256,7 @@ def add_surface_3d(ax, surface, label):
     lat_grid = numpy.array([[lat[0], lat[1]], [lat[3], lat[2]]])
     depth_grid = numpy.array([[depth[0], depth[1]], [depth[3], depth[2]]])
     ax.plot_surface(lon_grid, lat_grid, depth_grid, alpha=0.5, label=label)
+    return ax
 
 
 def plot_rupture_3d(rup):
@@ -273,9 +266,9 @@ def plot_rupture_3d(rup):
     ax = fig.add_subplot(111, projection='3d')
     if hasattr(rup.surface, 'surfaces'):
         for surf_idx, surface in enumerate(rup.surface.surfaces):
-            add_surface_3d(ax, surface, 'Surface %d' % surf_idx)
+            ax = add_surface_3d(ax, surface, 'Surface %d' % surf_idx)
     else:
-        add_surface_3d(ax, rup.surface, 'Surface')
+        ax = add_surface_3d(ax, rup.surface, 'Surface')
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z, marker='*',
             color='orange', label='Hypocenter', alpha=.5,
             linestyle='', markersize=8)
@@ -296,7 +289,7 @@ def plot_geom(multipol, lons, lats):
     plt.scatter(lons, lats, marker='.', color='green')
     plt.show()
 
-    
+
 def get_assetcol(calc_id):
     try:
         dstore = datastore.read(calc_id)

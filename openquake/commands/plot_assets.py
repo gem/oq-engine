@@ -21,7 +21,7 @@ import numpy
 import shapely
 import logging
 from openquake.commonlib import datastore
-from openquake.hazardlib.geo.utils import cross_idl, get_bbox
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes, add_rupture,
@@ -89,7 +89,6 @@ def main(calc_id: int = -1, site_model=False,
         stations = complete[station_sites]
         p.scatter(stations['lon'], stations['lat'], marker='D', c='brown',
                   label='stations', s=markersize_site_model)
-    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     if oq.rupture_xml or oq.rupture_dict:
         use_shakemap = dstore['oqparam'].shakemap_uri
         if use_shakemap:
@@ -104,7 +103,7 @@ def main(calc_id: int = -1, site_model=False,
                 and not use_shakemap):
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_ebrupture(dstore, rup_id=0).rupture
-            ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
+            ax, add_rupture(ax, rup)
         else:
             p.scatter(xlon, xlat, marker='*', color='orange',
                       label='hypocenter', alpha=.5)
@@ -121,13 +120,13 @@ def main(calc_id: int = -1, site_model=False,
         ax.set_ylim(auto=True)
         ax.relim()
         ax.autoscale_view()
-        # ax.margins(x=0.1, y=0.1)  # 10% margin on both axes  # doesn't seem to work
+        # ax.margins(x=0.1, y=0.1)  # this doesn't seem to have any effect
 
+    # make sure to use the same xlim, ylim even after adding country borders
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
-
+    xlim, ylim = adjust_limits(xlim[0], xlim[1], ylim[0], ylim[1])
     ax = add_borders(ax)
-
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
 
