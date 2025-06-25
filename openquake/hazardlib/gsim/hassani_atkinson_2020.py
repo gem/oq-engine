@@ -236,8 +236,6 @@ class HassaniAtkinson2020SInter(GMPE):
     Ground-Motion Model for Subduction Earthquakes in Japan, Bull.
     Seismol. Soc. Am. 111, 951–974, doi: 10.1785/0120200257
     """
-    gmpe_table = None  # use split_by_mag
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
 
     #: Supported intensity measure types are spectral acceleration,
