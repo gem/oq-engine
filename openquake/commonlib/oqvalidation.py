@@ -479,7 +479,7 @@ max_data_transfer:
 max_gmvs_chunk:
   Maximum number of rows of the gmf_data table per task.
   Example: *max_gmvs_chunk = 200_000*
-  Default: 500_000
+  Default: 1_000_000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -1080,7 +1080,7 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_blocks = valid.Param(valid.positiveint, 100)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_chunk = valid.Param(valid.positiveint, 500_000)  # for 2GB limit
+    max_gmvs_chunk = valid.Param(valid.positiveint, 1_000_000)  # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
