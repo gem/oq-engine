@@ -60,9 +60,14 @@ def fast_agg(keys, values, correl, li, acc):
         acc[ukey][li] += avalue
 
 
-def update_losses(loss_by_AR, ln, alt, rlz_id, AR, collect_rlzs):
+def update_losses(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
     """
-    add a sparse coo matrix with the losses per asset and realization
+    Populate loss_by_AR a dictionary ln -> {'aids': [], 'rlzs': [], 'loss': []}
+    where `ln` is the loss name, i.e. "structural", "injured", etc
+
+    :param alt: DataFrame agg_loss_table
+    :param rlz_id: effective realization index (usually 0)
+    :param collect_rlzs: usually True
     """
     if collect_rlzs or len(numpy.unique(rlz_id)) == 1:
         ldf = pandas.DataFrame(
@@ -115,8 +120,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
             alt = out[ln]
             if oq.avg_losses:
                 with mon_avg:
-                    update_losses(
-                        loss_by_AR, ln, alt, rlz_id, (A, R), oq.collect_rlzs)
+                    update_losses(loss_by_AR, ln, alt, rlz_id, oq.collect_rlzs)
             with mon_agg:
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
@@ -191,8 +195,17 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     # avg_losses and the calculation may hang; if too large, run out of memory
     slices = performance.split_slices(
         df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+    avg = {}
     for s0, s1 in slices:
-        yield event_based_risk(df[s0:s1], oqparam, monitor)
+        dic = event_based_risk(df[s0:s1], oqparam, monitor)
+        avg_ = dic.pop('avg')
+        if not avg:
+            avg.update(avg_)
+        else:
+            for ln in avg_:
+                avg[ln] += avg_[ln]
+        yield dic
+    yield dict(avg=avg)
 
 
 def event_based_risk(df, oqparam, monitor):
@@ -500,17 +513,22 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         if not dic:
             return
-        self.gmf_bytes += dic.pop('gmf_bytes')
+        self.gmf_bytes += dic.pop('gmf_bytes', 0)
         self.oqparam.ground_motion_fields = False  # hack
-        with self.monitor('saving risk_by_event'):
-            alt = dic.pop('alt')
-            if alt is not None:
+        if 'alt' in dic:
+            with self.monitor('saving risk_by_event'):
+                alt = dic.pop('alt')
                 for name in alt.columns:
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
-        with self.monitor('saving avg_losses'):
-            for ln, coo in dic.pop('avg').items():
-                self.avg_losses[ln][coo.row, coo.col] += coo.data
+        if 'avg' in dic:
+            # avg_losses are stored as coo matrices or csr matrices
+            # for each loss name (ln)
+            with self.monitor('saving avg_losses'):
+                for ln, coo in dic.pop('avg').items():
+                    if not hasattr(coo, 'row'):  # csr_matrix
+                        coo = coo.tocoo()
+                    self.avg_losses[ln][coo.row, coo.col] += coo.data
 
     def post_execute(self, dummy):
         """
