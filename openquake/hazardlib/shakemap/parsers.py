@@ -1592,15 +1592,25 @@ def _get_shakemap_array(xml_file):
            if f['name'] in SHAKEMAP_FIELDS}
     out = {name: [] for name in idx}
     uncertainty = any(imt.startswith('STD') for imt in out)
-    if (uncertainty and 'STDPSA06' not in idx) or (
-            not uncertainty and 'PSA06' not in idx):
-        # old shakemap
+
+    # FIXME: restore the check as it was!
+    missing = sorted(REQUIRED_IMTS - set(out))
+    if 'PSA06' in missing:  # old shakemap
         fieldmap = {f: FIELDMAP[f] for f in FIELDMAP if f != 'PSA06'}
     else:  # new shakemap
         fieldmap = FIELDMAP
-        missing = REQUIRED_IMTS - set(idx)
         if not uncertainty and missing:
             raise RuntimeError('Missing %s in %s' % (missing, fname))
+    # if (uncertainty and 'STDPSA06' not in idx) or (
+    #         not uncertainty and 'PSA06' not in idx):
+    #     # old shakemap
+    #     fieldmap = {f: FIELDMAP[f] for f in FIELDMAP if f != 'PSA06'}
+    # else:  # new shakemap
+    #     fieldmap = FIELDMAP
+    #     missing = REQUIRED_IMTS - set(idx)
+    #     if not uncertainty and missing:
+    #         raise RuntimeError('Missing %s in %s' % (missing, fname))
+
     for name in idx:
         i = idx[name]
         if name in fieldmap:

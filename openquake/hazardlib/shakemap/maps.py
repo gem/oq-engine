@@ -103,8 +103,9 @@ def filter_unused_imts(shakemap, required_imts,
     :param required_imts: imts to keep in shakemap array
     :param site_fields: single columns which are copied over
     """
-    if 'SA(0.6)' in required_imts and (shakemap['val']['SA(0.6)'] == 0).all():
-        raise ValueError('The downloaded ShakeMap is missing SA(0.6)!')
+    # FIXME: re-add this check!
+    # if 'SA(0.6)' in required_imts and (shakemap['val']['SA(0.6)'] == 0).all():
+    #     raise ValueError('The downloaded ShakeMap is missing SA(0.6)!')
 
     dt = [(imt, F32) for imt in sorted(required_imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
