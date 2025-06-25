@@ -70,7 +70,6 @@ def update_losses(loss_by_AR, ln, alt, rlz_id, AR, collect_rlzs):
         tot = ldf.groupby('aid').loss.sum()
         aids = tot.index.to_numpy()
         rlzs = numpy.zeros_like(tot)
-        coo = sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
     else:
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy(),
@@ -78,8 +77,9 @@ def update_losses(loss_by_AR, ln, alt, rlz_id, AR, collect_rlzs):
         # the SURA calculation would fail with alt.eid being F64 (?)
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
-        coo = sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
-    loss_by_AR[ln].append(coo)
+    loss_by_AR[ln]['aids'].append(aids)
+    loss_by_AR[ln]['rlzs'].append(rlzs)
+    loss_by_AR[ln]['loss'].append(tot.to_numpy())
 
 
 def debugprint(ln, asset_loss_table, adf):
@@ -103,7 +103,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     xtypes = oq.ext_loss_types
     if ideduc:
         xtypes.append('claim')
-    loss_by_AR = {ln: [] for ln in xtypes}
+    loss_by_AR = {ln: {'aids': [], 'rlzs': [], 'loss': []} for ln in xtypes}
     correl = int(oq.asset_correlation)
     (A, R, K), L = ARK, len(xtypes)
     acc = general.AccumDict(accum=numpy.zeros((L, 2)))  # u8idx->array
@@ -142,6 +142,14 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                     for c, col in enumerate(['variance', 'loss']):
                         dic[col].append(arr[li, c])
         fix_dtypes(dic)
+    for ln in list(loss_by_AR):
+        if loss_by_AR[ln]['aids']:
+            aids = numpy.concatenate(loss_by_AR[ln]['aids'])
+            rlzs = numpy.concatenate(loss_by_AR[ln]['rlzs'])
+            loss = numpy.concatenate(loss_by_AR[ln]['loss'])
+            loss_by_AR[ln] = sparse.coo_matrix((loss, (aids, rlzs)), (A, R))
+        else:
+            del loss_by_AR[ln]
     return loss_by_AR, pandas.DataFrame(dic)
 
 
@@ -501,9 +509,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
         with self.monitor('saving avg_losses'):
-            for ln, ls in dic.pop('avg').items():
-                for coo in ls:
-                    self.avg_losses[ln][coo.row, coo.col] += coo.data
+            for ln, coo in dic.pop('avg').items():
+                self.avg_losses[ln][coo.row, coo.col] += coo.data
 
     def post_execute(self, dummy):
         """
