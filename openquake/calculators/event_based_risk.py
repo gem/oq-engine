@@ -198,7 +198,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
         if not avg:
             avg.update(avg_)
         else:
-            for ln in avg:
+            for ln in avg_:
                 avg[ln] += avg_[ln]
         yield dic
     yield dict(avg=avg)
