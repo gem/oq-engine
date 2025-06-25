@@ -520,6 +520,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if 'avg' in dic:
             with self.monitor('saving avg_losses'):
                 for ln, coo in dic.pop('avg').items():
+                    if not hasattr(coo, 'row'):  # csr_matrix
+                        coo = coo.tocoo()
                     self.avg_losses[ln][coo.row, coo.col] += coo.data
 
     def post_execute(self, dummy):

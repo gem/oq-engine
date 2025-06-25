@@ -479,7 +479,7 @@ max_data_transfer:
 max_gmvs_chunk:
   Maximum number of rows of the gmf_data table per task.
   Example: *max_gmvs_chunk = 200_000*
-  Default: 1_000_000
+  Default: 500_000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
