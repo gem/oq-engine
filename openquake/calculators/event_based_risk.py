@@ -60,9 +60,14 @@ def fast_agg(keys, values, correl, li, acc):
         acc[ukey][li] += avalue
 
 
-def update_losses(loss_by_AR, ln, alt, rlz_id, AR, collect_rlzs):
+def update_losses(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
     """
-    add a sparse coo matrix with the losses per asset and realization
+    Populate loss_by_AR a dictionary ln -> {'aids': [], 'rlzs': [], 'loss': []}
+    where `ln` is the loss name, i.e. "structural", "injured", etc
+
+    :param alt: DataFrame agg_loss_table
+    :param rlz_id: effective realization index (usually 0)
+    :param collect_rlzs: usually True
     """
     if collect_rlzs or len(numpy.unique(rlz_id)) == 1:
         ldf = pandas.DataFrame(
@@ -115,8 +120,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
             alt = out[ln]
             if oq.avg_losses:
                 with mon_avg:
-                    update_losses(
-                        loss_by_AR, ln, alt, rlz_id, (A, R), oq.collect_rlzs)
+                    update_losses(loss_by_AR, ln, alt, rlz_id, oq.collect_rlzs)
             with mon_agg:
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
