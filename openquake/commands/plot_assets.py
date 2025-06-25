@@ -111,35 +111,42 @@ def main(calc_id: int = -1, site_model=False,
     else:
         xlon, xlat = [], []
 
-    ax = add_borders(ax)
-
     if region:
         minx, miny, maxx, maxy = region_geom.bounds
+        xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
+        ax.set_xlim(*xlim)
+        ax.set_ylim(*ylim)
     else:
-        minx, miny, maxx, maxy = get_bbox(
-            assetcol['lon'], assetcol['lat'], xlon, xlat)
-    minx = min(minx, min_x)
-    maxx = max(maxx, max_x)
-    miny = min(miny, min_y)
-    maxy = max(maxy, max_y)
-    xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+        ax.set_xlim(auto=True)
+        ax.set_ylim(auto=True)
+        ax.relim()
+        ax.autoscale_view()
+        # ax.margins(x=0.1, y=0.1)  # 10% margin on both axes  # doesn't seem to work
+
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+
+    ax = add_borders(ax)
+
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
+    legend_params = dict(loc='upper left', bbox_to_anchor=(1.05, 1.0), borderaxespad=0.)
     if country_iso_codes is not None:
         # NOTE: use following lines to add custom items without changing title
         # ax.plot([], [], ' ', label=country_iso_codes)
         # ax.legend()
         title = 'Countries: %s' % country_iso_codes
-        ax.legend(title=title)
+        ax.legend(title=title, **legend_params)
     else:
-        ax.legend()
+        ax.legend(**legend_params)
 
     if save_to:
         p.savefig(save_to, alpha=True, dpi=300)
         logging.info(f'Plot saved to {save_to}')
     if show:
+        p.tight_layout()  # adjust to prevent clipping
         p.show()
     return p
 
