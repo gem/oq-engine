@@ -60,9 +60,9 @@ def fast_agg(keys, values, correl, li, acc):
         acc[ukey][li] += avalue
 
 
-def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
+def update_losses(loss_by_AR, ln, alt, rlz_id, AR, collect_rlzs):
     """
-    :returns: a sparse coo matrix with the losses per asset and realization
+    add a sparse coo matrix with the losses per asset and realization
     """
     if collect_rlzs or len(numpy.unique(rlz_id)) == 1:
         ldf = pandas.DataFrame(
@@ -70,7 +70,7 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         tot = ldf.groupby('aid').loss.sum()
         aids = tot.index.to_numpy()
         rlzs = numpy.zeros_like(tot)
-        return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
+        coo = sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
     else:
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy(),
@@ -78,7 +78,8 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         # the SURA calculation would fail with alt.eid being F64 (?)
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
-        return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
+        coo = sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
+    loss_by_AR[ln].append(coo)
 
 
 def debugprint(ln, asset_loss_table, adf):
@@ -114,9 +115,8 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
             alt = out[ln]
             if oq.avg_losses:
                 with mon_avg:
-                    coo = average_losses(
-                        ln, alt, rlz_id, (A, R), oq.collect_rlzs)
-                    loss_by_AR[ln].append(coo)
+                    update_losses(
+                        loss_by_AR, ln, alt, rlz_id, (A, R), oq.collect_rlzs)
             with mon_agg:
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
