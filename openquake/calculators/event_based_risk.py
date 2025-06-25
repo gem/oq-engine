@@ -522,6 +522,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
         if 'avg' in dic:
+            # avg_losses are stored as coo matrices or csr matrices
+            # for each loss name (ln)
             with self.monitor('saving avg_losses'):
                 for ln, coo in dic.pop('avg').items():
                     if not hasattr(coo, 'row'):  # csr_matrix
