@@ -191,8 +191,19 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     # avg_losses and the calculation may hang; if too large, run out of memory
     slices = performance.split_slices(
         df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+    avg = {}
+    alts = []
+    gmf_bytes = 0
     for s0, s1 in slices:
-        yield event_based_risk(df[s0:s1], oqparam, monitor)
+        dic = event_based_risk(df[s0:s1], oqparam, monitor)
+        alts.append(dic['alt'])
+        gmf_bytes += dic['gmf_bytes']
+        if not avg:
+            avg.update(dic['avg'])
+        else:
+            for ln in avg:
+                avg[ln] += dic['avg'][ln]
+    return dict(avg=avg, alt=pandas.concat(alts), gmf_bytes=gmf_bytes)
 
 
 def event_based_risk(df, oqparam, monitor):
