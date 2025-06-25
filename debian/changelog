@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Reduced the data transfer in avg_losses and saved memory (4x for Philippines)
+  * Reduced the data transfer in avg_losses (20x for Philippines),
+    thus solving an out-of-memory error
   * Print a warning if there are vs30 values distant more than 10% from
     DEFINED_FOR_REFERENCE_VELOCITY
 
