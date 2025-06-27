@@ -34,6 +34,13 @@ from openquake.hazardlib.imt import PGA, SA, PGV
 from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
     _get_z2pt5_usgs_basin_scaling
 
+REGIONS = [None, "AK", "CAM", "Cascadia", "JP", "SA", "TW"]
+
+SAT_REGIONS = [None, "Aleutian", "CAM_N", "CAM_S", "SA_N",
+               "SA_S", "TW_E", "TW_W", "JP_Pac", "JP_Phi"]  
+
+BASINS = [None, "out", "Seattle"]
+
 EPI_ADJS = os.path.join(os.path.dirname(__file__),
                         "parker_2020_epi_adj_table.csv")
 
@@ -462,13 +469,20 @@ class ParkerEtAl2020SInter(GMPE):
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
-        assert region in [None, "AK", "CAM", "Cascadia", "JP", "SA", "TW"]
+        # Check region/sat_region/basin params are valid
+        assert region in REGIONS
+        assert saturation_region in SAT_REGIONS
+        assert basin in BASINS
+
+        # Assign them
         self.region = region
         if saturation_region is None:
             self.saturation_region = region
         else:
             self.saturation_region = saturation_region
         self.basin = basin
+
+        # US23 basin params
         self.m9_basin_term = m9_basin_term
         self.usgs_basin_scaling = usgs_basin_scaling
         # USGS basin scaling and M9 basin term is only applied when the
@@ -485,6 +499,7 @@ class ParkerEtAl2020SInter(GMPE):
                                  'adjustment (i.e. it must have z2pt5 as a '
                                 ' required site parameter).')
 
+        # Epistemic uncertainty scaling
         self.sigma_mu_epsilon = sigma_mu_epsilon
         with open(EPI_ADJS) as f:
             self.epi_adjs_table = pd.read_csv(f.name).set_index('Region')
