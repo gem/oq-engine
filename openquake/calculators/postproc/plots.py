@@ -45,7 +45,7 @@ def auto_limits(ax):
     return xlim, ylim
 
 
-def adjust_limits(ax, xlim, ylim, padding=0.5):
+def adjust_limits(ax, xlim, ylim, padding=1):
     # Add some padding around the given limits and give a square aspect to the plot
     x_min, x_max = xlim
     y_min, y_max = ylim
