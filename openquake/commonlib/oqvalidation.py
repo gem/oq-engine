@@ -479,7 +479,7 @@ max_data_transfer:
 max_gmvs_chunk:
   Maximum number of rows of the gmf_data table per task.
   Example: *max_gmvs_chunk = 200_000*
-  Default: 100_000
+  Default: 300_000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -490,6 +490,11 @@ max_potential_paths:
   Restrict the maximum number of realizations.
   Example: *max_potential_paths = 200*.
   Default: 15_000
+
+max_sites_correl:
+  Maximum number of sites for GMF-correlation.
+  Example: *max_sites_correl = 2000*
+  Default: 1200
 
 max_sites_disagg:
   Maximum number of sites for which to store rupture information.
@@ -983,7 +988,7 @@ class OqParam(valid.ParamSet):
                'max_hazard_curves': 'max'}
 
     hazard_imtls = {}
-    override_vs30 = valid.Param(valid.positivefloat, None)
+    override_vs30 = valid.Param(valid.positivefloats, ())
     aggregate_by = valid.Param(valid.namelists, [])
     aggregate_loss_curves_types = valid.Param(
         # accepting all comma-separated permutations of 1, 2 or 3 elements
@@ -1075,10 +1080,11 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_blocks = valid.Param(valid.positiveint, 100)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000)  # for 2GB limit
+    max_gmvs_chunk = valid.Param(valid.positiveint, 300_000)  # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
+    max_sites_correl = valid.Param(valid.positiveint, 1200)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     mosaic_model = valid.Param(valid.three_letters, '')
     std = valid.Param(valid.boolean, False)

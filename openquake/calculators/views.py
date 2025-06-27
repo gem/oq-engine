@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
+import sys
 import ast
 import html
 import json
@@ -246,7 +247,8 @@ def view_high_hazard(token, dstore):
     """
     oq = dstore['oqparam']
     max_poe= max(oq.poes)
-    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
+    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]
+    # NSML1 -> NM
     high = (max_hazard > max_poe).all(axis=1)
     return max_hazard[high]
 
@@ -1629,7 +1631,7 @@ def asce_fix(asce, siteid):
 @view.add('asce')
 def view_asce(token, dstore):
     """
-    Returns asce:41 and asce:07 arrays
+    Returns asce:41 and asce:07 tables
     """
     key = token.replace(':', '')
     array = dstore[key][:]
@@ -1638,17 +1640,10 @@ def view_asce(token, dstore):
     if len(siteids) != len(array):
         siteids = [f'SITE{i}' for i in range(len(array))]
     dics = [asce_fix(a, siteid) for siteid, a in zip(siteids, array)]
-    header = dics[0]
-    dtlist = []
-    for k in header:
-        if isinstance(header[k], str):
-            dtlist.append((k, object))
-        else:
-            dtlist.append((k, float))
-    res = numpy.zeros(len(dics), dtlist)
-    for i, dic in enumerate(dics):
-        for k in header:
-            res[i][k] = dic[k]
+    header = list(dics[0])
+    res = [header] + [[None]*len(header)] * len(dics)
+    for i, dic in enumerate(dics, 1):
+        res[i] = list(dic.values())
     return res
 
 

@@ -22,7 +22,6 @@ import time
 import logging
 import getpass
 import cProfile
-import numpy
 import pandas
 import collections
 from openquake.baselib import config, performance
@@ -48,18 +47,6 @@ def engine_profile(jobctx, nrows):
                            ext='org'))
 
 # ########################## run_site ############################## #
-
-def append_empty(lst):
-    """
-    Append empty result to the list, assuming lst is not empty
-    """
-    try:
-        arr = lst[-1]
-    except IndexError:
-        return
-    for k in arr.dtype.names:
-        arr[k] = numpy.nan
-    lst.append(arr)
 
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
@@ -124,6 +111,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
+    os.environ['OQ_DISTRIBUTE'] = 'zmq'
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     count_errors = 0
@@ -136,14 +124,12 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             count_errors += 1
         dstore = datastore.read(logctx.calc_id)
         try:
-            a07s.append(views.view('asce:07', dstore))
-            a41s.append(views.view('asce:41', dstore))
+            a07s.extend(views.view('asce:07', dstore))
+            a41s.extend(views.view('asce:41', dstore))
         except KeyError:
             # AELO results could not be computed due to some error,
             # so the asce data is missing in the datastore
-            # NB: assume the lists are not empty, i.e. the first site is OK
-            append_empty(a07s)
-            append_empty(a41s)
+            pass
 
     # printing/saving results
     print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
@@ -152,11 +138,10 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     if not a07s or not a41s:
         # serious problem to debug
         breakpoint()
-    for name, arrays in zip(['asce07', 'asce41'], [a07s, a41s]):
-        arr = numpy.concatenate(arrays, dtype=arrays[0].dtype)
+    for name, table in zip(['asce07', 'asce41'], [a07s, a41s]):
         fname = os.path.abspath(name + '.org')
         with open(fname, 'w') as f:
-            print(views.text_table(arr, ext='org'), file=f)
+            print(views.text_table(table, ext='org'), file=f)
         print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
@@ -314,14 +299,13 @@ def impact(exposure_hdf5='', *,
     ses_seed = '42'
     t0 = time.time()
     if rupfname.endswith('.csv'):
-        rupture_file = None
         df = pandas.read_csv(rupfname)
         for i, row in df.iterrows():
             usgs_id = row['usgs_id']
             print('###################### %s [%d/%d] #######################' %
                   (usgs_id, i + 1, len(df)))
             main_cmd(
-                usgs_id, rupture_file, callback,
+                usgs_id, None, callback,
                 maximum_distance=maximum_distance,
                 mosaic_model=mosaic_model,
                 trt=trt, truncation_level=truncation_level,

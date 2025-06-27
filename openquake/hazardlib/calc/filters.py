@@ -386,7 +386,7 @@ class SourceFilter(object):
         try:
             bbox = get_bounding_box(src, maxdist)
         except Exception:
-            logging.error(f'Error in source {src.source_id}')
+            logging.error(f'Error in source {src.source_id}', exc_info=True)
             raise
         return bbox
 

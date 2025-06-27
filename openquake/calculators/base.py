@@ -48,7 +48,6 @@ from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
@@ -430,6 +429,14 @@ def check_amplification(ampl_df, sitecol):
                          decode('utf8'))
 
 
+def delta(vs30, vs30ref):
+    """
+    >>> print(round(delta(760, 800), 3))
+    0.051
+    """
+    return 2 * (numpy.abs(vs30 - vs30ref) / (vs30 + vs30ref)).max()
+
+
 class HazardCalculator(BaseCalculator):
     """
     Base class for hazard calculators based on source models
@@ -538,6 +545,12 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
+
+        if (oq.calculation_mode == 'event_based' and
+                oq.ground_motion_correlation_model and
+                len(self.sitecol) > oq.max_sites_correl):
+            raise ValueError('You cannot use a correlation model with '
+                             f'{self.N} sites [{oq.max_sites_correl=}]')
         if hasattr(self, 'assetcol'):
             self.check_consequences()
         self.check_overflow()  # check if self.sitecol is too large
@@ -582,11 +595,23 @@ class HazardCalculator(BaseCalculator):
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
-        if self.amplifier:
+        if hasattr(self, 'full_lt'):
+            gsim_lt = self.full_lt.gsim_lt
+        else:
             gsim_lt = readinput.get_gsim_lt(oq)
+        if self.amplifier:            
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
-
+        for gsims in gsim_lt.values.values():
+            for gsim in gsims:
+                if self.sitecol and getattr(
+                        gsim, 'DEFINED_FOR_REFERENCE_VELOCITY', None):
+                    vs30ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
+                    if delta(self.sitecol.vs30, vs30ref) > .10:
+                        logging.info(
+                            f'{gsim.__class__.__name__}.'
+                            f'DEFINED_FOR_REFERENCE_VELOCITY={vs30ref} '
+                            'is not satisfied, please check the vs30s')
 
     def import_perils(self):  # called in pre_execute
         """
@@ -678,6 +703,9 @@ class HazardCalculator(BaseCalculator):
                     oq.aggregate_by, oq.inputs['mmi'], oq.inputs['exposure'][0])
                 if len(mmi_df):
                     self.datastore.hdf5.create_df('mmi_tags', mmi_df)
+                else:
+                    logging.info('Missing mmi_tags, there are no assets in '
+                                 'the MMI geometries provided by the ShakeMap')
 
     def pre_execute_from_parent(self):
         """
@@ -874,6 +902,30 @@ class HazardCalculator(BaseCalculator):
         logging.info(f'Saving {fig_path} into the datastore')
         self.datastore[fig_path] = Image.open(bio)
 
+    def _read_no_exposure(self, haz_sitecol):
+        oq = self.oqparam
+        if oq.hazard_calculation_id:
+            # NB: this is tested in event_based case_27 and case_31
+            child = readinput.get_site_collection(oq, self.datastore.hdf5)
+            assoc_dist = (oq.region_grid_spacing * 1.414
+                          if oq.region_grid_spacing else 5)  # Graeme's 5km
+            # keep the sites of the parent close to the sites of the child
+            self.sitecol, _array, _discarded = geo.utils.assoc(
+                child, haz_sitecol, assoc_dist, 'filter')
+            self.datastore['sitecol'] = self.sitecol
+        else:  # base case
+            self.sitecol = haz_sitecol
+        if self.sitecol and oq.imtls:
+            logging.info('Read N=%d hazard sites and L=%d hazard levels',
+                         len(self.sitecol), oq.imtls.size)
+        manysites = (oq.calculation_mode=='event_based'
+                     and oq.ground_motion_fields
+                     and len(self.sitecol) > oq.max_sites_disagg)
+        if manysites and not oq.minimum_magnitude:
+            oq.raise_invalid('missing minimum_magnitude, suggested 5')
+        if manysites and not oq.minimum_intensity:
+            oq.raise_invalid('missing minimum_intensity, suggested .05')
+
     def _read_risk1(self):
         # read the risk model (if any) and then the site collection,
         # possibly extracted from the exposure
@@ -890,7 +942,8 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol, _ = site.merge_sitecols(
                     oq.inputs['gmfs'], oq.mosaic_model, check_gmfs=True)
             else:
-                haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
+                haz_sitecol = readinput.get_site_collection(
+                    oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
@@ -933,20 +986,7 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.add_tagname('site_id')
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
-            if oq.hazard_calculation_id:
-                # NB: this is tested in event_based case_27 and case_31
-                child = readinput.get_site_collection(oq, self.datastore.hdf5)
-                assoc_dist = (oq.region_grid_spacing * 1.414
-                              if oq.region_grid_spacing else 5)  # Graeme's 5km
-                # keep the sites of the parent close to the sites of the child
-                self.sitecol, _array, _discarded = geo.utils.assoc(
-                    child, haz_sitecol, assoc_dist, 'filter')
-                self.datastore['sitecol'] = self.sitecol
-            else:  # base case
-                self.sitecol = haz_sitecol
-            if self.sitecol and oq.imtls:
-                logging.info('Read N=%d hazard sites and L=%d hazard levels',
-                             len(self.sitecol), oq.imtls.size)
+            self._read_no_exposure(haz_sitecol)
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
                 self.N > 1000 and len(oq.min_iml) == 0):
             oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
@@ -1019,21 +1059,26 @@ class HazardCalculator(BaseCalculator):
                 else:
                     # use the site model parameters
                     self.sitecol.assoc(sm, assoc_dist)
-                if oq.override_vs30:
-                    # override vs30, z1pt0 and z2pt5
-                    names = self.sitecol.array.dtype.names
-                    self.sitecol.array['vs30'] = oq.override_vs30
-                    if 'z1pt0' in names:
-                        self.sitecol.calculate_z1pt0()
-                    if 'z2pt5' in names:
-                        self.sitecol.calculate_z2pt5()
 
-                self.datastore['sitecol'] = self.sitecol
-                if self.sitecol is not self.sitecol.complete:
-                    self.datastore['complete'] = self.sitecol.complete
-                elif 'complete' in self.datastore.parent:
-                    # fix: the sitecol is not complete
-                    self.sitecol.complete = self.datastore.parent['complete']
+            if oq.override_vs30:
+                # override vs30, z1pt0 and z2pt5
+                names = self.sitecol.array.dtype.names
+                if len(self.sitecol) == 1 and len(oq.override_vs30) == 1:
+                    self.sitecol.array['vs30'] = oq.override_vs30[0]
+                else:
+                    # tested in classical/case_08
+                    self.sitecol = self.sitecol.multiply(oq.override_vs30)
+                if 'z1pt0' in names:
+                    self.sitecol.calculate_z1pt0()
+                if 'z2pt5' in names:
+                    self.sitecol.calculate_z2pt5()
+
+            self.datastore['sitecol'] = self.sitecol
+            if self.sitecol is not self.sitecol.complete:
+                self.datastore['complete'] = self.sitecol.complete
+            elif 'complete' in self.datastore.parent:
+                # fix: the sitecol is not complete
+                self.sitecol.complete = self.datastore.parent['complete']
 
         # store amplification functions if any
         if 'amplification' in oq.inputs:
@@ -1581,30 +1626,10 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     and stored in the datastore.
     """
     oq = calc.oqparam
-    imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
-    oq.risk_imtls = {imt: list(imls) for imt, imls in imtls.items()}
-    logging.info('Getting/reducing shakemap')
     with calc.monitor('getting/reducing shakemap'):
-        # for instance for the test case_shakemap the haz_sitecol
-        # has sids in range(0, 26) while sitecol.sids is
-        # [8, 9, 10, 11, 13, 15, 16, 17, 18];
-        # the total assetcol has 26 assets on the total sites
-        # and the reduced assetcol has 9 assets on the reduced sites
-        if oq.shakemap_id:
-            uridict = {'kind': 'usgs_id', 'id': oq.shakemap_id}
-        elif 'shakemap' in oq.inputs:
-            uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
-        else:
-            uridict = oq.shakemap_uri
-        sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict, oq.risk_imtls, haz_sitecol,
-            oq.asset_hazard_distance['default'])
-        if len(discarded):
-            calc.datastore['discarded'] = discarded
-        assetcol.reduce_also(sitecol)
+        sitecol, shakemap = readinput.assoc_to_shakemap(
+            oq, haz_sitecol, assetcol)  # also reducing assetcol
         calc.datastore['assetcol'] = assetcol
-        logging.info('Extracted %d assets', len(assetcol))
-
     # assemble dictionary to decide on the calculation method for the gmfs
     if 'MMI' in oq.imtls:
         # calculations with MMI should be executed

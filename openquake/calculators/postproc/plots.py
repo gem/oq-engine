@@ -49,11 +49,24 @@ def add_basemap(ax, min_x, min_y, max_x, max_y,
         ha="left",  # Horizontal alignment
         va="bottom",  # Vertical alignment
     )
-    return ax
 
 
-def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
-    # Make the plot display all items with some margin, looking square
+def auto_limits(ax):
+    # Set the plot to display all contents and return the limits determined
+    # automatically
+    ax.set_xlim(auto=True)
+    ax.set_ylim(auto=True)
+    ax.relim()
+    ax.autoscale_view()
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    return xlim, ylim
+
+
+def adjust_limits(ax, xlim, ylim, padding=1):
+    # Add some padding around the given limits and give a square aspect to the plot
+    x_min, x_max = xlim
+    y_min, y_max = ylim
     x_min, x_max = x_min - padding, x_max + padding
     y_min, y_max = y_min - padding, y_max + padding
     x_range = x_max - x_min
@@ -63,7 +76,8 @@ def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
     y_center = (y_min + y_max) / 2
     xlim = x_center - max_range / 2, x_center + max_range / 2
     ylim = y_center - max_range / 2, y_center + max_range / 2
-    return xlim, ylim
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
 
 
 def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
@@ -78,7 +92,6 @@ def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
                 ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=alpha))
         else:
             ax.add_patch(PolygonPatch(poly, fc=colour, alpha=alpha))
-    return ax
 
 
 def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
@@ -86,17 +99,16 @@ def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
                label_field='name'):
     data = read_df(lon_field, lat_field, label_field)
     if data is None:
-        return ax
+        return
     data = data[(data[lon_field] >= xlim[0]) & (data[lon_field] <= xlim[1])
                 & (data[lat_field] >= ylim[0]) & (data[lat_field] <= ylim[1])]
     if len(data) == 0:
-        return ax
+        return
     ax.scatter(data[lon_field], data[lat_field], label="Populated places",
                s=2, color='black', alpha=0.5)
     for _, row in data.iterrows():
         ax.text(row[lon_field], row[lat_field], row[label_field], fontsize=7,
                 ha='right', alpha=0.5)
-    return ax
 
 
 def get_country_iso_codes(calc_id, assetcol):
@@ -147,25 +159,21 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
                                   min(y_webmercator),
                                   max(x_webmercator),
                                   max(y_webmercator))
+    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
+                      cmap='jet', s=markersize)
+    plt.colorbar(coll)
     if rupture is not None:
-        ax, rup_min_x, rup_min_y, rup_max_x, rup_max_y = add_rupture_webmercator(
+        add_rupture_webmercator(
             ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=1,
             surf_facecolor='none', surf_linestyle='--')
-        min_x = min(min_x, rup_min_x)
-        max_x = max(max_x, rup_max_x)
-        min_y = min(min_y, rup_min_y)
-        max_y = max(max_y, rup_max_y)
-    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
-    min_x, max_x = xlim
-    min_y, max_y = ylim
+    xlim, ylim = auto_limits(ax)
     add_basemap(ax, min_x, min_y, max_x, max_y)
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
                       alpha=0.4)
     plt.colorbar(coll, ax=ax)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+    adjust_limits(ax, xlim, ylim, padding=1E5)
     if with_cities:
-        ax = add_cities(ax, xlim, ylim)
+        add_cities(ax, xlim, ylim)
     if return_base64:
         return plt_to_base64(plt)
     else:
@@ -192,18 +200,11 @@ def plot_avg_gmf(ex, imt):
     transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
     x_webmercator, y_webmercator = transformer.transform(
         avg_gmf['lons'], avg_gmf['lats'])
-    min_x, min_y, max_x, max_y = (min(x_webmercator),
-                                  min(y_webmercator),
-                                  max(x_webmercator),
-                                  max(y_webmercator))
-    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
-    min_x, max_x = xlim
-    min_y, max_y = ylim
+    xlim, ylim = auto_limits(ax)
     add_basemap(ax, min_x, min_y, max_x, max_y)
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
     plt.colorbar(coll, ax=ax)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+    adjust_limits(ax, xlim, ylim, padding=1E5)
     return plt
 
 
@@ -216,7 +217,6 @@ def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
     if facecolor is not None:
         fill_params['facecolor'] = facecolor
     ax.fill(*surface.get_surface_boundaries(), **fill_params)
-    return surface.get_bounding_box()
 
 
 def add_surface_webmercator(
@@ -241,32 +241,15 @@ def add_surface_webmercator(
 def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
                 surf_facecolor=None, surf_linestyle='-'):
     if hasattr(rup.surface, 'surfaces'):
-        min_x = 180
-        max_x = -180
-        min_y = 90
-        max_y = -90
         for surf_idx, surface in enumerate(rup.surface.surfaces):
-            min_x_, max_x_, max_y_, min_y_ = add_surface(
-                ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
-                facecolor=surf_facecolor, linestyle=surf_linestyle)
-            min_x = min(min_x, min_x_)
-            max_x = max(max_x, max_x_)
-            min_y = min(min_y, min_y_)
-            max_y = max(max_y, max_y_)
+            add_surface(ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
+                        facecolor=surf_facecolor, linestyle=surf_linestyle)
     else:
-        min_x, max_x, max_y, min_y = add_surface(
-            ax, rup.surface, 'Surface', alpha=surf_alpha,
-            facecolor=surf_facecolor, linestyle=surf_linestyle)
+        add_surface(ax, rup.surface, 'Surface', alpha=surf_alpha,
+                    facecolor=surf_facecolor, linestyle=surf_linestyle)
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
-    # Make sure to display the hypocenter if it is outside all surfaces
-    # (it may be useful for debugging purposes)
-    min_x = min(min_x, rup.hypocenter.x)
-    max_x = max(max_x, rup.hypocenter.x)
-    min_y = min(min_y, rup.hypocenter.y)
-    max_y = max(max_y, rup.hypocenter.y)
-    return ax, min_x, min_y, max_x, max_y
 
 
 def add_rupture_webmercator(
@@ -309,14 +292,13 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     ax.set_title(title)
     ax.set_aspect('equal')
     ax.grid(True)
-    ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
+    add_rupture(ax, rup)
+    xlim, ylim = auto_limits(ax)
     if with_borders:
-        ax = add_borders(ax)
-    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+        add_borders(ax)
     if with_cities:
-        ax = add_cities(ax, xlim, ylim)
+        add_cities(ax, xlim, ylim)
+    adjust_limits(ax, xlim, ylim, padding=3)
     ax.legend()
     if return_base64:
         return plt_to_base64(plt)
@@ -378,6 +360,16 @@ def plot_rupture_3d(rup):
     ax.legend()
     plt.show()
     return plt
+
+
+# useful for plotting mmi_tags
+def plot_geom(multipol, lons, lats):
+    plt = import_plt()
+    ax = plt.figure().add_subplot(111)
+    for pol in list(multipol.geoms):
+        ax.add_patch(PolygonPatch(pol, alpha=0.1))
+    plt.scatter(lons, lats, marker='.', color='green')
+    plt.show()
 
 
 def get_assetcol(calc_id):

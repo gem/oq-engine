@@ -168,11 +168,11 @@ class CostCalculator(object):
                 lt = lt[:-4]  # rstrip _ins
             if lt == 'number':
                 unit = 'units'
-            elif lt in ('occupants', 'residents'):
+            elif lt in ('affectedpop', 'injured', 'occupants', 'residents'):
                 unit = 'people'
             elif lt == 'area':
                 # tested in event_based_risk/case_8
-                # NB: the Global Risk Model use SQM always, hence the default
+                # NB: SI units used as default
                 unit = self.units.get(lt, 'SQM')
             else:
                 unit = self.units[lt]
@@ -460,6 +460,8 @@ class AssetCollection(object):
             self.tagcol.get_aggkey(aggregate_by))}
         K = len(aggkey)
         if geometry:
+            # from openquake.calculators.postproc.plots import plot_geom
+            # plot_geom(geometry, self['lon'], self['lat'])
             array = self.array[contains_xy(geometry, self['lon'], self['lat'])]
         else:
             array = self.array
@@ -944,7 +946,8 @@ def impact_read_assets(h5, start, stop):
             dic[field] = arr = group[field][start:stop]
             if field in TAGS:
                 # go back from indices to strings
-                dic[field] = TAGS[field][arr]
+                # NB: arr + 1 because the first value for the tags is "?"
+                dic[field] = TAGS[field][arr + 1]
         if field in dic and len(dic[field]) == 0:
             dic.pop(field)
     df = pandas.DataFrame(dic)

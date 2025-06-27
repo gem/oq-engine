@@ -29,11 +29,9 @@ from openquake.risklib.asset import _get_exposure
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import expo_to_hdf5
-from openquake.qa_tests_data import mosaic
 from openquake.engine.global_ses import dt
 
 U16 = numpy.uint16
-MOSAIC_DIR = os.path.dirname(mosaic.__file__)
 F32 = numpy.float32
 
 
@@ -74,31 +72,6 @@ def read_world_vulnerability(grm_dir, dstore):
     dstore.create_df('crm', crmodel.to_dframe(),
                      'gzip', **crmodel.get_attrs())
     return len(vfuncs)
-
-
-def read_world_tmap(grm_dir, dstore):
-    """
-    Store the world taxonomy mapping
-    """
-    # get the names of the files to read
-    summary = os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv')
-    tmap_df = pandas.read_csv(summary, index_col=['country'])
-    dic = {}
-    for fname, df in tmap_df.groupby('fname'):
-        dic[fname] = '_'.join(sorted(df.index))
-    n = len(dic)
-    assert len(set(dic.values())) == n, sorted(dic.values())
-    for cwd, dirs, files in os.walk(grm_dir):
-        for f in files:
-            if f in dic:
-                df = pandas.read_csv(os.path.join(cwd, f))
-                try:
-                    dstore.create_df('tmap/' + dic[f], df)
-                except ValueError:  # exists already
-                    print('Repeated %s' % dic[f])
-            elif f.startswith('taxonomy_mapping'):
-                raise NameError(f'{f} is not listed in {summary}')
-    return n
 
 
 def get_gsim_lt(cwd):
@@ -179,7 +152,8 @@ def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
     return len(smodel)
 
 
-def find_long_strings_and_export(csv_paths, fieldname, output_csv_path, min_length=32):
+def find_long_strings_and_export(csv_paths, fieldname, output_csv_path,
+                                 min_length=32):
     results = []
     for file_path in csv_paths:
         try:
@@ -202,9 +176,10 @@ def find_long_strings_and_export(csv_paths, fieldname, output_csv_path, min_leng
         except Exception as e:
             print(f"Error reading {file_path}: {e}")
     if results:
-        with open(output_csv_path, 'w', newline='', encoding='utf-8') as out_csv:
-            fieldnames = ["filename", "linenumber", fieldname, f"{fieldname}_len"]
-            writer = csv.DictWriter(out_csv, fieldnames=fieldnames)
+        with open(output_csv_path, 'w', newline='', encoding='utf-8') as out:
+            fieldnames = ["filename", "linenumber", fieldname,
+                          f"{fieldname}_len"]
+            writer = csv.DictWriter(out, fieldnames=fieldnames)
             writer.writeheader()
             for row in results:
                 writer.writerow(row)
@@ -213,20 +188,34 @@ def find_long_strings_and_export(csv_paths, fieldname, output_csv_path, min_leng
         print("No strings longer than {} characters found.".format(min_length))
 
 
-def main(mosaic_dir, grm_dir, wfp=False, find_long_strings_for_field=None):
+def main(mosaic_dir, grm_dir, wfp=False, action='build'):
     """
-    Storing global exposure
+    If action='build' (the default) stores the global exposure and tmap.
+    If action='zip' zips the global exposure in a single file exposures.zip
+    If action='find_long_XXX' find the fields XXX longer than 32 chars
     """
-
-    if find_long_strings_for_field:
-        fieldname = find_long_strings_for_field
+    if action.startswith('find_long'):  # i.e. find_long_NAME_2
+        fieldname = action[10:]
         exposures_xml = collect_exposures(grm_dir)
         csv_files = []
         for xml in exposures_xml:
-            exposure, _ = _get_exposure(xml)
+            exposure, _ = _get_exposure(xml, stop='asset')
             csv_files.extend(exposure.datafiles)
         output_file = "long_strings.csv"
         find_long_strings_and_export(csv_files, fieldname, output_file)
+        return
+    elif action == 'zip':
+        tmaps = sorted(expo_to_hdf5.read_world_tmap(grm_dir))
+        exposures_xml = collect_exposures(grm_dir)
+        csv_files = []
+        for xml in exposures_xml:
+            print(f'Reading {xml}')
+            exposure, _ = _get_exposure(xml, stop='asset')
+            csv_files.extend(exposure.datafiles)
+        n = len(tmaps) + len(exposures_xml) + len(csv_files)
+        print(f'Zipping {n} files')
+        a = general.zipfiles(tmaps + exposures_xml + csv_files, 'exposures.zip')
+        print(f'Saved {a} [{general.humansize(os.path.getsize(a))}]')
         return
 
     mon = performance.Monitor(measuremem=True)
@@ -240,19 +229,15 @@ def main(mosaic_dir, grm_dir, wfp=False, find_long_strings_for_field=None):
             logging.info('Stored {:_d} sites'.format(n))
             n = read_world_vulnerability(grm_dir, dstore)
             logging.info('Read %d vulnerability functions', n)
-            n = read_world_tmap(grm_dir, dstore)
-            logging.info('Read %d taxonomy mappings', n)
             fnames = collect_exposures(grm_dir)
-            expo_to_hdf5.store(fnames, wfp, dstore)
+            expo_to_hdf5.store(fnames, grm_dir, wfp, dstore)
         logging.info(mon)
 
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.grm_dir = 'Directory containing the global risk model'
 main.wfp = 'If true, consider only 7 countries for the World Food Program'
-main.find_long_strings_for_field = (
-    'Produces long_strings.csv summarizing filename, line number, value and length'
-    ' of strings above 32 characters in the given field')
+main.action = 'Perform an action (build, zip, find_long_<FIELD>)'
 
 if __name__ == '__main__':
     sap.run(main)

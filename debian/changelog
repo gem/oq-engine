@@ -1,4 +1,37 @@
+  [Christopher Brooks]
+  * Fixed bug in ParkerEtAl2020 epistemic uncertainty scaling factors.
+
   [Michele Simionato]
+  * Fixed indentation errors in nearly all secondary peril classes
+  * Reduced the data transfer in avg_losses (20x for Philippines),
+    thus solving an out-of-memory error; also optimized (25% for Philippines)
+  * Print a warning if there are vs30 values distant more than 10% from
+    DEFINED_FOR_REFERENCE_VELOCITY
+
+  [Anirudh Rao]
+  * Fixed a bug when generating the aggregate curves for `affectedpop` and
+    `injured` loss types, due to missing units
+
+  [Michele Simionato]
+  * Extended `override_vs30` to multiple values
+  * Forbidden GMF correlation with more then `max_sites_correl=1000`
+  * Made `minimum_intensity` and `minimum_magnitude` mandatory with event based
+    calculations with many sites
+
+  [Paolo Tormene]
+  * When a job is deleted, also the corresponding calc_CALCID_tmp.hdf5 file is
+    removed, if present
+
+  [Astha Poudel, Catarina Costa]
+  * Modified infrastructure risk to avoid calculating efficiency loss for
+    large networks
+
+  [Paolo Tormene]
+  * AELO: the management of warnings was made more robust
+
+  [Michele Simionato]
+  * OQImpact: reading the sites around the rupture and not around the hypocenter
+  * Raised an error if the ShakeMap does not contain SA(0.6) when required
   * Fixed the multi-peril implementation (imt_by_lt)
   * Raised an error for risk IMTs not covered by the secondary IMTs
   * Optimized build_global_exposure
@@ -167,7 +200,7 @@
     GrantEtAl2016RockSlopeFailure, NowickiJessee2018Landslides
 
   [Michele Simionato]
-  * Extended the output loss types to `affected` and `injured`
+  * Extended the output loss types to `affectedpop` and `injured`
   * Fixed `oq plot?hcurves`: the disaggregation PoEs were plotted in linear
     scale and not in logarithmic scale
   * Internal: introduced parameter `config.memory.gmf_data_rows`
