@@ -25,7 +25,7 @@ from openquake.hazardlib.geo.utils import cross_idl
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes, add_rupture,
-    adjust_limits)
+    adjust_limits, auto_limits)
 
 
 def main(calc_id: int = -1, site_model=False,
@@ -112,23 +112,13 @@ def main(calc_id: int = -1, site_model=False,
 
     if region:
         minx, miny, maxx, maxy = region_geom.bounds
-        xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
-        ax.set_xlim(*xlim)
-        ax.set_ylim(*ylim)
+        xlim = (minx, maxx)
+        ylim = (miny, maxy)
     else:
-        ax.set_xlim(auto=True)
-        ax.set_ylim(auto=True)
-        ax.relim()
-        ax.autoscale_view()
-        # ax.margins(x=0.1, y=0.1)  # this doesn't seem to have any effect
+        xlim, ylim = auto_limits(ax)
 
-    # make sure to use the same xlim, ylim even after adding country borders
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    xlim, ylim = adjust_limits(xlim[0], xlim[1], ylim[0], ylim[1])
-    ax = add_borders(ax)
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
+    add_borders(ax)
+    adjust_limits(ax, xlim, ylim, padding=3)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
     legend_params = dict(loc='upper left', bbox_to_anchor=(1.05, 1.0), borderaxespad=0.)

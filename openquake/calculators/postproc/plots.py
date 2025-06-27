@@ -33,8 +33,22 @@ def import_plt():
     return plt
 
 
-def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
-    # Make the plot display all items with some margin, looking square
+def auto_limits(ax):
+    # Set the plot to display all contents and return the limits determined
+    # automatically
+    ax.set_xlim(auto=True)
+    ax.set_ylim(auto=True)
+    ax.relim()
+    ax.autoscale_view()
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    return xlim, ylim
+
+
+def adjust_limits(ax, xlim, ylim, padding=0.5):
+    # Add some padding around the given limits and give a square aspect to the plot
+    x_min, x_max = xlim
+    y_min, y_max = ylim
     x_min, x_max = x_min - padding, x_max + padding
     y_min, y_max = y_min - padding, y_max + padding
     x_range = x_max - x_min
@@ -44,7 +58,8 @@ def adjust_limits(x_min, x_max, y_min, y_max, padding=0.5):
     y_center = (y_min + y_max) / 2
     xlim = x_center - max_range / 2, x_center + max_range / 2
     ylim = y_center - max_range / 2, y_center + max_range / 2
-    return xlim, ylim
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
 
 
 def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
@@ -59,7 +74,6 @@ def add_borders(ax, read_df=readinput.read_countries_df, buffer=0, alpha=0.1):
                 ax.add_patch(PolygonPatch(onepoly, fc=colour, alpha=alpha))
         else:
             ax.add_patch(PolygonPatch(poly, fc=colour, alpha=alpha))
-    return ax
 
 
 def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
@@ -67,17 +81,16 @@ def add_cities(ax, xlim, ylim, read_df=readinput.read_cities_df,
                label_field='name'):
     data = read_df(lon_field, lat_field, label_field)
     if data is None:
-        return ax
+        return
     data = data[(data[lon_field] >= xlim[0]) & (data[lon_field] <= xlim[1])
                 & (data[lat_field] >= ylim[0]) & (data[lat_field] <= ylim[1])]
     if len(data) == 0:
-        return ax
+        return
     ax.scatter(data[lon_field], data[lat_field], label="Populated places",
                s=2, color='black', alpha=0.5)
     for _, row in data.iterrows():
         ax.text(row[lon_field], row[lat_field], row[label_field], fontsize=7,
                 ha='right', alpha=0.5)
-    return ax
 
 
 def get_country_iso_codes(calc_id, assetcol):
@@ -128,18 +141,11 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
         ax = add_rupture(
             ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
             surf_facecolor='none', surf_linestyle='--')
-    ax.set_xlim(auto=True)
-    ax.set_ylim(auto=True)
-    ax.relim()
-    ax.autoscale_view()
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    ax = add_borders(ax, alpha=0.2)
-    xlim, ylim = adjust_limits(xlim[0], xlim[1], ylim[0], ylim[1])
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+    xlim, ylim = auto_limits(ax)
+    add_borders(ax, alpha=0.2)
+    adjust_limits(ax, xlim, ylim)
     if with_cities:
-        ax = add_cities(ax, xlim, ylim)
+        add_cities(ax, xlim, ylim)
     if return_base64:
         return plt_to_base64(plt)
     else:
@@ -169,18 +175,9 @@ def plot_avg_gmf(ex, imt):
                       s=markersize)
     plt.colorbar(coll)
 
-    ax.set_xlim(auto=True)
-    ax.set_ylim(auto=True)
-    ax.relim()
-    ax.autoscale_view()
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-
-    ax = add_borders(ax)
-
-    xlim, ylim = adjust_limits(xlim[0], xlim[1], ylim[0], ylim[1])
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+    xlim, ylim = auto_limits(ax)
+    add_borders(ax)
+    adjust_limits(ax, xlim, ylim)
     return plt
 
 
@@ -193,20 +190,17 @@ def add_surface(ax, surface, label, alpha=0.5, facecolor=None, linestyle='-'):
     if facecolor is not None:
         fill_params['facecolor'] = facecolor
     ax.fill(*surface.get_surface_boundaries(), **fill_params)
-    return ax
 
 
 def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
                 surf_facecolor=None, surf_linestyle='-'):
     if hasattr(rup.surface, 'surfaces'):
         for surf_idx, surface in enumerate(rup.surface.surfaces):
-            ax = add_surface(
-                ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
-                facecolor=surf_facecolor, linestyle=surf_linestyle)
+            add_surface(ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
+                        facecolor=surf_facecolor, linestyle=surf_linestyle)
     else:
-        ax = add_surface(
-            ax, rup.surface, 'Surface', alpha=surf_alpha,
-            facecolor=surf_facecolor, linestyle=surf_linestyle)
+        add_surface(ax, rup.surface, 'Surface', alpha=surf_alpha,
+                    facecolor=surf_facecolor, linestyle=surf_linestyle)
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
@@ -230,19 +224,12 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     ax.set_aspect('equal')
     ax.grid(True)
     ax, add_rupture(ax, rup)
-    ax.set_xlim(auto=True)
-    ax.set_ylim(auto=True)
-    ax.relim()
-    ax.autoscale_view()
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
+    xlim, ylim = auto_limits(ax)
     if with_borders:
-        ax = add_borders(ax)
-    xlim, ylim = adjust_limits(xlim[0], xlim[1], ylim[0], ylim[1])
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+        add_borders(ax)
     if with_cities:
-        ax = add_cities(ax, xlim, ylim)
+        add_cities(ax, xlim, ylim)
+    adjust_limits(ax, xlim, ylim, padding=3)
     ax.legend()
     if return_base64:
         return plt_to_base64(plt)
