@@ -205,7 +205,8 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             for ln in avg_:
                 avg[ln] += avg_[ln]
         yield dic
-    yield dict(avg=avg)
+    for ln in avg:  # yield smaller outputs
+        yield dict(avg={ln: avg[ln]})
 
 
 def event_based_risk(df, oqparam, monitor):
