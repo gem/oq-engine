@@ -205,7 +205,8 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             for ln in avg_:
                 avg[ln] += avg_[ln]
         yield dic
-    yield dict(avg=avg)
+    for ln in avg:  # yield smaller outputs
+        yield dict(avg={ln: avg[ln]})
 
 
 def event_based_risk(df, oqparam, monitor):
@@ -408,8 +409,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         ELT = len(oq.ext_loss_types)
         if oq.calculation_mode == 'event_based_risk' and oq.avg_losses:
             R = 1 if oq.collect_rlzs else self.R
-            logging.info('Transfering %s per task in avg_losses',
-                         general.humansize(A * ELT * 8 * R))
+            logging.info('Transfering %s * %d per task in avg_losses',
+                         general.humansize(A * 8 * R), ELT)
             if A * ELT * 8 > int(config.memory.avg_losses_max):
                 raise ValueError('For large exposures you must set '
                                  'avg_losses=false')
