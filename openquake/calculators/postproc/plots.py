@@ -138,9 +138,8 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
                       cmap='jet', s=markersize)
     plt.colorbar(coll)
     if rupture is not None:
-        ax = add_rupture(
-            ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
-            surf_facecolor='none', surf_linestyle='--')
+        add_rupture(ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.9,
+                    surf_facecolor='none', surf_linestyle='--')
     xlim, ylim = auto_limits(ax)
     add_borders(ax, alpha=0.2)
     adjust_limits(ax, xlim, ylim)
@@ -204,7 +203,6 @@ def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, marker='*',
             color='orange', label='Hypocenter', alpha=hypo_alpha,
             linestyle='', markersize=8)
-    return ax
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
@@ -223,7 +221,7 @@ def plot_rupture(rup, backend=None, figsize=(10, 10),
     ax.set_title(title)
     ax.set_aspect('equal')
     ax.grid(True)
-    ax, add_rupture(ax, rup)
+    add_rupture(ax, rup)
     xlim, ylim = auto_limits(ax)
     if with_borders:
         add_borders(ax)
