@@ -69,8 +69,9 @@ class AristotleValidateTestCase(unittest.TestCase):
     def test_2b(self):
         POST = {'usgs_id': 'us7000n05d', 'approach': 'build_rup_from_usgs',
                 'msr': 'WC1994'}
-        _rup, rupdic, _params, err = impact_validate(POST, user)
-        self.assertEqual(rupdic['rupture_from_usgs'], True)
+        rup, rupdic, _params, err = impact_validate(POST, user)
+        self.assertIsInstance(rup, BaseRupture)
+        self.assertEqual(rupdic['rupture_was_loaded'], True)
         self.assertEqual(rupdic['mosaic_models'], ['SAM'])
         self.assertEqual(err, {})
 
@@ -103,15 +104,17 @@ class AristotleValidateTestCase(unittest.TestCase):
             _rup, rupdic, params, err = impact_validate(
                 POST, user, rupture_file, stations)
             expected = {
-                'dep': 30.0,
+                # hypocenter was outside the rupture surface and it is moved to the
+                # center of the surface
+                'dep': 35.0,
+                'lat': 28.04196,
+                'lon': 84.67006,
                 'dip': 30.08335,
-                'lat': 27.6,
-                'lon': 84.4,
                 'mag': 7.0,
                 'mosaic_models': ['CHN', 'IND'],
                 'rake': 90.0,
                 'rupture_file': rupture_file,
-                'rupture_from_usgs': True,
+                'rupture_was_loaded': True,
                 'strike': 295.24732,
                 'trts': {'CHN': ['Active Shallow Crust',
                                  'Himalayan Thrust',
