@@ -95,7 +95,8 @@ def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
     if period <= adjs[f'T1_{add}']:
         eps_std = adjs[f'SigEp1_{add}']
     elif period > adjs[f'T1_{add}'] and period <= adjs[f'T2_{add}']:
-        p1 = adjs[f'SigEp1_{add}'] - (adjs[f'SigEp1_{add}'] - adjs[f'SigEp2_{add}'])
+        p1 = adjs[f'SigEp1_{add}'] - (
+            adjs[f'SigEp1_{add}'] - adjs[f'SigEp2_{add}'])
         p2 = (np.log(period/adjs[f'T1_{add}']) / 
               np.log(adjs[f'T2_{add}']/adjs[f'T1_{add}']))
         eps_std = p1 * p2
