@@ -226,10 +226,9 @@ class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
         for im, gmf in imt_gmf:
             if im.string == "PGA":
                 prob_liq, out_class = zhu_etal_2015_general(
-                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30
-                )
-            out.append(prob_liq)
-            out.append(out_class)
+                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30)
+                out.append(prob_liq)
+                out.append(out_class)
         return out
 
 
@@ -271,11 +270,10 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
                     vs30=sites.vs30,
                     dr=sites.dr,
                     dc=sites.dc,
-                    precip=sites.precip,
-                )
-            out.append(prob_liq)
-            out.append(out_class)
-            out.append(lse)
+                    precip=sites.precip)
+                out.append(prob_liq)
+                out.append(out_class)
+                out.append(lse)
         return out
 
 
@@ -317,11 +315,10 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
                     vs30=sites.vs30,
                     dw=sites.dw,
                     wtd=sites.gwd,
-                    precip=sites.precip,
-                )
-            out.append(prob_liq)
-            out.append(out_class)
-            out.append(lse)
+                    precip=sites.precip)
+                out.append(prob_liq)
+                out.append(out_class)
+                out.append(lse)
         return out
 
 
@@ -368,8 +365,8 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
         # Raise error if either PGA or PGV is missing
         if pga is None or pgv is None:
             raise ValueError(
-                "Both PGA and PGV are required to compute liquefaction probability using the RashidianBaise2020Liquefaction model"
-            )
+                "Both PGA and PGV are required to compute liquefaction "
+                "probability using the RashidianBaise2020Liquefaction model")
         prob_liq, out_class, lse = rashidian_baise_2020(
             pga=pga,
             pgv=pgv,
@@ -481,10 +478,9 @@ class AkhlagiEtAl2021LiquefactionA(SecondaryPeril):
                     tri=sites.tri,
                     dc=sites.dc,
                     dr=sites.dr,
-                    zwb=sites.zwb,
-                )
-            out.append(prob_liq)
-            out.append(out_class)
+                    zwb=sites.zwb)
+                out.append(prob_liq)
+                out.append(out_class)
         return out
 
 
@@ -525,10 +521,9 @@ class AkhlagiEtAl2021LiquefactionB(SecondaryPeril):
                     vs30=sites.vs30,
                     dc=sites.dc,
                     dr=sites.dr,
-                    zwb=sites.zwb,
-                )
-            out.append(prob_liq)
-            out.append(out_class)
+                    zwb=sites.zwb)
+                out.append(prob_liq)
+                out.append(out_class)
         return out
 
 
@@ -560,10 +555,9 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
         for im, gmf in imt_gmf:
             if im.string == "PGA":
                 prob_liq, out_class = bozzoni_etal_2021_europe(
-                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30
-                )
-            out.append(prob_liq)
-            out.append(out_class)
+                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30)
+                out.append(prob_liq)
+                out.append(out_class)
         return out
 
 
@@ -597,9 +591,8 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
     outputs = ["LiqOccur", "LiqProb"]
 
     def prepare(self, sites):
-        model_file = (
-            "liquefaction/data/todorovic_silva_2022/todorovic_silva_2022.onnx.gz"
-        )
+        model_file = "liquefaction/data/todorovic_silva_2022/" + \
+            "todorovic_silva_2022.onnx.gz"
         model_path = path.join(path.dirname(__file__), model_file)
         with gzip.open(model_path, "rb") as f:
             self.model = f.read()
@@ -609,16 +602,16 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGV":
-                out_class, out_prob = todorovic_silva_2022_nonparametric_general(
-                    pgv=gmf,
-                    vs30=sites.vs30,
-                    dw=sites.dw,
-                    wtd=sites.gwd,
-                    precip=sites.precip,
-                    session=self.inference_session,
-                )
-            out.append(out_class)
-            out.append(out_prob)
+                out_class, out_prob = \
+                    todorovic_silva_2022_nonparametric_general(
+                        pgv=gmf,
+                        vs30=sites.vs30,
+                        dw=sites.dw,
+                        wtd=sites.gwd,
+                        precip=sites.precip,
+                        session=self.inference_session)
+                out.append(out_class)
+                out.append(out_prob)
         return out
 
 
@@ -662,14 +655,10 @@ class Jibson2007ALandslides(SecondaryPeril):
         for im, gmf in imt_gmf:
             if im.string == "PGA":
                 Disp = jibson_2007_model_a(
-                    gmf,
-                    sites.crit_accel,
-                    self.c1,
-                    self.c2,
-                    self.c3,
-                    self.crit_accel_threshold,
-                )
-            out.append(Disp)
+                    gmf, sites.crit_accel,
+                    self.c1, self.c2, self.c3,
+                    self.crit_accel_threshold)
+                out.append(Disp)
         return out
 
 
@@ -758,10 +747,8 @@ class ChoRathje2022Landslides(SecondaryPeril):
                         gmf,
                         sites.tslope,
                         sites.crit_accel,
-                        sites.hratio,
-                        )
-            out.append(Disp)
-
+                        sites.hratio)
+                out.append(Disp)
         return out
 
 
@@ -794,11 +781,8 @@ class FotopoulouPitilakis2015ALandslides(SecondaryPeril):
         for im, gmf in imt_gmf:
             if im.string == "PGV":
                 Disp = fotopoulou_pitilakis_2015_model_a(
-                          gmf,
-                          mag,
-                          sites.crit_accel,
-                          )
-            out.append(Disp)
+                    gmf, mag, sites.crit_accel)
+                out.append(Disp)
         return out      
         
         
@@ -831,11 +815,8 @@ class FotopoulouPitilakis2015BLandslides(SecondaryPeril):
         for im, gmf in imt_gmf:
             if im.string == "PGA":
                 Disp = fotopoulou_pitilakis_2015_model_b(
-                          gmf,
-                          mag,
-                          sites.crit_accel,
-                          )
-            out.append(Disp)
+                          gmf, mag, sites.crit_accel,)
+                out.append(Disp)
         return out      
         
 class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
@@ -867,11 +848,8 @@ class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
         for im, gmf in imt_gmf:
             if im.string == "PGA":
                 Disp = fotopoulou_pitilakis_2015_model_c(
-                          gmf,
-                          mag,
-                          sites.crit_accel,
-                          )
-            out.append(Disp)
+                    gmf, mag, sites.crit_accel)
+                out.append(Disp)
         return out      
         
 
@@ -1001,7 +979,7 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
         for im, gmf in imt_gmf:
             if im.string == "PGA":
                 Disp = rathje_saygili_2009(gmf, mag, sites.crit_accel)
-            out.append(Disp)
+                out.append(Disp)
         return out  
 
 
@@ -1033,12 +1011,10 @@ class JibsonEtAl2000Landslides(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "IA":
-                    Disp = jibson_etal_2000(
-                        gmf,
-                        sites.crit_accel,
-                    )
-            out.append(Disp)
-            out.append(jibson_etal_2000_probability(Disp))
+                Disp = jibson_etal_2000(
+                    gmf, sites.crit_accel)
+                out.append(Disp)
+                out.append(jibson_etal_2000_probability(Disp))
         return out        
 
 
