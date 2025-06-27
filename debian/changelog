@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Fixed an indentation bug in Jibson2007BLandslides
+  * Fixed indentation errors in nearly all secondary peril classes
   * Reduced the data transfer in avg_losses (20x for Philippines),
     thus solving an out-of-memory error; also optimized (25% for Philippines)
   * Print a warning if there are vs30 values distant more than 10% from
