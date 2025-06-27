@@ -85,15 +85,15 @@ def _get_sigma_mu_adjustment(sat_region, trt, imt, epi_adjs_table):
 
     # Get period-dependent epistemic standard deviation (equation 27)
     period = imt.period
-    if period < adjs[f'T1_{add}']:
+    if period <= adjs[f'T1_{add}']:
         eps_std = adjs[f'SigEp1_{add}']
-    elif period >= adjs[f'T1_{add}'] and period < adjs[f'T2_{add}']:
-        p1 = adjs[f'SigEp1_{add}'
-                  ] - (adjs[f'SigEp1_{add}'] - adjs[f'SigEp2_{add}'])
+    elif period > adjs[f'T1_{add}'] and period <= adjs[f'T2_{add}']:
+        p1 = adjs[f'SigEp1_{add}'] - (adjs[f'SigEp1_{add}'] - adjs[f'SigEp2_{add}'])
         p2 = (np.log(period/adjs[f'T1_{add}']) / 
               np.log(adjs[f'T2_{add}']/adjs[f'T1_{add}']))
         eps_std = p1 * p2
     else:  # Must be SA with a period larger than or equal to T2
+        assert period > adjs[f'T2_{add}']
         eps_std = adjs[f'SigEp2_{add}']
 
     return eps_std
@@ -462,6 +462,7 @@ class ParkerEtAl2020SInter(GMPE):
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
+        assert region in [None, "AK", "CAM", "Cascadia", "JP", "SA", "TW"]
         self.region = region
         if saturation_region is None:
             self.saturation_region = region
@@ -655,3 +656,4 @@ add_alias('ParkerEtAl2020SSlabJapanPac', ParkerEtAl2020SSlabB,
           region="JP", saturation_region="JP_Pac")
 add_alias('ParkerEtAl2020SSlabJapanPhi', ParkerEtAl2020SSlabB,
           region="JP", saturation_region="JP_Phi")
+
