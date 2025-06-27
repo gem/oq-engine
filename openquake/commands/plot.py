@@ -920,7 +920,6 @@ def plot_polygon_sources(srcs, ax, kind):
         min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
         ax.fill(poly.lons, poly.lats, alpha=0.3, color=color, label=kind)
     print(f'...took {time.time() - t0} seconds')
-    return ax
 
 
 def plot_point_sources(srcs, ax):
@@ -943,7 +942,6 @@ def plot_point_sources(srcs, ax):
         ax.plot(lon, lat, 'o', alpha=0.7, color=color,
                 markersize=2, label=label)
     print(f'...took {time.time() - t0} seconds')
-    return ax
 
 
 def plot_sources(srcs, ax):
