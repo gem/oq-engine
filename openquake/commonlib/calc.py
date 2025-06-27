@@ -466,9 +466,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     maxw = slices['weight'].sum() / (oq.concurrent_tasks or 1) or 1.
     logging.info('maxw = {:_d}'.format(int(maxw)))
     smap = parallel.Starmap.apply(
-        task_func, (slices, oq, ds),
-        # maxweight=200M is the limit to run Chile with 2 GB per core
-        maxweight=min(maxw, 200_000_000),
+        task_func, (slices, oq, ds), maxweight=maxw,
         weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)
     return smap

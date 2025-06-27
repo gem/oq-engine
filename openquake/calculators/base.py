@@ -608,7 +608,7 @@ class HazardCalculator(BaseCalculator):
                         gsim, 'DEFINED_FOR_REFERENCE_VELOCITY', None):
                     vs30ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
                     if delta(self.sitecol.vs30, vs30ref) > .10:
-                        logging.warning(
+                        logging.info(
                             f'{gsim.__class__.__name__}.'
                             f'DEFINED_FOR_REFERENCE_VELOCITY={vs30ref} '
                             'is not satisfied, please check the vs30s')
