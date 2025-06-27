@@ -718,18 +718,11 @@ class Jibson2007BLandslides(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGA":
-                    Disp = jibson_2007_model_b(
-                        gmf,
-                        sites.crit_accel,
-                        mag,
-                        self.c1,
-                        self.c2,
-                        self.c3,
-                        self.c4,
-                        self.crit_accel_threshold,
-                    )
-
-            out.append(Disp)
+                Disp = jibson_2007_model_b(
+                    gmf, sites.crit_accel, mag,
+                    self.c1, self.c2, self.c3, self.c4,
+                    self.crit_accel_threshold)
+                out.append(Disp)
         return out
 
 
