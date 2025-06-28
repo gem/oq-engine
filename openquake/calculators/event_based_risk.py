@@ -220,7 +220,6 @@ def event_based_risk(df, oqparam, monitor):
         print(df)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-        ideduc = monitor.read('assets/ideductible')
         aggids = monitor.read('aggids')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
@@ -233,7 +232,7 @@ def event_based_risk(df, oqparam, monitor):
                             int(oqparam.asset_correlation))
 
     outs = gen_outputs(df, crmodel, rng, monitor)
-    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(),
+    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, oqparam.ideduc,
                       monitor)
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
 
@@ -362,6 +361,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # causing different losses
         del adf['id']
         monitor.save('assets', adf)
+
         if 'ID_0' in self.assetcol.tagnames:
             self.crmodel.countries = self.assetcol.tagcol.ID_0
         else:
