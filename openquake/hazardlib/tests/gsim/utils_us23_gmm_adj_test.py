@@ -49,6 +49,14 @@ exp_res = np.array([[[ -4.73116981,  -6.72824192,  -8.69828689, -10.26946305],
         [ -4.35919525,  -5.71917277,  -7.55847418,  -9.53132562],
         [ -5.44339364,  -6.71746409,  -8.22310968,  -9.76372018]],
 
+       [[ -4.51752818,  -6.57789779,  -9.12078283, -10.73412323],
+        [ -4.90204525,  -6.26202277,  -8.10132418, -10.07417562],
+        [ -5.98624364,  -7.26031409,  -8.76595968, -10.30657018]],
+
+       [[ -3.10282818,  -5.16319779,  -7.70608283,  -9.31942323],
+        [ -3.81634525,  -5.17632277,  -7.01562418,  -8.98847562],
+        [ -4.90054364,  -6.17461409,  -7.68025968,  -9.22087018]],
+
        [[ -1.54869462,  -3.8245714 ,  -5.293704  ,  -5.84592443],
         [ -2.33761724,  -3.72056054,  -4.88431736,  -5.81166458],
         [ -3.55411876,  -4.67077352,  -5.15474589,  -6.27965589]],
@@ -161,6 +169,12 @@ p20_adj = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
                      'usgs_basin_scaling="true"')
 p20_def = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"')
 
+# ParkerEtAl2020SInterB with epistemic uncertainty scaling factors
+p20_low = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
+                     'sigma_mu_epsilon=-1.645')
+p20_high = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
+                     'sigma_mu_epsilon=1.645')
+
 # AtkinsonMacias2009 (m9 cb14 basin terms, ba08 site term)
 a09_adj = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"\n'
                      'm9_basin_term="true"')
@@ -233,6 +247,8 @@ gmms = [ag_adj,
         k20_def,
         p20_adj,
         p20_def,
+        p20_low,
+        p20_high,
         a09_adj,
         a09_def,
         z06_adj,
