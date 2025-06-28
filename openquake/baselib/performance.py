@@ -393,6 +393,8 @@ class Monitor(object):
             dset = f[key]
             if '__pdcolumns__' in dset.attrs:
                 return f.read_df(key, slc=slc)
+            elif hasattr(dset, 'keys'):
+                return list(dset)
             elif dset.shape:
                 return dset[slc]
             return pickle.loads(dset[()])
