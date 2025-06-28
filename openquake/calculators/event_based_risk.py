@@ -27,7 +27,7 @@ from scipy import sparse
 
 from openquake.baselib import hdf5, performance, general, python3compat, config
 from openquake.hazardlib import stats, InvalidFile
-from openquake.commonlib.calc import starmap_from_gmfs, compactify3
+from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
@@ -220,7 +220,6 @@ def event_based_risk(df, oqparam, monitor):
         print(df)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-        ideduc = monitor.read('assets/ideductible')
         aggids = monitor.read('aggids')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
@@ -233,7 +232,7 @@ def event_based_risk(df, oqparam, monitor):
                             int(oqparam.asset_correlation))
 
     outs = gen_outputs(df, crmodel, rng, monitor)
-    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(),
+    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, oqparam.ideduc,
                       monitor)
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
 
@@ -251,14 +250,14 @@ def gen_outputs(df, crmodel, rng, monitor):
     ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
     for s0, s1 in monitor.read('start-stop'):
+        # the assets have all the same taxonomy
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        if 'ID_0' not in assets.columns:
-            assets['ID_0'] = 0
-        for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
-            # multiple countries are tested in impact/case_02
+        for id0 in assets.ID_0.unique():
+            # multiple countries are tested in test_impact_mode
             country = crmodel.countries[id0]
             with fil_mon:
+                adf = assets[assets.ID_0 == id0]
                 # *crucial* for the performance of the next step
                 gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
             if len(gmf_df) == 0:  # common enough
@@ -355,22 +354,26 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        adf = self.assetcol.to_dframe().sort_values(['taxonomy', 'ordinal'])
-        # NB: this is subtle! without the second ordering by 'ordinal'
+        adf = self.assetcol.to_dframe()
+        del adf['id']
+        if 'ID_0' not in adf.columns:
+            adf['ID_0'] = 0
+        adf = adf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
+        # NB: this is subtle! without the ordering by 'ordinal'
         # the asset dataframe will be ordered differently on AMD machines
         # with respect to Intel machines, depending on the machine, thus
         # causing different losses
-        del adf['id']
         monitor.save('assets', adf)
+
         if 'ID_0' in self.assetcol.tagnames:
             self.crmodel.countries = self.assetcol.tagcol.ID_0
         else:
             self.crmodel.countries = ['?']
 
         # storing start-stop indices in a smart way, so that the assets are
-        # read from the workers in chunks of at most 1 million elements
+        # read from the workers by taxonomy
         tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
-        monitor.save('start-stop', compactify3(tss))
+        monitor.save('start-stop', tss[:, 1:])
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
         monitor.save('weights', self.datastore['weights'][:])
