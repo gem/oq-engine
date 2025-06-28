@@ -190,7 +190,8 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 dset = dstore['gmf_data/' + col]
                 dic[col] = dset[s0+start:s0+stop][idx - start]
     df = pandas.DataFrame(dic)
-    adfs = read_adfs(monitor)
+    with monitor('reading assets', measuremem=False):
+        adfs = list(read_adfs(monitor))
     del dic
     # if max_gmvs_chunk is too small, there is a huge data transfer in
     # avg_losses and the calculation may hang; if too large, run out of memory
@@ -214,18 +215,15 @@ def read_adfs(monitor):
     """
     :returns: a list of dataframes, one for each (country, taxonomy)
     """
-    adfs = []
-    with monitor('reading assets', measuremem=False):
-        for s0, s1 in monitor.read('start-stop'):
-            # the assets have all the same taxonomy
-            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-            id0s = adf.ID_0.unique()
-            if len(id0s) == 1:
-                adfs.append(adf)
-            else:
-                for id0 in id0s:
-                    adfs.append(adf[adf.ID_0 == id0])
-    return adfs
+    for s0, s1 in monitor.read('start-stop'):
+        # the assets have all the same taxonomy
+        adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+        id0s = adf.ID_0.unique()
+        if len(id0s) == 1:
+            yield adf
+        else:
+            for id0 in id0s:
+                yield adf[adf.ID_0 == id0]
 
 
 def event_based_risk(df, adfs, oqparam, monitor):
