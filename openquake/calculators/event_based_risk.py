@@ -250,20 +250,21 @@ def gen_outputs(df, crmodel, rng, monitor):
     ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
     for s0, s1 in monitor.read('start-stop'):
+        # the assets have all the same country and taxonomy
         with ass_mon:
-            assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
-            # multiple countries are tested in impact/case_02
-            country = crmodel.countries[id0]
-            with fil_mon:
-                # *crucial* for the performance of the next step
-                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
-            if len(gmf_df) == 0:  # common enough
-                continue
-            with mon_risk:
-                [out] = crmodel.get_outputs(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
-            yield out
+            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+        [id0] = adf.ID_0.unique()
+        # multiple countries are tested in impact/case_02
+        country = crmodel.countries[id0]
+        with fil_mon:
+            # *crucial* for the performance of the next step
+            gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+        if len(gmf_df) == 0:  # common enough
+            continue
+        with mon_risk:
+            [out] = crmodel.get_outputs(
+                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+        yield out
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
@@ -369,9 +370,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.crmodel.countries = ['?']
 
         # storing start-stop indices in a smart way, so that the assets are
-        # read from the workers in chunks of at most 1 million elements
+        # read from the workers by taxonomy
         tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
-        monitor.save('start-stop', compactify3(tss))
+        monitor.save('start-stop', tss[:, 1:])
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
         monitor.save('weights', self.datastore['weights'][:])
