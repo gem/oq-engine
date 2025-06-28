@@ -230,14 +230,24 @@ def event_based_risk(df, oqparam, monitor):
     else:
         rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
                             int(oqparam.asset_correlation))
-
-    outs = gen_outputs(df, crmodel, rng, monitor)
+    adfs = []
+    with monitor('reading assets', measuremem=False):
+        for s0, s1 in monitor.read('start-stop'):
+            # the assets have all the same taxonomy
+            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+            id0s = adf.ID_0.unique()
+            if len(id0s) == 1:
+                adfs.append((adf, id0s[0]))
+            else:
+                for id0 in id0s:
+                    adfs.append(adf[adf.ID_0 == id0], id0)
+    outs = gen_outputs(df, adfs, crmodel, rng, monitor)
     avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, oqparam.ideduc,
                       monitor)
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
 
 
-def gen_outputs(df, crmodel, rng, monitor):
+def gen_outputs(df, adfs, crmodel, rng, monitor):
     """
     :param df: GMF dataframe (a slice of events)
     :param crmodel: CompositeRiskModel instance
@@ -247,25 +257,18 @@ def gen_outputs(df, crmodel, rng, monitor):
     """
     mon_risk = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
-    ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
-    for s0, s1 in monitor.read('start-stop'):
-        # the assets have all the same taxonomy
-        with ass_mon:
-            assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        for id0 in assets.ID_0.unique():
-            # multiple countries are tested in test_impact_mode
-            country = crmodel.countries[id0]
-            with fil_mon:
-                adf = assets[assets.ID_0 == id0]
-                # *crucial* for the performance of the next step
-                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
-            if len(gmf_df) == 0:  # common enough
-                continue
-            with mon_risk:
-                [out] = crmodel.get_outputs(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
-            yield out
+    for adf, id0 in adfs:
+        country = crmodel.countries[id0]
+        with fil_mon:
+            # *crucial* for the performance of the next step
+            gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+        if len(gmf_df) == 0:  # common enough
+            continue
+        with mon_risk:
+            [out] = crmodel.get_outputs(
+                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+        yield out
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
