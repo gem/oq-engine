@@ -252,19 +252,20 @@ def gen_outputs(df, crmodel, rng, monitor):
     for s0, s1 in monitor.read('start-stop'):
         # the assets have all the same country and taxonomy
         with ass_mon:
-            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        [id0] = adf.ID_0.unique()
-        # multiple countries are tested in impact/case_02
-        country = crmodel.countries[id0]
-        with fil_mon:
-            # *crucial* for the performance of the next step
-            gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
-        if len(gmf_df) == 0:  # common enough
-            continue
-        with mon_risk:
-            [out] = crmodel.get_outputs(
-                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
-        yield out
+            assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+        for id0 in assets.ID_0.unique():
+            # multiple countries are tested in impact/case_02
+            country = crmodel.countries[id0]
+            with fil_mon:
+                adf = assets[assets.ID_0 == id0]
+                # *crucial* for the performance of the next step
+                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+            if len(gmf_df) == 0:  # common enough
+                continue
+            with mon_risk:
+                [out] = crmodel.get_outputs(
+                    adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+            yield out
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
