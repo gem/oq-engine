@@ -252,8 +252,6 @@ def gen_outputs(df, crmodel, rng, monitor):
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        if 'ID_0' not in assets.columns:
-            assets['ID_0'] = 0
         for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
             # multiple countries are tested in impact/case_02
             country = crmodel.countries[id0]
@@ -360,6 +358,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # with respect to Intel machines, depending on the machine, thus
         # causing different losses
         del adf['id']
+        if 'ID_0' not in adf.columns:
+            adf['ID_0'] = 0
         monitor.save('assets', adf)
 
         if 'ID_0' in self.assetcol.tagnames:
