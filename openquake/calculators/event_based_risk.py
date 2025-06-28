@@ -190,6 +190,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 dset = dstore['gmf_data/' + col]
                 dic[col] = dset[s0+start:s0+stop][idx - start]
     df = pandas.DataFrame(dic)
+    adfs = read_adfs(monitor)
     del dic
     # if max_gmvs_chunk is too small, there is a huge data transfer in
     # avg_losses and the calculation may hang; if too large, run out of memory
@@ -197,7 +198,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
         df.eid.to_numpy(), oqparam.max_gmvs_chunk)
     avg = {}
     for s0, s1 in slices:
-        dic = event_based_risk(df[s0:s1], oqparam, monitor)
+        dic = event_based_risk(df[s0:s1], adfs, oqparam, monitor)
         avg_ = dic.pop('avg')
         if not avg:
             avg.update(avg_)
@@ -209,7 +210,22 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
         yield dict(avg={ln: avg[ln]})
 
 
-def event_based_risk(df, oqparam, monitor):
+def read_adfs(monitor):
+    adfs = []
+    with monitor('reading assets', measuremem=False):
+        for s0, s1 in monitor.read('start-stop'):
+            # the assets have all the same taxonomy
+            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+            id0s = adf.ID_0.unique()
+            if len(id0s) == 1:
+                adfs.append((adf, id0s[0]))
+            else:
+                for id0 in id0s:
+                    adfs.append(adf[adf.ID_0 == id0], id0)
+    return adfs
+
+
+def event_based_risk(df, adfs, oqparam, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param oqparam: parameters coming from the job.ini
@@ -230,17 +246,6 @@ def event_based_risk(df, oqparam, monitor):
     else:
         rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
                             int(oqparam.asset_correlation))
-    adfs = []
-    with monitor('reading assets', measuremem=False):
-        for s0, s1 in monitor.read('start-stop'):
-            # the assets have all the same taxonomy
-            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-            id0s = adf.ID_0.unique()
-            if len(id0s) == 1:
-                adfs.append((adf, id0s[0]))
-            else:
-                for id0 in id0s:
-                    adfs.append(adf[adf.ID_0 == id0], id0)
     outs = gen_outputs(df, adfs, crmodel, rng, monitor)
     avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, oqparam.ideduc,
                       monitor)
@@ -332,13 +337,14 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     :returns: a dictionary of arrays
     """
     cmaker.oq.ground_motion_fields = True
+    adfs = read_adfs(monitor)
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
         for dic in event_based.event_based(
                 block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):
                 gmf_df = pandas.DataFrame(dic['gmfdata'])
-                yield event_based_risk(gmf_df, cmaker.oq, monitor)
+                yield event_based_risk(gmf_df, adfs, cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
