@@ -211,6 +211,9 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
 
 
 def read_adfs(monitor):
+    """
+    :returns: a list of dataframes, one for each (country, taxonomy)
+    """
     adfs = []
     with monitor('reading assets', measuremem=False):
         for s0, s1 in monitor.read('start-stop'):
@@ -218,10 +221,10 @@ def read_adfs(monitor):
             adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
             id0s = adf.ID_0.unique()
             if len(id0s) == 1:
-                adfs.append((adf, id0s[0]))
+                adfs.append(adf)
             else:
                 for id0 in id0s:
-                    adfs.append(adf[adf.ID_0 == id0], id0)
+                    adfs.append(adf[adf.ID_0 == id0])
     return adfs
 
 
@@ -263,7 +266,8 @@ def gen_outputs(df, adfs, crmodel, rng, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     sids = df.sid.to_numpy()
-    for adf, id0 in adfs:
+    for adf in adfs:
+        id0 = adf.ID_0.values[0]
         country = crmodel.countries[id0]
         with fil_mon:
             # *crucial* for the performance of the next step
