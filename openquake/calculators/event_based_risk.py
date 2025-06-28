@@ -250,11 +250,11 @@ def gen_outputs(df, crmodel, rng, monitor):
     ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
     for s0, s1 in monitor.read('start-stop'):
-        # the assets have all the same country and taxonomy
+        # the assets have all the same taxonomy
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
         for id0 in assets.ID_0.unique():
-            # multiple countries are tested in impact/case_02
+            # multiple countries are tested in test_impact_mode
             country = crmodel.countries[id0]
             with fil_mon:
                 adf = assets[assets.ID_0 == id0]
