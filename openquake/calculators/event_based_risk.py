@@ -323,7 +323,6 @@ def expand3(arrayN3, maxsize):
     out = []
     for idx, start, stop in arrayN3:
         for slc in general.gen_slices(start, stop, maxsize):
-            print('---------------', slc.stop-slc.start)
             out.append((idx, slc.start, slc.stop))
     return U32(out)
 
