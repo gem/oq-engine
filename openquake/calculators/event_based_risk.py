@@ -192,10 +192,8 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 dic[col] = dset[s0+start:s0+stop][idx - start]
     df = pandas.DataFrame(dic)
     del dic
-    # if max_gmvs_chunk is too small, there is a huge data transfer in
-    # avg_losses and the calculation may hang; if too large, run out of memory
     slices = performance.split_slices(
-        df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+        df.eid.to_numpy(), int(config.memory.max_gmvs_chunk))
     avg = {}
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
