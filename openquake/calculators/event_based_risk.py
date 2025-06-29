@@ -382,7 +382,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers by taxonomy
         id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
-        tss = expand3(performance.idx_start_stop(id0taxo), 10_000)
+        max_assets = int(config.memory.max_assets_chunk)
+        tss = expand3(performance.idx_start_stop(id0taxo), max_assets)
         monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
