@@ -319,6 +319,15 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
+def expand3(arrayN3, maxsize):
+    out = []
+    for idx, start, stop in arrayN3:
+        for slc in general.gen_slices(start, stop, maxsize):
+            print('---------------', slc.stop-slc.start)
+            out.append((idx, slc.start, slc.stop))
+    return U32(out)
+
+
 def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
@@ -374,7 +383,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers by taxonomy
         id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
-        tss = performance.idx_start_stop(id0taxo)
+        tss = expand3(performance.idx_start_stop(id0taxo), 10_000)
         monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
