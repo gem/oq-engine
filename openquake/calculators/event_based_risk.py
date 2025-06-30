@@ -41,6 +41,7 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
@@ -249,23 +250,21 @@ def gen_outputs(df, crmodel, rng, monitor):
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
-    for s0, s1 in monitor.read('start-stop'):
-        # the assets have all the same taxonomy
+    for id0taxo, s0, s1 in monitor.read('start-stop'):
+        # the assets have all the same taxonomy and country
         with ass_mon:
-            assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        for id0 in assets.ID_0.unique():
-            # multiple countries are tested in test_impact_mode
-            country = crmodel.countries[id0]
-            with fil_mon:
-                adf = assets[assets.ID_0 == id0]
-                # *crucial* for the performance of the next step
-                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
-            if len(gmf_df) == 0:  # common enough
-                continue
-            with mon_risk:
-                [out] = crmodel.get_outputs(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
-            yield out
+            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+        # multiple countries are tested in test_impact_mode
+        country = crmodel.countries[id0taxo // TWO24]
+        with fil_mon:
+            # *crucial* for the performance of the next step
+            gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+        if len(gmf_df) == 0:  # common enough
+            continue
+        with mon_risk:
+            [out] = crmodel.get_outputs(
+                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+        yield out
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
@@ -372,8 +371,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers by taxonomy
-        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
-        monitor.save('start-stop', tss[:, 1:])
+        id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
+        tss = performance.idx_start_stop(id0taxo)
+        monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
         monitor.save('weights', self.datastore['weights'][:])
