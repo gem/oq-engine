@@ -436,12 +436,14 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     :returns: a Starmap object used for event based calculations
     """
     data = dstore['gmf_data']
+    gmvs_per_task = len(data['sid']) // (oq.concurrent_tasks or 1)
+    logging.info('gmvs_per_task =~ {:_d}'.format(gmvs_per_task))
     if 'gmf_data' in dstore.parent:
         ds = dstore.parent
-        gb = sum(data[k].nbytes for k in data) / 1024 ** 3
-        logging.info('There are %.1f GB of GMFs', gb)
     else:
         ds = dstore
+    nbytes = sum(data[k].nbytes for k in data)
+    logging.info('There are %.1f GB of GMFs', nbytes / 1024 ** 3)
     try:
         N = len(ds['complete'])
     except KeyError:
