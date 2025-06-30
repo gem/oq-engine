@@ -192,13 +192,13 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 dic[col] = dset[s0+start:s0+stop][idx - start]
     df = pandas.DataFrame(dic)
     del dic
-    # if max_gmvs_chunk is too small, there is a huge data transfer in
-    # avg_losses and the calculation may hang; if too large, run out of memory
     slices = performance.split_slices(
-        df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+        df.eid.to_numpy(), int(config.memory.max_gmvs_chunk))
     avg = {}
+    with monitor('reading crmodel', measuremem=True):
+        crmodel = monitor.read('crmodel')
     for s0, s1 in slices:
-        dic = event_based_risk(df[s0:s1], oqparam, monitor)
+        dic = event_based_risk(df[s0:s1], crmodel, monitor)
         avg_ = dic.pop('avg')
         if not avg:
             avg.update(avg_)
@@ -210,30 +210,30 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
         yield dict(avg={ln: avg[ln]})
 
 
-def event_based_risk(df, oqparam, monitor):
+def event_based_risk(df, crmodel, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param oqparam: parameters coming from the job.ini
+    :param crmodel: CompositeRiskModel instance
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = monitor.read('crmodel')
-        aggids = monitor.read('aggids')
-        rlz_id = monitor.read('rlz_id')
-        weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
 
-    ARK = (oqparam.A, len(weights), oqparam.K)
-    if oqparam.ignore_master_seed or oqparam.ignore_covs:
+    oq = crmodel.oqparam
+    aggids = monitor.read('aggids')
+    rlz_id = monitor.read('rlz_id')
+    weights = [1] if oq.collect_rlzs else monitor.read('weights')
+
+    ARK = (oq.A, len(weights), oq.K)
+    if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
-        rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
-                            int(oqparam.asset_correlation))
+        rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
+                            int(oq.asset_correlation))
 
     outs = gen_outputs(df, crmodel, rng, monitor)
-    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, oqparam.ideduc,
+    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc,
                       monitor)
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
 
@@ -246,7 +246,7 @@ def gen_outputs(df, crmodel, rng, monitor):
     :param monitor: Monitor instance
     :yields: one output per taxonomy and slice of events
     """
-    mon_risk = monitor('computing risk', measuremem=False)
+    mon_risk = monitor('computing risk', measuremem=True)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
@@ -319,6 +319,14 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
+def expand3(arrayN3, maxsize):
+    out = []
+    for idx, start, stop in arrayN3:
+        for slc in general.gen_slices(start, stop, maxsize):
+            out.append((idx, slc.start, slc.stop))
+    return U32(out)
+
+
 def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
@@ -328,13 +336,15 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     :returns: a dictionary of arrays
     """
     cmaker.oq.ground_motion_fields = True
+    with monitor('reading crmodel', measuremem=True):
+        crmodel = monitor.read('crmodel')
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
         for dic in event_based.event_based(
                 block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):
                 gmf_df = pandas.DataFrame(dic['gmfdata'])
-                yield event_based_risk(gmf_df, cmaker.oq, monitor)
+                yield event_based_risk(gmf_df, crmodel, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -372,7 +382,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers by taxonomy
         id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
-        tss = performance.idx_start_stop(id0taxo)
+        max_assets = int(config.memory.max_assets_chunk)
+        tss = expand3(performance.idx_start_stop(id0taxo), max_assets)
         monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
