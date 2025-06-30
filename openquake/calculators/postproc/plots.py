@@ -35,11 +35,11 @@ def import_plt():
     return plt
 
 
-def add_basemap(ax, min_x, min_y, max_x, max_y,
+def add_basemap(ax, x_min, y_min, x_max, y_max,
                 source=contextily.providers.CartoDB.Positron):
     # NOTE: another interesting option:
     # source = contextily.providers.TopPlusOpen.Grey
-    img, extent = contextily.bounds2img(min_x, min_y, max_x, max_y, source=source)
+    img, extent = contextily.bounds2img(x_min, y_min, x_max, y_max, source=source)
     ax.imshow(img, extent=extent, interpolation='bilinear', alpha=1)
     ax.text(
         0.01, 0.01,  # Position: Bottom-left corner (normalized coordinates)
@@ -155,10 +155,6 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
     x_webmercator, y_webmercator = transformer.transform(
         shakemap_array['lon'], shakemap_array['lat'])
-    min_x, min_y, max_x, max_y = (min(x_webmercator),
-                                  min(y_webmercator),
-                                  max(x_webmercator),
-                                  max(y_webmercator))
     coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
                       cmap='jet', s=markersize)
     plt.colorbar(coll)
@@ -167,7 +163,9 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
             ax, rupture, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=1,
             surf_facecolor='none', surf_linestyle='--')
     xlim, ylim = auto_limits(ax)
-    add_basemap(ax, min_x, min_y, max_x, max_y)
+    x_min, x_max = xlim
+    y_min, y_max = ylim
+    add_basemap(ax, x_min, y_min, x_max, y_max)
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
                       alpha=0.4)
     plt.colorbar(coll, ax=ax)
@@ -201,7 +199,9 @@ def plot_avg_gmf(ex, imt):
     x_webmercator, y_webmercator = transformer.transform(
         avg_gmf['lons'], avg_gmf['lats'])
     xlim, ylim = auto_limits(ax)
-    add_basemap(ax, min_x, min_y, max_x, max_y)
+    x_min, x_max = xlim
+    y_min, y_max = ylim
+    add_basemap(ax, x_min, y_min, x_max, y_max)
     coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
     plt.colorbar(coll, ax=ax)
     adjust_limits(ax, xlim, ylim, padding=1E5)
@@ -232,10 +232,6 @@ def add_surface_webmercator(
     if facecolor is not None:
         fill_params['facecolor'] = facecolor
     ax.fill(x, y, **fill_params)
-    lon_min, lon_max, lat_max, lat_min = surface.get_bounding_box()
-    x_min, y_max = transformer.transform(lon_min, lat_max)  # Top-left corner
-    x_max, y_min = transformer.transform(lon_max, lat_min)  # Bottom-right corner
-    return x_min, x_max, y_min, y_max
 
 
 def add_rupture(ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
@@ -256,24 +252,19 @@ def add_rupture_webmercator(
         ax, rup, hypo_alpha=0.5, hypo_markersize=8, surf_alpha=0.5,
         surf_facecolor=None, surf_linestyle='-'):
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
-    min_x, max_x = float('inf'), float('-inf')
-    min_y, max_y = float('inf'), float('-inf')
     if hasattr(rup.surface, 'surfaces'):
         for surf_idx, surface in enumerate(rup.surface.surfaces):
-            min_x_, max_x_, min_y_, max_y_ = add_surface_webmercator(
+            add_surface_webmercator(
                 ax, surface, 'Surface %d' % surf_idx, alpha=surf_alpha,
                 facecolor=surf_facecolor, linestyle=surf_linestyle)
-            min_x, max_x = min(min_x, min_x_), max(max_x, max_x_)
-            min_y, max_y = min(min_y, min_y_), max(max_y, max_y_)
     else:
-        min_x, max_x, min_y, max_y = add_surface_webmercator(
+        add_surface_webmercator(
             ax, rup.surface, 'Surface', alpha=surf_alpha,
             facecolor=surf_facecolor, linestyle=surf_linestyle)
     hypo_x, hypo_y = transformer.transform(rup.hypocenter.longitude,
                                            rup.hypocenter.latitude)
     ax.plot(hypo_x, hypo_y, marker='*', color='orange', label='Hypocenter',
             alpha=hypo_alpha, linestyle='', markersize=hypo_markersize)
-    return ax, min_x, min_y, max_x, max_y
 
 
 def plot_rupture(rup, backend=None, figsize=(10, 10),
@@ -316,17 +307,15 @@ def plot_rupture_webmercator(rup, backend=None, figsize=(10, 10), return_base64=
     _fig, ax = plt.subplots(figsize=figsize)
     ax.set_aspect('equal')
     # ax.grid(True)
-    ax, min_x, min_y, max_x, max_y = add_rupture_webmercator(
+    add_rupture_webmercator(
         ax, rup, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.3,
         surf_linestyle='--')
-    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
-    min_x, max_x = xlim
-    min_y, max_y = ylim
-    add_basemap(ax, min_x, min_y, max_x, max_y,
+    xlim, ylim = auto_limits(ax)
+    x_min, x_max = xlim
+    y_min, y_max = ylim
+    add_basemap(ax, x_min, y_min, x_max, y_max,
                 source=contextily.providers.TopPlusOpen.Color)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
-    ax.legend()
+    adjust_limits(ax, xlim, ylim, padding=1E5)
     if return_base64:
         return plt_to_base64(plt)
     else:

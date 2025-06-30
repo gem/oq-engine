@@ -18,7 +18,6 @@
 
 import os
 import numpy
-import math
 import shapely
 import logging
 from openquake.commonlib import datastore
@@ -26,7 +25,7 @@ from openquake.hazardlib.geo.utils import cross_idl  # , get_bbox
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
     get_assetcol, get_country_iso_codes, add_rupture_webmercator, adjust_limits,
-    add_basemap)
+    auto_limits, add_basemap)
 
 
 def main(calc_id: int = -1, site_model=False,
@@ -63,27 +62,18 @@ def main(calc_id: int = -1, site_model=False,
     # else:
     #     markersize_site_model = markersize_sitecol = markersize_assets = 18
     #     markersize_discarded = markersize_assets
-    min_x, max_x, min_y, max_y = math.inf, -math.inf, math.inf, -math.inf
     if site_model and 'site_model' in dstore:
         sm = dstore['site_model']
         sm_lons, sm_lats = sm['lon'], sm['lat']
         if len(sm_lons) > 1 and cross_idl(*sm_lons):
             sm_lons %= 360
         x_webmercator, y_webmercator = transformer.transform(sm_lons, sm_lats)
-        min_x, min_y, max_x, max_y = (min(x_webmercator),
-                                      min(y_webmercator),
-                                      max(x_webmercator),
-                                      max(y_webmercator))
         p.scatter(x_webmercator, y_webmercator, marker='.', color='orange',
                   label='site model')  # , s=markersize_site_model)
     # p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
     #           color='gray', label='grid')
     x_assetcol_wm, y_assetcol_wm = transformer.transform(
         assetcol['lon'], assetcol['lat'])
-    min_x, min_y, max_x, max_y = (min(min_x, min(x_assetcol_wm)),
-                                  min(min_y, min(y_assetcol_wm)),
-                                  max(max_x, max(x_assetcol_wm)),
-                                  max(max_y, max(y_assetcol_wm)))
     p.scatter(x_assetcol_wm, y_assetcol_wm, marker='.', color='green',
               label='assets')  # , s=markersize_assets)
     if not assets_only:
@@ -107,7 +97,7 @@ def main(calc_id: int = -1, site_model=False,
         if os.environ.get('OQ_APPLICATION_MODE') == 'ARISTOTLE':
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_ebrupture(dstore, rup_id=0)
-            ax, _minx, _miny, _maxx, _maxy = add_rupture_webmercator(
+            add_rupture_webmercator(
                 ax, rup, hypo_alpha=0.8, hypo_markersize=8, surf_alpha=0.3,
                 surf_linestyle='--')
         else:
@@ -117,21 +107,15 @@ def main(calc_id: int = -1, site_model=False,
         xlon, xlat = [], []
 
     if region:
-        minx, miny, maxx, maxy = region_proj_geom.bounds
+        x_min, y_min, x_max, y_max = region_proj_geom.bounds
+        xlim = (x_min, x_max)
+        ylim = (y_min, y_max)
     else:
-        minx, miny, maxx, maxy = (
-            min(x_assetcol_wm), min(y_assetcol_wm),
-            max(x_assetcol_wm), max(y_assetcol_wm))
-    min_x = min(min_x, _minx, minx)
-    max_x = max(max_x, _maxx, maxx)
-    min_y = min(min_y, _miny, miny)
-    max_y = max(max_y, _maxy, maxy)
-    xlim, ylim = adjust_limits(min_x, max_x, min_y, max_y, padding=1E5)
-    min_x, max_x = xlim
-    min_y, max_y = ylim
-    add_basemap(ax, min_x, min_y, max_x, max_y)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+        xlim, ylim = auto_limits(ax)
+        x_min, x_max = xlim
+        y_min, y_max = ylim
+    add_basemap(ax, x_min, y_min, x_max, y_max)
+    adjust_limits(ax, xlim, ylim, padding=1E5)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
     if country_iso_codes is not None:
