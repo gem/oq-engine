@@ -4,7 +4,8 @@
   [Michele Simionato]
   * Fixed indentation errors in nearly all secondary peril classes
   * Reduced the data transfer in avg_losses (20x for Philippines),
-    thus solving an out-of-memory error; also optimized (25% for Philippines)
+    thus solving an out-of-memory error; also improved the performance
+    (25% for Philippines) and reduced the memory occupation on the workers
   * Print a warning if there are vs30 values distant more than 10% from
     DEFINED_FOR_REFERENCE_VELOCITY
 
