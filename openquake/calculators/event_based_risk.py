@@ -319,7 +319,9 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
-def expand3(arrayN3, maxsize):
+def _expand3(arrayN3, maxsize):
+    # expand array with rows (id0taxo, start, stop) in chunks under
+    # maxsize
     out = []
     for idx, start, stop in arrayN3:
         for slc in general.gen_slices(start, stop, maxsize):
@@ -383,7 +385,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # read from the workers by taxonomy
         id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
         max_assets = int(config.memory.max_assets_chunk)
-        tss = expand3(performance.idx_start_stop(id0taxo), max_assets)
+        tss = _expand3(performance.idx_start_stop(id0taxo), max_assets)
         monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
