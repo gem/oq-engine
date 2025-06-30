@@ -155,8 +155,8 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
     x_webmercator, y_webmercator = transformer.transform(
         shakemap_array['lon'], shakemap_array['lat'])
-    coll = ax.scatter(shakemap_array['lon'], shakemap_array['lat'], c=gmf,
-                      cmap='jet', s=markersize)
+    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
+                      alpha=0.4)
     plt.colorbar(coll)
     if rupture is not None:
         add_rupture_webmercator(
@@ -166,10 +166,7 @@ def plot_shakemap(shakemap_array, imt, backend=None, figsize=(10, 10),
     x_min, x_max = xlim
     y_min, y_max = ylim
     add_basemap(ax, x_min, y_min, x_max, y_max)
-    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize,
-                      alpha=0.4)
-    plt.colorbar(coll, ax=ax)
-    adjust_limits(ax, xlim, ylim, padding=1E5)
+    adjust_limits(ax, xlim, ylim, padding=0.005)
     if with_cities:
         add_cities(ax, xlim, ylim)
     if return_base64:
@@ -198,12 +195,12 @@ def plot_avg_gmf(ex, imt):
     transformer = Transformer.from_crs('EPSG:4326', 'EPSG:3857', always_xy=True)
     x_webmercator, y_webmercator = transformer.transform(
         avg_gmf['lons'], avg_gmf['lats'])
+    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
+    plt.colorbar(coll, ax=ax)
     xlim, ylim = auto_limits(ax)
     x_min, x_max = xlim
     y_min, y_max = ylim
     add_basemap(ax, x_min, y_min, x_max, y_max)
-    coll = ax.scatter(x_webmercator, y_webmercator, c=gmf, cmap='jet', s=markersize)
-    plt.colorbar(coll, ax=ax)
     adjust_limits(ax, xlim, ylim, padding=1E5)
     return plt
 
