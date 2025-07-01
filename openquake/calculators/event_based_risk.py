@@ -206,9 +206,8 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             for ln in avg_:
                 avg[ln] += avg_[ln]
         yield dic
-    if len(df) > 1E6:
-        # very large calculation, avoid returning all at once
-        wait = monitor.task_no * .1 / len(avg)
+    # very large calculation, avoid returning all at once
+    wait = monitor.task_no * .1 / len(avg) if len(df) > 1E6 else 0
     for ln in avg:  # yield smaller outputs
         time.sleep(wait)
         yield dict(avg={ln: avg[ln]})
