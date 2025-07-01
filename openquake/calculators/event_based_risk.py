@@ -27,7 +27,7 @@ from scipy import sparse
 
 from openquake.baselib import hdf5, performance, general, python3compat, config
 from openquake.hazardlib import stats, InvalidFile
-from openquake.commonlib.calc import starmap_from_gmfs, compactify3
+from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
@@ -41,6 +41,7 @@ U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+TWO24 = 2 ** 24
 TWO32 = U64(2 ** 32)
 get_n_occ = operator.itemgetter(1)
 
@@ -191,13 +192,13 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 dic[col] = dset[s0+start:s0+stop][idx - start]
     df = pandas.DataFrame(dic)
     del dic
-    # if max_gmvs_chunk is too small, there is a huge data transfer in
-    # avg_losses and the calculation may hang; if too large, run out of memory
     slices = performance.split_slices(
-        df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+        df.eid.to_numpy(), int(config.memory.max_gmvs_chunk))
     avg = {}
+    with monitor('reading crmodel', measuremem=True):
+        crmodel = monitor.read('crmodel')
     for s0, s1 in slices:
-        dic = event_based_risk(df[s0:s1], oqparam, monitor)
+        dic = event_based_risk(df[s0:s1], crmodel, monitor)
         avg_ = dic.pop('avg')
         if not avg:
             avg.update(avg_)
@@ -209,31 +210,30 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
         yield dict(avg={ln: avg[ln]})
 
 
-def event_based_risk(df, oqparam, monitor):
+def event_based_risk(df, crmodel, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param oqparam: parameters coming from the job.ini
+    :param crmodel: CompositeRiskModel instance
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
-    with monitor('reading crmodel', measuremem=True):
-        crmodel = monitor.read('crmodel')
-        ideduc = monitor.read('assets/ideductible')
-        aggids = monitor.read('aggids')
-        rlz_id = monitor.read('rlz_id')
-        weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
 
-    ARK = (oqparam.A, len(weights), oqparam.K)
-    if oqparam.ignore_master_seed or oqparam.ignore_covs:
+    oq = crmodel.oqparam
+    aggids = monitor.read('aggids')
+    rlz_id = monitor.read('rlz_id')
+    weights = [1] if oq.collect_rlzs else monitor.read('weights')
+
+    ARK = (oq.A, len(weights), oq.K)
+    if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
-        rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
-                            int(oqparam.asset_correlation))
+        rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
+                            int(oq.asset_correlation))
 
     outs = gen_outputs(df, crmodel, rng, monitor)
-    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(),
+    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc,
                       monitor)
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
 
@@ -246,27 +246,25 @@ def gen_outputs(df, crmodel, rng, monitor):
     :param monitor: Monitor instance
     :yields: one output per taxonomy and slice of events
     """
-    mon_risk = monitor('computing risk', measuremem=False)
+    mon_risk = monitor('computing risk', measuremem=True)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
-    for s0, s1 in monitor.read('start-stop'):
+    for id0taxo, s0, s1 in monitor.read('start-stop'):
+        # the assets have all the same taxonomy and country
         with ass_mon:
-            assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        if 'ID_0' not in assets.columns:
-            assets['ID_0'] = 0
-        for (id0, taxo), adf in assets.groupby(['ID_0', 'taxonomy']):
-            # multiple countries are tested in impact/case_02
-            country = crmodel.countries[id0]
-            with fil_mon:
-                # *crucial* for the performance of the next step
-                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
-            if len(gmf_df) == 0:  # common enough
-                continue
-            with mon_risk:
-                [out] = crmodel.get_outputs(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
-            yield out
+            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+        # multiple countries are tested in test_impact_mode
+        country = crmodel.countries[id0taxo // TWO24]
+        with fil_mon:
+            # *crucial* for the performance of the next step
+            gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+        if len(gmf_df) == 0:  # common enough
+            continue
+        with mon_risk:
+            [out] = crmodel.get_outputs(
+                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+        yield out
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
@@ -321,6 +319,16 @@ def set_oqparam(oq, assetcol, dstore):
     oq.A = assetcol['ordinal'].max() + 1
 
 
+def _expand3(arrayN3, maxsize):
+    # expand array with rows (id0taxo, start, stop) in chunks under
+    # maxsize
+    out = []
+    for idx, start, stop in arrayN3:
+        for slc in general.gen_slices(start, stop, maxsize):
+            out.append((idx, slc.start, slc.stop))
+    return U32(out)
+
+
 def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
@@ -330,13 +338,15 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     :returns: a dictionary of arrays
     """
     cmaker.oq.ground_motion_fields = True
+    with monitor('reading crmodel', measuremem=True):
+        crmodel = monitor.read('crmodel')
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
         for dic in event_based.event_based(
                 block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):
                 gmf_df = pandas.DataFrame(dic['gmfdata'])
-                yield event_based_risk(gmf_df, cmaker.oq, monitor)
+                yield event_based_risk(gmf_df, crmodel, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -355,22 +365,28 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        adf = self.assetcol.to_dframe().sort_values(['taxonomy', 'ordinal'])
-        # NB: this is subtle! without the second ordering by 'ordinal'
+        adf = self.assetcol.to_dframe()
+        del adf['id']
+        if 'ID_0' not in adf.columns:
+            adf['ID_0'] = 0
+        adf = adf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
+        # NB: this is subtle! without the ordering by 'ordinal'
         # the asset dataframe will be ordered differently on AMD machines
         # with respect to Intel machines, depending on the machine, thus
         # causing different losses
-        del adf['id']
         monitor.save('assets', adf)
+
         if 'ID_0' in self.assetcol.tagnames:
             self.crmodel.countries = self.assetcol.tagcol.ID_0
         else:
             self.crmodel.countries = ['?']
 
         # storing start-stop indices in a smart way, so that the assets are
-        # read from the workers in chunks of at most 1 million elements
-        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
-        monitor.save('start-stop', compactify3(tss))
+        # read from the workers by taxonomy
+        id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
+        max_assets = int(config.memory.max_assets_chunk)
+        tss = _expand3(performance.idx_start_stop(id0taxo), max_assets)
+        monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
         monitor.save('weights', self.datastore['weights'][:])
