@@ -64,9 +64,9 @@ if settings.WEBUI:
             re_path(r'^v1/impact_get_shakemap_versions$',
                     views.impact_get_shakemap_versions,
                     name="impact_get_shakemap_versions"),
-            re_path(r'^v1/impact_get_nodal_planes$',
-                    views.impact_get_nodal_planes,
-                    name="impact_get_nodal_planes"),
+            re_path(r'^v1/impact_get_nodal_planes_and_info$',
+                    views.impact_get_nodal_planes_and_info,
+                    name="impact_get_nodal_planes_and_info"),
         ]
 
     for app_full in settings.STANDALONE_APPS:
