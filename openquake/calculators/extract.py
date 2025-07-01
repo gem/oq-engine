@@ -834,7 +834,7 @@ def _aggexp_tags(dstore):
     for name in values.dtype.names:
         dic[name] = okvalues[name]
     df = pandas.DataFrame(dic)
-    return df, ok
+    return df, keys
 
 
 @extract.add('aggexp_tags')
@@ -869,14 +869,8 @@ def extract_aggrisk_tags(dstore, what):
     else:
         qdf = ()
         qfields = []
-    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
-        # see impact_test.py
-        aggby = [','.join(a[0] for a in oq.aggregate_by)]
-    else:  # i.e. [['ID_0', 'OCCUPANCY']]
-        # see event_based_risk_test/case_1
-        [aggby] = oq.aggregate_by
-    keys = numpy.array([line.decode('utf8').split('\t')
-                        for line in dstore['agg_keys'][:]])
+    [aggby] = oq.aggregate_by
+    _df, keys = _aggexp_tags(dstore)
     values = dstore['agg_values'][:-1]  # discard the total aggregation
     lossdic = general.AccumDict(accum=0)
     K = len(keys)
