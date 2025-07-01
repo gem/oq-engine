@@ -31,7 +31,7 @@ import numpy
 import pandas
 from scipy.cluster.vq import kmeans2
 
-from openquake.baselib import config, hdf5, general, writers
+from openquake.baselib import config, hdf5, general, performance, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, InvalidFile
@@ -819,22 +819,23 @@ def _aggexp_tags(dstore):
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
-    if len(oq.aggregate_by) > 1:  # i.e. [['ID_0'], ['OCCUPANCY']]
-        aggby = [','.join(a[0] for a in oq.aggregate_by)]
-    else:  # i.e. [['ID_0', 'OCCUPANCY']]
-        [aggby] = oq.aggregate_by
-    keys = numpy.array([line.decode('utf8').split('\t')
-                        for line in dstore['agg_keys'][:]])
-    values = dstore['agg_values'][:-1]  # discard the total aggregation
-    ok = values['structural'] > 0
-    okvalues = values[ok]
-    dic = {}
-    for i, tag in enumerate(aggby):
-        dic[tag] = keys[ok, i]
-    for name in values.dtype.names:
-        dic[name] = okvalues[name]
-    df = pandas.DataFrame(dic)
-    return df, keys
+    aggkey = dstore['assetcol/tagcol'].get_aggkey(oq.aggregate_by)
+    ags = U32([key[0] for key in aggkey])
+    dfs = []
+    for ag, start, stop in performance.idx_start_stop(ags):
+        lines = numpy.array([
+            line.decode('utf8') for line in dstore['agg_keys'][start:stop]])
+        values = dstore['agg_values'][start:stop]
+        ok = values['structural'] > 0
+        okvalues = values[ok]
+        dic = {}#'agg_id': numpy.arange(start, stop)[ok]}
+        ks = numpy.array([ln.split('\t') for ln in lines[ok]])
+        for i, kfield in enumerate(oq.aggregate_by[ag]):
+            dic[kfield] = ks[:, i]
+        for name in values.dtype.names:
+            dic[name] = okvalues[name]
+        dfs.append(pandas.DataFrame(dic))
+    return dfs
 
 
 @extract.add('aggexp_tags')
@@ -843,7 +844,7 @@ def extract_aggexp_tags(dstore, what):
     Aggregate the exposure values (one for each loss type) by tag. Use it as
     /extract/aggexp_tags?
     """
-    return _aggexp_tags(dstore)[0]
+    return _aggexp_tags(dstore)
 
 
 @extract.add('mmi_tags')
@@ -862,54 +863,52 @@ def extract_aggrisk_tags(dstore, what):
     oq = dstore['oqparam']
     ws = dstore['weights'][:]
     adf = dstore.read_df('aggrisk')
+    adf.loss *= ws[adf.rlz_id]
+    del adf['rlz_id']
     if 'aggrisk_quantiles' in dstore:
-        # normally there are two quantiles 0.05, 0.95
+        # normally there are two quantiles 0.05, 0.95 (tested in impact1)
         qdf = dstore.read_df('aggrisk_quantiles', ['agg_id', 'loss_id'])
-        qfields = [col for col in qdf.columns if col != 'agg_id']
     else:
         qdf = ()
-        qfields = []
-    [aggby] = oq.aggregate_by
-    _df, keys = _aggexp_tags(dstore)
-    values = dstore['agg_values'][:-1]  # discard the total aggregation
-    lossdic = general.AccumDict(accum=0)
-    K = len(keys)
-    for agg_id, rlz_id, loss, loss_id in zip(
-            adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
-        if agg_id < K:
-            lossdic[agg_id, loss_id] += loss * ws[rlz_id]
-    acc = general.AccumDict(accum=[])
-    for (agg_id, loss_id), loss in sorted(lossdic.items()):
+    dfs = _aggexp_tags(dstore)
+    K = sum(len(df) for df in dfs)
+    good_loss_ids = U32(sorted(
+        set(adf.loss_id) & {LOSSID[lt] for lt in oq.loss_types}))
+    adf = adf[(adf.agg_id < K) & numpy.isin(adf.loss_id, good_loss_ids)]
+    values = dstore['agg_values'][:]
+    loss_df = adf.groupby(['agg_id', 'loss_id']).sum().rename(
+        columns={'loss': 'lossmea'})
+    if len(qdf):
+        loss_df = loss_df.join(qdf)
+    lts = []
+    vals = []
+    for agg_id, loss_id in loss_df.index:
         lt = LOSSTYPE[loss_id]
-        if lt in oq.loss_types:
-            for agg_key, key in zip(aggby, keys[agg_id]):
-                acc[agg_key].append(key)
-            acc['loss_type'].append(lt)
-            if lt == 'affectedpop':
-                lt = 'residents'
-            elif lt in ['occupants', 'injured']:
-                lt = 'occupants_' + oq.time_event
-            acc['value'].append(values[agg_id][lt])
-            acc['lossmea'].append(loss)
-            if len(qdf):
-                qvalues = qdf.loc[agg_id, loss_id].to_numpy()
-                for qfield, qvalue in zip(qfields, qvalues):
-                    acc[qfield].append(qvalue)
-    df = pandas.DataFrame(acc)
-    if aggby == ['ID_2']:
-        exposure_hdf5 = oq.inputs['exposure'][0]
-        with hdf5.File(exposure_hdf5) as f:
-            id2s = f['tagcol/ID_2'][:]
-            name2s = f['NAME_2'][:]
-            name2dic = {id2.decode('utf8'): name2.decode('utf8')
-                        for id2, name2 in zip(id2s, name2s)}
-        df['NAME_2'] = df['ID_2'].map(name2dic).fillna('n.a.')
-    total_df = df.groupby('loss_type', as_index=False).sum()
-    total_df[aggby] = '*total*'
-    if aggby == ['ID_2']:
-        total_df['NAME_2'] = '*total*'
-    df = pandas.concat([df, total_df], ignore_index=True)
-    return df
+        if lt == 'affectedpop':
+            lt = 'residents'
+        elif lt in ['occupants', 'injured']:
+            lt = 'occupants_' + oq.time_event
+        lts.append(lt)
+        vals.append(values[agg_id][lt])
+    loss_df['loss_type'] = lts
+    loss_df['value'] = vals
+    loss_df = loss_df.reset_index()
+    for aggby, df in zip(oq.aggregate_by, dfs):
+        del loss_df['agg_id'], loss_df['loss_id']
+        if aggby == ['ID_2']:
+            exposure_hdf5 = oq.inputs['exposure'][0]
+            with hdf5.File(exposure_hdf5) as f:
+                id2s = f['tagcol/ID_2'][:]
+                name2s = f['NAME_2'][:]
+                name2dic = {id2.decode('utf8'): name2.decode('utf8')
+                            for id2, name2 in zip(id2s, name2s)}
+            loss_df['NAME_2'] = loss_df['ID_2'].map(name2dic).fillna('n.a.')
+        total_df = loss_df.groupby('loss_type', as_index=False).sum()
+        total_df[aggby] = '*total*'
+        if aggby == ['ID_2']:
+            total_df['NAME_2'] = '*total*'
+        df = pandas.concat([loss_df, total_df], ignore_index=True)
+        yield '-'.join(aggby), df
 
 
 @extract.add('agg_losses')
