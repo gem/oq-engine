@@ -51,7 +51,7 @@ from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
     IMPACT_FORM_DEFAULTS)
 from openquake.hazardlib.shakemap.parsers import (
-    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes)
+    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
@@ -745,7 +745,7 @@ def impact_callback(
         params_to_print += (
             f'{n_stations} seismic stations were loaded (please see'
             f'in the calculation log if any of them were discarded)\n')
-    else:
+    elif 'shakemap_uri' not in params:
         params_to_print += 'No seismic stations were considered\n'
 
     from_email = settings.EMAIL_HOST_USER
@@ -796,6 +796,9 @@ def impact_get_rupture_data(request):
         img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
                                   return_base64=True)
         rupdic['rupture_png'] = img_base64
+    if request.user.level < 2 and 'warning_msg' in rupdic:
+        # we don't want to show the warning to level 1 users
+        del rupdic['warning_msg']
     return JsonResponse(rupdic, status=200)
 
 
@@ -847,21 +850,22 @@ def impact_get_shakemap_versions(request):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
-def impact_get_nodal_planes(request):
+def impact_get_nodal_planes_and_info(request):
     """
-    Return a list of nodal planes for the given usgs_id and shakemap_version
+    Return a list of nodal planes and a dict with lon, lat, dep and mag,
+    for the given usgs_id
 
     :param request:
-        a `django.http.HttpRequest` object containing usgs_id and shakemap_version
+        a `django.http.HttpRequest` object containing usgs_id
     """
     usgs_id = request.POST.get('usgs_id')
-    nodal_planes, err = get_nodal_planes(usgs_id)
+    nodal_planes, info, err = get_nodal_planes_and_info(usgs_id)
     if err:
         nodal_planes_issue = err['error_msg']
     else:
         nodal_planes_issue = None
     response_data = dict(nodal_planes=nodal_planes,
-                         nodal_planes_issue=nodal_planes_issue)
+                         nodal_planes_issue=nodal_planes_issue, info=info)
     return JsonResponse(response_data)
 
 
@@ -935,6 +939,8 @@ def impact_run(request):
     if request.user.level == 0:
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    if not rupture_path:
+        rupture_path = request.POST.get('rupture_from_usgs', '')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
     station_data_file_from_usgs = request.POST.get(
         'station_data_file_from_usgs', '')
