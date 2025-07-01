@@ -796,6 +796,9 @@ def impact_get_rupture_data(request):
         img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
                                   return_base64=True)
         rupdic['rupture_png'] = img_base64
+    if request.user.level < 2 and 'warning_msg' in rupdic:
+        # we don't want to show the warning to level 1 users
+        del rupdic['warning_msg']
     return JsonResponse(rupdic, status=200)
 
 
