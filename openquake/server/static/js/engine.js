@@ -1098,7 +1098,7 @@ function capitalizeFirstLetter(val) {
                 const selected_approach = get_selected_approach();
                 formData.append('approach', selected_approach);
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
-                formData.append('rupture_was_loaded', $('#rupture_was_loaded').val());
+                formData.append('rupture_was_loaded', $('#rupture_was_loaded').val() == 'Loaded');
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
                 if (approaches_requiring_shakemap_version.includes(selected_approach)) {
