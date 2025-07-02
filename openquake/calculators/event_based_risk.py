@@ -250,10 +250,10 @@ def output_gen(df, crmodel, rng, monitor):
     :param monitor: Monitor instance
     :yields: one output per taxonomy and slice of events
     """
-    sids = df.sid.to_numpy()
     risk_mon = monitor('computing risk', measuremem=True)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=False)
+    sids = df.sid.to_numpy()
     monitor.ctime = 0
     for id0taxo, s0, s1 in risk_mon.read('start-stop'):
         # the assets have all the same taxonomy and country
