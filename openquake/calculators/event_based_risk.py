@@ -115,8 +115,8 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     (A, R, K), L = ARK, len(xtypes)
     acc = general.AccumDict(accum=numpy.zeros((L, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
-    with mon_agg:
-        for out in outputs:
+    for out in outputs:
+        with mon_agg:
             for li, ln in enumerate(xtypes):
                 if ln not in out or len(out[ln]) == 0:
                     continue
