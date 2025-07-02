@@ -61,7 +61,7 @@ def fast_agg(keys, values, correl, li, acc):
         acc[ukey][li] += avalue
 
 
-def update_losses(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
+def update(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
     """
     Populate loss_by_AR a dictionary ln -> {'aids': [], 'rlzs': [], 'loss': []}
     where `ln` is the loss name, i.e. "structural", "injured", etc
@@ -71,12 +71,14 @@ def update_losses(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
     :param collect_rlzs: usually True
     """
     if collect_rlzs or len(numpy.unique(rlz_id)) == 1:
+        # fast lane
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy()))
         tot = ldf.groupby('aid').loss.sum()
         aids = tot.index.to_numpy()
         rlzs = numpy.zeros_like(tot)
     else:
+        # rare case
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy(),
                  rlz=rlz_id[U32(alt.eid)]))  # NB: without the U32 here
@@ -103,8 +105,6 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
-    mon_agg = monitor('aggregating losses', measuremem=False)
-    mon_avg = monitor('averaging losses', measuremem=False)
     oq = crmodel.oqparam
     xtypes = oq.ext_loss_types
     if ideduc:
@@ -119,34 +119,19 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln]
-            if oq.avg_losses:
-                with mon_avg:
-                    update_losses(loss_by_AR, ln, alt, rlz_id, oq.collect_rlzs)
-            with mon_agg:
-                if correl:  # use sigma^2 = (sum sigma_i)^2
-                    alt['variance'] = numpy.sqrt(alt.variance)
-                eids = alt.eid.to_numpy() * TWO32  # U64
-                values = numpy.array([alt[col] for col in value_cols]).T
-                # aggregate all assets
-                fast_agg(eids + U64(K), values, correl, li, acc)
-                if len(aggids):
-                    # aggregate assets for each tag combination
-                    aids = alt.aid.to_numpy()
-                    for kids in aggids[:, aids]:
-                        fast_agg(eids + U64(kids), values, correl, li, acc)
-    lis = range(len(xtypes))
-    with monitor('building event loss table', measuremem=True):
-        dic = general.AccumDict(accum=[])
-        for ukey, arr in acc.items():
-            eid, kid = divmod(ukey, TWO32)
-            for li in lis:
-                if arr[li].any():
-                    dic['event_id'].append(eid)
-                    dic['agg_id'].append(kid)
-                    dic['loss_id'].append(LOSSID[xtypes[li]])
-                    for c, col in enumerate(['variance', 'loss']):
-                        dic[col].append(arr[li, c])
-        fix_dtypes(dic)
+            if oq.avg_losses:  # fast
+                update(loss_by_AR, ln, alt, rlz_id, oq.collect_rlzs)
+            if correl:  # use sigma^2 = (sum sigma_i)^2
+                alt['variance'] = numpy.sqrt(alt.variance)
+            eids = alt.eid.to_numpy() * TWO32  # U64
+            values = numpy.array([alt[col] for col in value_cols]).T
+            # aggregate all assets
+            fast_agg(eids + U64(K), values, correl, li, acc)
+            if len(aggids):
+                # aggregate assets for each tag combination
+                aids = alt.aid.to_numpy()
+                for kids in aggids[:, aids]:
+                    fast_agg(eids + U64(kids), values, correl, li, acc)
     for ln in list(loss_by_AR):
         if loss_by_AR[ln]['aids']:
             aids = numpy.concatenate(loss_by_AR[ln]['aids'])
@@ -155,6 +140,20 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
             loss_by_AR[ln] = sparse.coo_matrix((loss, (aids, rlzs)), (A, R))
         else:
             del loss_by_AR[ln]
+
+    # building event loss table
+    lis = range(len(xtypes))
+    dic = general.AccumDict(accum=[])
+    for ukey, arr in acc.items():
+        eid, kid = divmod(ukey, TWO32)
+        for li in lis:
+            if arr[li].any():
+                dic['event_id'].append(eid)
+                dic['agg_id'].append(kid)
+                dic['loss_id'].append(LOSSID[xtypes[li]])
+                for c, col in enumerate(['variance', 'loss']):
+                    dic[col].append(arr[li, c])
+    fix_dtypes(dic)
     return loss_by_AR, pandas.DataFrame(dic)
 
 
@@ -206,7 +205,10 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             for ln in avg_:
                 avg[ln] += avg_[ln]
         yield dic
+    # very large calculation, avoid returning all at once
+    wait = monitor.task_no / len(avg) if len(df) > 1E6 else 0
     for ln in avg:  # yield smaller outputs
+        time.sleep(wait)
         yield dict(avg={ln: avg[ln]})
 
 
@@ -232,13 +234,15 @@ def event_based_risk(df, crmodel, monitor):
         rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
                             int(oq.asset_correlation))
 
-    outs = gen_outputs(df, crmodel, rng, monitor)
-    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc,
-                      monitor)
+    outgen = output_gen(df, crmodel, rng, monitor)
+    with monitor('aggregating losses', measuremem=True) as agg_mon:
+        avg, alt = aggreg(outgen, crmodel, ARK, aggids, rlz_id, oq.ideduc,
+                          monitor)
+    agg_mon.duration -= monitor.ctime  # subtract the computing time
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
 
 
-def gen_outputs(df, crmodel, rng, monitor):
+def output_gen(df, crmodel, rng, monitor):
     """
     :param df: GMF dataframe (a slice of events)
     :param crmodel: CompositeRiskModel instance
@@ -246,14 +250,15 @@ def gen_outputs(df, crmodel, rng, monitor):
     :param monitor: Monitor instance
     :yields: one output per taxonomy and slice of events
     """
-    mon_risk = monitor('computing risk', measuremem=True)
+    risk_mon = monitor('computing risk', measuremem=True)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
-    for id0taxo, s0, s1 in monitor.read('start-stop'):
+    monitor.ctime = 0
+    for id0taxo, s0, s1 in risk_mon.read('start-stop'):
         # the assets have all the same taxonomy and country
         with ass_mon:
-            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+            adf = risk_mon.read('assets', slice(s0, s1)).set_index('ordinal')
         # multiple countries are tested in test_impact_mode
         country = crmodel.countries[id0taxo // TWO24]
         with fil_mon:
@@ -261,9 +266,10 @@ def gen_outputs(df, crmodel, rng, monitor):
             gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
         if len(gmf_df) == 0:  # common enough
             continue
-        with mon_risk:
+        with risk_mon:
             [out] = crmodel.get_outputs(
                 adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+        monitor.ctime += ass_mon.dt + fil_mon.dt + risk_mon.dt
         yield out
 
 
