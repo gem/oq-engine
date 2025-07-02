@@ -61,7 +61,7 @@ def fast_agg(keys, values, correl, li, acc):
         acc[ukey][li] += avalue
 
 
-def update_losses(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
+def update(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
     """
     Populate loss_by_AR a dictionary ln -> {'aids': [], 'rlzs': [], 'loss': []}
     where `ln` is the loss name, i.e. "structural", "injured", etc
@@ -71,12 +71,14 @@ def update_losses(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
     :param collect_rlzs: usually True
     """
     if collect_rlzs or len(numpy.unique(rlz_id)) == 1:
+        # fast lane
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy()))
         tot = ldf.groupby('aid').loss.sum()
         aids = tot.index.to_numpy()
         rlzs = numpy.zeros_like(tot)
     else:
+        # rare case
         ldf = pandas.DataFrame(
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy(),
                  rlz=rlz_id[U32(alt.eid)]))  # NB: without the U32 here
@@ -104,7 +106,6 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     :returns: (avg_losses, agg_loss_table)
     """
     mon_agg = monitor('aggregating losses', measuremem=False)
-    mon_avg = monitor('averaging losses', measuremem=False)
     oq = crmodel.oqparam
     xtypes = oq.ext_loss_types
     if ideduc:
@@ -114,15 +115,14 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     (A, R, K), L = ARK, len(xtypes)
     acc = general.AccumDict(accum=numpy.zeros((L, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
-    for out in outputs:
-        for li, ln in enumerate(xtypes):
-            if ln not in out or len(out[ln]) == 0:
-                continue
-            alt = out[ln]
-            if oq.avg_losses:
-                with mon_avg:
-                    update_losses(loss_by_AR, ln, alt, rlz_id, oq.collect_rlzs)
-            with mon_agg:
+    with mon_agg:
+        for out in outputs:
+            for li, ln in enumerate(xtypes):
+                if ln not in out or len(out[ln]) == 0:
+                    continue
+                alt = out[ln]
+                if oq.avg_losses:  # fast
+                    update(loss_by_AR, ln, alt, rlz_id, oq.collect_rlzs)
                 if correl:  # use sigma^2 = (sum sigma_i)^2
                     alt['variance'] = numpy.sqrt(alt.variance)
                 eids = alt.eid.to_numpy() * TWO32  # U64
@@ -207,7 +207,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 avg[ln] += avg_[ln]
         yield dic
     # very large calculation, avoid returning all at once
-    wait = monitor.task_no * .1 / len(avg) if len(df) > 1E6 else 0
+    wait = monitor.task_no / len(avg) if len(df) > 1E6 else 0
     for ln in avg:  # yield smaller outputs
         time.sleep(wait)
         yield dict(avg={ln: avg[ln]})
