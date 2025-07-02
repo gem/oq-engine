@@ -49,7 +49,7 @@ from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
-    IMPACT_FORM_DEFAULTS)
+    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES)
 from openquake.hazardlib.shakemap.parsers import (
     get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
@@ -735,7 +735,10 @@ def impact_callback(
                 rupdic = ast.literal_eval(params['rupture_dict'])
                 for rupkey, rupval in rupdic.items():
                     if rupkey not in exclude_from_print:
-                        params_to_print += f'{rupkey}: {rupval}\n'
+                        if rupkey == 'approach':
+                            params_to_print += f'{rupkey}: {IMPACT_APPROACHES[val]}\n'
+                        else:
+                            params_to_print += f'{rupkey}: {rupval}\n'
             elif key not in exclude_from_print:
                 params_to_print += f'{key}: {val}\n'
     if 'station_data' in params['inputs']:
@@ -1502,6 +1505,7 @@ def web_engine(request, **kwargs):
         params['impact_form_labels'] = IMPACT_FORM_LABELS
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
+        params['impact_approaches'] = IMPACT_APPROACHES
 
         # this is usually ''; can be set in the local settings for debugging
         params['impact_default_usgs_id'] = \

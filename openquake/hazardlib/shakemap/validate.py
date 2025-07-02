@@ -213,17 +213,21 @@ IMPACT_FORM_DEFAULTS = {
     'description': '',
 }
 
+IMPACT_APPROACHES = {
+    'use_shakemap_from_usgs': 'Use ShakeMap from the USGS',
+    'use_pnt_rup_from_usgs': 'Use point rupture from the USGS',
+    'build_rup_from_usgs': 'Build rupture from USGS nodal plane solutions',
+    'use_shakemap_fault_rup_from_usgs': 'Use ShakeMap fault rupture from the USGS',
+    'use_finite_fault_model_from_usgs': 'Use finite fault model from the USGS',
+    'provide_rup': 'Provide earthquake rupture in OpenQuake NRML format',
+    'provide_rup_params': 'Provide earthquake rupture parameters',
+}
+
 
 msr_choices = [msr.__class__.__name__ for msr in get_available_magnitude_scalerel()]
 
 validators = {
-    'approach': valid.Choice('use_shakemap_from_usgs',
-                             'use_pnt_rup_from_usgs',
-                             'build_rup_from_usgs',
-                             'use_shakemap_fault_rup_from_usgs',
-                             'use_finite_fault_model_from_usgs',
-                             'provide_rup',
-                             'provide_rup_params'),
+    'approach': valid.Choice(*list(IMPACT_APPROACHES)),
     'usgs_id': valid.simple_id,
     'lon': nrml_validators['lon'],
     'lat': nrml_validators['lat'],
@@ -332,6 +336,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     #       in level 2 interface it depends from the selected approach
     if user.level == 1:
         dic['approach'] = 'use_shakemap_from_usgs'
+    else:
+        dic['approach'] = POST['approach']
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
