@@ -828,7 +828,7 @@ def _aggexp_tags(dstore):
         values = dstore['agg_values'][start:stop]
         ok = values['structural'] > 0
         okvalues = values[ok]
-        dic = {}#'agg_id': numpy.arange(start, stop)[ok]}
+        dic = {}
         ks = numpy.array([ln.split('\t') for ln in lines[ok]])
         for i, kfield in enumerate(oq.aggregate_by[ag]):
             dic[kfield] = ks[:, i]
@@ -893,8 +893,11 @@ def extract_aggrisk_tags(dstore, what):
     loss_df['loss_type'] = lts
     loss_df['value'] = vals
     loss_df = loss_df.reset_index()
+    outs = []
     for aggby, df in zip(oq.aggregate_by, dfs):
         del loss_df['agg_id'], loss_df['loss_id']
+        for kfield in aggby:
+            loss_df[kfield] = df[kfield]
         if aggby == ['ID_2']:
             exposure_hdf5 = oq.inputs['exposure'][0]
             with hdf5.File(exposure_hdf5) as f:
@@ -904,11 +907,14 @@ def extract_aggrisk_tags(dstore, what):
                             for id2, name2 in zip(id2s, name2s)}
             loss_df['NAME_2'] = loss_df['ID_2'].map(name2dic).fillna('n.a.')
         total_df = loss_df.groupby('loss_type', as_index=False).sum()
-        total_df[aggby] = '*total*'
+        for kfield in aggby:
+            total_df[kfield] = '*total*'
         if aggby == ['ID_2']:
             total_df['NAME_2'] = '*total*'
-        df = pandas.concat([loss_df, total_df], ignore_index=True)
-        yield '-'.join(aggby), df
+        outs.append(pandas.concat([loss_df, total_df], ignore_index=True))
+    out = pandas.concat(outs)
+    out.chunksizes = [len(out) for out in outs]
+    return out
 
 
 @extract.add('agg_losses')

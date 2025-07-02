@@ -104,8 +104,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         [fname] = export(('aggexp_tags', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        aw = extract(self.calc.datastore, 'aggrisk_tags')
-        breakpoint()
+        df = extract(self.calc.datastore, 'aggrisk_tags')
         fname = self.calc.datastore.export_path('aggrisk_tags.csv')
         CsvWriter(fmt=FIVEDIGITS).save(df, fname)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
