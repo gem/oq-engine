@@ -28,7 +28,7 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
-from openquake.calculators.extract import extract, sanitize, avglosses
+from openquake.calculators.extract import extract, sanitize, avglosses, aggexp_tags
 from openquake.calculators import post_risk
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
@@ -607,11 +607,16 @@ def export_aggexp_tags_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    df = extract(dstore, ekey[0] + '?')
+    oq = dstore['oqparam']
+    dfs, _ = aggexp_tags(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    fname = dstore.export_path('%s.%s' % ekey)
-    writer.save(df, fname, comment=dstore.metadata)
-    return [fname]
+    fnames = []
+    for aggby, df in zip(oq.aggregate_by, dfs):
+        del df['agg_id']
+        fname = dstore.export_path('%s-%s.csv' % (ekey[0], '-'.join(aggby)))
+        writer.save(df, fname, comment=dstore.metadata)
+        fnames.append(fname)
+    return fnames
 
 
 @export.add(('aggcurves', 'csv'))

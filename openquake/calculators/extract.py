@@ -815,7 +815,7 @@ def extract_agg_curves(dstore, what):
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
 
 
-def _aggexp_tags(dstore):
+def aggexp_tags(dstore):
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
@@ -837,7 +837,7 @@ def _aggexp_tags(dstore):
             dic[name] = okvalues[name]
         dfs.append(pandas.DataFrame(dic))
         slices.append(slice(start, stop))
-    return pandas.concat(dfs).set_index('agg_id'), slices
+    return dfs, slices
 
 
 @extract.add('aggexp_tags')
@@ -846,7 +846,8 @@ def extract_aggexp_tags(dstore, what):
     Aggregate the exposure values (one for each loss type) by tag. Use it as
     /extract/aggexp_tags?
     """
-    return _aggexp_tags(dstore)[0]
+    dfs = aggexp_tags(dstore)[0]
+    return pandas.concat(dfs).set_index('agg_id')
 
 
 @extract.add('mmi_tags')
@@ -876,9 +877,9 @@ def extract_aggrisk_tags(dstore, what):
         qdf = ()
         qfields = []
 
-    df, slices = _aggexp_tags(dstore)
+    dfs, slices = aggexp_tags(dstore)
     outs = []
-    for aggby, slc in zip(oq.aggregate_by, slices):
+    for aggby, df, slc in zip(oq.aggregate_by, dfs, slices):
         acc = general.AccumDict(accum=[])
         for agg_id, loss_id, loss in zip(
                 adf.agg_id, adf.loss_id, adf.loss):
@@ -915,9 +916,9 @@ def extract_aggrisk_tags(dstore, what):
                             for id2, name2 in zip(id2s, name2s)}
             out['NAME_2'] = out['ID_2'].map(name2dic).fillna('n.a.')
         total = out.groupby('loss_type', as_index=False).sum()
-        total[aggby] = '*total*'
+        total[aggby] = 'total'
         if aggby == ['ID_2']:
-            total['NAME_2'] = '*total*'
+            total['NAME_2'] = 'total'
         outs.append(pandas.concat([out, total], ignore_index=True))
     return pandas.concat(outs)
 
