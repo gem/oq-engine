@@ -607,19 +607,11 @@ def export_aggexp_tags_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    dfs = extract(dstore, ekey[0] + '?')
+    df = extract(dstore, ekey[0] + '?')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    if len(dfs) == 1:
-        fname = dstore.export_path('%s.%s' % ekey)
-        writer.save(dfs[0], fname, comment=dstore.metadata)
-        return [fname]
-    aggregate_by = dstore['oqparam'].aggregate_by
-    fnames = []
-    for aggby, df in zip(aggregate_by, dfs):
-        tup = ('-'.join(aggby),) + ekey
-        fname = dstore.export_path('%s-%s.%s' % tup)
-        fnames.append(writer.save(df, fname, comment=dstore.metadata))
-    return fnames
+    fname = dstore.export_path('%s.%s' % ekey)
+    writer.save(df, fname, comment=dstore.metadata)
+    return [fname]
 
 
 @export.add(('aggcurves', 'csv'))

@@ -822,20 +822,22 @@ def _aggexp_tags(dstore):
     aggkey = dstore['assetcol/tagcol'].get_aggkey(oq.aggregate_by)
     ags = U32([key[0] for key in aggkey])
     dfs = []
+    slices = []
     for ag, start, stop in performance.idx_start_stop(ags):
         lines = numpy.array([
             line.decode('utf8') for line in dstore['agg_keys'][start:stop]])
         values = dstore['agg_values'][start:stop]
         ok = values['structural'] > 0
         okvalues = values[ok]
-        dic = {}
+        dic = {'agg_id': numpy.arange(start, stop)[ok]}
         ks = numpy.array([ln.split('\t') for ln in lines[ok]])
         for i, kfield in enumerate(oq.aggregate_by[ag]):
             dic[kfield] = ks[:, i]
         for name in values.dtype.names:
             dic[name] = okvalues[name]
         dfs.append(pandas.DataFrame(dic))
-    return dfs
+        slices.append(slice(start, stop))
+    return pandas.concat(dfs).set_index('agg_id'), slices
 
 
 @extract.add('aggexp_tags')
@@ -844,7 +846,7 @@ def extract_aggexp_tags(dstore, what):
     Aggregate the exposure values (one for each loss type) by tag. Use it as
     /extract/aggexp_tags?
     """
-    return _aggexp_tags(dstore)
+    return _aggexp_tags(dstore)[0]
 
 
 @extract.add('mmi_tags')
@@ -862,7 +864,10 @@ def extract_aggrisk_tags(dstore, what):
     """
     oq = dstore['oqparam']
     ws = dstore['weights'][:]
-    adf = dstore.read_df('aggrisk')
+    aggrdf = dstore.read_df('aggrisk')
+    aggrdf.loss *= ws[aggrdf.rlz_id]
+    del aggrdf['rlz_id']
+    adf = aggrdf.groupby(['agg_id', 'loss_id']).sum().reset_index()
     if 'aggrisk_quantiles' in dstore:
         # normally there are two quantiles 0.05, 0.95
         qdf = dstore.read_df('aggrisk_quantiles', ['agg_id', 'loss_id'])
@@ -870,36 +875,37 @@ def extract_aggrisk_tags(dstore, what):
     else:
         qdf = ()
         qfields = []
-    #dfs = _aggexp_tags(dstore)
-    keys = numpy.array([line.decode('utf8').split('\t')
-                        for line in dstore['agg_keys'][:]])
-    values = dstore['agg_values'][:-1]  # discard the total aggregation
-    lossdic = general.AccumDict(accum=0)
-    K = len(keys)
-    for agg_id, rlz_id, loss, loss_id in zip(
-            adf.agg_id, adf.rlz_id, adf.loss, adf.loss_id):
-        if agg_id < K:
-            lossdic[agg_id, loss_id] += loss * ws[rlz_id]
+
+    df, slices = _aggexp_tags(dstore)
     outs = []
-    for aggby in oq.aggregate_by:
+    for aggby, slc in zip(oq.aggregate_by, slices):
         acc = general.AccumDict(accum=[])
-        for (agg_id, loss_id), loss in sorted(lossdic.items()):
+        for agg_id, loss_id, loss in zip(
+                adf.agg_id, adf.loss_id, adf.loss):
+            if agg_id < slc.start or agg_id >= slc.stop:
+                continue
+            try:
+                df.loc[agg_id]
+            except KeyError:
+                continue
             lt = LOSSTYPE[loss_id]
             if lt in oq.loss_types:
-                for agg_key, key in zip(aggby, keys[agg_id]):
-                    acc[agg_key].append(key)
+                for kfield, key in zip(aggby, df.loc[agg_id][aggby]):
+                    acc[kfield].append(key)
                 acc['loss_type'].append(lt)
                 if lt == 'affectedpop':
                     lt = 'residents'
                 elif lt in ['occupants', 'injured']:
                     lt = 'occupants_' + oq.time_event
-                acc['value'].append(values[agg_id][lt])
+                acc['value'].append(df.loc[agg_id][lt])
                 acc['lossmea'].append(loss)
                 if len(qdf):
                     qvalues = qdf.loc[agg_id, loss_id].to_numpy()
                     for qfield, qvalue in zip(qfields, qvalues):
                         acc[qfield].append(qvalue)
-        df = pandas.DataFrame(acc)
+        if not acc:
+            continue
+        out = pandas.DataFrame(acc)
         if aggby == ['ID_2']:
             exposure_hdf5 = oq.inputs['exposure'][0]
             with hdf5.File(exposure_hdf5) as f:
@@ -907,12 +913,12 @@ def extract_aggrisk_tags(dstore, what):
                 name2s = f['NAME_2'][:]
                 name2dic = {id2.decode('utf8'): name2.decode('utf8')
                             for id2, name2 in zip(id2s, name2s)}
-            df['NAME_2'] = df['ID_2'].map(name2dic).fillna('n.a.')
-        total_df = df.groupby('loss_type', as_index=False).sum()
-        total_df[aggby] = '*total*'
+            out['NAME_2'] = out['ID_2'].map(name2dic).fillna('n.a.')
+        total = out.groupby('loss_type', as_index=False).sum()
+        total[aggby] = '*total*'
         if aggby == ['ID_2']:
-            total_df['NAME_2'] = '*total*'
-        outs.append(pandas.concat([df, total_df], ignore_index=True))
+            total['NAME_2'] = '*total*'
+        outs.append(pandas.concat([out, total], ignore_index=True))
     return pandas.concat(outs)
 
 
