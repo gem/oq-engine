@@ -445,8 +445,12 @@ function capitalizeFirstLetter(val) {
         'use_shakemap_from_usgs',
         'use_pnt_rup_from_usgs',
         'build_rup_from_usgs',
-        'use_finite_rup_from_usgs'
+        'use_shakemap_fault_rup_from_usgs',
+        'use_finite_fault_model_from_usgs'
     ];
+
+    // The ShakeMap version is needed to download stations accordingly
+    const approaches_requiring_shakemap_version = approaches_requiring_usgs_id
 
     const retrieve_data_btn_txt_map = {
         'use_shakemap_from_usgs': {
@@ -458,10 +462,13 @@ function capitalizeFirstLetter(val) {
         'build_rup_from_usgs': {
             'initial': 'Build rupture',
             'running': 'Building rupture...',
-            'retrieving_nodal_planes': 'Retrieving nodal planes'},
-        'use_finite_rup_from_usgs': {
-            'initial': 'Retrieve finite rupture',
-            'running': 'Retrieving finite rupture...'},
+            'retrieving_nodal_planes': 'Retrieving nodal planes...'},
+        'use_shakemap_fault_rup_from_usgs': {
+            'initial': 'Retrieve ShakeMap fault rupture',
+            'running': 'Retrieving ShakeMap fault rupture...'},
+        'use_finite_fault_model_from_usgs': {
+            'initial': 'Retrieve finite fault model',
+            'running': 'Retrieving finite fault model...'},
         'provide_rup': {
             'initial': 'Retrieve rupture data',
             'running': 'Retrieving rupture data...'},
@@ -511,6 +518,7 @@ function capitalizeFirstLetter(val) {
         for (field of rupture_form_fields) {
             $('input#' + field).val(impact_form_defaults[field]);
         }
+        $('input#rupture_was_loaded').val('');
         // nodal planes are re-populated when loading rupture data; msrs are populated only once
         $('select#nodal_plane').empty();
         $('select#msr').val('WC1994');
@@ -773,25 +781,31 @@ function capitalizeFirstLetter(val) {
 
             $('input[name="usgs_id"]').on('input', function() {
                 reset_rupture_form_inputs();
-                set_shakemap_version_selector();
-                if ($('input[name="impact_approach"]:checked').val() === 'build_rup_from_usgs') {
+                var selected_approach = $('input[name="impact_approach"]:checked').val();
+                if (approaches_requiring_shakemap_version.includes(selected_approach)) {
+                    set_shakemap_version_selector();
+                }
+                if (selected_approach === 'build_rup_from_usgs') {
                     // retrieve nodal planes only when building rupture from USGS nodal plane solutions
                     var formData = {
                         usgs_id: $.trim($("#usgs_id").val()),
-                        shakemap_version: $("#shakemap_version").val()
                     };
                     $('#submit_impact_get_rupture').prop('disabled', true);
                     $('input[name="impact_approach"]').prop('disabled', true);
                     set_retrieve_data_btn_txt('retrieving_nodal_planes');
                     $.ajax({
                         type: "POST",
-                        url: gem_oq_server_url + "/v1/impact_get_nodal_planes",
+                        url: gem_oq_server_url + "/v1/impact_get_nodal_planes_and_info",
                         data: formData,
                         dataType: "json",
                         encode: true,
                     }).done(function (data) {
                         if ('nodal_planes' in data && data.nodal_planes) {
                             populate_nodal_plane_selector(data.nodal_planes);
+                            $('input#lon').val(data.info.lon);
+                            $('input#lat').val(data.info.lat);
+                            $('input#dep').val(data.info.dep);
+                            $('input#mag').val(data.info.mag);
                         }
                         if ('nodal_planes_issue' in data && data.nodal_planes_issue) {
                             $nodal_plane = $('select#nodal_plane');
@@ -819,7 +833,7 @@ function capitalizeFirstLetter(val) {
                 } else {
                     $('.usgs_id_grp').addClass('hidden');
                 }
-                if (selected_approach == 'use_finite_rup_from_usgs') {
+                if (['use_shakemap_fault_rup_from_usgs', 'use_finite_fault_model_from_usgs'].includes(selected_approach)) {
                     $('#rupture_from_usgs_grp').removeClass('hidden');
                 } else {
                     $('#rupture_from_usgs_grp').addClass('hidden');
@@ -856,6 +870,11 @@ function capitalizeFirstLetter(val) {
                         $('.usgs_id_grp').addClass('hidden');
                     }
                 }
+                if (approaches_requiring_shakemap_version.includes(selected_approach)) {
+                    $('div#shakemap_version_grp').removeClass('hidden');
+                } else {
+                    $('div#shakemap_version_grp').addClass('hidden');
+                }
             });
 
             $('select#nodal_plane').change(function () {
@@ -878,7 +897,9 @@ function capitalizeFirstLetter(val) {
                 if (require_usgs_id() || get_selected_approach() == 'provide_rup_params') {
                     // when providing rupture parameters, usgs_id is set to 'UserProvided'
                     formData.append('usgs_id', usgs_id);
-                    formData.append('shakemap_version', $("#shakemap_version").val());
+                    if (approaches_requiring_shakemap_version.includes(selected_approach)) {
+                        formData.append('shakemap_version', $("#shakemap_version").val());
+                    }
                 }
                 formData.append('use_shakemap', use_shakemap());
                 if (['provide_rup_params', 'build_rup_from_usgs'].includes(selected_approach)) {
@@ -921,12 +942,15 @@ function capitalizeFirstLetter(val) {
                     //       set a specific file in an HTML file input element using JavaScript or jQuery,
                     //       therefore we can not pre-populate the rupture_file_input with the rupture_file
                     //       obtained converting the USGS rupture.json, and we use a separate field referencing it
-                    $('#rupture_from_usgs').val(data.rupture_from_usgs);
-                    $('#rupture_from_usgs_loaded').val(data.rupture_from_usgs ? 'Loaded' : 'N.A.');
+                    $('#rupture_from_usgs').val(data.rupture_file);
+                    $('#rupture_was_loaded').val(data.rupture_was_loaded ? 'Loaded' : 'N.A.');
                     var conversion_issues = '';
                     if ('rupture_issue' in data) {
                         conversion_issues += '<p>' + data.rupture_issue + '</p>';
-                        $('#rupture_from_usgs_loaded').val('N.A. (conversion issue)');
+                        $('#rupture_was_loaded').val('N.A. (conversion issue)');
+                    }
+                    if ('warning_msg' in data) {
+                        conversion_issues += '<p>' + data.warning_msg + '</p>';
                     }
                     if (conversion_issues != '') {
                         diaerror.show(false, "Note", conversion_issues);
@@ -1074,9 +1098,12 @@ function capitalizeFirstLetter(val) {
                 const selected_approach = get_selected_approach();
                 formData.append('approach', selected_approach);
                 formData.append('rupture_from_usgs', $('#rupture_from_usgs').val());
+                formData.append('rupture_was_loaded', $('#rupture_was_loaded').val() == 'Loaded');
                 formData.append('rupture_file', $('#rupture_file_input')[0].files[0]);
                 formData.append('usgs_id', $("#usgs_id").val());
-                formData.append('shakemap_version', $("#shakemap_version").val());
+                if (approaches_requiring_shakemap_version.includes(selected_approach)) {
+                    formData.append('shakemap_version', $("#shakemap_version").val());
+                }
                 formData.append('use_shakemap', use_shakemap());
                 formData.append('lon', $("#lon").val());
                 formData.append('lat', $("#lat").val());
