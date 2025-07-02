@@ -270,8 +270,8 @@ class OutputGenerator:
             with mon:
                 [out] = crmodel.get_outputs(
                     adf, gmf_df, crmodel.oqparam._sec_losses, self.rng, country)
-            yield out
             self.ctime += self.ass_mon.dt + self.fil_mon.dt + mon.dt
+            yield out
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
