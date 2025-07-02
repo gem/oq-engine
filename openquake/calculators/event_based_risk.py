@@ -234,44 +234,43 @@ def event_based_risk(df, crmodel, monitor):
         rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
                             int(oq.asset_correlation))
 
-    outgen = OutputGenerator(df, crmodel, rng, monitor)
+    outgen = output_gen(df, crmodel, rng, monitor)
     with monitor('aggregating losses', measuremem=True) as agg_mon:
         avg, alt = aggreg(outgen, crmodel, ARK, aggids, rlz_id, oq.ideduc,
                           monitor)
-    agg_mon.duration -= outgen.ctime  # subtract the computing time
+    agg_mon.duration -= monitor.ctime  # subtract the computing time
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
 
 
-class OutputGenerator:
-    def __init__(self, df, crmodel, rng, monitor):
-        self.df = df
-        self.crmodel = crmodel
-        self.rng = rng
-        self.mon_risk = monitor('computing risk', measuremem=True)
-        self.fil_mon = monitor('filtering GMFs', measuremem=False)
-        self.ass_mon = monitor('reading assets', measuremem=False)
-        self.ctime = 0
-
-    def __iter__(self):
-        sids = self.df.sid.to_numpy()
-        mon = self.mon_risk
-        crmodel = self.crmodel
-        for id0taxo, s0, s1 in mon.read('start-stop'):
-            # the assets have all the same taxonomy and country
-            with self.ass_mon:
-                adf = mon.read('assets', slice(s0, s1)).set_index('ordinal')
-            # multiple countries are tested in test_impact_mode
-            country = crmodel.countries[id0taxo // TWO24]
-            with self.fil_mon:
-                # *crucial* for the performance of the next step
-                gmf_df = self.df[numpy.isin(sids, adf.site_id.unique())]
-            if len(gmf_df) == 0:  # common enough
-                continue
-            with mon:
-                [out] = crmodel.get_outputs(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, self.rng, country)
-            self.ctime += self.ass_mon.dt + self.fil_mon.dt + mon.dt
-            yield out
+def output_gen(df, crmodel, rng, monitor):
+    """
+    :param df: GMF dataframe (a slice of events)
+    :param crmodel: CompositeRiskModel instance
+    :param rng: random number generator
+    :param monitor: Monitor instance
+    :yields: one output per taxonomy and slice of events
+    """
+    sids = df.sid.to_numpy()
+    risk_mon = monitor('computing risk', measuremem=True)
+    fil_mon = monitor('filtering GMFs', measuremem=False)
+    ass_mon = monitor('reading assets', measuremem=False)
+    monitor.ctime = 0
+    for id0taxo, s0, s1 in risk_mon.read('start-stop'):
+        # the assets have all the same taxonomy and country
+        with ass_mon:
+            adf = risk_mon.read('assets', slice(s0, s1)).set_index('ordinal')
+        # multiple countries are tested in test_impact_mode
+        country = crmodel.countries[id0taxo // TWO24]
+        with fil_mon:
+            # *crucial* for the performance of the next step
+            gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+        if len(gmf_df) == 0:  # common enough
+            continue
+        with risk_mon:
+            [out] = crmodel.get_outputs(
+                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+        monitor.ctime += ass_mon.dt + fil_mon.dt + risk_mon.dt
+        yield out
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
