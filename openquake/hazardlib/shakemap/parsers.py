@@ -1389,7 +1389,7 @@ def _convert_rupture_file(dic, rupture_file, usgs_id, user):
         with open(rupture_file) as f:
             rup_data = json.load(f)
     for key in dic:
-        if dic[key] is not None:
+        if dic[key] is not None and key not in rupdic:
             rupdic[key] = dic[key]
     return rup, rupdic, rup_data, rupture_issue
 
@@ -1488,10 +1488,10 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                 err = {"status": "failed",
                        "error_msg": 'Unable to retrieve rupture geometries'}
                 return None, None, err
-    if not rupdic:
+    if 'lon' not in rupdic:  # rupdic was incompletely filled
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
     for key in dic:
-        if dic[key] is not None:
+        if dic[key] is not None and key not in rupdic:
             rupdic[key] = dic[key]
     if 'mmi_file' not in rupdic:
         rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
