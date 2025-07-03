@@ -880,6 +880,7 @@ def extract_aggrisk_tags(dstore, what):
     dfs, slices = aggexp_tags(dstore)
     outs = []
     for aggby, df, slc in zip(oq.aggregate_by, dfs, slices):
+        df = df.set_index('agg_id')
         acc = general.AccumDict(accum=[])
         for agg_id, loss_id, loss in zip(
                 adf.agg_id, adf.loss_id, adf.loss):
