@@ -1584,6 +1584,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     asce07_with_units = {}
     asce41_with_units = {}
     warnings = None
+    notes = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         try:
             asce_version = ds['oqparam'].asce_version
@@ -1657,13 +1658,14 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 warnings = ds_warnings
             else:
                 warnings += '\n' + ds_warnings
+        if 'notes' in ds:
+            notes = '\n'.join(s.decode('utf8') for s in ds['notes'])
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name, site=site,
                        calc_aelo_version=calc_aelo_version,
-                       asce_version=asce_version,
-                       warnings=warnings))
+                       asce_version=asce_version, warnings=warnings, notes=notes))
 
 
 def format_time_delta(td):

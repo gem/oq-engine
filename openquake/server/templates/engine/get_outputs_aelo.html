@@ -14,6 +14,11 @@
                   WARNING: {{ warnings }}
               </div>
               {% endif %}
+              {% if notes %}
+              <div id="warning-box" class="alert alert-info" style=>
+                  NOTE: {{ notes }}
+              </div>
+              {% endif %}
               <div id="my-outputs" class="well"></div>
             <div class="outputs-general-btns-left">
               <div id="to-full-outputs">
