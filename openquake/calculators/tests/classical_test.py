@@ -415,6 +415,7 @@ class ClassicalTestCase(CalculatorTestCase):
 
         # check override_vs30
         sitecol = self.calc.datastore['sitecol']
+        ae(sitecol.custom_site_id, [b'1001', b'1002:C', b'1002:BC'])
         aac(sitecol.vs30, [760, 500, 800])
         aac(sitecol.z1pt0, [41.306642, 228.885095, 31.070149] , atol=1e-6)
         aac(sitecol.z2pt5, [0.606824, 0.979697, 0.572241], atol=1e-6)
