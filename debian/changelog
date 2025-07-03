@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Extended aggexp_tags and aggrisk_tags to multi-tags
+
   [Paolo Tormene]
   * The OQ-Impact workflow option 'Use finite rupture from the USGS' was
     replaced by two options 'Use ShakeMap fault rupture from the USGS'
