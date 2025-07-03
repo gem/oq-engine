@@ -857,6 +857,7 @@ def extract_mmi_tags(dstore, what):
     return dstore.read_df('mmi_tags')
 
 
+# tested in impact_test and partially in case_1_ins
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
     """
@@ -916,9 +917,9 @@ def extract_aggrisk_tags(dstore, what):
                             for id2, name2 in zip(id2s, name2s)}
             out['NAME_2'] = out['ID_2'].map(name2dic).fillna('n.a.')
         total = out.groupby('loss_type', as_index=False).sum()
-        total[aggby] = 'total'
+        total[aggby] = '*total*'
         if aggby == ['ID_2']:
-            total['NAME_2'] = 'total'
+            total['NAME_2'] = '*total*'
         outs.append(pandas.concat([out, total], ignore_index=True))
     return pandas.concat(outs)
 
