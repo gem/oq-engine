@@ -731,12 +731,11 @@ def main(dstore, csm):
         vs30 = site.vs30
         loc = site.location
         if warning in ['zero_hazard', 'low_hazard']:
-            dic_mce = {'IMT': job_imts,
-                       'ProbMCE': [np.nan]*len(job_imts),
-                       'DetMCE': [np.nan]*len(job_imts),
-                       'MCE': [np.nan]*len(job_imts),
-                       'sid': [sid]*len(job_imts)}
-            mce_df = pd.DataFrame(dic_mce)
+            mce_df = pd.DataFrame({'IMT': job_imts,
+                                   'ProbMCE': [np.nan]*len(job_imts),
+                                   'DetMCE': [np.nan]*len(job_imts),
+                                   'MCE': [np.nan]*len(job_imts),
+                                   'sid': [sid]*len(job_imts)})
             mce_dfs.append(mce_df)
             asce07[sid] = hdf5.dumps(get_zero_hazard_asce07(ASCE_version, vs30))
             asce41[sid] = hdf5.dumps(get_zero_hazard_asce41(ASCE_version))
