@@ -1067,6 +1067,7 @@ class HazardCalculator(BaseCalculator):
                     self.sitecol.array['vs30'] = oq.override_vs30[0]
                 else:
                     # no multiply tested in classical/case_08
+                    self.sitecol.array['vs30'] = -999
                     self.sitecol = self.sitecol.multiply(oq.override_vs30)
                 if 'z1pt0' in names:
                     self.sitecol.calculate_z1pt0()
