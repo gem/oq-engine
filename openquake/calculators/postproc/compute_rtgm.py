@@ -374,14 +374,13 @@ def get_seismicity_class(mce, vs30):
     return Ss_seismicity, S1_seismicity
 
 
-
 class MCEGetter:
+    """
+    :param job_imts: the IMTs run in the job
+    :param det_imt: deterministic ground motion for each IMT
+    :param ASCE_version: ASCE version string
+    """
     def __init__(self, job_imts, det_imt, ASCE_version):
-        """
-        :param job_imts: the IMTs run in the job
-        :param det_imt: deterministic ground motion for each IMT
-        :param ASCE_version: ASCE version string
-        """
         self.job_imts = job_imts
         self.det_imt = det_imt
         self.ASCE_version = ASCE_version
@@ -394,7 +393,6 @@ class MCEGetter:
         :param low_haz: boolean specifying if the hazard is lower than DLLs
         :returns: a dictionary imt -> probabilistic MCE
         :returns: a dictionary imt -> governing MCE
-        :returns: a dictionary imt -> deterministic MCE
         :returns: a dictionary all ASCE 7-16 parameters
         :returns: pandas dataframe with three MCEs and related parameters
         """
@@ -429,9 +427,7 @@ class MCEGetter:
         mce_df = pd.DataFrame(dic_mce)
 
         Ss_seismicity, S1_seismicity = get_seismicity_class(mce, vs30)
-
         period_mce = [from_string(imt).period for imt in job_imts]
-
         if self.ASCE_version == 'ASCE7-16':
             asce07 = {
                  'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
@@ -449,7 +445,6 @@ class MCEGetter:
                  }
         else:
             design = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
-
             if vs30 == 760:
                 asce07 = {
                     'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
@@ -485,7 +480,7 @@ class MCEGetter:
                 asce07[key] = (round(asce07[key], ASCE_DECIMALS)
                                if asce07[key] is not np.nan
                                else 'n.a.')
-        return prob_mce_out, mce, det_mce, asce07, mce_df
+        return prob_mce_out, mce, asce07, mce_df
 
 
 def get_asce41(dstore, mce, facts, sid):
@@ -559,10 +554,10 @@ def get_asce41(dstore, mce, facts, sid):
     return asce41
 
 
-def process_site(site, oq, sa02, sa10, DLLs, ASCE_version,
-                 mrs_all, hcurves_all):
+def get_rtgm_warning(site, oq, sa02, sa10, DLLs, ASCE_version,
+                     mrs_all, hcurves_all):
     """
-    :returns: (rtgm_df, message)
+    :returns: (rtgm_df, warning)
     """
     sid = site.id
     mrs = mrs_all[sid]
@@ -613,9 +608,9 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
     mrs_all = dstore['mean_rates_by_src'][:]
     for sites in sites.values():
         [site] = sites
-        rtgm_df, message = process_site(site, oq, sa02, sa10, DLLs,
-                                        ASCE_version, mrs_all, hcurves_all)
-        yield site, rtgm_df, message
+        rtgm_df, warning = get_rtgm_warning(
+            site, oq, sa02, sa10, DLLs, ASCE_version, mrs_all, hcurves_all)
+        yield site, rtgm_df, warning
 
 
 def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
@@ -687,12 +682,11 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         mg = MCEGetter(job_imts, det_imt, oq.asce_version)
-        _prob_mce_out, mce, det_mce, asce07, mce_df = mg.get_mce_asce07(
+        _prob_mce_out, mce, asce07, mce_df = mg.get_mce_asce07(
             DLLs[sid], rtgm_df, sid, vs30)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
-        logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
 
         logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
@@ -749,7 +743,7 @@ def main(dstore, csm):
             logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
                          loc.y, mce_df)
         elif warning in ['below_min', 'only_prob_mce']:
-            _prob_mce_out, mce, _det_mce, a07, mce_df = mg.get_mce_asce07(
+            _prob_mce_out, mce, a07, mce_df = mg.get_mce_asce07(
                 DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
