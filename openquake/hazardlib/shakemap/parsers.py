@@ -1451,9 +1451,6 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
         if dic.get('lon') is None:  # don't override user-inserted values
             rupdic, err = load_rupdic_from_origin(
                 usgs_id, properties['products'])
-            for key in dic:
-                if dic[key] is not None:
-                    rupdic[key] = dic[key]
             if err:
                 return None, None, err
         else:
@@ -1490,6 +1487,9 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                 return None, None, err
     if not rupdic:
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
+    for key in dic:
+        if dic[key] is not None:
+            rupdic[key] = dic[key]
     if 'mmi_file' not in rupdic:
         rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
     if approach == 'use_shakemap_from_usgs':

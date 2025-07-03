@@ -736,9 +736,8 @@ def impact_callback(
                 for rupkey, rupval in rupdic.items():
                     if rupkey not in exclude_from_print:
                         if rupkey == 'approach':
-                            params_to_print += f'{rupkey}: {IMPACT_APPROACHES[val]}\n'
-                        else:
-                            params_to_print += f'{rupkey}: {rupval}\n'
+                            rupval = IMPACT_APPROACHES[rupval]
+                        params_to_print += f'{rupkey}: {rupval}\n'
             elif key not in exclude_from_print:
                 params_to_print += f'{key}: {val}\n'
     if 'station_data' in params['inputs']:
