@@ -717,15 +717,12 @@ def impact_callback(
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
     params_to_print = ''
-    exclude_from_print = []
+    exclude_from_print = ['rupture_from_usgs']
     if 'shakemap_uri' in params:
-        exclude_from_print = [
-            'station_data_file', 'station_data_issue',
-            'station_data_file_from_usgs',
+        exclude_from_print.extend([
+            'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
             'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type',
-            'gsim', 'shakemap_uri', 'rupture_file', 'rupture_from_usgs',
-            'title', 'mmi_file',
-            'rake']
+            'gsim', 'shakemap_uri', 'rupture_file', 'title', 'mmi_file', 'rake'])
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
