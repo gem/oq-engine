@@ -774,20 +774,30 @@ def export_asce(ekey, dstore):
     return [fname]
 
 
-# NB: exporting only the site #0; this is okay
+def _export_mde(writer, dstore, key, site, descr, suffix=''):
+    data = dstore[key + f'/{site.id}'][:]
+    fname = dstore.export_path('%s%s.csv' % (key, suffix))
+    comment = dstore.metadata.copy()
+    comment['lon'] = site.location.x
+    comment['lat'] = site.location.y
+    comment['vs30'] = site.vs30
+    comment['site_name'] = descr  # e.g. 'CCA example'
+    writer.save(data, fname, comment=comment)
+    return fname
+
+
 @export.add(('mag_dst_eps_sig', 'csv'))
 def export_mag_dst_eps_sig(ekey, dstore):
-    data = dstore[ekey[0] + '/0'][:]
+    site_ids= list(dstore[ekey[0]])
+    oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     writer = writers.CsvWriter(fmt='%.5f')
-    fname = dstore.export_path('%s.csv' % ekey[0])
-    comment = dstore.metadata.copy()
-    comment['lon'] = sitecol.lons[0]
-    comment['lat'] = sitecol.lats[0]
-    comment['vs30'] = sitecol.vs30[0]
-    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
-    writer.save(data, fname, comment=comment)
-    return [fname]
+    if len(site_ids) == 1:
+        [site] = sitecol
+        return _export_mde(writer, dstore, ekey[0], site, oq.description)
+    else:
+        return [_export_mde(writer, dstore, ekey[0], site, oq.description,
+                            f'-{site.id}') for site in sitecol]
 
 
 @export.add(('trt_gsim', 'csv'))
