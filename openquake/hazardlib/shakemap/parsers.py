@@ -1366,7 +1366,7 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
     return shakemap_versions, usgs_preferred_version, err
 
 
-def _convert_rupture_file(rupture_file, usgs_id, user):
+def _convert_rupture_file(dic, rupture_file, usgs_id, user):
     rup = None
     rupdic = {}
     rup_data = {}
@@ -1380,7 +1380,7 @@ def _convert_rupture_file(rupture_file, usgs_id, user):
             rupture_file = convert_to_oq_xml(rupture_file, rupture_file_xml)
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
-            return rup, rupdic, err
+            return None, {}, err
     if rupture_file.endswith('.xml'):
         rup, rupdic, rupture_issue = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
     elif rupture_file.endswith('.csv'):
@@ -1388,6 +1388,9 @@ def _convert_rupture_file(rupture_file, usgs_id, user):
     elif rupture_file.endswith('.json') and usgs_id != 'FromFile':
         with open(rupture_file) as f:
             rup_data = json.load(f)
+    for key in dic:
+        if dic[key] is not None:
+            rupdic[key] = dic[key]
     return rup, rupdic, rup_data, rupture_issue
 
 
@@ -1437,7 +1440,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
         return make_rup_from_dic(dic, rupture_file)
     if rupture_file:
         rup, rupdic, rup_data, rupture_issue = _convert_rupture_file(
-            rupture_file, usgs_id, user)
+            dic, rupture_file, usgs_id, user)
         if rupture_issue or usgs_id == 'FromFile':
             return rup, rupdic, rupture_issue
     assert usgs_id
@@ -1477,7 +1480,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                         usgs_id, contents, user)
             if rupture_file:
                 rup, rupdic, updated_rup_data, rupture_issue = _convert_rupture_file(
-                    rupture_file, usgs_id, user)
+                    dic, rupture_file, usgs_id, user)
                 if updated_rup_data:
                     rup_data = updated_rup_data
             elif approach in ['use_shakemap_fault_rup_from_usgs',
