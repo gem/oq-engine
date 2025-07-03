@@ -374,109 +374,118 @@ def get_seismicity_class(mce, vs30):
     return Ss_seismicity, S1_seismicity
 
 
-def get_mce_asce07(job_imts, det_imt, DLLs, rtgm, sid, vs30,
-                   ASCE_version, low_haz=False):
-    """
-    :param job_imts: the IMTs run in the job
-    :param det_imt: deterministic ground motion for each IMT
-    :param DLLs: deterministic lower limits according to ASCE 7-22
-    :param rtgm: dataframe
-    :param sid: the site ID
-    :param low_haz: boolean specifying if the hazard is lower than DLLs
-    :returns: a dictionary imt -> probabilistic MCE
-    :returns: a dictionary imt -> governing MCE
-    :returns: a dictionary imt -> deterministic MCE
-    :returns: a dictionary all ASCE 7-16 parameters
-    :returns: pandas dataframe with three MCEs and related parameters
-    """
-    prob_mce = rtgm.ProbMCE.to_numpy()
-    imts = rtgm['IMT']
-    for i, imt in enumerate(imts):
-        if imt == 'SA0P2':
-            crs = rtgm['RiskCoeff'][i]
-        elif imt == 'SA1P0':
-            cr1 = rtgm['RiskCoeff'][i]
 
-    det_mce = {}
-    mce = {}  # imt -> MCE
-    prob_mce_out = {}
-    for i, imt in enumerate(det_imt):
-        if low_haz:
-            det_mce[imt] = np.nan
-            det_imt[imt] = np.nan
-            mce[imt] = prob_mce[i]
-        else:
-            det_mce[imt] = max(det_imt[imt], DLLs[i])
-            mce[imt] = min(prob_mce[i], det_mce[imt])
-        prob_mce_out[imt] = prob_mce[i]
-    dic_mce = {'IMT': job_imts,
-               'DLL': DLLs,
-               'ProbMCE': prob_mce,
-               'DetMCE': det_mce.values(),
-               'MCE': mce.values(),
-               'sid': [sid]*len(job_imts)}
-    mce_df = pd.DataFrame(dic_mce)
+class MCEGetter:
+    def __init__(self, job_imts, det_imt, ASCE_version):
+        """
+        :param job_imts: the IMTs run in the job
+        :param det_imt: deterministic ground motion for each IMT
+        :param ASCE_version: ASCE version string
+        """
+        self.job_imts = job_imts
+        self.det_imt = det_imt
+        self.ASCE_version = ASCE_version
 
-    Ss_seismicity, S1_seismicity = get_seismicity_class(mce, vs30)
+    def get_mce_asce07(self, DLLs, rtgm, sid, vs30, low_haz=False):
+        """
+        :param DLLs: deterministic lower limits according to ASCE 7-22
+        :param rtgm: dataframe
+        :param sid: the site ID
+        :param low_haz: boolean specifying if the hazard is lower than DLLs
+        :returns: a dictionary imt -> probabilistic MCE
+        :returns: a dictionary imt -> governing MCE
+        :returns: a dictionary imt -> deterministic MCE
+        :returns: a dictionary all ASCE 7-16 parameters
+        :returns: pandas dataframe with three MCEs and related parameters
+        """
+        det_imt = self.det_imt
+        job_imts = self.job_imts
+        prob_mce = rtgm.ProbMCE.to_numpy()
+        imts = rtgm['IMT']
+        for i, imt in enumerate(imts):
+            if imt == 'SA0P2':
+                crs = rtgm['RiskCoeff'][i]
+            elif imt == 'SA1P0':
+                cr1 = rtgm['RiskCoeff'][i]
 
-    period_mce = [from_string(imt).period for imt in job_imts]
+        det_mce = {}
+        mce = {}  # imt -> MCE
+        prob_mce_out = {}
+        for i, imt in enumerate(det_imt):
+            if low_haz:
+                det_mce[imt] = np.nan
+                det_imt[imt] = np.nan
+                mce[imt] = prob_mce[i]
+            else:
+                det_mce[imt] = max(det_imt[imt], DLLs[i])
+                mce[imt] = min(prob_mce[i], det_mce[imt])
+            prob_mce_out[imt] = prob_mce[i]
+        dic_mce = {'IMT': job_imts,
+                   'DLL': DLLs,
+                   'ProbMCE': prob_mce,
+                   'DetMCE': det_mce.values(),
+                   'MCE': mce.values(),
+                   'sid': [sid]*len(job_imts)}
+        mce_df = pd.DataFrame(dic_mce)
 
-    if ASCE_version == 'ASCE7-16':
-        asce07 = {
-             'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
-             'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
+        Ss_seismicity, S1_seismicity = get_seismicity_class(mce, vs30)
 
-             'Ss': mce['SA(0.2)'], 'Ss_RT': prob_mce_out['SA(0.2)'],
-             'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
-             'Ss_det': det_mce['SA(0.2)'],
-             'Ss_seismicity': Ss_seismicity,
+        period_mce = [from_string(imt).period for imt in job_imts]
 
-             'S1': mce['SA(1.0)'], 'S1_RT': prob_mce_out['SA(1.0)'],
-             'CR1': cr1, 'S1_84th': det_imt['SA(1.0)'],
-             'S1_det': det_mce['SA(1.0)'],
-             'S1_seismicity': S1_seismicity
-             }
-    else:
-        design = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
-
-        if vs30 == 760:
+        if self.ASCE_version == 'ASCE7-16':
             asce07 = {
-                'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
-                'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
-                'Ss': mce['SA(0.2)'], 'Sms': design[2],
-                'Sds': design[0], 'Ss_RT': prob_mce_out['SA(0.2)'],
-                'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
-                'Ss_det': det_mce['SA(0.2)'],
-                'Ss_seismicity': Ss_seismicity,
-                'S1': mce['SA(1.0)'], 'Sm1': design[3],
-                'Sd1': design[1], 'S1_RT': prob_mce_out['SA(1.0)'],
-                'CR1': cr1, 'S1_84th': det_imt['SA(1.0)'],
-                'S1_det': det_mce['SA(1.0)'],
-                'S1_seismicity': S1_seismicity
-            }
+                 'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
+                 'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
+
+                 'Ss': mce['SA(0.2)'], 'Ss_RT': prob_mce_out['SA(0.2)'],
+                 'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
+                 'Ss_det': det_mce['SA(0.2)'],
+                 'Ss_seismicity': Ss_seismicity,
+
+                 'S1': mce['SA(1.0)'], 'S1_RT': prob_mce_out['SA(1.0)'],
+                 'CR1': cr1, 'S1_84th': det_imt['SA(1.0)'],
+                 'S1_det': det_mce['SA(1.0)'],
+                 'S1_seismicity': S1_seismicity
+                 }
         else:
-            asce07 = {
-                'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
-                'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
-                'Sms': design[2], 'Sds': design[0],
-                'Ss_RT': prob_mce_out['SA(0.2)'],
-                'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
-                'Ss_det': det_mce['SA(0.2)'],
-                'Ss_seismicity': Ss_seismicity,
-                'Sm1': design[3], 'Sd1': design[1],
-                'S1_RT': prob_mce_out['SA(1.0)'],
-                'CR1': cr1, 'S1_84th': det_imt['SA(1.0)'],
-                'S1_det': det_mce['SA(1.0)'],
-                'S1_seismicity': S1_seismicity
-            }
+            design = calc_sds_and_sd1(period_mce, mce_df.MCE, vs30)
 
-    for key in asce07:
-        if not isinstance(asce07[key], str):
-            asce07[key] = (
-                round(asce07[key], ASCE_DECIMALS) if asce07[key] is not np.nan
-                else 'n.a.')
-
-    return prob_mce_out, mce, det_mce, asce07, mce_df
+            if vs30 == 760:
+                asce07 = {
+                    'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
+                    'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
+                    'Ss': mce['SA(0.2)'], 'Sms': design[2],
+                    'Sds': design[0], 'Ss_RT': prob_mce_out['SA(0.2)'],
+                    'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
+                    'Ss_det': det_mce['SA(0.2)'],
+                    'Ss_seismicity': Ss_seismicity,
+                    'S1': mce['SA(1.0)'], 'Sm1': design[3],
+                    'Sd1': design[1], 'S1_RT': prob_mce_out['SA(1.0)'],
+                    'CR1': cr1, 'S1_84th': det_imt['SA(1.0)'],
+                    'S1_det': det_mce['SA(1.0)'],
+                    'S1_seismicity': S1_seismicity
+                }
+            else:
+                asce07 = {
+                    'PGA': mce['PGA'], 'PGA_2_50': prob_mce_out['PGA'],
+                    'PGA_84th': det_imt['PGA'], 'PGA_det': det_mce['PGA'],
+                    'Sms': design[2], 'Sds': design[0],
+                    'Ss_RT': prob_mce_out['SA(0.2)'],
+                    'CRs': crs, 'Ss_84th': det_imt['SA(0.2)'],
+                    'Ss_det': det_mce['SA(0.2)'],
+                    'Ss_seismicity': Ss_seismicity,
+                    'Sm1': design[3], 'Sd1': design[1],
+                    'S1_RT': prob_mce_out['SA(1.0)'],
+                    'CR1': cr1, 'S1_84th': det_imt['SA(1.0)'],
+                    'S1_det': det_mce['SA(1.0)'],
+                    'S1_seismicity': S1_seismicity
+                }
+        for key in asce07:
+            if not isinstance(asce07[key], str):
+                asce07[key] = (round(asce07[key], ASCE_DECIMALS)
+                               if asce07[key] is not np.nan
+                               else 'n.a.')
+        return prob_mce_out, mce, det_mce, asce07, mce_df
 
 
 def get_asce41(dstore, mce, facts, sid):
@@ -664,7 +673,6 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     :yields: (sid, mag_dst_eps_sig, asce07, asce41, mce_df)
     """
     oq = dstore['oqparam']
-    ASCE_version = oq.asce_version
     imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
                    for sid, rtgm_df in rtgm.items()}
     out = postproc.disagg_by_rel_sources.main(
@@ -678,8 +686,9 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
         det_imt, mag_dst_eps_sig = get_deterministic(
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
-        _prob_mce_out, mce, det_mce, asce07, mce_df = get_mce_asce07(
-            job_imts, det_imt, DLLs[sid], rtgm_df, sid, vs30, ASCE_version)
+        mg = MCEGetter(job_imts, det_imt, oq.asce_version)
+        _prob_mce_out, mce, det_mce, asce07, mce_df = mg.get_mce_asce07(
+            DLLs[sid], rtgm_df, sid, vs30)
         logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                      mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
@@ -721,8 +730,7 @@ def main(dstore, csm):
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
-    dummy_det = {imt: '' for imt in job_imts}
-
+    mg = MCEGetter(job_imts, {imt: '' for imt in job_imts}, ASCE_version)
     for site, rtgm_df, warning in process_sites(
             dstore, csm, DLLs, ASCE_version):
         sid = site.id
@@ -741,9 +749,8 @@ def main(dstore, csm):
             logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
                          loc.y, mce_df)
         elif warning in ['below_min', 'only_prob_mce']:
-            _prob_mce_out, mce, _det_mce, a07, mce_df = get_mce_asce07(
-                job_imts, dummy_det, DLLs[sid], rtgm_df, sid, vs30,
-                ASCE_version, low_haz=True)
+            _prob_mce_out, mce, _det_mce, a07, mce_df = mg.get_mce_asce07(
+                DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
             mce_dfs.append(mce_df)
