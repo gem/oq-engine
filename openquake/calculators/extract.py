@@ -837,7 +837,7 @@ def aggexp_tags(dstore):
             dic[name] = okvalues[name]
         dfs.append(pandas.DataFrame(dic))
         slices.append(slice(start, stop))
-    return dfs, slices
+    return pandas.concat(dfs).set_index('agg_id'), slices
 
 
 @extract.add('aggexp_tags')
@@ -846,8 +846,7 @@ def extract_aggexp_tags(dstore, what):
     Aggregate the exposure values (one for each loss type) by tag. Use it as
     /extract/aggexp_tags?
     """
-    dfs = aggexp_tags(dstore)[0]
-    return pandas.concat(dfs).set_index('agg_id')
+    return aggexp_tags(dstore)[0]
 
 
 @extract.add('mmi_tags')
@@ -877,10 +876,10 @@ def extract_aggrisk_tags(dstore, what):
         qdf = ()
         qfields = []
 
-    dfs, slices = aggexp_tags(dstore)
+    fulldf, slices = aggexp_tags(dstore)
     outs = []
-    for aggby, df, slc in zip(oq.aggregate_by, dfs, slices):
-        df = df.set_index('agg_id')
+    for aggby, slc in zip(oq.aggregate_by, slices):
+        df = fulldf[slc]
         acc = general.AccumDict(accum=[])
         for agg_id, loss_id, loss in zip(
                 adf.agg_id, adf.loss_id, adf.loss):
