@@ -815,7 +815,7 @@ def extract_agg_curves(dstore, what):
     return ArrayWrapper(arr, dict(json=hdf5.dumps(attrs)))
 
 
-def _aggexp_tags(dstore):
+def aggexp_tags(dstore):
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
@@ -846,7 +846,7 @@ def extract_aggexp_tags(dstore, what):
     Aggregate the exposure values (one for each loss type) by tag. Use it as
     /extract/aggexp_tags?
     """
-    return _aggexp_tags(dstore)[0]
+    return aggexp_tags(dstore)[0]
 
 
 @extract.add('mmi_tags')
@@ -857,6 +857,7 @@ def extract_mmi_tags(dstore, what):
     return dstore.read_df('mmi_tags')
 
 
+# tested in impact_test and partially in case_1_ins
 @extract.add('aggrisk_tags')
 def extract_aggrisk_tags(dstore, what):
     """
@@ -876,9 +877,10 @@ def extract_aggrisk_tags(dstore, what):
         qdf = ()
         qfields = []
 
-    df, slices = _aggexp_tags(dstore)
+    fulldf, slices = aggexp_tags(dstore)
     outs = []
     for aggby, slc in zip(oq.aggregate_by, slices):
+        df = fulldf[slc]
         acc = general.AccumDict(accum=[])
         for agg_id, loss_id, loss in zip(
                 adf.agg_id, adf.loss_id, adf.loss):
