@@ -550,6 +550,43 @@ def get_asce41(dstore, mce, facts, sid):
     return asce41
 
 
+def process_site(site, oq, sa02, sa10, DLLs, ASCE_version,
+                 mrs_all, hcurves_all):
+    """
+    :returns: (rtgm_df, message)
+    """
+    sid = site.id
+    mrs = mrs_all[sid]
+    hcurves = hcurves_all[sid, 0]  # shape ML1
+    mean_rates = to_rates(hcurves)
+    loc = site.location
+
+    if mrs.sum() == 0:
+        return None, 'zero_hazard'
+    elif mean_rates.max() < MIN_AFE or hcurves[0, 0] < min(oq.poes):
+        # PGA curve too low
+        return None, 'low_hazard'
+    try:
+        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
+    except ValueError as err:
+        # happens for site (24.96, 60.16) in EUR, the curve is too low
+        if 'below the interpolation range' in str(err):
+            return None, 'low_hazard'
+        else:
+            print(f'on site({loc.x}, {loc.y}): {err}', file=sys.stderr)
+            raise
+    logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
+
+    if (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
+            (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
+        return rtgm_df, 'below_min'
+    elif (rtgm_df.ProbMCE < DLLs[site.id]).all():
+        # do not disagg by rel sources
+        return rtgm_df, 'only_prob_mce'
+    else:
+        return rtgm_df, None
+
+
 def process_sites(dstore, csm, DLLs, ASCE_version):
     """
     :yields: (site, rtgm_df, warning)
@@ -567,40 +604,9 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
     mrs_all = dstore['mean_rates_by_src'][:]
     for sites in sites.values():
         [site] = sites
-        sid = site.id
-        mrs = mrs_all[sid]
-        hcurves = hcurves_all[sid, 0]  # shape ML1
-        mean_rates = to_rates(hcurves)
-        loc = site.location
-        if mrs.sum() == 0:
-            yield site, None, 'zero_hazard'
-            continue
-        elif mean_rates.max() < MIN_AFE or hcurves[0, 0] < min(oq.poes):
-            # PGA curve too low
-            yield site, None, 'low_hazard'
-            continue
-        try:
-            rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
-        except ValueError as err:
-            # happens for site (24.96, 60.16) in EUR, the curve is too low
-            if 'below the interpolation range' in str(err):
-                yield site, None, 'low_hazard'
-                continue
-            else:
-                print(f'on site({loc.x}, {loc.y}): {err}', file=sys.stderr)
-                raise
-        logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
-
-        if (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
-                (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
-            yield site, rtgm_df, 'below_min'
-
-        elif (rtgm_df.ProbMCE < DLLs[site.id]).all():
-            # do not disagg by rel sources
-            yield site, rtgm_df, 'only_prob_mce'
-
-        else:
-            yield site, rtgm_df, None
+        rtgm_df, message = process_site(site, oq, sa02, sa10, DLLs,
+                                        ASCE_version, mrs_all, hcurves_all)
+        yield site, rtgm_df, message
 
 
 def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:

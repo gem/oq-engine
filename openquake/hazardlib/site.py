@@ -295,6 +295,21 @@ site_param_dt = {
     'in_cshm': bool  # used in mcverry
 }
 
+def add(string, suffix, maxlen):
+    """
+    Add a suffix to a string staying within the maxlen limit
+
+    >>> add('pippo', ':xxx', 8)
+    'pipp:xxx'
+    >>> add('pippo', ':x', 8)
+    'pippo:x'
+    """
+    L = len(string)
+    assert L < maxlen, string
+    assert len(suffix) < maxlen, suffix
+    n = len(suffix)
+    return string[:maxlen-n] + suffix
+
 
 class SiteCollection(object):
     """\
@@ -492,6 +507,7 @@ class SiteCollection(object):
         new.complete = self.complete
         return new
 
+    # tested in classical/case_38
     def multiply(self, vs30s,
                  soil_classes=numpy.array(
                      [b'E', b'DE', b'D', b'CD', b'C', b'BC', b'B', b'A']),
@@ -538,7 +554,7 @@ class SiteCollection(object):
                         rec[name] = cl
                     elif name == 'custom_site_id':
                         # tested in classical/case_38
-                        rec[name] = orig_rec[name] + cl
+                        rec[name] = add(orig_rec[name], b':' + cl, 8)
                     elif name == 'vs30':
                         rec[name] = vs30
                     elif name == 'sids':
