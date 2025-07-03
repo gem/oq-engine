@@ -606,11 +606,37 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
     assert stats[0] == 'mean', stats[0]
     hcurves_all = dstore['hcurves-stats'][:]
     mrs_all = dstore['mean_rates_by_src'][:]
+    mg = MCEGetter(imts, {imt: '' for imt in imts}, ASCE_version)
     for sites in sites.values():
         [site] = sites
         rtgm_df, warning = get_rtgm_warning(
             site, oq, sa02, sa10, DLLs, ASCE_version, mrs_all, hcurves_all)
-        yield site, rtgm_df, warning
+        sid = site.id
+        vs30 = site.vs30
+        loc = site.location
+        if warning in ['zero_hazard', 'low_hazard']:
+            mce_df = pd.DataFrame({'IMT': imts,
+                                   'ProbMCE': [np.nan]*len(imts),
+                                   'DetMCE': [np.nan]*len(imts),
+                                   'MCE': [np.nan]*len(imts),
+                                   'sid': [sid]*len(imts)})
+            a07 = hdf5.dumps(get_zero_hazard_asce07(ASCE_version, vs30))
+            a41 = hdf5.dumps(get_zero_hazard_asce41(ASCE_version))
+            logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
+                         loc.y, mce_df)
+        elif warning in ['below_min', 'only_prob_mce']:
+            _prob_mce_out, mce, a07, mce_df = mg.get_mce_asce07(
+                DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
+            logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
+                         loc.y, mce_df)
+            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
+            a07 = hdf5.dumps(a07)
+            a41 = hdf5.dumps(a41)
+        else:
+            mce_df = None
+            a07 = None
+            a41 = None
+        yield site, rtgm_df, mce_df, a07, a41, warning
 
 
 def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
@@ -692,7 +718,8 @@ def calc_asce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
         logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
         logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
 
-        yield sid, mag_dst_eps_sig, asce07, asce41, mce_df
+        yield (sid, mag_dst_eps_sig, hdf5.dumps(asce07), hdf5.dumps(asce41),
+               mce_df)
 
 
 def to_array(dic):
@@ -724,34 +751,16 @@ def main(dstore, csm):
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
-    mg = MCEGetter(job_imts, {imt: '' for imt in job_imts}, ASCE_version)
-    for site, rtgm_df, warning in process_sites(
+    for site, rtgm_df, mce_df, a07, a41, warning in process_sites(
             dstore, csm, DLLs, ASCE_version):
         sid = site.id
-        vs30 = site.vs30
         loc = site.location
-        if warning in ['zero_hazard', 'low_hazard']:
-            mce_df = pd.DataFrame({'IMT': job_imts,
-                                   'ProbMCE': [np.nan]*len(job_imts),
-                                   'DetMCE': [np.nan]*len(job_imts),
-                                   'MCE': [np.nan]*len(job_imts),
-                                   'sid': [sid]*len(job_imts)})
-            mce_dfs.append(mce_df)
-            asce07[sid] = hdf5.dumps(get_zero_hazard_asce07(ASCE_version, vs30))
-            asce41[sid] = hdf5.dumps(get_zero_hazard_asce41(ASCE_version))
-            logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
-                         loc.y, mce_df)
-        elif warning in ['below_min', 'only_prob_mce']:
-            _prob_mce_out, mce, a07, mce_df = mg.get_mce_asce07(
-                DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
-            logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
-                         loc.y, mce_df)
-            mce_dfs.append(mce_df)
-            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-            asce07[sid] = hdf5.dumps(a07)
-            asce41[sid] = hdf5.dumps(a41)
-        else:  # High hazard
+        if mce_df is None:  # high hazard site requiring calc_asce
             rtgm[sid] = rtgm_df
+        else:  # low hazard
+            mce_dfs.append(mce_df)
+            asce07[sid] = a07
+            asce41[sid] = a41
         if warning:
             # for each site id, collect warning id and warning text as a tuple
             warnings[sid] = AeloWarning(
@@ -763,8 +772,8 @@ def main(dstore, csm):
 
     for sid, mdes, a07, a41, mce_df in calc_asce(
             dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
-        asce07[sid] = hdf5.dumps(a07)
-        asce41[sid] = hdf5.dumps(a41)
+        asce07[sid] = a07
+        asce41[sid] = a41
         dstore[f'mag_dst_eps_sig/{sid}'] = mdes
         mce_dfs.append(mce_df)
 
