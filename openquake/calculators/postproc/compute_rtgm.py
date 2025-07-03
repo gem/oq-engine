@@ -608,35 +608,35 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
     mrs_all = dstore['mean_rates_by_src'][:]
     mg = MCEGetter(imts, {imt: '' for imt in imts}, ASCE_version)
     for sites in sites.values():
-        [site] = sites
-        rtgm_df, warning = get_rtgm_warning(
-            site, oq, sa02, sa10, DLLs, ASCE_version, mrs_all, hcurves_all)
-        sid = site.id
-        vs30 = site.vs30
-        loc = site.location
-        if warning in ['zero_hazard', 'low_hazard']:
-            mce_df = pd.DataFrame({'IMT': imts,
-                                   'ProbMCE': [np.nan]*len(imts),
-                                   'DetMCE': [np.nan]*len(imts),
-                                   'MCE': [np.nan]*len(imts),
-                                   'sid': [sid]*len(imts)})
-            a07 = hdf5.dumps(get_zero_hazard_asce07(ASCE_version, vs30))
-            a41 = hdf5.dumps(get_zero_hazard_asce41(ASCE_version))
-            logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
-                         loc.y, mce_df)
-        elif warning in ['below_min', 'only_prob_mce']:
-            _prob_mce_out, mce, a07, mce_df = mg.get_mce_asce07(
-                DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
-            logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
-                         loc.y, mce_df)
-            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-            a07 = hdf5.dumps(a07)
-            a41 = hdf5.dumps(a41)
-        else:
-            mce_df = None
-            a07 = None
-            a41 = None
-        yield site, rtgm_df, mce_df, a07, a41, warning
+        for site in sites:
+            rtgm_df, warning = get_rtgm_warning(
+                site, oq, sa02, sa10, DLLs, ASCE_version, mrs_all, hcurves_all)
+            sid = site.id
+            vs30 = site.vs30
+            loc = site.location
+            if warning in ['zero_hazard', 'low_hazard']:
+                mce_df = pd.DataFrame({'IMT': imts,
+                                       'ProbMCE': [np.nan]*len(imts),
+                                       'DetMCE': [np.nan]*len(imts),
+                                       'MCE': [np.nan]*len(imts),
+                                       'sid': [sid]*len(imts)})
+                a07 = hdf5.dumps(get_zero_hazard_asce07(ASCE_version, vs30))
+                a41 = hdf5.dumps(get_zero_hazard_asce41(ASCE_version))
+                logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
+                             loc.y, mce_df)
+            elif warning in ['below_min', 'only_prob_mce']:
+                _prob_mce_out, mce, a07, mce_df = mg.get_mce_asce07(
+                    DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
+                logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
+                             loc.y, mce_df)
+                a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
+                a07 = hdf5.dumps(a07)
+                a41 = hdf5.dumps(a41)
+            else:
+                mce_df = None
+                a07 = None
+                a41 = None
+            yield site, rtgm_df, mce_df, a07, a41, warning
 
 
 def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
