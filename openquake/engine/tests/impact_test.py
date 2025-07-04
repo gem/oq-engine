@@ -80,6 +80,13 @@ def test_impact(n):
         raise unittest.SkipTest(f'Missing {expo}')
     calc, log = check(cd / f'impact{n}/job.ini', what='aggrisk_tags')
     if n == 1:
+        # test export_aggexp
+        fnames = export(('aggexp_tags', 'csv'), calc.datastore)
+        assert [strip(f) for f in fnames] == [
+            'aggexp_tags-NAME_1-OCCUPANCY.csv',
+            'aggexp_tags-NAME_1.csv',
+            'aggexp_tags-OCCUPANCY.csv']
+
         # repeat the calculation by exporting the input files
         fnames = check_export_job(calc.datastore)
         calc2, log2 = check(fnames[0])
