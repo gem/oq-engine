@@ -103,7 +103,7 @@ def test_PAC():
             # check that there are not warnings about results
             if 'notifications' in calc.datastore:
                 notifications = calc.datastore['notifications']
-                warnings = notifications[notifications['level'] == 'warning']
+                warnings = notifications[notifications['level'] == b'warning']
                 assert len(warnings) == 0, list(warnings)
 
             # check no plots created
@@ -168,10 +168,11 @@ def test_CCA():
             log.params.update(params)
             calc = base.calculators(log.get_oqparam(), log.calc_id)
             calc.run()
-        # check that the warning announces no close ruptures
-        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        # check that the warning announces zero hazard
+        notifications = calc.datastore['notifications']
+        warnings = notifications[notifications['level'] == b'warning']
         assert len(warnings) == 1
-        assert warnings[0].startswith('Zero hazard')
+        assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
 
         # check no plots created
         assert 'png/governing_mce.png' not in calc.datastore
@@ -220,10 +221,11 @@ def test_WAF():
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     if rtgmpy:
-        # check that warning indicates very low hazard
-        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        # check that warning indicates zero hazard
+        notifications = calc.datastore['notifications']
+        warnings = notifications[notifications['level'] == b'warning']
         assert len(warnings) == 1
-        assert warnings[0].startswith('Zero hazard')
+        assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
 
         # check no plots created
         assert 'png/governing_mce.png' not in calc.datastore
@@ -241,9 +243,10 @@ def test_WAF():
             calc.run()
 
         # check that warning indicates very low hazard
-        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        notifications = calc.datastore['notifications']
+        warnings = notifications[notifications['level'] == b'warning']
         assert len(warnings) == 1
-        assert warnings[0].startswith('The ASCE 7 and/or ASCE 41 parameter')
+        assert warnings[0]['name'].decode('utf8') == 'below_min'
 
         # check that 2 of 3 plots have been created
         assert 'png/hcurves.png' in calc.datastore
@@ -305,3 +308,6 @@ def test_MFK():
           mock.patch('openquake.hazardlib.source.multi_fault.BLOCKSIZE', 5),
           logs.init(job_ini) as log):
         base.calculators(log.get_oqparam(), log.calc_id).run()
+
+
+# TODO: add cases checking warning low_hazard and info only_prob_mce
