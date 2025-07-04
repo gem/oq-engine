@@ -101,8 +101,10 @@ def test_PAC():
                 atol=1E-6)
 
             # check that there are not warnings about results
-            warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
-            assert sum([len(w) for w in warnings]) == 0
+            if 'notifications' in calc.datastore:
+                notifications = calc.datastore['notifications']
+                warnings = notifications[notifications['level'] == 'warning']
+                assert len(warnings) == 0, list(warnings)
 
             # check no plots created
             assert 'png/governing_mce.png' not in calc.datastore
