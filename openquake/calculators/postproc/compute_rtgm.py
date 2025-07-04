@@ -727,15 +727,25 @@ def warnings_to_array(dic):
 
 
 # tested in test_rtgm
-def compute_mce_max(dstore, sids):
+def compute_mce_default(dstore, sitecol, locs):
     """
     For ASCE7-22 the site is multiplied 3 times with different
     values of the vs30 and the MCE is computed as the maximum MCE
-    across the sites
+    across the sites for each IMT.
     """
     # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
     mce_df = dstore.read_df('mce')
-    # TODO: create an output 'mce7-22'
+    mce_df = mce_df[mce_df.IMT != 'PGA']  # requested by Nico Luco
+    mce_df['period'] = [from_string(x).period for x in mce_df.IMT]
+    del mce_df['IMT']
+    out = []
+    for sids in locs.values():
+        csi = sitecol.custom_site_id[sids[0]].decode('ascii').split(':')[0]
+        mcedf = mce_df[np.isin(mce_df.sid, sids)]
+        df = mcedf.groupby('period').MCE.max().to_frame()  # MCE by period
+        df['custom_site_id'] = csi
+        out.append(df)
+    return pd.concat(out).reset_index()
 
 
 def main(dstore, csm):
@@ -746,9 +756,8 @@ def main(dstore, csm):
     oq = dstore['oqparam']
     ASCE_version = oq.asce_version
     job_imts = list(oq.imtls)
-    DLLs = {
-        site.id: get_DLLs(job_imts, site.vs30) for site in dstore['sitecol']
-    }
+    sitecol = dstore['sitecol']
+    DLLs = {site.id: get_DLLs(job_imts, site.vs30) for site in sitecol}
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
@@ -816,6 +825,5 @@ def main(dstore, csm):
     else:
         dstore['warnings'] = warnings_to_array(warnings)
 
-    for sids in locs.values():
-        if len(sids) > 1:
-            compute_mce_max(dstore, sids)
+    df = compute_mce_default(dstore, sitecol, locs)
+    dstore.create_df('mce_default', df)
