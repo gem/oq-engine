@@ -228,13 +228,16 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     DLL = mce_df['DLL']
     ax1.plot(T[1:], DLL[1:], 'kx', markersize=8, label='DLL', linewidth=1,
              linestyle='-')
-    ax1.plot(T[1:], prob_mce[1:], 'bX', markersize=8, label='Probabilisitc $MCE_r$',
+    ax1.plot(T[1:], prob_mce[1:], 'bX', markersize=8,
+             label='Probabilisitc $MCE_r$',
              linewidth=1, linestyle='-')
     upperlim = max(max(prob_mce), max(mce), max(det_mce), max(DLL))
-    ax1.plot(T[1:], det_mce[1:], 'c^', markersize=8, label='Deterministic $MCE_r$',
+    ax1.plot(T[1:], det_mce[1:], 'c^', markersize=8,
+             label='Deterministic $MCE_r$',
              linewidth=1, linestyle='-')
     ax1.set_ylim([0.01, upperlim + 0.2])
-    ax1.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$', linewidth=4, linestyle=':')
+    ax1.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$',
+             linewidth=4, linestyle=':')
     ax1.grid('both')
     ax1.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax1.set_xlabel('Period (s)', fontsize=20)
@@ -244,12 +247,15 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     plt.rcParams.update({'font.size': 15})
     ax2.plot(T[1:], DLL[1:], 'kx', markersize=8, label='DLL', linewidth=1,
              linestyle='-')
-    ax2.plot(T[1:], prob_mce[1:], 'bX', markersize=8, label='Probabilisitc $MCE_r$',
+    ax2.plot(T[1:], prob_mce[1:], 'bX', markersize=8,
+             label='Probabilisitc $MCE_r$',
              linewidth=1, linestyle='-')
-    ax2.plot(T[1:], det_mce[1:], 'c^', markersize=8, label='Deterministic $MCE_r$',
+    ax2.plot(T[1:], det_mce[1:], 'c^', markersize=8,
+             label='Deterministic $MCE_r$',
              linewidth=1, linestyle='-')
     plt.ylim([0.01, upperlim + 0.2])
-    ax2.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$', linewidth=4, linestyle=':')
+    ax2.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$',
+             linewidth=4, linestyle=':')
     ax2.grid('both')
     ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax2.set_xlabel('Period (s)', fontsize=20)

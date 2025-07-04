@@ -740,17 +740,18 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    N = len(dstore['sitecol/sids'])
     asce07 = {}
     asce41 = {}
     warnings = {}
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
+    locs = general.AccumDict(accum=[])  # lon, lat -> sids
     for site, rtgm_df, mce_df, a07, a41, warning in process_sites(
             dstore, csm, DLLs, ASCE_version):
         sid = site.id
         loc = site.location
+        locs[loc.x, loc.y].append(sid)
         if mce_df is None:  # high hazard site requiring calc_asce
             rtgm[sid] = rtgm_df
         else:  # low hazard
@@ -783,15 +784,17 @@ def main(dstore, csm):
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
     plot_sites(dstore, update_dstore=True)
-    if rtgm_dfs and N == 1:
-        sid = 0
-        if not warnings:
-            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-            plot_governing_mce(dstore, sid, update_dstore=True)
-            plot_disagg_by_src(dstore, sid, update_dstore=True)
-        elif warnings[sid].name not in ['zero_hazard', 'low_hazard']:
-            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-            plot_governing_mce(dstore, sid, update_dstore=True)
+    
+    if rtgm_dfs and len(locs) == 1:
+        [sids] = locs.values()
+        for sid in sids:
+            if not warnings:
+                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+                plot_governing_mce(dstore, sid, update_dstore=True)
+                plot_disagg_by_src(dstore, sid, update_dstore=True)
+            elif warnings[sid].name not in ['zero_hazard', 'low_hazard']:
+                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+                plot_governing_mce(dstore, sid, update_dstore=True)
 
     # if warnings are meaningful, and/or there are 2+ sites add them to the ds
     if len(warnings) == 1:
