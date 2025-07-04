@@ -606,23 +606,28 @@ def export_mean_rates_by_src(ekey, dstore):
     return fnames
 
 
-# this exports only the first site and it is okay
+# exports one file per site
+# tested in LogicTreeTestCase.test_case_05
 @export.add(('mean_disagg_by_src', 'csv'))
 def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
-    aw = dstore['mean_disagg_by_src']
-    df = aw.to_dframe()
-    df = df[df.value > 0]  # don't export zeros
-    df.rename(columns={'value': 'afoe'}, inplace=True)
-    fname = dstore.export_path('%s.%s' % ekey)
-    com = dstore.metadata.copy()
-    com['lon'] = sitecol.lons[0]
-    com['lat'] = sitecol.lats[0]
-    com['vs30'] = sitecol.vs30[0]
-    com['iml_disagg'] = dict(zip(aw.imt, aw.iml))
-    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    writer.save(df, fname, comment=com)
-    return [fname]
+    fnames = []
+    for site in sitecol:
+        suffix = '' if len(sitecol) == 1 else f'-{site.id}'
+        aw = dstore[f'mean_disagg_by_src/{site.id}']
+        df = aw.to_dframe()
+        df = df[df.value > 0]  # don't export zeros
+        df.rename(columns={'value': 'afoe'}, inplace=True)
+        fname = dstore.export_path('%s%s.csv' % (ekey[0], suffix))
+        com = dstore.metadata.copy()
+        com['lon'] = site.location.x
+        com['lat'] = site.location.y
+        com['vs30'] = site.vs30
+        com['iml_disagg'] = dict(zip(aw.imt, aw.iml))
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        writer.save(df, fname, comment=com)
+        fnames.append(fname)
+    return fnames
 
 
 @export.add(('disagg-rlzs', 'csv'),
