@@ -478,12 +478,16 @@ def calc_info(db, calc_id):
     :returns: dictionary of info about the given calculation
     """
     job = db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
+    fields_to_exclude = ['ds_calc_dir', 'pid']
+    fields_to_stringify = ['start_time', 'stop_time']
     response_data = {}
-    response_data['user_name'] = job.user_name
-    response_data['status'] = job.status
-    response_data['start_time'] = str(job.start_time)
-    response_data['stop_time'] = str(job.stop_time)
-    response_data['is_running'] = job.is_running
+    for field in job._fields:
+        if field in fields_to_exclude or field.startswith('_'):
+            continue
+        val = getattr(job, field)
+        if field in fields_to_stringify:
+            val = str(val)
+        response_data[field] = val
     return response_data
 
 
