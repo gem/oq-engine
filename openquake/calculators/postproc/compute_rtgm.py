@@ -726,6 +726,18 @@ def warnings_to_array(dic):
     return np.array([dic[sid].text for sid in sorted(dic)])
 
 
+# tested in test_rtgm
+def compute_mce_max(dstore, sids):
+    """
+    For ASCE7-22 the site is multiplied 3 times with different
+    values of the vs30 and the MCE is computed as the maximum MCE
+    across the sites
+    """
+    # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
+    mce_df = dstore.read_df('mce')
+    # TODO: create an output 'mce7-22'
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -740,17 +752,18 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    N = len(dstore['sitecol/sids'])
     asce07 = {}
     asce41 = {}
     warnings = {}
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
+    locs = general.AccumDict(accum=[])  # lon, lat -> sids
     for site, rtgm_df, mce_df, a07, a41, warning in process_sites(
             dstore, csm, DLLs, ASCE_version):
         sid = site.id
         loc = site.location
+        locs[loc.x, loc.y].append(sid)
         if mce_df is None:  # high hazard site requiring calc_asce
             rtgm[sid] = rtgm_df
         else:  # low hazard
@@ -783,15 +796,17 @@ def main(dstore, csm):
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
     plot_sites(dstore, update_dstore=True)
-    if rtgm_dfs and N == 1:
-        sid = 0
-        if not warnings:
-            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-            plot_governing_mce(dstore, sid, update_dstore=True)
-            plot_disagg_by_src(dstore, sid, update_dstore=True)
-        elif warnings[sid].name not in ['zero_hazard', 'low_hazard']:
-            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-            plot_governing_mce(dstore, sid, update_dstore=True)
+    
+    if rtgm_dfs and len(locs) == 1:
+        [sids] = locs.values()
+        for sid in sids:
+            if not warnings:
+                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+                plot_governing_mce(dstore, sid, update_dstore=True)
+                plot_disagg_by_src(dstore, sid, update_dstore=True)
+            elif warnings[sid].name not in ['zero_hazard', 'low_hazard']:
+                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+                plot_governing_mce(dstore, sid, update_dstore=True)
 
     # if warnings are meaningful, and/or there are 2+ sites add them to the ds
     if len(warnings) == 1:
@@ -800,3 +815,7 @@ def main(dstore, csm):
             dstore['warnings'] = warnings_to_array(warnings)
     else:
         dstore['warnings'] = warnings_to_array(warnings)
+
+    for sids in locs.values():
+        if len(sids) > 1:
+            compute_mce_max(dstore, sids)
