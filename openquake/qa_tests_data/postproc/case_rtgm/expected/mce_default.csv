@@ -1,6 +1,5 @@
-#,,"generated_by='OpenQuake engine 3.24.0-git21a7a8edaf', start_date='2025-07-04T08:59:57', checksum=501053635"
+#,,"generated_by='OpenQuake engine 3.24.0-git2c1861725d', start_date='2025-07-04T09:24:17', checksum=501053635"
 period,MCE,custom_site_id
-0.00000E+00,5.00000E-01,0
 2.00000E-02,6.34990E-01,0
 3.00000E-02,7.18683E-01,0
 5.00000E-02,9.50000E-01,0

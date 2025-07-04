@@ -735,6 +735,7 @@ def compute_mce_default(dstore, sitecol, locs):
     """
     # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
     mce_df = dstore.read_df('mce')
+    mce_df = mce_df[mce_df.IMT != 'PGA']  # requested by Nico Luco
     mce_df['period'] = [from_string(x).period for x in mce_df.IMT]
     del mce_df['IMT']
     out = []
