@@ -607,6 +607,7 @@ def export_mean_rates_by_src(ekey, dstore):
 
 
 # exports one file per site
+# tested in LogicTreeTestCase.test_case_05
 @export.add(('mean_disagg_by_src', 'csv'))
 def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
@@ -619,8 +620,8 @@ def export_mean_disagg_by_src(ekey, dstore):
         df.rename(columns={'value': 'afoe'}, inplace=True)
         fname = dstore.export_path('%s%s.csv' % (ekey[0], suffix))
         com = dstore.metadata.copy()
-        com['lon'] = site.loc.x
-        com['lat'] = site.loc.y
+        com['lon'] = site.location.x
+        com['lat'] = site.location.y
         com['vs30'] = site.vs30
         com['iml_disagg'] = dict(zip(aw.imt, aw.iml))
         writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
