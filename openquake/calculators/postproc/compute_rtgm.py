@@ -40,13 +40,12 @@ import sys
 import logging
 import numpy as np
 import pandas as pd
-from collections import namedtuple
 from scipy.interpolate import RegularGridInterpolator
 try:
     import rtgmpy
 except ImportError:
     rtgmpy = None
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
@@ -108,7 +107,12 @@ AELO_NOTES = {
         ' For further information, please refer to the user manual.'),
 }
 
-AeloNotification = namedtuple('AeloNotification', ['name', 'text'])
+notification_dtype = np.dtype([
+    ('sid', np.int32),
+    ('level', hdf5.vstr),
+    ('name', hdf5.vstr),
+    ('description', hdf5.vstr)
+])
 
 
 def get_DLLs(job_imts, vs30):
@@ -566,7 +570,7 @@ def get_asce41(dstore, mce, facts, sid):
 def get_rtgm_notification(site, oq, sa02, sa10, DLLs, ASCE_version,
                           mrs_all, hcurves_all):
     """
-    :returns: (rtgm_df, notification)
+    :returns: (rtgm_df, notification_name)
     """
     sid = site.id
     mrs = mrs_all[sid]
@@ -602,7 +606,7 @@ def get_rtgm_notification(site, oq, sa02, sa10, DLLs, ASCE_version,
 
 def process_sites(dstore, csm, DLLs, ASCE_version):
     """
-    :yields: (site, rtgm_df, notification)
+    :yields: (site, rtgm_df, notification_name)
     """
     oq = dstore['oqparam']
     imts = list(oq.imtls)
@@ -614,12 +618,12 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
     mrs_all = dstore['mean_rates_by_src'][:]
     mg = MCEGetter(imts, {imt: '' for imt in imts}, ASCE_version)
     for site in dstore['sitecol']:
-        rtgm_df, notification = get_rtgm_notification(
+        rtgm_df, notification_name = get_rtgm_notification(
             site, oq, sa02, sa10, DLLs, ASCE_version, mrs_all, hcurves_all)
         sid = site.id
         vs30 = site.vs30
         loc = site.location
-        if notification in ['zero_hazard', 'low_hazard']:
+        if notification_name in ['zero_hazard', 'low_hazard']:
             mce_df = pd.DataFrame({'IMT': imts,
                                    'ProbMCE': [np.nan]*len(imts),
                                    'DetMCE': [np.nan]*len(imts),
@@ -629,7 +633,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
             a41 = hdf5.dumps(get_zero_hazard_asce41(ASCE_version))
             logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
                          loc.y, mce_df)
-        elif notification in ['below_min', 'only_prob_mce']:
+        elif notification_name in ['below_min', 'only_prob_mce']:
             _prob_mce_out, mce, a07, mce_df = mg.get_mce_asce07(
                 DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
@@ -641,7 +645,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
             mce_df = None
             a07 = None
             a41 = None
-        yield site, rtgm_df, mce_df, a07, a41, notification
+        yield site, rtgm_df, mce_df, a07, a41, notification_name
 
 
 def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
@@ -731,10 +735,6 @@ def to_array(dic):
     return np.array([dic[sid] for sid in sorted(dic)])
 
 
-def notifications_to_array(dic):
-    return np.array([dic[sid].text for sid in sorted(dic)])
-
-
 # tested in test_rtgm
 def compute_mce_max(dstore, sids):
     """
@@ -763,14 +763,12 @@ def main(dstore, csm):
         return
     asce07 = {}
     asce41 = {}
-    notifications = {}
-    warnings = {}
-    notes = {}
+    notification_items = []
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
     locs = general.AccumDict(accum=[])  # lon, lat -> sids
-    for site, rtgm_df, mce_df, a07, a41, notification in process_sites(
+    for site, rtgm_df, mce_df, a07, a41, notification_name in process_sites(
             dstore, csm, DLLs, ASCE_version):
         sid = site.id
         loc = site.location
@@ -781,24 +779,22 @@ def main(dstore, csm):
             mce_dfs.append(mce_df)
             asce07[sid] = a07
             asce41[sid] = a41
-        if notification:
-            if notification in AELO_WARNINGS:
-                # for each site id, collect warning id and warning text as a tuple
-                warnings[sid] = AeloNotification(
-                    name=notification, text=AELO_WARNINGS[notification])
-                logging.warning(
-                    '(%.1f,%.1f) ' + AELO_WARNINGS[notification], loc.x, loc.y)
-            elif notification in AELO_NOTES:
-                # for each site id, collect note id and note text as a tuple
-                notes[sid] = AeloNotification(
-                    name=notification, text=AELO_NOTES[notification])
-                logging.info(
-                    '(%.1f,%.1f) ' + AELO_NOTES[notification], loc.x, loc.y)
+        if notification_name:
+            if notification_name in AELO_WARNINGS:
+                level = 'warning'
+                description = AELO_WARNINGS[notification_name]
+                logging.warning('(%.1f,%.1f) ' + description, loc.x, loc.y)
+            elif notification_name in AELO_NOTES:
+                level = 'info'
+                description = AELO_NOTES[notification_name]
+                logging.info('(%.1f,%.1f) ' + description, loc.x, loc.y)
             else:
                 raise NotImplementedError(
-                    f'Unexpected notification code: {notification}')
+                    f'Unexpected notification name: {notification_name}')
+            notification_items.append((sid, level, notification_name, description))
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
+    notifications = np.array(notification_items, dtype=notification_dtype)
 
     for sid, mdes, a07, a41, mce_df in calc_asce(
             dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
@@ -820,18 +816,17 @@ def main(dstore, csm):
     if rtgm_dfs and len(locs) == 1:
         [sids] = locs.values()
         for sid in sids:
-            if not notifications:
+            sid_notifications = notifications[notifications['sid'] == sid]
+            if not sid_notifications:
                 plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
                 plot_governing_mce(dstore, sid, update_dstore=True)
                 plot_disagg_by_src(dstore, sid, update_dstore=True)
-            elif notifications[sid].name not in ['zero_hazard', 'low_hazard']:
+            elif sid_notifications['name'][0] not in ['zero_hazard', 'low_hazard']:
                 plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
                 plot_governing_mce(dstore, sid, update_dstore=True)
 
-    if warnings:
-        dstore['warnings'] = notifications_to_array(warnings)
-    if notes:
-        dstore['notes'] = notifications_to_array(notes)
+    if notifications:
+        dstore['notifications'] = notifications
 
     for sids in locs.values():
         if len(sids) > 1:

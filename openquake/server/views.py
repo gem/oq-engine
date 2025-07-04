@@ -31,6 +31,7 @@ import signal
 import zlib
 import re
 import psutil
+from collections import defaultdict
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
@@ -58,12 +59,13 @@ from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
 from openquake.calculators.extract import extract as _extract
+from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
 from openquake.engine.aelo import (
-    get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
+    get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
@@ -1574,6 +1576,32 @@ def get_disp_val(val):
         return '{:.2f}'.format(numpy.round(val, 2))
 
 
+def group_keys_by_value(d):
+    """
+    Groups keys from the input dictionary by their shared values.
+    If a value is shared by multiple keys, those keys are grouped into a tuple.
+    Otherwise, the key is kept as-is.
+
+    :param d: a dictionary with hashable keys and values.
+    :returns: a dictionary where keys are either individual keys or tuples of keys
+              that shared the same value, and values are the original values.
+
+    Example:
+        >>> group_keys_by_value({0: 'a', 1: 'b', 2: 'a'})
+        {(0, 2): 'a', 1: 'b'}
+    """
+    grouped = defaultdict(list)
+    for k, v in d.items():
+        grouped[v].append(k)
+    result = {}
+    for v, keys in grouped.items():
+        if len(keys) == 1:
+            result[keys[0]] = v
+        else:
+            result[tuple(keys)] = v
+    return result
+
+
 # this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
@@ -1583,8 +1611,6 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     asce07 = asce41 = site = None
     asce07_with_units = {}
     asce41_with_units = {}
-    warnings = None
-    notes = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         try:
             asce_version = ds['oqparam'].asce_version
@@ -1595,8 +1621,6 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             calc_aelo_version = ds.get_attr('/', 'aelo_version')
         except KeyError:
             calc_aelo_version = '1.0.0'
-        if is_model_preliminary(ds):
-            warnings = PRELIMINARY_MODEL_WARNING
         if 'asce07' in ds:
             try:
                 asce07_js = ds['asce07'][0].decode('utf8')
@@ -1652,20 +1676,42 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
-        if 'warnings' in ds:
-            ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
-            if warnings is None:
-                warnings = ds_warnings
-            else:
-                warnings += '\n' + ds_warnings
-        if 'notes' in ds:
-            notes = '\n'.join(s.decode('utf8') for s in ds['notes'])
+        notifications = numpy.array([], dtype=notification_dtype)
+        sid_to_vs30 = {}
+        if is_model_preliminary(ds):
+            # sid -1 means it is not associated to a specific site
+            preliminary_model_warning = numpy.array([
+                (-1, b'warning', b'preliminary_model',
+                 PRELIMINARY_MODEL_WARNING_MSG.encode('utf8'))],
+                dtype=notification_dtype)
+            notifications = numpy.concatenate(
+                (notifications, preliminary_model_warning))
+            sid_to_vs30.update({-1: ''})  # warning about preliminary model
+        if 'notifications' in ds:
+            notifications = numpy.concatenate((notifications, ds['notifications']))
+            sitecol = ds['sitecol']
+            # NOTE: the variable name 'site' is already used
+            sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
+        notes = {}
+        warnings = {}
+        for notification in notifications:
+            vs30 = sid_to_vs30[notification['sid']]
+            if notification['level'] == b'info':
+                notes[vs30] = notification['description'].decode('utf8')
+            elif notification['level'] == b'warning':
+                warnings[vs30] = notification['description'].decode('utf8')
+        notes = group_keys_by_value(notes)
+        warnings = group_keys_by_value(warnings)
+        notes_str = '\n'.join([f'For {vs30=}: {msg}' for (vs30, msg) in notes.items()])
+        warnings_str = '\n'.join([f'For {vs30=}: {msg}' if vs30 else msg
+                                  for (vs30, msg) in warnings.items()])
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name, site=site,
                        calc_aelo_version=calc_aelo_version,
-                       asce_version=asce_version, warnings=warnings, notes=notes))
+                       asce_version=asce_version,
+                       warnings=warnings_str, notes=notes_str))
 
 
 def format_time_delta(td):
