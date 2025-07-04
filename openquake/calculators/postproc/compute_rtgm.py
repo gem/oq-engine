@@ -726,6 +726,18 @@ def warnings_to_array(dic):
     return np.array([dic[sid].text for sid in sorted(dic)])
 
 
+# tested in test_rtgm
+def compute_mce_max(dstore, sids):
+    """
+    For ASCE7-22 the site is multiplied 3 times with different
+    values of the vs30 and the MCE is computed as the maximum MCE
+    across the sites
+    """
+    # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
+    mce_df = dstore.read_df('mce')
+    # TODO: create an output 'mce7-22'
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -803,3 +815,7 @@ def main(dstore, csm):
             dstore['warnings'] = warnings_to_array(warnings)
     else:
         dstore['warnings'] = warnings_to_array(warnings)
+
+    for sids in locs.values():
+        if len(sids) > 1:
+            compute_mce_max(dstore, sids)
