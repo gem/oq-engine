@@ -1313,7 +1313,7 @@ class ContextMaker(object):
         lenctx = sum(len(ctx) for ctx in ctxs)
         esites = lenctx * src.num_ruptures / self.num_rups * multiplier
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * src.num_ruptures / self.num_rups * src.nsites ** .5
+        weight = src.dt * src.num_ruptures / self.num_rups * src.nsites ** .25
         if src.code in b'NX':  # increase weight
             weight *= 5.
         elif src.code == b'S':  # increase for USA, decrease for EUR
