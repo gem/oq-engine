@@ -751,11 +751,13 @@ def export_rtgm(ekey, dstore):
     writer.save(df, fname, comment=comment)
     return [fname]
 
-@export.add(('mce', 'csv'))
+
+@export.add(('mce', 'csv'), ('mce_default', 'csv'))
 def export_mce(ekey, dstore):
-    df = dstore.read_df('mce')
+    key = ekey[0]
+    df = dstore.read_df(key)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    fname = dstore.export_path('mce.csv')
+    fname = dstore.export_path(f'{key}.csv')
     comment = dstore.metadata.copy()
     writer.save(df, fname, comment=comment)
     return [fname]

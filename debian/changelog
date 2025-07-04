@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added output `mce_default` in AELO calculations
   * Extended `oq export_mean_disagg_by_src` to multiple sites
   * Extended `oq export_mag_dst_eps_sig` to multiple sites
   * Extended aggexp_tags and aggrisk_tags to multi-tags
