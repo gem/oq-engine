@@ -551,7 +551,7 @@ class SiteCollection(object):
                 for name in names:
                     if name == 'custom_site_id' and new_csi:
                         # tested in classical/case_08
-                        rec[name] = cl
+                        rec[name] = add(f'{i}'.encode('ascii'), b':' + cl, 8)
                     elif name == 'custom_site_id':
                         # tested in classical/case_38
                         rec[name] = add(orig_rec[name], b':' + cl, 8)

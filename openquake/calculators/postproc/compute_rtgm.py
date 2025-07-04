@@ -726,6 +726,28 @@ def warnings_to_array(dic):
     return np.array([dic[sid].text for sid in sorted(dic)])
 
 
+# tested in test_rtgm
+def compute_mce_default(dstore, sitecol, locs):
+    """
+    For ASCE7-22 the site is multiplied 3 times with different
+    values of the vs30 and the MCE is computed as the maximum MCE
+    across the sites for each IMT.
+    """
+    # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
+    mce_df = dstore.read_df('mce')
+    mce_df = mce_df[mce_df.IMT != 'PGA']  # requested by Nico Luco
+    mce_df['period'] = [from_string(x).period for x in mce_df.IMT]
+    del mce_df['IMT']
+    out = []
+    for sids in locs.values():
+        csi = sitecol.custom_site_id[sids[0]].decode('ascii').split(':')[0]
+        mcedf = mce_df[np.isin(mce_df.sid, sids)]
+        df = mcedf.groupby('period').MCE.max().to_frame()  # MCE by period
+        df['custom_site_id'] = csi
+        out.append(df)
+    return pd.concat(out).reset_index()
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -734,23 +756,23 @@ def main(dstore, csm):
     oq = dstore['oqparam']
     ASCE_version = oq.asce_version
     job_imts = list(oq.imtls)
-    DLLs = {
-        site.id: get_DLLs(job_imts, site.vs30) for site in dstore['sitecol']
-    }
+    sitecol = dstore['sitecol']
+    DLLs = {site.id: get_DLLs(job_imts, site.vs30) for site in sitecol}
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    N = len(dstore['sitecol/sids'])
     asce07 = {}
     asce41 = {}
     warnings = {}
     rtgm_dfs = []
     mce_dfs = []
     rtgm = {}
+    locs = general.AccumDict(accum=[])  # lon, lat -> sids
     for site, rtgm_df, mce_df, a07, a41, warning in process_sites(
             dstore, csm, DLLs, ASCE_version):
         sid = site.id
         loc = site.location
+        locs[loc.x, loc.y].append(sid)
         if mce_df is None:  # high hazard site requiring calc_asce
             rtgm[sid] = rtgm_df
         else:  # low hazard
@@ -783,15 +805,17 @@ def main(dstore, csm):
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
     plot_sites(dstore, update_dstore=True)
-    if rtgm_dfs and N == 1:
-        sid = 0
-        if not warnings:
-            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-            plot_governing_mce(dstore, sid, update_dstore=True)
-            plot_disagg_by_src(dstore, sid, update_dstore=True)
-        elif warnings[sid].name not in ['zero_hazard', 'low_hazard']:
-            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-            plot_governing_mce(dstore, sid, update_dstore=True)
+    
+    if rtgm_dfs and len(locs) == 1:
+        [sids] = locs.values()
+        for sid in sids:
+            if not warnings:
+                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+                plot_governing_mce(dstore, sid, update_dstore=True)
+                plot_disagg_by_src(dstore, sid, update_dstore=True)
+            elif warnings[sid].name not in ['zero_hazard', 'low_hazard']:
+                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+                plot_governing_mce(dstore, sid, update_dstore=True)
 
     # if warnings are meaningful, and/or there are 2+ sites add them to the ds
     if len(warnings) == 1:
@@ -800,3 +824,6 @@ def main(dstore, csm):
             dstore['warnings'] = warnings_to_array(warnings)
     else:
         dstore['warnings'] = warnings_to_array(warnings)
+
+    df = compute_mce_default(dstore, sitecol, locs)
+    dstore.create_df('mce_default', df)
