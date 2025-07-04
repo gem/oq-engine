@@ -37,8 +37,8 @@ from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
-    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d, adjust_limits,
-    auto_limits)
+    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_webmercator,
+    plot_rupture_3d, adjust_limits, auto_limits)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites)
 
@@ -1068,6 +1068,16 @@ def make_figure_rupture(extractors, what):
         dstore = ex.dstore
         rup = get_ebrupture(dstore, rup_id=0).rupture
     return plot_rupture(rup, with_borders=False)
+
+
+def make_figure_rupture_webmercator(extractors, what):
+    """
+    $ oq plot "rupture_webmercator?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    rup = get_ebrupture(dstore, rup_id=0)
+    return plot_rupture_webmercator(rup)
 
 
 def make_figure_rupture_3d(extractors, what):
