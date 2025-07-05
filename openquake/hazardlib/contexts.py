@@ -1316,8 +1316,6 @@ class ContextMaker(object):
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code in b'NX':  # increase weight
             weight *= 5.
-        elif src.code == b'S':  # increase for USA, decrease for EUR
-            weight *= 2
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter, multiplier=1):
