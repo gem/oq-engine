@@ -1877,4 +1877,4 @@ def view_assets_events(token, dstore):
     dtlist = [('assets', U32), ('events', U32), ('a*e', U64)]
     arr = numpy.array(out, dtlist)
     arr.sort(order='a*e')
-    return arr
+    return arr[-10:]
