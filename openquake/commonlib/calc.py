@@ -481,7 +481,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         task_func, (slices, oq, ds),
         maxweight=maxw, weight=w, h5=dstore.hdf5)
     smap.expected_outputs = count_outputs(slices, maxw, w)
-    logging.info('Expected outputs =%s', smap.expected_output)
+    logging.info('Expected outputs =%s', smap.expected_outputs)
     return smap
 
 
