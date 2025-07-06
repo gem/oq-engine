@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import sys
 import ast
 import html
 import json
@@ -53,6 +52,7 @@ TWO24 = 2**24
 F32 = numpy.float32
 F64 = numpy.float64
 U32 = numpy.uint32
+U64 = numpy.uint64
 U8 = numpy.uint8
 
 # a dictionary of views datastore -> array
@@ -1857,3 +1857,24 @@ def view_excessive_losses(token, dstore):
     array = dstore['assetcol'].array
     values = array['value-structural']
     return array[losses > values]
+
+
+@view.add('assets_events')
+def view_assets_events(token, dstore):
+    """
+    Displays the maximum number of assets and events
+    """
+    e_sids, events = numpy.unique(dstore['gmf_data/sid'][:], return_counts=1)
+    a_sids, assets = numpy.unique(dstore['assetcol/array']['site_id'],
+                                  return_counts=1)
+    assets = dict(zip(a_sids, assets))
+    events = dict(zip(e_sids, events))
+    out = []
+    for sid in set(e_sids) | set(e_sids):
+        a = assets.get(sid, 0)
+        e = events.get(sid, 0)
+        out.append((a, e, a*e))
+    dtlist = [('assets', U32), ('events', U32), ('a*e', U64)]
+    arr = numpy.array(out, dtlist)
+    arr.sort(order='a*e')
+    return arr

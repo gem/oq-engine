@@ -238,7 +238,8 @@ def event_based_risk(df, crmodel, monitor):
     with monitor('aggregating losses', measuremem=True) as agg_mon:
         avg, alt = aggreg(outgen, crmodel, ARK, aggids, rlz_id, oq.ideduc,
                           monitor)
-    out_bytes = (sum(avg[ln].data.nbytes*3 for ln in avg) +
+    # avg[ln] is a coo_matrix with data, row, col of 4 bytes per element
+    out_bytes = (sum(avg[ln].data.nbytes * 3 for ln in avg) +
                  alt.memory_usage().sum())
     agg_mon.duration -= monitor.ctime  # subtract the computing time
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum(),
