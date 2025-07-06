@@ -186,13 +186,12 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
                 dic[col] = dset[s0+start:s0+stop][idx - start]
     df = pandas.DataFrame(dic)
     del dic
-    slices = performance.split_slices(
-        df.eid.to_numpy(), int(config.memory.max_gmvs_chunk))
+    slices = general.gen_slices(0, len(df), int(config.memory.max_gmvs_chunk))
     avg = {}
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    for s0, s1 in slices:
-        dic = event_based_risk(df[s0:s1], crmodel, monitor)
+    for slc in slices:
+        dic = event_based_risk(df[slc], crmodel, monitor)
         avg_ = dic.pop('avg')
         if not avg:
             avg.update(avg_)
