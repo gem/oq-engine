@@ -22,7 +22,7 @@ import functools
 import numpy
 from shapely.geometry import Point
 
-from openquake.baselib import performance, parallel, hdf5, general
+from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import map_array, geo
 from openquake.hazardlib.source.rupture import get_events
@@ -428,6 +428,17 @@ def get_slices(sbe, data, num_assets):
     return out
 
 
+def count_outputs(sbe, maxw, weight, size=int(config.memory.max_gmvs_chunk)):
+    """
+    Count the alt and avg outputs for each task
+    """
+    tot = 0
+    for blk in general.block_splitter(sbe, maxw, weight):
+        alts = list(general.gen_slices(blk[0]['start'], blk[-1]['stop'], size))
+        tot += len(alts) + 1  # 1 avg output, multiple alt outputs
+    return tot
+
+
 def starmap_from_gmfs(task_func, oq, dstore, mon):
     """
     :param task_func: function or generator with signature (gmf_df, oq, dstore)
@@ -461,16 +472,15 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
             assert len(sbe) == len(numpy.unique(eids))  # sanity check
         slices = []
         logging.info('Reading event weights')
-        for slc in general.gen_slices(0, len(sbe), 100_000):
-            slices.append(get_slices(sbe[slc], data, num_assets))
-        slices = numpy.concatenate(slices, dtype=slices[0].dtype)
+        slices = get_slices(sbe, data, num_assets)
     dstore.swmr_on()
     maxw = slices['weight'].sum() / (oq.concurrent_tasks or 1) or 1.
     logging.info('maxw = {:_d}'.format(int(maxw)))
+    w = operator.itemgetter('weight')
     smap = parallel.Starmap.apply(
-        task_func, (slices, oq, ds), maxweight=maxw,
-        weight=operator.itemgetter('weight'),
-        h5=dstore.hdf5)
+        task_func, (slices, oq, ds),
+        maxweight=maxw, weight=w, h5=dstore.hdf5)
+    smap.expected_outputs = count_outputs(slices, maxw, w)
     return smap
 
 
