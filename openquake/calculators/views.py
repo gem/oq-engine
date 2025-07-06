@@ -1873,8 +1873,8 @@ def view_assets_events(token, dstore):
     for sid in set(e_sids) | set(e_sids):
         a = assets.get(sid, 0)
         e = events.get(sid, 0)
-        out.append((a, e, a*e))
-    dtlist = [('assets', U32), ('events', U32), ('a*e', U64)]
+        out.append((sid, a, e, a*e))
+    dtlist = [('sid', U32), ('assets', U32), ('events', U32), ('a*e', U64)]
     arr = numpy.array(out, dtlist)
     arr.sort(order='a*e')
     return arr[-10:]
