@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import os.path
 import logging
 import operator
@@ -172,14 +171,10 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
         # this is fast compared to reading the GMFs
         risk_sids = monitor.read('sids')
         s0, s1 = sbe[0]['start'], sbe[-1]['stop']
-        t0 = time.time()
         haz_sids = dstore['gmf_data/sid'][s0:s1]
-    dt = time.time() - t0
     idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
     if len(idx) == 0:
         return {}
-    # print('waiting %.1f' % dt)
-    time.sleep(dt)
     with dstore, monitor('reading GMFs', measuremem=True):
         start, stop = idx.min(), idx.max() + 1
         dic = {}
@@ -205,11 +200,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             for ln in avg_:
                 avg[ln] += avg_[ln]
         yield dic
-    # very large calculation, avoid returning all at once
-    wait = monitor.task_no / len(avg) if len(df) > 1E6 else 0
-    for ln in avg:  # yield smaller outputs
-        time.sleep(wait)
-        yield dict(avg={ln: avg[ln]})
+    yield dict(avg=avg)
 
 
 def event_based_risk(df, crmodel, monitor):
