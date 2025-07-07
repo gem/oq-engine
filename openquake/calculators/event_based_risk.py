@@ -60,14 +60,9 @@ def fast_agg(keys, values, correl, li, acc):
         acc[ukey][li] += avalue
 
 
-def update(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
+def update(loss_by_AL, lti, alt, rlz_id, collect_rlzs):
     """
-    Populate loss_by_AR a dictionary ln -> {'aids': [], 'rlzs': [], 'loss': []}
-    where `ln` is the loss name, i.e. "structural", "injured", etc
-
-    :param alt: DataFrame agg_loss_table
-    :param rlz_id: effective realization index (usually 0)
-    :param collect_rlzs: usually True
+    Populate loss_by_AL as a list of dicts {'aids': [], 'ltis': [], 'loss': []}
     """
     if collect_rlzs or len(numpy.unique(rlz_id)) == 1:
         # fast lane
@@ -84,9 +79,10 @@ def update(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
         # the SURA calculation would fail with alt.eid being F64 (?)
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
-    loss_by_AR[ln]['aids'].append(aids)
-    loss_by_AR[ln]['rlzs'].append(rlzs)
-    loss_by_AR[ln]['loss'].append(tot.to_numpy())
+    for r in rlzs:
+        loss_by_AL[r]['aids'].append(aids)
+        loss_by_AL[r]['ltis'].append(lti)
+        loss_by_AL[r]['loss'].append(tot.to_numpy())
 
 
 def debugprint(ln, asset_loss_table, adf):
@@ -108,37 +104,36 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     xtypes = oq.ext_loss_types
     if ideduc:
         xtypes.append('claim')
-    loss_by_AR = {ln: {'aids': [], 'rlzs': [], 'loss': []} for ln in xtypes}
-    correl = int(oq.asset_correlation)
     (A, R, K), L = ARK, len(xtypes)
+    loss_by_AL = [{'aids': [], 'ltis': [], 'loss': []} for r in range(R)]
+    correl = int(oq.asset_correlation)
     acc = general.AccumDict(accum=numpy.zeros((L, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
     for out in outputs:
-        for li, ln in enumerate(xtypes):
+        for lti, ln in enumerate(xtypes):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln]
             if oq.avg_losses:  # fast
-                update(loss_by_AR, ln, alt, rlz_id, oq.collect_rlzs)
+                update(loss_by_AL, ln, alt, rlz_id, oq.collect_rlzs)
             if correl:  # use sigma^2 = (sum sigma_i)^2
                 alt['variance'] = numpy.sqrt(alt.variance)
             eids = alt.eid.to_numpy() * TWO32  # U64
             values = numpy.array([alt[col] for col in value_cols]).T
             # aggregate all assets
-            fast_agg(eids + U64(K), values, correl, li, acc)
+            fast_agg(eids + U64(K), values, correl, lti, acc)
             if len(aggids):
                 # aggregate assets for each tag combination
                 aids = alt.aid.to_numpy()
                 for kids in aggids[:, aids]:
-                    fast_agg(eids + U64(kids), values, correl, li, acc)
-    for ln in list(loss_by_AR):
-        if loss_by_AR[ln]['aids']:
-            aids = numpy.concatenate(loss_by_AR[ln]['aids'])
-            rlzs = numpy.concatenate(loss_by_AR[ln]['rlzs'])
-            loss = numpy.concatenate(loss_by_AR[ln]['loss'])
-            loss_by_AR[ln] = sparse.coo_matrix((loss, (aids, rlzs)), (A, R))
-        else:
-            del loss_by_AR[ln]
+                    fast_agg(eids + U64(kids), values, correl, lti, acc)
+    for r, dic in enumerate(loss_by_AL):
+        if dic['aids']:
+            aids = numpy.concatenate(dic['aids'])
+            ltis = numpy.concatenate(dic['ltis'])
+            loss = numpy.concatenate(dic['loss'])
+            loss_by_AL[r] = sparse.coo_matrix((loss, (aids, ltis)), (A, L))
+
 
     # building event loss table
     lis = range(len(xtypes))
@@ -153,7 +148,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                 for c, col in enumerate(['variance', 'loss']):
                     dic[col].append(arr[li, c])
     fix_dtypes(dic)
-    return loss_by_AR, pandas.DataFrame(dic)
+    return loss_by_AL, pandas.DataFrame(dic)
 
 
 def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
