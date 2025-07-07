@@ -166,26 +166,11 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     """
     if dstore.parent:
         dstore.parent.open('r')
-    gmfcols = oqparam.gmf_data_dt().names
-    with dstore:
-        # this is fast compared to reading the GMFs
-        risk_sids = monitor.read('sids')
-        s0, s1 = sbe[0]['start'], sbe[-1]['stop']
-        haz_sids = dstore['gmf_data/sid'][s0:s1]
-    idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
-    if len(idx) == 0:
-        return {}
+    s0, s1 = sbe[0]['start'], sbe[-1]['stop']
     with dstore, monitor('reading GMFs', measuremem=True):
-        start, stop = idx.min(), idx.max() + 1
-        dic = {}
-        for col in gmfcols:
-            if col == 'sid':
-                dic[col] = haz_sids[idx]
-            else:
-                dset = dstore['gmf_data/' + col]
-                dic[col] = dset[s0+start:s0+stop][idx - start]
-    df = pandas.DataFrame(dic)
-    del dic
+        df = dstore.read_df('gmf_data', slc=slice(s0, s1))
+        risk_sids = monitor.read('sids')
+    df = df[numpy.isin(df.sid.to_numpy(), risk_sids)]
     slices = performance.split_slices(
         df.eid.to_numpy(), int(config.memory.max_gmvs_chunk))
     avg = {}
