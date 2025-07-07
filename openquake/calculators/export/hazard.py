@@ -756,6 +756,8 @@ def export_rtgm(ekey, dstore):
 def export_mce(ekey, dstore):
     key = ekey[0]
     df = dstore.read_df(key)
+    if key == 'mce':
+        df = df.replace(columns={'PGA': 'PGA_G'})  # at Manuela's request
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.export_path(f'{key}.csv')
     comment = dstore.metadata.copy()
@@ -775,7 +777,7 @@ def export_asce(ekey, dstore):
         comment['lon'] = sitecol.lons[s]
         comment['lat'] = sitecol.lats[s]
         comment['vs30'] = sitecol.vs30[s]
-        comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
+        comment['site_name'] = dstore['oqparam'].description  # 'CCA example'
         writer.save(dic.items(), fname, header=['parameter', 'value'],
                 comment=comment)
     return [fname]
