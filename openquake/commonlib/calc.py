@@ -448,7 +448,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     :param dstore: DataStore instance where the GMFs are stored
     :returns: a Starmap object used for event based calculations
     """
-    ct = oq.concurrent_tasks // 2 or 1
+    ct = int(oq.concurrent_tasks * .9) or 1
     data = dstore['gmf_data']
     gmvs_per_task = len(data['sid']) // ct
     logging.info('gmvs_per_task =~ {:_d}'.format(gmvs_per_task))
