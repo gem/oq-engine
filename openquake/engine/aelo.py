@@ -31,7 +31,7 @@ from openquake.qa_tests_data import mosaic
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
 PRELIMINARY_MODELS = []
-PRELIMINARY_MODEL_WARNING = (
+PRELIMINARY_MODEL_WARNING_MSG = (
     'Results are preliminary. The seismic hazard model used for the site'
     ' is under review and will be updated' ' during Year 3.')
 
@@ -150,7 +150,7 @@ def main(lon: valid.longitude,
             raise exc
 
     if jobctx.params['mosaic_model'] in PRELIMINARY_MODELS:
-        warnings.append(PRELIMINARY_MODEL_WARNING)
+        warnings.append(PRELIMINARY_MODEL_WARNING_MSG)
     logging.root.handlers = []  # avoid breaking the logs
     try:
         engine.run_jobs([jobctx])

@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import os.path
 import logging
 import operator
@@ -27,7 +26,7 @@ from scipy import sparse
 
 from openquake.baselib import hdf5, performance, general, python3compat, config
 from openquake.hazardlib import stats, InvalidFile
-from openquake.commonlib.calc import starmap_from_gmfs
+from openquake.commonlib.calc import starmap_from_gmfs, split
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
@@ -157,7 +156,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     return loss_by_AR, pandas.DataFrame(dic)
 
 
-def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
+def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
     """
     :param slice_by_event: composite array with fields 'start', 'stop'
     :param oqparam: OqParam instance
@@ -168,36 +167,29 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     if dstore.parent:
         dstore.parent.open('r')
     gmfcols = oqparam.gmf_data_dt().names
-    with dstore:
-        # this is fast compared to reading the GMFs
-        risk_sids = monitor.read('sids')
-        s0, s1 = sbe[0]['start'], sbe[-1]['stop']
-        t0 = time.time()
-        haz_sids = dstore['gmf_data/sid'][s0:s1]
-    dt = time.time() - t0
-    idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
-    if len(idx) == 0:
-        return {}
-    # print('waiting %.1f' % dt)
-    time.sleep(dt)
-    with dstore, monitor('reading GMFs', measuremem=True):
-        start, stop = idx.min(), idx.max() + 1
-        dic = {}
-        for col in gmfcols:
-            if col == 'sid':
-                dic[col] = haz_sids[idx]
-            else:
-                dset = dstore['gmf_data/' + col]
-                dic[col] = dset[s0+start:s0+stop][idx - start]
-    df = pandas.DataFrame(dic)
-    del dic
-    slices = performance.split_slices(
-        df.eid.to_numpy(), int(config.memory.max_gmvs_chunk))
-    avg = {}
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    for s0, s1 in slices:
-        dic = event_based_risk(df[s0:s1], crmodel, monitor)
+        risk_sids = monitor.read('sids')  # this is fast
+    avg = {}
+    for sbe in split(slice_by_event, int(config.memory.max_gmvs_chunk)):
+        s0, s1 = sbe[0]['start'], sbe[-1]['stop']
+        with dstore:
+            haz_sids = dstore['gmf_data/sid'][s0:s1]
+        idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
+        if len(idx) == 0:
+            yield {}
+            continue
+        with dstore, monitor('reading GMFs', measuremem=True):
+            start, stop = idx.min(), idx.max() + 1
+            dic = {}
+            for col in gmfcols:
+                if col == 'sid':
+                    dic[col] = haz_sids[idx]
+                else:
+                    dset = dstore['gmf_data/' + col]
+                    dic[col] = dset[s0+start:s0+stop][idx - start]
+            df = pandas.DataFrame(dic)
+        dic = event_based_risk(df, crmodel, monitor)
         avg_ = dic.pop('avg')
         if not avg:
             avg.update(avg_)
@@ -205,11 +197,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             for ln in avg_:
                 avg[ln] += avg_[ln]
         yield dic
-    # very large calculation, avoid returning all at once
-    wait = monitor.task_no / len(avg) if len(df) > 1E6 else 0
-    for ln in avg:  # yield smaller outputs
-        time.sleep(wait)
-        yield dict(avg={ln: avg[ln]})
+    yield dict(avg=avg)
 
 
 def event_based_risk(df, crmodel, monitor):
@@ -238,8 +226,12 @@ def event_based_risk(df, crmodel, monitor):
     with monitor('aggregating losses', measuremem=True) as agg_mon:
         avg, alt = aggreg(outgen, crmodel, ARK, aggids, rlz_id, oq.ideduc,
                           monitor)
+    # avg[ln] is a coo_matrix with data, row, col of 4 bytes per element
+    out_bytes = (sum(avg[ln].data.nbytes * 3 for ln in avg) +
+                 alt.memory_usage().sum())
     agg_mon.duration -= monitor.ctime  # subtract the computing time
-    return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
+    return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum(),
+                out_bytes=out_bytes)
 
 
 def output_gen(df, crmodel, rng, monitor):
@@ -488,6 +480,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         self.gmf_bytes = 0
+        self.out_bytes = 0
         if oq.calculation_mode == 'ebrisk' or 'gmf_data' not in self.datastore:
             # start from ruptures
             if (oq.ground_motion_fields and
@@ -537,6 +530,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if not dic:
             return
         self.gmf_bytes += dic.pop('gmf_bytes', 0)
+        self.out_bytes = max(self.out_bytes, dic.pop('out_bytes', 0))
         self.oqparam.ground_motion_fields = False  # hack
         if 'alt' in dic:
             with self.monitor('saving risk_by_event'):
@@ -559,7 +553,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-
+        logging.info('max output size = %s', general.humansize(self.out_bytes))
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
         upper_limit = self.E * (K + 1) * len(self.xtypes)
         if upper_limit < 1E7:
