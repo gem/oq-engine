@@ -104,7 +104,7 @@ def test_PAC():
             if 'notifications' in calc.datastore:
                 notifications = calc.datastore['notifications']
                 warnings = notifications[notifications['level'] == b'warning']
-                assert len(warnings) == 0, list(warnings)
+                assert len(warnings) == 0, f'{list(notifications)=}'
 
             # check no plots created
             assert 'png/governing_mce.png' not in calc.datastore
@@ -171,7 +171,7 @@ def test_CCA():
         # check that the warning announces zero hazard
         notifications = calc.datastore['notifications']
         warnings = notifications[notifications['level'] == b'warning']
-        assert len(warnings) == 1
+        assert len(warnings) == 1, f'{list(notifications)=}'
         assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
 
         # check no plots created
@@ -225,7 +225,7 @@ def test_WAF():
         # check that warning indicates zero hazard
         notifications = calc.datastore['notifications']
         warnings = notifications[notifications['level'] == b'warning']
-        assert len(warnings) == 1
+        assert len(warnings) == 1, f'{list(notifications)=}'
         assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
 
         # check no plots created
@@ -246,7 +246,7 @@ def test_WAF():
         # check that warning indicates very low hazard
         notifications = calc.datastore['notifications']
         warnings = notifications[notifications['level'] == b'warning']
-        assert len(warnings) == 1
+        assert len(warnings) == 1, f'{list(notifications)=}'
         assert warnings[0]['name'].decode('utf8') == 'below_min'
 
         # check that 2 of 3 plots have been created
