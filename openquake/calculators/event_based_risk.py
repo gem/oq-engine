@@ -158,11 +158,11 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     """
-    :param slice_by_event: composite array with fields 'start', 'stop'
+    :param sbe: composite array with fields 'start', 'stop'
     :param oqparam: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
-    :yields: dictionary of arrays, the output of event_based_risk
+    :yields: dictionary of arrays, the outputs of event_based_risk
     """
     if dstore.parent:
         dstore.parent.open('r')
