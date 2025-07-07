@@ -173,12 +173,13 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
     avg = {}
     for sbe in split(slice_by_event, int(config.memory.max_gmvs_chunk)):
         s0, s1 = sbe[0]['start'], sbe[-1]['stop']
-        with dstore, monitor('reading GMFs', measuremem=True):
+        with dstore:
             haz_sids = dstore['gmf_data/sid'][s0:s1]
-            idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
-            if len(idx) == 0:
-                yield {}
-                continue
+        idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
+        if len(idx) == 0:
+            yield {}
+            continue
+        with dstore, monitor('reading GMFs', measuremem=True):
             start, stop = idx.min(), idx.max() + 1
             dic = {}
             for col in gmfcols:
@@ -187,7 +188,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
                 else:
                     dset = dstore['gmf_data/' + col]
                     dic[col] = dset[s0+start:s0+stop][idx - start]
-        df = pandas.DataFrame(dic)
+            df = pandas.DataFrame(dic)
         dic = event_based_risk(df, crmodel, monitor)
         avg_ = dic.pop('avg')
         if not avg:
