@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import time
 import os.path
 import logging
 import operator
@@ -172,14 +171,11 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
         # this is fast compared to reading the GMFs
         risk_sids = monitor.read('sids')
         s0, s1 = sbe[0]['start'], sbe[-1]['stop']
-        t0 = time.time()
         haz_sids = dstore['gmf_data/sid'][s0:s1]
-    dt = time.time() - t0
     idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
     if len(idx) == 0:
         return {}
     # print('waiting %.1f' % dt)
-    time.sleep(dt)
     with dstore, monitor('reading GMFs', measuremem=True):
         start, stop = idx.min(), idx.max() + 1
         dic = {}
@@ -205,10 +201,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             for ln in avg_:
                 avg[ln] += avg_[ln]
         yield dic
-    # very large calculation, avoid returning all at once
-    wait = monitor.task_no / len(avg) if len(df) > 1E6 else 0
     for ln in avg:  # yield smaller outputs
-        time.sleep(wait)
         yield dict(avg={ln: avg[ln]})
 
 
@@ -238,8 +231,12 @@ def event_based_risk(df, crmodel, monitor):
     with monitor('aggregating losses', measuremem=True) as agg_mon:
         avg, alt = aggreg(outgen, crmodel, ARK, aggids, rlz_id, oq.ideduc,
                           monitor)
+    # avg[ln] is a coo_matrix with data, row, col of 4 bytes per element
+    out_bytes = (sum(avg[ln].data.nbytes * 3 for ln in avg) +
+                 alt.memory_usage().sum())
     agg_mon.duration -= monitor.ctime  # subtract the computing time
-    return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
+    return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum(),
+                out_bytes=out_bytes)
 
 
 def output_gen(df, crmodel, rng, monitor):
@@ -488,6 +485,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         self.gmf_bytes = 0
+        self.out_bytes = 0
         if oq.calculation_mode == 'ebrisk' or 'gmf_data' not in self.datastore:
             # start from ruptures
             if (oq.ground_motion_fields and
@@ -537,6 +535,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if not dic:
             return
         self.gmf_bytes += dic.pop('gmf_bytes', 0)
+        self.out_bytes = max(self.out_bytes, dic.pop('out_bytes', 0))
         self.oqparam.ground_motion_fields = False  # hack
         if 'alt' in dic:
             with self.monitor('saving risk_by_event'):
@@ -559,7 +558,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-
+        logging.info('max output size = %s', general.humansize(self.out_bytes))
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
         upper_limit = self.E * (K + 1) * len(self.xtypes)
         if upper_limit < 1E7:
