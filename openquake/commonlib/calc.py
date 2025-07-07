@@ -438,6 +438,7 @@ def count_outputs(eids, sbe, maxw, weight,
         s0, s1 = blk[0]['start'], blk[-1]['stop']
         alts = performance.split_slices(eids[s0:s1], size)
         tot += len(alts) + 1  # 1 avg output, multiple alt outputs
+        breakpoint()
     return tot
 
 
@@ -475,16 +476,16 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         slices = []
         logging.info('Reading event weights')
         slices = get_slices(sbe, data, num_assets)
-    eids = data['eid'][:]
-    dstore.swmr_on()
     maxw = slices['weight'].sum() / (oq.concurrent_tasks or 1) or 1.
     logging.info('maxw = {:_d}'.format(int(maxw)))
     w = operator.itemgetter('weight')
+    expected_outputs = count_outputs(data['eid'], slices, maxw, w)
+    logging.info('Expected outputs = %d', expected_outputs)
+    dstore.swmr_on()
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
         maxweight=maxw, weight=w, h5=dstore.hdf5)
-    smap.expected_outputs = count_outputs(eids, slices, maxw, w)
-    logging.info('Expected outputs =%s', smap.expected_outputs)
+    smap.expected_outputs = expected_outputs
     return smap
 
 
