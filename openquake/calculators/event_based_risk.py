@@ -181,7 +181,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
         if len(df) == 0:
             yield {}
             continue
-        dic = event_based_risk(df[s0:s1], crmodel, monitor)
+        dic = event_based_risk(df, crmodel, monitor)
         avg_ = dic.pop('avg')
         if not avg:
             avg.update(avg_)
