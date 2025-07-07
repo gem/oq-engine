@@ -188,7 +188,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
                 else:
                     dset = dstore['gmf_data/' + col]
                     dic[col] = dset[s0+start:s0+stop][idx - start]
-            df = pandas.DataFrame(dic)
+        df = pandas.DataFrame(dic)  # few MB
         dic = event_based_risk(df, crmodel, monitor)
         avg_ = dic.pop('avg')
         if not avg:
