@@ -173,6 +173,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     df = df[numpy.isin(df.sid.to_numpy(), risk_sids)]
     slices = performance.split_slices(
         df.eid.to_numpy(), int(config.memory.max_gmvs_chunk))
+    breakpoint()
     avg = {}
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
