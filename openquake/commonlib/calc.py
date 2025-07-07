@@ -438,7 +438,6 @@ def count_outputs(eids, sbe, maxw, weight,
         s0, s1 = blk[0]['start'], blk[-1]['stop']
         alts = performance.split_slices(eids[s0:s1], size)
         tot += len(alts) + 1  # 1 avg output, multiple alt outputs
-        breakpoint()
     return tot
 
 

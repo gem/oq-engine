@@ -168,16 +168,19 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
         dstore.parent.open('r')
     s0, s1 = sbe[0]['start'], sbe[-1]['stop']
     with dstore, monitor('reading GMFs', measuremem=True):
-        df = dstore.read_df('gmf_data', slc=slice(s0, s1))
+        gmf_df = dstore.read_df('gmf_data', slc=slice(s0, s1))
         risk_sids = monitor.read('sids')
-    df = df[numpy.isin(df.sid.to_numpy(), risk_sids)]
     slices = performance.split_slices(
-        df.eid.to_numpy(), int(config.memory.max_gmvs_chunk))
-    breakpoint()
+        gmf_df.eid.to_numpy(), int(config.memory.max_gmvs_chunk))
     avg = {}
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
     for s0, s1 in slices:
+        df = gmf_df[s0:s1]
+        df = df[numpy.isin(df.sid.to_numpy(), risk_sids)]
+        if len(df) == 0:
+            yield {}
+            continue
         dic = event_based_risk(df[s0:s1], crmodel, monitor)
         avg_ = dic.pop('avg')
         if not avg:
