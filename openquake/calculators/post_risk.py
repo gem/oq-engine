@@ -359,15 +359,15 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
                         agg * tr if oq.investigation_time else agg/ne)
     fix_dtypes(acc)
     aggrisk = pandas.DataFrame(acc)
-    out = general.AccumDict(accum=[])
+    out = {}
     if quantiles:
         for (agg_id, loss_id, col), (losses, ws) in quantiles.items():
             qs = weighted_quantiles(oq.quantiles, losses, ws)
-            out['agg_id'].append(agg_id)
-            out['loss_id'].append(loss_id)
+            out['agg_id'] = [agg_id]
+            out['loss_id'] = [loss_id]
             for q, qvalue in zip(oq.quantiles, qs):
                 qstring = ('%.2f' % q)[2:]  # ie. '05' or '95'
-                out[f'{col}q{qstring}'].append(qvalue)
+                out[f'{col}q{qstring}'] = [qvalue]
     aggrisk_quantiles = pandas.DataFrame(out)
     return aggrisk, aggrisk_quantiles, columns, builder
 

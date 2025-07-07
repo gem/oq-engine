@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Fixed a bug with the quantiles in event_based_damage
+  * Improved loggin the progress in event based risk
+  * Reduced slow tasks in the USA model
   * Added output `mce_default` in AELO calculations
   * Extended `oq export_mean_disagg_by_src` to multiple sites
   * Extended `oq export_mag_dst_eps_sig` to multiple sites
