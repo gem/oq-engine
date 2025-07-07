@@ -222,7 +222,14 @@ def event_based_risk(df, crmodel, monitor):
         rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
                             int(oq.asset_correlation))
 
-    outgen = output_gen(df, crmodel, rng, monitor)
+    with monitor('reading assets', measuremem=True):
+        dfs = []
+        for id0taxo, s0, s1 in monitor.read('start-stop'):
+            ass = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+            country = crmodel.countries[id0taxo // TWO24]
+            dfs.append((ass, country))
+    outgen = output_gen(df, dfs, crmodel, rng, monitor)
+    del dfs
     with monitor('aggregating losses', measuremem=True) as agg_mon:
         avg, alt = aggreg(outgen, crmodel, ARK, aggids, rlz_id, oq.ideduc,
                           monitor)
@@ -234,7 +241,7 @@ def event_based_risk(df, crmodel, monitor):
                 out_bytes=out_bytes)
 
 
-def output_gen(df, crmodel, rng, monitor):
+def output_gen(df, dfs, crmodel, rng, monitor):
     """
     :param df: GMF dataframe (a slice of events)
     :param crmodel: CompositeRiskModel instance
@@ -244,15 +251,9 @@ def output_gen(df, crmodel, rng, monitor):
     """
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
-    ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
     monitor.ctime = 0
-    for id0taxo, s0, s1 in risk_mon.read('start-stop'):
-        # the assets have all the same taxonomy and country
-        with ass_mon:
-            adf = risk_mon.read('assets', slice(s0, s1)).set_index('ordinal')
-        # multiple countries are tested in test_impact_mode
-        country = crmodel.countries[id0taxo // TWO24]
+    for adf, country in dfs:
         with fil_mon:
             # *crucial* for the performance of the next step
             gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
@@ -261,7 +262,7 @@ def output_gen(df, crmodel, rng, monitor):
         with risk_mon:
             [out] = crmodel.get_outputs(
                 adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
-        monitor.ctime += ass_mon.dt + fil_mon.dt + risk_mon.dt
+        monitor.ctime += fil_mon.dt + risk_mon.dt
         yield out
 
 
