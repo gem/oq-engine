@@ -242,7 +242,7 @@ def output_gen(df, crmodel, rng, monitor):
     :param monitor: Monitor instance
     :yields: one output per taxonomy and slice of events
     """
-    risk_mon = monitor('computing risk', measuremem=True)
+    risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
