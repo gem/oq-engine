@@ -1784,6 +1784,15 @@ def web_engine_get_outputs_impact(request, calc_id):
             warnings = ds_warnings
         else:
             warnings += '\n' + ds_warnings
+    mmi_tags = 'mmi_tags' in ds
+    # NOTE: aggrisk_tags is not available as an attribute of the datastore
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            _extract(ds, 'aggrisk_tags')
+    except KeyError:
+        aggrisk_tags = False
+    else:
+        aggrisk_tags = True
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
@@ -1799,7 +1808,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                        losses_header=losses_header,
                        weights_precision=weights_precision,
                        avg_gmf=avg_gmf, assets=assets,
-                       warnings=warnings))
+                       warnings=warnings, mmi_tags=mmi_tags, aggrisk_tags=aggrisk_tags))
 
 
 @cross_domain_ajax
