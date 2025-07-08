@@ -84,9 +84,8 @@ def update(loss_by_AR, ln, alt, rlz_id, collect_rlzs):
         # the SURA calculation would fail with alt.eid being F64 (?)
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
-    loss_by_AR[ln]['aids'].append(aids)
-    loss_by_AR[ln]['rlzs'].append(rlzs)
-    loss_by_AR[ln]['loss'].append(tot.to_numpy())
+    for aid, rlz, loss in zip(aids, U32(rlzs), tot.to_numpy()):
+        loss_by_AR[ln][aid, rlz] += loss
 
 
 def debugprint(ln, asset_loss_table, adf):
@@ -108,9 +107,9 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     xtypes = oq.ext_loss_types
     if ideduc:
         xtypes.append('claim')
-    loss_by_AR = {ln: {'aids': [], 'rlzs': [], 'loss': []} for ln in xtypes}
-    correl = int(oq.asset_correlation)
     (A, R, K), L = ARK, len(xtypes)
+    loss_by_AR = {ln: sparse.dok_matrix((A, R), F32) for ln in xtypes}
+    correl = int(oq.asset_correlation)
     acc = general.AccumDict(accum=numpy.zeros((L, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
     for out in outputs:
@@ -131,14 +130,6 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                 aids = alt.aid.to_numpy()
                 for kids in aggids[:, aids]:
                     fast_agg(eids + U64(kids), values, correl, li, acc)
-    for ln in list(loss_by_AR):
-        if loss_by_AR[ln]['aids']:
-            aids = numpy.concatenate(loss_by_AR[ln]['aids'])
-            rlzs = numpy.concatenate(loss_by_AR[ln]['rlzs'])
-            loss = numpy.concatenate(loss_by_AR[ln]['loss'])
-            loss_by_AR[ln] = sparse.coo_matrix((loss, (aids, rlzs)), (A, R))
-        else:
-            del loss_by_AR[ln]
 
     # building event loss table
     lis = range(len(xtypes))
@@ -153,7 +144,8 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                 for c, col in enumerate(['variance', 'loss']):
                     dic[col].append(arr[li, c])
     fix_dtypes(dic)
-    return loss_by_AR, pandas.DataFrame(dic)
+    coo = {ln: arr.tocoo() for ln, arr in loss_by_AR.items()}
+    return coo, pandas.DataFrame(dic)
 
 
 def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
@@ -539,13 +531,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 for name in alt.columns:
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
-        if 'avg' in dic:
+        if self.oqparam.avg_losses and 'avg' in dic:
             # avg_losses are stored as coo matrices or csr matrices
             # for each loss name (ln)
             with self.monitor('saving avg_losses'):
                 for ln, coo in dic.pop('avg').items():
-                    if not hasattr(coo, 'row'):  # csr_matrix
-                        coo = coo.tocoo()
                     self.avg_losses[ln][coo.row, coo.col] += coo.data
 
     def post_execute(self, dummy):
