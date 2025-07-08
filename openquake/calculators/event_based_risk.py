@@ -134,9 +134,9 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                     fast_agg(eids + U64(kids), values, correl, li, acc)
     if loss_by_AX['aids']:
         aids = numpy.concatenate(loss_by_AX['aids'])
-        rlzs = numpy.concatenate(loss_by_AX['bids'])
+        bids = numpy.concatenate(loss_by_AX['bids'])
         loss = numpy.concatenate(loss_by_AX['loss'])
-        loss_by_AX = sparse.coo_matrix((loss, (aids, rlzs)), (A, R*X))
+        loss_by_AX = sparse.coo_matrix((loss, (aids, bids)), (A, R*X))
     else:
         loss_by_AX = sparse.coo_matrix((A, R*X), F32)
 
