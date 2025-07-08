@@ -539,7 +539,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
         if self.oqparam.avg_losses and 'avg' in dic:
-            # avg_losses are stored as coo matrices or csr matrices
+            # avg_losses are stored as coo matrices
             with self.monitor('saving avg_losses'):
                 coo = dic.pop('avg')
                 rlzs, xlts = numpy.divmod(coo.col, self.X)
