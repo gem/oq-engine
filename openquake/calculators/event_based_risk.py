@@ -196,7 +196,12 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
         else:
             avg += avg_
         yield dic
-    yield dict(avg=avg if hasattr(avg, 'col') else avg.tocoo())
+    if not hasattr(avg, 'col'):
+        avg = avg.tocoo()
+    for slc in general.gen_slices(0, len(avg.data), 1_000_000):
+        pair = avg.data[slc], (avg.row[slc], avg.col[slc])
+        coo = sparse.coo_matrix(pair, avg.shape)
+        yield dict(avg=coo)
 
 
 def event_based_risk(df, crmodel, monitor):

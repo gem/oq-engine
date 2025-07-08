@@ -498,7 +498,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
         maxweight=maxw, weight=w, h5=dstore.hdf5)
-    smap.expected_outputs = expected_outputs
+    # smap.expected_outputs = expected_outputs
     return smap
 
 
