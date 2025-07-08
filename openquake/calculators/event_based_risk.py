@@ -549,9 +549,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             # avg_losses are stored as coo matrices
             with self.monitor('saving avg_losses'):
                 coo = dic.pop('avg')
-                rlzs, xlts = numpy.divmod(coo.col, self.X)
-                self.avg_losses[coo.row, xlts, rlzs] += coo.data
-                #fast_add(self.avg_losses, coo.row, coo.col, coo.data, self.X)
+                # the non-numpy approach is 2-3x slower, causing
+                # a big data queue and then running out of memory
+                # rlzs, xlts = numpy.divmod(coo.col, self.X)
+                # self.avg_losses[coo.row, xlts, rlzs] += coo.data
+                fast_add(self.avg_losses, coo.row, coo.col, coo.data, self.X)
 
     def post_execute(self, dummy):
         """
