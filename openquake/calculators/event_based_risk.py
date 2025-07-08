@@ -188,7 +188,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
                 else:
                     dset = dstore['gmf_data/' + col]
                     dic[col] = dset[s0+start:s0+stop][idx - start]
-            df = pandas.DataFrame(dic)
+        df = pandas.DataFrame(dic)  # few MB
         dic = event_based_risk(df, crmodel, monitor)
         avg_ = dic.pop('avg')
         if not avg:
@@ -222,7 +222,12 @@ def event_based_risk(df, crmodel, monitor):
         rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
                             int(oq.asset_correlation))
 
-    outgen = output_gen(df, crmodel, rng, monitor)
+    with monitor('reading assets', measuremem=True):
+        # saving a lot of memory with respect to a simple read('assets')
+        cols = monitor.read_pdcolumns('assets').split()
+        assdic = {col: monitor.read('assets/' + col) for col in cols}
+    outgen = output_gen(df, assdic, crmodel, rng, monitor)
+    del assdic
     with monitor('aggregating losses', measuremem=True) as agg_mon:
         avg, alt = aggreg(outgen, crmodel, ARK, aggids, rlz_id, oq.ideduc,
                           monitor)
@@ -234,24 +239,22 @@ def event_based_risk(df, crmodel, monitor):
                 out_bytes=out_bytes)
 
 
-def output_gen(df, crmodel, rng, monitor):
+def output_gen(df, assdic, crmodel, rng, monitor):
     """
     :param df: GMF dataframe (a slice of events)
+    :param assdic: a dictionary column name -> array
     :param crmodel: CompositeRiskModel instance
     :param rng: random number generator
     :param monitor: Monitor instance
     :yields: one output per taxonomy and slice of events
     """
-    risk_mon = monitor('computing risk', measuremem=True)
+    risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
-    ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
     monitor.ctime = 0
-    for id0taxo, s0, s1 in risk_mon.read('start-stop'):
-        # the assets have all the same taxonomy and country
-        with ass_mon:
-            adf = risk_mon.read('assets', slice(s0, s1)).set_index('ordinal')
-        # multiple countries are tested in test_impact_mode
+    for id0taxo, s0, s1 in monitor.read('start-stop'):
+        adf = pandas.DataFrame({col: assdic[col][s0:s1] for col in assdic})
+        adf = adf.set_index('ordinal')
         country = crmodel.countries[id0taxo // TWO24]
         with fil_mon:
             # *crucial* for the performance of the next step
@@ -261,7 +264,7 @@ def output_gen(df, crmodel, rng, monitor):
         with risk_mon:
             [out] = crmodel.get_outputs(
                 adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
-        monitor.ctime += ass_mon.dt + fil_mon.dt + risk_mon.dt
+        monitor.ctime += fil_mon.dt + risk_mon.dt
         yield out
 
 
