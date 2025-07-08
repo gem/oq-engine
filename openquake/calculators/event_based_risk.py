@@ -196,7 +196,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
         else:
             avg += avg_
         yield dic
-    yield dict(avg=avg.tocoo() if hasattr(avg, 'row') else avg)
+    yield dict(avg=avg if hasattr(avg, 'col') else avg.tocoo())
 
 
 def event_based_risk(df, crmodel, monitor):
