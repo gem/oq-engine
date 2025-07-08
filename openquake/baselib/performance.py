@@ -397,6 +397,11 @@ class Monitor(object):
                 return dset[slc]
             return pickle.loads(dset[()])
 
+    def read_pdcolumns(self, key):
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        with hdf5.File(tmp, 'r') as f:
+            return f[key].attrs['__pdcolumns__']
+
     def iter(self, genobj, atstop=lambda: None):
         """
         :param genobj: a generator object

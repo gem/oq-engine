@@ -800,7 +800,8 @@ def main(dstore, csm):
             else:
                 raise NotImplementedError(
                     f'Unexpected notification name: {notification_name}')
-            notification_items.append((sid, level, notification_name, description))
+            notification_items.append(
+                (sid, level, notification_name, description))
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
     notifications = np.array(notification_items, dtype=notification_dtype)
@@ -826,15 +827,16 @@ def main(dstore, csm):
         [sids] = locs.values()
         for sid in sids:
             sid_notifications = notifications[notifications['sid'] == sid]
-            if not sid_notifications:
+            if len(sid_notifications) ==0:
                 plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
                 plot_governing_mce(dstore, sid, update_dstore=True)
                 plot_disagg_by_src(dstore, sid, update_dstore=True)
-            elif sid_notifications['name'][0] not in ['zero_hazard', 'low_hazard']:
+            elif sid_notifications['name'][0] not in [
+                    'zero_hazard', 'low_hazard']:
                 plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
                 plot_governing_mce(dstore, sid, update_dstore=True)
 
-    if notifications:
+    if len(notifications):
         dstore['notifications'] = notifications
 
     df = compute_mce_default(dstore, sitecol, locs)
