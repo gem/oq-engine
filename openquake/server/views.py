@@ -1847,10 +1847,20 @@ def extract_html_table(request, calc_id, name):
     display_names = {'aggrisk_tags': 'Impact',
                      'mmi_tags': 'Exposure by MMI'}
     table_name = display_names[name] if name in display_names else name
+    table_header = []
+    for short_name in table.columns:
+        if short_name in AGGRISK_FIELD_DESCRIPTION:
+            display_name = AGGRISK_FIELD_DESCRIPTION[short_name]
+        elif short_name in EXPOSURE_FIELD_DESCRIPTION:
+            display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
+        else:
+            display_name = ''
+        table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
+    table_contents = table.to_numpy()
     return render(request, 'engine/show_table.html',
                   {'table_name': table_name,
-                   'table_header': table.columns,
-                   'table_contents': table.to_numpy()})
+                   'table_header': table_header,
+                   'table_contents': table_contents})
 
 
 @csrf_exempt
