@@ -549,7 +549,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             # avg_losses are stored as coo matrices
             with self.monitor('saving avg_losses'):
                 coo = dic.pop('avg')
-                fast_add(self.avg_losses, coo.row, coo.col, coo.data, self.X)
+                rlzs, xlts = numpy.divmod(coo.col, self.X)
+                self.avg_losses[coo.row, xlts, rlzs] += coo.data
+                #fast_add(self.avg_losses, coo.row, coo.col, coo.data, self.X)
 
     def post_execute(self, dummy):
         """
