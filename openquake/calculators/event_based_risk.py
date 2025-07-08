@@ -196,7 +196,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
         else:
             avg += avg_
         yield dic
-    yield dict(avg=avg)
+    yield dict(avg=avg.tocoo() if hasattr(avg, 'row') else avg)
 
 
 def event_based_risk(df, crmodel, monitor):
@@ -542,8 +542,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             # avg_losses are stored as coo matrices or csr matrices
             with self.monitor('saving avg_losses'):
                 coo = dic.pop('avg')
-                if not hasattr(coo, 'row'):  # csr_matrix
-                    coo = coo.tocoo()
                 rlzs, xlts = numpy.divmod(coo.col, self.X)
                 self.avg_losses[coo.row, xlts, rlzs] += coo.data
 
