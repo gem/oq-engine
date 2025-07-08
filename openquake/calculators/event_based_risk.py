@@ -86,7 +86,7 @@ def update(loss_by_AX, lti, X, alt, rlz_id, collect_rlzs):
         rlzs = U32(rlzs)
     loss_by_AX['aids'].append(aids)
     loss_by_AX['bids'].append(rlzs * X + lti)
-    loss_by_AX['loss'].append(tot.to_numpy())
+    loss_by_AX['loss'].append(F32(tot))
 
 
 def debugprint(ln, asset_loss_table, adf):
@@ -138,7 +138,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
         loss = numpy.concatenate(loss_by_AX['loss'])
         loss_by_AX = sparse.coo_matrix((loss, (aids, bids)), (A, R*X))
     else:
-        loss_by_AX = sparse.coo_matrix((A, R*X), F32)
+        loss_by_AX = sparse.coo_matrix((A, R*X), dtype=F32)
 
     # building event loss table
     lis = range(len(xtypes))
@@ -347,7 +347,7 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
                 yield event_based_risk(gmf_df, crmodel, monitor)
 
 
-@performance.compile("(f4[:,:,:], i4[:], i4[:], f8[:], i8)")
+@performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
 def fast_add(avg_losses, row, col, data, X):
     for r, c, d in zip(row, col, data):
         rlz, lti = divmod(c, X)
