@@ -74,7 +74,7 @@ def update(loss_by_AX, lti, X, alt, rlz_id, collect_rlzs):
             dict(aid=alt.aid.to_numpy(), loss=alt.loss.to_numpy()))
         tot = ldf.groupby('aid').loss.sum()
         aids = tot.index.to_numpy()
-        rlzs = numpy.zeros_like(tot)
+        rlzs = numpy.zeros_like(tot, U32)
     else:
         # rare case
         ldf = pandas.DataFrame(
@@ -86,7 +86,7 @@ def update(loss_by_AX, lti, X, alt, rlz_id, collect_rlzs):
         rlzs = U32(rlzs)
     loss_by_AX['aids'].append(aids)
     loss_by_AX['bids'].append(rlzs * X + lti)
-    loss_by_AX['loss'].append(tot.to_numpy())
+    loss_by_AX['loss'].append(F32(tot))
 
 
 def debugprint(ln, asset_loss_table, adf):
@@ -138,7 +138,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
         loss = numpy.concatenate(loss_by_AX['loss'])
         loss_by_AX = sparse.coo_matrix((loss, (aids, bids)), (A, R*X))
     else:
-        loss_by_AX = sparse.coo_matrix((A, R*X), F32)
+        loss_by_AX = sparse.coo_matrix((A, R*X), dtype=F32)
 
     # building event loss table
     lis = range(len(xtypes))
@@ -347,6 +347,13 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
                 yield event_based_risk(gmf_df, crmodel, monitor)
 
 
+@performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
+def fast_add(avg_losses, row, col, data, X):
+    for r, c, d in zip(row, col, data):
+        rlz, lti = divmod(c, X)
+        avg_losses[r, lti, rlz] += d
+
+
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
 class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     """
@@ -542,8 +549,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             # avg_losses are stored as coo matrices
             with self.monitor('saving avg_losses'):
                 coo = dic.pop('avg')
-                rlzs, xlts = numpy.divmod(coo.col, self.X)
-                self.avg_losses[coo.row, xlts, rlzs] += coo.data
+                # the non-numpy approach is 2-3x slower, causing
+                # a big data queue and then running out of memory
+                # rlzs, xlts = numpy.divmod(coo.col, self.X)
+                # self.avg_losses[coo.row, xlts, rlzs] += coo.data
+                fast_add(self.avg_losses, coo.row, coo.col, coo.data, self.X)
 
     def post_execute(self, dummy):
         """
