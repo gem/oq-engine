@@ -1844,12 +1844,13 @@ def extract_html_table(request, calc_id, name):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
-    table_html = table.to_html(classes="table table-striped", index=False)
     display_names = {'aggrisk_tags': 'Impact',
                      'mmi_tags': 'Exposure by MMI'}
     table_name = display_names[name] if name in display_names else name
     return render(request, 'engine/show_table.html',
-                  {'table_name': table_name, 'table_html': table_html})
+                  {'table_name': table_name,
+                   'table_header': table.columns,
+                   'table_contents': table.to_numpy()})
 
 
 @csrf_exempt
