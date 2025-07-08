@@ -60,9 +60,9 @@ def fast_agg(keys, values, correl, li, acc):
         acc[ukey][li] += avalue
 
 
-def update(loss_by_AR, lti, X, alt, rlz_id, collect_rlzs):
+def update(loss_by_AX, lti, X, alt, rlz_id, collect_rlzs):
     """
-    Populate loss_by_AR a dictionary {'aids': [], 'rlzs': [], 'loss': []}
+    Populate loss_by_AX a dictionary {'aids': [], 'bids': [], 'loss': []}
 
     :param alt: DataFrame agg_loss_table
     :param rlz_id: effective realization index (usually 0)
@@ -84,9 +84,9 @@ def update(loss_by_AR, lti, X, alt, rlz_id, collect_rlzs):
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
         rlzs = U32(rlzs)
-    loss_by_AR['aids'].append(aids)
-    loss_by_AR['rlzs'].append(rlzs * X + lti)
-    loss_by_AR['loss'].append(tot.to_numpy())
+    loss_by_AX['aids'].append(aids)
+    loss_by_AX['bids'].append(rlzs * X + lti)
+    loss_by_AX['loss'].append(tot.to_numpy())
 
 
 def debugprint(ln, asset_loss_table, adf):
@@ -108,7 +108,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     xtypes = oq.ext_loss_types
     if ideduc:
         xtypes.append('claim')
-    loss_by_AR = {'aids': [], 'rlzs': [], 'loss': []}
+    loss_by_AX = {'aids': [], 'bids': [], 'loss': []}
     correl = int(oq.asset_correlation)
     A, R, K = ARK
     X = len(xtypes)
@@ -120,7 +120,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                 continue
             alt = out[ln]
             if oq.avg_losses:  # fast
-                update(loss_by_AR, li, X, alt, rlz_id, oq.collect_rlzs)
+                update(loss_by_AX, li, X, alt, rlz_id, oq.collect_rlzs)
             if correl:  # use sigma^2 = (sum sigma_i)^2
                 alt['variance'] = numpy.sqrt(alt.variance)
             eids = alt.eid.to_numpy() * TWO32  # U64
@@ -132,13 +132,13 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                 aids = alt.aid.to_numpy()
                 for kids in aggids[:, aids]:
                     fast_agg(eids + U64(kids), values, correl, li, acc)
-    if loss_by_AR['aids']:
-        aids = numpy.concatenate(loss_by_AR['aids'])
-        rlzs = numpy.concatenate(loss_by_AR['rlzs'])
-        loss = numpy.concatenate(loss_by_AR['loss'])
-        loss_by_AR = sparse.coo_matrix((loss, (aids, rlzs)), (A, R*X))
+    if loss_by_AX['aids']:
+        aids = numpy.concatenate(loss_by_AX['aids'])
+        rlzs = numpy.concatenate(loss_by_AX['bids'])
+        loss = numpy.concatenate(loss_by_AX['loss'])
+        loss_by_AX = sparse.coo_matrix((loss, (aids, rlzs)), (A, R*X))
     else:
-        loss_by_AR = sparse.coo_matrix((A, R*X), F32)
+        loss_by_AX = sparse.coo_matrix((A, R*X), F32)
 
     # building event loss table
     lis = range(len(xtypes))
@@ -153,7 +153,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                 for c, col in enumerate(['variance', 'loss']):
                     dic[col].append(arr[li, c])
     fix_dtypes(dic)
-    return loss_by_AR, pandas.DataFrame(dic)
+    return loss_by_AX, pandas.DataFrame(dic)
 
 
 def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
