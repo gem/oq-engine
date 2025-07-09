@@ -171,6 +171,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
         crmodel = monitor.read('crmodel')
         risk_sids = monitor.read('sids')  # this is fast
     avg = None
+    assdic = read_assdic(slice(None), monitor)
     for sbe in split(slice_by_event, int(config.memory.max_gmvs_chunk)):
         s0, s1 = sbe[0]['start'], sbe[-1]['stop']
         with dstore:
@@ -189,7 +190,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
                     dset = dstore['gmf_data/' + col]
                     dic[col] = dset[s0+start:s0+stop][idx - start]
         df = pandas.DataFrame(dic)  # few MB
-        dic = event_based_risk(df, crmodel, monitor)
+        dic = event_based_risk(df, assdic, crmodel, monitor)
         avg_ = dic.pop('avg')
         if avg is None:
             avg = avg_
@@ -199,7 +200,19 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
     yield dict(avg=avg if hasattr(avg, 'col') else avg.tocoo())
 
 
-def event_based_risk(df, crmodel, monitor):
+def read_assdic(slc, monitor):
+    """
+    :param slc: slice object
+    :returns: dictionary col->array
+    """
+    with monitor('reading assets', measuremem=True):
+        # saving a lot of memory with respect to a simple read('assets')
+        cols = monitor.read_pdcolumns('assets').split()
+        assdic = {col: monitor.read('assets/' + col, slc) for col in cols}
+    return assdic
+
+
+def event_based_risk(df, assdic, crmodel, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
     :param crmodel: CompositeRiskModel instance
@@ -219,11 +232,6 @@ def event_based_risk(df, crmodel, monitor):
     else:
         rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
                             int(oq.asset_correlation))
-
-    with monitor('reading assets', measuremem=True):
-        # saving a lot of memory with respect to a simple read('assets')
-        cols = monitor.read_pdcolumns('assets').split()
-        assdic = {col: monitor.read('assets/' + col) for col in cols}
     outgen = output_gen(df, assdic, crmodel, rng, monitor)
     del assdic
     with monitor('aggregating losses', measuremem=True) as agg_mon:
@@ -338,13 +346,14 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     cmaker.oq.ground_motion_fields = True
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
+    assdic = read_assdic(slice(None), monitor)
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
         for dic in event_based.event_based(
                 block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):
                 gmf_df = pandas.DataFrame(dic['gmfdata'])
-                yield event_based_risk(gmf_df, crmodel, monitor)
+                yield event_based_risk(gmf_df, assdic, crmodel, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
