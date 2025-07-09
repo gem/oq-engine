@@ -84,7 +84,7 @@ def update(loss_by_AX, lti, X, alt, rlz_id, collect_rlzs):
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
         rlzs = U32(rlzs)
-    loss_by_AX['aids'].append(aids)
+    loss_by_AX['aids'].append(U32(aids))
     loss_by_AX['bids'].append(rlzs * X + lti)
     loss_by_AX['loss'].append(F32(tot))
 
@@ -100,17 +100,39 @@ def debugprint(ln, asset_loss_table, adf):
         print(df)
 
 
-def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
+def build_avg(loss_by_AX, A, X):
+    if loss_by_AX['aids']:
+        aids = numpy.concatenate(loss_by_AX['aids'], dtype=U32)
+        bids = numpy.concatenate(loss_by_AX['bids'], dtype=U32)
+        loss = numpy.concatenate(loss_by_AX['loss'], dtype=F32)
+        avg = sparse.coo_matrix((loss, (aids, bids)), (A, X))
+    else:
+        avg = sparse.coo_matrix((A, X), dtype=F32)
+    return avg
+
+
+def build_alt(acc, xtypes):
+    lis = range(len(xtypes))
+    dic = general.AccumDict(accum=[])
+    for ukey, arr in acc.items():
+        eid, kid = divmod(ukey, TWO32)
+        for li in lis:
+            if arr[li].any():
+                dic['event_id'].append(eid)
+                dic['agg_id'].append(kid)
+                dic['loss_id'].append(LOSSID[xtypes[li]])
+                for c, col in enumerate(['variance', 'loss']):
+                    dic[col].append(arr[li, c])
+    fix_dtypes(dic)
+    return pandas.DataFrame(dic)
+
+
+def aggreg(outputs, loss_by_AX, crmodel, K, aggids, rlz_id, xtypes, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
     oq = crmodel.oqparam
-    xtypes = oq.ext_loss_types
-    if ideduc:
-        xtypes.append('claim')
-    loss_by_AX = {'aids': [], 'bids': [], 'loss': []}
     correl = int(oq.asset_correlation)
-    A, R, K = ARK
     X = len(xtypes)
     acc = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
@@ -132,28 +154,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                 aids = alt.aid.to_numpy()
                 for kids in aggids[:, aids]:
                     fast_agg(eids + U64(kids), values, correl, li, acc)
-    if loss_by_AX['aids']:
-        aids = numpy.concatenate(loss_by_AX['aids'])
-        bids = numpy.concatenate(loss_by_AX['bids'])
-        loss = numpy.concatenate(loss_by_AX['loss'])
-        loss_by_AX = sparse.coo_matrix((loss, (aids, bids)), (A, R*X))
-    else:
-        loss_by_AX = sparse.coo_matrix((A, R*X), dtype=F32)
-
-    # building event loss table
-    lis = range(len(xtypes))
-    dic = general.AccumDict(accum=[])
-    for ukey, arr in acc.items():
-        eid, kid = divmod(ukey, TWO32)
-        for li in lis:
-            if arr[li].any():
-                dic['event_id'].append(eid)
-                dic['agg_id'].append(kid)
-                dic['loss_id'].append(LOSSID[xtypes[li]])
-                for c, col in enumerate(['variance', 'loss']):
-                    dic[col].append(arr[li, c])
-    fix_dtypes(dic)
-    return loss_by_AX, pandas.DataFrame(dic)
+    return acc
 
 
 def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
@@ -190,7 +191,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
                     dset = dstore['gmf_data/' + col]
                     dic[col] = dset[s0+start:s0+stop][idx - start]
         df = pandas.DataFrame(dic)  # few MB
-        dic = event_based_risk(df, assdic, crmodel, monitor)
+        dic = _event_based_risk(df, assdic, crmodel, monitor)
         avg_ = dic.pop('avg')
         if avg is None:
             avg = avg_
@@ -212,13 +213,7 @@ def read_assdic(slc, monitor):
     return assdic
 
 
-def event_based_risk(df, assdic, crmodel, monitor):
-    """
-    :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
-    :param crmodel: CompositeRiskModel instance
-    :param monitor: a Monitor instance
-    :returns: a dictionary of arrays
-    """
+def _event_based_risk(df, assdic, crmodel, monitor):
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
 
@@ -226,20 +221,27 @@ def event_based_risk(df, assdic, crmodel, monitor):
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
     weights = [1] if oq.collect_rlzs else monitor.read('weights')
-    ARK = (oq.A, len(weights), oq.K)
+    xtypes = oq.ext_loss_types
+    if oq.ideduc:
+        xtypes.append('claim')
+    X = len(xtypes)
+    R = len(weights)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
         rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
                             int(oq.asset_correlation))
     outgen = output_gen(df, assdic, crmodel, rng, monitor)
-    del assdic
     with monitor('aggregating losses', measuremem=True) as agg_mon:
-        avg, alt = aggreg(outgen, crmodel, ARK, aggids, rlz_id, oq.ideduc,
-                          monitor)
-    # avg[ln] is a coo_matrix with data, row, col of 4 bytes per element
-    out_bytes = avg.data.nbytes * 3 + alt.memory_usage().sum()
+        loss_by_AX = {'aids': [], 'bids': [], 'loss': []}
+        acc = aggreg(outgen, loss_by_AX, crmodel, oq.K,
+                     aggids, rlz_id, xtypes, monitor)
+        alt = build_alt(acc, xtypes)
+        avg = build_avg(loss_by_AX, oq.A, X*R)
+        del loss_by_AX
     agg_mon.duration -= monitor.ctime  # subtract the computing time
+    # avg has 3*4 bytes per element
+    out_bytes = avg.data.nbytes * 3 + alt.memory_usage().sum()
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum(),
                 out_bytes=out_bytes)
 
@@ -353,7 +355,7 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
                 block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):
                 gmf_df = pandas.DataFrame(dic['gmfdata'])
-                yield event_based_risk(gmf_df, assdic, crmodel, monitor)
+                yield _event_based_risk(gmf_df, assdic, crmodel, monitor)
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
