@@ -171,8 +171,11 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
         risk_sids = monitor.read('sids')  # this is fast
-    avg = None
+        R = 1 if oqparam.collect_rlzs else len(monitor.read('weights'))
+        X = len(oqparam.ext_loss_types) + oqparam.ideduc
+
     assdic = read_assdic(slice(None), monitor)
+    loss_by_AX = {'aids': [], 'bids': [], 'loss': []}
     for sbe in split(slice_by_event, int(config.memory.max_gmvs_chunk)):
         s0, s1 = sbe[0]['start'], sbe[-1]['stop']
         with dstore:
@@ -191,14 +194,9 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
                     dset = dstore['gmf_data/' + col]
                     dic[col] = dset[s0+start:s0+stop][idx - start]
         df = pandas.DataFrame(dic)  # few MB
-        dic = _event_based_risk(df, assdic, crmodel, monitor)
-        avg_ = dic.pop('avg')
-        if avg is None:
-            avg = avg_
-        else:
-            avg += avg_
+        dic = _event_based_risk(df, assdic, loss_by_AX, crmodel, monitor)
         yield dic
-    yield dict(avg=avg if hasattr(avg, 'col') else avg.tocoo())
+    yield dict(avg=build_avg(loss_by_AX, oqparam.A, R*X))
 
 
 def read_assdic(slc, monitor):
@@ -213,19 +211,16 @@ def read_assdic(slc, monitor):
     return assdic
 
 
-def _event_based_risk(df, assdic, crmodel, monitor):
+def _event_based_risk(df, assdic, loss_by_AX, crmodel, monitor):
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
 
     oq = crmodel.oqparam
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
-    weights = [1] if oq.collect_rlzs else monitor.read('weights')
     xtypes = oq.ext_loss_types
     if oq.ideduc:
         xtypes.append('claim')
-    X = len(xtypes)
-    R = len(weights)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -233,16 +228,13 @@ def _event_based_risk(df, assdic, crmodel, monitor):
                             int(oq.asset_correlation))
     outgen = output_gen(df, assdic, crmodel, rng, monitor)
     with monitor('aggregating losses', measuremem=True) as agg_mon:
-        loss_by_AX = {'aids': [], 'bids': [], 'loss': []}
         acc = aggreg(outgen, loss_by_AX, crmodel, oq.K,
                      aggids, rlz_id, xtypes, monitor)
         alt = build_alt(acc, xtypes)
-        avg = build_avg(loss_by_AX, oq.A, X*R)
-        del loss_by_AX
     agg_mon.duration -= monitor.ctime  # subtract the computing time
-    # avg has 3*4 bytes per element
-    out_bytes = avg.data.nbytes * 3 + alt.memory_usage().sum()
-    return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum(),
+    out_bytes = sum(loss.nbytes for loss in loss_by_AX['loss']) * 3 + \
+        alt.memory_usage().sum()
+    return dict(alt=alt, gmf_bytes=df.memory_usage().sum(),
                 out_bytes=out_bytes)
 
 
@@ -345,7 +337,14 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    cmaker.oq.ground_motion_fields = True
+    oq = cmaker.oq
+    oq.ground_motion_fields = True
+    weights = [1] if oq.collect_rlzs else monitor.read('weights')
+    xtypes = oq.ext_loss_types
+    if oq.ideduc:
+        xtypes.append('claim')
+    X = len(xtypes)
+    R = len(weights)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
     assdic = read_assdic(slice(None), monitor)
@@ -355,7 +354,9 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
                 block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):
                 gmf_df = pandas.DataFrame(dic['gmfdata'])
-                yield _event_based_risk(gmf_df, assdic, crmodel, monitor)
+                loss_by_AX = {'aids': [], 'bids': [], 'loss': []}        
+                yield _event_based_risk(gmf_df, assdic, loss_by_AX, crmodel, monitor)
+                yield dict(avg=build_avg(loss_by_AX, oq.A, R*X))
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
