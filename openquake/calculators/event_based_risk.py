@@ -201,6 +201,10 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
 
 
 def read_assdic(slc, monitor):
+    """
+    :param slc: slice object
+    :returns: dictionary col->array
+    """
     with monitor('reading assets', measuremem=True):
         # saving a lot of memory with respect to a simple read('assets')
         cols = monitor.read_pdcolumns('assets').split()
@@ -228,7 +232,6 @@ def event_based_risk(df, assdic, crmodel, monitor):
     else:
         rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
                             int(oq.asset_correlation))
-    assdic = assdic or read_assdic(slice(None), monitor)
     outgen = output_gen(df, assdic, crmodel, rng, monitor)
     del assdic
     with monitor('aggregating losses', measuremem=True) as agg_mon:
