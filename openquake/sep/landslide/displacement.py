@@ -105,7 +105,9 @@ def jibson_2007_model_a(
 
     pow_1 = (1 - accel_ratio) ** c2
     pow_2 = accel_ratio**c3
-    log_Disp = c1 + np.log10(pow_1 * pow_2)
+    pow_prod = pow_1 * pow_2
+    pow_prod[pow_prod == 0.0] = 1e-100  # fix zeros
+    log_Disp = c1 + np.log10(pow_prod)
 
     Disp_cm = 10.0 ** log_Disp
     # convert output to m
@@ -177,9 +179,10 @@ def jibson_2007_model_b(
     accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
 
     pow_1 = (1 - accel_ratio) ** c2
-    pow_2 = accel_ratio**c3
-
-    log_Disp = c1 + np.log10(pow_1 * pow_2) + c4 * mag
+    pow_2 = accel_ratio ** c3
+    pow_prod = pow_1 * pow_2
+    pow_prod[pow_prod == 0.0] = 1e-100  # fix zeros
+    log_Disp = c1 + np.log10(pow_prod) + c4 * mag
 
     Disp_cm = 10.0 ** log_Disp
 
