@@ -60,7 +60,7 @@ def fast_agg(keys, values, correl, li, acc):
         acc[ukey][li] += avalue
 
 
-def build_coo(AX, lti, X, alt, rlz_id, collect_rlzs):
+def build_csr(AX, lti, X, alt, rlz_id, collect_rlzs):
     """
     :param AX: (num_assets, num_eff_rlzs * num_ext_loss_types)
     :param lti: extended loss type index
@@ -84,7 +84,7 @@ def build_coo(AX, lti, X, alt, rlz_id, collect_rlzs):
         tot = ldf.groupby(['aid', 'rlz']).loss.sum()
         aids, rlzs = zip(*tot.index)
         rlzs = U32(rlzs)
-    return sparse.coo_matrix((F32(tot), (aids, rlzs * X + lti)), AX)
+    return sparse.csr_matrix((F32(tot), (aids, rlzs * X + lti)), AX)
 
 
 def debugprint(ln, asset_loss_table, adf):
@@ -109,7 +109,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     correl = int(oq.asset_correlation)
     A, R, K = ARK
     X = len(xtypes)
-    loss_by_AX = sparse.coo_matrix((A, R*X), dtype=F32)
+    loss_by_AX = sparse.csr_matrix((A, R*X), dtype=F32)
     acc = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
     for out in outputs:
@@ -118,7 +118,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                 continue
             alt = out[ln]
             if oq.avg_losses:  # fast
-                loss_by_AX += build_coo(loss_by_AX.shape, li, X, alt, rlz_id,
+                loss_by_AX += build_csr(loss_by_AX.shape, li, X, alt, rlz_id,
                                         oq.collect_rlzs)
             if correl:  # use sigma^2 = (sum sigma_i)^2
                 alt['variance'] = numpy.sqrt(alt.variance)
@@ -145,9 +145,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
                 for c, col in enumerate(['variance', 'loss']):
                     dic[col].append(arr[li, c])
     fix_dtypes(dic)
-    if not hasattr(loss_by_AX, 'row'):
-        loss_by_AX = loss_by_AX.tocoo()
-    return loss_by_AX, pandas.DataFrame(dic)
+    return loss_by_AX.tocoo(), pandas.DataFrame(dic)
 
 
 def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
