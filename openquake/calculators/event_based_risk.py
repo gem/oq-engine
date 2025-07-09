@@ -241,9 +241,9 @@ def event_based_risk(df, assdic, crmodel, monitor):
         else:
             avg = sparse.coo_matrix((A, R*X), dtype=F32)
         del loss_by_AX
-    # avg[ln] is a coo_matrix with data, row, col of 4 bytes per element
-    out_bytes = avg.data.nbytes * 3 + alt.memory_usage().sum()
     agg_mon.duration -= monitor.ctime  # subtract the computing time
+    # avg has 3*4 bytes per element
+    out_bytes = avg.data.nbytes * 3 + alt.memory_usage().sum()
     return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum(),
                 out_bytes=out_bytes)
 
