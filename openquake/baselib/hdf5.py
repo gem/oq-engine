@@ -1080,7 +1080,7 @@ def save_npz(obj, path):
                 a[key] = _fix_array(val, key)
     # turn into an error https://github.com/numpy/numpy/issues/14142
     with warnings.catch_warnings():
-        warnings.filterwarnings("error", category=UserWarning)
+        #warnings.filterwarnings("error", category=UserWarning)
         numpy.savez_compressed(path, **a)
 
 # #################### obj <-> json ##################### #

@@ -156,14 +156,18 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
         aae(haz[1], 0.13311564, decimal=6)
 
-        # test normal disaggregation
-        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/TRT-0.csv', fname)
+        # test traditional disaggregation
+        query = 'disagg?kind=TRT&spec=rlzs-traditional&poe_id=0&site_id=0&imt=PGA'
+        aw = extract(self.calc.datastore, query)
+        breakpoint()
 
-        # test conditional disaggregation
         [fname] = export(('disagg-rlzs-traditional', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/TRT-traditional-0.csv', fname)
+
+        # test normal disaggregation
+        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/TRT-0.csv', fname)
 
     def test_case_8(self):
         # test epsilon star

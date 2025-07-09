@@ -1337,7 +1337,8 @@ def extract_disagg(dstore, what):
     # matrix has shape (..., M, P, Z)
     matrix = fullmatrix[..., imti, poei, :]
     if traditional:
-        poe_agg = dstore['poe4'][sid, imti, poei]  # shape (M, P, Z)
+        # tested in disagg/case_7
+        poe_agg = dstore['poe4'][sid][imti, :, poei]  # shape (M, P, Z)
         matrix[:] = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
     disag_tup = tuple(label.split('_'))
@@ -1371,6 +1372,7 @@ def extract_disagg(dstore, what):
         weights /= weights.sum()  # normalize to 1
         attrs['weights'] = weights.tolist()
     extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
+    breakpoint()
     return ArrayWrapper(matrix, attrs, extra)
 
 
