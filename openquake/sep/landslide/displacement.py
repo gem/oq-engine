@@ -435,7 +435,7 @@ def rathje_saygili_2009(pga, mag, crit_accel):
     log_Disp = (4.89 -4.85*accel_ratio -
                 19.64*accel_ratio**2 +
                 42.49*accel_ratio**3 -
-                29.06*accel_ratio**3 +
+                29.06*accel_ratio**4 +
                 0.72*np.log(pga[ok]) + 0.89*(mag-6))
     Disp_cm = np.power(e, log_Disp) # in cm
     Disp[ok] = Disp_cm/100     # conversion in m
