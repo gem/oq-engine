@@ -62,8 +62,8 @@ def jibson_2007_model_a(
     accel_ratio_threshold: float = 0.05,
 ) -> np.ndarray:
     """
-    Calculates earthquake-induced displacements of landslides from PGA, and critical
-    acceleration, from Jibson (2007), equation 6.
+    Calculates earthquake-induced displacements of landslides from PGA, and
+    critical acceleration, from Jibson (2007), equation 6.
     
     Reference: Jibson, R.W. (2007). Regression models for estimating coseismic
     landslide displacement. Engineering Geology, 91(2-4), 209-218. 
@@ -187,17 +187,20 @@ def jibson_2007_model_b(
     Disp_cm = 10.0 ** log_Disp
 
     # Convert output to m
-    Disp[ok] = Disp_cm / 100.0    
+    Disp[ok] = Disp_cm / 100.0
+    
     return Disp
 
 
 def cho_rathje_2022(pgv_, tslope_, crit_accel_, hratio_):
     '''
-    Calculates earthquake-induced displacements of landslides by Eq.4a, Cho&Rathje(2022)
+    Calculates earthquake-induced displacements of landslides by
+    Eq.4a, Cho&Rathje(2022)
     
-    Reference: Cho, Y., & Rathje, E. M. (2022). Generic predictive model of earthquake-
-    induced slope displacements derived from finite-element analysis. Journal of 
-    Geotechnical and Geoenvironmental Engineering, 148(4), 04022010.
+    Reference: Cho, Y., & Rathje, E. M. (2022). Generic predictive model
+    of earthquake-induced slope displacements derived from finite-element
+    analysis. Journal of Geotechnical and Geoenvironmental Engineering,
+    148(4), 04022010.
     https://doi.org/10.1061/(ASCE)GT.1943-5606.0002757
     
     :param pgv:
@@ -209,7 +212,8 @@ def cho_rathje_2022(pgv_, tslope_, crit_accel_, hratio_):
         tslope = (4* Hslope / vs) with vs = material shear wave velocity and 
         Hslope = slope height
     :param hratio:
-        Ratio between the depth of the landslide and the height of the slope (adimensional)
+        Ratio between the depth of the landslide and the height of the slope
+        (adimensional)
         
     :returns:   
         Disp: Earthquake-induced displacement in m.
