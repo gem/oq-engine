@@ -439,11 +439,11 @@ def saygili_rathje_2008(pga, pgv, crit_accel):
     accel_ratio[accel_ratio > 1.0] = 1.0
     accel_ratio[accel_ratio <= accel_ratio_threshold] = accel_ratio_threshold
         
-    log_Disp = -1.56 - 4.58*(crit_accel/pga) - 20.84*(
-        np.power((crit_accel/pga), 2)) + 44.75*(
-            np.power((crit_accel/pga), 3)) - 30.50*(
-                np.power((crit_accel/pga), 4)) - 0.64*(
-                    np.log(pga)) + 1.55*(np.log(pgv))
+    log_Disp = (-1.56 - 4.58*(crit_accel/pga) -
+                20.84*(np.power((crit_accel/pga), 2)) +
+                44.75*(np.power((crit_accel/pga), 3)) -
+                30.50*(np.power((crit_accel/pga), 4)) -
+                0.64*(np.log(pga)) + 1.55*(np.log(pgv)))
     Disp_cm = np.power(e, log_Disp)
     Disp =  Disp_cm/100
     
