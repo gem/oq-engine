@@ -231,8 +231,7 @@ def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
         aggreg(outgen, loss2, loss3, crmodel, oq.K,
                aggids, rlz_id, xtypes, monitor)
     agg_mon.duration -= monitor.ctime  # subtract the computing time
-    out_bytes = sum(loss.nbytes for loss in loss3['loss']) * 3
-    return dict(gmf_bytes=df.memory_usage().sum(), out_bytes=out_bytes)
+    return dict(gmf_bytes=df.memory_usage().sum())
 
 
 def output_gen(df, assdic, crmodel, rng, monitor):
@@ -500,7 +499,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         self.gmf_bytes = 0
-        self.out_bytes = 0
         if oq.calculation_mode == 'ebrisk' or 'gmf_data' not in self.datastore:
             # start from ruptures
             if (oq.ground_motion_fields and
@@ -550,7 +548,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if not dic:
             return
         self.gmf_bytes += dic.pop('gmf_bytes', 0)
-        self.out_bytes = max(self.out_bytes, dic.pop('out_bytes', 0))
         self.oqparam.ground_motion_fields = False  # hack
         if 'alt' in dic:
             with self.monitor('saving risk_by_event'):
@@ -574,7 +571,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         and then loss curves and maps.
         """
         oq = self.oqparam
-        logging.info('max output size = %s', general.humansize(self.out_bytes))
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
         upper_limit = self.E * (K + 1) * len(self.xtypes)
         if upper_limit < 1E7:
