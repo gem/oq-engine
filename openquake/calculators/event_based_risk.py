@@ -186,15 +186,15 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
             continue
         with dstore, monitor('reading GMFs', measuremem=True):
             start, stop = idx.min(), idx.max() + 1
-            dic = {}
+            gmfdic = {}
             for col in gmfcols:
                 if col == 'sid':
-                    dic[col] = haz_sids[idx]
+                    gmfdic[col] = haz_sids[idx]
                 else:
                     dset = dstore['gmf_data/' + col]
-                    dic[col] = dset[s0+start:s0+stop][idx - start]
-        df = pandas.DataFrame(dic)  # few MB
-        dic = _event_based_risk(df, assdic, loss3, crmodel, monitor)
+                    gmfdic[col] = dset[s0+start:s0+stop][idx - start]
+        gmfdf = pandas.DataFrame(gmfdic)  # few MB
+        dic = _event_based_risk(gmfdf, assdic, loss3, crmodel, monitor)
         yield dic
     yield dict(avg=build_avg(loss3, oqparam.A, R*X))
 
