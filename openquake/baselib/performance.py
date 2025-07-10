@@ -215,7 +215,6 @@ class Monitor(object):
     authkey = None
     calc_id = None
     inject = None
-    #config = config
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
                  h5=None, version=None, dbserver_host='127.0.0.1'):
