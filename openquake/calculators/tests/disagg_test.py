@@ -157,8 +157,10 @@ class DisaggregationTestCase(CalculatorTestCase):
         aae(haz[1], 0.13311564, decimal=6)
 
         # test traditional disaggregation
-        query = 'disagg?kind=TRT&spec=rlzs-traditional&poe_id=0&site_id=0&imt=PGA'
+        query = ('disagg?kind=TRT&spec=rlzs-traditional&poe_id=0&site_id=0'
+                 '&imt=PGA')
         aw = extract(self.calc.datastore, query)
+        df = aw.to_dframe()
         breakpoint()
 
         [fname] = export(('disagg-rlzs-traditional', 'csv'),
