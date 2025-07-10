@@ -2239,9 +2239,6 @@ class OqParam(valid.ParamSet):
         tagset = asset.tagset(self.aggregate_by)
         if 'id' in tagset and len(tagset) > 1:
             raise ValueError('aggregate_by = id must contain a single tag')
-        elif 'site_id' in tagset and len(tagset) > 1:
-            raise ValueError(
-                'aggregate_by = site_id must contain a single tag')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
                 err_msg = ('The field `aggregate_by = policy`'
@@ -2258,7 +2255,8 @@ class OqParam(valid.ParamSet):
         try:
             [lt] = dic
         except ValueError:
-            self.raise_invalid('too many loss types in reinsurance %s' % list(dic))
+            self.raise_invalid(
+                'too many loss types in reinsurance %s' % list(dic))
         if lt not in scientific.LOSSID:
             self.raise_invalid('%s: unknown loss type %s in reinsurance' % lt)
         if '+' in lt and not self.total_losses:
