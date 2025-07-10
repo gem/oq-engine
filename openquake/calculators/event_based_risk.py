@@ -182,7 +182,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
             haz_sids = dstore['gmf_data/sid'][s0:s1]
         idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
         if len(idx) == 0:
-            return {}
+            continue
         with dstore, monitor('reading GMFs', measuremem=True):
             start, stop = idx.min(), idx.max() + 1
             gmfdic = {}
