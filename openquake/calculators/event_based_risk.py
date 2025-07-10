@@ -127,14 +127,10 @@ def build_alt(acc, xtypes):
     return pandas.DataFrame(dic)
 
 
-def aggreg(outputs, loss3, crmodel, K, aggids, rlz_id, xtypes, monitor):
-    """
-    :returns: (avg_losses, agg_loss_table)
-    """
+def aggreg(outputs, acc, loss3, crmodel, K, aggids, rlz_id, xtypes, monitor):
     oq = crmodel.oqparam
     correl = int(oq.asset_correlation)
     X = len(xtypes)
-    acc = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
     for out in outputs:
         for li, ln in enumerate(xtypes):
@@ -154,7 +150,6 @@ def aggreg(outputs, loss3, crmodel, K, aggids, rlz_id, xtypes, monitor):
                 aids = alt.aid.to_numpy()
                 for kids in aggids[:, aids]:
                     fast_agg(eids + U64(kids), values, correl, li, acc)
-    return acc
 
 
 def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
@@ -174,16 +169,20 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
         R = 1 if oqparam.collect_rlzs else len(monitor.read('weights'))
         X = len(oqparam.ext_loss_types) + oqparam.ideduc
 
+    gmf_bytes = 0
+    xtypes = oqparam.ext_loss_types
+    if oqparam.ideduc:
+        xtypes.append('claim')
     assdic = read_assdic(slice(None), monitor)
     loss3 = {'aids': [], 'bids': [], 'loss': []}
+    acc = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
     for sbe in split(slice_by_event, int(config.memory.max_gmvs_chunk)):
         s0, s1 = sbe[0]['start'], sbe[-1]['stop']
         with dstore:
             haz_sids = dstore['gmf_data/sid'][s0:s1]
         idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
         if len(idx) == 0:
-            yield {}
-            continue
+            return {}
         with dstore, monitor('reading GMFs', measuremem=True):
             start, stop = idx.min(), idx.max() + 1
             gmfdic = {}
@@ -194,9 +193,12 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
                     dset = dstore['gmf_data/' + col]
                     gmfdic[col] = dset[s0+start:s0+stop][idx - start]
         gmfdf = pandas.DataFrame(gmfdic)  # few MB
-        dic = _event_based_risk(gmfdf, assdic, loss3, crmodel, monitor)
-        yield dic
-    yield dict(avg=build_avg(loss3, oqparam.A, R*X))
+        dic = _event_based_risk(gmfdf, assdic, acc, loss3, crmodel, monitor)
+        gmf_bytes += dic['gmf_bytes']
+    dic = dict(alt=build_alt(acc, xtypes), gmf_bytes=gmf_bytes)
+    if oqparam.avg_losses:
+        dic['avg'] = build_avg(loss3, oqparam.A, R*X)
+    return dic
 
 
 def read_assdic(slc, monitor):
@@ -211,7 +213,7 @@ def read_assdic(slc, monitor):
     return assdic
 
 
-def _event_based_risk(df, assdic, loss3, crmodel, monitor):
+def _event_based_risk(df, assdic, acc, loss3, crmodel, monitor):
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
 
@@ -228,14 +230,11 @@ def _event_based_risk(df, assdic, loss3, crmodel, monitor):
                             int(oq.asset_correlation))
     outgen = output_gen(df, assdic, crmodel, rng, monitor)
     with monitor('aggregating losses', measuremem=True) as agg_mon:
-        acc = aggreg(outgen, loss3, crmodel, oq.K,
-                     aggids, rlz_id, xtypes, monitor)
-        alt = build_alt(acc, xtypes)
+        aggreg(outgen, acc, loss3, crmodel, oq.K,
+               aggids, rlz_id, xtypes, monitor)
     agg_mon.duration -= monitor.ctime  # subtract the computing time
-    out_bytes = sum(loss.nbytes for loss in loss3['loss']) * 3 + \
-        alt.memory_usage().sum()
-    return dict(alt=alt, gmf_bytes=df.memory_usage().sum(),
-                out_bytes=out_bytes)
+    out_bytes = sum(loss.nbytes for loss in loss3['loss']) * 3
+    return dict(gmf_bytes=df.memory_usage().sum(), out_bytes=out_bytes)
 
 
 def output_gen(df, assdic, crmodel, rng, monitor):
@@ -354,9 +353,13 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
                 block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):
                 gmf_df = pandas.DataFrame(dic['gmfdata'])
-                loss3 = {'aids': [], 'bids': [], 'loss': []}        
-                yield _event_based_risk(gmf_df, assdic, loss3, crmodel, monitor)
-                yield dict(avg=build_avg(loss3, oq.A, R*X))
+                loss3 = {'aids': [], 'bids': [], 'loss': []}
+                acc = general.AccumDict(accum=numpy.zeros((X, 2)))
+                dic = _event_based_risk(
+                    gmf_df, assdic, acc, loss3, crmodel, monitor)
+                dic['avg'] = build_avg(loss3, oq.A, R*X)
+                dic['alt'] = build_alt(acc, xtypes)
+                yield dic
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
