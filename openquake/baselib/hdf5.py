@@ -664,10 +664,10 @@ class ArrayWrapper(object):
         return cls(array, attrs, (extra,))
 
     def __init__(self, array, attrs, extra=('value',)):
-        if 'shape_descr' in attrs:
-            for name in attrs['shape_descr']:
-                if isinstance(attrs[name], int):
-                    attrs[name] = list(range(attrs[name]))
+        #if 'shape_descr' in attrs:
+        #    for name in attrs['shape_descr']:
+        #        if isinstance(attrs[name], int):
+        #            attrs[name] = list(range(attrs[name]))
         vars(self).update(attrs)
         self.extra = list(extra)
         if len(array):

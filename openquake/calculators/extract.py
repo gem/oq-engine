@@ -1335,7 +1335,7 @@ def extract_disagg(dstore, what):
     bins = {k: bin_edges(v, sid) for k, v in dstore['disagg-bins'].items()}
     fullmatrix = dstore['disagg-%s/%s' % (spec, label)][sid]
     # matrix has shape (..., M, P, Z)
-    matrix = numpy.array([fullmatrix[..., imt, poei, :] for imt in imti])
+    matrix = fullmatrix[..., imti, :, :][..., poei, :]
     if traditional:
         # tested in disagg/case_7
         poe3 = dstore['poe4'][sid]
