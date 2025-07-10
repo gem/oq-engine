@@ -31,6 +31,7 @@ from openquake.qa_tests_data.disagg import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_master)
 
 aae = numpy.testing.assert_almost_equal
+ae = numpy.testing.assert_equal
 
 RLZCOL = re.compile(r'rlz\d+')
 
@@ -161,7 +162,12 @@ class DisaggregationTestCase(CalculatorTestCase):
                  '&imt=PGA')
         aw = extract(self.calc.datastore, query)
         df = aw.to_dframe()
-        assert len(df) == 0  # because the array is zero
+        assert len(df) == 0  # because the array is zero for the first poe
+        query = ('disagg?kind=TRT&spec=rlzs-traditional&poe_id=1&site_id=0'
+                 '&imt=PGA')
+        aw = extract(self.calc.datastore, query)
+        [arr] = aw.to_dframe().to_numpy()  # nonzero for the second poe
+        assert tuple(arr) == ('Subduction Interface', 'PGA', 0.0044, 1.0, 1.0)
 
         [fname] = export(('disagg-rlzs-traditional', 'csv'),
                          self.calc.datastore)
