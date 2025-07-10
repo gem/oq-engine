@@ -902,7 +902,8 @@ class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
             )
         out.append(Disp)
         return out 
-  
+
+
 class SaygiliRathje2008Landslides(SecondaryPeril):
     '''
     Computes earthquake-induced displacements from pga and pgv
@@ -944,10 +945,9 @@ class SaygiliRathje2008Landslides(SecondaryPeril):
 
         Disp = saygili_rathje_2008(pga, pgv, sites.crit_accel)
         out.append(Disp)
-        return out  
-  
-  
-        
+        return out
+
+
 class RathjeSaygili2009Landslides(SecondaryPeril):   
     '''
     Computes earthquake-induced displacements from pga and moment 
