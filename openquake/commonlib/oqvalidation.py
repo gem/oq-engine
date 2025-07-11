@@ -2239,6 +2239,8 @@ class OqParam(valid.ParamSet):
         tagset = asset.tagset(self.aggregate_by)
         if 'id' in tagset and len(tagset) > 1:
             raise ValueError('aggregate_by = id must contain a single tag')
+        elif 'site_id' in tagset and self.avg_losses:
+            logging.warning('avg_losses with site_id in aggregate_by')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
                 err_msg = ('The field `aggregate_by = policy`'
