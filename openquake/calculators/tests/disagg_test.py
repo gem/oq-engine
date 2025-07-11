@@ -31,6 +31,7 @@ from openquake.qa_tests_data.disagg import (
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_master)
 
 aae = numpy.testing.assert_almost_equal
+ae = numpy.testing.assert_equal
 
 RLZCOL = re.compile(r'rlz\d+')
 
@@ -156,14 +157,25 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
         aae(haz[1], 0.13311564, decimal=6)
 
-        # test normal disaggregation
-        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/TRT-0.csv', fname)
+        # test traditional disaggregation
+        query = ('disagg?kind=TRT&spec=rlzs-traditional&poe_id=0&site_id=0'
+                 '&imt=PGA')
+        aw = extract(self.calc.datastore, query)
+        df = aw.to_dframe()
+        assert len(df) == 0  # because the array is zero for the first poe
+        query = ('disagg?kind=TRT&spec=rlzs-traditional&poe_id=1&site_id=0'
+                 '&imt=PGA')
+        aw = extract(self.calc.datastore, query)
+        [arr] = aw.to_dframe().to_numpy()  # nonzero for the second poe
+        assert tuple(arr) == ('Subduction Interface', 'PGA', 0.0044, 1.0, 1.0)
 
-        # test conditional disaggregation
         [fname] = export(('disagg-rlzs-traditional', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/TRT-traditional-0.csv', fname)
+
+        # test normal disaggregation
+        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/TRT-0.csv', fname)
 
     def test_case_8(self):
         # test epsilon star
@@ -197,13 +209,13 @@ class DisaggregationTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'disagg?kind=Mag&site_id=0&'
                      'imt=SA(0.1)&poe_id=0&spec=rlzs')
         self.assertEqual(len(aw.mag), 4)
-        self.assertEqual(aw.shape, (4, 1, 1))
+        self.assertEqual(aw.shape, (4, 1, 1, 1))
 
         aw = extract(self.calc.datastore, 'disagg?kind=Mag_Dist_Eps&site_id=0&'
                      'imt=SA(0.1)&poe_id=0&spec=rlzs')
         self.assertEqual(len(aw.dist), 10)
         self.assertEqual(len(aw.eps), 6)
-        self.assertEqual(aw.shape, (4, 10, 6, 1, 1))
+        self.assertEqual(aw.shape, (4, 10, 6, 1, 1, 1))
 
     def test_case_10(self):
         # test single magnitude

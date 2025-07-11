@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed an extract bug in disagg-traditional with realizations
   * Fixed a bug with the quantiles in event_based_damage
   * Improved loggin the progress in event based risk
   * Reduced slow tasks in the USA model
