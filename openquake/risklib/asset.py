@@ -183,6 +183,16 @@ class CostCalculator(object):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
 
 
+def fix(key, tagnames):
+    lst = []
+    for k, name in zip(key, tagnames):
+        if name == 'site_id':
+            lst.append(k + 1)
+        else:
+            lst.append(k)
+    return tuple(lst)
+
+
 class TagCollection(object):
     """
     An iterable collection of tags in the form "tagname=tagvalue".
@@ -479,12 +489,10 @@ class AssetCollection(object):
             df = dataf.set_index(tagnames)
             if tagnames == ['id']:
                 df.index = self['ordinal'] + 1
-            elif tagnames == ['site_id']:
-                df.index = self['site_id'] + 1
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
-                agg_values[aggkey[ag, key]] = tuple(grp[vfields].sum())
+                agg_values[aggkey[ag, fix(key, tagnames)]] = tuple(grp[vfields].sum())
         if self.fields:  # missing in scenario_damage case_8
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
@@ -560,10 +568,8 @@ class AssetCollection(object):
         for ag, aggby in enumerate(aggregate_by):
             if aggby == ['id']:
                 aggids[ag] = self['ordinal']
-            elif aggby == ['site_id']:
-                aggids[ag] = self['site_id']
             else:
-                aggids[ag] = [key2i[ag, tuple(t)] for t in self[aggby]]
+                aggids[ag] = [key2i[ag, to_tuple(rec, aggby)] for rec in self[aggby]]
         return aggids, [decode(vals) for vals in aggkey.values()]
 
     def reduce(self, sitecol):
@@ -644,6 +650,15 @@ class AssetCollection(object):
     def __repr__(self):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
+
+def to_tuple(rec, aggby):
+    lst = []
+    for field in aggby:
+        if field == 'site_id':
+            lst.append(rec[field] + 1)
+        else:
+            lst.append(rec[field])
+    return tuple(lst)
 
 # ########################### exposure ############################ #
 
