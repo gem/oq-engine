@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended the aggregation by `site_id` to multiple tags
   * Fixed an extract bug in disagg-traditional with realizations
   * Fixed a bug with the quantiles in event_based_damage
   * Improved loggin the progress in event based risk
