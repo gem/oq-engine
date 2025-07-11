@@ -183,10 +183,10 @@ class CostCalculator(object):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
 
 
-def fix(key, tagnames):
+def to_tuple(rec, aggby):
     lst = []
-    for k, name in zip(key, tagnames):
-        if name == 'site_id':
+    for k, field in zip(rec, aggby):
+        if field == 'site_id':
             lst.append(k + 1)
         else:
             lst.append(k)
@@ -492,7 +492,8 @@ class AssetCollection(object):
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
-                agg_values[aggkey[ag, fix(key, tagnames)]] = tuple(grp[vfields].sum())
+                agg_values[aggkey[ag, to_tuple(key, tagnames)]] = tuple(
+                    grp[vfields].sum())
         if self.fields:  # missing in scenario_damage case_8
             agg_values[K] = tuple(dataf[vfields].sum())
         return agg_values
@@ -650,15 +651,6 @@ class AssetCollection(object):
     def __repr__(self):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
-
-def to_tuple(rec, aggby):
-    lst = []
-    for field in aggby:
-        if field == 'site_id':
-            lst.append(rec[field] + 1)
-        else:
-            lst.append(rec[field])
-    return tuple(lst)
 
 # ########################### exposure ############################ #
 
