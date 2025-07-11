@@ -492,13 +492,15 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     maxw = slices['weight'].sum() // ct or 1.
     logging.info('maxw = {:_d}'.format(int(maxw)))
     w = operator.itemgetter('weight')
-    expected_outputs = count_outputs(data['eid'], slices, maxw, w)
-    logging.info('Expected outputs = %d', expected_outputs)
+    if oq.calculation_mode == 'event_based_risk':
+        expected_outputs = count_outputs(data['eid'], slices, maxw, w)
+        logging.info('Expected outputs = %d', expected_outputs)
     dstore.swmr_on()
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
         maxweight=maxw, weight=w, h5=dstore.hdf5)
-    smap.expected_outputs = expected_outputs
+    if oq.calculation_mode == 'event_based_risk':
+        smap.expected_outputs = expected_outputs
     return smap
 
 

@@ -996,15 +996,16 @@ class Starmap(object):
                 if self.distribute in ('zmq', 'slurm'):
                     mem_gb = 0
                     if res.mon.task_no % 10 == 0:
-                        # measure the memory only for 1 task out of 10, to be fast
+                        # measure the memory only for 1 task out of 10
                         # with 8 nodes the time to get the memory is 0.01 secs
                         for line in host_cores:
                             host, _cores = line.split()
-                            addr = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
+                            addr = 'tcp://%s:%s' % (
+                                host, config.zworkers.ctrl_port)
                             with Socket(addr, zmq.REQ, 'connect') as sock:
                                 mem_gb += sock.send('memory_gb')
                 elif self._shared:
-                    # do not measure the memory on the workers, only in the master
+                    # do not measure the memory on the workers
                     # otherwise memory_rss would double count the shared memory
                     mem_gb = memory_gb()
                 else:
@@ -1021,6 +1022,9 @@ class Starmap(object):
         self.socket.__exit__(None, None, None)
         self.tasks.clear()
         self.unlink()
+        if self.expected_outputs:
+            assert self.expected_outputs == self.n_out, (
+                self.expected_outputs, self.n_out)
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
             logging.info(
