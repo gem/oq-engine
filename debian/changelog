@@ -1,5 +1,8 @@
   [Michele Simionato]
   * Fixed an extract bug in disagg-traditional with realizations
+  * Fixed a bug with the quantiles in event_based_damage
+  * Improved loggin the progress in event based risk
+  * Reduced slow tasks in the USA model
   * Added output `mce_default` in AELO calculations
   * Extended `oq export_mean_disagg_by_src` to multiple sites
   * Extended `oq export_mag_dst_eps_sig` to multiple sites
@@ -23,6 +26,8 @@
   * Reduced the data transfer in avg_losses (20x for Philippines),
     thus solving an out-of-memory error; also improved the performance
     (25% for Philippines) and reduced the memory occupation on the workers
+  * Print a warning if there are vs30 values distant more than 10% from
+    DEFINED_FOR_REFERENCE_VELOCITY
 
   [Anirudh Rao]
   * Fixed a bug when generating the aggregate curves for `affectedpop` and
