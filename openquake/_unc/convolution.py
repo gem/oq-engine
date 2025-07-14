@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jit
+from openquake.baselib.performance import compile
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 
 TOLERANCE = 1e-6
@@ -30,15 +30,16 @@ def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
 
     # Compute the histogram
     his, _ = np.histogram(vals, bins=bins, weights=wei)
-    assert len(his) == num_powers*res
+    assert len(his) == num_powers * res
 
     return min_power, num_powers, his
 
 
-@jit(nopython=True)
+# TODO: do we need this to be done in numba? it looks like a no to me
+@compile("(f8[:],f8[:],f8[:],f8[:])")
 def _get_vals(pmfa, pmfb, midsa, midsb):
     # Outputs
-    yvals = np.zeros(len(pmfa)*len(pmfb))
+    yvals = np.zeros(len(pmfa) * len(pmfb))
     xvals = np.zeros_like(yvals)
     cnt = 0
     for i, a in enumerate(pmfa):
@@ -51,23 +52,24 @@ def _get_vals(pmfa, pmfb, midsa, midsb):
     return xvals, yvals
 
 
+# TODO: introduce a histogram object with 4 attributes
+# ASK: I was expecting a call to scipy.signal.convolve?
 def conv(pmfa, min_power_a, res_a, num_powers_a,
          pmfb, min_power_b, res_b, num_powers_b, res=None):
     """
-    Computing the convolution of the two histograms
+    Computing the convolution of two histograms.
 
-    :param pmfa:
-    :param min_power_a:
-    :param res_a:
-    :param num_powers_a:
-    :param pmfb:
-    :param min_power_b:
-    :param res_b:
-    :param num_powers_b:
+    :param pmfa: PMF of the first histogram
+    :param min_power_a: minimim power of the first histogram
+    :param res_a: resolution of the first histogram
+    :param num_powers_a: number of powers of the first histogram
+    :param pmfb: PMF of the second histogram
+    :param min_power_b: minimim power of the second histogram
+    :param res_b: resolution of the second histogram
+    :param num_powers_b: number of powers of the second histogram
     :returns:
         min_power_o, res, num_powers_o, pmfo
     """
-
     # Checking input
     num = num_powers_a*res_a
     if len(pmfa) != num:
@@ -83,13 +85,11 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
         raise ValueError(msg)
 
     # Checking input
-    if np.abs(1.0-np.sum(pmfa)) > TOLERANCE and len(pmfa):
+    if np.abs(1.0 - np.sum(pmfa)) > TOLERANCE and len(pmfa):
         smm = np.sum(pmfa)
-        print(np.abs(1.0-smm))
         raise ValueError(f'Sum of elements pmfa not equal to 1 {smm:8.4e}')
-    if np.abs(1.0-np.sum(pmfb)) > TOLERANCE and len(pmfb):
+    if np.abs(1.0 - np.sum(pmfb)) > TOLERANCE and len(pmfb):
         smm = np.sum(pmfb)
-        print(np.abs(1.0-smm))
         raise ValueError(f'Sum of elements pmfb not equal to 1 {smm:8.4e}')
 
     # Defining the resolution of output
@@ -102,10 +102,7 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
                             10**(min_power_b + num_powers_b)))
     min_power_o = int(vmin)
     num_powers_o = int(vmax - vmin)
-    try:
-        bins_o = get_bins_from_params(min_power_o, res, num_powers_o)
-    except:
-        breakpoint()
+    bins_o = get_bins_from_params(min_power_o, res, num_powers_o)
 
     # Compute mid points
     bins_a = get_bins_from_params(min_power_a, res_a, num_powers_a)
@@ -116,19 +113,15 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
     xvals, yvals = _get_vals(pmfa, pmfb, midsa, midsb)
     idxs = np.digitize(xvals, bins_o)
     idxs -= 1
-    pmfo = np.zeros(len(bins_o)-1, dtype=np.float64)
-
-    # For DEBUGGING
-    # for i, x, y in zip(idxs, xvals, yvals):
-    #    print(i, x, y)
-
+    pmfo = np.zeros(len(bins_o) - 1, dtype=np.float64)
     for i in np.unique(idxs):
         pmfo[i] = np.sum(yvals[idxs == i])
         msg = "The sum of pmfo is {:f}".format(sum(pmfo))
 
-    assert len(pmfo) == res*num_powers_o
+    assert len(pmfo) == res * num_powers_o
 
-    if not np.abs(1.0-np.sum(pmfo)) < TOLERANCE:
+    if not np.abs(1.0 - np.sum(pmfo)) < TOLERANCE:
+        # why printing? else it should be an error?
         print(msg)
         print(pmfa)
         print(pmfb)
