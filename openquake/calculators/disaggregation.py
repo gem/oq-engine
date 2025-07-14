@@ -432,6 +432,10 @@ class DisaggregationCalculator(base.HazardCalculator):
                             poe_agg, mean_rates.CUTOFF)
 
         self.datastore[name] = out
+        for key in out:
+            sd = ['site_id'] + key.split('_') + ['imt', 'poe', 'Z']
+            self.datastore[f'{name}/{key}'].attrs['shape_descr'] = sd
+
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
 
