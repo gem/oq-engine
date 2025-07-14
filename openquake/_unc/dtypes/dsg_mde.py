@@ -60,11 +60,11 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
 
     # Check
     msg = f"The datastore does not include results for {imtstr}"
-    if imtstr not in list(oqp.hazard_imtls.keys()):
+    if imtstr not in list(oqp.hazard_imtls):
         raise ValueError(msg)
 
     # Index of the selected IMT
-    imt_idx = list(oqp.hazard_imtls.keys()).index(imtstr)
+    imt_idx = list(oqp.hazard_imtls).index(imtstr)
 
     # Read the poes and convert them into frequencies. The Mag_Dist_Eps
     # matrix has the following dimensions:

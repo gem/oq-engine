@@ -49,7 +49,6 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
         weights of the realisations and an array with the shape of the
         disaggregation matrix.
     """
-
     # Indexes of the realisations
     if len(idxs) > 0:
         idxs = np.array(idxs, dtype=int)
@@ -61,11 +60,11 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
 
     # Check
     msg = f"The datastore does not include results for {imtstr}"
-    if imtstr not in list(oqp.hazard_imtls.keys()):
+    if imtstr not in list(oqp.hazard_imtls):
         raise ValueError(msg)
 
     # Index of the selected IMT
-    imt_idx = list(oqp.hazard_imtls.keys()).index(imtstr)
+    imt_idx = list(oqp.hazard_imtls).index(imtstr)
 
     # Read the poes and convert them into frequencies. The Mag
     # matrix has the following dimensions:
@@ -73,7 +72,7 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
     poes = dstore.getitem('disagg/Mag')[0, imt_idx, 0, :, idxs]
     shapes = poes.shape
     poes[poes > 0.99999] = 0.99999
-    afes = -np.log(1.-poes)/oqp.investigation_time
+    afes = -np.log(1.-poes) / oqp.investigation_time
 
     # Realization weights
     weights = dstore.getitem('weights')[idxs]
@@ -124,7 +123,6 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
     ohis = []
     min_powers = []
     num_powers = []
-
     idx_empty = []
     for imag in range(afes_mtx.shape[0]):
 
@@ -148,7 +146,7 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
         his = his / np.sum(his)
 
         # Checking
-        assert len(his) == num_pow*res
+        assert len(his) == num_pow * res
         assert np.abs(np.sum(his) - 1.0) < 1e-8
 
         # Updating output
