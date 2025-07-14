@@ -37,8 +37,8 @@ from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
-    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d, adjust_limits,
-    auto_limits)
+    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d,
+    adjust_limits, auto_limits)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites)
 
@@ -328,7 +328,7 @@ def make_figure_disagg(extractors, what):
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    y = disagg.array[..., 0, 0]  # shape (..., M, P)
+    y = disagg.array[..., 0, 0, 0]  # shape (..., M, P, Z) => (...)
     ndims = len(kind)  # number of dimensions of the array
     assert ndims == len(y.shape), (ndims, len(y.shape))
     print(y)
