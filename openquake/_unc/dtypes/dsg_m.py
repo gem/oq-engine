@@ -29,8 +29,7 @@ from openquake._unc.bins import get_bins_data, get_bins_from_params
 #      frequencies of exceeedance """
 
 
-def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
-                         idxs: list = []):
+def get_afes_from_dstore(dstore, imtstr: str, info: bool=False, idxs: list=[]):
     """
     Pulls from the datastore the poes for a given IMT and convert them to afes
     (we assume the dstore contains only 1 site).
@@ -155,7 +154,7 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
         num_powers.append(int(num_pow))
 
     for imag in idx_empty:
-        ohis[imag] = np.zeros((num_pow*res))
+        ohis[imag] = np.zeros((num_pow * res))
         min_powers[imag] = np.min(min_powers)
         num_powers[imag] = 0
 
