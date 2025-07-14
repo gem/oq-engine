@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * On Windows use as default num_cores
+    num_threads/2 if num_threads > 8 else num_threads
   * Extended the aggregation by `site_id` to multiple tags
   * Fixed an extract bug in disagg-traditional with realizations
   * Fixed a bug with the quantiles in event_based_damage
