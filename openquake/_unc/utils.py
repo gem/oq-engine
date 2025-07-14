@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -36,9 +35,8 @@ from openquake.baselib import hdf5
 from openquake.commonlib.datastore import read
 from openquake._unc.bins import get_bins_from_params
 
-CORR_UNC = []
 
-
+# TODO: read directly from the dstore
 def read_hazard_curve_csv(filename):
     """
     Read a csv file containing hazard curves.
@@ -72,7 +70,7 @@ def get_mean(fhis, fmin_pow, fnum_pow, res):
     mean = []
     for his, mpow, npow in zip(fhis, fmin_pow, fnum_pow):
         bins = get_bins_from_params(mpow, res, npow)
-        mids = bins[:-1]+np.diff(bins)/2
+        mids = bins[:-1] + np.diff(bins)/2
         mean.append(np.average(mids, weights=his))
     return mean
 
