@@ -1,6 +1,20 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# coding: utf-8
-
+# 
+# Copyright (C) 2025, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import pathlib
 import unittest
@@ -8,9 +22,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import EngFormatter
 
-from openquake.commonlib import datastore
+from openquake.calculators.base import run_calc
 from openquake._unc.hcurves_dist import get_stats
-
 from openquake._unc.hazard_pmf import get_hazard_pmf
 from openquake._unc.hazard_pmf import afes_matrix_from_dstore
 
@@ -26,18 +39,14 @@ PLOTTING = 0
 CLOSE_TO_ONE = 0.99999999999
 
 
-def _test(tpath, calc_id):
-
+def _test(dstore):
     # Single source disaggregation
-    fname = os.path.join(tpath, f'calc_{calc_id}.hdf5')
-    dstore = datastore.read(fname)
     oqp = dstore['oqparam']
-    realizations = dstore.get('disagg-rlzs/Mag', None)[0, :, 0, 0, :]
-    rmap = dstore.get('best_rlzs', None)[:][0]
-    weights = dstore.get('weights', None)[:]
-    weights = weights[rmap]
-    mags = dstore.get('disagg-bins/Mag', None)
-    mean_dsg = dstore.get('disagg-stats/Mag', None)[0, :, 0, 0, :]
+    realizations = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
+    rmap = dstore['best_rlzs'][0]
+    weights = dstore['weights'][:][rmap]
+    mags = dstore['disagg-bins/Mag']
+    mean_dsg = dstore['disagg-stats/Mag'][0, :, 0, 0, :]
     mean_dsg = np.squeeze(mean_dsg)
 
     # For each magnitude we compute the average rate of exceedance
@@ -89,36 +98,32 @@ def _test(tpath, calc_id):
 
 class SingleSourceTestCase(unittest.TestCase):
 
-    def test_m_convolution_source_b(self):
-        """ Convolution m test case - source a """
-        # This is the disaggregation just for source a of the total hazard
-        # i.e. source a + source b contributions
-        tpath = os.path.join(TFF, 'data_calc', 'disaggregation',
-                             'test_case00', 'out_b')
-        calc_id = 1600
-        _test(tpath, calc_id)
-
     def test_m_convolution_source_a(self):
-        """ Convolution m test case - source b"""
+        # Convolution m test case - source a
         # This is the disaggregation just for source a of the total hazard
         # i.e. source a + source b contributions
-        tpath = os.path.join(TFF, 'data_calc', 'disaggregation',
-                             'test_case00', 'out_a')
-        calc_id = 1599
-        _test(tpath, calc_id)
+        calc = run_calc(os.path.join(TFF, 'data_calc', 'disaggregation',
+                                     'test_case00', 'job_a.ini'))
+        _test(calc.datastore)
+
+    def test_m_convolution_source_b(self):
+        # Convolution m test case - source b
+        # This is the disaggregation just for source a of the total hazard
+        # i.e. source a + source b contributions
+        calc = run_calc(os.path.join(TFF, 'data_calc', 'disaggregation',
+                                     'test_case00', 'job_b.ini'))
+        _test(calc.datastore)
 
     def test_m_convolution_source_only_b(self):
-        """ Convolution m test case - source b only"""
+        # Convolution m test case - source b only
         # This is the disaggregation just for source a of the hazard from
         # source b contributions
-        tpath = os.path.join(TFF, 'data_calc', 'disaggregation',
-                             'test_case00', 'out_b_only')
-        calc_id = 1882
-        _test(tpath, calc_id)
+        calc = run_calc(os.path.join(TFF, 'data_calc', 'disaggregation',
+                                     'test_case00', 'job_b_only.ini'))
+        _test(calc.datastore)
 
 
 def plot_comparison(hists, oute, idxe, mags, mean, oqp):
-
     fig, axes = plt.subplots(1, 2)
     fig.set_size_inches(10, 6)
     fig.suptitle('Comparison between the AfE computed')
