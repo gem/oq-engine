@@ -554,7 +554,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
                     z[name] = valid.longitudes(coos)
             elif name in ["vs30", "z1pt0", "z2pt5"]:
                 pars = ' '.join(str(x) for x in vals)
-                if name == 'vs30':
+                if name == 'vs30' and not oqparam.override_vs30:
                     z[name] = valid.positivefloats(pars)
                 else:
                     z[name] = valid.positivefloatsorsentinels(pars)
