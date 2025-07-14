@@ -680,9 +680,9 @@ class SharedArray(object):
 
 # determine the number of cores to use
 cpu_count = psutil.cpu_count()
-if sys.platform == 'win32':
+if sys.platform == 'win32' and cpu_count > 8:
     # assume hyperthreading is on; use half the threads to save memory
-    tot_cores = cpu_count // 2 or 1
+    tot_cores = cpu_count // 2
 elif sys.platform == 'linux':
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
