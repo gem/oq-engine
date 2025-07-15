@@ -719,6 +719,9 @@ class Starmap(object):
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
             cls.pool = multiprocessing.dummy.Pool(num_cores)
 
+        if num_cores > tot_cores:
+            logging.warning(f'Overcommit: {num_cores=} but {tot_cores=}')
+
     @classmethod
     def shutdown(cls):
         # shutting down the pool during the runtime causes mysterious
