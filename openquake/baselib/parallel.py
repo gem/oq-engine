@@ -709,7 +709,7 @@ class Starmap(object):
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            cls.pool = mp_context.Pool(min(num_cores, tot_cores), init_workers,
+            cls.pool = mp_context.Pool(num_cores, init_workers,
                                        maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             # after spawning the processes restore the original handlers

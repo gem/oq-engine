@@ -89,7 +89,7 @@ def set_concurrent_tasks_default(calc):
         parallel.Starmap.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
     else:
-        num_workers = min(parallel.num_cores, parallel.tot_cores)
+        num_workers = parallel.num_cores
     if dist == 'no':
         logging.warning('Disabled distribution')
     else:
