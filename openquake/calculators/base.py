@@ -527,7 +527,7 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         dist = parallel.oq_distribute()
         avail = psutil.virtual_memory().available / 1024**3
-        required = .25 * (1 if dist == 'no' else parallel.Starmap.num_cores)
+        required = .25 * (1 if dist == 'no' else parallel.num_cores)
         if (dist == 'processpool' and avail < required and
                 sys.platform != 'darwin'):
             # macos tells that there is no memory when there is, so we

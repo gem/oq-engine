@@ -689,13 +689,13 @@ elif sys.platform == 'linux':
     tot_cores = len(psutil.Process().cpu_affinity())
 else:
     tot_cores = cpu_count
+num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
 
 
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
-    num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
     CT = num_cores * 2
     expected_outputs = 0  # unknown
 
@@ -709,16 +709,15 @@ class Starmap(object):
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            cls.pool = mp_context.Pool(
-                cls.num_cores if cls.num_cores <= tot_cores else tot_cores,
-                init_workers, maxtasksperchild=cls.maxtasksperchild)
+            cls.pool = mp_context.Pool(min(num_cores, tot_cores), init_workers,
+                                       maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
+            cls.pool = multiprocessing.dummy.Pool(num_cores)
 
     @classmethod
     def shutdown(cls):
@@ -775,7 +774,7 @@ class Starmap(object):
         Same as Starmap.apply, but possibly produces subtasks
         """
         args = (allargs[0], task, allargs[1:], duration, outs_per_task)
-        return cls.apply(split_task, args, concurrent_tasks or 2*cls.num_cores,
+        return cls.apply(split_task, args, concurrent_tasks or 2*num_cores,
                          maxweight, weight, key, distribute, progress, h5)
 
     def __init__(self, task_func, task_args=(), distribute=None,
@@ -1091,7 +1090,7 @@ def logfinish(n, tot):
     return n + 1
 
 
-def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
+def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
     """
     Spawn processes with the given arguments
     """
