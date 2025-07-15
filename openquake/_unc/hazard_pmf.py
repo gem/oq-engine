@@ -306,7 +306,7 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
     return ohis, min_powers, num_powers
 
 
-# @jit(nopython=True)
+# TODO: use numba?
 def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
              num_powers_a: int, min_power_b: int, reb: int, num_powers_b: int,
              res: int):
@@ -326,7 +326,6 @@ def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
         A tuple with the output pmf, the minimum power, the resolution and the
         number of powers required
     """
-
     assert len(hpmfa) == len(hpmfb)
 
     out1 = []

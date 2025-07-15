@@ -15,6 +15,7 @@
 # 
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
 import numpy as np
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 
@@ -47,7 +48,6 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool=False, idxs: list=[]):
         weights of the realisations and an array with the shape of the
         disaggregation matrix.
     """
-
     # Indexes of the realisations
     if len(idxs) > 0:
         idxs = np.array(idxs, dtype=int)
@@ -59,7 +59,7 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool=False, idxs: list=[]):
 
     # Check
     msg = f"The datastore does not include results for {imtstr}"
-    if imtstr not in list(oqp.hazard_imtls):
+    if imtstr not in oqp.hazard_imtls:
         raise ValueError(msg)
 
     # Index of the selected IMT
@@ -71,7 +71,7 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool=False, idxs: list=[]):
     poes = dstore.getitem('disagg-rlzs/Mag_Dist')[0, :, :, imt_idx, 0, idxs]
     shapes = poes.shape
     poes[poes > 0.99999] = 0.99999
-    afes = -np.log(1.-poes)/oqp.investigation_time
+    afes = -np.log(1.-poes) / oqp.investigation_time
 
     # Realization weights
     weights = dstore.getitem('weights')[idxs]

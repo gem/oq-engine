@@ -59,7 +59,7 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool=False, idxs: list=[]):
 
     # Check
     msg = f"The datastore does not include results for {imtstr}"
-    if imtstr not in list(oqp.hazard_imtls):
+    if imtstr not in oqp.hazard_imtls:
         raise ValueError(msg)
 
     # Index of the selected IMT
@@ -94,7 +94,7 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool=False, idxs: list=[]):
 
 
 def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
-                   idxs: np.ndarray = None):
+                   idxs: np.ndarray=None):
     """
     Computes the histograms of the AfE for each M-D-e combination
 
