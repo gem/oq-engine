@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the log message to show the pool size instead of num_cores
   * On Windows use as default num_cores
     num_threads/2 if num_threads > 8 else num_threads
   * Extended the aggregation by `site_id` to multiple tags
