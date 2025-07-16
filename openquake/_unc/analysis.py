@@ -26,9 +26,11 @@
 # -----------------------------------------------------------------------------
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding: utf-8
+
 """
 Module `openquake._unc.analysis`
 """
+
 import re
 import os
 import xml.etree.ElementTree as ET
@@ -36,9 +38,9 @@ import logging
 import numpy as np
 
 from openquake.commonlib import datastore
-from openquake.calculators.base import run_calc
 from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore as afes_ds_mde
 from openquake._unc.dtypes.dsg_md import get_afes_from_dstore as afes_ds_md
+
 
 # Setting namespace
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -115,6 +117,7 @@ class Analysis:
             calculations performed and the possible correlation of
             uncertainties between the LTs of individual sources
         """
+
         # TODO
         # Add the following checks:
         # - We have a datastore for each source correlated
@@ -130,23 +133,18 @@ class Analysis:
         root = tree.getroot()
 
         # Reading info about calculations per individual source
-        calcs = {}  # src_id -> dstore
+        calcs = {}  # i.e. {'a': './out_a/calc_8509.hdf5', ...}
         src_ids = set()
         for calc in root.findall(PATH_CALC):
+
+            # Dictionary with the path to the .hdf5 file with the datastore
+            calcs[calc.attrib['sourceID']] = calc.attrib['datastore']
+
             # Check duplicated IDs
             if calc.attrib['sourceID'] in src_ids:
                 msg = "Duplicated src ID in the definition of datastores"
                 msg += f" Check: {calc.attrib['sourceID']}"
                 raise ValueError(msg)
-
-            # Reading/generating datastore
-            value = calc.attrib['datastore']
-            if value.endswith('.hdf5'):
-                dstore = datastore.read(os.path.join(root_path, value))
-            else:
-                ini = os.path.join(root_path, value)
-                dstore = run_calc(ini).datastore
-            calcs[calc.attrib['sourceID']] = dstore
 
             # Updating the set of src IDs
             src_ids = src_ids | set(calc.attrib['sourceID'])
@@ -172,11 +170,13 @@ class Analysis:
             # file are the same used for the various sources
             ordinal = []
             for sid in sids:
-                dstore = calcs[sid]
-                utypes = dstore.getitem('full_lt/source_model_lt')['utype']
+                fname = calcs[sid]
+                fname = os.path.abspath(os.path.join(root_path, fname))
+                dstore = datastore.read(fname)
+                tmp = dstore.getitem('full_lt/source_model_lt')['utype']
                 unique = []
                 # This creates a list of unique uncertainty types
-                for t in utypes:
+                for t in tmp:
                     if t not in unique:
                         unique.append(t)
                 utypes = [t for t in unique]
@@ -217,7 +217,7 @@ class Analysis:
         """
         out = set()
         for bsid in self.bsets:
-            for key in self.bsets[bsid]['data']:
+            for key in self.bsets[bsid]['data'].keys():
                 out = out.union(set([key]))
         return out
 
@@ -298,19 +298,30 @@ class Analysis:
                 bsets.append(set([key]))
         return ssets, bsets
 
-    def get_dstores(self):
+    def get_dstores(self, root_path=None):
         """
         Get the OQ datastores instances for the sources considered in the
         analysis
         """
-        return self.calcs
 
-    def get_imls(self):
+        if root_path is None:
+            root_path = self.root_path
+
+        # For each source we read information in the corresponding datastore
+        dstores = {}
+        for key in sorted(self.calcs):
+            fname = self.calcs[key]
+            if not re.search('^/', fname):
+                fname = os.path.abspath(os.path.join(self.root_path, fname))
+            dstores[key] = datastore.read(fname)
+        return dstores
+
+    def get_imls(self, root_path=None):
         """
         Get the imls
         """
-        dstores = self.get_dstores()
-        keys = list(dstores)
+        dstores = self.get_dstores(root_path)
+        keys = list(dstores.keys())
         dstore = dstores[keys[0]]
         oqp = dstore['oqparam']
         return oqp.hazard_imtls
@@ -361,7 +372,10 @@ class Analysis:
         # For each source we read information in the corresponding datastore
         for key in self.calcs:
 
-            fname = self.calcs[key].filename
+            fname = self.calcs[key]
+            if not re.search('^/', fname):
+                fname = os.path.abspath(os.path.join(root_path, fname))
+
             msg = f"Source: {key} - File: {os.path.basename(fname)}"
             logging.info(msg)
 
@@ -449,7 +463,7 @@ def get_patterns(rlzs: dict, an01: Analysis):
         uncertainties.
     """
     patterns = {}
-    for bsid in an01.bsets:
+    for bsid in an01.bsets.keys():
 
         # Info
         msg = f"Creating patterns for branch set {bsid:s}"
@@ -457,7 +471,7 @@ def get_patterns(rlzs: dict, an01: Analysis):
 
         # Processing the sources in the branchset bsid
         patterns[bsid] = {}
-        for sid in an01.bsets[bsid]['data']:
+        for sid in an01.bsets[bsid]['data'].keys():
 
             # Info
             msg = f"   Source: {sid:s}"
