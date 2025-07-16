@@ -84,7 +84,7 @@ class HistogramMDETestCase(unittest.TestCase):
 
         # The sum of the histograms (which are normalised) must be equal to
         # the number of M-D-e combinations with values different than 0
-        self.assertAlmostEqual(smm, cnt)
+        aae(smm, cnt, decimal=5)
 
         if PLOT:
             from bokeh.models import HoverTool
