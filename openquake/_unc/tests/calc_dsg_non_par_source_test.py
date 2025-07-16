@@ -33,6 +33,7 @@ import unittest
 import numpy as np
 
 from openquake.commonlib import datastore
+from openquake.calculators.base import run_calc
 from openquake._unc.hcurves_dist import get_stats
 
 from openquake._unc.hazard_pmf import get_hazard_pmf
@@ -55,21 +56,17 @@ PLOTTING = 0
 class SingleSourceTestCase(unittest.TestCase):
 
     def test_m_convolution_source_b(self):
-        """ Convolution m test case """
-
-        tpath = os.path.join(TFF, 'data_calc', 'disaggregation',
-                             'test_case_non_param')
-
         # Single source disaggregation
-        fname = os.path.join(tpath, 'out', 'calc_1884.hdf5')
-        dstore = datastore.read(fname)
+        job_ini = os.path.join(TFF, 'data_calc', 'disaggregation',
+                               'test_case_non_param', 'jobD.ini')
+        calc = run_calc(job_ini)
+        dstore = calc.datastore
         oqp = dstore['oqparam']
-        rmap = dstore.get('best_rlzs', None)[:][0]
-        expct = dstore.get('disagg-rlzs/Mag', None)[0, :, 0, 0, :]
-        weights = dstore.get('weights', None)[:]
-        weights = weights[rmap]
-        mags = dstore.get('disagg-bins/Mag', None)[:]
-        mean = dstore.get('disagg-stats/Mag', None)[0, :, 0, 0, :]
+        rmap = dstore['best_rlzs'][0]
+        expct = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
+        weights = dstore['weights'][:][rmap]
+        mags = dstore['disagg-bins/Mag'][:]
+        mean = dstore['disagg-stats/Mag'][0, :, 0, 0, :]
         mean = np.squeeze(mean)
 
         # Computing the mean disaggregation in `oute`
@@ -79,7 +76,7 @@ class SingleSourceTestCase(unittest.TestCase):
         for imag in range(expct.shape[0]):
             poes = expct[imag, :]
             poes[poes > 0.99999] = 0.99999
-            afes = -np.log(1.-poes)/oqp.investigation_time
+            afes = -np.log(1.-poes) / oqp.investigation_time
             tmp = np.sum(afes*weights)
             oute[imag] = tmp
             if tmp > 0.0:

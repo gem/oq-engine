@@ -25,8 +25,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # -----------------------------------------------------------------------------
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# coding: utf-8
-
 import numpy as np
 from openquake._unc.bins import get_bins_from_params
 from openquake._unc.utils import weighted_percentile

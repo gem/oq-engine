@@ -31,6 +31,7 @@ import numpy as np
 
 SMALL = 1e-20
 
+
 def get_bins_data(samples: np.ndarray):
     """
     Computes the lowest power of 10 and the number of powers of 10 needed to
@@ -49,7 +50,7 @@ def get_bins_data(samples: np.ndarray):
 
     # Fixing 0 values
     idx_small = samples < SMALL
-    samples[idx_small] = SMALL+SMALL*0.01
+    samples[idx_small] = SMALL * 1.01
 
     # Find histogram params
     sam = samples[np.abs(samples) > SMALL]

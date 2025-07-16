@@ -25,20 +25,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # -----------------------------------------------------------------------------
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# coding: utf-8
-
-import copy
-import numpy as np
-
-from typing import Tuple
-from collections.abc import Sequence
-
-from openquake._unc.convolution import conv
-from openquake._unc.utils import get_rlz_hcs, get_rlzs
-from openquake._unc.bins import get_bins_data, get_bins_from_params
-
-TOLERANCE = 1e-6
-
 """
 We use a hazard PMF to store the results of a number of a hazard curves
 representing a set of realisations admitted by a logic tree for a single
@@ -49,6 +35,14 @@ For the description of a PMF we use:
     - A numpy array (cardinality: L x |number of bins|) containing the annual
       frequencies of exceeedance
 """
+import copy
+import numpy as np
+from typing import Tuple
+from collections.abc import Sequence
+from openquake._unc.convolution import conv
+from openquake._unc.bins import get_bins_data, get_bins_from_params
+
+TOLERANCE = 1e-6
 
 
 def get_m_from_2d(poes, shapes, idxs=None):
@@ -185,7 +179,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
     imls = oqp.hazard_imtls[imtstr]
 
     # Index of the selected IMT
-    imt_idx = list(oqp.hazard_imtls.keys()).index(imtstr)
+    imt_idx = list(oqp.hazard_imtls).index(imtstr)
 
     # Poes
     if atype == 'hcurves':
@@ -198,7 +192,8 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
         # Number of distances
         # Number of epsilons
         # Number of realisations
-        poes = dstore.getitem('disagg-rlzs/Mag_Dist_Eps')[0, imt_idx, 0, :, :, :, idxs]
+        poes = dstore.getitem('disagg-rlzs/Mag_Dist_Eps')[
+            0, imt_idx, 0, :, :, :, idxs]
         poes = get_2d_from_mde(poes)
     elif atype == 'md':
         # The shape of the final `poes` is: R X A where R is the number of
@@ -371,7 +366,7 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
     return ohis, min_powers, num_powers
 
 
-# @jit(nopython=True)
+# TODO: use numba?
 def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
              num_powers_a: int, min_power_b: int, reb: int, num_powers_b: int,
              res: int):
@@ -391,7 +386,6 @@ def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
         A tuple with the output pmf, the minimum power, the resolution and the
         number of powers required
     """
-
     assert len(hpmfa) == len(hpmfb)
 
     out1 = []
@@ -451,15 +445,6 @@ def mixture(results: Sequence[list[list]],
     minpow[:] = np.nan
     maxpow = np.empty((num_imls))
     maxpow[:] = np.nan
-
-    # The minimum power is IMT dependent
-    """
-    for res in results:
-        minpow = np.minimum(minpow, res[1])
-        maxpow = np.maximum(maxpow, np.array(res[1])+np.array(res[2]))
-    maxrange = maxpow - minpow
-    """
-
     for i, res in enumerate(results):
 
         tmp_minpow = np.array(res[1], dtype=float)
