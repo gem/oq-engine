@@ -41,6 +41,7 @@ from typing import Tuple
 from collections.abc import Sequence
 from openquake._unc.convolution import conv
 from openquake._unc.bins import get_bins_data, get_bins_from_params
+from openquake._unc.utils import get_rlzs, get_rlz_hcs
 
 TOLERANCE = 1e-6
 
@@ -457,7 +458,7 @@ def mixture(results: Sequence[list[list]],
         else:
             minpow[idx] = np.minimum(minpow[idx], tmp_minpow[idx])
             maxpow[idx] = np.maximum(maxpow[idx], tmp_minpow[idx] +
-                                                  tmp_numpow[idx])
+                                     tmp_numpow[idx])
 
     idx = ~np.isnan(minpow)
     maxrange = copy.copy(minpow)
@@ -491,19 +492,13 @@ def mixture(results: Sequence[list[list]],
                 tmp = np.zeros((int(resolution*maxrange[i_iml])))
 
             # Find where to add the current PMF
-            try:
-                low = int(resolution*(res[1][i_iml]-minpow[i_iml]))
-            except:
-                breakpoint()
+            low = int(resolution*(res[1][i_iml]-minpow[i_iml]))
             upp = int(low + resolution*(res[2][i_iml]))
 
             # Sum the PMF
-            try:
-                idxs = np.arange(low, upp)
-                tmp[idxs] += np.array(res[0][i_iml])*res[3]
-                tot_wei += res[3]
-            except:
-                breakpoint()
+            idxs = np.arange(low, upp)
+            tmp[idxs] += np.array(res[0][i_iml])*res[3]
+            tot_wei += res[3]
 
         if tmp is not None:
             chk = np.sum(tmp)
