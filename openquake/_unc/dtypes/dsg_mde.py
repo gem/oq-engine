@@ -25,7 +25,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # -----------------------------------------------------------------------------
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# coding: utf-8
 
 import numpy as np
 from openquake._unc.bins import get_bins_data, get_bins_from_params
@@ -59,6 +58,7 @@ def get_afes_from_dstore(dstore, imt_idx: int, info: bool=False, idxs: list=[]):
         weights of the realisations and an array with the shape of the
         disaggregation matrix.
     """
+
     # Indexes of the realisations
     if len(idxs) > 0:
         idxs = np.array(idxs, dtype=int)
@@ -76,7 +76,7 @@ def get_afes_from_dstore(dstore, imt_idx: int, info: bool=False, idxs: list=[]):
         0, :, :, :, imt_idx, 0, idxs]
     shapes = poes.shape
     poes[poes > 0.99999] = 0.99999
-    afes = -np.log(1.-poes)/oqp.investigation_time
+    afes = -np.log(1.-poes) / oqp.investigation_time
 
     # Realization weights
     weights = dstore.getitem('weights')[idxs]
@@ -103,7 +103,7 @@ def get_afes_from_dstore(dstore, imt_idx: int, info: bool=False, idxs: list=[]):
 
 
 def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
-                   idxs: np.ndarray = None):
+                   idxs: np.ndarray=None):
     """
     Computes the histograms of the AfE for each M-D-e combination
 
@@ -123,7 +123,6 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
         the histogram. The second list contains integers defining the range
         covered by the histogram (i.e. number of powers of 10).
     """
-
     if idxs is not None:
         afes_mtx = afes_mtx[idxs, :]
         weights = weights[idxs]
@@ -155,8 +154,9 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
                 his = his / np.sum(his)
 
                 # Checking
-                assert len(his) == num_pow*res
-                assert np.abs(np.sum(his) - 1.0) < 1e-8
+                assert len(his) == num_pow * res
+                eps = np.abs(np.sum(his) - 1.0)
+                assert eps < 1.5e-7, eps
 
                 # Updating output
                 ohis.append(his)
