@@ -89,7 +89,7 @@ def set_concurrent_tasks_default(calc):
         parallel.Starmap.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
     else:
-        num_workers = parallel.Starmap.num_cores
+        num_workers = parallel.num_cores
     if dist == 'no':
         logging.warning('Disabled distribution')
     else:
@@ -307,11 +307,11 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
     dist = parallel.oq_distribute()
     if dist == 'slurm':
         # check the total number of required cores
-        tot_cores = parallel.Starmap.num_cores * nodes
+        tot_cores = parallel.num_cores * nodes
         max_cores = int(config.distribution.max_cores)
         if tot_cores > max_cores:
             raise ValueError('You can use at most %d nodes' %
-                             (max_cores // parallel.Starmap.num_cores))
+                             (max_cores // parallel.num_cores))
 
     if concurrent_jobs is None:
         # // 8 is chosen so that the core occupation in cole is decent

@@ -215,7 +215,6 @@ class Monitor(object):
     authkey = None
     calc_id = None
     inject = None
-    #config = config
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
                  h5=None, version=None, dbserver_host='127.0.0.1'):
@@ -396,6 +395,11 @@ class Monitor(object):
             elif dset.shape:
                 return dset[slc]
             return pickle.loads(dset[()])
+
+    def read_pdcolumns(self, key):
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        with hdf5.File(tmp, 'r') as f:
+            return f[key].attrs['__pdcolumns__']
 
     def iter(self, genobj, atstop=lambda: None):
         """

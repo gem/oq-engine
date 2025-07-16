@@ -33,8 +33,6 @@ from openquake._unc.convolution import get_pmf, conv
 
 
 class CreatePMFTest(unittest.TestCase):
-    """
-    """
 
     def test_pmf_01(self):
         vals = np.array([0.011, 0.051, 0.052, 0.83])
@@ -49,8 +47,6 @@ class CreatePMFTest(unittest.TestCase):
 class ConvolutionTest(unittest.TestCase):
 
     def test_simple_convolution(self):
-        """ Simple convolution test case """
-
         # We start from PMFs
         res_a = 4
         res_b = 4
@@ -91,5 +87,4 @@ class ConvolutionTest(unittest.TestCase):
         _, _, _, pmfo = conv(
             hia, min_power_a, res_a, num_powers_a, hib, min_power_b, res_b,
             num_powers_b)
-        expected = np.array([0., 0., 0.3, 0.68, 0.02, 0., 0., 0.])
-        np.testing.assert_allclose(expected, pmfo)
+        np.testing.assert_allclose(pmfo, [0., 0., 0.3, 0.68, 0.02, 0., 0., 0.])

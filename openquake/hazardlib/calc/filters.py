@@ -385,8 +385,11 @@ class SourceFilter(object):
                                      src.tectonic_region_type)[-1][1]
         try:
             bbox = get_bounding_box(src, maxdist)
+        except (FilteredAway, BBoxError):
+            # this is expected around the poles and will be ignored
+            raise
         except Exception:
-            logging.error(f'Error in source {src.source_id}')
+            logging.error(f'Error in source {src.source_id}', exc_info=True)
             raise
         return bbox
 

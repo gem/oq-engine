@@ -32,12 +32,29 @@ import os
 import numpy as np
 import pandas as pd
 from glob import glob
-from openquake.man.tools.csv_output import read_hazard_curve_csv
+from openquake.baselib import hdf5
 from openquake.commonlib.datastore import read
 from openquake._unc.bins import get_bins_from_params
 
 
-CORR_UNC = []
+# TODO: read directly from the dstore
+def read_hazard_curve_csv(filename):
+    """
+    Read a csv file containing hazard curves.
+    :param str filename:
+        Name of the .csv file containing the data
+    :return:
+        A tuple with the following information:
+            - Longitudes
+            - Latitudes
+            - PoEs
+            - dictionary of metadata
+            - IMLs
+    """
+    aw = hdf5.read_csv(filename)
+    imls = [float(col[:4]) for col in aw.dtype.names[3:]]
+    poes = np.hstack([aw[col] for col in aw.dtype.names[3:]])
+    return aw['lon'], aw['lat'], poes, vars(aw), imls
 
 
 def get_mean(fhis, fmin_pow, fnum_pow, res):
@@ -54,7 +71,7 @@ def get_mean(fhis, fmin_pow, fnum_pow, res):
     mean = []
     for his, mpow, npow in zip(fhis, fmin_pow, fnum_pow):
         bins = get_bins_from_params(mpow, res, npow)
-        mids = bins[:-1]+np.diff(bins)/2
+        mids = bins[:-1] + np.diff(bins)/2
         mean.append(np.average(mids, weights=his))
     return mean
 
@@ -81,6 +98,7 @@ def weighted_percentile(data, weights, perc):
     return np.interp(perc, cdf, data)
 
 
+# TODO: use dstore, not folder
 def get_rlzs(folder: str) -> pd.DataFrame:
     """
     Create a DataFrame with the list of realisations.
@@ -93,6 +111,7 @@ def get_rlzs(folder: str) -> pd.DataFrame:
     return pd.read_csv(fname[0]), calc_id
 
 
+# TODO: use dstore, not folder
 def get_mean_hc(folder: str, imt: str):
     fmt = 'hazard_curve-mean-{:s}*.csv'
     fname = glob(os.path.join(folder, fmt.format(imt)))
@@ -100,12 +119,14 @@ def get_mean_hc(folder: str, imt: str):
     return read_hazard_curve_csv(fname[0])
 
 
+# TODO: use dstore, not folder
 def get_quantile_hc(folder, imt, quantile):
     tmps = 'quantile_curve-{:s}-{:s}*.csv'.format(str(quantile), imt)
     fname = glob(os.path.join(folder, tmps))
     return read_hazard_curve_csv(fname[0])
 
 
+# TODO: use dstore, not folder
 def get_rlz_hcs(folder, imt):
     fmt = 'hazard_curve-rlz*-{:s}_*.csv'
     poes = []
@@ -119,6 +140,7 @@ def get_rlz_hcs(folder, imt):
     return lo, la, np.array(poes), hea, np.squeeze(iml), calc_id
 
 
+# TODO: use dstore, not folder
 def get_lt_info_from_datastore(folder, calc_id):
     fname = os.path.join(folder, "calc_{:s}.hdf5".format(calc_id))
     return _get_lt_info_from_datastore(fname)
@@ -134,12 +156,6 @@ def _get_lt_info_from_datastore(fname):
 
 def get_correlation(ssclts, gmclts, rlzs, comtx):
 
-    print(rlzs[0])
-    print(rlzs[1])
-
-    print(ssclts[0])
-    print(gmclts[0])
-
     for i, ra in rlzs[0].iterrows():
         for j, rb in rlzs[1].iterrows():
             m = re.search('\\d*\\~(\\d*)', ra.branch_path)
@@ -152,17 +168,3 @@ def get_correlation(ssclts, gmclts, rlzs, comtx):
                 comtx[i, j] = 1
                 comtx[j, i] = 1
 
-    """
-    for i, unca in ssclts[0].iterrows():
-        for j, uncb in ssclts[1].iterrows():
-            if (unca.utype in CORR_UNC and
-                    unca.utype == uncb.utype and unca.uvalue == uncb.uvalue):
-                print(unca, uncb)
-
-    # GMC
-    for i, unca in gmclts[0].iterrows():
-        for j, uncb in gmclts[1].iterrows():
-            print(unca.trt, uncb.trt, unca.uncertainty, uncb.uncertainty)
-            if (unca.trt == uncb.trt and
-                    unca.uncertainty == uncb.uncertainty):
-    """

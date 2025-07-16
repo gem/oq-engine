@@ -28,7 +28,8 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import nrml
 from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
-from openquake.calculators.extract import extract, sanitize, avglosses
+from openquake.calculators.extract import (
+    extract, sanitize, avglosses, aggexp_tags)
 from openquake.calculators import post_risk
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
@@ -429,11 +430,13 @@ def export_damages_csv(ekey, dstore):
     csqs = tuple(dstore.getitem('crm').attrs['consequences'])
     for i, ros in enumerate(rlzs_or_stats):
         if ebd:  # export only the consequences from damages-rlzs, i == 0
-            if len(csqs) == 0:  # no consequences, export nothing
+            if len(csqs) == 0:
+                print('No consequences, exporting nothing')
                 return []
             rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
             data = orig[:, i]
-            dtlist = [(col, F32) for col in data.dtype.names if col.endswith(csqs)]
+            dtlist = [(col, F32) for col in data.dtype.names
+                      if col.endswith(csqs)]
             damages = numpy.zeros(len(data), dtlist)
             for csq, _ in dtlist:
                 damages[csq] = data[csq] * rate
@@ -607,11 +610,16 @@ def export_aggexp_tags_csv(ekey, dstore):
     :param ekey: export key, i.e. a pair (datastore key, fmt)
     :param dstore: datastore object
     """
-    df = extract(dstore, ekey[0] + '?')
+    oq = dstore['oqparam']
+    fulldf, slices = aggexp_tags(dstore)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    fname = dstore.export_path('%s.%s' % ekey)
-    writer.save(df, fname, comment=dstore.metadata)
-    return [fname]
+    fnames = []
+    for aggby, slc in zip(oq.aggregate_by, slices):
+        df = fulldf[slc]
+        fname = dstore.export_path('%s-%s.csv' % (ekey[0], '-'.join(aggby)))
+        writer.save(df, fname, comment=dstore.metadata)
+        fnames.append(fname)
+    return fnames
 
 
 @export.add(('aggcurves', 'csv'))

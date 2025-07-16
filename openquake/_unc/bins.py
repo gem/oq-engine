@@ -35,7 +35,7 @@ SMALL = 1e-20
 def get_bins_data(samples: np.ndarray):
     """
     Computes the lowest power of 10 and the number of powers of 10 needed to
-    the cover values in the `samples` dataset.
+    cover the values in the `samples` dataset.
 
     :param samples:
         A set of values for which we want to obtain the corresponding bins

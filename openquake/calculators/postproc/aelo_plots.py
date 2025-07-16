@@ -24,7 +24,7 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
-from openquake.calculators.postproc.plots import add_borders, adjust_limits
+from openquake.calculators.postproc.plots import add_borders, adjust_limits, auto_limits
 from PIL import Image
 
 ASCE_version = 'ASCE7-22'
@@ -228,13 +228,16 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     DLL = mce_df['DLL']
     ax1.plot(T[1:], DLL[1:], 'kx', markersize=8, label='DLL', linewidth=1,
              linestyle='-')
-    ax1.plot(T[1:], prob_mce[1:], 'bX', markersize=8, label='Probabilisitc $MCE_r$',
+    ax1.plot(T[1:], prob_mce[1:], 'bX', markersize=8,
+             label='Probabilisitc $MCE_r$',
              linewidth=1, linestyle='-')
     upperlim = max(max(prob_mce), max(mce), max(det_mce), max(DLL))
-    ax1.plot(T[1:], det_mce[1:], 'c^', markersize=8, label='Deterministic $MCE_r$',
+    ax1.plot(T[1:], det_mce[1:], 'c^', markersize=8,
+             label='Deterministic $MCE_r$',
              linewidth=1, linestyle='-')
     ax1.set_ylim([0.01, upperlim + 0.2])
-    ax1.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$', linewidth=4, linestyle=':')
+    ax1.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$',
+             linewidth=4, linestyle=':')
     ax1.grid('both')
     ax1.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax1.set_xlabel('Period (s)', fontsize=20)
@@ -244,12 +247,15 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     plt.rcParams.update({'font.size': 15})
     ax2.plot(T[1:], DLL[1:], 'kx', markersize=8, label='DLL', linewidth=1,
              linestyle='-')
-    ax2.plot(T[1:], prob_mce[1:], 'bX', markersize=8, label='Probabilisitc $MCE_r$',
+    ax2.plot(T[1:], prob_mce[1:], 'bX', markersize=8,
+             label='Probabilisitc $MCE_r$',
              linewidth=1, linestyle='-')
-    ax2.plot(T[1:], det_mce[1:], 'c^', markersize=8, label='Deterministic $MCE_r$',
+    ax2.plot(T[1:], det_mce[1:], 'c^', markersize=8,
+             label='Deterministic $MCE_r$',
              linewidth=1, linestyle='-')
     plt.ylim([0.01, upperlim + 0.2])
-    ax2.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$', linewidth=4, linestyle=':')
+    ax2.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$',
+             linewidth=4, linestyle=':')
     ax2.grid('both')
     ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax2.set_xlabel('Period (s)', fontsize=20)
@@ -454,11 +460,9 @@ def plot_sites(dstore, update_dstore=False):
         marker = 'o'
         padding = 0
     plt.scatter(lons, lats, c='black', marker=marker, s=markersize)
+    xlim, ylim = auto_limits(ax)
     add_borders(ax, readinput.read_countries_df, buffer=0.)
-    xlim, ylim = adjust_limits(
-        lons.min(), lons.max(), lats.min(), lats.max(), padding=padding)
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
+    adjust_limits(ax, xlim, ylim, padding=padding)
     if update_dstore:
         bio = io.BytesIO()
         fig.savefig(bio, format='png', bbox_inches='tight')

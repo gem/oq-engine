@@ -476,11 +476,6 @@ max_blocks:
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
-max_gmvs_chunk:
-  Maximum number of rows of the gmf_data table per task.
-  Example: *max_gmvs_chunk = 200_000*
-  Default: 100_000
-
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
   Example: *max_potential_gmfs = 1E9*.
@@ -490,6 +485,11 @@ max_potential_paths:
   Restrict the maximum number of realizations.
   Example: *max_potential_paths = 200*.
   Default: 15_000
+
+max_sites_correl:
+  Maximum number of sites for GMF-correlation.
+  Example: *max_sites_correl = 2000*
+  Default: 1200
 
 max_sites_disagg:
   Maximum number of sites for which to store rupture information.
@@ -910,6 +910,10 @@ ALL_COST_TYPES = [
 VULN_TYPES = COST_TYPES + [
     'number', 'area', 'occupants', 'residents', 'affectedpop', 'injured']
 
+# mapping version -> corresponding display name
+ASCE_VERSIONS = {'ASCE7-16': 'ASCE 7-16 & 41-17',
+                 'ASCE7-22': 'ASCE 7-22 & 41-23'}
+
 
 def check_same_levels(imtls):
     """
@@ -979,7 +983,7 @@ class OqParam(valid.ParamSet):
                'max_hazard_curves': 'max'}
 
     hazard_imtls = {}
-    override_vs30 = valid.Param(valid.positivefloat, None)
+    override_vs30 = valid.Param(valid.positivefloats, ())
     aggregate_by = valid.Param(valid.namelists, [])
     aggregate_loss_curves_types = valid.Param(
         # accepting all comma-separated permutations of 1, 2 or 3 elements
@@ -994,7 +998,7 @@ class OqParam(valid.ParamSet):
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
     asce_version = valid.Param(
-        valid.Choice('ASCE7-16', 'ASCE7-22'), 'ASCE7-16')
+        valid.Choice(*ASCE_VERSIONS.keys()), 'ASCE7-16')
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
@@ -1071,10 +1075,10 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_blocks = valid.Param(valid.positiveint, 100)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000)  # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
+    max_sites_correl = valid.Param(valid.positiveint, 1200)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     mosaic_model = valid.Param(valid.three_letters, '')
     std = valid.Param(valid.boolean, False)
@@ -1098,10 +1102,10 @@ class OqParam(valid.ParamSet):
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    reference_depth_to_1pt0km_per_sec = valid.Param(
-        valid.positivefloat, numpy.nan)
-    reference_depth_to_2pt5km_per_sec = valid.Param(
-        valid.positivefloat, numpy.nan)
+    reference_depth_to_1pt0km_per_sec = valid.Param( # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan) 
+    reference_depth_to_2pt5km_per_sec = valid.Param( # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'inferred')
     reference_vs30_value = valid.Param(
@@ -1704,6 +1708,15 @@ class OqParam(valid.ParamSet):
             if any(sec_imt.endswith(imt) for sec_imt in sec_imts):
                 self.raise_invalid('you forgot to set secondary_perils =')
 
+        seco_imts = {sec_imt.split('_')[1] for sec_imt in self.sec_imts}
+        risk_imts = set(self.risk_imtls)
+        for imt in risk_imts - seco_imts:
+            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI')):
+                pass  # ground shaking IMT
+            else:
+                raise ValueError(f'The risk functions contain {imt} which is '
+                                 f'not in the secondary IMTs {seco_imts}')
+
         risk_perils = sorted(set(getattr(rf, 'peril', 'groundshaking')
                                  for rf in risklist))
         return risk_perils
@@ -1719,8 +1732,9 @@ class OqParam(valid.ParamSet):
         """
         :returns: a composite dtype (imt, poe)
         """
+        imts = list(self.imtls) + self.sec_imts
         return numpy.dtype([('%s-%s' % (imt, poe), F32)
-                            for imt in self.imtls for poe in self.poes])
+                            for imt in imts for poe in self.poes])
 
     def uhs_dt(self):  # used for CSV and NPZ export
         """
@@ -2225,9 +2239,8 @@ class OqParam(valid.ParamSet):
         tagset = asset.tagset(self.aggregate_by)
         if 'id' in tagset and len(tagset) > 1:
             raise ValueError('aggregate_by = id must contain a single tag')
-        elif 'site_id' in tagset and len(tagset) > 1:
-            raise ValueError(
-                'aggregate_by = site_id must contain a single tag')
+        elif 'site_id' in tagset and self.avg_losses:
+            logging.warning('avg_losses with site_id in aggregate_by')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
                 err_msg = ('The field `aggregate_by = policy`'
@@ -2244,7 +2257,8 @@ class OqParam(valid.ParamSet):
         try:
             [lt] = dic
         except ValueError:
-            self.raise_invalid('too many loss types in reinsurance %s' % list(dic))
+            self.raise_invalid(
+                'too many loss types in reinsurance %s' % list(dic))
         if lt not in scientific.LOSSID:
             self.raise_invalid('%s: unknown loss type %s in reinsurance' % lt)
         if '+' in lt and not self.total_losses:

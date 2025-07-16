@@ -410,6 +410,15 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             oq = self.oqparam
             M = len(oq.imtls)
+            """
+            afename = '_afes/' + source_id
+            try:
+                rm = self.datastore[afename]
+            except KeyError:  # store the rates
+                self.datastore[afename] = rmap / oq.investigation_time
+            else:  # update the rates
+                self.datastore[afename] = rm + rmap / oq.investigation_time
+            """
             acc[source_id] += get_rates(rmap, grp_id, M, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22

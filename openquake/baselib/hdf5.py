@@ -85,7 +85,7 @@ def sanitize(value):
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
-           fillvalue=0, attrs=None):
+           fillvalue=None, attrs=None):
     """
     :param hdf5: a h5py.File object
     :param name: an hdf5 key string
@@ -668,6 +668,12 @@ class ArrayWrapper(object):
         self.extra = list(extra)
         if len(array):
             self.array = array
+        n = len(extra)
+        if 'shape_descr' in attrs and n > 1:
+            assert len(attrs['shape_descr']) == len(array.shape[:-1]), (
+                attrs['shape_descr'], array.shape[:-1])
+        if n > 1:
+            assert array.shape[-1] == n, (array.shape[-1], n)
 
     def __iter__(self):
         if hasattr(self, 'array'):

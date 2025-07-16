@@ -60,7 +60,8 @@ class AristotleParam:
             self.exposure_hdf5 = os.path.join(MOSAIC_DIR, 'exposure.hdf5')
         inputs = {'exposure': [self.exposure_hdf5], 'job_ini': '<in-memory>'}
         rupdic = self.rupture_dict
-        if not self.rupture_file and 'rupture_file' in rupdic:
+        if (not self.rupture_file and 'rupture_file' in rupdic
+                and rupdic['rupture_was_loaded']):
             self.rupture_file = rupdic['rupture_file']
         if self.rupture_file:
             inputs['rupture_model'] = self.rupture_file
@@ -205,7 +206,7 @@ IMPACT_FORM_DEFAULTS = {
     'station_data_file': '',
     'maximum_distance_stations': '',
     'msr': 'WC1994',
-    'rupture_from_usgs_loaded': '',
+    'rupture_was_loaded': '',
     'rupture_file_input': '',
     'station_data_file_input': '',
     'station_data_file_loaded': '',
@@ -219,7 +220,8 @@ validators = {
     'approach': valid.Choice('use_shakemap_from_usgs',
                              'use_pnt_rup_from_usgs',
                              'build_rup_from_usgs',
-                             'use_finite_rup_from_usgs',
+                             'use_shakemap_fault_rup_from_usgs',
+                             'use_finite_fault_model_from_usgs',
                              'provide_rup',
                              'provide_rup_params'),
     'usgs_id': valid.simple_id,
@@ -336,10 +338,10 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     if 'shakemap_version' in POST:
         shakemap_version = POST['shakemap_version']
     else:
-        shakemap_version = 'preferred'
+        shakemap_version = 'usgs_preferred'
 
-    rup, rupdic, err = get_rup_dic(dic, user, use_shakemap, shakemap_version,
-                                   rupture_file, monitor)
+    rup, rupdic, err = get_rup_dic(
+        dic, user, use_shakemap, shakemap_version, rupture_file, monitor)
     if err:
         return None, None, None, err
     # round floats
@@ -356,7 +358,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         trts[mosaic_model] = get_trts_around(mosaic_model, expo)
     rupdic['trts'] = trts
     rupdic['mosaic_models'] = mosaic_models
-    rupdic['rupture_from_usgs'] = rup is not None
+    rupdic['rupture_from_usgs'] = rupture_file
+    rupdic['rupture_was_loaded'] = rup is not None
     if 'description' in dic and dic['description']:
         params['description'] = dic['description']
     if len(params) > 1:  # called by impact_run

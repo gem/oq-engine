@@ -305,11 +305,12 @@ def del_calc(db, job_id, user, delete_file=True, force=False):
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
     :param job_id: job ID, can be an integer or a string
     :param user: username
-    :param delete_file: also delete the HDF5 file
+    :param delete_file: also delete the HDF5 file(s)
     :param force: delete even if there are dependent calculations
     :returns: a dict with key "success" and value indicating
         the job id of the calculation or of its ancestor, or key "error"
-        and value describing what went wrong
+        and value describing what went wrong, and a list of paths of files
+        to be removed
     """
     job_id = int(job_id)
     dependent = db(
@@ -343,15 +344,17 @@ def del_calc(db, job_id, user, delete_file=True, force=False):
         return {"error": 'Cannot delete calculation %d: it belongs to '
                 '%s and you are %s' % (job_id, owner, user)}
 
-    fname = path + ".hdf5"
+    fnames = [f'{path}.hdf5', f'{path}_tmp.hdf5']
     # A calculation could fail before it produces a hdf5, or somebody
     # may have canceled the file, so it could not exist
-    if delete_file and os.path.isfile(fname):
-        try:
-            os.remove(fname)
-        except OSError as exc:  # permission error
-            return {"error": 'Could not remove %s: %s' % (fname, exc)}
-    return {"success": str(job_id), "hdf5path": fname}
+    if delete_file:
+        for fname in fnames:
+            if os.path.isfile(fname):
+                try:
+                    os.remove(fname)
+                except OSError as exc:  # permission error
+                    return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    return {"success": str(job_id), "hdf5paths": fnames}
 
 
 def log(db, job_id, timestamp, level, process, message):
@@ -475,12 +478,16 @@ def calc_info(db, calc_id):
     :returns: dictionary of info about the given calculation
     """
     job = db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
+    fields_to_exclude = ['ds_calc_dir', 'pid']
+    fields_to_stringify = ['start_time', 'stop_time']
     response_data = {}
-    response_data['user_name'] = job.user_name
-    response_data['status'] = job.status
-    response_data['start_time'] = str(job.start_time)
-    response_data['stop_time'] = str(job.stop_time)
-    response_data['is_running'] = job.is_running
+    for field in job._fields:
+        if field in fields_to_exclude or field.startswith('_'):
+            continue
+        val = getattr(job, field)
+        if field in fields_to_stringify:
+            val = str(val)
+        response_data[field] = val
     return response_data
 
 
@@ -536,7 +543,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
              job.hazard_calculation_id, job.size_mb, job.host,
-             job.start_time)
+             job.start_time, job.relevant)
             for job in jobs]
 
 
@@ -642,7 +649,7 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
+    log = db("SELECT * FROM log WHERE job_id=?x AND level='ERROR'",
              job_id)
     if not log:
         return []

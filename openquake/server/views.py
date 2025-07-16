@@ -31,6 +31,7 @@ import signal
 import zlib
 import re
 import psutil
+from collections import defaultdict
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
 from xml.parsers.expat import ExpatError
@@ -51,19 +52,20 @@ from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
     IMPACT_FORM_DEFAULTS)
 from openquake.hazardlib.shakemap.parsers import (
-    get_stations_from_usgs, get_shakemap_versions)
+    get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base, views
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import (
     export, AGGRISK_FIELD_DESCRIPTION, EXPOSURE_FIELD_DESCRIPTION)
 from openquake.calculators.extract import extract as _extract
+from openquake.calculators.postproc.compute_rtgm import notification_dtype
 from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
 from openquake.engine.aelo import (
-    get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
+    get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
@@ -109,7 +111,7 @@ AELO_FORM_LABELS = {
     'site_class': 'Site class',
     'vs30': 'Vs30 (m/s)',
     'siteid': 'Site name',
-    'asce_version': 'ASCE version',
+    'asce_version': 'ASCE standards',
 }
 
 AELO_FORM_PLACEHOLDERS = {
@@ -117,7 +119,7 @@ AELO_FORM_PLACEHOLDERS = {
     'lat': 'max. 5 decimals',
     'vs30': 'float (150 - 3000)',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
-    'asce_version': 'ASCE version',
+    'asce_version': 'ASCE standards',
 }
 
 HIDDEN_OUTPUTS = ['assetcol', 'job']
@@ -455,7 +457,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id, size_mb, host, start_time) in calc_data:
+         parent_id, size_mb, host, start_time, relevant) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
@@ -474,7 +476,7 @@ def calc_list(request, id=None):
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
                  parent_id=parent_id, abortable=abortable, size_mb=size_mb,
-                 start_time=start_time_str))
+                 start_time=start_time_str, relevant=relevant))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -745,7 +747,7 @@ def impact_callback(
         params_to_print += (
             f'{n_stations} seismic stations were loaded (please see'
             f'in the calculation log if any of them were discarded)\n')
-    else:
+    elif 'shakemap_uri' not in params:
         params_to_print += 'No seismic stations were considered\n'
 
     from_email = settings.EMAIL_HOST_USER
@@ -796,6 +798,9 @@ def impact_get_rupture_data(request):
         img_base64 = plot_rupture(rup, backend='Agg', figsize=(8, 8),
                                   return_base64=True)
         rupdic['rupture_png'] = img_base64
+    if request.user.level < 2 and 'warning_msg' in rupdic:
+        # we don't want to show the warning to level 1 users
+        del rupdic['warning_msg']
     return JsonResponse(rupdic, status=200)
 
 
@@ -841,6 +846,28 @@ def impact_get_shakemap_versions(request):
     response_data = dict(shakemap_versions=shakemap_versions,
                          usgs_preferred_version=usgs_preferred_version,
                          shakemap_versions_issue=shakemap_versions_issue)
+    return JsonResponse(response_data)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def impact_get_nodal_planes_and_info(request):
+    """
+    Return a list of nodal planes and a dict with lon, lat, dep and mag,
+    for the given usgs_id
+
+    :param request:
+        a `django.http.HttpRequest` object containing usgs_id
+    """
+    usgs_id = request.POST.get('usgs_id')
+    nodal_planes, info, err = get_nodal_planes_and_info(usgs_id)
+    if err:
+        nodal_planes_issue = err['error_msg']
+    else:
+        nodal_planes_issue = None
+    response_data = dict(nodal_planes=nodal_planes,
+                         nodal_planes_issue=nodal_planes_issue, info=info)
     return JsonResponse(response_data)
 
 
@@ -914,6 +941,8 @@ def impact_run(request):
     if request.user.level == 0:
         return HttpResponseForbidden()
     rupture_path = get_uploaded_file_path(request, 'rupture_file')
+    if (not rupture_path and request.POST.get('rupture_was_loaded')):
+        rupture_path = request.POST.get('rupture_from_usgs', '')
     station_data_file = get_uploaded_file_path(request, 'station_data_file')
     station_data_file_from_usgs = request.POST.get(
         'station_data_file_from_usgs', '')
@@ -1468,8 +1497,7 @@ def web_engine(request, **kwargs):
     if application_mode == 'AELO':
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
-        params['asce_versions'] = (
-            oqvalidation.OqParam.asce_version.validator.choices)
+        params['asce_versions'] = oqvalidation.ASCE_VERSIONS
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
@@ -1548,6 +1576,32 @@ def get_disp_val(val):
         return '{:.2f}'.format(numpy.round(val, 2))
 
 
+def group_keys_by_value(d):
+    """
+    Groups keys from the input dictionary by their shared values.
+    If a value is shared by multiple keys, those keys are grouped into a tuple.
+    Otherwise, the key is kept as-is.
+
+    :param d: a dictionary with hashable keys and values.
+    :returns: a dictionary where keys are either individual keys or tuples of keys
+              that shared the same value, and values are the original values.
+
+    Example:
+        >>> group_keys_by_value({0: 'a', 1: 'b', 2: 'a'})
+        {(0, 2): 'a', 1: 'b'}
+    """
+    grouped = defaultdict(list)
+    for k, v in d.items():
+        grouped[v].append(k)
+    result = {}
+    for v, keys in grouped.items():
+        if len(keys) == 1:
+            result[keys[0]] = v
+        else:
+            result[tuple(keys)] = v
+    return result
+
+
 # this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
@@ -1557,10 +1611,16 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     asce07 = asce41 = site = None
     asce07_with_units = {}
     asce41_with_units = {}
-    warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        if is_model_preliminary(ds):
-            warnings = PRELIMINARY_MODEL_WARNING
+        try:
+            asce_version = ds['oqparam'].asce_version
+        except AttributeError:
+            # for backwards compatibility on old calculations
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
+            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
         if 'asce07' in ds:
             try:
                 asce07_js = ds['asce07'][0].decode('utf8')
@@ -1568,8 +1628,14 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 # NOTE: for backwards compatibility, read scalar
                 asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
-            for key, value in asce07.items():
-                if key not in ('PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
+            asce07_key_mapping = {}
+            if asce_version != 'ASCE7-16':
+                asce07_key_mapping = {
+                    'PGA': 'PGAm',
+                }
+            asce07_m = {asce07_key_mapping.get(k, k): v for k, v in asce07.items()}
+            for key, value in asce07_m.items():
+                if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value
@@ -1585,7 +1651,20 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 # NOTE: for backwards compatibility, read scalar
                 asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
-            for key, value in asce41.items():
+            asce41_key_mapping = {}
+            if asce_version != 'ASCE7-16':
+                asce41_key_mapping = {
+                    'BSE2N_Ss': 'BSE2N_Sxs',
+                    'BSE2E_Ss': 'BSE2E_Sxs',
+                    'BSE1N_Ss': 'BSE1N_Sxs',
+                    'BSE1E_Ss': 'BSE1E_Sxs',
+                    'BSE2N_S1': 'BSE2N_Sx1',
+                    'BSE2E_S1': 'BSE2E_Sx1',
+                    'BSE1N_S1': 'BSE1N_Sx1',
+                    'BSE1E_S1': 'BSE1E_Sx1',
+                }
+            asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
+            for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
                     continue
                 if not isinstance(value, float):
@@ -1597,28 +1676,42 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
-        try:
-            asce_version = ds['oqparam'].asce_version
-        except AttributeError:
-            # for backwards compatibility on old calculations
-            asce_version = oqvalidation.OqParam.asce_version.default
-        try:
-            calc_aelo_version = ds.get_attr('/', 'aelo_version')
-        except KeyError:
-            calc_aelo_version = '1.0.0'
-        if 'warnings' in ds:
-            ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
-            if warnings is None:
-                warnings = ds_warnings
-            else:
-                warnings += '\n' + ds_warnings
+        notifications = numpy.array([], dtype=notification_dtype)
+        sid_to_vs30 = {}
+        if is_model_preliminary(ds):
+            # sid -1 means it is not associated to a specific site
+            preliminary_model_warning = numpy.array([
+                (-1, b'warning', b'preliminary_model',
+                 PRELIMINARY_MODEL_WARNING_MSG.encode('utf8'))],
+                dtype=notification_dtype)
+            notifications = numpy.concatenate(
+                (notifications, preliminary_model_warning))
+            sid_to_vs30.update({-1: ''})  # warning about preliminary model
+        if 'notifications' in ds:
+            notifications = numpy.concatenate((notifications, ds['notifications']))
+            sitecol = ds['sitecol']
+            # NOTE: the variable name 'site' is already used
+            sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
+        notes = {}
+        warnings = {}
+        for notification in notifications:
+            vs30 = sid_to_vs30[notification['sid']]
+            if notification['level'] == b'info':
+                notes[vs30] = notification['description'].decode('utf8')
+            elif notification['level'] == b'warning':
+                warnings[vs30] = notification['description'].decode('utf8')
+        notes = group_keys_by_value(notes)
+        warnings = group_keys_by_value(warnings)
+        notes_str = '\n'.join([f'For {vs30=}: {msg}' for (vs30, msg) in notes.items()])
+        warnings_str = '\n'.join([f'For {vs30=}: {msg}' if vs30 else msg
+                                  for (vs30, msg) in warnings.items()])
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name, site=site,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version,
-                       warnings=warnings))
+                       warnings=warnings_str, notes=notes_str))
 
 
 def format_time_delta(td):
