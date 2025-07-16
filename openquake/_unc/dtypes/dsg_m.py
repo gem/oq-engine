@@ -40,16 +40,16 @@ from openquake._unc.bins import get_bins_data, get_bins_from_params
 #      frequencies of exceeedance """
 
 
-def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
-                         idxs: list = []):
+def get_afes_from_dstore(dstore, imt_idx: int, info: bool = False,
+                         idxs: list=[]):
     """
     Pulls from the datastore the poes for a given IMT and convert them to afes
     (we assume the dstore contains only 1 site).
 
     :param dstore:
         Instance of :class:`openquake.commonlib.datastore.DataStore`
-    :param imtstr:
-        A string specifying the intensity measure type of interest
+    :param imt_idx:
+        Index specifying the intensity measure type of interest
     :param info:
         [optional] A boolean controlling the amont of information provided
     :param idxs:
@@ -69,14 +69,7 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
 
     # Read oq parameters
     oqp = dstore['oqparam']
-
-    # Check
-    msg = f"The datastore does not include results for {imtstr}"
-    if imtstr not in list(oqp.hazard_imtls.keys()):
-        raise ValueError(msg)
-
-    # Index of the selected IMT
-    imt_idx = list(oqp.hazard_imtls.keys()).index(imtstr)
+    imtstr = list(oqp.imtls)[imt_idx]
 
     # Read the poes and convert them into frequencies. The Mag
     # matrix has the following dimensions:

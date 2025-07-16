@@ -133,7 +133,7 @@ class Analysis:
         root = tree.getroot()
 
         # Reading info about calculations per individual source
-        calcs = {}
+        calcs = {}  # i.e. {'a': './out_a/calc_8509.hdf5', ...}
         src_ids = set()
         for calc in root.findall(PATH_CALC):
 
@@ -361,7 +361,7 @@ class Analysis:
         :returns:
             Three dictionaries with the ID of the sources as keys:
                 - 'rlzs' contains, for each source, the realization and the
-                paths describing the SSC and the GMC
+                   paths describing the SSC and the GMC
                 - 'poes' contains the hazard curves
                 - 'weights' contains the weights of all the realizations
         """
@@ -376,12 +376,12 @@ class Analysis:
             if not re.search('^/', fname):
                 fname = os.path.abspath(os.path.join(root_path, fname))
 
-            tmp = os.path.basename(fname)
-            msg = f"Source: {key:s} - File: {tmp:s} "
+            msg = f"Source: {key} - File: {os.path.basename(fname)}"
             logging.info(msg)
 
             # Create the datastore
             dstore = datastore.read(fname)
+            imti = list(dstore['oqparam'].imtls).index(imtstr)
 
             # Read data from datastore
             if atype == 'hcurves':
@@ -390,10 +390,10 @@ class Analysis:
                 # R - realizations
                 # I - IMTs
                 # L - IMLs
-                poes[key] = dstore['hcurves-rlzs'][:]
+                poes[key] = dstore['hcurves-rlzs'][:,:,imti,:]
             elif atype == 'mde':
                 # Read disagg results. Matrix shape is 7D
-                binc, poes[key], _, shapes = afes_ds_mde(dstore, imtstr)
+                binc, poes[key], _, shapes = afes_ds_mde(dstore, imti)
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
                     self.dsg_mag = dstore['disagg-bins/Mag'][:]
@@ -403,7 +403,7 @@ class Analysis:
                     assert self.shapes[:-1] == shapes[:-1]
             elif atype == 'md':
                 # Read disagg results. Matrix shape is 7D
-                binc, poes[key], _, shapes = afes_ds_md(dstore, imtstr)
+                binc, poes[key], _, shapes = afes_ds_md(dstore, imti)
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
                     self.dsg_mag = dstore['disagg-bins/Mag'][:]
@@ -412,7 +412,7 @@ class Analysis:
                     assert self.shapes[:-1] == shapes[:-1]
             elif atype == 'm':
                 # Read disagg results. Matrix shape is 7D
-                binc, poes[key], _, shapes = afes_ds_md(dstore, imtstr)
+                binc, poes[key], _, shapes = afes_ds_md(dstore, imti)
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
                     self.dsg_mag = dstore['disagg-bins/Mag'][:]

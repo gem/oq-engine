@@ -40,16 +40,15 @@ from openquake._unc.bins import get_bins_data, get_bins_from_params
 #      frequencies of exceeedance """
 
 
-def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
-                         idxs: list = []):
+def get_afes_from_dstore(dstore, imt_idx: int, info: bool=False, idxs: list=[]):
     """
     Pulls from the datastore the poes for a given IMT and convert them to afes
     (we assume the dstore contains only 1 site).
 
     :param dstore:
         Instance of :class:`openquake.commonlib.datastore.DataStore`
-    :param imtstr:
-        A string specifying the intensity measure type of interest
+    :param imt_idx:
+        Index of the intensity measure type of interest
     :param info:
         [optional] A boolean controlling the amont of information provided
     :param idxs:
@@ -60,7 +59,6 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
         weights of the realisations and an array with the shape of the
         disaggregation matrix.
     """
-
     # Indexes of the realisations
     if len(idxs) > 0:
         idxs = np.array(idxs, dtype=int)
@@ -69,19 +67,13 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool = False,
 
     # Read oq parameters
     oqp = dstore['oqparam']
-
-    # Check
-    msg = f"The datastore does not include results for {imtstr}"
-    if imtstr not in list(oqp.hazard_imtls.keys()):
-        raise ValueError(msg)
-
-    # Index of the selected IMT
-    imt_idx = list(oqp.hazard_imtls.keys()).index(imtstr)
+    imtstr = list(oqp.imtls)[imt_idx]
 
     # Read the poes and convert them into frequencies. The Mag_Dist_Eps
     # matrix has the following dimensions:
     # |Site| x |Mag| x |Dist| x |Eps| x |IMTs| x |IMLs| x |Rlz|
-    poes = dstore.getitem('disagg-rlzs/Mag_Dist_Eps')[0, :, :, :, imt_idx, 0, idxs]
+    poes = dstore.getitem('disagg-rlzs/Mag_Dist_Eps')[
+        0, :, :, :, imt_idx, 0, idxs]
     shapes = poes.shape
     poes[poes > 0.99999] = 0.99999
     afes = -np.log(1.-poes)/oqp.investigation_time

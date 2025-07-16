@@ -86,7 +86,7 @@ class AnalysisTestCase(unittest.TestCase):
         # - Source 'b' has also 24 realizations (3x2) in the SSC and 4 in the
         #   GMClt. This source has correlated uncertainties with sources 'b'
         #   and 'c'
-        rlzs, _, _ = an01.read_dstores(root_path, 'hcurves', 'PGA' )
+        rlzs, _, _ = an01.read_dstores(root_path, 'hcurves', 'PGA')
         patterns = get_patterns(rlzs, an01)
         # These are the patterns for the first uncertainty and source 'b'.
         # Overall the SSC LT for source 'b' contains 4 branchsets and the

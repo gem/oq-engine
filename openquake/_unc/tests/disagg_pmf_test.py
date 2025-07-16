@@ -57,7 +57,7 @@ class HistogramMDETestCase(unittest.TestCase):
 
         # Read datastore
         dstore = read_dstore(fname)
-        binc, afes, weights, shapes = get_afes_from_dstore(dstore, 'PGA')
+        binc, afes, weights, shapes = get_afes_from_dstore(dstore, 0)
 
         # Check the centers of the bins
         expected = np.array([5.0, 15, 25, 35, 45, 55, 65, 75, 85, 95, 110, 130,
@@ -79,7 +79,7 @@ class HistogramMDETestCase(unittest.TestCase):
 
         # Read datastore
         dstore = read_dstore(fname)
-        mdebinc, afes, weights, shapes = get_afes_from_dstore(dstore, 'PGA')
+        mdebinc, afes, weights, shapes = get_afes_from_dstore(dstore, 0)
 
         # Get the histograms
         res = 10
