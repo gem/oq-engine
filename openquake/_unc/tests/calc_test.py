@@ -320,7 +320,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         file_path = TFF / 'data_calc'
         for nsam in [500, 1000, 10000, 100000]:
 
-            print("\n   Number of samples: {nsam}")
+            print(f"\n   Number of samples: {nsam}")
 
             conf_samp['analysis']['number_of_samples'] = f'{nsam}'
             conf_samp['analysis']['conf_file_path'] = file_path
@@ -465,7 +465,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         file_path = TFF / 'data_calc'
         for nsam in [500, 1000, 10000, 100000, 1000000]:
 
-            print("\n   Number of samples: {nsam}")
+            print(f"\n   Number of samples: {nsam}")
             conf_sampl['analysis']['number_of_samples'] = f'{nsam}'
             conf_sampl['analysis']['conf_file_path'] = file_path
 
