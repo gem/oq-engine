@@ -40,7 +40,7 @@ import numpy as np
 from openquake.commonlib import datastore
 from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore as afes_ds_mde
 from openquake._unc.dtypes.dsg_md import get_afes_from_dstore as afes_ds_md
-from openquake._unc.dtypes.dsg_m import get_afes_from_dstore as afes_ds_m
+
 
 # Setting namespace
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -339,7 +339,7 @@ class Analysis:
             A tuple with the list of the realisations and an array with the
             corresponding weights.
         """
-        weights = dstore.getitem('weights')[:]
+        weights = dstore['weights'][:]
         rlz = []
         for k in dstore['full_lt'].rlzs['branch_path']:
             rlz.append(k)
@@ -390,15 +390,15 @@ class Analysis:
                 # R - realizations
                 # I - IMTs
                 # L - IMLs
-                poes[key] = dstore.getitem('hcurves-rlzs')[:]
+                poes[key] = dstore['hcurves-rlzs'][:]
             elif atype == 'mde':
                 # Read disagg results. Matrix shape is 7D
                 binc, poes[key], _, shapes = afes_ds_mde(dstore, imtstr)
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
-                    self.dsg_mag = dstore.getitem('disagg-bins/Mag')[:]
-                    self.dsg_dst = dstore.getitem('disagg-bins/Dist')[:]
-                    self.dsg_eps = dstore.getitem('disagg-bins/Eps')[:]
+                    self.dsg_mag = dstore['disagg-bins/Mag'][:]
+                    self.dsg_dst = dstore['disagg-bins/Dist'][:]
+                    self.dsg_eps = dstore['disagg-bins/Eps'][:]
                 else:
                     assert self.shapes[:-1] == shapes[:-1]
             elif atype == 'md':
@@ -406,8 +406,8 @@ class Analysis:
                 binc, poes[key], _, shapes = afes_ds_md(dstore, imtstr)
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
-                    self.dsg_mag = dstore.getitem('disagg-bins/Mag')[:]
-                    self.dsg_dst = dstore.getitem('disagg-bins/Dist')[:]
+                    self.dsg_mag = dstore['disagg-bins/Mag'][:]
+                    self.dsg_dst = dstore['disagg-bins/Dist'][:]
                 else:
                     assert self.shapes[:-1] == shapes[:-1]
             elif atype == 'm':
@@ -415,12 +415,12 @@ class Analysis:
                 binc, poes[key], _, shapes = afes_ds_md(dstore, imtstr)
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
-                    self.dsg_mag = dstore.getitem('disagg-bins/Mag')[:]
+                    self.dsg_mag = dstore['disagg-bins/Mag'][:]
                 else:
                     assert self.shapes[:-1] == shapes[:-1]
 
             # Read weights for all the realizations
-            weights[key] = dstore.getitem('weights')[:]
+            weights[key] = dstore['weights'][:]
 
             # Read realizations
             rlz = []
