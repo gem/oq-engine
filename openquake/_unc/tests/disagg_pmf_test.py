@@ -7,7 +7,6 @@ import unittest
 import numpy as np
 
 from openquake._unc.bins import get_bins_from_params
-from openquake.commonlib.datastore import read as read_dstore
 from openquake.calculators.base import run_calc
 from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore, get_histograms
 
@@ -24,20 +23,10 @@ PLOT = False
 
 class HistogramMDETestCase(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
+    def test_get_histograms(self):
         job_ini = os.path.join(TFF, 'data_calc', 'disaggregation',
                                'test_case01', 'job_a.ini')
-        cls.dstore = run_calc(job_ini).datastore
-
-    def test_read_dstore(self):
-
-        # Define fname of the .hdf5 file
-        fname = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
-                             'out_a', 'calc_1978.hdf5')
-
-        # Read datastore
-        dstore = read_dstore(fname)
+        dstore = run_calc(job_ini).datastore
         binc, afes, weights, shapes = get_afes_from_dstore(dstore, 'PGA')
 
         # Check the centers of the bins
@@ -49,28 +38,14 @@ class HistogramMDETestCase(unittest.TestCase):
         expected = np.arange(-3.5, 4., 1.0)
         aeq(binc['eps'], expected)
 
-    def test_get_histograms(self):
-
-        # This test reads the disaggregation results in a datastore and
-        # computes an histogram of the PoEs in each bin
-
-        # Define fname of the .hdf5 file
-        fname = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
-                             'out_a', 'calc_1978.hdf5')
-
-        # Read datastore
-        dstore = read_dstore(fname)
-        mdebinc, afes, weights, shapes = get_afes_from_dstore(dstore, 'PGA')
-
         # Get the histograms
         res = 10
         ohis, min_powers, num_powers = get_histograms(afes, weights, res)
 
         # Check that the list of histograms has the same shape of the number of
         # bins composing the disaggregation matrix
-        expected = (len(mdebinc['mag']) * len(mdebinc['dst']) *
-                    len(mdebinc['eps']))
-        self.assertTrue(expected == len(ohis))
+        expected = len(binc['mag']) * len(binc['dst']) * len(binc['eps'])
+        assert expected == len(ohis)
 
         # Computing the mean and counting the M-D-e combinations with values
         # different than 0
@@ -95,16 +70,17 @@ class HistogramMDETestCase(unittest.TestCase):
             d1 = afes.shape[0]
             d2 = afes.shape[1]
             d3 = afes.shape[2]
-            for idx, (ohi, mpo, npo) in enumerate(zip(ohis, min_powers, num_powers)):
+            for idx, (ohi, mpo, npo) in enumerate(
+                    zip(ohis, min_powers, num_powers)):
                 if ohi is not None:
                     bins = get_bins_from_params(mpo, res, npo)
                     binc = bins[:-1] + np.diff(bins) / 2
                     col = tuple(np.random.randint(0, high=255, size=[3]))
                     # Get the indexes of the cell in the original 3D matrix
                     tmp = np.unravel_index(idx, ([d1, d2, d3]))
-                    tmag = mdebinc['mag'][tmp[0]]
-                    tdst = mdebinc['dst'][tmp[1]]
-                    teps = mdebinc['eps'][tmp[2]]
+                    tmag = binc['mag'][tmp[0]]
+                    tdst = binc['dst'][tmp[1]]
+                    teps = binc['eps'][tmp[2]]
                     # Set the label with the values of magnitude, distance and
                     # epsilon
                     lab = f'[{tmag},{tdst},{teps}]'
