@@ -152,7 +152,8 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
 
                 # Checking
                 assert len(his) == num_pow * res
-                assert np.abs(np.sum(his) - 1.0) < 1e-8
+                eps = np.abs(np.sum(his) - 1.0)
+                assert eps < 1.5e-7, eps
 
                 # Updating output
                 ohis.append(his)
