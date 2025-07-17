@@ -429,7 +429,7 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             patterns[bsid][srcid] = temp_patterns
     """# in the analysis_test patterns is the following dictionary:
     {'bs1': {'b': ['^...A.~.', '^...B.~.'],
-      'c': ['^....A.~.', '^....B.~.']},
+             'c': ['^....A.~.', '^....B.~.']},
       'bs2': {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
               'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}}
     """
@@ -459,7 +459,6 @@ def get_hcurves_ids(rlzs, patterns, weights):
     :returns:
         A tuple with two dictionaries.
     """
-
     # These are two dictionaries with key the branch set ID and value a
     # dictionary with key the source IDs
     grp_hcurves = {}
