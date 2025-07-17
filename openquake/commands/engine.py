@@ -238,7 +238,7 @@ main.list_risk_calculations = dict(
     abbrev='--lrc', help='List risk calculation information')
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
-main.seq = 'Run multiple job.inis sequentially'
+main.multi = 'Run multiple job.inis in parallel'
 main.reuse_input = 'Read the CompositeSourceModel from the cache (if any)'
 
 # options
