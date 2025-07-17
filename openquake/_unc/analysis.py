@@ -32,6 +32,7 @@ Module `openquake._unc.analysis`
 
 import re
 import os
+import collections
 import xml.etree.ElementTree as ET
 import logging
 import numpy as np
@@ -178,19 +179,17 @@ class Analysis:
                 fname = calcs[sid]
                 dstore = datastore.read(fname)
                 tmp = dstore.getitem('full_lt/source_model_lt')['utype']
-                unique = []
+
                 # This creates a list of unique uncertainty types
-                for t in tmp:
-                    if t not in unique:
-                        unique.append(t)
-                utypes = [t for t in unique]
+                utypes = list(collections.Counter(tmp))
+
                 # Find the index of the uncertainty
                 if utype in utypes:
-                    ordinal.append(f'{utypes.index(utype)}')
+                    ordinal.append(utypes.index(utype))
                 else:
                     # We assume that in the GMM logic tree we have only one
                     # branch
-                    ordinal.append('0')
+                    ordinal.append(0)
 
             # Values:
             # - IDs of the sources involved
