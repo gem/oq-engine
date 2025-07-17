@@ -49,21 +49,9 @@ NS = "{http://openquake.org/xmlns/nrml/0.5}"
 # Paths
 PATH_CALC = "{0:s}calculations/{0:s}calc".format(NS)
 PATH_UNC = "{0:s}uncertainties/".format(NS)
-PATH_SIDS = "{:s}sourceIDs".format(NS)
+PATH_SRC_IDS = "{:s}sourceIDs".format(NS)
 PATH_BSIDS = "{:s}branchSetID".format(NS)
 PATH_ORDINAL = "{:s}branchSetOrdinal".format(NS)
-
-
-def split_rlz_pattern(lt_str: str):
-    """
-    Splits a LT pattern in two components. One for the SSC and one for the GMC
-
-    :param lt_str:
-        A string with a LT path
-    """
-    ssc_labels = [i for i in re.split('~', lt_str)[0]]
-    gmc_labels = re.split('~', lt_str)[1]
-    return ssc_labels, gmc_labels
 
 
 class Analysis:
@@ -74,7 +62,7 @@ class Analysis:
     :param bsets:
         A dictionary with branchset ID as keys and a dictionary with various
         information as value. Dictionary content:
-        - sids: IDs of the sources
+        - src_ids: IDs of the sources
         - bsids: IDs of the branches in the original LTs
         - utype: Type of uncertainty
         - logictree: Type of LT (ssc or gmc)
@@ -137,6 +125,13 @@ class Analysis:
         calcs = {}  # i.e. {'a': './out_a/calc_8509.hdf5', ...}
         src_ids = set()
         for calc in root.findall(PATH_CALC):
+            # Check duplicated IDs
+            if calc.attrib['sourceID'] in src_ids:
+                msg = "Duplicated src ID in the definition of datastores"
+                msg += f" Check: {calc.attrib['sourceID']}"
+                raise ValueError(msg)
+
+            # Read or compute the datastore
             if 'datastore' in calc.attrib:
                 dstore = os.path.join(root_path, calc.attrib['datastore'])
             else:
@@ -146,14 +141,8 @@ class Analysis:
             # Dictionary with the path to the .hdf5 file with the datastore
             calcs[calc.attrib['sourceID']] = dstore
 
-            # Check duplicated IDs
-            if calc.attrib['sourceID'] in src_ids:
-                msg = "Duplicated src ID in the definition of datastores"
-                msg += f" Check: {calc.attrib['sourceID']}"
-                raise ValueError(msg)
-
             # Updating the set of src IDs
-            src_ids = src_ids | set(calc.attrib['sourceID'])
+            src_ids.add(calc.attrib['sourceID'])
 
         # Reading info about correlated uncertainties i.e. branch sets
         bsets = {}
@@ -169,13 +158,13 @@ class Analysis:
             bsid = bs.attrib['branchSetID']
             utype = bs.attrib['uncertaintyType'].encode()
             logictree = bs.attrib['logicTree']
-            sids = bs.findall(PATH_SIDS)[0].text.split(' ')
+            src_ids = bs.findall(PATH_SRC_IDS)[0].text.split(' ')
             bsids = bs.findall(PATH_BSIDS)[0].text.split(' ')
 
             # Here we should check that the uncertainties in the analysis .xml
             # file are the same used for the various sources
             ordinal = []
-            for sid in sids:
+            for sid in src_ids:
                 fname = calcs[sid]
                 dstore = datastore.read(fname)
                 tmp = dstore.getitem('full_lt/source_model_lt')['utype']
@@ -197,10 +186,10 @@ class Analysis:
             # - Type of uncertainty
             # - Type of LT (ssc or gmc)
             # - Ordinal of the branchsets in their LTs
-            bsets[bsid] = {'sid': sids, 'bsids': bsids, 'utype': utype,
+            bsets[bsid] = {'sid': src_ids, 'bsids': bsids, 'utype': utype,
                            'logictree': logictree, 'ordinal': ordinal}
             data = {}
-            for i, sid in enumerate(sids):
+            for i, sid in enumerate(src_ids):
                 data[sid] = {'bsid': bsids[i], 'ordinal': ordinal[i]}
             bsets[bsid] = {'utype': utype, 'logictree': logictree,
                            'data': data}
@@ -208,145 +197,93 @@ class Analysis:
             # For each source ID we store the ordinal of the branchset
             # containing the uncertainty here considered. Note that the
             # ordinal can be either for the SSC or the GMC.
-            for sid, odn in zip(sids, ordinal):
+            for sid, odn in zip(src_ids, ordinal):
                 corbs_per_src[(sid, int(odn), logictree)] = bsid
 
         # Initializing the Analysis object
         return cls(bsets, corbs_per_src, corbs_bs_id, calcs, root_path)
 
+    # this is not used
     def get_srcIDs_with_correlations(self):
         """
         Returns a set with the IDs of the sources with correlated uncertainties
         """
         out = set()
         for bsid in self.bsets:
-            for key in self.bsets[bsid]['data']:
-                out = out.union(set([key]))
+            out |= self.bsets[bsid]['data']
         return out
 
     def get_sets(self):
         """
         :returns:
-            A tuple. The first element 'ssets' contains a list of sets.
-            Each set is a list of source IDs sharing some correlation. The
-            second list contains sets with the IDs of the branch sets with
+            A pair of lists of sets. In the first
+            each set contains source IDs sharing some correlation.
+            In the second each set contains the IDs of the branch sets with
             correlations (note that the branch set ID refers to the ones
             included in the .xml file used to instantiate the `Analysis`
-            object.
+            object).
         """
         ssets = []
         bsets = []
-
         # Process all the correlated branch sets
         for bsid in sorted(self.bsets):
             found = False
-            sidset = set(list(self.bsets[bsid]['data']))
+            srcids = set(self.bsets[bsid]['data'])
 
             # If true, this source is in the current branch set
             for i, sset in enumerate(ssets):
-                if sidset & sset:
-                    ssets[i] = sidset | ssets[i]
-                    bsets[i] = set([bsid]) | bsets[i]
+                if srcids & sset:
+                    ssets[i] |= srcids
+                    bsets[i] |= {bsid}
                     found = True
                     continue
             if not found:
-                ssets.append(sidset)
-                bsets.append(set([bsid]))
+                ssets.append(srcids)
+                bsets.append({bsid})
 
         # Adding uncorrelated sources
-        for sid in self.calcs:
+        for src_id in self.calcs:
             found = False
             for sset in ssets:
-                if sid in sset:
+                if src_id in sset:
                     found = True
                     continue
             if not found:
-                ssets.append(set([sid]))
+                ssets.append({src_id})
                 bsets.append(None)
 
+        # in analysis_test we have
+        # ssets = [{'b', 'a', 'c'}, {'d'}]
+        # bsets = [{'bs2', 'bs1'}, None]
         return ssets, bsets
 
-    def get_sets_old(self):
+    def get_dstores(self):
         """
-        Returns a list of sets. Each set contains the IDs of correlated
-        sources.
+        Get the datastores instances for the sources considered in the
+        analysis, sorted by source id.
         """
-        ssets = []
-        bsets = []
-        # Process all the source IDs
-        for srcid in sorted(self.calcs):
-            # Process the given (correlated) branchset
-            found = False
-            for key in sorted(self.bsets):
-                bset = self.bsets[key]
-                # If any of the source IDs for the current branchset is in
-                # one output set then we add all the source IDs since they
-                # will be all correlated
-                srcs_ids = set(bset['sid'])
-                # If true, this source is in the current branch set
-                if srcid in srcs_ids:
-                    # Process the current set. If one of the sources in the
-                    # current branch set is in one of the output sets, update
-                    # the output set with the additional correlated src_ids
-                    for i in range(len(ssets)):
-                        if srcs_ids & ssets[i]:
-                            ssets[i] = srcs_ids | ssets[i]
-                            bsets[i] = set([key]) | bsets[i]
-                            found = True
-                            continue
-            # Updating the output set with a new group containing an
-            # uncorrelated source id
-            if not found:
-                ssets.append(set(srcid))
-                bsets.append(set([key]))
-        return ssets, bsets
+        return {src_id: datastore.read(fname)
+                for src_id, fname in sorted(self.calcs.items())}
 
-    def get_dstores(self, root_path=None):
+    def get_imtls(self):
         """
-        Get the OQ datastores instances for the sources considered in the
-        analysis
+        Get the imtls
         """
+        dstore = list(self.get_dstores().values())[0]
+        return dstore['oqparam'].hazard_imtls
 
-        if root_path is None:
-            root_path = self.root_path
-
-        # For each source we read information in the corresponding datastore
-        dstores = {}
-        for key in sorted(self.calcs):
-            fname = self.calcs[key]
-            if not re.search('^/', fname):
-                fname = os.path.abspath(os.path.join(self.root_path, fname))
-            dstores[key] = datastore.read(fname)
-        return dstores
-
-    def get_imls(self, root_path=None):
+    def get_bpaths_weights(self, dstore, srcid):
         """
-        Get the imls
-        """
-        dstores = self.get_dstores(root_path)
-        keys = list(dstores)
-        dstore = dstores[keys[0]]
-        oqp = dstore['oqparam']
-        return oqp.hazard_imtls
-
-    def get_weights_from_dstore(self, dstore, srcid):
-        """
-        Get the weights of the realisations in the datastore for a given
-        source.
-
         :param dstore:
             A :class:`openquake.commonlib.datastore.DataStore` instance
-        :param srdid:
+        :param srcid:
             The ID of the source
         :returns:
-            A tuple with the list of the realisations and an array with the
-            corresponding weights.
+            Branch paths and corresponding weights
         """
         weights = dstore['weights'][:]
-        rlz = []
-        for k in dstore['full_lt'].rlzs['branch_path']:
-            rlz.append(k)
-        return rlz, weights
+        bpaths = dstore['full_lt'].rlzs['branch_path']
+        return bpaths, weights
 
     def read_dstores(self, root_path: str, atype: str, imtstr: str):
         """
@@ -374,11 +311,7 @@ class Analysis:
 
         # For each source we read information in the corresponding datastore
         for key in self.calcs:
-
             fname = self.calcs[key]
-            if not re.search('^/', fname):
-                fname = os.path.abspath(os.path.join(root_path, fname))
-
             msg = f"Source: {key} - File: {os.path.basename(fname)}"
             logging.info(msg)
 
@@ -430,11 +363,9 @@ class Analysis:
             ssc = []
             gmc = []
             for k in dstore['full_lt'].rlzs['branch_path']:
-                # atmp and btmp are lists with 1 character strings
-                atmp, btmp = split_rlz_pattern(k)
-                logging.debug(k)
-                ssc.append(atmp)
-                gmc.append(btmp)
+                smpath, gspath = k.split('~')
+                ssc.append(smpath)
+                gmc.append(gspath)
                 rlz.append(k)
 
             # This dictionary [where keys are the source IDs] contains two
@@ -445,7 +376,7 @@ class Analysis:
         return rlzs, poes, weights
 
 
-def get_patterns(rlzs: dict, an01: Analysis):
+def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
     """
     Computes the patterns needed to select realizations from a source-specific
     logic tree
@@ -456,7 +387,7 @@ def get_patterns(rlzs: dict, an01: Analysis):
     :param an01:
         An instance of :class:`openquake._unc.analysis.Analysis`
     :param verbose:
-        A boolean controlling the l
+        A boolean controlling the logging
     :returns:
         A dictionary with key the ID of the branch set with correlated
         uncertainties (IDs as defined in the `analysis.xml` input file) and
@@ -468,47 +399,42 @@ def get_patterns(rlzs: dict, an01: Analysis):
     patterns = {}
     for bsid in an01.bsets:
 
-        # Info
-        msg = f"Creating patterns for branch set {bsid:s}"
-        logging.info(msg)
+        if verbose:
+            logging.info(f"Creating patterns for branch set {bsid}")
 
         # Processing the sources in the branchset bsid
         patterns[bsid] = {}
-        for sid in an01.bsets[bsid]['data']:
-
-            # Info
-            msg = f"   Source: {sid:s}"
-            logging.info(msg)
-            logging.debug(rlzs[sid])
+        for srcid in an01.bsets[bsid]['data']:
+            if verbose:
+                logging.info(f"   Source: {srcid}")
+                logging.debug(rlzs[srcid])
 
             # Create the general pattern. This will select everything
             # e.g. '.+.+.+~.+'
-            patterns[bsid][sid] = {}
-            nssc = 1 if len(rlzs[sid][0].shape) == 1 else rlzs[sid][0].shape[1]
-            # tmpssc = ''.join(['.+' for i in range(nssc)])
-            tmpssc = '..' + ''.join(['.' for i in range(2, nssc)])
-
-            ngmc = 1 if len(rlzs[sid][1].shape) == 1 else rlzs[sid][1].shape[1]
-            tmpgmc = ''.join(['.' for i in range(ngmc)])
-            pattern = '^'+tmpssc+'~'+tmpgmc
-
+            patterns[bsid][srcid] = {}
+            smpaths, gspaths, _ = rlzs[srcid]
+            nssc = len(smpaths[0])
+            tmpssc = '..' + ''.join('.' for i in range(2, nssc))
+            ngmc = len(gspaths[0])
+            tmpgmc = ''.join('.' for i in range(ngmc))
+            pattern = '^' + tmpssc + '~' + tmpgmc
             # Find the index in the pattern where we replace the '.' with the
             # ID of the branches that are correlated.
-            ordinal = int(an01.bsets[bsid]['data'][sid]['ordinal'])
+            ordinal = int(an01.bsets[bsid]['data'][srcid]['ordinal'])
             # + 1 for the initial ~
             # + 1 for the first element (that uses two letters)
             idx = ordinal + 1 + 1
             is_gmc = an01.bsets[bsid]['logictree'] == 'gmc'
-            idx = nssc + idx if is_gmc else idx
-            itype = 1 if is_gmc else 0
-            iii = (slice(None, None, None))
-            if len(rlzs[sid][itype].shape) > 1:
-                iii = (slice(None, None, None), ordinal+1)
+            if is_gmc:
+                paths = rlzs[srcid][1]
+                idx += nssc
+            else:
+                paths = [bpath[ordinal + 1] for bpath in rlzs[srcid][0]]
             temp_patterns = []
-            for key in np.unique(rlzs[sid][itype][iii]):
+            for key in np.unique(paths):
                 tmp = pattern[:idx] + key + pattern[idx+1:]
                 temp_patterns.append(tmp)
-            patterns[bsid][sid] = temp_patterns
+            patterns[bsid][srcid] = temp_patterns
 
     return patterns
 
@@ -544,17 +470,17 @@ def get_hcurves_ids(rlzs, patterns, weights):
     for bsid in patterns:
         grp_hcurves[bsid] = {}
         grp_weights[bsid] = {}
-        for sid in patterns[bsid]:
+        for srcid in patterns[bsid]:
             # Loop over the patterns of all the realizations for a given source
-            grp_hcurves[bsid][sid] = []
-            grp_weights[bsid][sid] = []
-            for p in patterns[bsid][sid]:
+            grp_hcurves[bsid][srcid] = []
+            grp_weights[bsid][srcid] = []
+            for p in patterns[bsid][srcid]:
                 tmp_idxs = []
                 wei = 0.0
-                for i, rlz in enumerate(rlzs[sid][2]):
+                for i, rlz in enumerate(rlzs[srcid][2]):
                     if re.search(p, rlz):
                         tmp_idxs.append(i)
-                        wei += weights[sid][i]
-                grp_hcurves[bsid][sid].append(tmp_idxs)
-                grp_weights[bsid][sid].append(wei)
+                        wei += weights[srcid][i]
+                grp_hcurves[bsid][srcid].append(tmp_idxs)
+                grp_weights[bsid][srcid].append(wei)
     return grp_hcurves, grp_weights

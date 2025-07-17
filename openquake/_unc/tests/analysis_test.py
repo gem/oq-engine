@@ -62,10 +62,10 @@ class AnalysisTestCase(unittest.TestCase):
         expected = [set(['b', 'a', 'c']), set(['d'])]
         self.assertEqual(computed, expected)
 
-    def test_get_imls(self):
+    def test_get_imtls(self):
         # Check the IMLs for PGA
         an01 = self.an01
-        imtls = an01.get_imls()
+        imtls = an01.get_imtls()
         expected = np.logspace(np.log10(0.00001), np.log10(3.00), num=25)
         aac(expected, imtls['PGA'])
 
