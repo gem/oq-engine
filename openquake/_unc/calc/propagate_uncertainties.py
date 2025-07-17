@@ -73,8 +73,7 @@ def prepare(fname: str, atype: str, imtstr: str = None):
     np.random.seed(10)
 
     # Read the datastores specified in the input path
-    root_path = os.path.dirname(fname)
-    rlzs, _, weights = an01.read_dstores(root_path, atype, imtstr)
+    rlzs, _, weights = an01.read_dstores(atype, imtstr)
 
     # Correlated branchsets. For test case 2, the correlation between 'a' and
     # 'b' is the GMM model while between 'b' and 'c' it's the seismogenic

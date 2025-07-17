@@ -72,7 +72,6 @@ class AnalysisTestCase(unittest.TestCase):
     def test_get_patterns(self):
         # Test the patterns created to select the realizations
         an01 = self.an01
-        root_path = os.path.dirname(self.fname)
         # This returns a triple. The first element is a dictionary with key the
         # ID of each source and with value a list. The list contains three
         # elements: an array with the paths for each realization of the SSClt,
@@ -84,7 +83,7 @@ class AnalysisTestCase(unittest.TestCase):
         # - Source 'b' has also 24 realizations (3x2) in the SSC and 4 in the
         #   GMClt. This source has correlated uncertainties with sources 'b'
         #   and 'c'
-        rlzs, _, _ = an01.read_dstores(root_path, 'hcurves', 'PGA')
+        rlzs, _, _ = an01.read_dstores('hcurves', 'PGA')
         patterns = get_patterns(rlzs, an01)
         # These are the patterns for the first uncertainty and source 'b'.
         # Overall the SSC LT for source 'b' contains 4 branchsets and the
@@ -98,8 +97,7 @@ class AnalysisTestCase(unittest.TestCase):
     def test_get_curves_and_weights(self):
         # Test the curve IDs
         an01 = self.an01
-        root_path = os.path.dirname(self.fname)
-        rlzs, poes, weights = an01.read_dstores(root_path, 'hcurves', 'PGA')
+        rlzs, poes, weights = an01.read_dstores('hcurves', 'PGA')
         # Get the patterns
         patterns = get_patterns(rlzs, an01)
         # Get for each set of correlated uncertainties the source IDs
@@ -118,7 +116,6 @@ class AnalysisDisaggregationTestCase(unittest.TestCase):
         fname = os.path.join(
             BDP, 'disaggregation', 'test_case01', 'analysis.xml')
         an01 = Analysis.read(fname)
-        root_path = os.path.dirname(fname)
-        rlzs, poes, weights = an01.read_dstores(root_path, 'mde', 'PGA')
+        rlzs, poes, weights = an01.read_dstores('mde', 'PGA')
         self.assertEqual(['a', 'b'], list(poes))
         self.assertEqual((17, 17, 8, 24), poes['a'].shape)

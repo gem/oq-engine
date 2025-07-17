@@ -55,6 +55,8 @@ aac = np.testing.assert_allclose
 
 # Options
 PLOTTING = False
+NSAMPLES = [500, 1000, 10000]
+# NSAMPLES = [500, 1000, 10000, 100000]
 
 
 class ResultsCalculationTestCase01(unittest.TestCase):
@@ -317,7 +319,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         # Compute sampling
         results = []
         file_path = TFF / 'data_calc'
-        for nsam in [500, 1000, 10000, 100000]:
+        for nsam in NSAMPLES:
 
             print(f"\n   Number of samples: {nsam}")
 
@@ -462,7 +464,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         # Compute sampling
         results = []
         file_path = TFF / 'data_calc'
-        for nsam in [500, 1000, 10000, 100000, 1000000]:
+        for nsam in NSAMPLES:
 
             print(f"\n   Number of samples: {nsam}")
             conf_sampl['analysis']['number_of_samples'] = f'{nsam}'

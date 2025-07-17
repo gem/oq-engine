@@ -57,7 +57,7 @@ def plot_results(fhis, fmin_pow, fnum_pow, res, analysis, axs):
         Two handles for the figure and the axes
     """
 
-    dstores = analysis.get_dstores()
+    dstores = analysis.dstores
     for k, sid in enumerate(dstores):
         imls, afes, weights = afes_matrix_from_dstore(
             dstores[sid], 'PGA', False)

@@ -65,8 +65,8 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
     logging.info(msg)
 
     # Create a dictionary with the datastores, one for each source
-    sids = np.array(list(an01.calcs))
-    dstores = an01.get_dstores()
+    sids = np.array(list(an01.dstores))
+    dstores = an01.dstores
 
     # Create the mtx where we store results for all the IMTs. The shape
     # of this matrix - called afes - is: S x SRC x R x I x L
@@ -76,7 +76,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
     # I - IMTs
     # L - IMLs
     shps = dstores[sids[0]].getitem('hcurves-rlzs')[:].shape
-    afes = np.zeros((shps[0], len(an01.calcs), nsam, shps[2], shps[3]))
+    afes = np.zeros((shps[0], len(an01.dstores), nsam, shps[2], shps[3]))
     weir = np.ones(nsam)
 
     # Process the sets of results. When a set contains a single source,

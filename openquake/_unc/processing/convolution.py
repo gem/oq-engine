@@ -66,7 +66,7 @@ def convolution(ssets: list, bsets: list, an01: Analysis, root_path: str,
     logging.info(msg)
 
     # Create a dictionary with the datastores, one for each source
-    dstores = an01.get_dstores()
+    dstores = an01.dstores
 
     # Process the sets of logic trees. When a set contains a single source,
     # this means that the source does not have correlations with other sources.
@@ -89,11 +89,6 @@ def convolution(ssets: list, bsets: list, an01: Analysis, root_path: str,
 
             # Source ID
             sid = list(sset)[0]
-
-            # Datastore name
-            fname = an01.calcs[sid]
-            fname = os.path.join(root_path, fname)
-
             # Load the matrix containing the annual frequencies of exceedance.
             # afes is an array with shape I x L where I is the number of
             # intensity measure levels and L is the number of intensity measure
