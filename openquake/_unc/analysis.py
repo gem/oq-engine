@@ -178,18 +178,18 @@ class Analysis:
             for sid in sids:
                 fname = calcs[sid]
                 dstore = datastore.read(fname)
-                utype = dstore.getitem('full_lt/source_model_lt')['utype']
+                tmp = dstore.getitem('full_lt/source_model_lt')['utype']
 
                 # This creates a list of unique uncertainty types
-                utypes = list(collections.Counter(utype))
+                utypes = list(collections.Counter(tmp))
 
                 # Find the index of the uncertainty
                 if utype in utypes:
-                    ordinal.append(f'{utypes.index(utype)}')
+                    ordinal.append(utypes.index(utype))
                 else:
                     # We assume that in the GMM logic tree we have only one
                     # branch
-                    ordinal.append('0')
+                    ordinal.append(0)
 
             # Values:
             # - IDs of the sources involved
