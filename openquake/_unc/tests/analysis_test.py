@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -45,34 +44,33 @@ class AnalysisTestCase(unittest.TestCase):
     Tests various methods of the :class:`openquake._unc.analysis.Analysis`
     class.
     """
-
     def setUp(self):
         self.fname = os.path.join(BDP, 'test_case02', 'analysis.xml')
         self.an01 = Analysis.read(self.fname)
 
     def test01(self):
-        """ Check the info describing correlation """
+        # Check the info describing correlation
         an01 = self.an01
         expected = {('b', 2, 'ssc'): 'bs1', ('c', 3, 'ssc'): 'bs1',
                     ('a', 0, 'gmc'): 'bs2', ('b', 0, 'gmc'): 'bs2'}
         self.assertEqual(an01.corbs_per_src, expected)
 
     def test_get_sets_01(self):
-        """ Check the groups with correlated uncertainties """
+        # Check the groups with correlated uncertainties
         an01 = self.an01
         computed, _ = an01.get_sets()
         expected = [set(['b', 'a', 'c']), set(['d'])]
         self.assertEqual(computed, expected)
 
     def test_get_imls(self):
-        """ Check the IMLs for PGA """
+        # Check the IMLs for PGA
         an01 = self.an01
         imtls = an01.get_imls()
         expected = np.logspace(np.log10(0.00001), np.log10(3.00), num=25)
         aac(expected, imtls['PGA'])
 
     def test_get_patterns(self):
-        """ Test the patterns created to select the realizations """
+        # Test the patterns created to select the realizations
         an01 = self.an01
         root_path = os.path.dirname(self.fname)
         # This returns a triple. The first element is a dictionary with key the
@@ -98,7 +96,7 @@ class AnalysisTestCase(unittest.TestCase):
         self.assertEqual(patterns['bs2']['b'], expected)
 
     def test_get_curves_and_weights(self):
-        """ Test the curve IDs """
+        # Test the curve IDs
         an01 = self.an01
         root_path = os.path.dirname(self.fname)
         rlzs, poes, weights = an01.read_dstores(root_path, 'hcurves', 'PGA')
@@ -116,14 +114,11 @@ class AnalysisTestCase(unittest.TestCase):
 
 class AnalysisDisaggregationTestCase(unittest.TestCase):
 
-    def setUp(self):
-        tmp_path = os.path.join(BDP, 'disaggregation', 'test_case01')
-        self.fname = os.path.join(tmp_path, 'analysis.xml')
-        self.an01 = Analysis.read(self.fname)
-
     def test_read_dstore_disagg(self):
-        an01 = self.an01
-        root_path = os.path.dirname(self.fname)
+        fname = os.path.join(
+            BDP, 'disaggregation', 'test_case01', 'analysis.xml')
+        an01 = Analysis.read(fname)
+        root_path = os.path.dirname(fname)
         rlzs, poes, weights = an01.read_dstores(root_path, 'mde', 'PGA')
-        self.assertEqual(['a', 'b'], list(poes.keys()))
+        self.assertEqual(['a', 'b'], list(poes))
         self.assertEqual((17, 17, 8, 24), poes['a'].shape)

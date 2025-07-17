@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -217,7 +216,7 @@ class Analysis:
         """
         out = set()
         for bsid in self.bsets:
-            for key in self.bsets[bsid]['data'].keys():
+            for key in self.bsets[bsid]['data']:
                 out = out.union(set([key]))
         return out
 
@@ -321,7 +320,7 @@ class Analysis:
         Get the imls
         """
         dstores = self.get_dstores(root_path)
-        keys = list(dstores.keys())
+        keys = list(dstores)
         dstore = dstores[keys[0]]
         oqp = dstore['oqparam']
         return oqp.hazard_imtls
@@ -463,7 +462,7 @@ def get_patterns(rlzs: dict, an01: Analysis):
         uncertainties.
     """
     patterns = {}
-    for bsid in an01.bsets.keys():
+    for bsid in an01.bsets:
 
         # Info
         msg = f"Creating patterns for branch set {bsid:s}"
@@ -471,7 +470,7 @@ def get_patterns(rlzs: dict, an01: Analysis):
 
         # Processing the sources in the branchset bsid
         patterns[bsid] = {}
-        for sid in an01.bsets[bsid]['data'].keys():
+        for sid in an01.bsets[bsid]['data']:
 
             # Info
             msg = f"   Source: {sid:s}"
