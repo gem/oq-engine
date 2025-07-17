@@ -125,6 +125,13 @@ class Analysis:
         calcs = {}  # i.e. {'a': './out_a/calc_8509.hdf5', ...}
         src_ids = set()
         for calc in root.findall(PATH_CALC):
+            # Check duplicated IDs
+            if calc.attrib['sourceID'] in src_ids:
+                msg = "Duplicated src ID in the definition of datastores"
+                msg += f" Check: {calc.attrib['sourceID']}"
+                raise ValueError(msg)
+
+            # Read or compute the datastore
             if 'datastore' in calc.attrib:
                 dstore = os.path.join(root_path, calc.attrib['datastore'])
             else:
@@ -134,14 +141,8 @@ class Analysis:
             # Dictionary with the path to the .hdf5 file with the datastore
             calcs[calc.attrib['sourceID']] = dstore
 
-            # Check duplicated IDs
-            if calc.attrib['sourceID'] in src_ids:
-                msg = "Duplicated src ID in the definition of datastores"
-                msg += f" Check: {calc.attrib['sourceID']}"
-                raise ValueError(msg)
-
             # Updating the set of src IDs
-            src_ids = src_ids | set(calc.attrib['sourceID'])
+            src_ids.add(calc.attrib['sourceID'])
 
         # Reading info about correlated uncertainties i.e. branch sets
         bsets = {}
@@ -202,14 +203,14 @@ class Analysis:
         # Initializing the Analysis object
         return cls(bsets, corbs_per_src, corbs_bs_id, calcs, root_path)
 
+    # this is not used
     def get_srcIDs_with_correlations(self):
         """
         Returns a set with the IDs of the sources with correlated uncertainties
         """
         out = set()
         for bsid in self.bsets:
-            for key in self.bsets[bsid]['data']:
-                out = out.union(set([key]))
+            out |= self.bsets[bsid]['data']
         return out
 
     def get_sets(self):
@@ -310,11 +311,7 @@ class Analysis:
 
         # For each source we read information in the corresponding datastore
         for key in self.calcs:
-
             fname = self.calcs[key]
-            if not re.search('^/', fname):
-                fname = os.path.abspath(os.path.join(root_path, fname))
-
             msg = f"Source: {key} - File: {os.path.basename(fname)}"
             logging.info(msg)
 
