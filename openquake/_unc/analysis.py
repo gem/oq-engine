@@ -215,30 +215,29 @@ class Analysis:
     def get_sets(self):
         """
         :returns:
-            A tuple. The first element 'ssets' contains a list of sets.
-            Each set is a list of source IDs sharing some correlation. The
-            second list contains sets with the IDs of the branch sets with
+            A pair of lists of sets. In the first
+            each set contains source IDs sharing some correlation.
+            In the second each set contains the IDs of the branch sets with
             correlations (note that the branch set ID refers to the ones
             included in the .xml file used to instantiate the `Analysis`
-            object.
+            object).
         """
         ssets = []
         bsets = []
-
         # Process all the correlated branch sets
         for bsid in sorted(self.bsets):
             found = False
-            sidset = set(self.bsets[bsid]['data'])
+            srcids = set(self.bsets[bsid]['data'])
 
             # If true, this source is in the current branch set
             for i, sset in enumerate(ssets):
-                if sidset & sset:
-                    ssets[i] = sidset | ssets[i]
-                    bsets[i] = set([bsid]) | bsets[i]
+                if srcids & sset:
+                    ssets[i] |= srcids
+                    bsets[i] |= {bsid}
                     found = True
                     continue
             if not found:
-                ssets.append(sidset)
+                ssets.append(srcids)
                 bsets.append({bsid})
 
         # Adding uncorrelated sources
@@ -249,44 +248,12 @@ class Analysis:
                     found = True
                     continue
             if not found:
-                ssets.append(set([src_id]))
+                ssets.append({src_id})
                 bsets.append(None)
 
-        return ssets, bsets
-
-    def get_sets_old(self):
-        """
-        Returns a list of sets. Each set contains the IDs of correlated
-        sources.
-        """
-        ssets = []
-        bsets = []
-        # Process all the source IDs
-        for srcid in sorted(self.calcs):
-            # Process the given (correlated) branchset
-            found = False
-            for key in sorted(self.bsets):
-                bset = self.bsets[key]
-                # If any of the source IDs for the current branchset is in
-                # one output set then we add all the source IDs since they
-                # will be all correlated
-                srcs_ids = set(bset['sid'])
-                # If true, this source is in the current branch set
-                if srcid in srcs_ids:
-                    # Process the current set. If one of the sources in the
-                    # current branch set is in one of the output sets, update
-                    # the output set with the additional correlated src_ids
-                    for i in range(len(ssets)):
-                        if srcs_ids & ssets[i]:
-                            ssets[i] = srcs_ids | ssets[i]
-                            bsets[i] = set([key]) | bsets[i]
-                            found = True
-                            continue
-            # Updating the output set with a new group containing an
-            # uncorrelated source id
-            if not found:
-                ssets.append({srcid})
-                bsets.append({key})
+        # in analysis_test we have
+        # ssets = [{'b', 'a', 'c'}, {'d'}]
+        # bsets = [{'bs2', 'bs1'}, None]
         return ssets, bsets
 
     def get_dstores(self):
@@ -304,24 +271,18 @@ class Analysis:
         dstore = list(self.get_dstores().values())[0]
         return dstore['oqparam'].hazard_imtls
 
-    def get_weights_from_dstore(self, dstore, srcid):
+    def get_bpaths_weights(self, dstore, srcid):
         """
-        Get the weights of the realisations in the datastore for a given
-        source.
-
         :param dstore:
             A :class:`openquake.commonlib.datastore.DataStore` instance
-        :param srdid:
+        :param srcid:
             The ID of the source
         :returns:
-            A tuple with the list of the realisations and an array with the
-            corresponding weights.
+            Branch paths and corresponding weights
         """
         weights = dstore['weights'][:]
-        rlz = []
-        for k in dstore['full_lt'].rlzs['branch_path']:
-            rlz.append(k)
-        return rlz, weights
+        bpaths = dstore['full_lt'].rlzs['branch_path']
+        return bpaths, weights
 
     def read_dstores(self, root_path: str, atype: str, imtstr: str):
         """

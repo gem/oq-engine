@@ -106,7 +106,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
                 bs_sids = list(an01.bsets[bsid]['data'].keys())
 
                 # Realisations for the first source
-                rlzs, wei = an01.get_weights_from_dstore(
+                rlzs, wei = an01.get_bpaths_weights(
                     dstores[bs_sids[0]], bs_sids[0])
 
                 # These are the weights assigned to each group of correlated
@@ -170,7 +170,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
                 # investigated. `wei` contains the weights assigned to each one
                 # of the realizations admitted by the logic tree of the current
                 # source
-                _, wei = an01.get_weights_from_dstore(dstores[sid], sid)
+                _, wei = an01.get_bpaths_weights(dstores[sid], sid)
 
                 # Array where we store the indexes of the sampled realisations
                 idx_rlzs = np.zeros((nsam), dtype=int)
@@ -208,7 +208,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
 
             # Get realisations and weights for the source currently
             # investigated
-            rlzs, wei = an01.get_weights_from_dstore(dstores[sid], sid)
+            rlzs, wei = an01.get_bpaths_weights(dstores[sid], sid)
 
             # Sampling of results
             iii = np.arange(0, len(wei))
