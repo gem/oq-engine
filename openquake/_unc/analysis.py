@@ -430,8 +430,8 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
     """# in the analysis_test patterns is the following dictionary:
     {'bs1': {'b': ['^...A.~.', '^...B.~.'],
              'c': ['^....A.~.', '^....B.~.']},
-      'bs2': {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
-              'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}}
+     'bs2': {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
+             'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}}
     """
     return patterns
 
