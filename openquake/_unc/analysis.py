@@ -364,7 +364,7 @@ class Analysis:
             gmc = []
             for k in dstore['full_lt'].rlzs['branch_path']:
                 smpath, gspath = k.split('~')
-                ssc.append(list(smpath))
+                ssc.append(smpath)
                 gmc.append(gspath)
                 rlz.append(k)
 
@@ -412,13 +412,12 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             # Create the general pattern. This will select everything
             # e.g. '.+.+.+~.+'
             patterns[bsid][srcid] = {}
-            nssc = 1 if len(rlzs[srcid][0].shape) == 1 else rlzs[srcid][0].shape[1]
-            tmpssc = '..' + ''.join(['.' for i in range(2, nssc)])
-
-            ngmc = 1 if len(rlzs[srcid][1].shape) == 1 else rlzs[srcid][1].shape[1]
+            smpaths, gspaths, _ = rlzs[srcid]
+            nssc = len(smpaths[0])
+            tmpssc = '..' + ''.join('.' for i in range(2, nssc))
+            ngmc = len(gspaths[0])
             tmpgmc = ''.join('.' for i in range(ngmc))
-            pattern = '^' + tmpssc + '~'+tmpgmc
-
+            pattern = '^' + tmpssc + '~' + tmpgmc
             # Find the index in the pattern where we replace the '.' with the
             # ID of the branches that are correlated.
             ordinal = int(an01.bsets[bsid]['data'][srcid]['ordinal'])
@@ -426,13 +425,13 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             # + 1 for the first element (that uses two letters)
             idx = ordinal + 1 + 1
             is_gmc = an01.bsets[bsid]['logictree'] == 'gmc'
-            idx = nssc + idx if is_gmc else idx
-            itype = 1 if is_gmc else 0
-            iii = (slice(None, None, None))
-            if len(rlzs[srcid][itype].shape) > 1:
-                iii = (slice(None, None, None), ordinal+1)
+            if is_gmc:
+                paths = rlzs[srcid][1]
+                idx += nssc
+            else:
+                paths = [bpath[ordinal + 1] for bpath in rlzs[srcid][0]]
             temp_patterns = []
-            for key in np.unique(rlzs[srcid][itype][iii]):
+            for key in np.unique(paths):
                 tmp = pattern[:idx] + key + pattern[idx+1:]
                 temp_patterns.append(tmp)
             patterns[bsid][srcid] = temp_patterns
