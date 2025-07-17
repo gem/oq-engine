@@ -49,21 +49,9 @@ NS = "{http://openquake.org/xmlns/nrml/0.5}"
 # Paths
 PATH_CALC = "{0:s}calculations/{0:s}calc".format(NS)
 PATH_UNC = "{0:s}uncertainties/".format(NS)
-PATH_SIDS = "{:s}sourceIDs".format(NS)
+PATH_SRC_IDS = "{:s}sourceIDs".format(NS)
 PATH_BSIDS = "{:s}branchSetID".format(NS)
 PATH_ORDINAL = "{:s}branchSetOrdinal".format(NS)
-
-
-def split_rlz_pattern(lt_str: str):
-    """
-    Splits a LT pattern in two components. One for the SSC and one for the GMC
-
-    :param lt_str:
-        A string with a LT path
-    """
-    ssc_labels = [i for i in re.split('~', lt_str)[0]]
-    gmc_labels = re.split('~', lt_str)[1]
-    return ssc_labels, gmc_labels
 
 
 class Analysis:
@@ -74,7 +62,7 @@ class Analysis:
     :param bsets:
         A dictionary with branchset ID as keys and a dictionary with various
         information as value. Dictionary content:
-        - sids: IDs of the sources
+        - src_ids: IDs of the sources
         - bsids: IDs of the branches in the original LTs
         - utype: Type of uncertainty
         - logictree: Type of LT (ssc or gmc)
@@ -169,13 +157,13 @@ class Analysis:
             bsid = bs.attrib['branchSetID']
             utype = bs.attrib['uncertaintyType'].encode()
             logictree = bs.attrib['logicTree']
-            sids = bs.findall(PATH_SIDS)[0].text.split(' ')
+            src_ids = bs.findall(PATH_SRC_IDS)[0].text.split(' ')
             bsids = bs.findall(PATH_BSIDS)[0].text.split(' ')
 
             # Here we should check that the uncertainties in the analysis .xml
             # file are the same used for the various sources
             ordinal = []
-            for sid in sids:
+            for sid in src_ids:
                 fname = calcs[sid]
                 dstore = datastore.read(fname)
                 tmp = dstore.getitem('full_lt/source_model_lt')['utype']
@@ -197,10 +185,10 @@ class Analysis:
             # - Type of uncertainty
             # - Type of LT (ssc or gmc)
             # - Ordinal of the branchsets in their LTs
-            bsets[bsid] = {'sid': sids, 'bsids': bsids, 'utype': utype,
+            bsets[bsid] = {'sid': src_ids, 'bsids': bsids, 'utype': utype,
                            'logictree': logictree, 'ordinal': ordinal}
             data = {}
-            for i, sid in enumerate(sids):
+            for i, sid in enumerate(src_ids):
                 data[sid] = {'bsid': bsids[i], 'ordinal': ordinal[i]}
             bsets[bsid] = {'utype': utype, 'logictree': logictree,
                            'data': data}
@@ -208,7 +196,7 @@ class Analysis:
             # For each source ID we store the ordinal of the branchset
             # containing the uncertainty here considered. Note that the
             # ordinal can be either for the SSC or the GMC.
-            for sid, odn in zip(sids, ordinal):
+            for sid, odn in zip(src_ids, ordinal):
                 corbs_per_src[(sid, int(odn), logictree)] = bsid
 
         # Initializing the Analysis object
@@ -240,7 +228,7 @@ class Analysis:
         # Process all the correlated branch sets
         for bsid in sorted(self.bsets):
             found = False
-            sidset = set(list(self.bsets[bsid]['data']))
+            sidset = set(self.bsets[bsid]['data'])
 
             # If true, this source is in the current branch set
             for i, sset in enumerate(ssets):
@@ -251,17 +239,17 @@ class Analysis:
                     continue
             if not found:
                 ssets.append(sidset)
-                bsets.append(set([bsid]))
+                bsets.append({bsid})
 
         # Adding uncorrelated sources
-        for sid in self.calcs:
+        for src_id in self.calcs:
             found = False
             for sset in ssets:
-                if sid in sset:
+                if src_id in sset:
                     found = True
                     continue
             if not found:
-                ssets.append(set([sid]))
+                ssets.append(set([src_id]))
                 bsets.append(None)
 
         return ssets, bsets
@@ -297,37 +285,24 @@ class Analysis:
             # Updating the output set with a new group containing an
             # uncorrelated source id
             if not found:
-                ssets.append(set(srcid))
-                bsets.append(set([key]))
+                ssets.append({srcid})
+                bsets.append({key})
         return ssets, bsets
 
-    def get_dstores(self, root_path=None):
+    def get_dstores(self):
         """
-        Get the OQ datastores instances for the sources considered in the
-        analysis
+        Get the datastores instances for the sources considered in the
+        analysis, sorted by source id.
         """
+        return {src_id: datastore.read(fname)
+                for src_id, fname in sorted(self.calcs.items())}
 
-        if root_path is None:
-            root_path = self.root_path
-
-        # For each source we read information in the corresponding datastore
-        dstores = {}
-        for key in sorted(self.calcs):
-            fname = self.calcs[key]
-            if not re.search('^/', fname):
-                fname = os.path.abspath(os.path.join(self.root_path, fname))
-            dstores[key] = datastore.read(fname)
-        return dstores
-
-    def get_imls(self, root_path=None):
+    def get_imtls(self):
         """
-        Get the imls
+        Get the imtls
         """
-        dstores = self.get_dstores(root_path)
-        keys = list(dstores)
-        dstore = dstores[keys[0]]
-        oqp = dstore['oqparam']
-        return oqp.hazard_imtls
+        dstore = list(self.get_dstores().values())[0]
+        return dstore['oqparam'].hazard_imtls
 
     def get_weights_from_dstore(self, dstore, srcid):
         """
@@ -430,11 +405,9 @@ class Analysis:
             ssc = []
             gmc = []
             for k in dstore['full_lt'].rlzs['branch_path']:
-                # atmp and btmp are lists with 1 character strings
-                atmp, btmp = split_rlz_pattern(k)
-                logging.debug(k)
-                ssc.append(atmp)
-                gmc.append(btmp)
+                smpath, gspath = k.split('~')
+                ssc.append(list(smpath))
+                gmc.append(gspath)
                 rlz.append(k)
 
             # This dictionary [where keys are the source IDs] contains two

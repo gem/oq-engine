@@ -169,7 +169,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
 
         if PLOTTING:
-            imtls = alys.get_imls()
+            imtls = alys.get_imtls()
             mtx = computed_mtx
             idx = np.where(np.isfinite(mtx))
             iii = mtx[idx[0], idx[1]] > 1e-20
