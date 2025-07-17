@@ -41,7 +41,6 @@ from openquake.commonlib import datastore
 from openquake.calculators.base import dcache
 from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore as afes_ds_mde
 from openquake._unc.dtypes.dsg_md import get_afes_from_dstore as afes_ds_md
-from openquake._unc.dtypes.dsg_m import get_afes_from_dstore as afes_ds_m
 
 
 # Setting namespace
@@ -107,6 +106,7 @@ class Analysis:
             calculations performed and the possible correlation of
             uncertainties between the LTs of individual sources
         """
+
         # TODO
         # Add the following checks:
         # - We have a datastore for each source correlated
@@ -306,8 +306,11 @@ class Analysis:
             msg = f"Source: {key} - File: {os.path.basename(fname)}"
             logging.info(msg)
 
-            # Read data from datastore
+            # Create the datastore
+            dstore = datastore.read(fname)
             imti = list(dstore['oqparam'].imtls).index(imtstr)
+
+            # Read data from datastore
             if atype == 'hcurves':
                 # Read HC dataset. It has the following shape S x R x I x L
                 # S - number of sites
@@ -337,7 +340,7 @@ class Analysis:
             elif atype == 'm':
                 # Read disagg results. Matrix shape is 7D
                 binc, poes[key], _, shapes = afes_ds_md(dstore, imti)
-                # ASK Msrco: why not afes_ds_m(dstore, imti)?
+                # ASK Marco: why not afes_ds_m(dstore, imti)?
                 # it breaks test_m_convolution_source_b
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
