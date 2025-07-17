@@ -1,4 +1,29 @@
-# -*- coding: utf-8 -*-
+#
+# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
+# Copyright (C) 2025 GEM Foundation
+#
+#                `.......      `....     `..`...     `..`... `......
+#                `..    `..  `..    `..  `..`. `..   `..     `..
+#                `..    `..`..        `..`..`.. `..  `..     `..
+#                `.......  `..        `..`..`..  `.. `..     `..
+#                `..       `..        `..`..`..   `. `..     `..
+#                `..         `..     `.. `..`..    `. ..     `..
+#                `..           `....     `..`..      `..     `..
+#
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# -----------------------------------------------------------------------------
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # 
 # Copyright (C) 2025, GEM Foundation
@@ -29,15 +54,16 @@ from openquake._unc.bins import get_bins_data, get_bins_from_params
 #      frequencies of exceeedance """
 
 
-def get_afes_from_dstore(dstore, imtstr: str, info: bool=False, idxs: list=[]):
+def get_afes_from_dstore(dstore, imt_idx: int, info: bool = False,
+                         idxs: list = []):
     """
     Pulls from the datastore the poes for a given IMT and convert them to afes
     (we assume the dstore contains only 1 site).
 
     :param dstore:
         Instance of :class:`openquake.commonlib.datastore.DataStore`
-    :param imtstr:
-        A string specifying the intensity measure type of interest
+    :param imt_idx:
+        Index specifying the intensity measure type of interest
     :param info:
         [optional] A boolean controlling the amont of information provided
     :param idxs:
@@ -56,14 +82,7 @@ def get_afes_from_dstore(dstore, imtstr: str, info: bool=False, idxs: list=[]):
 
     # Read oq parameters
     oqp = dstore['oqparam']
-
-    # Check
-    msg = f"The datastore does not include results for {imtstr}"
-    if imtstr not in oqp.hazard_imtls:
-        raise ValueError(msg)
-
-    # Index of the selected IMT
-    imt_idx = list(oqp.hazard_imtls).index(imtstr)
+    imtstr = list(oqp.imtls)[imt_idx]
 
     # Read the poes and convert them into frequencies. The Mag_Dist
     # matrix has the following dimensions:
