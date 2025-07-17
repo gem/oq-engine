@@ -1,3 +1,29 @@
+#
+# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
+# Copyright (C) 2025 GEM Foundation
+#
+#                `.......      `....     `..`...     `..`... `......
+#                `..    `..  `..    `..  `..`. `..   `..     `..
+#                `..    `..`..        `..`..`.. `..  `..     `..
+#                `.......  `..        `..`..`..  `.. `..     `..
+#                `..       `..        `..`..`..   `. `..     `..
+#                `..         `..     `.. `..`..    `. ..     `..
+#                `..           `....     `..`..      `..     `..
+#
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# -----------------------------------------------------------------------------
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding: utf-8
 
@@ -7,7 +33,7 @@ import unittest
 import numpy as np
 
 from openquake._unc.bins import get_bins_from_params
-from openquake.calculators.base import run_calc
+from openquake.calculators.base import dcache
 from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore, get_histograms
 
 # This file folder
@@ -26,7 +52,7 @@ class HistogramMDETestCase(unittest.TestCase):
     def test_get_histograms(self):
         job_ini = os.path.join(TFF, 'data_calc', 'disaggregation',
                                'test_case01', 'job_a.ini')
-        dstore = run_calc(job_ini).datastore
+        dstore = dcache.get(job_ini)
         binc, afes, weights, shapes = get_afes_from_dstore(dstore, 'PGA')
 
         # Check the centers of the bins
@@ -58,7 +84,7 @@ class HistogramMDETestCase(unittest.TestCase):
 
         # The sum of the histograms (which are normalised) must be equal to
         # the number of M-D-e combinations with values different than 0
-        self.assertAlmostEqual(smm, cnt)
+        aae(smm, cnt, decimal=5)
 
         if PLOT:
             from bokeh.models import HoverTool

@@ -6,8 +6,7 @@ import pathlib
 import unittest
 import numpy as np
 
-from openquake.commonlib import datastore
-from openquake.calculators.base import run_calc
+from openquake.calculators.base import dcache
 from openquake._unc.hcurves_dist import get_stats
 
 from openquake._unc.hazard_pmf import get_hazard_pmf
@@ -33,8 +32,7 @@ class SingleSourceTestCase(unittest.TestCase):
         # Single source disaggregation
         job_ini = os.path.join(TFF, 'data_calc', 'disaggregation',
                                'test_case_non_param', 'jobD.ini')
-        calc = run_calc(job_ini)
-        dstore = calc.datastore
+        dstore = dcache.get(job_ini)
         oqp = dstore['oqparam']
         rmap = dstore['best_rlzs'][0]
         expct = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
