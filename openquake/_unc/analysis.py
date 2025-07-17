@@ -37,6 +37,7 @@ import logging
 import numpy as np
 
 from openquake.commonlib import datastore
+from openquake.calculators.base import dcache
 from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore as afes_ds_mde
 from openquake._unc.dtypes.dsg_md import get_afes_from_dstore as afes_ds_md
 
@@ -135,9 +136,14 @@ class Analysis:
         calcs = {}  # i.e. {'a': './out_a/calc_8509.hdf5', ...}
         src_ids = set()
         for calc in root.findall(PATH_CALC):
+            if 'datastore' in calc.attrib:
+                dstore = os.path.join(root_path, calc.attrib['datastore'])
+            else:
+                ini = os.path.join(root_path, calc.attrib['ini'])
+                dstore = dcache.get(ini).filename
 
             # Dictionary with the path to the .hdf5 file with the datastore
-            calcs[calc.attrib['sourceID']] = calc.attrib['datastore']
+            calcs[calc.attrib['sourceID']] = dstore
 
             # Check duplicated IDs
             if calc.attrib['sourceID'] in src_ids:
@@ -170,7 +176,6 @@ class Analysis:
             ordinal = []
             for sid in sids:
                 fname = calcs[sid]
-                fname = os.path.abspath(os.path.join(root_path, fname))
                 dstore = datastore.read(fname)
                 tmp = dstore.getitem('full_lt/source_model_lt')['utype']
                 unique = []
