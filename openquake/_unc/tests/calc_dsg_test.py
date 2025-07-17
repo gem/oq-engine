@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -37,6 +36,7 @@ import matplotlib.pyplot as plt
 from openquake._unc.tests.utils_plot_dsg import plot_dsg_md
 from openquake.baselib import hdf5
 from openquake.commonlib import datastore
+from openquake.calculators.base import dcache
 from openquake._unc.hazard_pmf import get_mde_from_2d, get_md_from_2d
 from openquake._unc.hcurves_dist import to_matrix, get_stats
 from openquake._unc.calc.propagate_uncertainties import (
@@ -56,28 +56,22 @@ PLOTTING = False
 class BasicCalcsTestCase(unittest.TestCase):
 
     def test01(self):
-        tpath = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01')
+        path = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01')
+        dstore = dcache.get(os.path.join(path, 'job_all.ini'))
+        rmap = dstore['best_rlzs'][0]
+        res_all = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
+        wei_all = dstore['weights'][:][rmap]
 
-        fname = os.path.join(tpath, 'out_all', 'calc_1980.hdf5')
-        dstore = datastore.read(fname)
-        rmap = dstore.get('best_rlzs', None)[:][0]
-        res_all = dstore.get('disagg-rlzs/Mag', None)[0, :, 0, 0, :]
-        wei_all = dstore.get('weights', None)[:]
-        wei_all = wei_all[rmap]
-
-        fname = os.path.join(tpath, 'out_a', 'calc_1978.hdf5')
-        dstore = datastore.read(fname)
+        dstore = dcache.get(os.path.join(path, 'job_a.ini'))
         rmap = dstore.get('best_rlzs', None)[:][0]
         res_a = dstore.get('disagg-rlzs/Mag', None)[0, :, 0, 0, :]
         wei_a = dstore.get('weights', None)[:]
         wei_a = wei_a[rmap]
 
-        fname = os.path.join(tpath, 'out_b', 'calc_1979.hdf5')
-        dstore = datastore.read(fname)
-        rmap = dstore.get('best_rlzs', None)[:][0]
-        res_b = dstore.get('disagg-rlzs/Mag', None)[0, :, 0, 0, :]
-        wei_b = dstore.get('weights', None)[:]
-        wei_b = wei_b[rmap]
+        dstore = dcache.get(os.path.join(path, 'job_b.ini'))
+        rmap = dstore['best_rlzs'][0]
+        res_b = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
+        wei_b = dstore['weights'][:][rmap]
 
         mags_b = dstore.get('disagg-bins/Mag', None)
         mags_b = mags_b[:-1] + np.diff(mags_b) / 2
@@ -95,7 +89,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
     @unittest.skip('not ready')
     def test_mde_convolution(self):
-        """ Convolution mde test case """
+        # Convolution mde test case
 
         tmp_path = os.path.join(TFF, 'data_calc', 'disaggregation',
                                 'test_case01')
@@ -187,7 +181,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
             fig.show()
 
     def test_md_convolution(self):
-        """ Convolution md test case """
+        # Convolution md test case
 
         tmp_path = os.path.join(TFF, 'data_calc', 'disaggregation',
                                 'test_case01')
@@ -206,15 +200,11 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
         # Expected results
         tpath = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01')
-        fname = os.path.join(tpath, 'out_all', 'calc_1980.hdf5')
-        f = hdf5.File(fname, "r")
+        dstore = dcache.get(os.path.join(tpath, 'job_all.ini'))
 
-        expct = f['disagg-rlzs/Mag_Dist'][0, :, :, 0, 0, :]
-        rmap = f['best_rlzs'][:]
-        weights = f['weights'][:]
-        weights = weights[rmap]
-
-        dstore = datastore.read(fname)
+        expct = dstore['disagg-rlzs/Mag_Dist'][0, :, :, 0, 0, :]
+        rmap = dstore['best_rlzs'][:]
+        weights = dstore['weights'][:][rmap]
         oqp = dstore['oqparam']
 
         oute = []
@@ -269,7 +259,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         plot_dsg_md(d_cen, m_cen, mtxe, conf)
 
     def test_m_convolution(self):
-        """ Convolution m test case """
+        # Convolution m test case
 
         tmp_path = os.path.join(TFF, 'data_calc', 'disaggregation',
                                 'test_case01')
@@ -288,19 +278,15 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
         # Expected results - Realizations
         tpath = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01')
-        fname = os.path.join(tpath, 'out_all', 'calc_1980.hdf5')
-        dstore = datastore.read(fname)
-        res = dstore.get('disagg-stats/Mag', None)[0, :, 0, 0, 0]
-        rmap = dstore.get('best_rlzs', None)[:][0]
+        dstore = dcache.get(os.path.join(tpath, 'job_all.ini'))
+        res = dstore['disagg-stats/Mag'][0, :, 0, 0, 0]
+        rmap = dstore['best_rlzs'][0]
 
         # Expected results - Mean disaggregation
-        f = hdf5.File(fname, "r")
-        expct = f['disagg-rlzs/Mag'][0, :, 0, 0, :]
-        weights = f['weights'][:]
-        weights = weights[rmap]
+        expct = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
+        weights = dstore['weights'][:][rmap]
 
         # Open datastore and read oq params
-        dstore = datastore.read(fname)
         oqp = dstore['oqparam']
 
         oute = []
@@ -358,7 +344,6 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 def get_data(alys, out):
     mag = alys.dsg_mag[:-1] + np.diff(alys.dsg_mag) / 2
     dst = alys.dsg_dst[:-1] + np.diff(alys.dsg_dst) / 2
-
     data = []
     for imag in range(alys.shapes[0]):
         for idst in range(alys.shapes[1]):
