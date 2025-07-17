@@ -65,7 +65,7 @@ class ResultsCalculationTestCase01(unittest.TestCase):
     """
 
     def test_against_oq(self):
-        """ Convolution Vs OQ """
+        # Convolution Vs OQ
 
         # Convolution
         fname = os.path.join(TFF, 'data_calc', 'test_case01_convolution.ini')
@@ -145,7 +145,7 @@ class ResultsCalculationTestCase01(unittest.TestCase):
 class ResultsCalculationTestCase02(unittest.TestCase):
 
     def test_convolution(self):
-        """ Convolution test case """
+        # Convolution test case
 
         fname = os.path.join(TFF, 'data_calc', 'test_case02_convolution.ini')
         tmpdir = tempfile.mkdtemp()
@@ -211,14 +211,13 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             plt.show()
 
     def test_sampling(self):
-        """ Sampling test case """
-        # Compute sampling
+        # Sampling test case
         fname = os.path.join(TFF, 'data_calc', 'test_case02_sampling.ini')
         tmpdir = tempfile.mkdtemp()
         imls, afes, _ = propagate(fname, override_folder_out=tmpdir)
 
     def test_comparison(self):
-        """ Comparing results from convolution and sampling """
+        # Comparing results from convolution and sampling
 
         # Compute convolution
         fname = os.path.join(TFF, 'data_calc', 'test_case02_convolution.ini')
@@ -304,7 +303,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
 
     @pytest.mark.slow
     def test_02_performance(self):
-        """ Comparing results from convolution and sampling - test 02"""
+        # Comparing results from convolution and sampling - test 02
 
         fname_c = os.path.join(TFF, 'data_calc', 'test_case02_convolution.ini')
         conf_conv = configparser.ConfigParser()
