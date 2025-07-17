@@ -33,7 +33,7 @@ import unittest
 import numpy as np
 
 from openquake._unc.bins import get_bins_from_params
-from openquake.calculators.base import run_calc
+from openquake.calculators.base import dcache
 from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore, get_histograms
 
 # This file folder
@@ -52,8 +52,8 @@ class HistogramMDETestCase(unittest.TestCase):
     def test_get_histograms(self):
         job_ini = os.path.join(TFF, 'data_calc', 'disaggregation',
                                'test_case01', 'job_a.ini')
-        dstore = run_calc(job_ini).datastore
-        binc, afes, weights, shapes = get_afes_from_dstore(dstore, 0)
+        dstore = dcache.get(job_ini)
+        binc, afes, weights, shapes = get_afes_from_dstore(dstore, 'PGA')
 
         # Check the centers of the bins
         expected = np.array([5.0, 15, 25, 35, 45, 55, 65, 75, 85, 95, 110, 130,

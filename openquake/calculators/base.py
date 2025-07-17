@@ -26,6 +26,7 @@ import inspect
 import logging
 import operator
 import traceback
+import tempfile
 import getpass
 from datetime import datetime
 from shapely import wkt
@@ -1691,6 +1692,44 @@ def create_risk_by_event(calc):
                  [(dc, F32) for dc in crmodel.get_dmg_csq()])
         dstore.create_df('risk_by_event', descr, K=K,
                          L=len(oq.loss_types), limit_states=dmgs)
+
+
+class DstoreCache:
+    """
+    Datastore cache based on a file called 'ini_hdf5.csv'
+    containing associations job.ini -> calc_XXX.hdf5
+    """
+    def __init__(self, dirpath):
+        self.ini_hdf5_csv = os.path.join(dirpath or tempfile.gettempdir(),
+                                         'ini_hdf5.csv')
+
+    def read(self):
+        cache = {}
+        if not os.path.exists(self.ini_hdf5_csv):
+            return cache
+        with open(self.ini_hdf5_csv, 'rt') as f:
+            for line in f:
+                ini, hdf5 = line.split(',')
+                cache[ini] = hdf5[:-1]  # strip trailing \n
+        return cache
+
+    def get(self, ini):
+        assert ',' not in ini, ini
+        cache = self.read()
+        if ini in cache:
+            return datastore.read(cache[ini])
+        dstore = run_calc(ini).datastore
+        cache[ini] = dstore.filename
+        assert ',' not in cache[ini], cache[ini]
+        with open(self.ini_hdf5_csv, 'w') as f:
+            for ini, h5 in sorted(cache.items()):
+                print(f'{ini},{h5}', file=f)
+        return dstore
+
+    def clear(self):
+        os.remove(self.ini_hdf5_csv)
+
+dcache = DstoreCache(config.directory.custom_tmp)
 
 
 def run_calc(job_ini, **kw):

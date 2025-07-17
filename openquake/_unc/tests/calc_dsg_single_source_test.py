@@ -32,7 +32,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import EngFormatter
 
-from openquake.calculators.base import run_calc
+from openquake.calculators.base import dcache
 from openquake._unc.hcurves_dist import get_stats
 from openquake._unc.hazard_pmf import get_hazard_pmf
 from openquake._unc.hazard_pmf import afes_matrix_from_dstore
@@ -112,25 +112,25 @@ class SingleSourceTestCase(unittest.TestCase):
         # Convolution m test case - source a
         # This is the disaggregation just for source a of the total hazard
         # i.e. source a + source b contributions
-        calc = run_calc(os.path.join(TFF, 'data_calc', 'disaggregation',
-                                     'test_case00', 'job_a.ini'))
-        _test(calc.datastore)
+        dstore = dcache.get(os.path.join(TFF, 'data_calc', 'disaggregation',
+                                         'test_case00', 'job_a.ini'))
+        _test(dstore)
 
     def test_m_convolution_source_b(self):
         # Convolution m test case - source b
         # This is the disaggregation just for source a of the total hazard
         # i.e. source a + source b contributions
-        calc = run_calc(os.path.join(TFF, 'data_calc', 'disaggregation',
-                                     'test_case00', 'job_b.ini'))
-        _test(calc.datastore)
+        dstore = dcache.get(os.path.join(TFF, 'data_calc', 'disaggregation',
+                                         'test_case00', 'job_b.ini'))
+        _test(dstore)
 
     def test_m_convolution_source_only_b(self):
         # Convolution m test case - source b only
         # This is the disaggregation just for source a of the hazard from
         # source b contributions
-        calc = run_calc(os.path.join(TFF, 'data_calc', 'disaggregation',
-                                     'test_case00', 'job_b_only.ini'))
-        _test(calc.datastore)
+        dstore = dcache.get(os.path.join(TFF, 'data_calc', 'disaggregation',
+                                         'test_case00', 'job_b_only.ini'))
+        _test(dstore)
 
 
 def plot_comparison(hists, oute, idxe, mags, mean, oqp):
