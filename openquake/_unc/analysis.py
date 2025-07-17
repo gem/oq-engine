@@ -376,7 +376,7 @@ class Analysis:
         return rlzs, poes, weights
 
 
-def get_patterns(rlzs: dict, an01: Analysis):
+def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
     """
     Computes the patterns needed to select realizations from a source-specific
     logic tree
@@ -387,7 +387,7 @@ def get_patterns(rlzs: dict, an01: Analysis):
     :param an01:
         An instance of :class:`openquake._unc.analysis.Analysis`
     :param verbose:
-        A boolean controlling the l
+        A boolean controlling the logging
     :returns:
         A dictionary with key the ID of the branch set with correlated
         uncertainties (IDs as defined in the `analysis.xml` input file) and
@@ -399,33 +399,29 @@ def get_patterns(rlzs: dict, an01: Analysis):
     patterns = {}
     for bsid in an01.bsets:
 
-        # Info
-        msg = f"Creating patterns for branch set {bsid:s}"
-        logging.info(msg)
+        if verbose:
+            logging.info(f"Creating patterns for branch set {bsid}")
 
         # Processing the sources in the branchset bsid
         patterns[bsid] = {}
-        for sid in an01.bsets[bsid]['data']:
-
-            # Info
-            msg = f"   Source: {sid:s}"
-            logging.info(msg)
-            logging.debug(rlzs[sid])
+        for srcid in an01.bsets[bsid]['data']:
+            if verbose:
+                logging.info(f"   Source: {srcid}")
+                logging.debug(rlzs[srcid])
 
             # Create the general pattern. This will select everything
             # e.g. '.+.+.+~.+'
-            patterns[bsid][sid] = {}
-            nssc = 1 if len(rlzs[sid][0].shape) == 1 else rlzs[sid][0].shape[1]
-            # tmpssc = ''.join(['.+' for i in range(nssc)])
+            patterns[bsid][srcid] = {}
+            nssc = 1 if len(rlzs[srcid][0].shape) == 1 else rlzs[srcid][0].shape[1]
             tmpssc = '..' + ''.join(['.' for i in range(2, nssc)])
 
-            ngmc = 1 if len(rlzs[sid][1].shape) == 1 else rlzs[sid][1].shape[1]
-            tmpgmc = ''.join(['.' for i in range(ngmc)])
-            pattern = '^'+tmpssc+'~'+tmpgmc
+            ngmc = 1 if len(rlzs[srcid][1].shape) == 1 else rlzs[srcid][1].shape[1]
+            tmpgmc = ''.join('.' for i in range(ngmc))
+            pattern = '^' + tmpssc + '~'+tmpgmc
 
             # Find the index in the pattern where we replace the '.' with the
             # ID of the branches that are correlated.
-            ordinal = int(an01.bsets[bsid]['data'][sid]['ordinal'])
+            ordinal = int(an01.bsets[bsid]['data'][srcid]['ordinal'])
             # + 1 for the initial ~
             # + 1 for the first element (that uses two letters)
             idx = ordinal + 1 + 1
@@ -433,13 +429,13 @@ def get_patterns(rlzs: dict, an01: Analysis):
             idx = nssc + idx if is_gmc else idx
             itype = 1 if is_gmc else 0
             iii = (slice(None, None, None))
-            if len(rlzs[sid][itype].shape) > 1:
+            if len(rlzs[srcid][itype].shape) > 1:
                 iii = (slice(None, None, None), ordinal+1)
             temp_patterns = []
-            for key in np.unique(rlzs[sid][itype][iii]):
+            for key in np.unique(rlzs[srcid][itype][iii]):
                 tmp = pattern[:idx] + key + pattern[idx+1:]
                 temp_patterns.append(tmp)
-            patterns[bsid][sid] = temp_patterns
+            patterns[bsid][srcid] = temp_patterns
 
     return patterns
 
@@ -475,17 +471,17 @@ def get_hcurves_ids(rlzs, patterns, weights):
     for bsid in patterns:
         grp_hcurves[bsid] = {}
         grp_weights[bsid] = {}
-        for sid in patterns[bsid]:
+        for srcid in patterns[bsid]:
             # Loop over the patterns of all the realizations for a given source
-            grp_hcurves[bsid][sid] = []
-            grp_weights[bsid][sid] = []
-            for p in patterns[bsid][sid]:
+            grp_hcurves[bsid][srcid] = []
+            grp_weights[bsid][srcid] = []
+            for p in patterns[bsid][srcid]:
                 tmp_idxs = []
                 wei = 0.0
-                for i, rlz in enumerate(rlzs[sid][2]):
+                for i, rlz in enumerate(rlzs[srcid][2]):
                     if re.search(p, rlz):
                         tmp_idxs.append(i)
-                        wei += weights[sid][i]
-                grp_hcurves[bsid][sid].append(tmp_idxs)
-                grp_weights[bsid][sid].append(wei)
+                        wei += weights[srcid][i]
+                grp_hcurves[bsid][srcid].append(tmp_idxs)
+                grp_weights[bsid][srcid].append(wei)
     return grp_hcurves, grp_weights
