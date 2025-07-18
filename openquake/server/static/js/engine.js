@@ -663,15 +663,23 @@ function capitalizeFirstLetter(val) {
                                setTimer();
                            });
 
+            var vs30_original_placeholder = $('input#vs30').attr('placeholder');
             $('select#site_class').on('change', function() {
                 const site_class = $(this).val();
                 const $input_vs30 = $('input#vs30');
                 if (site_class === 'custom') {
                     $input_vs30.prop('disabled', false);
                     $input_vs30.val('');
+                    $input_vs30.attr('placeholder', vs30_original_placeholder);
                 } else {
                     $input_vs30.prop('disabled', true);
-                    $input_vs30.val($(this).val());
+                    if (site_class === 'default') {
+                        $input_vs30.val('');
+                        $input_vs30.attr('placeholder', '');
+                    } else {
+                        $input_vs30.val($(this).val());
+                        $input_vs30.attr('placeholder', vs30_original_placeholder);
+                    }
                 }
             });
 
@@ -693,15 +701,16 @@ function capitalizeFirstLetter(val) {
                         {value: 260, text: 'D - Stiff Soil' },
                         {value: 185, text: 'DE ' },
                         {value: 150, text: 'E - Soft Clay Soil' },
+                        {value: 'default', text: 'Default'},
                         {value: 'custom', text: 'Specify Vs30'},
                     ];
-                    const default_site_class = 'BC';
+                    const preselected_site_class = 'BC';
                     items.forEach(item => {
                         $site_class_select.append(
                             $("<option>", {
                                 value: item.value,
                                 text: item.text,
-                                selected: item.text === default_site_class
+                                selected: item.text === preselected_site_class
                             })
                         );
                     });
@@ -718,10 +727,17 @@ function capitalizeFirstLetter(val) {
             // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
             $("#aelo_run_form").submit(function (event) {
                 $('#submit_aelo_calc').prop('disabled', true);
+                var site_class = $('select#site_class').val();
+                var vs30;
+                if (site_class === 'default') {
+                    vs30 = '260 365 530';
+                } else {
+                    vs30 = $("input#vs30").val();
+                }
                 var formData = {
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
-                    vs30: parseFloat($("input#vs30").val()),
+                    vs30: vs30,
                     siteid: $("#siteid").val(),
                     asce_version: $("#asce_version").val()
                 };
