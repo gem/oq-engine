@@ -8,13 +8,9 @@
             <form id="impact_get_rupture_form" method="post" enctype="multipart/form-data">
               {% csrf_token %}
               <div id="impact_approach">
-                  <label><input type="radio" name="impact_approach" value="use_shakemap_from_usgs" checked>Use ShakeMap from the USGS</label>
-                  <label><input type="radio" name="impact_approach" value="use_pnt_rup_from_usgs">Use point rupture from the USGS</label>
-                  <label><input type="radio" name="impact_approach" value="build_rup_from_usgs">Build rupture from USGS nodal plane solutions</label>
-                  <label><input type="radio" name="impact_approach" value="use_shakemap_fault_rup_from_usgs">Use ShakeMap fault rupture from the USGS</label>
-                  <label><input type="radio" name="impact_approach" value="use_finite_fault_model_from_usgs">Use finite fault model from the USGS</label>
-                  <label><input type="radio" name="impact_approach" value="provide_rup">Provide earthquake rupture in OpenQuake NRML format</label>
-                  <label><input type="radio" name="impact_approach" value="provide_rup_params">Provide earthquake rupture parameters</label>
+                  {% for approach_id, approach_display_name in impact_approaches.items %}
+                  <label><input type="radio" name="impact_approach" value="{{ approach_id }}" {% if approach_id == 'use_shakemap_from_usgs' %}checked{% endif %}>{{ approach_display_name }}</label>
+                  {% endfor %}
               </div>
               <div id="usgs_id_grp" class="impact_form_row usgs_id_grp">
                 <label for"usgs_id">{{ impact_form_labels.usgs_id }}</label>

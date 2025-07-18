@@ -1366,7 +1366,7 @@ def get_shakemap_versions(usgs_id, user=User(), monitor=performance.Monitor()):
     return shakemap_versions, usgs_preferred_version, err
 
 
-def _convert_rupture_file(rupture_file, usgs_id, user):
+def _convert_rupture_file(inputdic, rupture_file, usgs_id, user):
     rup = None
     rupdic = {}
     rup_data = {}
@@ -1380,7 +1380,7 @@ def _convert_rupture_file(rupture_file, usgs_id, user):
             rupture_file = convert_to_oq_xml(rupture_file, rupture_file_xml)
         except ValueError as exc:
             err = {"status": "failed", "error_msg": str(exc)}
-            return rup, rupdic, err
+            return None, {}, err
     if rupture_file.endswith('.xml'):
         rup, rupdic, rupture_issue = _get_rup_dic_from_xml(usgs_id, user, rupture_file)
     elif rupture_file.endswith('.csv'):
@@ -1388,13 +1388,16 @@ def _convert_rupture_file(rupture_file, usgs_id, user):
     elif rupture_file.endswith('.json') and usgs_id != 'FromFile':
         with open(rupture_file) as f:
             rup_data = json.load(f)
+    for key in inputdic:
+        if inputdic[key] is not None and key not in rupdic:
+            rupdic[key] = inputdic[key]
     return rup, rupdic, rup_data, rupture_issue
 
 
-def make_rup_from_dic(dic, rupture_file):
+def make_rup_from_dic(inputdic, rupture_file):
     rup = None
     rupture_issue = None
-    rupdic = dic.copy()
+    rupdic = inputdic.copy()
     rupdic.update(rupture_file=rupture_file)
     try:
         rup = build_planar_rupture_from_dict(rupdic)
@@ -1403,7 +1406,7 @@ def make_rup_from_dic(dic, rupture_file):
     return rup, rupdic, rupture_issue
 
 
-def get_rup_dic(dic, user=User(), use_shakemap=False,
+def get_rup_dic(inputdic, user=User(), use_shakemap=False,
                 shakemap_version='usgs_preferred', rupture_file=None,
                 monitor=performance.Monitor()):
     """
@@ -1413,7 +1416,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
     NOTE: this function is called twice by impact_validate: first when
     retrieving rupture data, then when running the job.
 
-    :param dic:
+    :param inputdic:
         dictionary with ShakeMap ID and other parameters
     :param user:
        User instance
@@ -1429,15 +1432,15 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
     rupdic = {}
     rup_data = {}
     err = {}
-    usgs_id = dic['usgs_id']
-    approach = dic['approach']
+    usgs_id = inputdic['usgs_id']
+    approach = inputdic['approach']
     rup = None
     rupture_issue = None
     if approach == 'provide_rup_params':
-        return make_rup_from_dic(dic, rupture_file)
+        return make_rup_from_dic(inputdic, rupture_file)
     if rupture_file:
         rup, rupdic, rup_data, rupture_issue = _convert_rupture_file(
-            rupture_file, usgs_id, user)
+            inputdic, rupture_file, usgs_id, user)
         if rupture_issue or usgs_id == 'FromFile':
             return rup, rupdic, rupture_issue
     assert usgs_id
@@ -1448,16 +1451,13 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
     if err:
         return None, None, err
     if approach in ['use_pnt_rup_from_usgs', 'build_rup_from_usgs']:
-        if dic.get('lon') is None:  # don't override user-inserted values
+        if inputdic.get('lon') is None:  # don't override user-inserted values
             rupdic, err = load_rupdic_from_origin(
                 usgs_id, properties['products'])
-            for key in dic:
-                if dic[key] is not None:
-                    rupdic[key] = dic[key]
             if err:
                 return None, None, err
         else:
-            rupdic = dic.copy()
+            rupdic = inputdic.copy()
     elif 'download/rupture.json' not in contents:
         # happens for us6000f65h in parsers_test
         rupdic, err = load_rupdic_from_finite_fault(
@@ -1480,7 +1480,7 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                         usgs_id, contents, user)
             if rupture_file:
                 rup, rupdic, updated_rup_data, rupture_issue = _convert_rupture_file(
-                    rupture_file, usgs_id, user)
+                    inputdic, rupture_file, usgs_id, user)
                 if updated_rup_data:
                     rup_data = updated_rup_data
             elif approach in ['use_shakemap_fault_rup_from_usgs',
@@ -1488,8 +1488,11 @@ def get_rup_dic(dic, user=User(), use_shakemap=False,
                 err = {"status": "failed",
                        "error_msg": 'Unable to retrieve rupture geometries'}
                 return None, None, err
-    if not rupdic:
+    if 'lon' not in rupdic:  # rupdic was incompletely filled
         rupdic = convert_rup_data(rup_data, usgs_id, rupture_file, shakemap)
+    for key in inputdic:
+        if inputdic[key] is not None and key not in rupdic:
+            rupdic[key] = inputdic[key]
     if 'mmi_file' not in rupdic:
         rupdic['mmi_file'] = download_mmi(usgs_id, contents, user)
     if approach == 'use_shakemap_from_usgs':
