@@ -117,7 +117,7 @@ AELO_FORM_LABELS = {
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': 'float (150 - 3000)',
+    'vs30': 'float [150 - 3000]',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE standards',
 }
@@ -1012,7 +1012,11 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
-        vs30 = validate_vs30(request.POST.get('vs30'))
+        vs30s_in = sorted([float(val) for val in request.POST.get('vs30').split()])
+        vs30s_out = []
+        for vs30 in vs30s_in:
+            vs30s_out.append(validate_vs30(vs30))
+        vs30 = ' '.join(str(val) for val in vs30s_out)
     except Exception as exc:
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
