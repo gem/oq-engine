@@ -979,7 +979,8 @@ class HazardCalculator(BaseCalculator):
         else:  # no exposure
             self._read_no_exposure(haz_sitecol)
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
-                self.N > 1000 and len(oq.min_iml) == 0):
+                oq.ground_motion_fields and self.N > 1000 and
+                len(oq.min_iml) == 0):
             oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
 
         if oq_hazard:
