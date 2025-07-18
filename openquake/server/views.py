@@ -1788,6 +1788,15 @@ def web_engine_get_outputs_impact(request, calc_id):
             warnings = ds_warnings
         else:
             warnings += '\n' + ds_warnings
+    mmi_tags = 'mmi_tags' in ds
+    # NOTE: aggrisk_tags is not available as an attribute of the datastore
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            _extract(ds, 'aggrisk_tags')
+    except KeyError:
+        aggrisk_tags = False
+    else:
+        aggrisk_tags = True
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
@@ -1803,7 +1812,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                        losses_header=losses_header,
                        weights_precision=weights_precision,
                        avg_gmf=avg_gmf, assets=assets,
-                       warnings=warnings))
+                       warnings=warnings, mmi_tags=mmi_tags, aggrisk_tags=aggrisk_tags))
 
 
 @cross_domain_ajax
@@ -1848,12 +1857,23 @@ def extract_html_table(request, calc_id, name):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
-    table_html = table.to_html(classes="table table-striped", index=False)
     display_names = {'aggrisk_tags': 'Impact',
                      'mmi_tags': 'Exposure by MMI'}
     table_name = display_names[name] if name in display_names else name
+    table_header = []
+    for short_name in table.columns:
+        if short_name in AGGRISK_FIELD_DESCRIPTION:
+            display_name = AGGRISK_FIELD_DESCRIPTION[short_name]
+        elif short_name in EXPOSURE_FIELD_DESCRIPTION:
+            display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
+        else:
+            display_name = ''
+        table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
+    table_contents = table.to_numpy()
     return render(request, 'engine/show_table.html',
-                  {'table_name': table_name, 'table_html': table_html})
+                  {'table_name': table_name,
+                   'table_header': table_header,
+                   'table_contents': table_contents})
 
 
 @csrf_exempt
