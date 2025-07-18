@@ -82,7 +82,6 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
     # Process the sets of results. When a set contains a single source,
     # this means that the source does not have correlations with other sources.
     for i, _ in enumerate(ssets):
-
         sset = ssets[i]
         bset = bsets[i]
 
@@ -103,7 +102,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
 
                 # ID of the sources in this set with a given correlated
                 # uncertainty
-                bs_sids = list(an01.bsets[bsid]['data'].keys())
+                bs_sids = list(an01.bsets[bsid]['data'])
 
                 # Realisations for the first source
                 rlzs, wei = an01.get_rpaths_weights(
@@ -124,11 +123,10 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
                     tmp, size=nsam, p=weights_per_group)
 
             # Sample hazard curves for each source in this set
-            for sid in sorted(sset):
+            for srcid in sorted(sset):
 
-                print(f'Source ID: {sid}')
-
-                msg = f"   Source: {sid}"
+                print(f'Source ID: {srcid}')
+                msg = f"   Source: {srcid}"
                 logging.info(msg)
 
                 # This is a container for the indexes of the realizations. Each
@@ -145,7 +143,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
 
                     # If the logic tree of the current source includes this
                     # correlation
-                    if sid in grp_curves[bsid].keys():
+                    if srcid in grp_curves[bsid]:
 
                         # For each sample
                         for sam in range(nsam):
@@ -153,12 +151,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
                             # Get the sequence of indexes of the curves for the
                             # sampled set of correlated results
                             xx = bset_sampled_indexes[bsid][sam]
-                            try:
-                                tmp = grp_curves[bsid][sid][xx]
-                            except:
-                                print(bset_sampled_indexes[bsid][sam])
-                                breakpoint()
-
+                            tmp = grp_curves[bsid][srcid][xx]
                             if i == 0:
                                 iii[sam] = set(tmp)
                             else:
@@ -170,14 +163,14 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
                 # investigated. `wei` contains the weights assigned to each one
                 # of the realizations admitted by the logic tree of the current
                 # source
-                _, wei = an01.get_rpaths_weights(dstores[sid], sid)
+                _, wei = an01.get_rpaths_weights(dstores[srcid], srcid)
 
                 # Array where we store the indexes of the sampled realisations
                 idx_rlzs = np.zeros((nsam), dtype=int)
-                poes = dstores[sid].getitem('hcurves-rlzs')[:]
+                poes = dstores[srcid].getitem('hcurves-rlzs')[:]
 
                 # Index of the current source
-                kkk = np.where(sids == sid)[0]
+                kkk = np.where(sids == srcid)[0]
 
                 # Process each sample for the current source
                 for sam in range(nsam):
@@ -185,7 +178,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
                     # These are the indexes from which we draw a sample
                     idxs = np.array(sorted(list(iii[sam])))
 
-                    #if sid == 'b':
+                    #if srcid == 'b':
                     #    breakpoint()
 
                     # Normalised weights
@@ -203,19 +196,19 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
 
         else:
 
-            sid = list(sset)[0]
-            kkk = np.where(sids == sid)[0]
+            srcid = list(sset)[0]
+            kkk = np.where(sids == srcid)[0]
 
             # Get realisations and weights for the source currently
             # investigated
-            rlzs, wei = an01.get_rpaths_weights(dstores[sid], sid)
+            rlzs, wei = an01.get_rpaths_weights(dstores[srcid], srcid)
 
             # Sampling of results
             iii = np.arange(0, len(wei))
             idx_rlzs = np.random.choice(iii, size=nsam, p=wei)
 
             # Updating the afes matrix
-            poes = dstores[sid].getitem('hcurves-rlzs')[:]
+            poes = dstores[srcid]['hcurves-rlzs'][:]
             afes[:, kkk, :, :, :] = poes[:, idx_rlzs]
             weir *= wei[idx_rlzs]
 
@@ -224,12 +217,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
     afes[afes > 0.99999] = 0.99999
     afes = - np.log(1. - afes) / oqp.investigation_time
 
-    # imls
-    imls = {}
-    for key in oqp.hazard_imtls:
-        imls[key] = oqp.hazard_imtls[key]
-
-    return imls, afes
+    return oqp.hazard_imtls, afes
 
 
 def rounding(weights_per_group, num):

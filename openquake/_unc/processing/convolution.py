@@ -125,7 +125,7 @@ def _get_path_info(sset, bset, an01, grp_curves):
     weight_redux = {sid: 1 for sid in sset}
     for bset_i, bsid in enumerate(bset):
         bset_list.append(bsid)
-        srcids = list(an01.bsets[bsid]['data'].keys())
+        srcids = list(an01.bsets[bsid]['data'])
         if bset_i == 0:
             for i in range(len(grp_curves[bsid][srcids[0]])):
                 paths.append(f'{i}')
@@ -159,7 +159,7 @@ def process_bset(sset, bset, an01, grp_curves, dstores, res, imt, atype):
     # Compute the number of groups of correlated uncertainties
     num_paths = 1
     for bset_i, bsid in enumerate(bset):
-        srcids = list(an01.bsets[bsid]['data'].keys())
+        srcids = list(an01.bsets[bsid]['data'])
         num_paths *= len(grp_curves[bsid][srcids[0]])
 
     # Paths
@@ -185,7 +185,7 @@ def process_bset(sset, bset, an01, grp_curves, dstores, res, imt, atype):
 
                 # Check if the current source is in this group
                 bsid = bset_list[i]
-                if sid in list(an01.bsets[bsid]['data'].keys()):
+                if sid in list(an01.bsets[bsid]['data']):
 
                     tmp = set(grp_curves[bsid][sid][grp_i])
                     if len(rlz_idx) == 0:

@@ -41,7 +41,7 @@ def plot_dsg_md_prepare(dstore_name, imt_id, poe_id, site_id):
 
     dstore = datastore.read(dstore_name)
     oqp = dstore.get('oqparam', None)
-    imts = list(oqp.imtls.keys())
+    imts = list(oqp.imtls)
 
     if 'site_model' in oqp.inputs:
         sites = pd.read_csv(oqp.inputs['site_model'][0])

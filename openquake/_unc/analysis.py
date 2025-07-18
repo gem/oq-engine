@@ -62,7 +62,6 @@ class Analysis:
         - srcids: IDs of the sources
         - bsids: IDs of the branches in the original LTs
         - utype: Type of uncertainty
-        - logictree: Type of LT (ssc or gmc)
         - ordinal: Ordinal of the branchsets in their LTs
     :param corbs_per_src_ssc:
         A dictionary
@@ -153,7 +152,6 @@ class Analysis:
 
             bsid = bs.attrib['branchSetID']
             utype = bs.attrib['uncertaintyType'].encode()
-            logictree = bs.attrib['logicTree']
             srcids = bs.findall(PATH_SRCIDS)[0].text.split(' ')
             bsids = bs.findall(PATH_BSIDS)[0].text.split(' ')
 
@@ -180,22 +178,12 @@ class Analysis:
             # containing the uncertainty here considered. Note that the
             # ordinal can be either for the SSC or the GMC.
             for srcid, odn in zip(srcids, ordinal):
-                corbs_per_src[srcid, odn, logictree] = bsid
+                corbs_per_src[srcid, odn] = bsid
 
         # Initializing the Analysis object
         self = cls(bsets, corbs_per_src, corbs_bs_id, dstores, root_path)
         self.fname = fname
         return self
-
-    # this is not used
-    def get_srcIDs_with_correlations(self):
-        """
-        Returns a set with the IDs of the sources with correlated uncertainties
-        """
-        out = set()
-        for bsid in self.bsets:
-            out |= self.bsets[bsid]['data']
-        return out
 
     def get_sets(self):
         """
@@ -398,6 +386,7 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             if is_gmc:
                 paths = gspaths
                 idx += nssc
+                ordinal = 0
             else:
                 paths = [path[ordinal + 1] for path in smpaths]
             patt = [pattern[:idx] + path + pattern[idx+1:]

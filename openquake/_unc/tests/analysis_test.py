@@ -51,15 +51,15 @@ class AnalysisTestCase(unittest.TestCase):
     def test01(self):
         # Check the info describing correlation
         an01 = self.an01
-        expected = {('b', 2, 'ssc'): 'bs1', ('c', 3, 'ssc'): 'bs1',
-                    ('a', 0, 'gmc'): 'bs2', ('b', 0, 'gmc'): 'bs2'}
+        expected = {('b', 2): 'bs1', ('c', 3): 'bs1',
+                    ('a', 0): 'bs2', ('b', 0): 'bs2'}
         self.assertEqual(an01.corbs_per_src, expected)
 
     def test_get_sets_01(self):
         # Check the groups with correlated uncertainties
         an01 = self.an01
         computed, _ = an01.get_sets()
-        expected = [set(['b', 'a', 'c']), set(['d'])]
+        expected = [{'b', 'a', 'c'}, {'d'}]
         self.assertEqual(computed, expected)
 
     def test_get_imtls(self):
