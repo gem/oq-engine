@@ -162,32 +162,19 @@ class Analysis:
             ordinal = []
             for srcid in srcids:
                 dstore = dstores[srcid]
-                tmp = dstore.getitem('full_lt/source_model_lt')['utype']
-
-                # This creates a list of unique uncertainty types
-                utypes = list(collections.Counter(tmp))
-
+                # List of unique uncertainty types
+                utypes = dstore.getitem('full_lt/source_model_lt')['utype']
+                utypes = list(collections.Counter(utypes))
                 # Find the index of the uncertainty
-                if utype in utypes:
-                    ordinal.append(utypes.index(utype))
-                else:
-                    # We assume that in the GMM logic tree we have only one
-                    # branch
-                    ordinal.append(0)
+                try:
+                    idx = utypes.index(utype)
+                except ValueError:  # for gmpeModel there ia a single bset
+                    idx = 0
+                ordinal.append(idx)
 
-            # Values:
-            # - IDs of the sources involved
-            # - IDs of the branches in the original LTs
-            # - Type of uncertainty
-            # - Type of LT (ssc or gmc)
-            # - Ordinal of the branchsets in their LTs
-            bsets[bsid] = {'srcid': srcids, 'bsids': bsids, 'utype': utype,
-                           'logictree': logictree, 'ordinal': ordinal}
-            data = {}
-            for i, srcid in enumerate(srcids):
-                data[srcid] = {'bsid': bsids[i], 'ordinal': ordinal[i]}
-            bsets[bsid] = {'utype': utype, 'logictree': logictree,
-                           'data': data}
+            data = {srcid: {'bsid': bsids[i], 'ordinal': ordinal[i]}
+                    for i, srcid in enumerate(srcids)}
+            bsets[bsid] = {'utype': utype, 'data': data}
 
             # For each source ID we store the ordinal of the branchset
             # containing the uncertainty here considered. Note that the
@@ -403,16 +390,16 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             pattern = '^' + ssc + '~' + gmc
             # Find the index in the pattern where we replace the '.' with the
             # ID of the branches that are correlated.
-            ordinal = int(an01.bsets[bsid]['data'][srcid]['ordinal'])
+            ordinal = an01.bsets[bsid]['data'][srcid]['ordinal']
             # + 1 for the initial ~
             # + 1 for the first element (that uses two letters)
             idx = ordinal + 1 + 1
-            is_gmc = an01.bsets[bsid]['logictree'] == 'gmc'
+            is_gmc = an01.bsets[bsid]['utype'] == b'gmpeModel'
             if is_gmc:
                 paths = gspaths
                 idx += nssc
             else:
-                paths = [bpath[ordinal + 1] for bpath in smpaths]
+                paths = [path[ordinal + 1] for path in smpaths]
             patt = [pattern[:idx] + path + pattern[idx+1:]
                     for path in np.unique(paths)]
             patterns[bsid][srcid] = patt
