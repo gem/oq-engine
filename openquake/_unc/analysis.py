@@ -25,11 +25,9 @@
 # -----------------------------------------------------------------------------
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding: utf-8
-
 """
 Module `openquake._unc.analysis`
 """
-
 import re
 import os
 import collections
@@ -42,14 +40,13 @@ from openquake.calculators.base import dcache
 from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore as afes_ds_mde
 from openquake._unc.dtypes.dsg_md import get_afes_from_dstore as afes_ds_md
 
-
 # Setting namespace
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
 
 # Paths
 PATH_CALC = "{0:s}calculations/{0:s}calc".format(NS)
 PATH_UNC = "{0:s}uncertainties/".format(NS)
-PATH_SRC_IDS = "{:s}sourceIDs".format(NS)
+PATH_SRCIDS = "{:s}sourceIDs".format(NS)
 PATH_BSIDS = "{:s}branchSetID".format(NS)
 PATH_ORDINAL = "{:s}branchSetOrdinal".format(NS)
 
@@ -62,7 +59,7 @@ class Analysis:
     :param bsets:
         A dictionary with branchset ID as keys and a dictionary with various
         information as value. Dictionary content:
-        - src_ids: IDs of the sources
+        - srcids: IDs of the sources
         - bsids: IDs of the branches in the original LTs
         - utype: Type of uncertainty
         - logictree: Type of LT (ssc or gmc)
@@ -106,7 +103,6 @@ class Analysis:
             calculations performed and the possible correlation of
             uncertainties between the LTs of individual sources
         """
-
         # TODO
         # Add the following checks:
         # - We have a datastore for each source correlated
@@ -122,10 +118,10 @@ class Analysis:
 
         # Reading info about calculations per individual source
         dstores = {}  # i.e. {'a': 'job_a.ini', ...}
-        src_ids = set()
+        srcids = set()
         for calc in root.findall(PATH_CALC):
             # Check duplicated IDs
-            if calc.attrib['sourceID'] in src_ids:
+            if calc.attrib['sourceID'] in srcids:
                 msg = "Duplicated src ID in the definition of datastores"
                 msg += f" Check: {calc.attrib['sourceID']}"
                 raise ValueError(msg)
@@ -143,29 +139,28 @@ class Analysis:
             dstores[calc.attrib['sourceID']] = dstore
 
             # Updating the set of src IDs
-            src_ids.add(calc.attrib['sourceID'])
+            srcids.add(calc.attrib['sourceID'])
 
-        # Reading info about correlated uncertainties i.e. branch sets
+        # Branch sets
         bsets = {}
 
         # Correlated branch sets per source
         corbs_per_src = {}
         corbs_bs_id = {}
 
-        # For each branchset in the .xml with the information about
-        # correlation
+        # For each branchset in the .xml
         for bs in root.findall(PATH_UNC):
 
             bsid = bs.attrib['branchSetID']
             utype = bs.attrib['uncertaintyType'].encode()
             logictree = bs.attrib['logicTree']
-            src_ids = bs.findall(PATH_SRC_IDS)[0].text.split(' ')
+            srcids = bs.findall(PATH_SRCIDS)[0].text.split(' ')
             bsids = bs.findall(PATH_BSIDS)[0].text.split(' ')
 
             # Here we should check that the uncertainties in the analysis .xml
             # file are the same used for the various sources
             ordinal = []
-            for srcid in src_ids:
+            for srcid in srcids:
                 dstore = dstores[srcid]
                 tmp = dstore.getitem('full_lt/source_model_lt')['utype']
 
@@ -186,10 +181,10 @@ class Analysis:
             # - Type of uncertainty
             # - Type of LT (ssc or gmc)
             # - Ordinal of the branchsets in their LTs
-            bsets[bsid] = {'srcid': src_ids, 'bsids': bsids, 'utype': utype,
+            bsets[bsid] = {'srcid': srcids, 'bsids': bsids, 'utype': utype,
                            'logictree': logictree, 'ordinal': ordinal}
             data = {}
-            for i, srcid in enumerate(src_ids):
+            for i, srcid in enumerate(srcids):
                 data[srcid] = {'bsid': bsids[i], 'ordinal': ordinal[i]}
             bsets[bsid] = {'utype': utype, 'logictree': logictree,
                            'data': data}
@@ -197,7 +192,7 @@ class Analysis:
             # For each source ID we store the ordinal of the branchset
             # containing the uncertainty here considered. Note that the
             # ordinal can be either for the SSC or the GMC.
-            for srcid, odn in zip(src_ids, ordinal):
+            for srcid, odn in zip(srcids, ordinal):
                 corbs_per_src[srcid, odn, logictree] = bsid
 
         # Initializing the Analysis object
@@ -266,14 +261,14 @@ class Analysis:
         dstore = list(self.dstores.values())[0]
         return dstore['oqparam'].hazard_imtls
 
-    def get_bpaths_weights(self, dstore, srcid):
+    def get_rpaths_weights(self, dstore, srcid):
         """
         :param dstore:
             A :class:`openquake.commonlib.datastore.DataStore` instance
         :param srcid:
             The ID of the source
         :returns:
-            Branch paths and corresponding weights
+            Realization paths and corresponding weights
         """
         weights = dstore['weights'][:]
         bpaths = dstore['full_lt'].rlzs['branch_path']
@@ -286,13 +281,13 @@ class Analysis:
         assigned to the realizations.
 
         :param atype:
-            The type of analysis to be perfomed
+            The type of analysis to be performed
         :param imtstr:
             A string defining the intensity measure type
 
         :returns:
             Three dictionaries with the ID of the sources as keys:
-                - 'rlzs' contains, for each source, the realization and the
+                - 'rlzs' contains, for each source, the
                    paths describing the SSC and the GMC
                 - 'poes' contains the hazard curves
                 - 'weights' contains the weights of all the realizations
@@ -307,11 +302,8 @@ class Analysis:
             msg = f"Source: {key} - File: {os.path.basename(fname)}"
             logging.info(msg)
 
-            # Create the datastore
-            dstore = datastore.read(fname)
-            imti = list(dstore['oqparam'].imtls).index(imtstr)
-
             # Read data from datastore
+            imti = list(dstore['oqparam'].imtls).index(imtstr)
             if atype == 'hcurves':
                 # Read HC dataset. It has the following shape S x R x I x L
                 # S - number of sites
@@ -353,14 +345,12 @@ class Analysis:
             weights[key] = dstore['weights'][:]
 
             # Read realizations
-            rlz = []
             ssc = []
             gmc = []
-            for k in dstore['full_lt'].rlzs['branch_path']:
-                smpath, gspath = k.split('~')
+            for rpath in dstore['full_lt'].rlzs['branch_path']:
+                smpath, gspath = rpath.split('~')
                 ssc.append(smpath)
                 gmc.append(gspath)
-                rlz.append(k)
 
             # This dictionary [where keys are the source IDs] contains two
             # arrays with the indexes of the realizations for the SSC and
