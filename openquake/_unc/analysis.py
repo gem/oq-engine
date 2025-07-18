@@ -165,8 +165,8 @@ class Analysis:
             # Here we should check that the uncertainties in the analysis .xml
             # file are the same used for the various sources
             ordinal = []
-            for sid in src_ids:
-                dstore = dstores[sid]
+            for srcid in src_ids:
+                dstore = dstores[srcid]
                 tmp = dstore.getitem('full_lt/source_model_lt')['utype']
 
                 # This creates a list of unique uncertainty types
@@ -186,7 +186,7 @@ class Analysis:
             # - Type of uncertainty
             # - Type of LT (ssc or gmc)
             # - Ordinal of the branchsets in their LTs
-            bsets[bsid] = {'sid': src_ids, 'bsids': bsids, 'utype': utype,
+            bsets[bsid] = {'srcid': src_ids, 'bsids': bsids, 'utype': utype,
                            'logictree': logictree, 'ordinal': ordinal}
             data = {}
             for i, srcid in enumerate(src_ids):
@@ -363,9 +363,9 @@ class Analysis:
                 rlz.append(k)
 
             # This dictionary [where keys are the source IDs] contains two
-            # arrays (with the indexes of the realizations for the SSC and
-            # GMC) and one list with the paths of all the realizations
-            rlzs[key] = [np.array(ssc), np.array(gmc), rlz]
+            # arrays with the indexes of the realizations for the SSC and
+            # GMC
+            rlzs[key] = [np.array(ssc), np.array(gmc)]
 
         return rlzs, poes, weights
 
@@ -405,7 +405,7 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             # Create the general pattern. This will select everything
             # e.g. '.+.+.+~.+'
             patterns[bsid][srcid] = {}
-            smpaths, gspaths, _ = rlzs[srcid]
+            smpaths, gspaths = rlzs[srcid]
             nssc = len(smpaths[0])
             ssc = '..' + ''.join('.' for i in range(2, nssc))
             ngmc = len(gspaths[0])
@@ -419,16 +419,14 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             idx = ordinal + 1 + 1
             is_gmc = an01.bsets[bsid]['logictree'] == 'gmc'
             if is_gmc:
-                paths = rlzs[srcid][1]
+                paths = gspaths
                 idx += nssc
             else:
-                paths = [bpath[ordinal + 1] for bpath in rlzs[srcid][0]]
-            temp_patterns = []
-            for key in np.unique(paths):
-                tmp = pattern[:idx] + key + pattern[idx+1:]
-                temp_patterns.append(tmp)
-            patterns[bsid][srcid] = temp_patterns
-    """# in the analysis_test patterns is the following dictionary:
+                paths = [bpath[ordinal + 1] for bpath in smpaths]
+            patt = [pattern[:idx] + path + pattern[idx+1:]
+                    for path in np.unique(paths)]
+            patterns[bsid][srcid] = patt
+    """# in the analysis_test, `patterns` is the following dictionary:
     {'bs1': {'b': ['^...A.~.', '^...B.~.'],
              'c': ['^....A.~.', '^....B.~.']},
      'bs2': {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
@@ -443,10 +441,8 @@ def get_hcurves_ids(rlzs, patterns, weights):
     dictionary, the patterns describing the
 
     :param rlzs:
-        A dictionary with keys the IDs of the sources. The values are lists,
-        each one with three elements: one containing the description of the
-        paths for the SSC, one for the GMC and one with the overall path of
-        each realisation.
+        A dictionary with keys the IDs of the sources. The values are lists
+        of pairs (smpaths, gspaths) for each realisation.
     :param patterns:
         A dictionary with keys the IDs of the branch sets of correlated
         uncertainties. The value is a dictionary with key the source ID.
@@ -468,13 +464,16 @@ def get_hcurves_ids(rlzs, patterns, weights):
         grp_hcurves[bsid] = {}
         grp_weights[bsid] = {}
         for srcid in patterns[bsid]:
+            smpath, gspath = rlzs[srcid]
+            rpath = smpath + '~' + gspath
+
             # Loop over the patterns of all the realizations for a given source
             grp_hcurves[bsid][srcid] = []
             grp_weights[bsid][srcid] = []
             for p in patterns[bsid][srcid]:
                 tmp_idxs = []
                 wei = 0.0
-                for i, rlz in enumerate(rlzs[srcid][2]):
+                for i, rlz in enumerate(rpath):
                     if re.search(p, rlz):
                         tmp_idxs.append(i)
                         wei += weights[srcid][i]
