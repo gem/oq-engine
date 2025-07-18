@@ -78,7 +78,7 @@ class Analysis:
     """
 
     def __init__(self, bsets: dict, corbs_per_src: dict, corbs_bs_id: dict,
-                 dstores: dict, root_path: str = None):
+                 dstores: dict, root_path: str=None):
 
         # The branch sets for which we have correlated uncertainties
         self.bsets = bsets
@@ -118,11 +118,10 @@ class Analysis:
         root_path = os.path.dirname(fname)
 
         # Get .xml root
-        tree = ET.parse(fname)
-        root = tree.getroot()
+        root = ET.parse(fname).getroot()
 
         # Reading info about calculations per individual source
-        dstores = {}  # i.e. {'a': './out_a/calc_8509.hdf5', ...}
+        dstores = {}  # i.e. {'a': 'job_a.ini', ...}
         src_ids = set()
         for calc in root.findall(PATH_CALC):
             # Check duplicated IDs
@@ -133,6 +132,8 @@ class Analysis:
 
             # Read or compute the datastore
             if 'datastore' in calc.attrib:
+                # the problem is calc_test:test_against_oq
+                # raise RuntimeError(fname)
                 hdf5 = os.path.join(root_path, calc.attrib['datastore'])
                 dstore = datastore.read(hdf5)
             else:
@@ -197,7 +198,7 @@ class Analysis:
             # containing the uncertainty here considered. Note that the
             # ordinal can be either for the SSC or the GMC.
             for srcid, odn in zip(src_ids, ordinal):
-                corbs_per_src[srcid, int(odn), logictree] = bsid
+                corbs_per_src[srcid, odn, logictree] = bsid
 
         # Initializing the Analysis object
         self = cls(bsets, corbs_per_src, corbs_bs_id, dstores, root_path)
