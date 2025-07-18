@@ -455,7 +455,7 @@ def get_hcurves_ids(rlzs, patterns, weights):
         grp_weights[bsid] = {}
         for srcid in patterns[bsid]:
             smpath, gspath = rlzs[srcid]
-            rpath = smpath + '~' + gspath
+            rpath = [f'{sm}~{gs}' for sm, gs in zip(smpath, gspath)]
 
             # Loop over the patterns of all the realizations for a given source
             grp_hcurves[bsid][srcid] = []
