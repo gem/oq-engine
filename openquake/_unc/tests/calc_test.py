@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -99,8 +98,8 @@ class ResultsCalculationTestCase01(unittest.TestCase):
             for fname in glob.glob(pattern):
                 tmp = pd.read_csv(fname, comment='#')
                 poe = -np.log(1 - tmp.iloc[0].to_numpy()[3:])
-                _ = plt.plot(imls, poe, '-', color='lightblue', alpha=0.8)
-            _ = plt.plot(imls, expected, '-', label='OQ Full Path Enumeration')
+                plt.plot(imls, poe, '-', color='lightblue', alpha=0.8)
+            plt.plot(imls, expected, '-', label='OQ Full Path Enumeration')
             lab = 'Convolution'
             plt.plot(imls, res_conv[:, 0], 'o', mfc='none', label=lab)
             plt.yscale('log')
@@ -203,8 +202,8 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             axs.set_xlabel('Intensity Measure Level, $\\kappa$ [g]')
             axs.set_ylabel('Annual Frequency of Exceedance')
 
-            tmp = os.path.join(TFF, 'figs', 'calc_test-case02_matrix.png')
-            _ = plt.savefig(tmp)
+            plt.savefig(
+                os.path.join(TFF, 'figs', 'calc_test-case02_matrix.png'))
             plt.show()
 
     def test_sampling(self):
@@ -272,13 +271,13 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         if PLOTTING:
             fig, _ = plt.subplots(1, 1)
 
-            _ = plt.plot(imls['PGA'], pct_16, '-', label='16th perc. sampling')
+            plt.plot(imls['PGA'], pct_16, '-', label='16th perc. sampling')
             lab = '16th perc. convolution'
-            _ = plt.plot(
+            plt.plot(
                 imls['PGA'], res_conv[:, 0], 'o', mfc='none', label=lab)
 
             lab = '84th perc. sampling'
-            _ = plt.plot(imls['PGA'], pct_84, '-', label=lab)
+            plt.plot(imls['PGA'], pct_84, '-', label=lab)
             lab = '84th perc. convolution'
             plt.plot(
                 imls['PGA'], res_conv[:, 1], 'o', mfc='none', label=lab)
@@ -517,9 +516,9 @@ class ResultsCalculationTestCase02(unittest.TestCase):
 
             plt.xlabel('Number of samples')
             plt.ylabel('Execution time [s]')
-            _ = plt.grid(which='major', ls='--', color='grey')
-            _ = plt.grid(which='minor', ls=':', color='lightgrey')
-            _ = plt.legend()
+            plt.grid(which='major', ls='--', color='grey')
+            plt.grid(which='minor', ls=':', color='lightgrey')
+            plt.legend()
 
             plt.sca(axs[1, 0])
             plt.plot(nsam, memu[:, 0] / (1024 * 1024), '-')
@@ -537,9 +536,9 @@ class ResultsCalculationTestCase02(unittest.TestCase):
 
             plt.xlabel('Number of samples')
             plt.ylabel('Memory consumption [MB]')
-            _ = plt.grid(which='major', ls='--', color='grey')
-            _ = plt.grid(which='minor', ls=':', color='lightgrey')
-            _ = plt.legend()
+            plt.grid(which='major', ls='--', color='grey')
+            plt.grid(which='minor', ls=':', color='lightgrey')
+            plt.legend()
 
             plt.sca(axs[0, 1])
             for row in results:
@@ -553,9 +552,9 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             plt.ylabel('Ratio')
             plt.xscale('log')
             plt.yscale('log')
-            _ = plt.grid(which='major', ls='--', color='grey')
-            _ = plt.grid(which='minor', ls=':', color='lightgrey')
-            _ = plt.legend()
+            plt.grid(which='major', ls='--', color='grey')
+            plt.grid(which='minor', ls=':', color='lightgrey')
+            plt.legend()
 
             plt.sca(axs[1, 1])
             plt.plot(imls['PGA'], afe, lw=2, label='oq')
