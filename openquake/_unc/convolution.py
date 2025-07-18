@@ -1,3 +1,32 @@
+#
+# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
+# Copyright (C) 2025 GEM Foundation
+#
+#                `.......      `....     `..`...     `..`... `......
+#                `..    `..  `..    `..  `..`. `..   `..     `..
+#                `..    `..`..        `..`..`.. `..  `..     `..
+#                `.......  `..        `..`..`..  `.. `..     `..
+#                `..       `..        `..`..`..   `. `..     `..
+#                `..         `..     `.. `..`..    `. ..     `..
+#                `..           `....     `..`..      `..     `..
+#
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# -----------------------------------------------------------------------------
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# coding: utf-8
+
 import numpy as np
 from openquake.baselib.performance import compile
 from openquake._unc.bins import get_bins_data, get_bins_from_params
@@ -36,7 +65,7 @@ def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
 
 
 # TODO: do we need this to be done in numba? it looks like a no to me
-@compile("(f8[:],f8[:],f8[:],f8[:])")
+# @compile("(f8[:],f8[:],f8[:],f8[:])")
 def _get_vals(pmfa, pmfb, midsa, midsb):
     # Outputs
     yvals = np.zeros(len(pmfa) * len(pmfb))
@@ -120,11 +149,6 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
 
     assert len(pmfo) == res * num_powers_o
 
-    if not np.abs(1.0 - np.sum(pmfo)) < TOLERANCE:
-        # why printing? else it should be an error?
-        print(msg)
-        print(pmfa)
-        print(pmfb)
-        print(pmfo)
+    assert np.abs(1.0 - np.sum(pmfo)) < TOLERANCE
 
     return min_power_o, res, num_powers_o, pmfo

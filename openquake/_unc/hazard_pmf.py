@@ -1,20 +1,30 @@
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2025, GEM Foundation
-# 
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# OpenQuake is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-# 
+#
+# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
+# Copyright (C) 2025 GEM Foundation
+#
+#                `.......      `....     `..`...     `..`... `......
+#                `..    `..  `..    `..  `..`. `..   `..     `..
+#                `..    `..`..        `..`..`.. `..  `..     `..
+#                `.......  `..        `..`..`..  `.. `..     `..
+#                `..       `..        `..`..`..   `. `..     `..
+#                `..         `..     `.. `..`..    `. ..     `..
+#                `..           `....     `..`..      `..     `..
+#
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+# details.
+#
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# -----------------------------------------------------------------------------
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 We use a hazard PMF to store the results of a number of a hazard curves
 representing a set of realisations admitted by a logic tree for a single
@@ -31,6 +41,7 @@ from typing import Tuple
 from collections.abc import Sequence
 from openquake._unc.convolution import conv
 from openquake._unc.bins import get_bins_data, get_bins_from_params
+from openquake._unc.utils import get_rlzs, get_rlz_hcs
 
 TOLERANCE = 1e-6
 
@@ -221,6 +232,56 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
     return imls, afes, weights
 
 
+def afes_matrix_from_csv_files(fname: str, imtstr: str, info: bool = False,
+                               idxs: list = []):
+    """
+    :param fname:
+        The name of the folder containing the .csv files with prefix
+        'hazard_curve-rlz' and the file with data on realizations
+    :param imtstr:
+        The string of the IMTs
+    :param info:
+        When true more info is prompted
+    :param idxs:
+        List of indexes with the realisations to be selected
+    :returns:
+        A tuple with a vector containing the imls values and a 2D vector with
+        the set of afes for each IML. The cardinality of the second array is
+        the number of realisations times the number of sites.
+    """
+    # The shape of poes: |realizations| x |number of imls| x |sites|
+    _, _, poes, hea, imls, calc_id_a = get_rlz_hcs(fname, imtstr)
+
+    # Indexes of the realisations
+    if len(idxs) > 0:
+        idxs = np.array(idxs, dtype=int)
+    else:
+        idxs = slice(None)
+
+    poes = poes[idxs, :, :]
+
+    # Information on the content of files
+    if info:
+        len_description = 30
+        tmps = 'OQ version'.ljust(len_description)
+        print('{:s}: {:s}'.format(tmps, hea['engine']))
+        tmps = 'Investigation time'.ljust(len_description)
+        print('{:s}: {:f}'.format(tmps, hea['investigation_time']))
+        tmps = 'IMT'.ljust(len_description)
+        print('{:s}: {:s}'.format(tmps, hea['imt']))
+        tmps = 'Number of files'.ljust(len_description)
+        print('{:s}: {:d}'.format(tmps, len(poes)))
+
+    # Computing afes
+    poes[poes > 0.99999] = 0.99999
+    afes = -np.log(1.-poes)/hea['investigation_time']
+
+    # Getting weights
+    rlzs, calc_id = get_rlzs(fname)
+
+    return imls, np.squeeze(afes), rlzs.weight.to_numpy()
+
+
 def get_hazard_pmf(afes_mtx: np.ndarray, weights: np.ndarray = None,
                    samples: int = 30, idxs: np.ndarray = None):
     """
@@ -397,7 +458,7 @@ def mixture(results: Sequence[list[list]],
         else:
             minpow[idx] = np.minimum(minpow[idx], tmp_minpow[idx])
             maxpow[idx] = np.maximum(maxpow[idx], tmp_minpow[idx] +
-                                                  tmp_numpow[idx])
+                                     tmp_numpow[idx])
 
     idx = ~np.isnan(minpow)
     maxrange = copy.copy(minpow)
@@ -431,19 +492,13 @@ def mixture(results: Sequence[list[list]],
                 tmp = np.zeros((int(resolution*maxrange[i_iml])))
 
             # Find where to add the current PMF
-            try:
-                low = int(resolution*(res[1][i_iml]-minpow[i_iml]))
-            except:
-                breakpoint()
+            low = int(resolution*(res[1][i_iml]-minpow[i_iml]))
             upp = int(low + resolution*(res[2][i_iml]))
 
             # Sum the PMF
-            try:
-                idxs = np.arange(low, upp)
-                tmp[idxs] += np.array(res[0][i_iml])*res[3]
-                tot_wei += res[3]
-            except:
-                breakpoint()
+            idxs = np.arange(low, upp)
+            tmp[idxs] += np.array(res[0][i_iml])*res[3]
+            tot_wei += res[3]
 
         if tmp is not None:
             chk = np.sum(tmp)

@@ -1,3 +1,4 @@
+#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -154,6 +155,7 @@ def _get_lt_info_from_datastore(fname):
 
 
 def get_correlation(ssclts, gmclts, rlzs, comtx):
+
     for i, ra in rlzs[0].iterrows():
         for j, rb in rlzs[1].iterrows():
             m = re.search('\\d*\\~(\\d*)', ra.branch_path)
@@ -165,3 +167,4 @@ def get_correlation(ssclts, gmclts, rlzs, comtx):
             if (sera.uncertainty == serb.uncertainty):
                 comtx[i, j] = 1
                 comtx[j, i] = 1
+

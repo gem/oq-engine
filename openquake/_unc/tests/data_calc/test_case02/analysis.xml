@@ -12,15 +12,14 @@
 
     <uncertainties>
         <logicTreeBranchSet uncertaintyType="setLowerSeismDepthAbsolute" 
-                branchSetID="bs1" logicTree="ssc">
+                branchSetID="bs1">
             <sourceIDs>b c</sourceIDs>
             <branchSetID>bs3 bs4</branchSetID>
         </logicTreeBranchSet>
     </uncertainties>
 
     <uncertainties>
-        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
-                logicTree="gmc">
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2">
             <sourceIDs>a b</sourceIDs>
             <branchSetID>bs1 bs1</branchSetID>
         </logicTreeBranchSet>
