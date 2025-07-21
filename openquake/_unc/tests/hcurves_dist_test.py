@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -36,28 +35,15 @@ aae = np.testing.assert_almost_equal
 
 class HazardCurvesDistributionTestCase(unittest.TestCase):
 
-    def setUp(self):
-        self.his0 = np.array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
-        self.his1 = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        self.minp = np.array([0, 1])
-        self.nump = np.array([2, 2])
+    def test(self):
+        his = [np.array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19]),
+               np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])]
+        minp = np.array([0, 1])
+        nump = np.array([2, 2])
 
-    def test_get_matrix(self):
-        """ Get the matrix test case """
-        his = []
-        his.append(self.his0)
-        his.append(self.his1)
-        computed, _ = to_matrix(his, self.minp, self.nump)
+        computed, _ = to_matrix(his, minp, nump)
         expected = np.empty((15, 2)) * np.nan
-        expected[0:10, 0] = self.his0
-        expected[5:15, 1] = self.his1
+        expected[0:10, 0] = his[0]
+        expected[5:15, 1] = his[1]
         aae(expected, computed)
-
-    def test_from_matrix(self):
-        """ From matrix test case """
-        his = []
-        his.append(self.his0)
-        his.append(self.his1)
-        mtx, _ = to_matrix(his, self.minp, self.nump)
-        computed = from_matrix(mtx)
-        aae(his, computed)
+        aae(his, from_matrix(computed))

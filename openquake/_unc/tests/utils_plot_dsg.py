@@ -122,16 +122,15 @@ def plot_dsg_md(dist_cen, ma_cen, dsg_mea, conf):
     bbox = dict(boxstyle="round", fc="white")
     axs.text(0.98, 0.97, label, transform=axs.transAxes,
              fontsize=9, va='top', ha='right', bbox=bbox)
-    _ = plt.colorbar()
+    plt.colorbar()
 
     ylim = axs.get_ylim()
-    _ = plt.xlim([0, 100])
-    _ = plt.ylim([ylim[0], 8.0])
-    _ = plt.xlabel('Distance, Rrup [km]')
-    _ = plt.ylabel('Magnitude, M ')
-    _ = plt.grid(which='major', ls='--', color='gray')
-    title = f"Site: {site_lab} | IMT:{imt_lab} | RP:{rp} yr"
-    _ = plt.title(title)
+    plt.xlim([0, 100])
+    plt.ylim([ylim[0], 8.0])
+    plt.xlabel('Distance, Rrup [km]')
+    plt.ylabel('Magnitude, M ')
+    plt.grid(which='major', ls='--', color='gray')
+    plt.title(f"Site: {site_lab} | IMT:{imt_lab} | RP:{rp} yr")
 
     tmp = re.sub('\\.', 'pt', imt_lab)
     tmp = re.sub('\\(', '-', tmp)
