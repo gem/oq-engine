@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -37,7 +36,7 @@ import numpy as np
 from openquake._unc.analysis import Analysis
 
 
-def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
+def sampling(ssets: list, bsets: list, an01: Analysis,
              grp_curves, nsam: int):
     """
     Propagates epistemic uncertainties by sampling. It accounts for the
@@ -50,8 +49,6 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
         A list with the id of the branch sets with correlated uncertainties
     :param an01:
         A :class:`openquake._unc.analysis.Analysis` instance
-    :param root_path:
-        Path where
     :param grp_curves:
     :param nsam:
         Total number of samples
@@ -60,12 +57,10 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
         :class:`numpy.ndarray` instance with the annual frequencies of
         exceedance
     """
-
-    msg = 'Computing sampling'
-    logging.info(msg)
+    logging.info('Computing sampling')
 
     # Create a dictionary with the datastores, one for each source
-    sids = np.array(list(an01.dstores))
+    srcids = np.array(list(an01.dstores))
     dstores = an01.dstores
 
     # Create the mtx where we store results for all the IMTs. The shape
@@ -75,7 +70,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
     # R - realizations
     # I - IMTs
     # L - IMLs
-    shps = dstores[sids[0]].getitem('hcurves-rlzs')[:].shape
+    shps = dstores[srcids[0]].getitem('hcurves-rlzs')[:].shape
     afes = np.zeros((shps[0], len(an01.dstores), nsam, shps[2], shps[3]))
     weir = np.ones(nsam)
 
@@ -170,7 +165,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
                 poes = dstores[srcid].getitem('hcurves-rlzs')[:]
 
                 # Index of the current source
-                kkk = np.where(sids == srcid)[0]
+                kkk = np.where(srcids == srcid)[0]
 
                 # Process each sample for the current source
                 for sam in range(nsam):
@@ -197,15 +192,14 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
         else:
 
             srcid = list(sset)[0]
-            kkk = np.where(sids == srcid)[0]
+            kkk, = np.where(srcids == srcid)
 
             # Get realisations and weights for the source currently
             # investigated
             rlzs, wei = an01.get_rpaths_weights(dstores[srcid], srcid)
 
             # Sampling of results
-            iii = np.arange(0, len(wei))
-            idx_rlzs = np.random.choice(iii, size=nsam, p=wei)
+            idx_rlzs = np.random.choice(len(wei), size=nsam, p=wei)
 
             # Updating the afes matrix
             poes = dstores[srcid]['hcurves-rlzs'][:]
@@ -213,7 +207,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, root_path: str,
             weir *= wei[idx_rlzs]
 
     # Converting the final matrix into annual frequencies of exceedance
-    oqp = dstores[sids[0]]['oqparam']
+    oqp = dstores[srcids[0]]['oqparam']
     afes[afes > 0.99999] = 0.99999
     afes = - np.log(1. - afes) / oqp.investigation_time
 

@@ -40,7 +40,8 @@ from openquake.baselib import hdf5
 from openquake._unc.analysis import (
     Analysis, get_patterns, get_hcurves_ids)
 from openquake._unc.hcurves_dist import to_matrix
-from openquake._unc.processing import sampling, convolution
+from openquake._unc.processing.sampling import sampling
+from openquake._unc.processing.convolution import convolution
 
 
 def prepare(fname: str, atype: str, imtstr: str = None):
@@ -95,7 +96,7 @@ def prepare(fname: str, atype: str, imtstr: str = None):
     return ssets, bsets, grp_curves, an01
 
 
-def propagate(fname_config: Union[str, dict], calc_type: str = 'hazard_curves',
+def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
               **kwargs):
     """
     Given a configuration file, this code returns either a set of realizations
@@ -165,8 +166,7 @@ def propagate(fname_config: Union[str, dict], calc_type: str = 'hazard_curves',
     if kwargs.get('override_folder_out', None) is not None:
         folder_out = kwargs['override_folder_out']
 
-    # Set the name of the output .hdf5 file
-    fname_out = os.path.join(folder_out, 'results.hdf5')
+    # create folder_out if needed
     pathlib.Path(folder_out).mkdir(parents=True, exist_ok=True)
 
     # Define the type of analysis
@@ -190,7 +190,6 @@ def propagate(fname_config: Union[str, dict], calc_type: str = 'hazard_curves',
 
     # Preparing required info
     ssets, bsets, grp_curves, an01 = prepare(fname, atype, imt)
-    root_path = os.path.abspath(os.path.dirname(fname))
 
     # Processing the logic tree. The results we get are: frequency histograms
     # for the intensity levels considered.
@@ -199,7 +198,7 @@ def propagate(fname_config: Union[str, dict], calc_type: str = 'hazard_curves',
         # Processing by convolution
         logging.info("Running convolution")
         fhis, fmin_pow, fnum_pow = convolution(
-            ssets, bsets, an01, root_path, grp_curves, imt, atype, res)
+            ssets, bsets, an01, grp_curves, imt, atype, res)
 
         # This is for testing purposes
         tmp = list(filter(lambda item: item is not None, fhis))
@@ -216,7 +215,7 @@ def propagate(fname_config: Union[str, dict], calc_type: str = 'hazard_curves',
 
         # Processing by sampling. 'nsam' is the number of samples
         logging.info("Running sampling")
-        imls, afes = sampling(ssets, bsets, an01, root_path, grp_curves, nsam)
+        imls, afes = sampling(ssets, bsets, an01, grp_curves, nsam)
         return imls, afes, an01
 
     raise ValueError(f'Calculation type {analysis_type} not supported')

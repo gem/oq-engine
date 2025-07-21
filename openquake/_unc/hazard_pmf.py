@@ -150,8 +150,8 @@ def get_2d_from_mde(poes):
     return out
 
 
-def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
-                            idxs: list = []):
+def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
+                            idxs: list=[]):
     """
     Pulls from the datastore the afes matrix for a given IMT (we assume the
     dstore contains only 1 site)

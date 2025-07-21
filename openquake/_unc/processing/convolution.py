@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -27,7 +26,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding: utf-8
 
-import os
 import logging
 import numpy as np
 
@@ -36,18 +34,15 @@ from openquake._unc.hazard_pmf import (
     afes_matrix_from_dstore, get_hazard_pmf, convolve, mixture)
 
 
-def convolution(ssets: list, bsets: list, an01: Analysis, root_path: str,
+def convolution(ssets: list, bsets: list, an01: Analysis,
                 grp_curves: dict, imt: str, atype: str, res: int = 50):
     """
     This processes the hazard curves and computes the final results
 
-    :param ssets:
-    :param bsets:
+    :param ssets: sets of sources
+    :param bsets: sets if branchset IDs
     :param an01:
         An instance of :class:`openquake._unc.analysis.Analysis`
-    :param root_path:
-        Root path where to find the datastores of the files with the results of
-        the source-specific analyses.
     :param grp_curves:
         A dictionary of dictionaries
     :param imt:
@@ -61,40 +56,30 @@ def convolution(ssets: list, bsets: list, an01: Analysis, root_path: str,
         A triple containing the output histogram, and two arrays with the
         lowest power and the number of powers used to define the histogram
     """
+    logging.info('Computing convolution')
 
-    msg = 'Computing convolution'
-    logging.info(msg)
-
-    # Create a dictionary with the datastores, one for each source
-    dstores = an01.dstores
-
-    # Process the sets of logic trees. When a set contains a single source,
+    # Process the sets of sources. When a set contains a single source,
     # this means that the source does not have correlations with other sources.
     for iset in range(len(ssets)):
-
         sset = ssets[iset]
         bset = bsets[iset]
 
         # Info
-        msg = f'Processing set {iset} sources {sset} correlated bs {bset}'
+        msg = f'Processing sources {sset} correlated bs {bset}'
         logging.info(msg)
 
         # When bset is not None there are correlated sources
         if bset is not None:
-
             his, min_pow, num_pow = process_bset(
-                sset, bset, an01, grp_curves, dstores, res, imt, atype)
-
+                sset, bset, an01, grp_curves, res, imt, atype)
         else:
-
-            # Source ID
-            sid = list(sset)[0]
+            srcid = list(sset)[0]
             # Load the matrix containing the annual frequencies of exceedance.
             # afes is an array with shape I x L where I is the number of
             # intensity measure levels and L is the number of intensity measure
             # levels
-            afds = afes_matrix_from_dstore
-            imls, afes, weights = afds(dstores[sid], imt, atype=atype)
+            imls, afes, weights = afes_matrix_from_dstore(
+                an01.dstores[srcid], imt, atype)
 
             # Convert the matrix into a list of histograms, one for each
             # intensity measure level considered
@@ -115,14 +100,14 @@ def convolution(ssets: list, bsets: list, an01: Analysis, root_path: str,
 
 def _get_path_info(sset, bset, an01, grp_curves):
     """
-    :param sset:
-    :param bset:
-    :param an01:
-    :param grp_curves:
+    :param sset: set of sources
+    :param bset: set of branchset IDs
+    :param an01: Analysis instance
+    :param grp_curves: dictionary
     """
     paths = []
     bset_list = []
-    weight_redux = {sid: 1 for sid in sset}
+    weight_redux = {srcid: 1 for srcid in sset}
     for bset_i, bsid in enumerate(bset):
         bset_list.append(bsid)
         srcids = list(an01.bsets[bsid]['data'])
@@ -138,19 +123,18 @@ def _get_path_info(sset, bset, an01, grp_curves):
         # Update the weight reduction factors for the sources not having this
         # branch set of correlated uncertainties
         srcids_not = sset - set(srcids)
-        for sid in srcids_not:
-            weight_redux[sid] *= len(grp_curves[bsid][srcids[0]])
+        for srcid in srcids_not:
+            weight_redux[srcid] *= len(grp_curves[bsid][srcids[0]])
     return paths, bset_list, weight_redux
 
 
-def process_bset(sset, bset, an01, grp_curves, dstores, res, imt, atype):
+def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
     """
     Process a branchset
 
     :param bset:
     :param an01:
     :param grp_curves:
-    :param dstores:
     :param res:
     :param imt:
         The intensity measure type of interest
@@ -175,7 +159,7 @@ def process_bset(sset, bset, an01, grp_curves, dstores, res, imt, atype):
         group_idxs = [int(s) for s in path.split('_')]
 
         # For each source
-        for sid in sorted(sset):
+        for srcid in sorted(sset):
 
             # For each group. Here we find the indexes 'rlz_idx' of the
             # realizations (i.e. the hazard curves) for the current source
@@ -185,56 +169,48 @@ def process_bset(sset, bset, an01, grp_curves, dstores, res, imt, atype):
 
                 # Check if the current source is in this group
                 bsid = bset_list[i]
-                if sid in list(an01.bsets[bsid]['data']):
+                if srcid in list(an01.bsets[bsid]['data']):
 
-                    tmp = set(grp_curves[bsid][sid][grp_i])
+                    tmp = set(grp_curves[bsid][srcid][grp_i])
                     if len(rlz_idx) == 0:
                         rlz_idx = tmp
                     else:
                         rlz_idx = rlz_idx.intersection(tmp)
 
             # Get hazard curves
-            iii = sorted(list(rlz_idx))
             _, afes, weights = afes_matrix_from_dstore(
-                dstores[sid], imtstr=imt, info=False, idxs=iii, atype=atype)
+                an01.dstores[srcid], imt, atype, False, sorted(rlz_idx))
 
             # Get histogram
             his, min_pow, num_pow = get_hazard_pmf(
                 afes, samples=res, weights=weights)
 
             # Computing weight
-            wei_sum = sum(weights) / weight_redux[sid]
+            wei_sum = sum(weights) / weight_redux[srcid]
 
             # Checking the weights
-            if sid not in chk_idxs:
-                chk_idxs[sid] = rlz_idx
-                chk_wei[sid] = wei_sum
+            if srcid not in chk_idxs:
+                chk_idxs[srcid] = rlz_idx
+                chk_wei[srcid] = wei_sum
             else:
-                chk_idxs[sid] = chk_idxs[sid].union(rlz_idx)
-                chk_wei[sid] += wei_sum
+                chk_idxs[srcid] = chk_idxs[srcid].union(rlz_idx)
+                chk_wei[srcid] += wei_sum
 
             # Updating results for the current set of correlated uncertainties
             if path not in ares:
                 ares[path] = [his, min_pow, num_pow, wei_sum]
             else:
-                his_t = ares[path][0]
-                m_pow_t = ares[path][1]
-                n_pow_t = ares[path][2]
-                wei = ares[path][3]
+                his_t, m_pow_t, n_pow_t, wei = ares[path]
                 his, m_pow, n_pow = convolve(
                         his_t, his,
                         m_pow_t, res, n_pow_t,
                         min_pow, res, num_pow, res)
-                ares[path] = [his, m_pow, n_pow, wei+wei_sum]
+                ares[path] = [his, m_pow, n_pow, wei + wei_sum]
 
     results = []
-    twei = 0
     for i, path in enumerate(paths):
-        ares[path][3] = ares[path][3] / len(sset)
+        ares[path][3] /= len(sset)  # fix weight
         results.append(ares[path])
-        twei += ares[path][3]
 
     # Taking the mixture MFD
-    his, min_pow, num_pow = mixture(results, res)
-
-    return his, min_pow, num_pow
+    return mixture(results, res)
