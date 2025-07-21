@@ -487,13 +487,6 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         # Comparing results from convolution and sampling - test 01
 
         # Read oq mean result
-        fname = TFF / 'data_calc' / 'test_case01' / 'out_all'
-        fname = fname / 'hazard_curve-mean-PGA_944.csv'
-
-        dfmean = pd.read_csv(fname, comment='#')
-        imls = [float(re.sub('poe-', '', s)) for s in dfmean.columns if
-                re.search('^poe', s)]
-
         dstore = dcache.get(str(TFF / 'data_calc/test_case01/job_all.ini'))
         mean = dstore['hcurves-stats'][0, 0, 0, :]
         afe = -np.log(1 - mean)

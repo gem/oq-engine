@@ -4,12 +4,8 @@
       xmlns="http://openquake.org/xmlns/nrml/0.5">
 
     <calculations>
-
-        <calc sourceID="a" datastore="./out_a/calc_8507.hdf5"/>
-        <calc sourceID="b" datastore="./out_b/calc_8508.hdf5"/>
-<!--
         <calc sourceID="a" ini="./job_a.ini"/>
-        <calc sourceID="b" ini="./job_b.ini"/>  -->
+        <calc sourceID="b" ini="./job_b.ini"/>
     </calculations>
 
     <uncertainties>
