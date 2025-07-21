@@ -411,7 +411,7 @@ def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
             min_power_o, res, num_powers_o, pmfo = mpa, rea, npa, ha
         else:
             min_power_o, res, num_powers_o, pmfo = conv(
-                ha, mpa, rea, npa, hb, mpb, reb, npb, res)
+                ha, mpa, rea, npa, hb, mpb, reb, npb)
 
         out1.append(pmfo)
         out2.append(min_power_o)
@@ -423,8 +423,8 @@ def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
     return out1, out2, out3
 
 
-def mixture(results: Sequence[list[list]],
-            resolution: float) -> Tuple[list, list, list]:
+def mixture(results: Sequence[list[list]], resolution: float
+            ) -> Tuple[list, list, list]:
     """
     Given a list of PMFs this computes for each IML a mixture distribution
     corresponding to a weighted sum of input PMFs.
