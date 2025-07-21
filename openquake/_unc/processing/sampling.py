@@ -36,6 +36,7 @@ import numpy as np
 from openquake._unc.analysis import Analysis
 
 
+# tested in test_01_performance
 def sampling(ssets: list, bsets: list, an01: Analysis,
              grp_curves, nsam: int):
     """
@@ -108,21 +109,16 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
                 weights_per_group = []
                 for iii in grp_curves[bsid][bs_sids[0]]:
                     weights_per_group.append(sum(wei[iii]))
-                weights_per_group = np.array(weights_per_group)
 
                 # 'bset_sampled_indexes' contains the indexes of the sampled
                 # set of correlated realisations
-                tmp = np.array(list(range(len(weights_per_group))))
-                weights_per_group = rounding(weights_per_group, 4)
+                weights_per_group = rounding(weights_per_group, 2)
                 bset_sampled_indexes[bsid] = np.random.choice(
-                    tmp, size=nsam, p=weights_per_group)
+                    len(weights_per_group), nsam, p=weights_per_group)
 
             # Sample hazard curves for each source in this set
             for srcid in sorted(sset):
-
-                print(f'Source ID: {srcid}')
-                msg = f"   Source: {srcid}"
-                logging.info(msg)
+                logging.info(f"   Source: {srcid}")
 
                 # This is a container for the indexes of the realizations. Each
                 # element is a set of indexes of realizations for the source
@@ -161,20 +157,17 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
                 _, wei = an01.get_rpaths_weights(dstores[srcid], srcid)
 
                 # Array where we store the indexes of the sampled realisations
-                idx_rlzs = np.zeros((nsam), dtype=int)
+                idx_rlzs = np.zeros(nsam, dtype=int)
                 poes = dstores[srcid].getitem('hcurves-rlzs')[:]
 
                 # Index of the current source
-                kkk = np.where(srcids == srcid)[0]
+                kkk, = np.where(srcids == srcid)
 
                 # Process each sample for the current source
                 for sam in range(nsam):
 
                     # These are the indexes from which we draw a sample
-                    idxs = np.array(sorted(list(iii[sam])))
-
-                    #if srcid == 'b':
-                    #    breakpoint()
+                    idxs = np.sort(list(iii[sam]))
 
                     # Normalised weights
                     norm_wei = wei[idxs] / sum(wei[idxs])
@@ -214,12 +207,12 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
     return oqp.hazard_imtls, afes
 
 
-def rounding(weights_per_group, num):
-    out = []
-    for i in range(len(weights_per_group)-1):
-        wei = weights_per_group[i]
-        tmp = float(f"{wei:.{num}f}")
-        out.append(tmp)
-    out.append(1.0 - np.sum(out))
-    return np.array(out)
+def rounding(weights, digits):
+    """
+    >>> rounding([.123, .234, .51, .133], 2)
+    array([0.12, 0.23, 0.51, 0.14])
+    """
+    out = np.round(weights, digits)
+    out[-1] = 1. - out[:-1].sum()
+    return out
 
