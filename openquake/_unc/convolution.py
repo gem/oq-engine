@@ -63,19 +63,23 @@ def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
 
 
 class Histogram:
-    def __init__(self, pmf, minpower, powers, res):
+    def __init__(self, pmf, minpow, numpow, res):
         self.pmf = pmf
-        self.minpow = minpower
-        self.numpow = powers
+        self.minpow = minpow
+        self.numpow = numpow
         self.res = res
-        self.num = self.res * self.numpow
-        if len(pmf) != self.num:
-            fmt = '|pmf| {:d} ≠ (number of powers * resolution) {:d}*{:d}={:d}'
-            msg = fmt.format(len(pmf), powers, res, self.num)
-            raise ValueError(msg)
-        elif np.abs(1.0 - np.sum(pmf)) > TOLERANCE:
-            smm = np.sum(pmf)
-            raise ValueError(f'Sum of elements pmfa not equal to 1 {smm:8.4e}')
+        assert res
+        if pmf is None or isinstance(pmf[0], np.ndarray):  # already checked
+            return
+        if isinstance(numpow, int):
+            self.num = self.res * self.numpow
+            if len(pmf) != self.num:
+                fmt = '|pmf| {:d} ≠ (number of powers * resolution) {:d}*{:d}={:d}'
+                msg = fmt.format(len(pmf), numpow, res, self.num)
+                raise ValueError(msg)
+            elif np.abs(1.0 - np.sum(pmf)) > TOLERANCE:
+                smm = np.sum(pmf)
+                raise ValueError(f'Sum of elements pmfa not equal to 1 {smm:8.4e}')
 
 
 def conv(pmfa, min_power_a, res_a, num_powers_a,
