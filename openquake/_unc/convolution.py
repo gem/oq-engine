@@ -64,23 +64,6 @@ def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
     return min_power, num_powers, his
 
 
-# TODO: do we need this to be done in numba? it looks like a no to me
-# @compile("(f8[:],f8[:],f8[:],f8[:])")
-def _get_vals(pmfa, pmfb, midsa, midsb):
-    # Outputs
-    yvals = np.zeros(len(pmfa) * len(pmfb))
-    xvals = np.zeros_like(yvals)
-    cnt = 0
-    for i, a in enumerate(pmfa):
-        for j, b in enumerate(pmfb):
-            xvals[cnt] = midsa[i] + midsb[j]
-            yvals[cnt] = a * b
-            cnt += 1
-    xvals = xvals[:cnt+1]
-    yvals = yvals[:cnt+1]
-    return xvals, yvals
-
-
 # TODO: introduce a histogram object with 4 attributes
 # ASK: I was expecting a call to scipy.signal.convolve?
 def conv(pmfa, min_power_a, res_a, num_powers_a,
@@ -136,19 +119,18 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
     # Compute mid points
     bins_a = get_bins_from_params(min_power_a, res_a, num_powers_a)
     bins_b = get_bins_from_params(min_power_b, res_b, num_powers_b)
-    midsa = bins_a[:-1] + np.diff(bins_a)/2
-    midsb = bins_b[:-1] + np.diff(bins_b)/2
+    midsa = bins_a[:-1] + np.diff(bins_a) / 2
+    midsb = bins_b[:-1] + np.diff(bins_b) / 2
 
-    xvals, yvals = _get_vals(pmfa, pmfb, midsa, midsb)
-    idxs = np.digitize(xvals, bins_o)
-    idxs -= 1
-    pmfo = np.zeros(len(bins_o) - 1, dtype=np.float64)
+    xvals = np.add.outer(midsa, midsb).flatten()
+    yvals = np.outer(pmfa, pmfb).flatten()
+    idxs = np.digitize(xvals, bins_o) - 1
+    pmfo = np.zeros(len(bins_o) - 1)
     for i in np.unique(idxs):
-        pmfo[i] = np.sum(yvals[idxs == i])
+        pmfo[i] = yvals[idxs == i].sum()
         msg = "The sum of pmfo is {:f}".format(sum(pmfo))
 
     assert len(pmfo) == res * num_powers_o
-
-    assert np.abs(1.0 - np.sum(pmfo)) < TOLERANCE
+    assert np.abs(1.0 - pmfo.sum()) < TOLERANCE, pmfo.sum()
 
     return min_power_o, res, num_powers_o, pmfo
