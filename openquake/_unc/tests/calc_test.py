@@ -40,7 +40,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from openquake.baselib import hdf5
-from openquake.commonlib import datastore
+from openquake.calculators.base import dcache
 from openquake._unc.hcurves_dist import to_matrix, get_stats
 from openquake._unc.calc.propagate_uncertainties import (
     propagate, write_results_convolution)
@@ -67,7 +67,6 @@ class ResultsCalculationTestCase01(unittest.TestCase):
     def test_against_oq(self):
         # Convolution Vs OQ
 
-        calc_id = 944
         xlim = [1e-2, 5]
 
         # Convolution
@@ -76,9 +75,8 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         his, minp, nump, _ = propagate(fname, override_folder_out=tmpdir)
 
         # Read oq mean result
-        fname = os.path.join(TFF, 'data_calc', 'test_case01', 'out_all',
-                             f'calc_{calc_id}.hdf5')
-        dstore = datastore.read(str(fname))
+        ini = os.path.join(TFF, 'data_calc', 'test_case01', 'job_all.ini')
+        dstore = dcache.get(ini)
         mean = dstore['hcurves-stats'][0, 0, 0, :]
         median = dstore['hcurves-stats'][0, 2, 0, :]
         oqp = dstore['oqparam']
@@ -108,19 +106,18 @@ class ResultsCalculationTestCase01(unittest.TestCase):
 
             # Plot convolution results
             lab = 'Mean from POINT'
-            _ = plt.plot(imls, res_conv[:, 0], 'o', mfc='none', label=lab)
-
-            _ = plt.xscale('log')
-            _ = plt.yscale('log')
-            _ = plt.xlim(xlim)
-            _ = plt.legend()
-            _ = plt.xlabel('Intensity measure level, IML [g]')
-            _ = plt.ylabel('Annual Frequency of exceedance, AFoE []')
-            _ = plt.title('Test Case 01 - Mean PGA')
-            _ = plt.grid(which='major', ls='--', color='grey')
-            _ = plt.grid(which='minor', ls=':', color='lightgrey')
+            plt.plot(imls, res_conv[:, 0], 'o', mfc='none', label=lab)
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.xlim(xlim)
+            plt.legend()
+            plt.xlabel('Intensity measure level, IML [g]')
+            plt.ylabel('Annual Frequency of exceedance, AFoE []')
+            plt.title('Test Case 01 - Mean PGA')
+            plt.grid(which='major', ls='--', color='grey')
+            plt.grid(which='minor', ls=':', color='lightgrey')
             tmp = os.path.join(TFF, 'figs', 'calc_test-case01_mean.png')
-            _ = plt.savefig(tmp)
+            plt.savefig(tmp)
             plt.show()
 
         # Testing the median
@@ -138,20 +135,19 @@ class ResultsCalculationTestCase01(unittest.TestCase):
                 _ = plt.plot(imls, poe, '-', color='lightblue', alpha=0.8)
 
             lbl = 'OQ Full Path Enumeration'
-            _ = plt.plot(imls, expected_med, '-', label=lbl)
+            plt.plot(imls, expected_med, '-', label=lbl)
 
             lab = 'Median from POINT'
-            _ = plt.plot(imls, res_conv[:, 1], 'o', mfc='none', label=lab)
-            _ = plt.yscale('log')
-            _ = plt.xscale('log')
-            _ = plt.legend()
-            _ = plt.xlabel('Intensity measure level, IML [g]')
-            _ = plt.ylabel('Annual Frequency of exceedance, AFoE []')
-            _ = plt.title('Test Case 01 - PGA')
-            _ = plt.grid(which='major', ls='--', color='grey')
-            _ = plt.grid(which='minor', ls=':', color='lightgrey')
-            tmp = os.path.join(TFF, 'figs', 'calc_test-case01_median.png')
-            _ = plt.savefig(tmp)
+            plt.plot(imls, res_conv[:, 1], 'o', mfc='none', label=lab)
+            plt.yscale('log')
+            plt.xscale('log')
+            plt.legend()
+            plt.xlabel('Intensity measure level, IML [g]')
+            plt.ylabel('Annual Frequency of exceedance, AFoE []')
+            plt.title('Test Case 01 - PGA')
+            plt.grid(which='major', ls='--', color='grey')
+            plt.grid(which='minor', ls=':', color='lightgrey')
+            plt.savefig(os.path.join(TFF, 'figs', 'calc_test-case01_median.png'))
             plt.show()
 
         # Plotting mean and median and percentiles
@@ -163,14 +159,14 @@ class ResultsCalculationTestCase01(unittest.TestCase):
             for i_rlz in range(0, n_rlz):
                 poe = -np.log(1 - dstore['hcurves-rlzs'][0, i_rlz, 0, :])
                 if i_rlz == 0:
-                    _ = plt.plot(imls, poe, '-', color='lightblue', alpha=0.8,
-                                 label='LT realization')
+                    plt.plot(imls, poe, '-', color='lightblue', alpha=0.8,
+                             label='LT realization')
                 else:
-                    _ = plt.plot(imls, poe, '-', color='lightblue', alpha=0.8)
+                    plt.plot(imls, poe, '-', color='lightblue', alpha=0.8)
 
-            _ = plt.plot(imls, expected_med, '-',
+            plt.plot(imls, expected_med, '-',
                          label='Median from OQ Full Path Enumeration')
-            _ = plt.plot(imls, expected_mea, '-',
+            plt.plot(imls, expected_mea, '-',
                          label='Mean from OQ Full Path Enumeration')
             lab = '16th percentile from POINT'
             expected_pct = -np.log(1 - dstore['hcurves-stats'][0, 1, 0, :])
@@ -178,29 +174,27 @@ class ResultsCalculationTestCase01(unittest.TestCase):
                          lw=1)
             lab = '84th percentile from POINT'
             expected_pct = -np.log(1 - dstore['hcurves-stats'][0, 3, 0, :])
-            _ = plt.plot(imls, expected_pct, '-.r', mfc='none', label=lab,
-                         lw=1)
+            plt.plot(imls, expected_pct, '-.r', mfc='none', label=lab, lw=1)
 
             # Plot convolution results - median
             lab = 'Median from POINT'
-            _ = plt.plot(imls, res_conv[:, 1], 'o', mfc='none', label=lab)
+            plt.plot(imls, res_conv[:, 1], 'o', mfc='none', label=lab)
 
             # Plot convolution results - mean
             lab = 'Mean from POINT'
-            _ = plt.plot(imls, res_conv[:, 0], 'o', mfc='none', label=lab)
+            plt.plot(imls, res_conv[:, 0], 'o', mfc='none', label=lab)
 
-            _ = plt.xlim(xlim)
-            _ = plt.yscale('log')
-            _ = plt.xscale('log')
-            _ = plt.legend()
-            _ = plt.xlabel('Intensity measure level, IML [g]')
-            _ = plt.ylabel('Annual Frequency of exceedance, AFoE []')
-            _ = plt.title('Test Case 01 - Median PGA')
-            _ = plt.grid(which='major', ls='--', color='grey')
-            _ = plt.grid(which='minor', ls=':', color='lightgrey')
+            plt.xlim(xlim)
+            plt.yscale('log')
+            plt.xscale('log')
+            plt.legend()
+            plt.xlabel('Intensity measure level, IML [g]')
+            plt.ylabel('Annual Frequency of exceedance, AFoE []')
+            plt.title('Test Case 01 - Median PGA')
+            plt.grid(which='major', ls='--', color='grey')
+            plt.grid(which='minor', ls=':', color='lightgrey')
 
-            tmp = os.path.join(TFF, 'figs', 'calc_test-case01_all.png')
-            _ = plt.savefig(tmp)
+            plt.savefig(os.path.join(TFF, 'figs', 'calc_test-case01_all.png'))
             plt.show()
 
 
@@ -499,7 +493,10 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         dfmean = pd.read_csv(fname, comment='#')
         imls = [float(re.sub('poe-', '', s)) for s in dfmean.columns if
                 re.search('^poe', s)]
-        afe = -np.log(1 - dfmean.iloc[0].to_numpy()[3:])
+
+        dstore = dcache.get(str(TFF / 'data_calc/test_case01/job_all.ini'))
+        mean = dstore['hcurves-stats'][0, 0, 0, :]
+        afe = -np.log(1 - mean)
 
         # Convolution
         fname_c = os.path.join(TFF, 'data_calc', 'test_case01_convolution.ini')
