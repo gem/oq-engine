@@ -91,7 +91,6 @@ def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
     return min_power, num_powers, his
 
 
-# TODO: introduce a histogram object with 4 attributes
 def conv(pmfa, min_power_a, res_a, num_powers_a,
          pmfb, min_power_b, res_b, num_powers_b, res=None):
     """
@@ -138,3 +137,57 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
     assert np.abs(1.0 - pmfo.sum()) < TOLERANCE, pmfo.sum()
 
     return min_power_o, res, num_powers_o, pmfo
+
+
+def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
+             num_powers_a: int, min_power_b: int, reb: int, num_powers_b: int,
+             res: int):
+    """
+    Convolves two hazard PMFs
+
+    :param hpmfa:
+    :param hpmfb:
+    :param min_power_a:
+    :param rea:
+    :param num_powers_a:
+    :param min_power_b:
+    :param reb:
+    :param num_powers_b:
+
+    :returns:
+        A tuple with the output pmf, the minimum power, the resolution and the
+        number of powers required
+    """
+    res = res or min(rea, reb)
+    assert len(hpmfa) == len(hpmfb)
+
+    out1 = []
+    out2 = []
+    out3 = []
+    for i in range(len(hpmfa)):
+
+        ha = hpmfa[i]
+        npa = num_powers_a[i]
+        mpa = min_power_a[i]
+
+        hb = hpmfb[i]
+        npb = num_powers_b[i]
+        mpb = min_power_b[i]
+
+        if ha is None and hb is None:
+            min_power_o, _, num_powers_o, pmfo = (
+                None, None, None, None)
+        elif ha is None:
+            min_power_o, res, num_powers_o, pmfo = mpb, reb, npb, hb
+        elif hb is None:
+            min_power_o, res, num_powers_o, pmfo = mpa, rea, npa, ha
+        else:
+            min_power_o, res, num_powers_o, pmfo = conv(
+                ha, mpa, rea, npa, hb, mpb, reb, npb, res)
+
+        out1.append(pmfo)
+        out2.append(min_power_o)
+        out3.append(num_powers_o)
+
+    # one histogram for each IMT considered, plenty of None
+    return Histograms(out1, out2, out3, res)

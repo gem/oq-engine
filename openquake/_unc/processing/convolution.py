@@ -31,7 +31,8 @@ import numpy as np
 
 from openquake._unc.analysis import Analysis
 from openquake._unc.hazard_pmf import (
-    afes_matrix_from_dstore, get_hazard_pmf, convolve, mixture)
+    afes_matrix_from_dstore, get_hazard_pmf, mixture)
+from openquake._unc.convolution import convolve
 
 
 def convolution(ssets: list, bsets: list, an01: Analysis,
