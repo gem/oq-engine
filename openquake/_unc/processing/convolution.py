@@ -32,7 +32,7 @@ import numpy as np
 from openquake._unc.analysis import Analysis
 from openquake._unc.hazard_pmf import (
     afes_matrix_from_dstore, get_hazard_pmf, mixture)
-from openquake._unc.convolution import convolve, Histograms
+from openquake._unc.convolution import Histograms
 
 
 def convolution(ssets: list, bsets: list, an01: Analysis,
@@ -86,9 +86,8 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
         if iset == 0:
             fhis, fmin_pow, fnum_pow = his, min_pow, num_pow
         else:
-            ha = Histograms(fhis, fmin_pow, fnum_pow, res)
-            hb = Histograms(his, min_pow, num_pow, res)
-            h = convolve(ha, hb)
+            h = (Histograms(fhis, fmin_pow, fnum_pow, res) *
+                 Histograms(his, min_pow, num_pow, res))
             fhis, fmin_pow, fnum_pow = h.pmfs, h.minpow, h.numpow
 
     return fhis, np.array(fmin_pow), np.array(fnum_pow)
@@ -197,9 +196,8 @@ def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
                 ares[path] = [his, min_pow, num_pow, wei_sum]
             else:
                 his_t, m_pow_t, n_pow_t, wei = ares[path]
-                ha = Histograms(his_t, m_pow_t, n_pow_t, res)
-                hb = Histograms(his, min_pow, num_pow, res)
-                h = convolve(ha, hb)
+                h = (Histograms(his_t, m_pow_t, n_pow_t, res) *
+                     Histograms(his, min_pow, num_pow, res))
                 his, m_pow, n_pow = h.pmfs, h.minpow, h.numpow
                 ares[path] = [his, m_pow, n_pow, wei + wei_sum]
 

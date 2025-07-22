@@ -48,7 +48,7 @@ class Histograms:
         self.numpow = numpow
         self.res = res
         for pmf, minp, nump in zip(pmfs, minpow, numpow):
-            if pmf is None:  # happens in hazard_pmf.convolve
+            if pmf is None:  # may happen in the convolution
                 continue
             num = res * nump
             if len(pmf) != num:
@@ -59,6 +59,47 @@ class Histograms:
                 smm = np.sum(pmf)
                 raise ValueError(
                     f'Sum of elements pmfa not equal to 1 {smm:8.4e}')
+
+    def __mul__(histo_a, histo_b):
+        """
+        Implements the convolution product of histograms
+        """
+        n = len(histo_a.pmfs)
+        assert len(histo_b.pmfs) == n
+        rea = histo_a.res
+        reb = histo_b.res
+        res = min(rea, reb)
+
+        out1 = []
+        out2 = []
+        out3 = []
+        for i in range(n):
+
+            ha = histo_a.pmfs[i]
+            npa = histo_a.numpow[i]
+            mpa = histo_a.minpow[i]
+
+            hb = histo_b.pmfs[i]
+            npb = histo_b.numpow[i]
+            mpb = histo_b.minpow[i]
+
+            if ha is None and hb is None:
+                min_power_o, _, num_powers_o, pmfo = (
+                    None, None, None, None)
+            elif ha is None:
+                min_power_o, res, num_powers_o, pmfo = mpb, reb, npb, hb
+            elif hb is None:
+                min_power_o, res, num_powers_o, pmfo = mpa, rea, npa, ha
+            else:
+                min_power_o, res, num_powers_o, pmfo = conv(
+                    ha, mpa, rea, npa, hb, mpb, reb, npb, res)
+
+            out1.append(pmfo)
+            out2.append(min_power_o)
+            out3.append(num_powers_o)
+
+        # one histogram for each IMT considered, plenty of None
+        return Histograms(out1, out2, out3, res)
 
 
 def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
@@ -137,45 +178,3 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
     assert np.abs(1.0 - pmfo.sum()) < TOLERANCE, pmfo.sum()
 
     return min_power_o, res, num_powers_o, pmfo
-
-
-def convolve(histo_a, histo_b):
-    """
-    Convolves two sets of histograms
-    """
-    n = len(histo_a.pmfs)
-    assert len(histo_b.pmfs) == n
-    rea = histo_a.res
-    reb = histo_b.res
-    res = min(rea, reb)
-
-    out1 = []
-    out2 = []
-    out3 = []
-    for i in range(n):
-
-        ha = histo_a.pmfs[i]
-        npa = histo_a.numpow[i]
-        mpa = histo_a.minpow[i]
-
-        hb = histo_b.pmfs[i]
-        npb = histo_b.numpow[i]
-        mpb = histo_b.minpow[i]
-
-        if ha is None and hb is None:
-            min_power_o, _, num_powers_o, pmfo = (
-                None, None, None, None)
-        elif ha is None:
-            min_power_o, res, num_powers_o, pmfo = mpb, reb, npb, hb
-        elif hb is None:
-            min_power_o, res, num_powers_o, pmfo = mpa, rea, npa, ha
-        else:
-            min_power_o, res, num_powers_o, pmfo = conv(
-                ha, mpa, rea, npa, hb, mpb, reb, npb, res)
-
-        out1.append(pmfo)
-        out2.append(min_power_o)
-        out3.append(num_powers_o)
-
-    # one histogram for each IMT considered, plenty of None
-    return Histograms(out1, out2, out3, res)
