@@ -215,9 +215,9 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
                     poes = expct[imag, idst, :]
                     poes[poes > 0.99999] = 0.99999
                     afes = -np.log(1. - poes) / oqp.investigation_time
-                    tmp = np.sum(afes * weights)
-                    if tmp > 0.0:
-                        oute.append(tmp)
+                    wei = np.sum(afes * weights)
+                    if wei > 0:
+                        oute.append(wei)
                         idxe.append(cnt)
                 cnt += 1
 
