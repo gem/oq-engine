@@ -157,28 +157,28 @@ def plot_mean_hcurves_rtgm(dstore, sid=0, plot_mce=False, axes=None):
     if plot_mce:
         for i, imt in enumerate(plot_imt):
             axes.loglog(imls_mc[i], AFE[i], color=colors(i),
-                       label=plot_IMT[i], linewidth=3, zorder=1,
-                       linestyle=patterns[i])
+                        label=plot_IMT[i], linewidth=3, zorder=1,
+                        linestyle=patterns[i])
         # plot the label only once but it must be at the end of the legend
             if imt == plot_imt[-1]:
                 axes.loglog([plot_rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-                           label='Probabilistic MCE',  linewidth=2,
-                           markersize=10, zorder=3)
+                            label='Probabilistic MCE',  linewidth=2,
+                            markersize=10, zorder=3)
             else:
                 axes.loglog([plot_rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-                           linewidth=2, markersize=10, zorder=3)
+                            linewidth=2, markersize=10, zorder=3)
             axes.loglog([(plot_rtgm_probmce[i]-1000), plot_rtgm_probmce[i]],
-                       [afe_RTGM[i], afe_RTGM[i]],
-                       color='black', alpha=0.5, linestyle='--', linewidth=1.3)
+                        [afe_RTGM[i], afe_RTGM[i]],
+                        color='black', alpha=0.5, linestyle='--', linewidth=1.3)
 
             axes.loglog([plot_rtgm_probmce[i], plot_rtgm_probmce[i]],
-                       [0, afe_RTGM[i]], color='black', alpha=0.5,
-                       linestyle='--', linewidth=1.3)
+                        [0, afe_RTGM[i]], color='black', alpha=0.5,
+                        linestyle='--', linewidth=1.3)
     else:
         for i, imt in enumerate(plot_imt):
             axes.loglog(imls[i], AFE[i], color=colors(i),
-                       label=plot_IMT[i], linewidth=3, zorder=1,
-                       linestyle=patterns[i])
+                        label=plot_IMT[i], linewidth=3, zorder=1,
+                        linestyle=patterns[i])
 
     # add the ASCE 41-23 RPs
     for afe_val, label in [
@@ -204,25 +204,18 @@ def plot_mean_hcurves_rtgm(dstore, sid=0, plot_mce=False, axes=None):
     return plt
 
 
-def plot_governing_mce(dstore, sid=0, axes=None):
+def plot_governing_mce(dstore, update_dstore=False):
     """
-    Plot governing MCE into provided Axes or create a new figure if none provided.
-
     :param dstore: the datastore
-    :param sid: the site index
-    :param axes: tuple of (ax1, ax2) or None
     :returns: image of governing MCE
     """
+    # FIXME: The mce for the individual vs30 are in the column MCE of the
+    # file mce.csv, while the final one is in the file called now mce_default.csv
+    site_idx = 0  # FIXME
     plt = import_plt()
-
-    # Setup figure or use provided axes
-    if axes is None:
-        _fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
-    else:
-        ax1, ax2 = axes
-
-    # Read data
-    mce_df = dstore.read_df('mce', sel=dict(sid=sid))
+    _fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
+    # get imls and imts, make arrays
+    mce_df = dstore.read_df('mce', sel=dict(sid=site_idx))
     det_mce = mce_df['DetMCE']
     mce = mce_df['MCE']
     prob_mce = mce_df['ProbMCE']
@@ -269,6 +262,14 @@ def plot_governing_mce(dstore, sid=0, axes=None):
     ax2.set_xscale('linear')
     ax2.set_yscale('linear')
 
+    # add user guide message
+    message = 'See WebUI User Guide for complete explanation of plot contents.'
+    plt.text(0.03, -upperlim*0.2, message, fontsize='small', color='black',
+             alpha=0.85)
+    if update_dstore:
+        bio = io.BytesIO()
+        plt.savefig(bio, format='png', bbox_inches='tight')
+        dstore['png/governing_mce.png'] = Image.open(bio)
     return plt
 
 
@@ -324,7 +325,6 @@ def _plot(ax, ax1, sid, plot_idx, m, n, imls, imls_o,
             i += 1
 
 
-# FIXME: check refactoring
 def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, sid,
             rtgm_probmce, mrs, dstore):
     # identify the sources that have a contribution > than fact (here 10%) of
@@ -341,7 +341,7 @@ def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, sid,
 
     afe_target = _find_afe_target(imls, AFE[m], RTGM)
 
-    # --- Main subplot (maximum component) ---
+    # maximum component
     ax[n].loglog(imls, AFE[m], 'k', label=_get_label(imt),
                  linewidth=2, zorder=3)
     ax[n].loglog([numpy.min(imls), RTGM], [afe_target, afe_target], 'k--',

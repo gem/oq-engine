@@ -872,21 +872,10 @@ def main(dstore, csm):
         add_footer_referencing_user_guide(fig1)
         save_figure_to_dstore(fig1, dstore, 'png/hcurves.png')
 
-        # FIG 2: Governing MCE (2 rows, n_sids columns)
-        n_rows = 2  # loglog, linear
-        fig2, axes2 = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 10),
-                                   squeeze=False)
-        for i, sid in enumerate(sids):
-            vs30 = vs30s[i]
-            sid_notifications = notifications[notifications['sid'] == sid]
-            if len(sid_notifications) == 0 or sid_notifications['name'][0] not in [
-                    'zero_hazard', 'low_hazard']:
-                plot_governing_mce(dstore, sid, axes=[axes2[0, i], axes2[1, i]])
-                display_vs30_in_subplot_title(axes2, n_rows, i, vs30)
-                for row in range(n_rows):
-                    axes2[row, i].set_title(f"{vs30=} m/s", fontsize=13)
-        add_footer_referencing_user_guide(fig2)
-        save_figure_to_dstore(fig2, dstore, 'png/governing_mce.png')
+        # FIG 2: Governing MCE (2 rows, 1 column) (regardless from the number of sids)
+        if len(notifications) == 0 or notifications['name'][0] not in [
+                'zero_hazard', 'low_hazard']:
+            plot_governing_mce(dstore, update_dstore=True)
 
         # FIG 3: Disaggregation by Source (3 rows, n_sids columns)
         n_rows = 3  # 3 imts: [PGA, SA(0.2), SA(1.0)]
@@ -899,9 +888,13 @@ def main(dstore, csm):
                 plot_disagg_by_src(
                     dstore, sid, axes=[axes3[0, i], axes3[1, i], axes3[2, i]])
                 display_vs30_in_subplot_title(axes3, n_rows, i, vs30)
-        add_footer_referencing_user_guide(fig3)
-        fig3.subplots_adjust(hspace=0.3)  # avoid overlapping titles and xlabels
-        save_figure_to_dstore(fig3, dstore, 'png/disagg_by_src-All-IMTs.png')
+        has_data = any(ax.has_data() for row in axes3 for ax in row)
+        if has_data:
+            add_footer_referencing_user_guide(fig3)
+            fig3.subplots_adjust(hspace=0.3)  # avoid overlapping titles and xlabels
+            save_figure_to_dstore(fig3, dstore, 'png/disagg_by_src-All-IMTs.png')
+        else:
+            plt.close(fig3)
 
     if len(notifications):
         dstore['notifications'] = notifications

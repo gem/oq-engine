@@ -259,7 +259,9 @@ def test_JPN():
     # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
     expected = os.path.join(MOSAIC_DIR, 'JPN/in/expected/uhs.csv')
-    dic = dict(sites='139 36', site='JPN-site', vs30='530 760 1080')
+    # testing the vs30 values corresponding to the "default" site class
+    dic = dict(sites='139 36', site='JPN-site', vs30='260 365 530')
+    # dic = dict(sites='139 36', site='JPN-site', vs30='760')
     with logs.init(job_ini) as log:
         params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
         params['maximum_distance'] = '300'
