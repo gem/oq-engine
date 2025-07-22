@@ -139,39 +139,28 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
     return min_power_o, res, num_powers_o, pmfo
 
 
-def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
-             num_powers_a: int, min_power_b: int, reb: int, num_powers_b: int):
+def convolve(histo_a, histo_b):
     """
-    Convolves two hazard PMFs
-
-    :param hpmfa:
-    :param hpmfb:
-    :param min_power_a:
-    :param rea:
-    :param num_powers_a:
-    :param min_power_b:
-    :param reb:
-    :param num_powers_b:
-
-    :returns:
-        A tuple with the output pmf, the minimum power, the resolution and the
-        number of powers required
+    Convolves two sets of histograms
     """
+    n = len(histo_a.pmfs)
+    assert len(histo_b.pmfs) == n
+    rea = histo_a.res
+    reb = histo_b.res
     res = min(rea, reb)
-    assert len(hpmfa) == len(hpmfb)
 
     out1 = []
     out2 = []
     out3 = []
-    for i in range(len(hpmfa)):
+    for i in range(n):
 
-        ha = hpmfa[i]
-        npa = num_powers_a[i]
-        mpa = min_power_a[i]
+        ha = histo_a.pmfs[i]
+        npa = histo_a.numpow[i]
+        mpa = histo_a.minpow[i]
 
-        hb = hpmfb[i]
-        npb = num_powers_b[i]
-        mpb = min_power_b[i]
+        hb = histo_b.pmfs[i]
+        npb = histo_b.numpow[i]
+        mpb = histo_b.minpow[i]
 
         if ha is None and hb is None:
             min_power_o, _, num_powers_o, pmfo = (
