@@ -51,7 +51,7 @@ from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites,
-    _find_fact_maxC)
+    _find_fact_maxC, import_plt)
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
@@ -757,6 +757,33 @@ def compute_mce_default(dstore, sitecol, locs):
     return pd.concat(out).reset_index()
 
 
+def save_figure_to_dstore(fig, dstore, key):
+    """
+    Save a matplotlib figure to the datastore as a PNG image.
+
+    :param fig: The matplotlib figure object
+    :param dstore: The datastore to write to
+    :param key: The key under which to store the PNG (e.g., 'png/fig1.png')
+    """
+    from PIL import Image
+    bio = io.BytesIO()
+    fig.savefig(bio, format='png', bbox_inches='tight')
+    bio.seek(0)
+    dstore[key] = Image.open(bio)
+
+
+def add_footer_referencing_user_guide(fig):
+    fig.tight_layout(rect=[0, 0.03, 1, 1])
+    fig.text(0.5, 0.015,  # y = 0.015 is the vertical position of the footer
+             'See WebUI User Guide for complete explanation of plot contents.',
+             ha='center', fontsize='small', color='black', alpha=0.85)
+
+
+def display_vs30_in_subplot_title(axes, n_rows, sid_idx, vs30):
+    for row in range(n_rows):
+        axes[row, sid_idx].set_title(f"{vs30=} m/s", fontsize=13)
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -825,16 +852,56 @@ def main(dstore, csm):
     plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and len(locs) == 1:
         [sids] = locs.values()
-        for sid in sids:
+        n_sids = len(sids)
+        vs30s = oq.override_vs30
+        assert n_sids == len(vs30s), (f'The number of seeds ({n_sids}) must be equal to'
+                                      f' the number of values of vs30 ({len(vs30s)})')
+        plt = import_plt()
+
+        # FIG 1: Mean Hazard Curves (1 row, n_sids columns)
+        n_rows = 1
+        fig1, axes1 = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 6),
+                                   squeeze=False)
+        for i, sid in enumerate(sids):
+            vs30 = vs30s[i]
             sid_notifications = notifications[notifications['sid'] == sid]
-            if len(sid_notifications) ==0:
-                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-                plot_governing_mce(dstore, sid, update_dstore=True)
-                plot_disagg_by_src(dstore, sid, update_dstore=True)
-            elif sid_notifications['name'][0] not in [
+            if len(sid_notifications) == 0 or sid_notifications['name'][0] not in [
                     'zero_hazard', 'low_hazard']:
-                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-                plot_governing_mce(dstore, sid, update_dstore=True)
+                plot_mean_hcurves_rtgm(dstore, sid, axes=axes1[0, i])
+                display_vs30_in_subplot_title(axes1, n_rows, i, vs30)
+        add_footer_referencing_user_guide(fig1)
+        save_figure_to_dstore(fig1, dstore, 'png/hcurves.png')
+
+        # FIG 2: Governing MCE (2 rows, n_sids columns)
+        n_rows = 2  # loglog, linear
+        fig2, axes2 = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 10),
+                                   squeeze=False)
+        for i, sid in enumerate(sids):
+            vs30 = vs30s[i]
+            sid_notifications = notifications[notifications['sid'] == sid]
+            if len(sid_notifications) == 0 or sid_notifications['name'][0] not in [
+                    'zero_hazard', 'low_hazard']:
+                plot_governing_mce(dstore, sid, axes=[axes2[0, i], axes2[1, i]])
+                display_vs30_in_subplot_title(axes2, n_rows, i, vs30)
+                for row in range(n_rows):
+                    axes2[row, i].set_title(f"{vs30=} m/s", fontsize=13)
+        add_footer_referencing_user_guide(fig2)
+        save_figure_to_dstore(fig2, dstore, 'png/governing_mce.png')
+
+        # FIG 3: Disaggregation by Source (3 rows, n_sids columns)
+        n_rows = 3  # 3 imts: [PGA, SA(0.2), SA(1.0)]
+        fig3, axes3 = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 15),
+                                   squeeze=False)
+        for i, sid in enumerate(sids):
+            vs30 = vs30s[i]
+            sid_notifications = notifications[notifications['sid'] == sid]
+            if len(sid_notifications) == 0:
+                plot_disagg_by_src(
+                    dstore, sid, axes=[axes3[0, i], axes3[1, i], axes3[2, i]])
+                display_vs30_in_subplot_title(axes3, n_rows, i, vs30)
+        add_footer_referencing_user_guide(fig3)
+        fig3.subplots_adjust(hspace=0.3)  # avoid overlapping titles and xlabels
+        save_figure_to_dstore(fig3, dstore, 'png/disagg_by_src-All-IMTs.png')
 
     if len(notifications):
         dstore['notifications'] = notifications
