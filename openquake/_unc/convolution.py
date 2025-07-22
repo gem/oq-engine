@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -28,10 +27,36 @@
 # coding: utf-8
 
 import numpy as np
-from openquake.baselib.performance import compile
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 
 TOLERANCE = 1e-6
+
+class Histograms:
+    """
+    An histogram for each IMT.
+ 
+    :param pmfs: Probability Mass Functions with L values
+    :param minpow: L minimum powers
+    :param numpow: L number of powers
+    :param res: resolution
+    """
+    def __init__(self, pmfs, minpow, numpow, res):
+        assert res
+        assert len(pmfs) == len(minpow) == len(numpow)
+        self.pmfs = pmfs
+        self.minpow = minpow
+        self.numpow = numpow
+        self.res = res
+        for pmf, minp, nump in zip(pmfs, minpow, numpow):
+            num = res * nump
+            if len(pmf) != num:
+                msg = ('|pmf| {:d} ≠ (number of powers * resolution) '
+                       '{:d}*{:d}={:d}').format(len(pmf), nump, res, num)
+                raise ValueError(msg)
+            elif np.abs(1.0 - np.sum(pmf)) > TOLERANCE:
+                smm = np.sum(pmf)
+                raise ValueError(
+                    f'Sum of elements pmfa not equal to 1 {smm:8.4e}')
 
 
 def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
@@ -65,7 +90,6 @@ def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
 
 
 # TODO: introduce a histogram object with 4 attributes
-# ASK: I was expecting a call to scipy.signal.convolve?
 def conv(pmfa, min_power_a, res_a, num_powers_a,
          pmfb, min_power_b, res_b, num_powers_b, res=None):
     """
@@ -83,30 +107,9 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
         min_power_o, res, num_powers_o, pmfo
     """
     # Checking input
-    num = num_powers_a*res_a
-    if len(pmfa) != num:
-        fmt = '|pmfa| {:d} ≠ (number of powers * resolution) {:d}*{:d}={:d}'
-        msg = fmt.format(len(pmfa), num_powers_a, res_a, num)
-        raise ValueError(msg)
-
-    # Checking input
-    num = num_powers_b*res_b
-    if len(pmfb) != num:
-        fmt = '|pmfb| {:d} ≠ (number of powers * resolution) {:d}*{:d}={:d}'
-        msg = fmt.format(len(pmfb), num_powers_b, res_b, int(num))
-        raise ValueError(msg)
-
-    # Checking input
-    if np.abs(1.0 - np.sum(pmfa)) > TOLERANCE and len(pmfa):
-        smm = np.sum(pmfa)
-        raise ValueError(f'Sum of elements pmfa not equal to 1 {smm:8.4e}')
-    if np.abs(1.0 - np.sum(pmfb)) > TOLERANCE and len(pmfb):
-        smm = np.sum(pmfb)
-        raise ValueError(f'Sum of elements pmfb not equal to 1 {smm:8.4e}')
-
-    # Defining the resolution of output
-    if res is None:
-        res = np.amin([res_a, res_b])
+    res = min(res_a, res_b)
+    Histograms([pmfa, pmfb], [min_power_a, min_power_b],
+               [num_powers_a, num_powers_b], res)
 
     # Compute bin data and bins for output
     vmin = np.floor(np.log10(10**min_power_a + 10**min_power_b))
@@ -128,7 +131,6 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
     pmfo = np.zeros(len(bins_o) - 1)
     for i in np.unique(idxs):
         pmfo[i] = yvals[idxs == i].sum()
-        msg = "The sum of pmfo is {:f}".format(sum(pmfo))
 
     assert len(pmfo) == res * num_powers_o
     assert np.abs(1.0 - pmfo.sum()) < TOLERANCE, pmfo.sum()
