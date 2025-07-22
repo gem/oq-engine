@@ -29,7 +29,7 @@
 import unittest
 import numpy as np
 
-from openquake._unc.hcurves_dist import to_matrix, from_matrix
+from openquake._unc.hcurves_dist import to_matrix
 aae = np.testing.assert_almost_equal
 
 
@@ -46,4 +46,5 @@ class HazardCurvesDistributionTestCase(unittest.TestCase):
         expected[0:10, 0] = his[0]
         expected[5:15, 1] = his[1]
         aae(expected, computed)
-        aae(his, from_matrix(computed))
+        for hi, col in zip(his, computed.T):
+            aae(hi, col[np.isfinite(col)])

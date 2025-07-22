@@ -183,13 +183,12 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
     def test_md_convolution(self):
         # Convolution md test case
 
-        tmp_path = os.path.join(TFF, 'data_calc', 'disaggregation',
-                                'test_case01')
-        fname_ini = os.path.join(tmp_path, 'test_case01_convolution_md.ini')
+        ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
+                           'test_case01_convolution_md.ini')
 
         tmpdir = tempfile.mkdtemp()
         his, minp, nump, alys = propagate(
-            fname_ini, calc_type='disaggregation', override_folder_out=tmpdir)
+            ini, calc_type='disaggregation', override_folder_out=tmpdir)
 
         # Results
         computed_mtx, afes = to_matrix(his, minp, nump)

@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -54,17 +53,6 @@ def to_matrix(his: list, minp: np.ndarray, nump: np.ndarray) -> np.ndarray:
     return mtx, afes
 
 
-def from_matrix(mtx):
-    """
-    Convert the matrix into a list of arrays.
-    """
-    out = []
-    for i in range(mtx.shape[1]):
-        idx = np.isfinite(mtx[:, i])
-        out.append(mtx[idx, i])
-    return out
-
-
 def get_stats(result_types, hiss, minp, nump):
     """
     :param result_types:
@@ -80,19 +68,17 @@ def get_stats(result_types, hiss, minp, nump):
     nump = np.array(nump, dtype=float)
     idx = np.array(np.where(np.isfinite(nump)), dtype=int)[0]
     res = int(len(hiss[idx[0]]) / nump[idx[0]])
-
     for i in idx:
         his = hiss[i]
         mpow = minp[i]
         npow = nump[i]
         bins = get_bins_from_params(mpow, res, npow)
-        mids = bins[:-1]+np.diff(bins)/2
+        mids = bins[:-1] + np.diff(bins) / 2
         tmp = []
         for rty in result_types:
             if rty < 0:
                 tmp.append(np.average(mids, weights=his))
             else:
-                pct = weighted_percentile(mids, weights=his, perc=rty)
-                tmp.append(pct)
+                tmp.append(weighted_percentile(mids, weights=his, perc=rty))
         out.append(tmp)
     return np.array(out), idx
