@@ -60,13 +60,8 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
 
     # Process the sets of sources. When a set contains a single source,
     # this means that the source does not have correlations with other sources.
-    for iset in range(len(ssets)):
-        sset = ssets[iset]
-        bset = bsets[iset]
-
-        # Info
-        msg = f'Processing sources {sset} correlated bs {bset}'
-        logging.info(msg)
+    for iset, (sset, bset) in enumerate(zip(ssets, bsets)):
+        logging.info(f'Processing sources {sset} correlated bs {bset}')
 
         # When bset is not None there are correlated sources
         if bset is not None:
@@ -93,8 +88,6 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
             fhis, fmin_pow, fnum_pow = convolve(
                fhis, his, fmin_pow, res, fnum_pow, min_pow, res, num_pow, res)
 
-    #return fhis, np.array(fmin_pow, dtype=int), np.array(fnum_pow, dtype=int)
-    assert len(fhis) == len(fmin_pow) == len(fnum_pow)
     return fhis, np.array(fmin_pow), np.array(fnum_pow)
 
 
