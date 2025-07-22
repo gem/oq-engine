@@ -26,7 +26,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding: utf-8
 
-import re
 import os
 import time
 import pathlib
@@ -36,7 +35,6 @@ import tracemalloc
 import configparser
 import pytest
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 from openquake.baselib import hdf5
@@ -147,7 +145,8 @@ class ResultsCalculationTestCase01(unittest.TestCase):
             plt.title('Test Case 01 - PGA')
             plt.grid(which='major', ls='--', color='grey')
             plt.grid(which='minor', ls=':', color='lightgrey')
-            plt.savefig(os.path.join(TFF, 'figs', 'calc_test-case01_median.png'))
+            plt.savefig(
+                os.path.join(TFF, 'figs', 'calc_test-case01_median.png'))
             plt.show()
 
         # Plotting mean and median and percentiles

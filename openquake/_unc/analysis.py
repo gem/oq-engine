@@ -87,6 +87,8 @@ class Analysis:
         # A dictionary with key the IDs of the sources. The value is a string
         # with the path to the datastore containing the results.
         self.dstores = dstores
+        itimes = [dstore['oqparam'].investigation_time for dstore in dstores.values()]
+        self.itime, = np.unique(itimes)
 
         # Path to the folder containing the datastores
         self.root_path = root_path
@@ -333,6 +335,26 @@ class Analysis:
             rlzs[key] = [np.array(ssc), np.array(gmc)]
 
         return rlzs, poes, weights
+
+    def extract_afes(self, mag_dst_rlz, weights):
+        """
+        Extract nonzero afes and indices from the array mag_dst_rlz,
+        by averaging on the realization weights.
+        """
+        oute = []
+        idxe = []
+        cnt = 0
+        for imag in range(self.shapes[0]):
+            for idst in range(self.shapes[1]):
+                poes = mag_dst_rlz[imag, idst, :]
+                poes[poes > 0.99999] = 0.99999
+                afes = -np.log(1. - poes) / self.itime
+                afe = np.sum(afes * weights)
+                if afe > 0:
+                    oute.append(afe)
+                    idxe.append(cnt)
+                cnt += 1
+        return oute, idxe
 
 
 def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
