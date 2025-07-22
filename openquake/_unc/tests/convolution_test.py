@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -84,7 +83,7 @@ class ConvolutionTest(unittest.TestCase):
         #      0.1 * 0.8 + 0.0 * 0.0 = 0.08
 
         # Computing convolution
-        _, _, _, pmfo = conv(
+        pmfo = conv(
             hia, min_power_a, res_a, num_powers_a, hib, min_power_b, res_b,
-            num_powers_b)
+            num_powers_b).pmfs[0]
         np.testing.assert_allclose(pmfo, [0., 0., 0.3, 0.68, 0.02, 0., 0., 0.])

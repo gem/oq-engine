@@ -39,7 +39,6 @@ import copy
 import numpy as np
 from typing import Tuple
 from collections.abc import Sequence
-from openquake._unc.convolution import conv
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 from openquake._unc.utils import get_rlzs, get_rlz_hcs
 
@@ -367,62 +366,6 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
     return ohis, min_powers, num_powers
 
 
-# TODO: use numba?
-def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
-             num_powers_a: int, min_power_b: int, reb: int, num_powers_b: int,
-             res: int):
-    """
-    Convolves two hazard PMFs
-
-    :param hpmfa:
-    :param hpmfb:
-    :param min_power_a:
-    :param rea:
-    :param num_powers_a:
-    :param min_power_b:
-    :param reb:
-    :param num_powers_b:
-
-    :returns:
-        A tuple with the output pmf, the minimum power, the resolution and the
-        number of powers required
-    """
-    assert len(hpmfa) == len(hpmfb)
-
-    out1 = []
-    out2 = []
-    out3 = []
-    for i in range(len(hpmfa)):
-
-        ha = hpmfa[i]
-        npa = num_powers_a[i]
-        mpa = min_power_a[i]
-
-        hb = hpmfb[i]
-        npb = num_powers_b[i]
-        mpb = min_power_b[i]
-
-        if ha is None and hb is None:
-            min_power_o, res, num_powers_o, pmfo = (
-                None, None, None, None)
-        elif ha is None:
-            min_power_o, res, num_powers_o, pmfo = mpb, reb, npb, hb
-        elif hb is None:
-            min_power_o, res, num_powers_o, pmfo = mpa, rea, npa, ha
-        else:
-            min_power_o, res, num_powers_o, pmfo = conv(
-                ha, mpa, rea, npa, hb, mpb, reb, npb, res)
-
-        out1.append(pmfo)
-        out2.append(min_power_o)
-        out3.append(num_powers_o)
-
-    # out3 contains the number of powers used to represent the PMFs for each
-    # IMT considered
-
-    return out1, out2, out3
-
-
 def mixture(results: Sequence[list[list]],
             resolution: float) -> Tuple[list, list, list]:
     """
@@ -463,10 +406,6 @@ def mixture(results: Sequence[list[list]],
     idx = ~np.isnan(minpow)
     maxrange = copy.copy(minpow)
     maxrange[idx] = maxpow[idx] - minpow[idx]
-
-    # Check
-    # for i in range(0, len(results)):
-    #    assert len(results[0][0][0]) == len(results[i][0][0])
 
     # Create output. For each IML we create the mixture PMF as a weighted sum
     # of the two original PMFs. In the case of disaggregation the number of
