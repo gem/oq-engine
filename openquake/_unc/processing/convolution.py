@@ -87,7 +87,7 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
             fhis, fmin_pow, fnum_pow = his, min_pow, num_pow
         else:
             h = convolve(
-                fhis, his, fmin_pow, res, fnum_pow, min_pow, res, num_pow, res)
+                fhis, his, fmin_pow, res, fnum_pow, min_pow, res, num_pow)
             fhis, fmin_pow, fnum_pow = h.pmfs, h.minpow, h.numpow
 
     return fhis, np.array(fmin_pow), np.array(fnum_pow)
@@ -197,7 +197,7 @@ def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
             else:
                 his_t, m_pow_t, n_pow_t, wei = ares[path]
                 h = convolve(his_t, his, m_pow_t, res, n_pow_t,
-                             min_pow, res, num_pow, res)
+                             min_pow, res, num_pow)
                 his, m_pow, n_pow = h.pmfs, h.minpow, h.numpow
                 ares[path] = [his, m_pow, n_pow, wei + wei_sum]
 

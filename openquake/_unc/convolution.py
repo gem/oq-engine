@@ -140,8 +140,7 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
 
 
 def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
-             num_powers_a: int, min_power_b: int, reb: int, num_powers_b: int,
-             res: int):
+             num_powers_a: int, min_power_b: int, reb: int, num_powers_b: int):
     """
     Convolves two hazard PMFs
 
@@ -158,7 +157,7 @@ def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
         A tuple with the output pmf, the minimum power, the resolution and the
         number of powers required
     """
-    res = res or min(rea, reb)
+    res = min(rea, reb)
     assert len(hpmfa) == len(hpmfb)
 
     out1 = []
