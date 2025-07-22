@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -28,7 +27,6 @@
 # coding: utf-8
 
 import os
-import re
 import pathlib
 import logging
 import numpy as np
@@ -44,7 +42,7 @@ from openquake._unc.processing.sampling import sampling
 from openquake._unc.processing.convolution import convolution
 
 
-def prepare(fname: str, atype: str, imtstr: str = None):
+def prepare(fname: str, atype: str, imtstr: str=None):
     """
     Prepare the information needed for the analysis.
 
@@ -92,7 +90,6 @@ def prepare(fname: str, atype: str, imtstr: str = None):
     # sets each one containing sources with some correlation. 'bsets' is a list
     # of sets with correlated branch sets IDs
     ssets, bsets = an01.get_sets()
-
     return ssets, bsets, grp_curves, an01
 
 
@@ -108,7 +105,7 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
         a dictionary with the content of a .toml configuration file.
     :param calc_type:
         The calculation type. Default is the calculation of 'hazard_curves'.
-        Other supported options are 'disaggregation'.
+        The other supported option is 'disaggregation'.
     :returns:
         In case of an analysis based on convolution, it returns a tuple
         containing: 'fhis' a list of arrays with length equal to the number of
@@ -136,8 +133,7 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
 
     # Configuration
     if isinstance(fname_config, str):
-        # conf_file_path = os.path.dirname(fname_config)
-        conf_file_path = pathlib.Path(fname_config).parent.resolve()
+        conf_file_path = os.path.dirname(fname_config)
         conf = configparser.ConfigParser()
         conf.read(fname_config)
     elif isinstance(fname_config, dict):
@@ -147,19 +143,11 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
         raise ValueError('Unknown format for input')
 
     # Name of the .xml file with the information needed to perform the analysis
-    fname = conf['analysis']['input_file']
-    if not re.search('^/', fname):
-        fname = os.path.join(conf_file_path, fname)
-    msg = f'The input file {fname} does not exist'
-    assert os.path.exists(fname), msg
+    fname = os.path.join(conf_file_path, conf['analysis']['input_file'])
+    assert os.path.exists(fname), fname
 
     # Read the name of the output folder in the configuration
-    folder_out = conf['output']['output_folder']
-
-    # If the folder path is relative (to the position of the configuration
-    # file), complete the path
-    if not re.search('^/', folder_out):
-        folder_out = os.path.join(conf_file_path, folder_out)
+    folder_out = os.path.join(conf_file_path, conf['output']['output_folder'])
 
     # Override the path to the output folder, with the path provided in the
     # call to this function
@@ -191,29 +179,15 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
     # Preparing required info
     ssets, bsets, grp_curves, an01 = prepare(fname, atype, imt)
 
-    # Processing the logic tree. The results we get are: frequency histograms
-    # for the intensity levels considered.
     if analysis_type == 'convolution':
-
-        # Processing by convolution
+        # getting the frequency histograms
+        # for the intensity levels considered
         logging.info("Running convolution")
         fhis, fmin_pow, fnum_pow = convolution(
             ssets, bsets, an01, grp_curves, imt, atype, res)
-
-        # This is for testing purposes
-        tmp = list(filter(lambda item: item is not None, fhis))
-        n1 = sum(1 for _ in tmp)
-        tmp = list(filter(lambda item: item is not None, fmin_pow))
-        n2 = sum(1 for _ in tmp)
-        tmp = list(filter(lambda item: item is not None, fnum_pow))
-        n3 = sum(1 for _ in tmp)
-        assert n1 == n2 == n3
-
         return fhis, fmin_pow, fnum_pow, an01
 
-    if analysis_type == 'sampling':
-
-        # Processing by sampling. 'nsam' is the number of samples
+    elif analysis_type == 'sampling':
         logging.info("Running sampling")
         imls, afes = sampling(ssets, bsets, an01, grp_curves, nsam)
         return imls, afes, an01
@@ -238,12 +212,11 @@ def write_results_convolution(
         histogram
     """
     mtx, afes = to_matrix(his, np.array(min_pow), np.array(num_pow))
-    fout = hdf5.File(fname, "w")
-    _ = fout.create_dataset("histograms", data=mtx)
-    _ = fout.create_dataset("mininum_power", data=np.array(min_pow))
-    _ = fout.create_dataset("number_of_powers", data=np.array(num_pow))
-    _ = fout.create_dataset("afes", data=afes)
-    fout.close()
+    with hdf5.File(fname, "w") as fout:
+        fout.create_dataset("histograms", data=mtx)
+        fout.create_dataset("mininum_power", data=np.array(min_pow))
+        fout.create_dataset("number_of_powers", data=np.array(num_pow))
+        fout.create_dataset("afes", data=afes)
 
 
 def write_results_sampling(fname: str, imls: np.ndarray, afes: np.ndarray):
@@ -257,12 +230,11 @@ def write_results_sampling(fname: str, imls: np.ndarray, afes: np.ndarray):
     :param afes:
         List of arrays with the results of the sampling procedure
     """
-    fout = hdf5.File(fname, "w")
-    group = fout.create_group("imls")
-    for key in imls:
-        _ = group.create_dataset(key, data=imls[key])
-    _ = fout.create_dataset("afes", data=afes)
-    fout.close()
+    with hdf5.File(fname, "w") as fout:
+        group = fout.create_group("imls")
+        for key in imls:
+            group.create_dataset(key, data=imls[key])
+        fout.create_dataset("afes", data=afes)
 
 
 def main(fname_config: str):
