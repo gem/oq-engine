@@ -107,7 +107,7 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
         min_power_o, res, num_powers_o, pmfo
     """
     # Checking input
-    res = min(res_a, res_b)
+    res = res or min(res_a, res_b)
     Histograms([pmfa, pmfb], [min_power_a, min_power_b],
                [num_powers_a, num_powers_b], res)
 
