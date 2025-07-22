@@ -84,15 +84,15 @@ class Histograms:
             mpb = histo_b.minpow[i]
 
             if ha is None and hb is None:
-                min_power_o, _, num_powers_o, pmfo = (
-                    None, None, None, None)
+                min_power_o, num_powers_o, pmfo = None, None, None
             elif ha is None:
-                min_power_o, res, num_powers_o, pmfo = mpb, reb, npb, hb
+                min_power_o, num_powers_o, pmfo = mpb, npb, hb
             elif hb is None:
-                min_power_o, res, num_powers_o, pmfo = mpa, rea, npa, ha
+                min_power_o, num_powers_o, pmfo = mpa, npa, ha
             else:
-                min_power_o, res, num_powers_o, pmfo = conv(
-                    ha, mpa, rea, npa, hb, mpb, reb, npb, res)
+                h = conv(ha, mpa, rea, npa, hb, mpb, reb, npb, res)
+                min_power_o, num_powers_o, pmfo = \
+                    h.minpow[0], h.numpow[0], h.pmfs[0]
 
             out1.append(pmfo)
             out2.append(min_power_o)
@@ -174,7 +174,4 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
     for i in np.unique(idxs):
         pmfo[i] = yvals[idxs == i].sum()
 
-    assert len(pmfo) == res * num_powers_o
-    assert np.abs(1.0 - pmfo.sum()) < TOLERANCE, pmfo.sum()
-
-    return min_power_o, res, num_powers_o, pmfo
+    return Histograms([pmfo], [min_power_o], [num_powers_o], res)
