@@ -237,7 +237,12 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         mtxe = get_md_from_2d(oute, tmp, idxs)
 
         # Test the mean
-        # aae(oute, res_conv[:, 0])
+        rounded = np.round(mtxe[0], 10)
+        expected = np.array(
+            [0.      , 0.      , 0.      , 0.      , 0.000996, 0.000996,
+             0.000996, 0.000996, 0.003984, 0.015936, 0.015936, 0.015936,
+             0.015936, 0.00136 , 0.000996, 0.00408 , 0.015936])
+        aae(rounded, expected)
 
         conf = {}
         conf['imt_lab'] = 'PGA'
