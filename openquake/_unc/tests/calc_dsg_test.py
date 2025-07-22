@@ -219,7 +219,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         weights = dstore['weights'][:][rmap]
 
         # Open datastore and read oq params
-        oqp = dstore['oqparam']
+        itime = dstore['oqparam'].investigation_time
 
         oute = []
         idxe = []
@@ -227,10 +227,10 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         for imag in range(alys.shapes[0]):
             poes = expct[imag, :]
             poes[poes > 0.99999] = 0.99999
-            afes = -np.log(1. - poes) / oqp.investigation_time
-            tmp = np.sum(afes * weights)
-            if tmp > 0.0:
-                oute.append(tmp)
+            afes = -np.log(1. - poes) / itime
+            wei = afes @ weights
+            if wei > 0.0:
+                oute.append(wei)
                 idxe.append(cnt)
             cnt += 1
 
@@ -271,14 +271,3 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
             plt.legend()
             plt.savefig(TFF / 'figs' / 'dsg_correlation_test01.png')
             plt.show()
-
-
-def get_data(alys, out):
-    mag = alys.dsg_mag[:-1] + np.diff(alys.dsg_mag) / 2
-    dst = alys.dsg_dst[:-1] + np.diff(alys.dsg_dst) / 2
-    data = []
-    for imag in range(alys.shapes[0]):
-        for idst in range(alys.shapes[1]):
-            if np.isfinite(out[imag, idst]):
-                data.append([mag[imag], dst[idst], out[imag, idst]])
-    return np.array(data)
