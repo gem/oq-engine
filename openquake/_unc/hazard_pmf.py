@@ -39,7 +39,7 @@ import copy
 import numpy as np
 from typing import Tuple
 from collections.abc import Sequence
-from openquake._unc.convolution import conv
+from openquake._unc.convolution import conv, Histograms
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 from openquake._unc.utils import get_rlzs, get_rlz_hcs
 
@@ -367,7 +367,6 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
     return ohis, min_powers, num_powers
 
 
-# TODO: use numba?
 def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
              num_powers_a: int, min_power_b: int, reb: int, num_powers_b: int,
              res: int):
@@ -387,6 +386,7 @@ def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
         A tuple with the output pmf, the minimum power, the resolution and the
         number of powers required
     """
+    res = res or min(rea, reb)
     assert len(hpmfa) == len(hpmfb)
 
     out1 = []
@@ -403,7 +403,7 @@ def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
         mpb = min_power_b[i]
 
         if ha is None and hb is None:
-            min_power_o, res, num_powers_o, pmfo = (
+            min_power_o, _, num_powers_o, pmfo = (
                 None, None, None, None)
         elif ha is None:
             min_power_o, res, num_powers_o, pmfo = mpb, reb, npb, hb
@@ -417,10 +417,8 @@ def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
         out2.append(min_power_o)
         out3.append(num_powers_o)
 
-    # out3 contains the number of powers used to represent the PMFs for each
-    # IMT considered
-
-    return out1, out2, out3
+    # one histogram for each IMT considered, plenty of None
+    return Histograms(out1, out2, out3, res)
 
 
 def mixture(results: Sequence[list[list]],

@@ -48,6 +48,8 @@ class Histograms:
         self.numpow = numpow
         self.res = res
         for pmf, minp, nump in zip(pmfs, minpow, numpow):
+            if pmf is None:  # happens in hazard_pmf.convolve
+                continue
             num = res * nump
             if len(pmf) != num:
                 msg = ('|pmf| {:d} ≠ (number of powers * resolution) '
