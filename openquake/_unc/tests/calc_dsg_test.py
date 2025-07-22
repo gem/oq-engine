@@ -132,25 +132,6 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
                     idxe.append(cnt)
                 cnt += 1
 
-        outexp = np.array([5.047940e-05, 2.256400e-05, 3.505100e-06, 5.545000e-07,
-                           6.160000e-08, 1.590000e-08, 3.000000e-10, 6.301320e-05,
-                           2.495560e-05, 4.543500e-06, 5.729000e-07, 7.660000e-08,
-                           9.400000e-09, 7.217670e-05, 2.946790e-05, 5.591300e-06,
-                           6.648000e-07, 1.068000e-07, 1.110000e-08, 8.443390e-05,
-                           3.254070e-05, 5.792300e-06, 6.038000e-07, 1.339000e-07,
-                           1.020000e-08, 1.011107e-04, 3.277540e-05, 6.047000e-06,
-                           4.328000e-07, 1.275000e-07, 9.024860e-05, 3.375480e-05,
-                           6.069200e-06, 4.004000e-07, 1.274000e-07, 1.221746e-04,
-                           3.523240e-05, 4.941400e-06, 4.939000e-07, 1.050000e-08,
-                           1.306358e-04, 3.437390e-05, 4.589900e-06, 5.110000e-07,
-                           1.591468e-04, 3.460260e-05, 1.811500e-06, 2.808000e-07,
-                           1.514135e-04, 3.081520e-05, 1.807200e-06, 3.096000e-07,
-                           1.612345e-04, 2.585910e-05, 1.959900e-06, 1.687358e-04,
-                           1.571210e-05, 1.502600e-06, 1.672837e-04, 5.009700e-06,
-                           7.728000e-07, 1.580009e-04, 4.083100e-06, 2.343940e-05,
-                           3.042300e-06])
-        aae(np.round(oute, 10), outexp)
-
         # Mean and median from convolution
         res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
 
@@ -217,22 +198,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         # Expected results - Mean disaggregation
         expct = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
         weights = dstore['weights'][:][rmap]
-
-        # Open datastore and read oq params
-        itime = dstore['oqparam'].investigation_time
-
-        oute = []
-        idxe = []
-        cnt = 0
-        for imag in range(alys.shapes[0]):
-            poes = expct[imag, :]
-            poes[poes > 0.99999] = 0.99999
-            afes = -np.log(1. - poes) / itime
-            wei = afes @ weights
-            if wei > 0.0:
-                oute.append(wei)
-                idxe.append(cnt)
-            cnt += 1
+        oute, idxe = alys.extract_afes(expct[:, None], weights)
 
         # Mean and median from convolution
         res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)

@@ -344,8 +344,9 @@ class Analysis:
         oute = []
         idxe = []
         cnt = 0
-        for imag in range(self.shapes[0]):
-            for idst in range(self.shapes[1]):
+        Ma, D, R = mag_dst_rlz.shape
+        for imag in range(Ma):
+            for idst in range(D):
                 poes = mag_dst_rlz[imag, idst, :]
                 poes[poes > 0.99999] = 0.99999
                 afes = -np.log(1. - poes) / self.itime
