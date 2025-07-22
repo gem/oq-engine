@@ -34,10 +34,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from openquake._unc.tests.utils_plot_dsg import plot_dsg_md
-from openquake.baselib import hdf5
-from openquake.commonlib import datastore
 from openquake.calculators.base import dcache
-from openquake._unc.hazard_pmf import get_mde_from_2d, get_md_from_2d
+from openquake._unc.hazard_pmf import get_md_from_2d
 from openquake._unc.hcurves_dist import to_matrix, get_stats
 from openquake._unc.calc.propagate_uncertainties import (
     propagate, write_results_convolution)
@@ -89,96 +87,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
     @unittest.skip('not ready')
     def test_mde_convolution(self):
-        # Convolution mde test case
-
-        tmp_path = os.path.join(TFF, 'data_calc', 'disaggregation',
-                                'test_case01')
-        fname_ini = os.path.join(tmp_path, 'test_case01_convolution_mde.ini')
-
-        tmpdir = tempfile.mkdtemp()
-        his, minp, nump, alys = propagate(
-            fname_ini, calc_type='disaggregation', override_folder_out=tmpdir)
-
-        # Results
-        computed_mtx, afes = to_matrix(his, minp, nump)
-        fname_out = os.path.join(tmpdir, 'res.hdf5')
-
-        write_results_convolution(fname_out, his, np.array(minp, dtype=float),
-                                  np.array(nump, dtype=float))
-
-        # Expected results
-        tpath = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01')
-        fname = os.path.join(tpath, 'out_all', 'calc_1980.hdf5')
-        f = hdf5.File(fname, "r")
-
-        expct = f['disagg/Mag_Dist_Eps'][0, 0, 0, :, :, :, :]
-        weights = f['weights']
-
-        dstore = datastore.read(fname)
-        oqp = dstore['oqparam']
-
-        oute = []
-        idxe = []
-        cnt = 0
-        for imag in range(alys.shapes[0]):
-            for idst in range(alys.shapes[1]):
-                for ieps in range(alys.shapes[2]):
-                    if np.all(np.isfinite(expct[imag, idst, ieps, :])):
-                        poes = expct[imag, idst, ieps, :]
-                        poes[poes > 0.99999] = 0.99999
-                        afes = -np.log(1. - poes) / oqp.investigation_time
-                        tmp = np.sum(afes * weights)
-                        if tmp > 0.0:
-                            oute.append(tmp)
-                            idxe.append(cnt)
-                    cnt += 1
-
-        # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
-
-        # Test the indexes
-        aae(idxs, idxe)
-
-        # Mean matrix
-        tmp = alys.shapes[:-1]
-        out = get_mde_from_2d(res_conv[:, 0], tmp, idxs)
-
-        # Test the mean
-        # aae(oute, res_conv[:, 0])
-
-        if False:
-            fig, axs = plt.subplots(1, 1)
-            plt.plot(oute, res_conv[:, 0], 'o')
-            xlim = axs.get_xlim()
-            ylim = axs.get_ylim()
-            xli = [min([xlim[0], ylim[0]]), max([xlim[1], ylim[1]])]
-            plt.plot(xli, xli, '--')
-            plt.grid(which='major', color='lightgrey', ls='--')
-            plt.grid(which='minor', color='lightgrey', ls=':')
-            plt.show()
-
-        if PLOTTING:
-
-            mag = alys.dsg_mag[:-1] + np.diff(alys.dsg_mag) / 2
-            dst = alys.dsg_dst[:-1] + np.diff(alys.dsg_dst) / 2
-            eps = alys.dsg_eps[:-1] + np.diff(alys.dsg_eps) / 2
-
-            data = []
-            for imag in range(alys.shapes[0]):
-                for idst in range(alys.shapes[1]):
-                    for ieps in range(alys.shapes[2]):
-                        if np.isfinite(out[imag, idst, ieps]):
-                            data.append([mag[imag], dst[idst], eps[ieps],
-                                         out[imag, idst, ieps]])
-            data = np.array(data)
-
-            import pygmt
-            region = [4.0, 8.0, 0, 100, -3, 3]
-            fig = pygmt.Figure()
-            fig.basemap(region=region, projection="X8c", frame=True,
-                        perspective=[315, 25], zscale=0.5)
-            fig.plot3d(data[:, 0:3], style='c0.1c', perspective=[315, 25])
-            fig.show()
+        pass
 
     def test_md_convolution(self):
         # Convolution md test case
@@ -193,15 +102,14 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         # Results
         computed_mtx, afes = to_matrix(his, minp, nump)
         fname_out = os.path.join(tmpdir, 'res.hdf5')
-
         write_results_convolution(fname_out, his, np.array(minp, dtype=float),
                                   np.array(nump, dtype=float))
 
         # Expected results
-        tpath = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01')
-        dstore = dcache.get(os.path.join(tpath, 'job_all.ini'))
-
-        expct = dstore['disagg-rlzs/Mag_Dist'][0, :, :, 0, 0, :]
+        ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
+                           'job_all.ini')
+        dstore = dcache.get(ini)
+        expct = dstore['disagg-rlzs/Mag_Dist'][0, :, :, 0, 0, :]  # mag,dist,rlz
         rmap = dstore['best_rlzs'][:]
         weights = dstore['weights'][:][rmap]
         oqp = dstore['oqparam']
@@ -220,6 +128,25 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
                         oute.append(wei)
                         idxe.append(cnt)
                 cnt += 1
+
+        outexp = np.array([5.047940e-05, 2.256400e-05, 3.505100e-06, 5.545000e-07,
+                           6.160000e-08, 1.590000e-08, 3.000000e-10, 6.301320e-05,
+                           2.495560e-05, 4.543500e-06, 5.729000e-07, 7.660000e-08,
+                           9.400000e-09, 7.217670e-05, 2.946790e-05, 5.591300e-06,
+                           6.648000e-07, 1.068000e-07, 1.110000e-08, 8.443390e-05,
+                           3.254070e-05, 5.792300e-06, 6.038000e-07, 1.339000e-07,
+                           1.020000e-08, 1.011107e-04, 3.277540e-05, 6.047000e-06,
+                           4.328000e-07, 1.275000e-07, 9.024860e-05, 3.375480e-05,
+                           6.069200e-06, 4.004000e-07, 1.274000e-07, 1.221746e-04,
+                           3.523240e-05, 4.941400e-06, 4.939000e-07, 1.050000e-08,
+                           1.306358e-04, 3.437390e-05, 4.589900e-06, 5.110000e-07,
+                           1.591468e-04, 3.460260e-05, 1.811500e-06, 2.808000e-07,
+                           1.514135e-04, 3.081520e-05, 1.807200e-06, 3.096000e-07,
+                           1.612345e-04, 2.585910e-05, 1.959900e-06, 1.687358e-04,
+                           1.571210e-05, 1.502600e-06, 1.672837e-04, 5.009700e-06,
+                           7.728000e-07, 1.580009e-04, 4.083100e-06, 2.343940e-05,
+                           3.042300e-06])
+        aae(np.round(oute, 10), outexp)
 
         # Mean and median from convolution
         res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
