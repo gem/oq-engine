@@ -34,8 +34,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from openquake._unc.tests.utils_plot_dsg import plot_dsg_md
-from openquake.baselib import hdf5
-from openquake.commonlib import datastore
 from openquake.calculators.base import dcache
 from openquake._unc.hazard_pmf import get_mde_from_2d, get_md_from_2d
 from openquake._unc.hcurves_dist import to_matrix, get_stats
@@ -89,96 +87,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
     @unittest.skip('not ready')
     def test_mde_convolution(self):
-        # Convolution mde test case
-
-        tmp_path = os.path.join(TFF, 'data_calc', 'disaggregation',
-                                'test_case01')
-        fname_ini = os.path.join(tmp_path, 'test_case01_convolution_mde.ini')
-
-        tmpdir = tempfile.mkdtemp()
-        his, minp, nump, alys = propagate(
-            fname_ini, calc_type='disaggregation', override_folder_out=tmpdir)
-
-        # Results
-        computed_mtx, afes = to_matrix(his, minp, nump)
-        fname_out = os.path.join(tmpdir, 'res.hdf5')
-
-        write_results_convolution(fname_out, his, np.array(minp, dtype=float),
-                                  np.array(nump, dtype=float))
-
-        # Expected results
-        tpath = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01')
-        fname = os.path.join(tpath, 'out_all', 'calc_1980.hdf5')
-        f = hdf5.File(fname, "r")
-
-        expct = f['disagg/Mag_Dist_Eps'][0, 0, 0, :, :, :, :]
-        weights = f['weights']
-
-        dstore = datastore.read(fname)
-        oqp = dstore['oqparam']
-
-        oute = []
-        idxe = []
-        cnt = 0
-        for imag in range(alys.shapes[0]):
-            for idst in range(alys.shapes[1]):
-                for ieps in range(alys.shapes[2]):
-                    if np.all(np.isfinite(expct[imag, idst, ieps, :])):
-                        poes = expct[imag, idst, ieps, :]
-                        poes[poes > 0.99999] = 0.99999
-                        afes = -np.log(1. - poes) / oqp.investigation_time
-                        tmp = np.sum(afes * weights)
-                        if tmp > 0.0:
-                            oute.append(tmp)
-                            idxe.append(cnt)
-                    cnt += 1
-
-        # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
-
-        # Test the indexes
-        aae(idxs, idxe)
-
-        # Mean matrix
-        tmp = alys.shapes[:-1]
-        out = get_mde_from_2d(res_conv[:, 0], tmp, idxs)
-
-        # Test the mean
-        # aae(oute, res_conv[:, 0])
-
-        if False:
-            fig, axs = plt.subplots(1, 1)
-            plt.plot(oute, res_conv[:, 0], 'o')
-            xlim = axs.get_xlim()
-            ylim = axs.get_ylim()
-            xli = [min([xlim[0], ylim[0]]), max([xlim[1], ylim[1]])]
-            plt.plot(xli, xli, '--')
-            plt.grid(which='major', color='lightgrey', ls='--')
-            plt.grid(which='minor', color='lightgrey', ls=':')
-            plt.show()
-
-        if PLOTTING:
-
-            mag = alys.dsg_mag[:-1] + np.diff(alys.dsg_mag) / 2
-            dst = alys.dsg_dst[:-1] + np.diff(alys.dsg_dst) / 2
-            eps = alys.dsg_eps[:-1] + np.diff(alys.dsg_eps) / 2
-
-            data = []
-            for imag in range(alys.shapes[0]):
-                for idst in range(alys.shapes[1]):
-                    for ieps in range(alys.shapes[2]):
-                        if np.isfinite(out[imag, idst, ieps]):
-                            data.append([mag[imag], dst[idst], eps[ieps],
-                                         out[imag, idst, ieps]])
-            data = np.array(data)
-
-            import pygmt
-            region = [4.0, 8.0, 0, 100, -3, 3]
-            fig = pygmt.Figure()
-            fig.basemap(region=region, projection="X8c", frame=True,
-                        perspective=[315, 25], zscale=0.5)
-            fig.plot3d(data[:, 0:3], style='c0.1c', perspective=[315, 25])
-            fig.show()
+        pass
 
     def test_md_convolution(self):
         # Convolution md test case
