@@ -122,7 +122,6 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
         values the imls, 'afes' a large matrix with the samples and, 'an01'
         an instance of :class:`openquake._unc.analysis.Analysis`.
     """
-
     fmt = "%(asctime)s - %(message)s"
     logging.basicConfig(level=logging.INFO, format=fmt, datefmt='%H:%M:%S',)
 

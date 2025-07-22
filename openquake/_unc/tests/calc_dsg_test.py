@@ -61,9 +61,9 @@ class BasicCalcsTestCase(unittest.TestCase):
         wei_all = dstore['weights'][:][rmap]
 
         dstore = dcache.get(os.path.join(path, 'job_a.ini'))
-        rmap = dstore.get('best_rlzs', None)[:][0]
-        res_a = dstore.get('disagg-rlzs/Mag', None)[0, :, 0, 0, :]
-        wei_a = dstore.get('weights', None)[:]
+        rmap = dstore['best_rlzs'][0]
+        res_a = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
+        wei_a = dstore['weights'][:]
         wei_a = wei_a[rmap]
 
         dstore = dcache.get(os.path.join(path, 'job_b.ini'))
@@ -92,12 +92,12 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
     def test_md_convolution(self):
         # Convolution md test case
 
-        ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
-                           'test_case01_convolution_md.ini')
+        fname = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
+                             'test_case01_convolution_md.ini')
 
         tmpdir = tempfile.mkdtemp()
         his, minp, nump, alys = propagate(
-            ini, calc_type='disaggregation', override_folder_out=tmpdir)
+            fname, calc_type='disaggregation', override_folder_out=tmpdir)
 
         # Results
         computed_mtx, afes = to_matrix(his, minp, nump)
@@ -116,7 +116,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
         rmap = dstore['best_rlzs'][:]
         weights = dstore['weights'][:][rmap]
-        oqp = dstore['oqparam']
+        itime = dstore['oqparam'].investigation_time
 
         oute = []
         idxe = []
@@ -125,7 +125,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
             for idst in range(alys.shapes[1]):
                 poes = expct[imag, idst, :]
                 poes[poes > 0.99999] = 0.99999
-                afes = -np.log(1. - poes) / oqp.investigation_time
+                afes = -np.log(1. - poes) / itime
                 wei = np.sum(afes * weights)
                 if wei > 0:
                     oute.append(wei)
@@ -194,11 +194,11 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
     def test_m_convolution(self):
         # Convolution m test case
-        ini = os.path.join(TFF, 'data_calc', 'disaggregation',
-                                'test_case01', 'test_case01_convolution_m.ini')
+        fname = os.path.join(TFF, 'data_calc', 'disaggregation',
+                             'test_case01', 'test_case01_convolution_m.ini')
         tmpdir = tempfile.mkdtemp()
         his, minp, nump, alys = propagate(
-            ini, calc_type='disaggregation', override_folder_out=tmpdir)
+            fname, calc_type='disaggregation', override_folder_out=tmpdir)
 
         # Results
         computed_mtx, afes = to_matrix(his, minp, nump)
@@ -208,8 +208,9 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
                                   np.array(nump, dtype=float))
 
         # Expected results - Realizations
-        tpath = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01')
-        dstore = dcache.get(os.path.join(tpath, 'job_all.ini'))
+        ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
+                           'job_all.ini')
+        dstore = dcache.get(ini)
         res = dstore['disagg-stats/Mag'][0, :, 0, 0, 0]
         rmap = dstore['best_rlzs'][0]
 
