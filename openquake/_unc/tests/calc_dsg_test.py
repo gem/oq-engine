@@ -110,6 +110,10 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
                            'job_all.ini')
         dstore = dcache.get(ini)
         expct = dstore['disagg-rlzs/Mag_Dist'][0, :, :, 0, 0, :]  # mag,dist,rlz
+
+        aae(expct.mean(), 7.41170608e-06)
+        aae(expct.std(), 2.95703767e-05)
+
         rmap = dstore['best_rlzs'][:]
         weights = dstore['weights'][:][rmap]
         oqp = dstore['oqparam']
@@ -119,14 +123,13 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         cnt = 0
         for imag in range(alys.shapes[0]):
             for idst in range(alys.shapes[1]):
-                if np.all(np.isfinite(expct[imag, idst, :])):
-                    poes = expct[imag, idst, :]
-                    poes[poes > 0.99999] = 0.99999
-                    afes = -np.log(1. - poes) / oqp.investigation_time
-                    wei = np.sum(afes * weights)
-                    if wei > 0:
-                        oute.append(wei)
-                        idxe.append(cnt)
+                poes = expct[imag, idst, :]
+                poes[poes > 0.99999] = 0.99999
+                afes = -np.log(1. - poes) / oqp.investigation_time
+                wei = np.sum(afes * weights)
+                if wei > 0:
+                    oute.append(wei)
+                    idxe.append(cnt)
                 cnt += 1
 
         outexp = np.array([5.047940e-05, 2.256400e-05, 3.505100e-06, 5.545000e-07,
