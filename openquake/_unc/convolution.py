@@ -46,7 +46,7 @@ class Histograms:
         self.idxs, = np.where([pmf is not None for pmf in pmfs])
         # all histograms must have the same resolution
         i, *idx = self.idxs
-        res = len(pmfs[i]) / numpow[i]
+        res = len(pmfs[i]) // numpow[i]
         for i in idx:
             assert len(pmfs[i]) / numpow[i] == res
         self.pmfs = pmfs

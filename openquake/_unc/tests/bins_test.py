@@ -33,7 +33,9 @@ from openquake._unc.bins import get_bins_data, get_bins_from_params
 
 
 class CreatePMFTest(unittest.TestCase):
-
+    """
+    Tests the calculation of the PMF with np.histogram
+    """
     def test_pmf(self):
         res = 10
         vals = np.array([0.011, 0.051, 0.052, 0.83])
@@ -59,14 +61,7 @@ class BinsDataTest(unittest.TestCase):
     """
     Tests the calculation of bins data
     """
-    def test_get_data1(self):
-        # bins for simple case
-        vals = np.array([0.011, 0.051, 0.052, 0.83])
-        min_power, num_powers = get_bins_data(vals)
-        np.testing.assert_equal(min_power, -2)
-        np.testing.assert_equal(num_powers, 2)
-
-    def test_get_data2(self):
+    def test_get_data(self):
         # bins for small values and negative zeros
         vals = np.array([
             -0.000000e+00, -0.000000e+00, +1.870947e-11, -0.000000e+00,
@@ -82,7 +77,6 @@ class GetBinsTest(unittest.TestCase):
     Tests the calculation of bins i.e. edges of the intervals considered
     starting from bins data
     """
-
     def test_pmf_01(self):
         # simple bins calculation
         min_power = -2
@@ -100,4 +94,4 @@ class GetBinsTest(unittest.TestCase):
         num_powers = 3
         nsampl_per_power = 5
         bins = get_bins_from_params(min_power, nsampl_per_power, num_powers)
-        np.testing.assert_equal(len(bins), num_powers*nsampl_per_power+1)
+        np.testing.assert_equal(len(bins), num_powers * nsampl_per_power + 1)

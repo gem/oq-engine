@@ -73,6 +73,7 @@ def get_mde_from_2d(poes, shapes, idxs=None):
     cnt = 0
     counter = 0
     out = np.empty((shapes))
+    1/0
     for imag in range(shapes[0]):
         for idst in range(shapes[1]):
             if cnt in idxs:
@@ -384,9 +385,9 @@ def mixture(results: Sequence[list[list]],
     num_imls = len(results[0][0])
 
     # The minimum power is IMT dependent
-    minpow = np.empty((num_imls))
+    minpow = np.empty(num_imls)
     minpow[:] = np.nan
-    maxpow = np.empty((num_imls))
+    maxpow = np.empty(num_imls)
     maxpow[:] = np.nan
     for i, res in enumerate(results):
 
@@ -411,7 +412,7 @@ def mixture(results: Sequence[list[list]],
     # imls `num_imls` corresponds to the number of cells (i.e. the number of
     # M-R combinations)
     olst = []
-    for i_iml in range(0, num_imls):
+    for i_iml in range(num_imls):
 
         tmp = None
         tot_wei = 0.0
@@ -427,11 +428,11 @@ def mixture(results: Sequence[list[list]],
 
             # Initialize the array where we store the output distribution
             if j == 0:
-                tmp = np.zeros((int(resolution*maxrange[i_iml])))
+                tmp = np.zeros(int(resolution*maxrange[i_iml]))
 
             # Find where to add the current PMF
-            low = int(resolution*(res[1][i_iml]-minpow[i_iml]))
-            upp = int(low + resolution*(res[2][i_iml]))
+            low = int(resolution * (res[1][i_iml] - minpow[i_iml]))
+            upp = int(low + resolution * (res[2][i_iml]))
 
             # Sum the PMF
             idxs = np.arange(low, upp)
@@ -439,8 +440,7 @@ def mixture(results: Sequence[list[list]],
             tot_wei += res[3]
 
         if tmp is not None:
-            chk = np.sum(tmp)
-            chk = np.sum(tmp)/tot_wei
+            chk = np.sum(tmp) / tot_wei
             msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
             assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
             olst.append(tmp)
@@ -451,5 +451,4 @@ def mixture(results: Sequence[list[list]],
     minpow = [i if ~np.isnan(i) else None for i in minpow]
     maxrange = [i if ~np.isnan(i) else None for i in maxrange]
     assert len(olst) == len(minpow) == len(maxrange)
-
     return olst, minpow, maxrange

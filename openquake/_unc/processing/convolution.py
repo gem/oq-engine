@@ -36,7 +36,7 @@ from openquake._unc.convolution import Histograms
 
 
 def convolution(ssets: list, bsets: list, an01: Analysis,
-                grp_curves: dict, imt: str, atype: str, res: int = 50):
+                grp_curves: dict, imt: str, atype: str, res: int=50):
     """
     This processes the hazard curves and computes the final results
 
