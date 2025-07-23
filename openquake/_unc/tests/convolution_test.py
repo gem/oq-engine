@@ -28,7 +28,8 @@
 
 import unittest
 import numpy as np
-from openquake._unc.convolution import conv, get_bins_data, get_bins_from_params
+from openquake._unc.convolution import conv
+from openquake._unc.bins import get_bins_data, get_bins_from_params
 
 
 class CreatePMFTest(unittest.TestCase):
