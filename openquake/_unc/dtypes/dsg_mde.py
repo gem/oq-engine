@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -59,7 +58,7 @@ def get_afes_from_dstore(dstore, imt_idx: int, info: bool=False, idxs: list=[]):
         disaggregation matrix.
     """
 
-    # Indexes of the realisations
+    # Indexes of the realizations
     if len(idxs) > 0:
         idxs = np.array(idxs, dtype=int)
     else:
