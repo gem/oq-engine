@@ -28,27 +28,33 @@
 
 import unittest
 import numpy as np
-from openquake._unc.convolution import get_pmf, conv
+from openquake._unc.convolution import conv, get_bins_data, get_bins_from_params
 
 
 class CreatePMFTest(unittest.TestCase):
 
     def test_pmf_01(self):
+        res = 10
         vals = np.array([0.011, 0.051, 0.052, 0.83])
-        min_power, num_powers, pmf = get_pmf(vals)
+        wei = np.ones_like(vals) / len(vals)
+
+        # Compute bins data and bins
+        min_power, num_powers = get_bins_data(vals)
+        bins = get_bins_from_params(min_power, res, num_powers)
+
+        # Compute the histogram of size num_powers * res
+        his, _ = np.histogram(vals, bins=bins, weights=wei)
         expected = np.array([0.25, 0., 0., 0., 0., 0.,
                              0., 0.5, 0., 0., 0.,
                              0., 0., 0., 0., 0.,
                              0., 0., 0., 0.25])
-        np.testing.assert_array_equal(expected, pmf)
+        np.testing.assert_array_equal(expected, his)
 
 
 class ConvolutionTest(unittest.TestCase):
 
     def test_simple_convolution(self):
         # We start from PMFs
-        res_a = 4
-        res_b = 4
         min_power_a = -1
         num_powers_a = 1
         min_power_b = -1
@@ -83,7 +89,6 @@ class ConvolutionTest(unittest.TestCase):
         #      0.1 * 0.8 + 0.0 * 0.0 = 0.08
 
         # Computing convolution
-        pmfo = conv(
-            hia, min_power_a, res_a, num_powers_a, hib, min_power_b, res_b,
-            num_powers_b).pmfs[0]
+        pmfo = conv(hia, min_power_a, num_powers_a,
+                    hib, min_power_b, num_powers_b).pmfs[0]
         np.testing.assert_allclose(pmfo, [0., 0., 0.3, 0.68, 0.02, 0., 0., 0.])

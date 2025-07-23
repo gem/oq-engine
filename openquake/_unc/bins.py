@@ -40,7 +40,7 @@ def get_bins_data(samples: np.ndarray):
     :param samples:
         A set of values for which we want to obtain the corresponding bins
     :returns:
-        A tuple with two floats, the minimum power of 10 and the number of
+        A tuple with two ints, the minimum power of 10 and the number of
         powers.
     """
 
@@ -49,8 +49,7 @@ def get_bins_data(samples: np.ndarray):
         return None, None
 
     # Fixing 0 values
-    idx_small = samples < SMALL
-    samples[idx_small] = SMALL * 1.01
+    samples[samples < SMALL] = SMALL * 1.01
 
     # Find histogram params
     sam = samples[np.abs(samples) > SMALL]
@@ -58,7 +57,7 @@ def get_bins_data(samples: np.ndarray):
     upv = np.ceil(np.log10(np.max(sam)))
     num_powers = upv - min_power
 
-    return min_power, num_powers
+    return int(min_power), int(num_powers)
 
 
 def get_bins_from_params(min_power: int, nsampl_per_power: int,

@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -39,8 +38,7 @@ from openquake._unc.bins import get_bins_data, get_bins_from_params
 #      frequencies of exceeedance """
 
 
-def get_afes_from_dstore(dstore, imt_idx: int, info: bool = False,
-                         idxs: list=[]):
+def get_afes_from_dstore(dstore, imt_idx: int, info: bool=False, idxs: list=[]):
     """
     Pulls from the datastore the poes for a given IMT and convert them to afes
     (we assume the dstore contains only 1 site).
@@ -73,7 +71,7 @@ def get_afes_from_dstore(dstore, imt_idx: int, info: bool = False,
     # Read the poes and convert them into frequencies. The Mag
     # matrix has the following dimensions:
     # |Site| x |IMTs| x |IMLs| x |Mag| x |Rlz|
-    poes = dstore.getitem('disagg/Mag')[0, imt_idx, 0, :, idxs]
+    poes = dstore.getitem('disagg-rlzs/Mag')[0, imt_idx, 0, :, idxs]
     shapes = poes.shape
     poes[poes > 0.99999] = 0.99999
     afes = -np.log(1.-poes) / oqp.investigation_time
@@ -129,7 +127,6 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
     num_powers = []
     idx_empty = []
     for imag in range(afes_mtx.shape[0]):
-
         dat = np.array(afes_mtx[imag, :])
 
         # Filling the output list with a None for the combinations
