@@ -131,7 +131,9 @@ def plot_mean_hcurves_rtgm(dstore, sid=0, plot_mce=False, axes=None):
     plt = import_plt()
 
     dinfo = get_info(dstore)
+    # get imls and imts, make arrays
     imtls = dinfo['imtls']
+    # separate imts and imls
     AFE, afe_RTGM, imls, imls_mc = [], [], [], []
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm', sel=dict(sid=sid))
@@ -387,6 +389,13 @@ def plot_disagg_by_src(dstore, sid=0, axes=None):
         AFE.append(to_rates(hcurve, window))
     fact = 0.1
     n = 0
+
+    # if axes not provided, create a figure and axes
+    own_fig = False
+    if axes is None:
+        fig, axes = plt.subplots(3, 1, figsize=(8, 15))
+        own_fig = True
+
     for m, imt in enumerate(imtls):
         if rtgm_df['ProbMCE'][m] == 0:
             continue
@@ -394,6 +403,10 @@ def plot_disagg_by_src(dstore, sid=0, axes=None):
             _plot_m(plt, plot_idx, axes, m, n, imt, AFE, fact, imtls, sid,
                     rtgm_df['ProbMCE'], dstore['mean_rates_by_src'], dstore)
             n += 1
+
+    if own_fig:
+        fig.tight_layout()
+        fig.subplots_adjust(hspace=0.3)
 
     return plt
 
