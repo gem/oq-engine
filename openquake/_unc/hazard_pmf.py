@@ -36,8 +36,6 @@ For the description of a PMF we use:
 """
 
 import numpy as np
-from typing import Tuple
-from collections.abc import Sequence
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 from openquake._unc.utils import get_rlzs, get_rlz_hcs
 from openquake._unc.convolution import Histograms
@@ -341,8 +339,7 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
     return Histograms(ohis, min_powers, num_powers)
 
 
-def mixture(results: Sequence[list[list]],
-            resolution: float) -> Tuple[list, list, list]:
+def mixture(results: list, resolution: float) -> Histograms:
     """
     Given a list of PMFs this computes for each IML a mixture distribution
     corresponding to a weighted sum of input PMFs.
@@ -355,7 +352,7 @@ def mixture(results: Sequence[list[list]],
         The number of points per power interval (i.e. the resolution used to
         represent the pmf)
     :returns:
-        A triple with the pmfs, the min power and the range (num of powers).
+        Not normalized Histograms
     """
     num_imls = len(results[0][0])
     idxs, = np.where([res[0] is not None for res in results])
@@ -413,4 +410,4 @@ def mixture(results: Sequence[list[list]],
         assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
         olst[i_iml] = out
 
-    return Histograms(olst, minpow, maxrange)
+    return Histograms(olst, minpow, maxrange, normalized=False)
