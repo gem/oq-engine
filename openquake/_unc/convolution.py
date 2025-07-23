@@ -107,7 +107,7 @@ class Histograms:
         """
         :param result_types:
             Example: with [-1, 0.50, 0.84] we return mean, median and 84th
-            percentile
+            percentile for the mid points of the underlying bins (not None)
         """
         out = []
         for i in self.idxs:
