@@ -413,4 +413,4 @@ def mixture(results: Sequence[list[list]],
         assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
         olst[i_iml] = out
 
-    return olst, minpow, maxrange
+    return Histograms(olst, minpow, maxrange)

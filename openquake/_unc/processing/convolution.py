@@ -66,8 +66,7 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
 
         # When bset is not None there are correlated sources
         if bset is not None:
-            his, min_pow, num_pow = process_bset(
-                sset, bset, an01, grp_curves, res, imt, atype)
+            h = process_bset(sset, bset, an01, grp_curves, res, imt, atype)
         else:
             srcid = list(sset)[0]
             # Load the matrix containing the annual frequencies of exceedance.
@@ -79,15 +78,13 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
 
             # Convert the matrix into a list of histograms, one for each
             # intensity measure level considered
-            his, min_pow, num_pow = get_histograms(
-                afes, samples=res, weights=weights)
+            h = get_histograms(afes, weights, res)
 
         # Update the final distribution
         if iset == 0:
-            fhis, fmin_pow, fnum_pow = his, min_pow, num_pow
+            fhis, fmin_pow, fnum_pow = h.pmfs, h.minpow, h.numpow
         else:
-            h = (Histograms(fhis, fmin_pow, fnum_pow) *
-                 Histograms(his, min_pow, num_pow))
+            h = Histograms(fhis, fmin_pow, fnum_pow) * h
             fhis, fmin_pow, fnum_pow = h.pmfs, h.minpow, h.numpow
 
     return fhis, np.array(fmin_pow), np.array(fnum_pow)
