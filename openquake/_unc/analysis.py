@@ -321,17 +321,7 @@ class Analysis:
             weights[key] = dstore['weights'][:]
 
             # Read realizations
-            ssc = []
-            gmc = []
-            for rpath in dstore['full_lt'].rlzs['branch_path']:
-                smpath, gspath = rpath.split('~')
-                ssc.append(smpath)
-                gmc.append(gspath)
-
-            # This dictionary [where keys are the source IDs] contains two
-            # arrays with the indexes of the realizations for the SSC and
-            # GMC
-            rlzs[key] = [np.array(ssc), np.array(gmc)]
+            rlzs[key] = dstore['full_lt'].rlzs['branch_path']
 
         return rlzs, poes, weights
 
@@ -392,7 +382,9 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             # Create the general pattern. This will select everything
             # e.g. '.+.+.+~.+'
             patterns[bsid][srcid] = {}
-            smpaths, gspaths = rlzs[srcid]
+            rpaths = rlzs[srcid]
+            smpaths = [r[:-2] for r in rpaths]
+            gspaths = [r[-1] for r in rpaths]
             nssc = len(smpaths[0])
             ssc = '..' + ''.join('.' for i in range(2, nssc))
             ngmc = len(gspaths[0])
@@ -452,19 +444,18 @@ def get_hcurves_ids(rlzs, patterns, weights):
         grp_hcurves[bsid] = {}
         grp_weights[bsid] = {}
         for srcid in patterns[bsid]:
-            smpath, gspath = rlzs[srcid]
-            rpath = [f'{sm}~{gs}' for sm, gs in zip(smpath, gspath)]
+            rpath = rlzs[srcid]
 
             # Loop over the patterns of all the realizations for a given source
             grp_hcurves[bsid][srcid] = []
             grp_weights[bsid][srcid] = []
             for p in patterns[bsid][srcid]:
-                tmp_idxs = []
+                idxs = []
                 wei = 0.0
                 for i, rlz in enumerate(rpath):
                     if re.search(p, rlz):
-                        tmp_idxs.append(i)
+                        idxs.append(i)
                         wei += weights[srcid][i]
-                grp_hcurves[bsid][srcid].append(tmp_idxs)
+                grp_hcurves[bsid][srcid].append(idxs)
                 grp_weights[bsid][srcid].append(wei)
     return grp_hcurves, grp_weights
