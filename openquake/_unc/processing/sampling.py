@@ -113,7 +113,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
                 # 'bset_sampled_indexes' contains the indexes of the sampled
                 # set of correlated realisations
                 weights_per_group = rounding(weights_per_group, 2)
-                bset_sampled_indexes[bsid] = np.random.choice(
+                bset_sampled_indexes[bsid] = an01.rng.choice(
                     len(weights_per_group), nsam, p=weights_per_group)
 
             # Sample hazard curves for each source in this set

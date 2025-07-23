@@ -73,7 +73,7 @@ class Analysis:
     """
 
     def __init__(self, bsets: dict, corbs_per_src: dict, corbs_bs_id: dict,
-                 dstores: dict, root_path: str=None):
+                 dstores: dict, root_path: str, seed: int):
 
         # The branch sets for which we have correlated uncertainties
         self.bsets = bsets
@@ -92,9 +92,10 @@ class Analysis:
 
         # Path to the folder containing the datastores
         self.root_path = root_path
+        self.rng = np.random.default_rng(seed)  # used in sampling
 
     @classmethod
-    def read(cls, fname: str):
+    def read(cls, fname: str, seed: int=10):
         """
         This method loads the information about the analysis of results from
         an .xml file.
@@ -183,7 +184,8 @@ class Analysis:
                 corbs_per_src[srcid, odn] = bsid
 
         # Initializing the Analysis object
-        self = cls(bsets, corbs_per_src, corbs_bs_id, dstores, root_path)
+        self = cls(bsets, corbs_per_src, corbs_bs_id, dstores, root_path,
+                   seed)
         self.fname = fname
         return self
 
@@ -445,6 +447,7 @@ def get_hcurves_ids(rlzs, patterns, weights):
         grp_weights[bsid] = {}
         for srcid in patterns[bsid]:
             rpath = rlzs[srcid]
+            ws = weights[srcid]
 
             # Loop over the patterns of all the realizations for a given source
             grp_hcurves[bsid][srcid] = []
@@ -455,7 +458,7 @@ def get_hcurves_ids(rlzs, patterns, weights):
                 for i, rlz in enumerate(rpath):
                     if re.search(p, rlz):
                         idxs.append(i)
-                        wei += weights[srcid][i]
+                        wei += ws[i]
                 grp_hcurves[bsid][srcid].append(idxs)
                 grp_weights[bsid][srcid].append(wei)
     return grp_hcurves, grp_weights

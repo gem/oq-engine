@@ -68,8 +68,7 @@ def prepare(fname: str, atype: str, imtstr: str=None):
     """
 
     # Set the random seed and create the `analysis` object
-    an01 = Analysis.read(fname)
-    np.random.seed(10)
+    an01 = Analysis.read(fname, seed=10)
 
     # Read the datastores specified in the input path
     rlzs, _, weights = an01.read_dstores(atype, imtstr)
