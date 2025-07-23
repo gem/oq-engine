@@ -27,7 +27,7 @@
 # coding: utf-8
 
 import numpy as np
-from openquake._unc.bins import get_bins_data, get_bins_from_params
+from openquake._unc.bins import get_bins_from_params
 from openquake._unc.utils import weighted_percentile
 
 TOLERANCE = 1e-6
@@ -55,14 +55,8 @@ class Histograms:
         self.normalized = normalized
         self.res = res
         for pmf, minp, nump in zip(pmfs, minpow, numpow):
-            if pmf is None:  # may happen in the convolution
-                continue
-            num = res * nump
-            if len(pmf) != num:
-                msg = ('|pmf| {:d} ≠ (number of powers * resolution) '
-                       '{:d}*{:d}={:d}').format(len(pmf), nump, res, num)
-                raise ValueError(msg)
-            elif normalized and np.abs(1.0 - np.sum(pmf)) > TOLERANCE:
+            if normalized and pmf is not None and np.abs(
+                    1.0 - np.sum(pmf)) > TOLERANCE:
                 smm = np.sum(pmf)
                 raise ValueError(f'Sum not equal to 1 {smm:8.4e}')
 
@@ -123,36 +117,6 @@ class Histograms:
                     tmp.append(weighted_percentile(mids, weights=his, perc=rty))
             out.append(tmp)
         return np.array(out)
-
-
-def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
-            scaling: str = None):
-    """
-    Returns a probability mass funtion from a set of values plus the bins data.
-
-    :param vals:
-        An instance of :class:`numpy.ndarray` with the values to use for the
-        calculation of the PMF
-    :param wei:
-        An instance of :class:`numpy.ndarray` with the same cardinality of
-        `vals`
-    :param res:
-        Resolution (i.e. number of bins per logaritmic interval)
-    :param scaling:
-        The way in which the resolution scales per each order of magnitude.
-    """
-    # Compute weights is not provided
-    wei = wei if wei is not None else np.ones_like(vals) * 1. / len(vals)
-
-    # Compute bins data and bins
-    min_power, num_powers = get_bins_data(vals)
-    bins = get_bins_from_params(min_power, res, num_powers)
-
-    # Compute the histogram
-    his, _ = np.histogram(vals, bins=bins, weights=wei)
-    assert len(his) == num_powers * res
-
-    return min_power, num_powers, his
 
 
 def conv(pmfa, min_power_a, num_powers_a, pmfb, min_power_b, num_powers_b):
