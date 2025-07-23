@@ -43,7 +43,6 @@ TFF = pathlib.Path(__file__).parent.resolve()
 aae = np.testing.assert_almost_equal
 aac = np.testing.assert_allclose
 aeq = np.testing.assert_equal
-
 PLOT = False
 
 
