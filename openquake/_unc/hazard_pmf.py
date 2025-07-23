@@ -37,42 +37,15 @@ For the description of a PMF we use:
 
 import numpy as np
 from openquake._unc.bins import get_bins_data, get_bins_from_params
-from openquake._unc.utils import get_rlzs, get_rlz_hcs
 from openquake._unc.convolution import Histograms
 
 TOLERANCE = 1e-6
-
-
-def get_m_from_2d(poes, shapes, idxs=None):
-    cnt = 0
-    counter = 0
-    out = np.empty((shapes))
-    for imag in range(shapes[0]):
-        if cnt in idxs:
-            out[imag] = poes[counter]
-            counter += 1
-        cnt += 1
-    return out
 
 
 def get_md_from_2d(poes, shapes, idxs=None):
     cnt = 0
     counter = 0
     out = np.empty((shapes))
-    for imag in range(shapes[0]):
-        for idst in range(shapes[1]):
-            if cnt in idxs:
-                out[imag, idst] = poes[counter]
-                counter += 1
-            cnt += 1
-    return out
-
-
-def get_mde_from_2d(poes, shapes, idxs=None):
-    cnt = 0
-    counter = 0
-    out = np.empty((shapes))
-    1/0
     for imag in range(shapes[0]):
         for idst in range(shapes[1]):
             if cnt in idxs:
@@ -305,7 +278,6 @@ def mixture(results: list, resolution: float) -> Histograms:
         Not normalized Histograms
     """
     num_imls = len(results[0][0])
-    idxs, = np.where([res[0] is not None for res in results])
 
     # The minimum power is IMT dependent
     minpow = np.full(num_imls, np.nan)
@@ -348,11 +320,10 @@ def mixture(results: list, resolution: float) -> Histograms:
 
             # Find where to add the current PMF
             low = int(resolution * (min_pow[i_iml] - minpow[i_iml]))
-            upp = int(low + resolution * (num_pow[i_iml]))
+            upp = int(low + resolution *  num_pow[i_iml])
 
             # Sum the PMF
-            idxs = np.arange(low, upp)
-            out[idxs] += his[i_iml] * weight
+            out[low:upp] += his[i_iml] * weight
             tot_wei += weight
 
         chk = np.sum(out) / tot_wei
