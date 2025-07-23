@@ -33,8 +33,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import EngFormatter
 
 from openquake.calculators.base import dcache
-from openquake._unc.hcurves_dist import get_stats
-from openquake._unc.hazard_pmf import get_hazard_pmf
+from openquake._unc.hazard_pmf import get_histograms
 from openquake._unc.hazard_pmf import afes_matrix_from_dstore
 
 # This file folder
@@ -84,10 +83,10 @@ def _test(dstore):
     # propagating epistemic uncertainties)
     _, afes, weights = afes_matrix_from_dstore(
             dstore, imtstr=imt, info=False, idxs=iii, atype=atype)
-    his, min_pow, num_pow = get_hazard_pmf(afes, samples=res, weights=weights)
+    h = get_histograms(afes, weights, res)
 
     # Get statistics out of the histogram. Mean and median
-    hists, hists_idxs = get_stats([-1, 0.50], his, min_pow, num_pow)
+    hists = h.get_stats([-1, 0.50])
 
     # Check the sum of the AfE computed with the histograms and the
     # results computed from the various realisations

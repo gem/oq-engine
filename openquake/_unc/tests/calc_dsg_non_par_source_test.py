@@ -35,7 +35,7 @@ import numpy as np
 from openquake.calculators.base import dcache
 from openquake._unc.hcurves_dist import get_stats
 
-from openquake._unc.hazard_pmf import get_hazard_pmf
+from openquake._unc.hazard_pmf import get_histograms
 from openquake._unc.hazard_pmf import afes_matrix_from_dstore
 
 from openquake._unc.tests.calc_dsg_single_source_test import (
@@ -92,9 +92,8 @@ class SingleSourceTestCase(unittest.TestCase):
 
         # Get histogram
         res = 300
-        his, min_pow, num_pow = get_hazard_pmf(afes, samples=res,
-                                               weights=weights)
-        hists, hists_idxs = get_stats([-1, 0.50], his, min_pow, num_pow)
+        h = get_histograms(afes, weights, res)
+        hists = h.get_stats([-1, 0.50])
 
         # Check the sum
         aac(np.sum(oute[idxe]), np.sum(hists[:, 0]), atol=1e-7, rtol=1e-3)

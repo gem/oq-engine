@@ -40,6 +40,7 @@ from typing import Tuple
 from collections.abc import Sequence
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 from openquake._unc.utils import get_rlzs, get_rlz_hcs
+from openquake._unc.convolution import Histograms
 
 TOLERANCE = 1e-6
 
@@ -281,29 +282,6 @@ def afes_matrix_from_csv_files(fname: str, imtstr: str, info: bool = False,
     return imls, np.squeeze(afes), rlzs.weight.to_numpy()
 
 
-def get_hazard_pmf(afes_mtx: np.ndarray, weights: np.ndarray = None,
-                   samples: int = 30, idxs: np.ndarray = None):
-    """
-    :param afes_mtx:
-        Annual frequency of exceedance matrix
-    :param weights:
-        Weights for the realisations included in the `afes_mtx`
-    :param samples:
-        The number of samples per each power of 10
-    :param idxs:
-        The indexes of the realizations to use
-    """
-    if idxs is not None:
-        afes_mtx = afes_mtx[idxs, :]
-        weights = weights[idxs]
-
-    # Computing histograms
-    his, min_powers, num_powers = get_histograms(afes_mtx, weights=weights,
-                                                 res=samples)
-
-    return his, min_powers, num_powers
-
-
 def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
                    idxs: np.ndarray = None):
     """
@@ -334,9 +312,7 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
     min_powers = []
     num_powers = []
     for i in range(afes_mtx.shape[1]):
-
         dat = np.array(afes_mtx[:, i])
-
         if not np.any(dat > 1e-20):
             ohis.append(None)
             min_powers.append(None)
@@ -362,7 +338,7 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
         min_powers.append(int(min_power))
         num_powers.append(int(num_power))
 
-    return ohis, min_powers, num_powers
+    return Histograms(ohis, min_powers, num_powers)
 
 
 def mixture(results: Sequence[list[list]],

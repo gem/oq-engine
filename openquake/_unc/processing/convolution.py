@@ -31,7 +31,7 @@ import numpy as np
 
 from openquake._unc.analysis import Analysis
 from openquake._unc.hazard_pmf import (
-    afes_matrix_from_dstore, get_hazard_pmf, mixture)
+    afes_matrix_from_dstore, get_histograms, mixture)
 from openquake._unc.convolution import Histograms
 
 
@@ -79,7 +79,7 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
 
             # Convert the matrix into a list of histograms, one for each
             # intensity measure level considered
-            his, min_pow, num_pow = get_hazard_pmf(
+            his, min_pow, num_pow = get_histograms(
                 afes, samples=res, weights=weights)
 
         # Update the final distribution
@@ -176,8 +176,7 @@ def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
                 an01.dstores[srcid], imt, atype, False, sorted(rlz_idx))
 
             # Get histogram
-            his, min_pow, num_pow = get_hazard_pmf(
-                afes, samples=res, weights=weights)
+            h = get_histograms(afes, weights, res)
 
             # Computing weight
             wei_sum = sum(weights) / weight_redux[srcid]
@@ -192,11 +191,10 @@ def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
 
             # Updating results for the current set of correlated uncertainties
             if path not in ares:
-                ares[path] = [his, min_pow, num_pow, wei_sum]
+                ares[path] = [h.pmfs, h.minpow, h.numpow, wei_sum]
             else:
                 his_t, m_pow_t, n_pow_t, wei = ares[path]
-                h = (Histograms(his_t, m_pow_t, n_pow_t) *
-                     Histograms(his, min_pow, num_pow))
+                h = Histograms(his_t, m_pow_t, n_pow_t) * h
                 his, m_pow, n_pow = h.pmfs, h.minpow, h.numpow
                 ares[path] = [his, m_pow, n_pow, wei + wei_sum]
 
