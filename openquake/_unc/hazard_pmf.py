@@ -274,7 +274,7 @@ def mixture(results: list[Histograms]) -> Histograms:
         Not normalized Histograms
     """
     resolution = results[0].res  # all equal resolutions
-    num_imls = len(results[0].pmfs)
+    num_imls = len(results[0].pmfs)  # all equal lenghts
 
     # The minimum power is IMT dependent
     minpow = np.full(num_imls, np.nan)
