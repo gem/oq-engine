@@ -24,24 +24,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # -----------------------------------------------------------------------------
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2025, GEM Foundation
-# 
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# OpenQuake is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-# 
-# You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
 from openquake._unc.bins import get_bins_data, get_bins_from_params
+from openquake._unc.convolution import Histograms
 
 # We use a PMF-matrix to store the results of a number of disaggregation
 # results obtained from a set of realisations admitted by a logic tree for a
@@ -53,16 +39,18 @@ from openquake._unc.bins import get_bins_data, get_bins_from_params
 #      frequencies of exceeedance """
 
 
-def get_afes_from_dstore(dstore, imt_idx: int, info: bool = False,
-                         idxs: list = []):
+def get_afes_from_dstore(dstore, name, imt_idx: int,
+                         info: bool=False, idxs: list=[]):
     """
     Pulls from the datastore the poes for a given IMT and convert them to afes
     (we assume the dstore contains only 1 site).
 
     :param dstore:
         Instance of :class:`openquake.commonlib.datastore.DataStore`
+    :param name:
+        One of Mag, Mag_Dist, Mag_Dist_Eps
     :param imt_idx:
-        Index specifying the intensity measure type of interest
+        Index of the intensity measure type of interest
     :param info:
         [optional] A boolean controlling the amont of information provided
     :param idxs:
@@ -73,7 +61,8 @@ def get_afes_from_dstore(dstore, imt_idx: int, info: bool = False,
         weights of the realisations and an array with the shape of the
         disaggregation matrix.
     """
-    # Indexes of the realisations
+
+    # Indexes of the realizations
     if len(idxs) > 0:
         idxs = np.array(idxs, dtype=int)
     else:
@@ -83,16 +72,24 @@ def get_afes_from_dstore(dstore, imt_idx: int, info: bool = False,
     oqp = dstore['oqparam']
     imtstr = list(oqp.imtls)[imt_idx]
 
-    # Read the poes and convert them into frequencies. The Mag_Dist
+    # Read the poes and convert them into frequencies. The Mag_Dist_Eps
     # matrix has the following dimensions:
-    # |Site| x |Mag| x |Dist| x |IMTs| x |IMLs| x |Rlz|
-    poes = dstore.getitem('disagg-rlzs/Mag_Dist')[0, :, :, imt_idx, 0, idxs]
+    # |Site| x |Mag| x |Dist| x |Eps| x |IMTs| x |IMLs| x |Rlz|
+
+    if name == 'Mag_Dist_Eps': 
+        poes = dstore['disagg-rlzs/Mag_Dist_Eps'][0, :, :, :, imt_idx, 0, idxs]
+    elif name == 'Mag_Dist':
+        poes = dstore['disagg-rlzs/Mag_Dist'][0, :, :, imt_idx, 0, idxs]
+    elif name == 'Mag':
+        poes = dstore['disagg-rlzs/Mag'][0, :, imt_idx, 0, idxs]
+    else:
+        raise NameError(name)
     shapes = poes.shape
     poes[poes > 0.99999] = 0.99999
     afes = -np.log(1.-poes) / oqp.investigation_time
 
     # Realization weights
-    weights = dstore.getitem('weights')[idxs]
+    weights = dstore['weights'][idxs]
 
     # Central value for each bin
     binc = {}
@@ -100,6 +97,8 @@ def get_afes_from_dstore(dstore, imt_idx: int, info: bool = False,
     binc['mag'] = tmp[:-1] + np.diff(tmp) / 2
     tmp = dstore.getitem('disagg-bins/Dist')[:]
     binc['dst'] = tmp[:-1] + np.diff(tmp) / 2
+    tmp = dstore.getitem('disagg-bins/Eps')[:]
+    binc['eps'] = tmp[:-1] + np.diff(tmp) / 2
 
     if info:
         len_description = 30
@@ -134,7 +133,6 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
         the histogram. The second list contains integers defining the range
         covered by the histogram (i.e. number of powers of 10).
     """
-
     if idxs is not None:
         afes_mtx = afes_mtx[idxs, :]
         weights = weights[idxs]
@@ -145,32 +143,34 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
     num_powers = []
     for imag in range(afes_mtx.shape[0]):
         for idst in range(afes_mtx.shape[1]):
+            for ieps in range(afes_mtx.shape[2]):
 
-            dat = np.array(afes_mtx[imag, idst, :])
+                dat = np.array(afes_mtx[imag, idst, ieps, :])
 
-            # Filling the output list with a None for the combinations
-            # without contributions
-            if not np.any(dat > 1e-30):
-                ohis.append(None)
-                min_powers.append(None)
-                num_powers.append(None)
-                continue
+                # Filling the output list with a None for the combinations
+                # without contributions
+                if not np.any(dat > 1e-30):
+                    ohis.append(None)
+                    min_powers.append(None)
+                    num_powers.append(None)
+                    continue
 
-            # Computing bins
-            min_power, num_pow = get_bins_data(dat)
-            bins = get_bins_from_params(min_power, res, num_powers=num_pow)
+                # Computing bins
+                min_power, num_pow = get_bins_data(dat)
+                bins = get_bins_from_params(min_power, res, num_powers=num_pow)
 
-            # Computing histogram
-            his, _ = np.histogram(dat, bins, weights=weights)
-            his = his / np.sum(his)
+                # Computing histogram
+                his, _ = np.histogram(dat, bins, weights=weights)
+                his = his / np.sum(his)
 
-            # Checking
-            assert len(his) == num_pow*res
-            assert np.abs(np.sum(his) - 1.0) < 1e-8
+                # Checking
+                assert len(his) == num_pow * res
+                eps = np.abs(np.sum(his) - 1.0)
+                assert eps < 1.5e-7, eps
 
-            # Updating output
-            ohis.append(his)
-            min_powers.append(int(min_power))
-            num_powers.append(int(num_pow))
+                # Updating output
+                ohis.append(his)
+                min_powers.append(int(min_power))
+                num_powers.append(int(num_pow))
 
-    return ohis, min_powers, num_powers
+    return Histograms(ohis, min_powers, num_powers)

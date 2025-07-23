@@ -34,7 +34,7 @@ import numpy as np
 
 from openquake._unc.bins import get_bins_from_params
 from openquake.calculators.base import dcache
-from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore, get_histograms
+from openquake._unc.dsg_mde import get_afes_from_dstore, get_histograms
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
@@ -43,7 +43,6 @@ TFF = pathlib.Path(__file__).parent.resolve()
 aae = np.testing.assert_almost_equal
 aac = np.testing.assert_allclose
 aeq = np.testing.assert_equal
-
 PLOT = False
 
 
@@ -53,7 +52,8 @@ class HistogramMDETestCase(unittest.TestCase):
         job_ini = os.path.join(TFF, 'data_calc', 'disaggregation',
                                'test_case01', 'job_a.ini')
         dstore = dcache.get(job_ini)
-        binc, afes, weights, shapes = get_afes_from_dstore(dstore, 0)
+        binc, afes, weights, shapes = get_afes_from_dstore(
+            dstore, 'Mag_Dist_Eps', 0)
 
         # Check the centers of the bins
         expected = np.array([5.0, 15, 25, 35, 45, 55, 65, 75, 85, 95, 110, 130,
@@ -66,18 +66,18 @@ class HistogramMDETestCase(unittest.TestCase):
 
         # Get the histograms
         res = 10
-        ohis, min_powers, num_powers = get_histograms(afes, weights, res)
+        h = get_histograms(afes, weights, res)
 
         # Check that the list of histograms has the same shape of the number of
         # bins composing the disaggregation matrix
         expected = len(binc['mag']) * len(binc['dst']) * len(binc['eps'])
-        assert expected == len(ohis)
+        assert expected == len(h.pmfs)
 
         # Computing the mean and counting the M-D-e combinations with values
         # different than 0
         smm = 0.0
         cnt = 0.
-        for ohi in ohis:
+        for ohi in h.pmfs:
             if ohi is not None:
                 smm += np.sum(ohi)
                 cnt += 1.
@@ -97,7 +97,7 @@ class HistogramMDETestCase(unittest.TestCase):
             d2 = afes.shape[1]
             d3 = afes.shape[2]
             for idx, (ohi, mpo, npo) in enumerate(
-                    zip(ohis, min_powers, num_powers)):
+                    zip(h.pmfs, h.minpow, h.numpow)):
                 if ohi is not None:
                     bins = get_bins_from_params(mpo, res, npo)
                     binc = bins[:-1] + np.diff(bins) / 2

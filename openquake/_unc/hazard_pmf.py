@@ -36,10 +36,9 @@ For the description of a PMF we use:
 """
 
 import numpy as np
-from typing import Tuple
-from collections.abc import Sequence
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 from openquake._unc.utils import get_rlzs, get_rlz_hcs
+from openquake._unc.convolution import Histograms
 
 TOLERANCE = 1e-6
 
@@ -231,79 +230,6 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
     return imls, afes, weights
 
 
-def afes_matrix_from_csv_files(fname: str, imtstr: str, info: bool = False,
-                               idxs: list = []):
-    """
-    :param fname:
-        The name of the folder containing the .csv files with prefix
-        'hazard_curve-rlz' and the file with data on realizations
-    :param imtstr:
-        The string of the IMTs
-    :param info:
-        When true more info is prompted
-    :param idxs:
-        List of indexes with the realisations to be selected
-    :returns:
-        A tuple with a vector containing the imls values and a 2D vector with
-        the set of afes for each IML. The cardinality of the second array is
-        the number of realisations times the number of sites.
-    """
-    # The shape of poes: |realizations| x |number of imls| x |sites|
-    _, _, poes, hea, imls, calc_id_a = get_rlz_hcs(fname, imtstr)
-
-    # Indexes of the realisations
-    if len(idxs) > 0:
-        idxs = np.array(idxs, dtype=int)
-    else:
-        idxs = slice(None)
-
-    poes = poes[idxs, :, :]
-
-    # Information on the content of files
-    if info:
-        len_description = 30
-        tmps = 'OQ version'.ljust(len_description)
-        print('{:s}: {:s}'.format(tmps, hea['engine']))
-        tmps = 'Investigation time'.ljust(len_description)
-        print('{:s}: {:f}'.format(tmps, hea['investigation_time']))
-        tmps = 'IMT'.ljust(len_description)
-        print('{:s}: {:s}'.format(tmps, hea['imt']))
-        tmps = 'Number of files'.ljust(len_description)
-        print('{:s}: {:d}'.format(tmps, len(poes)))
-
-    # Computing afes
-    poes[poes > 0.99999] = 0.99999
-    afes = -np.log(1.-poes)/hea['investigation_time']
-
-    # Getting weights
-    rlzs, calc_id = get_rlzs(fname)
-
-    return imls, np.squeeze(afes), rlzs.weight.to_numpy()
-
-
-def get_hazard_pmf(afes_mtx: np.ndarray, weights: np.ndarray = None,
-                   samples: int = 30, idxs: np.ndarray = None):
-    """
-    :param afes_mtx:
-        Annual frequency of exceedance matrix
-    :param weights:
-        Weights for the realisations included in the `afes_mtx`
-    :param samples:
-        The number of samples per each power of 10
-    :param idxs:
-        The indexes of the realizations to use
-    """
-    if idxs is not None:
-        afes_mtx = afes_mtx[idxs, :]
-        weights = weights[idxs]
-
-    # Computing histograms
-    his, min_powers, num_powers = get_histograms(afes_mtx, weights=weights,
-                                                 res=samples)
-
-    return his, min_powers, num_powers
-
-
 def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
                    idxs: np.ndarray = None):
     """
@@ -324,7 +250,6 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
         bin of the histogram. The second list contains integers defining the
         range covered by the histogram (i.e. number of powers of 10).
     """
-
     if idxs is not None:
         afes_mtx = afes_mtx[idxs, :]
         weights = weights[idxs]
@@ -335,9 +260,7 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
     min_powers = []
     num_powers = []
     for i in range(afes_mtx.shape[1]):
-
         dat = np.array(afes_mtx[:, i])
-
         if not np.any(dat > 1e-20):
             ohis.append(None)
             min_powers.append(None)
@@ -363,11 +286,10 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
         min_powers.append(int(min_power))
         num_powers.append(int(num_power))
 
-    return ohis, min_powers, num_powers
+    return Histograms(ohis, min_powers, num_powers)
 
 
-def mixture(results: Sequence[list[list]],
-            resolution: float) -> Tuple[list, list, list]:
+def mixture(results: list, resolution: float) -> Histograms:
     """
     Given a list of PMFs this computes for each IML a mixture distribution
     corresponding to a weighted sum of input PMFs.
@@ -380,9 +302,10 @@ def mixture(results: Sequence[list[list]],
         The number of points per power interval (i.e. the resolution used to
         represent the pmf)
     :returns:
-        A triple with the pmfs, the min power and the range (num of powers).
+        Not normalized Histograms
     """
     num_imls = len(results[0][0])
+    idxs, = np.where([res[0] is not None for res in results])
 
     # The minimum power is IMT dependent
     minpow = np.full(num_imls, np.nan)
@@ -408,10 +331,10 @@ def mixture(results: Sequence[list[list]],
     # of the two original PMFs. In the case of disaggregation the number of
     # imls `num_imls` corresponds to the number of cells (i.e. the number of
     # M-R combinations)
-    olst = []
-    for i_iml in range(num_imls):
+    olst = [None] * num_imls
+    for i_iml in np.where(ok)[0]:
 
-        tmp = None
+        out = np.zeros(int(resolution * maxrange[i_iml]))
         tot_wei = 0.0
         for j, (his, min_pow, num_pow, weight) in enumerate(results):
 
@@ -423,29 +346,18 @@ def mixture(results: Sequence[list[list]],
             if min_pow[i_iml] is None:
                 continue
 
-            # Initialize the array where we store the output distribution
-            if j == 0:
-                tmp = np.zeros(int(resolution*maxrange[i_iml]))
-
             # Find where to add the current PMF
             low = int(resolution * (min_pow[i_iml] - minpow[i_iml]))
             upp = int(low + resolution * (num_pow[i_iml]))
 
             # Sum the PMF
             idxs = np.arange(low, upp)
-            tmp[idxs] += np.array(his[i_iml]) * weight
+            out[idxs] += his[i_iml] * weight
             tot_wei += weight
 
-        if tmp is not None:
-            chk = np.sum(tmp) / tot_wei
-            msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
-            assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
-            olst.append(tmp)
-        else:
-            olst.append(None)
+        chk = np.sum(out) / tot_wei
+        msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
+        assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
+        olst[i_iml] = out
 
-    # Check output dimension
-    minpow = [i if ~np.isnan(i) else None for i in minpow]
-    maxrange = [i if ~np.isnan(i) else None for i in maxrange]
-    assert len(olst) == len(minpow) == len(maxrange)
-    return olst, minpow, maxrange
+    return Histograms(olst, minpow, maxrange, normalized=False)

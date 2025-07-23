@@ -37,9 +37,7 @@ import numpy as np
 
 from openquake.commonlib import datastore
 from openquake.calculators.base import dcache
-from openquake._unc.dtypes.dsg_mde import get_afes_from_dstore as afes_ds_mde
-from openquake._unc.dtypes.dsg_md import get_afes_from_dstore as afes_ds_md
-from openquake._unc.dtypes.dsg_m import get_afes_from_dstore as afes_ds_m
+from openquake._unc.dsg_mde import get_afes_from_dstore as afes_from
 
 # Setting namespace
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -292,7 +290,8 @@ class Analysis:
                 poes[key] = dstore['hcurves-rlzs'][:,:,imti,:]
             elif atype == 'mde':
                 # Read disagg results. Matrix shape is 7D
-                binc, poes[key], _, shapes = afes_ds_mde(dstore, imti)
+                binc, poes[key], _, shapes = afes_from(
+                    dstore, 'Mag_Dist_Eps', imti)
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
                     self.dsg_mag = dstore['disagg-bins/Mag'][:]
@@ -302,7 +301,7 @@ class Analysis:
                     assert self.shapes[:-1] == shapes[:-1]
             elif atype == 'md':
                 # Read disagg results. Matrix shape is 7D
-                binc, poes[key], _, shapes = afes_ds_md(dstore, imti)
+                binc, poes[key], _, shapes = afes_from(dstore, 'Mag_Dist', imti)
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
                     self.dsg_mag = dstore['disagg-bins/Mag'][:]
@@ -311,9 +310,7 @@ class Analysis:
                     assert self.shapes[:-1] == shapes[:-1]
             elif atype == 'm':
                 # Read disagg results. Matrix shape is 7D
-                binc, poes[key], _, shapes = afes_ds_m(dstore, imti)
-                # ASK Marco: why not afes_ds_m(dstore, imti)?
-                # it breaks test_m_convolution_source_b
+                binc, poes[key], _, shapes = afes_from(dstore, 'Mag', imti)
                 if not hasattr(self, 'shapes'):
                     self.shapes = shapes
                     self.dsg_mag = dstore['disagg-bins/Mag'][:]
