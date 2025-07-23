@@ -47,8 +47,6 @@ class ConvolutionTest(unittest.TestCase):
 
     def test_simple_convolution(self):
         # We start from PMFs
-        res_a = 4
-        res_b = 4
         min_power_a = -1
         num_powers_a = 1
         min_power_b = -1
@@ -83,7 +81,6 @@ class ConvolutionTest(unittest.TestCase):
         #      0.1 * 0.8 + 0.0 * 0.0 = 0.08
 
         # Computing convolution
-        pmfo = conv(
-            hia, min_power_a, res_a, num_powers_a, hib, min_power_b, res_b,
-            num_powers_b).pmfs[0]
+        pmfo = conv(hia, min_power_a, num_powers_a,
+                    hib, min_power_b, num_powers_b).pmfs[0]
         np.testing.assert_allclose(pmfo, [0., 0., 0.3, 0.68, 0.02, 0., 0., 0.])

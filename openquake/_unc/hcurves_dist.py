@@ -68,5 +68,5 @@ def get_stats(result_types, hiss, minp, nump):
         contains the requested results (one for each column) the second one
         includes the indexes of the original list with finite values.
     """
-    h = Histograms(hiss, minp, nump)
+    h = Histograms(hiss, minp, nump, normalized=False)
     return h.get_stats(result_types), h.idxs
