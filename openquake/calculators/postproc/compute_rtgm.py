@@ -784,6 +784,41 @@ def display_vs30_in_subplot_title(axes, n_rows, sid_idx, vs30):
         axes[row, sid_idx].set_title(f"{vs30=} m/s", fontsize=13)
 
 
+def make_figure_hcurves(plt, sids, dstore, notifications, vs30s):
+    n_rows = 1
+    n_sids = len(sids)
+    fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 6), squeeze=False)
+    for i, sid in enumerate(sids):
+        vs30 = vs30s[i]
+        sid_notifications = notifications[notifications['sid'] == sid]
+        if len(sid_notifications) == 0 or sid_notifications['name'][0] not in [
+                'zero_hazard', 'low_hazard']:
+            plot_mean_hcurves_rtgm(dstore, sid, axes=axes[0, i])
+            display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+    add_footer_referencing_user_guide(fig)
+    save_figure_to_dstore(fig, dstore, 'png/hcurves.png')
+    plt.close(fig)
+
+
+def make_figure_disagg_by_src(plt, sids, dstore, notifications, vs30s):
+    n_rows = 3  # 3 imts: [PGA, SA(0.2), SA(1.0)]
+    n_sids = len(sids)
+    fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 15), squeeze=False)
+    for i, sid in enumerate(sids):
+        vs30 = vs30s[i]
+        sid_notifications = notifications[notifications['sid'] == sid]
+        if len(sid_notifications) == 0:
+            plot_disagg_by_src(
+                dstore, sid, axes=[axes[0, i], axes[1, i], axes[2, i]])
+            display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+    has_data = any(ax.has_data() for row in axes for ax in row)
+    if has_data:
+        add_footer_referencing_user_guide(fig)
+        fig.subplots_adjust(hspace=0.3)  # avoid overlapping titles and xlabels
+        save_figure_to_dstore(fig, dstore, 'png/disagg_by_src-All-IMTs.png')
+    plt.close(fig)
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -858,43 +893,16 @@ def main(dstore, csm):
                                       f' the number of values of vs30 ({len(vs30s)})')
         plt = import_plt()
 
-        # FIG 1: Mean Hazard Curves (1 row, n_sids columns)
-        n_rows = 1
-        fig1, axes1 = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 6),
-                                   squeeze=False)
-        for i, sid in enumerate(sids):
-            vs30 = vs30s[i]
-            sid_notifications = notifications[notifications['sid'] == sid]
-            if len(sid_notifications) == 0 or sid_notifications['name'][0] not in [
-                    'zero_hazard', 'low_hazard']:
-                plot_mean_hcurves_rtgm(dstore, sid, axes=axes1[0, i])
-                display_vs30_in_subplot_title(axes1, n_rows, i, vs30)
-        add_footer_referencing_user_guide(fig1)
-        save_figure_to_dstore(fig1, dstore, 'png/hcurves.png')
+        # Mean Hazard Curves (1 row, n_sids columns)
+        make_figure_hcurves(plt, sids, dstore, notifications, vs30s)
 
-        # FIG 2: Governing MCE (2 rows, 1 column) (regardless from the number of sids)
+        # Governing MCE (2 rows, 1 column) (regardless from the number of sids)
         if len(notifications) == 0 or notifications['name'][0] not in [
                 'zero_hazard', 'low_hazard']:
             plot_governing_mce(dstore, update_dstore=True)
 
-        # FIG 3: Disaggregation by Source (3 rows, n_sids columns)
-        n_rows = 3  # 3 imts: [PGA, SA(0.2), SA(1.0)]
-        fig3, axes3 = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 15),
-                                   squeeze=False)
-        for i, sid in enumerate(sids):
-            vs30 = vs30s[i]
-            sid_notifications = notifications[notifications['sid'] == sid]
-            if len(sid_notifications) == 0:
-                plot_disagg_by_src(
-                    dstore, sid, axes=[axes3[0, i], axes3[1, i], axes3[2, i]])
-                display_vs30_in_subplot_title(axes3, n_rows, i, vs30)
-        has_data = any(ax.has_data() for row in axes3 for ax in row)
-        if has_data:
-            add_footer_referencing_user_guide(fig3)
-            fig3.subplots_adjust(hspace=0.3)  # avoid overlapping titles and xlabels
-            save_figure_to_dstore(fig3, dstore, 'png/disagg_by_src-All-IMTs.png')
-        else:
-            plt.close(fig3)
+        # Disaggregation by Source (3 rows, n_sids columns)
+        make_figure_disagg_by_src(plt, sids, dstore, notifications, vs30s)
 
     if len(notifications):
         dstore['notifications'] = notifications
