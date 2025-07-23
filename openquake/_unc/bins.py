@@ -61,7 +61,7 @@ def get_bins_data(samples: np.ndarray):
 
 
 def get_bins_from_params(min_power: int, nsampl_per_power: int,
-                         num_powers: int, scale='constant'):
+                         num_powers: int):
     """
     :param min_power:
         Lowest power i.e. 10^min_power corresponds to the left limit of the
@@ -78,9 +78,5 @@ def get_bins_from_params(min_power: int, nsampl_per_power: int,
     minp = int(min_power)
     nump = int(num_powers)
     res = int(nsampl_per_power)
-    if scale == 'constant':
-        bins = np.logspace(minp, minp + nump,  nump*res + 1)
-    else:
-        msg = 'The {:s} scaling option is not supported'.format(scale)
-        raise ValueError(msg)
+    bins = np.logspace(minp, minp + nump,  nump*res + 1)
     return bins

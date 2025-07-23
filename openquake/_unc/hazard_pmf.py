@@ -34,7 +34,7 @@ For the description of a PMF we use:
     - A numpy array (cardinality: L x |number of bins|) containing the annual
       frequencies of exceeedance
 """
-import copy
+
 import numpy as np
 from typing import Tuple
 from collections.abc import Sequence
@@ -385,27 +385,24 @@ def mixture(results: Sequence[list[list]],
     num_imls = len(results[0][0])
 
     # The minimum power is IMT dependent
-    minpow = np.empty(num_imls)
-    minpow[:] = np.nan
-    maxpow = np.empty(num_imls)
-    maxpow[:] = np.nan
+    minpow = np.full(num_imls, np.nan)
+    maxpow = np.full(num_imls, np.nan)
     for i, res in enumerate(results):
 
-        tmp_minpow = np.array(res[1], dtype=float)
-        tmp_numpow = np.array(res[2], dtype=float)
-        idx = ~np.isnan(tmp_minpow)
+        minp = np.array(res[1], dtype=float)
+        nump = np.array(res[2], dtype=float)
+        ok = ~np.isnan(minp)
 
         if i == 0:
-            minpow[idx] = tmp_minpow[idx]
-            maxpow[idx] = tmp_numpow[idx] + tmp_minpow[idx]
+            minpow[ok] = minp[ok]
+            maxpow[ok] = nump[ok] + minp[ok]
         else:
-            minpow[idx] = np.minimum(minpow[idx], tmp_minpow[idx])
-            maxpow[idx] = np.maximum(maxpow[idx], tmp_minpow[idx] +
-                                     tmp_numpow[idx])
+            minpow[ok] = np.minimum(minpow[ok], minp[ok])
+            maxpow[ok] = np.maximum(maxpow[ok], minp[ok] + nump[ok])
 
-    idx = ~np.isnan(minpow)
-    maxrange = copy.copy(minpow)
-    maxrange[idx] = maxpow[idx] - minpow[idx]
+    ok = ~np.isnan(minpow)
+    maxrange = minpow.copy()
+    maxrange[ok] = maxpow[ok] - minpow[ok]
 
     # Create output. For each IML we create the mixture PMF as a weighted sum
     # of the two original PMFs. In the case of disaggregation the number of
@@ -416,14 +413,14 @@ def mixture(results: Sequence[list[list]],
 
         tmp = None
         tot_wei = 0.0
-        for j, res in enumerate(results):
+        for j, (his, min_pow, num_pow, weight) in enumerate(results):
 
             # Skipping this IML if the maxrange is nan
             if np.isnan(maxrange[i_iml]):
                 break
 
             # Skipping this realization if the lower limit is None
-            if res[1][i_iml] is None:
+            if min_pow[i_iml] is None:
                 continue
 
             # Initialize the array where we store the output distribution
@@ -431,13 +428,13 @@ def mixture(results: Sequence[list[list]],
                 tmp = np.zeros(int(resolution*maxrange[i_iml]))
 
             # Find where to add the current PMF
-            low = int(resolution * (res[1][i_iml] - minpow[i_iml]))
-            upp = int(low + resolution * (res[2][i_iml]))
+            low = int(resolution * (min_pow[i_iml] - minpow[i_iml]))
+            upp = int(low + resolution * (num_pow[i_iml]))
 
             # Sum the PMF
             idxs = np.arange(low, upp)
-            tmp[idxs] += np.array(res[0][i_iml])*res[3]
-            tot_wei += res[3]
+            tmp[idxs] += np.array(his[i_iml]) * weight
+            tot_wei += weight
 
         if tmp is not None:
             chk = np.sum(tmp) / tot_wei
