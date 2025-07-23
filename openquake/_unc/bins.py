@@ -70,13 +70,14 @@ def get_bins_from_params(min_power: int, nsampl_per_power: int,
         The number of samples in each power
     :param num_powers:
         The range covered by the bins
+    :returns:
+        num_powers * nsampl_per_power + 1 bins
     """
+    assert nsampl_per_power > 0
     assert num_powers > 0
-    res = nsampl_per_power
     if scale == 'constant':
         upv = min_power + num_powers
-        nint = int(res*(upv-min_power))+1
-        bins = np.logspace(min_power, upv, nint)
+        bins = np.logspace(min_power, upv,  nsampl_per_power * num_powers + 1)
     else:
         msg = 'The {:s} scaling option is not supported'.format(scale)
         raise ValueError(msg)

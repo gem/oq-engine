@@ -32,6 +32,29 @@ import numpy as np
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 
 
+class CreatePMFTest(unittest.TestCase):
+
+    def test_pmf(self):
+        res = 10
+        vals = np.array([0.011, 0.051, 0.052, 0.83])
+        wei = np.ones_like(vals) / len(vals)
+
+        # Compute bins data and bins
+        min_power, num_powers = get_bins_data(vals)
+        assert (min_power, num_powers) == (-2, 2)
+        bins = get_bins_from_params(min_power, res, num_powers)
+        assert len(bins) == 10*2 + 1
+
+        # Compute the histogram of size num_powers * res
+        his, _ = np.histogram(vals, bins=bins, weights=wei)
+        assert len(his) == 20
+        expected = np.array([0.25, 0., 0., 0., 0., 0.,
+                             0., 0.5, 0., 0., 0.,
+                             0., 0., 0., 0., 0.,
+                             0., 0., 0., 0.25])
+        np.testing.assert_array_equal(expected, his)
+
+
 class BinsDataTest(unittest.TestCase):
     """
     Tests the calculation of bins data
