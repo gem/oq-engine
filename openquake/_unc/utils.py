@@ -75,6 +75,7 @@ def get_mean(fhis, fmin_pow, fnum_pow, res):
     return mean
 
 
+# NB: this will be obsolete in numpy 2+
 def weighted_percentile(data, weights, perc):
     """
     Given a vector of values and one of associated weights computes the

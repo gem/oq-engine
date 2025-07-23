@@ -26,8 +26,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 import numpy as np
-from openquake._unc.bins import get_bins_from_params
-from openquake._unc.utils import weighted_percentile
+from openquake._unc.convolution import Histograms
 
 
 def to_matrix(his: list, minp: np.ndarray, nump: np.ndarray) -> np.ndarray:
@@ -40,7 +39,6 @@ def to_matrix(his: list, minp: np.ndarray, nump: np.ndarray) -> np.ndarray:
     samples = int(len(his[idx[0]])/nump[idx[0]])
     # samples = int(len(his[0])/nump[0])
     maxp = np.empty_like(minp)
-
     maxp[idx] = minp[idx] + nump[idx]
     mrange = int(np.amax(maxp[idx]) - np.amin(minp[idx]))
     mtx = np.empty((mrange*samples, len(his))) * np.nan
@@ -59,26 +57,16 @@ def get_stats(result_types, hiss, minp, nump):
         A list with the values of the percentiles. For -1 we compute the mean.
         Example: with [-1, 0.50, 0.84] we return mean, median and 84th
         percentile
+    :param hiss:
+        list of weights (some can be None)
+    :param minp:
+        list of minimum powers (some can be None)
+    :param nump:
+        list of number of powers (some can be None)
     :returns:
         A tuple with two :class:`numpy.ndarray` instances. The first one
         contains the requested results (one for each column) the second one
-        includes the indexes of the original list provided with finite values.
+        includes the indexes of the original list with finite values.
     """
-    out = []
-    nump = np.array(nump, dtype=float)
-    idx = np.array(np.where(np.isfinite(nump)), dtype=int)[0]
-    res = int(len(hiss[idx[0]]) / nump[idx[0]])
-    for i in idx:
-        his = hiss[i]
-        mpow = minp[i]
-        npow = nump[i]
-        bins = get_bins_from_params(mpow, res, npow)
-        mids = bins[:-1] + np.diff(bins) / 2
-        tmp = []
-        for rty in result_types:
-            if rty < 0:
-                tmp.append(np.average(mids, weights=his))
-            else:
-                tmp.append(weighted_percentile(mids, weights=his, perc=rty))
-        out.append(tmp)
-    return np.array(out), idx
+    h = Histograms(hiss, minp, nump)
+    return h.get_stats(result_types), h.idxs

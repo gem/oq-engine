@@ -28,21 +28,28 @@
 
 import numpy as np
 from openquake._unc.bins import get_bins_data, get_bins_from_params
+from openquake._unc.utils import weighted_percentile
 
 TOLERANCE = 1e-6
 
 class Histograms:
     """
-    An histogram for each IMT.
+    A container of histograms (some of them can be None).
  
-    :param pmfs: Probability Mass Functions with L values
-    :param minpow: L minimum powers
-    :param numpow: L number of powers
-    :param res: resolution
+    :param pmfs: list of Probability Mass Functions (can contain None) 
+    :param minpow: list of minimum powers (can contain None)
+    :param numpow: list of number of powers (can contain None)
+    :param res: resolution (the same) satisfying res = len(pmf)/numpow
     """
-    def __init__(self, pmfs, minpow, numpow, res):
-        assert res
+    def __init__(self, pmfs, minpow, numpow, res=None):
         assert len(pmfs) == len(minpow) == len(numpow)
+        self.idxs, = np.where([pmf is not None for pmf in pmfs])
+        if res is None:
+            # all histograms must have the same resolution
+            i, *idx = self.idxs
+            res = len(pmfs[i]) / numpow[i]
+            for i in idx:
+                assert len(pmfs[i]) / numpow[i] == res
         self.pmfs = pmfs
         self.minpow = minpow
         self.numpow = numpow
@@ -56,9 +63,9 @@ class Histograms:
                        '{:d}*{:d}={:d}').format(len(pmf), nump, res, num)
                 raise ValueError(msg)
             elif np.abs(1.0 - np.sum(pmf)) > TOLERANCE:
+                return
                 smm = np.sum(pmf)
-                raise ValueError(
-                    f'Sum of elements pmfa not equal to 1 {smm:8.4e}')
+                raise ValueError(f'Sum not equal to 1 {smm:8.4e}')
 
     def __mul__(histo_a, histo_b):
         """
@@ -90,7 +97,7 @@ class Histograms:
             elif hb is None:
                 min_power_o, num_powers_o, pmfo = mpa, npa, ha
             else:
-                h = conv(ha, mpa, rea, npa, hb, mpb, reb, npb, res)
+                h = conv(ha, mpa, rea, npa, hb, mpb, reb, npb)
                 min_power_o, num_powers_o, pmfo = \
                     h.minpow[0], h.numpow[0], h.pmfs[0]
 
@@ -99,7 +106,28 @@ class Histograms:
             out3.append(num_powers_o)
 
         # one histogram for each IMT considered, plenty of None
-        return Histograms(out1, out2, out3, res)
+        return Histograms(out1, out2, out3)
+
+    def get_stats(self, result_types):
+        """
+        :param result_types:
+            Example: with [-1, 0.50, 0.84] we return mean, median and 84th
+            percentile
+        """
+        out = []
+        for i in self.idxs:
+            his = self.pmfs[i]
+            bins = get_bins_from_params(
+                self.minpow[i], self.res, self.numpow[i])
+            mids = bins[:-1] + np.diff(bins) / 2
+            tmp = []
+            for rty in result_types:
+                if rty == -1:  # mean
+                    tmp.append(np.average(mids, weights=his))
+                else:
+                    tmp.append(weighted_percentile(mids, weights=his, perc=rty))
+            out.append(tmp)
+        return np.array(out)
 
 
 def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
@@ -133,7 +161,7 @@ def get_pmf(vals: np.ndarray, wei: np.ndarray = None, res: int = 10,
 
 
 def conv(pmfa, min_power_a, res_a, num_powers_a,
-         pmfb, min_power_b, res_b, num_powers_b, res=None):
+         pmfb, min_power_b, res_b, num_powers_b):
     """
     Computing the convolution of two histograms.
 
@@ -149,9 +177,8 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
         min_power_o, res, num_powers_o, pmfo
     """
     # Checking input
-    res = res or min(res_a, res_b)
     Histograms([pmfa, pmfb], [min_power_a, min_power_b],
-               [num_powers_a, num_powers_b], res)
+               [num_powers_a, num_powers_b])
 
     # Compute bin data and bins for output
     vmin = np.floor(np.log10(10**min_power_a + 10**min_power_b))
@@ -159,7 +186,7 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
                             10**(min_power_b + num_powers_b)))
     min_power_o = int(vmin)
     num_powers_o = int(vmax - vmin)
-    bins_o = get_bins_from_params(min_power_o, res, num_powers_o)
+    bins_o = get_bins_from_params(min_power_o, res_a, num_powers_o)
 
     # Compute mid points
     bins_a = get_bins_from_params(min_power_a, res_a, num_powers_a)
@@ -174,4 +201,4 @@ def conv(pmfa, min_power_a, res_a, num_powers_a,
     for i in np.unique(idxs):
         pmfo[i] = yvals[idxs == i].sum()
 
-    return Histograms([pmfo], [min_power_o], [num_powers_o], res)
+    return Histograms([pmfo], [min_power_o], [num_powers_o])

@@ -88,7 +88,8 @@ class Analysis:
         # A dictionary with key the IDs of the sources. The value is a string
         # with the path to the datastore containing the results.
         self.dstores = dstores
-        itimes = [dstore['oqparam'].investigation_time for dstore in dstores.values()]
+        itimes = [dstore['oqparam'].investigation_time
+                  for dstore in dstores.values()]
         self.itime, = np.unique(itimes)
 
         # Path to the folder containing the datastores
