@@ -41,7 +41,7 @@ class Histograms:
     :param numpow: list of number of powers (can contain None)
     :param res: resolution (the same) satisfying res = len(pmf)/numpow
     """
-    def __init__(self, pmfs, minpow, numpow, normalized=True):
+    def __init__(self, pmfs, minpow, numpow, weight=0, normalized=True):
         assert len(pmfs) == len(minpow) == len(numpow)
         self.idxs, = np.where([pmf is not None for pmf in pmfs])
         # all histograms must have the same resolution
@@ -53,6 +53,7 @@ class Histograms:
         self.minpow = minpow
         self.numpow = numpow
         self.normalized = normalized
+        self.weight = weight
         self.res = res
         for pmf, minp, nump in zip(pmfs, minpow, numpow):
             if normalized and pmf is not None and np.abs(
@@ -98,7 +99,7 @@ class Histograms:
             out2.append(min_power_o)
             out3.append(num_powers_o)
 
-        return Histograms(out1, out2, out3)
+        return Histograms(out1, out2, out3, histo_a.weight + histo_b.weight)
 
     def get_stats(self, result_types):
         """

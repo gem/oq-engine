@@ -198,7 +198,7 @@ def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
     results = []
     for i, path in enumerate(paths):
         ares[path][3] /= len(sset)  # fix weight
-        results.append(ares[path])
+        results.append(Histograms(*ares[path]))
 
     # Taking the mixture MFD
-    return mixture(results, res)
+    return mixture(results)

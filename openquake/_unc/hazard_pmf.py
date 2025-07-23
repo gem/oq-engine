@@ -262,30 +262,27 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
     return Histograms(ohis, min_powers, num_powers)
 
 
-def mixture(results: list, resolution: float) -> Histograms:
+def mixture(results: list[Histograms]) -> Histograms:
     """
-    Given a list of PMFs this computes for each IML a mixture distribution
-    corresponding to a weighted sum of input PMFs.
+    Given a list of Histograms this computes a mixture distribution
+    corresponding to a weighted sum of the inputs.
 
     :param results:
-        It's a list of lists. The number of elements is equal to the number of
-        correlated groups. Each element contains the following:
-        his_t, min_pow_t, num_pow_t, weight_t
-    :param resolution:
-        The number of points per power interval (i.e. the resolution used to
-        represent the pmf)
+        It's a list of Histograms. The number of elements is equal to the
+        number of correlated groups
     :returns:
         Not normalized Histograms
     """
-    num_imls = len(results[0][0])
+    resolution = results[0].res  # all equal resolutions
+    num_imls = len(results[0].pmfs)
 
     # The minimum power is IMT dependent
     minpow = np.full(num_imls, np.nan)
     maxpow = np.full(num_imls, np.nan)
     for i, res in enumerate(results):
 
-        minp = np.array(res[1], dtype=float)
-        nump = np.array(res[2], dtype=float)
+        minp = np.array(res.minpow, dtype=float)
+        nump = np.array(res.numpow, dtype=float)
         ok = ~np.isnan(minp)
 
         if i == 0:
@@ -308,23 +305,23 @@ def mixture(results: list, resolution: float) -> Histograms:
 
         out = np.zeros(int(resolution * maxrange[i_iml]))
         tot_wei = 0.0
-        for j, (his, min_pow, num_pow, weight) in enumerate(results):
+        for j, res in enumerate(results):
 
             # Skipping this IML if the maxrange is nan
             if np.isnan(maxrange[i_iml]):
                 break
 
             # Skipping this realization if the lower limit is None
-            if min_pow[i_iml] is None:
+            if res.minpow[i_iml] is None:
                 continue
 
             # Find where to add the current PMF
-            low = int(resolution * (min_pow[i_iml] - minpow[i_iml]))
-            upp = int(low + resolution *  num_pow[i_iml])
+            low = int(resolution * (res.minpow[i_iml] - minpow[i_iml]))
+            upp = int(low + resolution *  res.numpow[i_iml])
 
             # Sum the PMF
-            out[low:upp] += his[i_iml] * weight
-            tot_wei += weight
+            out[low:upp] += res.pmfs[i_iml] * res.weight
+            tot_wei += res.weight
 
         chk = np.sum(out) / tot_wei
         msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
