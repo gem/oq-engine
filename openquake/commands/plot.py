@@ -754,13 +754,11 @@ def make_figure_mean_hcurves_rtgm(extractors, what):
 
 def make_figure_governing_mce(extractors, what):
     """
-    $ oq plot "governing_mce?sid=0"
+    $ oq plot "governing_mce?"
     """
     [ex] = extractors
     dstore = ex.dstore
-    kwargs = parse_qs(what.split('?')[1])
-    [sid] = kwargs.get('sid', ['0'])
-    plt = plot_governing_mce(dstore, sid=int(sid))
+    plt = plot_governing_mce(dstore)
     return plt
 
 
