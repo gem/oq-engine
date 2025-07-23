@@ -66,18 +66,18 @@ class HistogramMDETestCase(unittest.TestCase):
 
         # Get the histograms
         res = 10
-        ohis, min_powers, num_powers = get_histograms(afes, weights, res)
+        h = get_histograms(afes, weights, res)
 
         # Check that the list of histograms has the same shape of the number of
         # bins composing the disaggregation matrix
         expected = len(binc['mag']) * len(binc['dst']) * len(binc['eps'])
-        assert expected == len(ohis)
+        assert expected == len(h.pmfs)
 
         # Computing the mean and counting the M-D-e combinations with values
         # different than 0
         smm = 0.0
         cnt = 0.
-        for ohi in ohis:
+        for ohi in h.pmfs:
             if ohi is not None:
                 smm += np.sum(ohi)
                 cnt += 1.
@@ -97,7 +97,7 @@ class HistogramMDETestCase(unittest.TestCase):
             d2 = afes.shape[1]
             d3 = afes.shape[2]
             for idx, (ohi, mpo, npo) in enumerate(
-                    zip(ohis, min_powers, num_powers)):
+                    zip(h.pmfs, h.minpow, h.numpow)):
                 if ohi is not None:
                     bins = get_bins_from_params(mpo, res, npo)
                     binc = bins[:-1] + np.diff(bins) / 2

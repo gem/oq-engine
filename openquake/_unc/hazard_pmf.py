@@ -230,56 +230,6 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
     return imls, afes, weights
 
 
-def afes_matrix_from_csv_files(fname: str, imtstr: str, info: bool = False,
-                               idxs: list = []):
-    """
-    :param fname:
-        The name of the folder containing the .csv files with prefix
-        'hazard_curve-rlz' and the file with data on realizations
-    :param imtstr:
-        The string of the IMTs
-    :param info:
-        When true more info is prompted
-    :param idxs:
-        List of indexes with the realisations to be selected
-    :returns:
-        A tuple with a vector containing the imls values and a 2D vector with
-        the set of afes for each IML. The cardinality of the second array is
-        the number of realisations times the number of sites.
-    """
-    # The shape of poes: |realizations| x |number of imls| x |sites|
-    _, _, poes, hea, imls, calc_id_a = get_rlz_hcs(fname, imtstr)
-
-    # Indexes of the realisations
-    if len(idxs) > 0:
-        idxs = np.array(idxs, dtype=int)
-    else:
-        idxs = slice(None)
-
-    poes = poes[idxs, :, :]
-
-    # Information on the content of files
-    if info:
-        len_description = 30
-        tmps = 'OQ version'.ljust(len_description)
-        print('{:s}: {:s}'.format(tmps, hea['engine']))
-        tmps = 'Investigation time'.ljust(len_description)
-        print('{:s}: {:f}'.format(tmps, hea['investigation_time']))
-        tmps = 'IMT'.ljust(len_description)
-        print('{:s}: {:s}'.format(tmps, hea['imt']))
-        tmps = 'Number of files'.ljust(len_description)
-        print('{:s}: {:d}'.format(tmps, len(poes)))
-
-    # Computing afes
-    poes[poes > 0.99999] = 0.99999
-    afes = -np.log(1.-poes)/hea['investigation_time']
-
-    # Getting weights
-    rlzs, calc_id = get_rlzs(fname)
-
-    return imls, np.squeeze(afes), rlzs.weight.to_numpy()
-
-
 def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
                    idxs: np.ndarray = None):
     """
