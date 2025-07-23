@@ -134,7 +134,6 @@ def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
     :param imt:
         The intensity measure type of interest
     """
-
     # Compute the number of groups of correlated uncertainties
     num_paths = 1
     for bset_i, bsid in enumerate(bset):

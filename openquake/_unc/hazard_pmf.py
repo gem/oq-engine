@@ -324,7 +324,6 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
         bin of the histogram. The second list contains integers defining the
         range covered by the histogram (i.e. number of powers of 10).
     """
-
     if idxs is not None:
         afes_mtx = afes_mtx[idxs, :]
         weights = weights[idxs]
@@ -383,6 +382,7 @@ def mixture(results: Sequence[list[list]],
         A triple with the pmfs, the min power and the range (num of powers).
     """
     num_imls = len(results[0][0])
+    idxs, = np.where([res[0] is not None for res in results])
 
     # The minimum power is IMT dependent
     minpow = np.full(num_imls, np.nan)
@@ -408,10 +408,10 @@ def mixture(results: Sequence[list[list]],
     # of the two original PMFs. In the case of disaggregation the number of
     # imls `num_imls` corresponds to the number of cells (i.e. the number of
     # M-R combinations)
-    olst = []
-    for i_iml in range(num_imls):
+    olst = [None] * num_imls
+    for i_iml in np.where(ok)[0]:
 
-        tmp = None
+        out = np.zeros(int(resolution * maxrange[i_iml]))
         tot_wei = 0.0
         for j, (his, min_pow, num_pow, weight) in enumerate(results):
 
@@ -423,29 +423,18 @@ def mixture(results: Sequence[list[list]],
             if min_pow[i_iml] is None:
                 continue
 
-            # Initialize the array where we store the output distribution
-            if j == 0:
-                tmp = np.zeros(int(resolution*maxrange[i_iml]))
-
             # Find where to add the current PMF
             low = int(resolution * (min_pow[i_iml] - minpow[i_iml]))
             upp = int(low + resolution * (num_pow[i_iml]))
 
             # Sum the PMF
             idxs = np.arange(low, upp)
-            tmp[idxs] += np.array(his[i_iml]) * weight
+            out[idxs] += his[i_iml] * weight
             tot_wei += weight
 
-        if tmp is not None:
-            chk = np.sum(tmp) / tot_wei
-            msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
-            assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
-            olst.append(tmp)
-        else:
-            olst.append(None)
+        chk = np.sum(out) / tot_wei
+        msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
+        assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
+        olst[i_iml] = out
 
-    # Check output dimension
-    minpow = [i if ~np.isnan(i) else None for i in minpow]
-    maxrange = [i if ~np.isnan(i) else None for i in maxrange]
-    assert len(olst) == len(minpow) == len(maxrange)
     return olst, minpow, maxrange

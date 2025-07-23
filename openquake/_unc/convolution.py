@@ -60,6 +60,9 @@ class Histograms:
                 smm = np.sum(pmf)
                 raise ValueError(f'Sum not equal to 1 {smm:8.4e}')
 
+    def __imul__(self, other):
+        return self * other
+
     def __mul__(histo_a, histo_b):
         """
         Implements the convolution product of histograms
