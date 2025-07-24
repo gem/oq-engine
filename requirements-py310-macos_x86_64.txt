@@ -2,6 +2,7 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/macos/py310/h3-3.7.7-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/charset_normalizer-3.3.2-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/pyzmq-26.0.3-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/pandas-2.0.3-cp310-cp310-macosx_10_9_x86_64.whl
