@@ -61,25 +61,18 @@ class Analysis:
         - bsids: IDs of the branches in the original LTs
         - utype: Type of uncertainty
         - ordinal: Ordinal of the branchsets in their LTs
-    :param corbs_per_src_ssc:
-        A dictionary
-    :param corbs_bs_id_ssc:
     :param dstores:
         A dictionary with source IDs as keys and a string with the path to
         the datastore containing the results (i.e. hazard curves) as value.
     :param fname:
         The path to the analysis.xml file
     """
-    def __init__(self, bsets: dict, corbs_per_src: dict, corbs_bs_id: dict,
+    def __init__(self, utypes: dict, bsets: dict,
                  dstores: dict, fname: str, seed: int):
 
         # The branch sets for which we have correlated uncertainties
+        self.utypes = utypes
         self.bsets = bsets
-
-        # Correlated branchsets. These are two dictionaries with key the
-        # branchset ID
-        self.corbs_per_src = corbs_per_src
-        self.corbs_bs_id = corbs_bs_id
 
         # A dictionary with key the IDs of the sources. The value is a string
         # with the path to the datastore containing the results.
@@ -134,11 +127,8 @@ class Analysis:
             srcids.add(calc.attrib['sourceID'])
 
         # Branch sets
+        utypes = {}
         bsets = {}
-
-        # Correlated branch sets per source
-        corbs_per_src = {}
-        corbs_bs_id = {}
 
         # For each branchset in the .xml
         for bs in root.findall(PATH_UNC):
@@ -154,28 +144,21 @@ class Analysis:
             for srcid in srcids:
                 dstore = dstores[srcid]
                 # List of unique uncertainty types
-                utypes = dstore.getitem('full_lt/source_model_lt')['utype']
-                utypes = list(collections.Counter(utypes))
+                us = dstore.getitem('full_lt/source_model_lt')['utype']
+                us = list(collections.Counter(us))
                 # Find the index of the uncertainty
                 try:
-                    idx = utypes.index(utype)
+                    idx = us.index(utype)
                 except ValueError:  # for gmpeModel there ia a single bset
                     idx = 0
                 ordinal.append(idx)
 
-            data = {srcid: {'bsid': bsids[i], 'ordinal': ordinal[i]}
-                    for i, srcid in enumerate(srcids)}
-            bsets[bsid] = {'utype': utype, 'data': data}
-
-            # For each source ID we store the ordinal of the branchset
-            # containing the uncertainty here considered. Note that the
-            # ordinal can be either for the SSC or the GMC.
-            for srcid, odn in zip(srcids, ordinal):
-                corbs_per_src[srcid, odn] = bsid
+            utypes[bsid] = utype
+            bsets[bsid] = {srcid: {'bsid': bsids[i], 'ordinal': ordinal[i]}
+                           for i, srcid in enumerate(srcids)}
 
         # Initializing the Analysis object
-        self = cls(bsets, corbs_per_src, corbs_bs_id, dstores, fname,
-                   seed)
+        self = cls(utypes, bsets, dstores, fname, seed)
         return self
 
     def get_sets(self):
@@ -193,7 +176,7 @@ class Analysis:
         # Process all the correlated branch sets
         for bsid in sorted(self.bsets):
             found = False
-            srcids = set(self.bsets[bsid]['data'])
+            srcids = set(self.bsets[bsid])
 
             # If true, this source is in the current branch set
             for i, sset in enumerate(ssets):
@@ -229,15 +212,14 @@ class Analysis:
         dstore = list(self.dstores.values())[0]
         return dstore['oqparam'].hazard_imtls
 
-    def get_rpaths_weights(self, dstore, srcid):
+    def get_rpaths_weights(self, srcid):
         """
-        :param dstore:
-            A :class:`openquake.commonlib.datastore.DataStore` instance
         :param srcid:
-            The ID of the source
+            The ID of a source
         :returns:
             Realization paths and corresponding weights
         """
+        dstore = self.dstores[srcid]
         weights = dstore['weights'][:]
         bpaths = dstore['full_lt'].rlzs['branch_path']
         return bpaths, weights
@@ -337,76 +319,72 @@ class Analysis:
                 cnt += 1
         return oute, idxe
 
+    def get_patterns(self, rlzs: dict, verbose=False):
+        """
+        Computes the patterns needed to select realizations from a
+        source-specific logic tree
 
-def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
-    """
-    Computes the patterns needed to select realizations from a source-specific
-    logic tree
-
-    :param rlzs:
-        A dictionary with information on all the realizations. The key is the
-        source ID.
-    :param an01:
-        An instance of :class:`openquake._unc.analysis.Analysis`
-    :param verbose:
-        A boolean controlling the logging
-    :returns:
-        A dictionary with key the ID of the branch set with correlated
-        uncertainties (IDs as defined in the `analysis.xml` input file) and
-        with value a dictionary with key the IDs of the sources with correlated
-        uncertainties and with values a list of patterns than can be used to
-        select the realizations belonging to each set of correlated
-        uncertainties.
-    """
-    patterns = {}
-    for bsid in an01.bsets:
-        if verbose:
-            logging.info(f"Creating patterns for branch set {bsid}")
-
-        # Processing the sources in the branchset bsid
-        patterns[bsid] = {}
-        for srcid in an01.bsets[bsid]['data']:
+        :param rlzs:
+            A dictionary with information on all the realizations.
+            The key is the source ID.
+        :param verbose:
+            A boolean controlling the logging
+        :returns:
+            A dictionary with key the ID of the branch set with correlated
+            uncertainties (IDs as defined in the `analysis.xml` input file) and
+            with value a dictionary with key the IDs of the sources with
+            correlated uncertainties and with values a list of patterns than
+            can be used to select the realizations belonging to each set of
+            correlated uncertainties.
+        """
+        patterns = {}
+        for bsid in self.bsets:
             if verbose:
-                logging.info(f"   Source: {srcid}")
-                logging.debug(rlzs[srcid])
+                logging.info(f"Creating patterns for branch set {bsid}")
 
-            # Create the general pattern. This will select everything
-            # e.g. '.+.+.+~.+'
-            patterns[bsid][srcid] = {}
-            rpaths = rlzs[srcid]
-            smpaths = [r[:-2] for r in rpaths]
-            gspaths = [r[-1] for r in rpaths]
-            nssc = len(smpaths[0])
-            ssc = '..' + ''.join('.' for i in range(2, nssc))
-            ngmc = len(gspaths[0])
-            gmc = ''.join('.' for i in range(ngmc))
-            pattern = '^' + ssc + '~' + gmc
-            # Find the index in the pattern where we replace the '.' with the
-            # ID of the branches that are correlated.
-            ordinal = an01.bsets[bsid]['data'][srcid]['ordinal']
-            # + 1 for the initial ~
-            # + 1 for the first element (that uses two letters)
-            idx = ordinal + 1 + 1
-            is_gmc = an01.bsets[bsid]['utype'] == b'gmpeModel'
-            if is_gmc:
-                paths = gspaths
-                idx += nssc
-                ordinal = 0
-            else:
-                paths = [path[ordinal + 1] for path in smpaths]
-            patt = [pattern[:idx] + path + pattern[idx+1:]
-                    for path in np.unique(paths)]
-            patterns[bsid][srcid] = patt
-    """# in the analysis_test, `patterns` is the following dictionary:
-    {'bs1': {'b': ['^...A.~.', '^...B.~.'],
-             'c': ['^....A.~.', '^....B.~.']},
-     'bs2': {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
-             'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}}
-    """
-    return patterns
+            # Processing the sources in the branchset bsid
+            patterns[bsid] = {}
+            for srcid in self.bsets[bsid]:
+                if verbose:
+                    logging.info(f"   Source: {srcid}")
+                    logging.debug(rlzs[srcid])
+
+                patterns[bsid][srcid] = {}
+                rpaths = rlzs[srcid]
+                smpaths = [r[:-2] for r in rpaths]
+                gspaths = [r[-1] for r in rpaths]
+                nssc = len(smpaths[0])
+                ssc = '..' + ''.join('.' for i in range(2, nssc))
+                ngmc = len(gspaths[0])
+                gmc = ''.join('.' for i in range(ngmc))
+                # Create the general pattern. This will select everything
+                pattern = '^' + ssc + '~' + gmc
+                # Find the index iwhere we replace the '.' with the
+                # ID of the branches that are correlated.
+                ordinal = self.bsets[bsid][srcid]['ordinal']
+
+                # + 1 for the first element (that uses two letters)
+                idx = ordinal + 1 + 1
+                is_gmc = self.utypes[bsid] == b'gmpeModel'
+                if is_gmc:
+                    paths = gspaths
+                    idx += nssc
+                    ordinal = 0
+                else:
+                    paths = [path[ordinal + 1] for path in smpaths]
+                patt = [pattern[:idx] + path + pattern[idx+1:]
+                        for path in np.unique(paths)]
+                patterns[bsid][srcid] = patt
+        """# in the analysis_test, `patterns` is the following dictionary:
+        {'bs1': {'b': ['^...A.~.', '^...B.~.'],
+                 'c': ['^....A.~.', '^....B.~.']},
+         'bs2': {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
+                 'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}}
+        """
+        return patterns
 
 
-def get_hcurves_ids(rlzs, patterns, weights):
+def get_hcurves_ids(rlzs, patterns):
     """
     Given the realizations for each source as specified in the `rlzs`
     dictionary, the patterns describing the
@@ -420,34 +398,22 @@ def get_hcurves_ids(rlzs, patterns, weights):
         The values are lists of strings. Each string is a regular expression
         (e.g.  ^.+A.+.+~.+') that can be used to select the subset of
         realizations involving the current source that are correlated.
-    :param weights:
-        A dictionary with keys the IDs of the sources and an array as value.
-        These arrays contain the weights assigned to each realisation admitted
-        by the logic tree for a single source.
     :returns:
-        A tuple with two dictionaries.
+        A double dictionary bsid -> srcid -> idxs
     """
     # These are two dictionaries with key the branch set ID and value a
     # dictionary with key the source IDs
     grp_hcurves = {}
-    grp_weights = {}
     for bsid in patterns:
         grp_hcurves[bsid] = {}
-        grp_weights[bsid] = {}
         for srcid in patterns[bsid]:
             rpath = rlzs[srcid]
-            ws = weights[srcid]
-
             # Loop over the patterns of all the realizations for a given source
             grp_hcurves[bsid][srcid] = []
-            grp_weights[bsid][srcid] = []
             for p in patterns[bsid][srcid]:
                 idxs = []
-                wei = 0.0
                 for i, rlz in enumerate(rpath):
                     if re.search(p, rlz):
                         idxs.append(i)
-                        wei += ws[i]
                 grp_hcurves[bsid][srcid].append(idxs)
-                grp_weights[bsid][srcid].append(wei)
-    return grp_hcurves, grp_weights
+    return grp_hcurves

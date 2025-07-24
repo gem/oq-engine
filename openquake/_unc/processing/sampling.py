@@ -77,12 +77,8 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
 
     # Process the sets of results. When a set contains a single source,
     # this means that the source does not have correlations with other sources.
-    for i, _ in enumerate(ssets):
-        sset = ssets[i]
-        bset = bsets[i]
-
-        # Info
-        msg = f'Processing set {i} sources {sset} correlated bs {bset}'
+    for sset, bset in zip(ssets, bsets):
+        msg = f'Processing sources {sset} correlated with {bset}'
         logging.info(msg)
 
         # When bset is not None, it contains sources with correlated
@@ -98,17 +94,16 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
 
                 # ID of the sources in this set with a given correlated
                 # uncertainty
-                bs_sids = list(an01.bsets[bsid]['data'])
+                bs_sids = list(an01.bsets[bsid])
 
                 # Realisations for the first source
-                rlzs, wei = an01.get_rpaths_weights(
-                    dstores[bs_sids[0]], bs_sids[0])
+                rlzs, wei = an01.get_rpaths_weights(bs_sids[0])
 
                 # These are the weights assigned to each group of correlated
                 # results for this uncertainty
                 weights_per_group = []
                 for iii in grp_curves[bsid][bs_sids[0]]:
-                    weights_per_group.append(sum(wei[iii]))
+                    weights_per_group.append(wei[iii].sum())
 
                 # 'bset_sampled_indexes' contains the indexes of the sampled
                 # set of correlated realisations
@@ -116,72 +111,8 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
                 bset_sampled_indexes[bsid] = an01.rng.choice(
                     len(weights_per_group), nsam, p=weights_per_group)
 
-            # Sample hazard curves for each source in this set
-            for srcid in sorted(sset):
-                logging.info(f"   Source: {srcid}")
-
-                # This is a container for the indexes of the realizations. Each
-                # element is a set of indexes of realizations for the source
-                # in question
-                iii = [None] * nsam
-
-                # This is a counter for the branch set of correlated
-                # uncertainties in a group
-                i = 0
-
-                # For each set of correlated results
-                for bsid in bset:
-
-                    # If the logic tree of the current source includes this
-                    # correlation
-                    if srcid in grp_curves[bsid]:
-
-                        # For each sample
-                        for sam in range(nsam):
-
-                            # Get the sequence of indexes of the curves for the
-                            # sampled set of correlated results
-                            xx = bset_sampled_indexes[bsid][sam]
-                            tmp = grp_curves[bsid][srcid][xx]
-                            if i == 0:
-                                iii[sam] = set(tmp)
-                            else:
-                                iii[sam] = iii[sam].intersection(set(tmp))
-
-                        i += 1
-
-                # Get realisations and weights for the source currently
-                # investigated. `wei` contains the weights assigned to each one
-                # of the realizations admitted by the logic tree of the current
-                # source
-                _, wei = an01.get_rpaths_weights(dstores[srcid], srcid)
-
-                # Array where we store the indexes of the sampled realisations
-                idx_rlzs = np.zeros(nsam, dtype=int)
-                poes = dstores[srcid].getitem('hcurves-rlzs')[:]
-
-                # Index of the current source
-                kkk, = np.where(srcids == srcid)
-
-                # Process each sample for the current source
-                for sam in range(nsam):
-
-                    # These are the indexes from which we draw a sample
-                    idxs = np.sort(list(iii[sam]))
-
-                    # Normalised weights
-                    norm_wei = wei[idxs] / sum(wei[idxs])
-
-                    # Pick the index of the hazard curve for the current sample
-                    idx_rlzs[sam] = np.random.choice(idxs, p=norm_wei)
-
-                    # Save the probabilities of exceedance for the current
-                    # source and sample
-                    afes[:, kkk, sam, :, :] = poes[:, idx_rlzs[sam]]
-
-                    # Save the weight for this sample
-                    weir[sam] *= wei[idx_rlzs[sam]]
-
+            sample_set(an01, sset, bset, nsam, grp_curves, bset_sampled_indexes,
+                       afes, weir)
         else:
 
             srcid = list(sset)[0]
@@ -189,7 +120,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
 
             # Get realisations and weights for the source currently
             # investigated
-            rlzs, wei = an01.get_rpaths_weights(dstores[srcid], srcid)
+            rlzs, wei = an01.get_rpaths_weights(srcid)
 
             # Sampling of results
             idx_rlzs = np.random.choice(len(wei), size=nsam, p=wei)
@@ -205,6 +136,75 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
     afes = - np.log(1. - afes) / oqp.investigation_time
 
     return oqp.hazard_imtls, afes
+
+
+def sample_set(an01, sset, bset, nsam, grp_curves, bset_sampled_indexes,
+               afes, weir):
+
+    # Sample hazard curves for each source in this set
+    srcids = np.array(list(an01.dstores))
+    for srcid in sorted(sset):
+        logging.info(f"   Source: {srcid}")
+
+        # This is a container for the indexes of the realizations. Each
+        # element is a set of indexes of realizations for the source
+        # in question
+        iii = [None] * nsam
+
+        # This is a counter for the branch set of correlated
+        # uncertainties in a group
+        i = 0
+
+        # For each set of correlated results
+        for bsid in bset:
+
+            # If the logic tree of the current source includes this
+            # correlation
+            if srcid in grp_curves[bsid]:
+
+                # For each sample
+                for sam in range(nsam):
+                    # Get the sequence of indexes of the curves for the
+                    # sampled set of correlated results
+                    xx = bset_sampled_indexes[bsid][sam]
+                    tmp = grp_curves[bsid][srcid][xx]
+                    if i == 0:
+                        iii[sam] = set(tmp)
+                    else:
+                        iii[sam] = iii[sam].intersection(set(tmp))
+                i += 1
+
+        # Get realisations and weights for the source currently
+        # investigated. `wei` contains the weights assigned to each one
+        # of the realizations admitted by the logic tree of the current
+        # source
+        _, wei = an01.get_rpaths_weights(srcid)
+
+        # Array where we store the indexes of the sampled realisations
+        idx_rlzs = np.zeros(nsam, dtype=int)
+        poes = an01.dstores[srcid]['hcurves-rlzs'][:]
+
+        # Index of the current source
+        kkk, = np.where(srcids == srcid)
+
+        # Process each sample for the current source
+        for sam in range(nsam):
+
+            # These are the indexes from which we draw a sample
+            idxs = np.sort(list(iii[sam]))
+
+            # Normalised weights
+            norm_wei = wei[idxs] / sum(wei[idxs])
+
+            # Pick the index of the hazard curve for the current sample
+            idx_rlzs[sam] = np.random.choice(idxs, p=norm_wei)
+
+            # Save the probabilities of exceedance for the current
+            # source and sample
+            afes[:, kkk, sam, :, :] = poes[:, idx_rlzs[sam]]
+
+            # Save the weight for this sample
+            weir[sam] *= wei[idx_rlzs[sam]]
 
 
 def rounding(weights, digits):

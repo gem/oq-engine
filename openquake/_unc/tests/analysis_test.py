@@ -29,7 +29,7 @@
 import os
 import unittest
 import numpy as np
-from openquake._unc.analysis import Analysis, get_patterns, get_hcurves_ids
+from openquake._unc.analysis import Analysis, get_hcurves_ids
 
 # Base Data Path
 BDP = os.path.join(os.path.dirname(__file__), 'data_calc')
@@ -44,16 +44,10 @@ class AnalysisTestCase(unittest.TestCase):
     Tests various methods of the :class:`openquake._unc.analysis.Analysis`
     class.
     """
-    def setUp(self):
-        self.fname = os.path.join(BDP, 'test_case02', 'analysis.xml')
-        self.an01 = Analysis.read(self.fname)
-
-    def test01(self):
-        # Check the info describing correlation
-        an01 = self.an01
-        expected = {('b', 2): 'bs1', ('c', 3): 'bs1',
-                    ('a', 0): 'bs2', ('b', 0): 'bs2'}
-        self.assertEqual(an01.corbs_per_src, expected)
+    @classmethod
+    def setUpClass(cls):
+        fname = os.path.join(BDP, 'test_case02', 'analysis.xml')
+        cls.an01 = Analysis.read(fname)
 
     def test_get_sets_01(self):
         # Check the groups with correlated uncertainties
@@ -84,7 +78,7 @@ class AnalysisTestCase(unittest.TestCase):
         #   GMClt. This source has correlated uncertainties with sources 'b'
         #   and 'c'
         rlzs, _, _ = an01.read_dstores('hcurves', 'PGA')
-        patterns = get_patterns(rlzs, an01)
+        patterns = an01.get_patterns(rlzs)
         # These are the patterns for the first uncertainty and source 'b'.
         # Overall the SSC LT for source 'b' contains 4 branchsets and the
         # correlated uncertainty is the third one.
@@ -99,15 +93,14 @@ class AnalysisTestCase(unittest.TestCase):
         an01 = self.an01
         rlzs, poes, weights = an01.read_dstores('hcurves', 'PGA')
         # Get the patterns
-        patterns = get_patterns(rlzs, an01)
+        patterns = an01.get_patterns(rlzs)
         # Get for each set of correlated uncertainties the source IDs
         # and the IDs of the realizations belonging to a sub-set of
-        # correlated branches and the corresponding weights
-        hcids, weis = get_hcurves_ids(rlzs, patterns, weights)
+        # correlated branches
+        hcids = get_hcurves_ids(rlzs, patterns)
         # Test
         expected = [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19]
         aeq(hcids['bs1']['b'][0], expected)
-        aac(weis['bs1']['b'][0], 0.8)
 
 
 class AnalysisDisaggregationTestCase(unittest.TestCase):
