@@ -113,7 +113,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
         rmap = dstore['best_rlzs'][:]
         weights = dstore['weights'][:][rmap]
-        oute, idxe = alys.extract_afes(expct, weights)
+        oute, idxe = alys.extract_afes_rlzs(expct, weights)
 
         # Mean and median from convolution
         res_conv = h.get_stats([-1, 0.50])
@@ -180,7 +180,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         # Expected results - Mean disaggregation
         expct = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
         weights = dstore['weights'][:][rmap]
-        oute, idxe = alys.extract_afes(expct[:, None], weights)
+        oute, idxe = alys.extract_afes_rlzs(expct[:, None], weights)
 
         # Mean and median from convolution
         res_conv = h.get_stats([-1, 0.50])

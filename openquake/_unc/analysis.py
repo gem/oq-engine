@@ -35,7 +35,6 @@ import xml.etree.ElementTree as ET
 import logging
 import numpy as np
 
-from openquake.commonlib import datastore
 from openquake.calculators.base import dcache
 from openquake._unc.dsg_mde import get_afes_from_dstore as afes_from
 
@@ -68,12 +67,11 @@ class Analysis:
     :param dstores:
         A dictionary with source IDs as keys and a string with the path to
         the datastore containing the results (i.e. hazard curves) as value.
-    :param root_path:
-        The path to the folder
+    :param fname:
+        The path to the analysis.xml file
     """
-
     def __init__(self, bsets: dict, corbs_per_src: dict, corbs_bs_id: dict,
-                 dstores: dict, root_path: str, seed: int):
+                 dstores: dict, fname: str, seed: int):
 
         # The branch sets for which we have correlated uncertainties
         self.bsets = bsets
@@ -91,7 +89,7 @@ class Analysis:
         self.itime, = np.unique(itimes)
 
         # Path to the folder containing the datastores
-        self.root_path = root_path
+        self.fname = fname
         self.rng = np.random.default_rng(seed)  # used in sampling
 
     @classmethod
@@ -129,16 +127,8 @@ class Analysis:
                 raise ValueError(msg)
 
             # Read or compute the datastore
-            if 'datastore' in calc.attrib:
-                # the problem is calc_test:test_against_oq
-                # raise RuntimeError(fname)
-                hdf5 = os.path.join(root_path, calc.attrib['datastore'])
-                dstore = datastore.read(hdf5)
-            else:
-                ini = os.path.join(root_path, calc.attrib['ini'])
-                dstore = dcache.get(ini)
-
-            dstores[calc.attrib['sourceID']] = dstore
+            ini = os.path.join(root_path, calc.attrib['ini'])
+            dstores[calc.attrib['sourceID']] = dcache.get(ini)
 
             # Updating the set of src IDs
             srcids.add(calc.attrib['sourceID'])
@@ -184,9 +174,8 @@ class Analysis:
                 corbs_per_src[srcid, odn] = bsid
 
         # Initializing the Analysis object
-        self = cls(bsets, corbs_per_src, corbs_bs_id, dstores, root_path,
+        self = cls(bsets, corbs_per_src, corbs_bs_id, dstores, fname,
                    seed)
-        self.fname = fname
         return self
 
     def get_sets(self):
@@ -327,7 +316,7 @@ class Analysis:
 
         return rlzs, poes, weights
 
-    def extract_afes(self, mag_dst_rlz, weights):
+    def extract_afes_rlzs(self, mag_dst_rlz, weights):
         """
         Extract nonzero afes and indices from the array mag_dst_rlz,
         by averaging on the realization weights.
