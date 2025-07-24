@@ -81,7 +81,7 @@ def prepare(fname: str, atype: str, imtstr: str=None):
     patterns = get_patterns(rlzs, an01)
 
     # Get the indexes of the hazard curves to be combined
-    grp_curves, _ = get_hcurves_ids(rlzs, patterns, weights)
+    grp_curves = get_hcurves_ids(rlzs, patterns)
 
     # Source sets and associated correlated branch sets. 'ssets' is a list of
     # sets each one containing sources with some correlation. 'bsets' is a list

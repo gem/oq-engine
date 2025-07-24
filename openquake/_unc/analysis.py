@@ -388,7 +388,7 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
     return patterns
 
 
-def get_hcurves_ids(rlzs, patterns, weights):
+def get_hcurves_ids(rlzs, patterns):
     """
     Given the realizations for each source as specified in the `rlzs`
     dictionary, the patterns describing the
@@ -402,34 +402,22 @@ def get_hcurves_ids(rlzs, patterns, weights):
         The values are lists of strings. Each string is a regular expression
         (e.g.  ^.+A.+.+~.+') that can be used to select the subset of
         realizations involving the current source that are correlated.
-    :param weights:
-        A dictionary with keys the IDs of the sources and an array as value.
-        These arrays contain the weights assigned to each realisation admitted
-        by the logic tree for a single source.
     :returns:
-        A tuple with two dictionaries.
+        A double dictionary bsid -> srcid -> idxs
     """
     # These are two dictionaries with key the branch set ID and value a
     # dictionary with key the source IDs
     grp_hcurves = {}
-    grp_weights = {}
     for bsid in patterns:
         grp_hcurves[bsid] = {}
-        grp_weights[bsid] = {}
         for srcid in patterns[bsid]:
             rpath = rlzs[srcid]
-            ws = weights[srcid]
-
             # Loop over the patterns of all the realizations for a given source
             grp_hcurves[bsid][srcid] = []
-            grp_weights[bsid][srcid] = []
             for p in patterns[bsid][srcid]:
                 idxs = []
-                wei = 0.0
                 for i, rlz in enumerate(rpath):
                     if re.search(p, rlz):
                         idxs.append(i)
-                        wei += ws[i]
                 grp_hcurves[bsid][srcid].append(idxs)
-                grp_weights[bsid][srcid].append(wei)
-    return grp_hcurves, grp_weights
+    return grp_hcurves

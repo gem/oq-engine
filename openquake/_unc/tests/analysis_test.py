@@ -96,12 +96,11 @@ class AnalysisTestCase(unittest.TestCase):
         patterns = get_patterns(rlzs, an01)
         # Get for each set of correlated uncertainties the source IDs
         # and the IDs of the realizations belonging to a sub-set of
-        # correlated branches and the corresponding weights
-        hcids, weis = get_hcurves_ids(rlzs, patterns, weights)
+        # correlated branches
+        hcids = get_hcurves_ids(rlzs, patterns)
         # Test
         expected = [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19]
         aeq(hcids['bs1']['b'][0], expected)
-        aac(weis['bs1']['b'][0], 0.8)
 
 
 class AnalysisDisaggregationTestCase(unittest.TestCase):
