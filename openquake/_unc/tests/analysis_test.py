@@ -44,16 +44,10 @@ class AnalysisTestCase(unittest.TestCase):
     Tests various methods of the :class:`openquake._unc.analysis.Analysis`
     class.
     """
-    def setUp(self):
-        self.fname = os.path.join(BDP, 'test_case02', 'analysis.xml')
-        self.an01 = Analysis.read(self.fname)
-
-    def test01(self):
-        # Check the info describing correlation
-        an01 = self.an01
-        expected = {('b', 2): 'bs1', ('c', 3): 'bs1',
-                    ('a', 0): 'bs2', ('b', 0): 'bs2'}
-        self.assertEqual(an01.corbs_per_src, expected)
+    @classmethod
+    def setUpClass(cls):
+        fname = os.path.join(BDP, 'test_case02', 'analysis.xml')
+        cls.an01 = Analysis.read(fname)
 
     def test_get_sets_01(self):
         # Check the groups with correlated uncertainties

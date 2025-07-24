@@ -61,24 +61,18 @@ class Analysis:
         - bsids: IDs of the branches in the original LTs
         - utype: Type of uncertainty
         - ordinal: Ordinal of the branchsets in their LTs
-    :param corbs_per_src:
-        A dictionary
     :param dstores:
         A dictionary with source IDs as keys and a string with the path to
         the datastore containing the results (i.e. hazard curves) as value.
     :param fname:
         The path to the analysis.xml file
     """
-    def __init__(self, utypes: dict, bsets: dict, corbs_per_src: dict,
+    def __init__(self, utypes: dict, bsets: dict,
                  dstores: dict, fname: str, seed: int):
 
         # The branch sets for which we have correlated uncertainties
         self.utypes = utypes
         self.bsets = bsets
-
-        # Correlated branchsets. These are two dictionaries with key the
-        # branchset ID
-        self.corbs_per_src = corbs_per_src
 
         # A dictionary with key the IDs of the sources. The value is a string
         # with the path to the datastore containing the results.
@@ -136,9 +130,6 @@ class Analysis:
         utypes = {}
         bsets = {}
 
-        # Correlated branch sets per source
-        corbs_per_src = {}
-
         # For each branchset in the .xml
         for bs in root.findall(PATH_UNC):
 
@@ -166,14 +157,8 @@ class Analysis:
             bsets[bsid] = {srcid: {'bsid': bsids[i], 'ordinal': ordinal[i]}
                            for i, srcid in enumerate(srcids)}
 
-            # For each source ID we store the ordinal of the branchset
-            # containing the uncertainty here considered. Note that the
-            # ordinal can be either for the SSC or the GMC.
-            for srcid, odn in zip(srcids, ordinal):
-                corbs_per_src[srcid, odn] = bsid
-
         # Initializing the Analysis object
-        self = cls(utypes, bsets, corbs_per_src, dstores, fname, seed)
+        self = cls(utypes, bsets, dstores, fname, seed)
         return self
 
     def get_sets(self):

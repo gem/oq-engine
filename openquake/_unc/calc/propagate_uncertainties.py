@@ -39,7 +39,6 @@ from openquake._unc.analysis import (
     Analysis, get_patterns, get_hcurves_ids)
 from openquake._unc.processing.sampling import sampling
 from openquake._unc.processing.convolution import convolution
-from openquake._unc.convolution import HistoGroup
 
 
 def prepare(fname: str, atype: str, imtstr: str=None):
@@ -76,7 +75,6 @@ def prepare(fname: str, atype: str, imtstr: str=None):
     # Correlated branchsets. For test case 2, the correlation between 'a' and
     # 'b' is the GMM model while between 'b' and 'c' it's the seismogenic
     # thickness.
-    logging.info("Correlated branch sets: %s", an01.corbs_per_src)
 
     # Get the patterns (with wildcards) that can be used to select the
     # correlated realizations.
