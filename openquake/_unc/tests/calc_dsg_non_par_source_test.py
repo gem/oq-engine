@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -33,8 +32,6 @@ import unittest
 import numpy as np
 
 from openquake.calculators.base import dcache
-from openquake._unc.hcurves_dist import get_stats
-
 from openquake._unc.hazard_pmf import get_histograms
 from openquake._unc.hazard_pmf import afes_matrix_from_dstore
 

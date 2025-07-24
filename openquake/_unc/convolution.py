@@ -27,34 +27,34 @@
 # coding: utf-8
 
 import numpy as np
+from openquake.baselib import hdf5
 from openquake._unc.bins import get_bins_from_params
 from openquake._unc.utils import weighted_percentile
 
 TOLERANCE = 1e-6
 
-class Histograms:
+class HistoGroup:
     """
     A container of histograms (some of them can be None).
  
-    :param pmfs: list of Probability Mass Functions (can contain None) 
+    :param pmfs: list of histogram arrays (can contain None) 
     :param minpow: list of minimum powers (can contain None)
     :param numpow: list of number of powers (can contain None)
-    :param res: resolution (the same) satisfying res = len(pmf)/numpow
+    :param normalized: if True, each histogram must be normalized
     """
     def __init__(self, pmfs, minpow, numpow, weight=0, normalized=True):
         assert len(pmfs) == len(minpow) == len(numpow)
         self.idxs, = np.where([pmf is not None for pmf in pmfs])
         # all histograms must have the same resolution
         i, *idx = self.idxs
-        res = len(pmfs[i]) // numpow[i]
+        self.res = len(pmfs[i]) // int(numpow[i])
         for i in idx:
-            assert len(pmfs[i]) / numpow[i] == res
+            assert len(pmfs[i]) / numpow[i] == self.res
         self.pmfs = pmfs
         self.minpow = minpow
         self.numpow = numpow
         self.normalized = normalized
         self.weight = weight
-        self.res = res
         for pmf, minp, nump in zip(pmfs, minpow, numpow):
             if normalized and pmf is not None and np.abs(
                     1.0 - np.sum(pmf)) > TOLERANCE:
@@ -99,7 +99,28 @@ class Histograms:
             out2.append(min_power_o)
             out3.append(num_powers_o)
 
-        return Histograms(out1, out2, out3, histo_a.weight + histo_b.weight)
+        return HistoGroup(out1, out2, out3, histo_a.weight + histo_b.weight)
+
+    def to_matrix(self):
+        """
+        Convert the hazard curves distribution into a matrix and afes
+        """
+        nump = np.array(self.numpow, dtype=float)
+        idx = np.array(np.where(np.isfinite(nump)), dtype=int)[0]
+        # Find the number of samples per power
+        samples = int(self.res)
+        # samples = int(len(his[0])/nump[0])
+        maxp = np.empty_like(self.minpow)
+        maxp[idx] = self.minpow[idx] + nump[idx]
+        mrange = int(np.amax(maxp[idx]) - np.amin(self.minpow[idx]))
+        mtx = np.full((mrange*samples, len(self.pmfs)), np.nan)
+        for i in idx:
+            i0 = int((self.minpow[i] - min(self.minpow[idx])) * samples)
+            i1 = int(i0 + nump[i] * samples)
+            mtx[i0:i1, i] = self.pmfs[i]
+        afes = 10**np.linspace(np.amin(self.minpow[idx]), np.amax(maxp[idx]),
+                               mrange*samples)
+        return mtx, afes
 
     def get_stats(self, result_types):
         """
@@ -122,6 +143,16 @@ class Histograms:
             out.append(tmp)
         return np.array(out)
 
+    def save(self, fname):
+        """
+        Save to a .hdf5 file
+        """
+        mtx, afes = self.to_matrix()
+        with hdf5.File(fname, "w") as fout:
+            fout.create_dataset("histograms", data=mtx)
+            fout.create_dataset("mininum_power", data=np.array(self.minpow))
+            fout.create_dataset("number_of_powers", data=np.array(self.numpow))
+            fout.create_dataset("afes", data=afes)
 
 def conv(pmfa, min_power_a, num_powers_a, pmfb, min_power_b, num_powers_b):
     """
@@ -134,10 +165,10 @@ def conv(pmfa, min_power_a, num_powers_a, pmfb, min_power_b, num_powers_b):
     :param min_power_b: minimim power of the second histogram
     :param num_powers_b: number of powers of the second histogram
     :returns:
-        :class:`Histograms` instance with a single histogram
+        :class:`HistoGroup` instance with a single histogram
     """
     # Checking input
-    h = Histograms([pmfa, pmfb], [min_power_a, min_power_b],
+    h = HistoGroup([pmfa, pmfb], [min_power_a, min_power_b],
                    [num_powers_a, num_powers_b])
 
     # Compute bin data and bins for output
@@ -161,4 +192,4 @@ def conv(pmfa, min_power_a, num_powers_a, pmfb, min_power_b, num_powers_b):
     for i in np.unique(idxs):
         pmfo[i] = yvals[idxs == i].sum()
 
-    return Histograms([pmfo], [min_power_o], [num_powers_o])
+    return HistoGroup([pmfo], [min_power_o], [num_powers_o])

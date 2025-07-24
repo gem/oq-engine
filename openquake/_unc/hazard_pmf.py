@@ -37,7 +37,7 @@ For the description of a PMF we use:
 
 import numpy as np
 from openquake._unc.bins import get_bins_data, get_bins_from_params
-from openquake._unc.convolution import Histograms
+from openquake._unc.convolution import HistoGroup
 
 TOLERANCE = 1e-6
 
@@ -259,22 +259,22 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
         min_powers.append(int(min_power))
         num_powers.append(int(num_power))
 
-    return Histograms(ohis, min_powers, num_powers)
+    return HistoGroup(ohis, min_powers, num_powers)
 
 
-def mixture(results: list[Histograms]) -> Histograms:
+def mixture(results: list[HistoGroup]) -> HistoGroup:
     """
-    Given a list of Histograms this computes a mixture distribution
+    Given a list of HistoGroup this computes a mixture distribution
     corresponding to a weighted sum of the inputs.
 
     :param results:
-        It's a list of Histograms. The number of elements is equal to the
+        It's a list of HistoGroup. The number of elements is equal to the
         number of correlated groups
     :returns:
-        Not normalized Histograms
+        Not normalized HistoGroup
     """
     resolution = results[0].res  # all equal resolutions
-    num_imls = len(results[0].pmfs)
+    num_imls = len(results[0].pmfs)  # all equal lenghts
 
     # The minimum power is IMT dependent
     minpow = np.full(num_imls, np.nan)
@@ -328,4 +328,4 @@ def mixture(results: list[Histograms]) -> Histograms:
         assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
         olst[i_iml] = out
 
-    return Histograms(olst, minpow, maxrange, normalized=False)
+    return HistoGroup(olst, minpow, maxrange, normalized=False)

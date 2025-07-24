@@ -39,9 +39,7 @@ import matplotlib.pyplot as plt
 
 from openquake.baselib import hdf5
 from openquake.calculators.base import dcache
-from openquake._unc.hcurves_dist import to_matrix, get_stats
-from openquake._unc.calc.propagate_uncertainties import (
-    propagate, write_results_convolution)
+from openquake._unc.calc.propagate_uncertainties import propagate
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
@@ -70,7 +68,7 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         # Convolution
         fname = os.path.join(TFF, 'data_calc', 'test_case01_convolution.ini')
         tmpdir = tempfile.mkdtemp()
-        his, minp, nump, _ = propagate(fname, override_folder_out=tmpdir)
+        h, _ = propagate(fname, override_folder_out=tmpdir)
 
         # Read oq mean result
         ini = os.path.join(TFF, 'data_calc', 'test_case01', 'job_all.ini')
@@ -81,7 +79,7 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         imls = oqp.hazard_imtls['PGA']
 
         # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
+        res_conv = h.get_stats([-1, 0.50])
 
         # Testing the mean
         expected_mea = -np.log(1 - mean)
@@ -130,7 +128,7 @@ class ResultsCalculationTestCase01(unittest.TestCase):
             n_rlz = dstore['hcurves-rlzs'].shape[1]
             for i_rlz in range(0, n_rlz):
                 poe = -np.log(1 - dstore['hcurves-rlzs'][0, i_rlz, 0, :])
-                _ = plt.plot(imls, poe, '-', color='lightblue', alpha=0.8)
+                plt.plot(imls, poe, '-', color='lightblue', alpha=0.8)
 
             lbl = 'OQ Full Path Enumeration'
             plt.plot(imls, expected_med, '-', label=lbl)
@@ -204,12 +202,11 @@ class ResultsCalculationTestCase02(unittest.TestCase):
 
         fname = os.path.join(TFF, 'data_calc', 'test_case02_convolution.ini')
         tmpdir = tempfile.mkdtemp()
-        his, minp, nump, alys = propagate(fname, override_folder_out=tmpdir)
+        h, alys = propagate(fname, override_folder_out=tmpdir)
 
         # Results
-        computed_mtx, afes = to_matrix(his, np.array(minp), np.array(nump))
-        fname = os.path.join(tmpdir, 'res.hdf5')
-        write_results_convolution(fname, his, minp, nump)
+        computed_mtx, afes = h.to_matrix()
+        h.save(os.path.join(tmpdir, 'res.hdf5'))
 
         # Expected results
         fname = os.path.join(
@@ -218,7 +215,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             aae(computed_mtx, f["histograms"][:], decimal=2)
 
         # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
+        res_conv = h.get_stats([-1, 0.50])
 
         if PLOTTING:
             imtls = alys.get_imtls()
@@ -244,10 +241,11 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             # Inset
             ins = axs.inset_axes([0.5, 0.25, 0.2, 0.4])
             j = 22
-            tmpy = 10**np.linspace(minp[j], minp[j] + nump[j], num=len(his[j]))
+            tmpy = 10**np.linspace(h.minpow[j], h.minpow[j] + h.numpow[j],
+                                   num=len(h.pmfs[j]))
             hei = list(np.diff(tmpy))
             hei.insert(0, hei[0])
-            ins.barh(tmpy, his[j], height=hei, fc='none', ec='lightblue')
+            ins.barh(tmpy, h.pmfs[j], height=hei, fc='none', ec='lightblue')
             ins.set_yscale('log')
             ins.set_ylim([1e-5, 5e-3])
 
@@ -274,10 +272,10 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         # Compute convolution
         fname = os.path.join(TFF, 'data_calc', 'test_case02_convolution.ini')
         tmpdir = tempfile.mkdtemp()
-        his, minp, nump, _ = propagate(fname, override_folder_out=tmpdir)
+        h, _ = propagate(fname, override_folder_out=tmpdir)
 
         # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
+        res_conv = h.get_stats([-1, 0.50])
 
         # Compute sampling
         fname = os.path.join(TFF, 'data_calc', 'test_case02_sampling.ini')
@@ -320,8 +318,8 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         pct_16 = np.percentile(np.sum(afes[0, :, :, 0], axis=0), 16, axis=0)
         pct_84 = np.percentile(np.sum(afes[0, :, :, 0], axis=0), 84, axis=0)
 
-        # Mean and median from convolution
-        res_conv, idxs = get_stats([0.16, 0.84], his, minp, nump)
+        # Quantiles from convolution
+        res_conv = h.get_stats([0.16, 0.84])
 
         # Plotting
         if PLOTTING:
@@ -400,10 +398,10 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         conf_conv = {s: dict(conf_conv.items(s)) for s in conf_conv.sections()}
         conf_conv['analysis']['resolution'] = '100'
         conf_conv['analysis']['conf_file_path'] = file_path
-        his, minp, nump, _ = propagate(conf_conv, override_folder_out=tmpdir)
+        h, _ = propagate(conf_conv, override_folder_out=tmpdir)
 
         # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50, 0.16, 0.84], his, minp, nump)
+        res_conv = h.get_stats([-1, 0.50, 0.16, 0.84])
 
         exec_time = time.time() - start_time
         mem = tracemalloc.get_traced_memory()
@@ -519,7 +517,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             # Mean and median from sampling
             mean_sampl = np.mean(np.sum(afes[0, :, :, 0], axis=0), axis=0)
             median_sampl = np.median(np.sum(afes[0, :, :, 0], axis=0), axis=0)
-            tmp = np.sum(afes[0, :, :, 0], axis=0)
+            tmp = afes[0, :, :, 0].sum(axis=0)
             pct_16 = np.percentile(tmp, 16, axis=0)
             pct_84 = np.percentile(tmp, 84, axis=0)
 
@@ -538,10 +536,10 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         conf_conv = {s: dict(conf_conv.items(s)) for s in conf_conv.sections()}
         conf_conv['analysis']['resolution'] = '100'
         conf_conv['analysis']['conf_file_path'] = file_path
-        his, minp, nump, _ = propagate(conf_conv, override_folder_out=tmpdir)
+        h, _ = propagate(conf_conv, override_folder_out=tmpdir)
 
         # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50, 0.16, 0.84], his, minp, nump)
+        res_conv = h.get_stats([-1, 0.50, 0.16, 0.84])
 
         exec_time = time.time() - start_time
         mem = tracemalloc.get_traced_memory()

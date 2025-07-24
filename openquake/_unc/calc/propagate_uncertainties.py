@@ -37,9 +37,9 @@ from openquake.baselib import sap
 from openquake.baselib import hdf5
 from openquake._unc.analysis import (
     Analysis, get_patterns, get_hcurves_ids)
-from openquake._unc.hcurves_dist import to_matrix
 from openquake._unc.processing.sampling import sampling
 from openquake._unc.processing.convolution import convolution
+from openquake._unc.convolution import HistoGroup
 
 
 def prepare(fname: str, atype: str, imtstr: str=None):
@@ -181,9 +181,8 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
         # getting the frequency histograms
         # for the intensity levels considered
         logging.info("Running convolution")
-        fhis, fmin_pow, fnum_pow = convolution(
-            ssets, bsets, an01, grp_curves, imt, atype, res)
-        return fhis, fmin_pow, fnum_pow, an01
+        h = convolution(ssets, bsets, an01, grp_curves, imt, atype, res)
+        return h, an01
 
     elif analysis_type == 'sampling':
         logging.info("Running sampling")
@@ -191,30 +190,6 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
         return imls, afes, an01
 
     raise ValueError(f'Calculation type {analysis_type} not supported')
-
-
-def write_results_convolution(
-        fname: str, his: list, min_pow: list, num_pow: list):
-    """
-    Save results to a .hdf5 file
-
-    :param fname:
-        Name of the output .hdf5 file
-    :param his:
-        A list of vectors. Each vector is an histogram of the afes for a given
-        iml.
-    :param min_pow:
-        A list with the minimum power (of 10) used to represent the histogram
-    :param num_pow:
-        A list with the number of power (of 10) used to represent the
-        histogram
-    """
-    mtx, afes = to_matrix(his, np.array(min_pow), np.array(num_pow))
-    with hdf5.File(fname, "w") as fout:
-        fout.create_dataset("histograms", data=mtx)
-        fout.create_dataset("mininum_power", data=np.array(min_pow))
-        fout.create_dataset("number_of_powers", data=np.array(num_pow))
-        fout.create_dataset("afes", data=afes)
 
 
 def write_results_sampling(fname: str, imls: np.ndarray, afes: np.ndarray):
