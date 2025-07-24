@@ -25,6 +25,7 @@ import django
 from openquake.baselib.general import gettemp
 from openquake.commonlib.readinput import loadnpz
 
+
 class EngineServerTestCase(django.test.TestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
