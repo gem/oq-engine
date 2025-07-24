@@ -16,23 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import io
 import os
 import sys
 import json
 import time
-import numpy
 
 import django
 from openquake.baselib.general import gettemp
-
-
-def loadnpz(lines):
-    if hasattr(lines, 'content'):
-        # there was an error and we got an HTTP response from Django
-        raise RuntimeError(lines.content.decode('utf-8'))
-    bio = io.BytesIO(b''.join(ln for ln in lines))
-    return numpy.load(bio)
+from openquake.commonlib.readinput import loadnpz
 
 
 class EngineServerTestCase(django.test.TestCase):
