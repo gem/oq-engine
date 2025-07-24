@@ -20,6 +20,7 @@
 Utilities to read the input files recognized by the OpenQuake engine.
 """
 
+import io
 import os
 import re
 import ast
@@ -34,7 +35,6 @@ import functools
 import configparser
 import collections
 import itertools
-import json
 
 import numpy
 import pandas
@@ -1841,3 +1841,14 @@ def read_source_models(fnames, hdf5path='', **converterparams):
                 if src.code == b'F':  # multifault
                     src.set_msparams(secparams)
     return smodels
+
+
+def loadnpz(resp):
+    """
+    Get an .npz file from the WebUI
+    """
+    if hasattr(resp, 'content'):
+        # there was an error and we got an HTTP response from Django
+        raise RuntimeError(resp.content.decode('utf-8'))
+    bio = io.BytesIO(b''.join(ln for ln in resp))
+    return numpy.load(bio)
