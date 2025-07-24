@@ -85,7 +85,7 @@ class SingleSourceTestCase(unittest.TestCase):
 
         # Read realizations
         _, afes, weights = afes_matrix_from_dstore(
-                dstore, imtstr=imt, info=False, idxs=iii, atype=atype)
+                dstore, imtstr=imt, info=False, rlzs=iii, atype=atype)
 
         # Get histogram
         res = 300

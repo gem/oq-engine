@@ -97,9 +97,10 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         h, alys = propagate(
             fname, calc_type='disaggregation', override_folder_out=tmpdir)
 
-        # Results
-        computed_mtx, afes = h.to_matrix()
-        h.save(os.path.join(tmpdir, 'res.hdf5'))
+        # Save results
+        fname = os.path.join(tmpdir, 'res.hdf5')
+        print(f'Saving {fname}')
+        h.save(fname)
 
         # Expected results
         ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
@@ -112,21 +113,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
         rmap = dstore['best_rlzs'][:]
         weights = dstore['weights'][:][rmap]
-        itime = dstore['oqparam'].investigation_time
-
-        oute = []
-        idxe = []
-        cnt = 0
-        for imag in range(alys.shapes[0]):
-            for idst in range(alys.shapes[1]):
-                poes = expct[imag, idst, :]
-                poes[poes > 0.99999] = 0.99999
-                afes = -np.log(1. - poes) / itime
-                wei = np.sum(afes * weights)
-                if wei > 0:
-                    oute.append(wei)
-                    idxe.append(cnt)
-                cnt += 1
+        oute, idxe = alys.extract_afes(expct, weights)
 
         # Mean and median from convolution
         res_conv = h.get_stats([-1, 0.50])
@@ -137,18 +124,19 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         assert len(oute) == len(res_conv[:, 0])
 
         # Mean matrix (17 x 17)
-        tmp = alys.shapes[:-1]
-        out = get_md_from_2d(res_conv[:, 0], tmp, h.idxs)
+        shape = alys.shapes[:-1]
+        out = get_md_from_2d(res_conv[:, 0], shape, h.idxs)
 
         # Expected mean
-        mtxe = get_md_from_2d(oute, tmp, h.idxs)
+        mate = get_md_from_2d(oute, shape, h.idxs)
 
         # Test the mean
-        rounded = np.round(mtxe[0], 10)
+        rounded = np.round(mate[1], 10)
         expected = np.array(
-            [0.      , 0.      , 0.      , 0.      , 0.000996, 0.000996,
-             0.000996, 0.000996, 0.003984, 0.015936, 0.015936, 0.015936,
-             0.015936, 0.00136 , 0.000996, 0.00408 , 0.015936])
+            [0.00000e+00, 5.04794e-05, 2.25640e-05, 3.50510e-06, 5.54500e-07,
+             6.16000e-08, 1.59000e-08, 3.00000e-10, 0.00000e+00, 0.00000e+00,
+             0.00000e+00, 0.00000e+00, 0.00000e+00, 0.00000e+00, 0.00000e+00,
+             0.00000e+00, 0.00000e+00])
         aae(rounded, expected)
 
         conf = {}
@@ -167,7 +155,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         plot_dsg_md(d_cen, m_cen, out, conf)
 
         conf['fig_name'] = str(TFF / 'figs' / 'dsg_test01_md_oq.png')
-        plot_dsg_md(d_cen, m_cen, mtxe, conf)
+        plot_dsg_md(d_cen, m_cen, mate, conf)
 
     def test_m_convolution(self):
         # Convolution m test case
@@ -177,9 +165,10 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         h, alys = propagate(
             fname, calc_type='disaggregation', override_folder_out=tmpdir)
 
-        # Results
-        computed_mtx, afes = h.to_matrix()
-        h.save(os.path.join(tmpdir, 'res.hdf5'))
+        # Save results
+        fname = os.path.join(tmpdir, 'res.hdf5')
+        print(f'Saving {fname}')
+        h.save(fname)
 
         # Expected results - Realizations
         ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
