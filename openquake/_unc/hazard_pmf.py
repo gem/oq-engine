@@ -42,37 +42,26 @@ from openquake._unc.convolution import HistoGroup
 TOLERANCE = 1e-6
 
 
-def get_md_from_2d(poes, shapes, idxs=None):
+def get_md_from_2d(poes, shapes, idxs):
+    """
+    Reshape the array containing the results of a MD disaggregation analysis.
+
+    :param poes:
+        The MD disaggregation matrix for a given site, imt and iml. This is
+        a 1d array.
+    :returns:
+        An array with the same information that can be used in the
+        convolution
+    """
     cnt = 0
     counter = 0
-    out = np.empty((shapes))
+    out = np.zeros(shapes)
     for imag in range(shapes[0]):
         for idst in range(shapes[1]):
             if cnt in idxs:
                 out[imag, idst] = poes[counter]
                 counter += 1
             cnt += 1
-    return out
-
-
-def get_2d_from_m(poes):
-    """
-    Reshape the array containing the results of a M disaggregation analysis.
-
-    :param poes:
-        The m disaggregation matrix for a given site, imt and iml. This is
-        a 1d array.
-    :returns:
-        An array with the same information that can be used in the
-        convolution
-    """
-    num_rlzs = poes.shape[-1]
-    num_rows = int(poes.size/num_rlzs)
-    out = np.zeros((num_rlzs, num_rows))
-    cnt = 0
-    for imag in range(poes.shape[0]):
-        out[:, cnt] = poes[imag, :]
-        cnt += 1
     return out
 
 
@@ -171,12 +160,11 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         # The shape of the final `poes` is: R X A where R is the number of
         # realizations and A is the number of the annual frequencies of
         # exceedance
-        poes = dstore.getitem('disagg-rlzs/Mag_Dist')[0, :, :, imt_idx, 0, idxs]
+        poes = dstore['disagg-rlzs/Mag_Dist'][0, :, :, imt_idx, 0, idxs]
         poes = get_2d_from_md(poes)
         assert len(idxs) == poes.shape[0]
     elif atype == 'm':
-        poes = dstore.getitem('disagg-rlzs/Mag')[0, :, imt_idx, 0, idxs]
-        poes = get_2d_from_m(poes)
+        poes = dstore['disagg-rlzs/Mag'][0, :, imt_idx, 0, idxs].T
     else:
         raise ValueError(f'Unsupported atype: {atype}')
 
