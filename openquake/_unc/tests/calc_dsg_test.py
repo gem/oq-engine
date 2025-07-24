@@ -131,11 +131,12 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         mate = get_md_from_2d(oute, shape, h.idxs)
 
         # Test the mean
-        rounded = np.round(mate[0], 10)
+        rounded = np.round(mate[1], 10)
         expected = np.array(
-            [0.      , 0.      , 0.      , 0.      , 0.000996, 0.000996,
-             0.000996, 0.000996, 0.003984, 0.015936, 0.015936, 0.015936,
-             0.015936, 0.00136 , 0.000996, 0.00408 , 0.015936])
+            [0.00000e+00, 5.04794e-05, 2.25640e-05, 3.50510e-06, 5.54500e-07,
+             6.16000e-08, 1.59000e-08, 3.00000e-10, 0.00000e+00, 0.00000e+00,
+             0.00000e+00, 0.00000e+00, 0.00000e+00, 0.00000e+00, 0.00000e+00,
+             0.00000e+00, 0.00000e+00])
         aae(rounded, expected)
 
         conf = {}

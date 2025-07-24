@@ -111,7 +111,7 @@ def get_2d_from_mde(poes):
 
 
 def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
-                            idxs: list=[]):
+                            rlzs=slice(None)):
     """
     Pulls from the datastore the afes matrix for a given IMT (we assume the
     dstore contains only 1 site)
@@ -122,19 +122,12 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         A string specifying the intensity measure type of interest
     :param info:
         A boolean controlling the amont of information provided
-    :param idxs:
+    :param rlzs:
         [optional] the indexes of the realisations to read
     :returns:
         A triple with the intensity measure levels, the annual frequencies of
         exceedance and the weights of the realisations.
     """
-
-    # Indexes of the realisations
-    if len(idxs) > 0:
-        idxs = np.array(idxs, dtype=int)
-    else:
-        idxs = slice(None)
-
     # Intensity measure levels
     oqp = dstore['oqparam']
     imls = oqp.hazard_imtls[imtstr]
@@ -144,7 +137,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
 
     # Poes
     if atype == 'hcurves':
-        poes = dstore.getitem('hcurves-rlzs')[0, idxs, imt_idx, :]
+        poes = dstore['hcurves-rlzs'][0, rlzs, imt_idx, :]
     elif atype == 'mde':
         # Number of sites
         # Number of IMTs
@@ -153,18 +146,19 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         # Number of distances
         # Number of epsilons
         # Number of realisations
-        poes = dstore.getitem('disagg-rlzs/Mag_Dist_Eps')[
-            0, imt_idx, 0, :, :, :, idxs]
+        poes = dstore['disagg-rlzs/Mag_Dist_Eps'][
+            0, imt_idx, 0, :, :, :, rlzs]
         poes = get_2d_from_mde(poes)
     elif atype == 'md':
         # The shape of the final `poes` is: R X A where R is the number of
         # realizations and A is the number of the annual frequencies of
         # exceedance
-        poes = dstore['disagg-rlzs/Mag_Dist'][0, :, :, imt_idx, 0, idxs]
+        poes = dstore['disagg-rlzs/Mag_Dist'][0, :, :, imt_idx, 0, rlzs]
         poes = get_2d_from_md(poes)
-        assert len(idxs) == poes.shape[0]
+        assert len(rlzs) == poes.shape[0]
     elif atype == 'm':
-        poes = dstore['disagg-rlzs/Mag'][0, :, imt_idx, 0, idxs].T
+        poes = dstore['disagg-rlzs/Mag'][0, :, imt_idx, 0, rlzs].T
+        # shape (R, Ma) i.e. (6, 17) in test_m_correlation
     else:
         raise ValueError(f'Unsupported atype: {atype}')
 
@@ -174,10 +168,10 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
     # Weights
     weights = dstore.getitem('weights')[:]
     if atype in ['mde', 'md', 'm']:
-        rmap = dstore.get('best_rlzs', None)[:][0]
-        weights = weights[rmap][idxs]
+        rmap = dstore['best_rlzs'][0]
+        weights = weights[rmap][rlzs]
     else:
-        weights = weights[idxs]
+        weights = weights[rlzs]
 
     if info:
         len_description = 30
@@ -192,7 +186,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
 
 
 def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
-                   idxs: np.ndarray = None):
+                   rlzs=slice(None)):
     """
     Computes the PMFs of the AfE for each intensity measure level
 
@@ -202,7 +196,7 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
         The weights for the realisations
     :param res:
         The number of samples per each power of 10
-    :param idxs:
+    :param rlzs:
         Indexes of the realisations to consider
     :returns:
         A tuple with three lists. The first list contains the histograms
@@ -211,9 +205,8 @@ def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
         bin of the histogram. The second list contains integers defining the
         range covered by the histogram (i.e. number of powers of 10).
     """
-    if idxs is not None:
-        afes_mtx = afes_mtx[idxs, :]
-        weights = weights[idxs]
+    afes_mtx = afes_mtx[rlzs, :]
+    weights = weights[rlzs]
 
     # Loop over each column of afes_mtx i.e. each set of afes computed for a
     # given intensity level

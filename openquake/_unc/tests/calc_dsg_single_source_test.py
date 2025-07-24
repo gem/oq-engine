@@ -82,7 +82,7 @@ def _test(dstore):
     # Read realizations and get the histogram (the one that we would use for
     # propagating epistemic uncertainties)
     _, afes, weights = afes_matrix_from_dstore(
-            dstore, imtstr=imt, info=False, idxs=iii, atype=atype)
+            dstore, imtstr=imt, info=False, rlzs=iii, atype=atype)
     h = get_histograms(afes, weights, res)
 
     # Get statistics out of the histogram. Mean and median
