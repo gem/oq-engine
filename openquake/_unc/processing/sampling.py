@@ -98,7 +98,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
 
                 # ID of the sources in this set with a given correlated
                 # uncertainty
-                bs_sids = list(an01.bsets[bsid]['data'])
+                bs_sids = list(an01.bsets[bsid])
 
                 # Realisations for the first source
                 rlzs, wei = an01.get_rpaths_weights(

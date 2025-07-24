@@ -61,25 +61,24 @@ class Analysis:
         - bsids: IDs of the branches in the original LTs
         - utype: Type of uncertainty
         - ordinal: Ordinal of the branchsets in their LTs
-    :param corbs_per_src_ssc:
+    :param corbs_per_src:
         A dictionary
-    :param corbs_bs_id_ssc:
     :param dstores:
         A dictionary with source IDs as keys and a string with the path to
         the datastore containing the results (i.e. hazard curves) as value.
     :param fname:
         The path to the analysis.xml file
     """
-    def __init__(self, bsets: dict, corbs_per_src: dict, corbs_bs_id: dict,
+    def __init__(self, utypes: dict, bsets: dict, corbs_per_src: dict,
                  dstores: dict, fname: str, seed: int):
 
         # The branch sets for which we have correlated uncertainties
+        self.utypes = utypes
         self.bsets = bsets
 
         # Correlated branchsets. These are two dictionaries with key the
         # branchset ID
         self.corbs_per_src = corbs_per_src
-        self.corbs_bs_id = corbs_bs_id
 
         # A dictionary with key the IDs of the sources. The value is a string
         # with the path to the datastore containing the results.
@@ -134,11 +133,11 @@ class Analysis:
             srcids.add(calc.attrib['sourceID'])
 
         # Branch sets
+        utypes = {}
         bsets = {}
 
         # Correlated branch sets per source
         corbs_per_src = {}
-        corbs_bs_id = {}
 
         # For each branchset in the .xml
         for bs in root.findall(PATH_UNC):
@@ -154,18 +153,18 @@ class Analysis:
             for srcid in srcids:
                 dstore = dstores[srcid]
                 # List of unique uncertainty types
-                utypes = dstore.getitem('full_lt/source_model_lt')['utype']
-                utypes = list(collections.Counter(utypes))
+                us = dstore.getitem('full_lt/source_model_lt')['utype']
+                us = list(collections.Counter(us))
                 # Find the index of the uncertainty
                 try:
-                    idx = utypes.index(utype)
+                    idx = us.index(utype)
                 except ValueError:  # for gmpeModel there ia a single bset
                     idx = 0
                 ordinal.append(idx)
 
-            data = {srcid: {'bsid': bsids[i], 'ordinal': ordinal[i]}
-                    for i, srcid in enumerate(srcids)}
-            bsets[bsid] = {'utype': utype, 'data': data}
+            utypes[bsid] = utype
+            bsets[bsid] = {srcid: {'bsid': bsids[i], 'ordinal': ordinal[i]}
+                           for i, srcid in enumerate(srcids)}
 
             # For each source ID we store the ordinal of the branchset
             # containing the uncertainty here considered. Note that the
@@ -174,8 +173,7 @@ class Analysis:
                 corbs_per_src[srcid, odn] = bsid
 
         # Initializing the Analysis object
-        self = cls(bsets, corbs_per_src, corbs_bs_id, dstores, fname,
-                   seed)
+        self = cls(utypes, bsets, corbs_per_src, dstores, fname, seed)
         return self
 
     def get_sets(self):
@@ -193,7 +191,7 @@ class Analysis:
         # Process all the correlated branch sets
         for bsid in sorted(self.bsets):
             found = False
-            srcids = set(self.bsets[bsid]['data'])
+            srcids = set(self.bsets[bsid])
 
             # If true, this source is in the current branch set
             for i, sset in enumerate(ssets):
@@ -365,7 +363,7 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
 
         # Processing the sources in the branchset bsid
         patterns[bsid] = {}
-        for srcid in an01.bsets[bsid]['data']:
+        for srcid in an01.bsets[bsid]:
             if verbose:
                 logging.info(f"   Source: {srcid}")
                 logging.debug(rlzs[srcid])
@@ -382,11 +380,11 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             pattern = '^' + ssc + '~' + gmc
             # Find the index in the pattern where we replace the '.' with the
             # ID of the branches that are correlated.
-            ordinal = an01.bsets[bsid]['data'][srcid]['ordinal']
+            ordinal = an01.bsets[bsid][srcid]['ordinal']
 
             # + 1 for the first element (that uses two letters)
             idx = ordinal + 1 + 1
-            is_gmc = an01.bsets[bsid]['utype'] == b'gmpeModel'
+            is_gmc = an01.utypes[bsid] == b'gmpeModel'
             if is_gmc:
                 paths = gspaths
                 idx += nssc
