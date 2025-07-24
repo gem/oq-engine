@@ -101,20 +101,22 @@ class HistoGroup:
 
         return HistoGroup(out1, out2, out3, histo_a.weight + histo_b.weight)
 
+    # tested in test_m_convolution
     def to_matrix(self):
         """
         Convert the hazard curves distribution into a matrix and afes
         """
         nump = np.array(self.numpow, dtype=float)
         idx, = np.where(np.isfinite(nump))
+        minp = self.minpow[idx].min()
         maxp = (self.minpow[idx] + nump[idx]).max()
-        n = int(maxp - self.minpow[idx].min()) * self.res
+        n = int(maxp - minp) * self.res
         mat = np.full((n, len(self.pmfs)), np.nan)
         for i in idx:
-            i0 = int((self.minpow[i] - self.minpow[idx].min())) * self.res
+            i0 = int(self.minpow[i] - minp) * self.res
             i1 = i0 + int(nump[i]) * self.res
             mat[i0:i1, i] = self.pmfs[i]
-        afes = 10**np.linspace(self.minpow[idx].min(), maxp, n)
+        afes = 10**np.linspace(minp, maxp, n)
         return mat, afes
 
     def get_stats(self, result_types):
