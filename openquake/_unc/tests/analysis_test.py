@@ -29,7 +29,7 @@
 import os
 import unittest
 import numpy as np
-from openquake._unc.analysis import Analysis, get_patterns, get_hcurves_ids
+from openquake._unc.analysis import Analysis, get_hcurves_ids
 
 # Base Data Path
 BDP = os.path.join(os.path.dirname(__file__), 'data_calc')
@@ -78,7 +78,7 @@ class AnalysisTestCase(unittest.TestCase):
         #   GMClt. This source has correlated uncertainties with sources 'b'
         #   and 'c'
         rlzs, _, _ = an01.read_dstores('hcurves', 'PGA')
-        patterns = get_patterns(rlzs, an01)
+        patterns = an01.get_patterns(rlzs)
         # These are the patterns for the first uncertainty and source 'b'.
         # Overall the SSC LT for source 'b' contains 4 branchsets and the
         # correlated uncertainty is the third one.
@@ -93,7 +93,7 @@ class AnalysisTestCase(unittest.TestCase):
         an01 = self.an01
         rlzs, poes, weights = an01.read_dstores('hcurves', 'PGA')
         # Get the patterns
-        patterns = get_patterns(rlzs, an01)
+        patterns = an01.get_patterns(rlzs)
         # Get for each set of correlated uncertainties the source IDs
         # and the IDs of the realizations belonging to a sub-set of
         # correlated branches

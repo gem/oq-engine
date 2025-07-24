@@ -35,8 +35,7 @@ import configparser
 from typing import Union
 from openquake.baselib import sap
 from openquake.baselib import hdf5
-from openquake._unc.analysis import (
-    Analysis, get_patterns, get_hcurves_ids)
+from openquake._unc.analysis import Analysis, get_hcurves_ids
 from openquake._unc.processing.sampling import sampling
 from openquake._unc.processing.convolution import convolution
 
@@ -78,7 +77,7 @@ def prepare(fname: str, atype: str, imtstr: str=None):
 
     # Get the patterns (with wildcards) that can be used to select the
     # correlated realizations.
-    patterns = get_patterns(rlzs, an01)
+    patterns = an01.get_patterns(rlzs)
 
     # Get the indexes of the hazard curves to be combined
     grp_curves = get_hcurves_ids(rlzs, patterns)

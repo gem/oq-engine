@@ -320,72 +320,69 @@ class Analysis:
                 cnt += 1
         return oute, idxe
 
+    def get_patterns(self, rlzs: dict, verbose=False):
+        """
+        Computes the patterns needed to select realizations from a
+        source-specific logic tree
 
-def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
-    """
-    Computes the patterns needed to select realizations from a source-specific
-    logic tree
-
-    :param rlzs:
-        A dictionary with information on all the realizations. The key is the
-        source ID.
-    :param an01:
-        An instance of :class:`openquake._unc.analysis.Analysis`
-    :param verbose:
-        A boolean controlling the logging
-    :returns:
-        A dictionary with key the ID of the branch set with correlated
-        uncertainties (IDs as defined in the `analysis.xml` input file) and
-        with value a dictionary with key the IDs of the sources with correlated
-        uncertainties and with values a list of patterns than can be used to
-        select the realizations belonging to each set of correlated
-        uncertainties.
-    """
-    patterns = {}
-    for bsid in an01.bsets:
-        if verbose:
-            logging.info(f"Creating patterns for branch set {bsid}")
-
-        # Processing the sources in the branchset bsid
-        patterns[bsid] = {}
-        for srcid in an01.bsets[bsid]:
+        :param rlzs:
+            A dictionary with information on all the realizations.
+            The key is the source ID.
+        :param verbose:
+            A boolean controlling the logging
+        :returns:
+            A dictionary with key the ID of the branch set with correlated
+            uncertainties (IDs as defined in the `analysis.xml` input file) and
+            with value a dictionary with key the IDs of the sources with
+            correlated uncertainties and with values a list of patterns than
+            can be used to select the realizations belonging to each set of
+            correlated uncertainties.
+        """
+        patterns = {}
+        for bsid in self.bsets:
             if verbose:
-                logging.info(f"   Source: {srcid}")
-                logging.debug(rlzs[srcid])
+                logging.info(f"Creating patterns for branch set {bsid}")
 
-            patterns[bsid][srcid] = {}
-            rpaths = rlzs[srcid]
-            smpaths = [r[:-2] for r in rpaths]
-            gspaths = [r[-1] for r in rpaths]
-            nssc = len(smpaths[0])
-            ssc = '..' + ''.join('.' for i in range(2, nssc))
-            ngmc = len(gspaths[0])
-            gmc = ''.join('.' for i in range(ngmc))
-            # Create the general pattern. This will select everything
-            pattern = '^' + ssc + '~' + gmc
-            # Find the index in the pattern where we replace the '.' with the
-            # ID of the branches that are correlated.
-            ordinal = an01.bsets[bsid][srcid]['ordinal']
+            # Processing the sources in the branchset bsid
+            patterns[bsid] = {}
+            for srcid in self.bsets[bsid]:
+                if verbose:
+                    logging.info(f"   Source: {srcid}")
+                    logging.debug(rlzs[srcid])
 
-            # + 1 for the first element (that uses two letters)
-            idx = ordinal + 1 + 1
-            is_gmc = an01.utypes[bsid] == b'gmpeModel'
-            if is_gmc:
-                paths = gspaths
-                idx += nssc
-                ordinal = 0
-            else:
-                paths = [path[ordinal + 1] for path in smpaths]
-            patt = [pattern[:idx] + path + pattern[idx+1:]
-                    for path in np.unique(paths)]
-            patterns[bsid][srcid] = patt
-    """# in the analysis_test, `patterns` is the following dictionary:
-    {'bs1': {'b': ['^...A.~.', '^...B.~.'],
-             'c': ['^....A.~.', '^....B.~.']},
-     'bs2': {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
-             'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}}
-    """
-    return patterns
+                patterns[bsid][srcid] = {}
+                rpaths = rlzs[srcid]
+                smpaths = [r[:-2] for r in rpaths]
+                gspaths = [r[-1] for r in rpaths]
+                nssc = len(smpaths[0])
+                ssc = '..' + ''.join('.' for i in range(2, nssc))
+                ngmc = len(gspaths[0])
+                gmc = ''.join('.' for i in range(ngmc))
+                # Create the general pattern. This will select everything
+                pattern = '^' + ssc + '~' + gmc
+                # Find the index in the pattern where we replace the '.' with the
+                # ID of the branches that are correlated.
+                ordinal = self.bsets[bsid][srcid]['ordinal']
+
+                # + 1 for the first element (that uses two letters)
+                idx = ordinal + 1 + 1
+                is_gmc = self.utypes[bsid] == b'gmpeModel'
+                if is_gmc:
+                    paths = gspaths
+                    idx += nssc
+                    ordinal = 0
+                else:
+                    paths = [path[ordinal + 1] for path in smpaths]
+                patt = [pattern[:idx] + path + pattern[idx+1:]
+                        for path in np.unique(paths)]
+                patterns[bsid][srcid] = patt
+        """# in the analysis_test, `patterns` is the following dictionary:
+        {'bs1': {'b': ['^...A.~.', '^...B.~.'],
+                 'c': ['^....A.~.', '^....B.~.']},
+         'bs2': {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
+                 'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}}
+        """
+        return patterns
 
 
 def get_hcurves_ids(rlzs, patterns):
