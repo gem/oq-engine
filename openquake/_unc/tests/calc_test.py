@@ -125,7 +125,6 @@ class ResultsCalculationTestCase01(unittest.TestCase):
         plt.show()
 
     def plot2(self, expected_med):
-        # Plotting
         # ------------------------------------------------------------ FIGURE 2
         fig, axs = plt.subplots(1, 1)
 
@@ -170,8 +169,7 @@ class ResultsCalculationTestCase01(unittest.TestCase):
                      label='Mean from OQ Full Path Enumeration')
         lab = '16th percentile from POINT'
         expected_pct = -np.log(1 - self.dstore['hcurves-stats'][0, 1, 0, :])
-        _ = plt.plot(self.imls, expected_pct, '--r', mfc='none', label=lab,
-                     lw=1)
+        plt.plot(self.imls, expected_pct, '--r', mfc='none', label=lab, lw=1)
         lab = '84th percentile from POINT'
         expected_pct = -np.log(1 - self.dstore['hcurves-stats'][0, 3, 0, :])
         plt.plot(self.imls, expected_pct, '-.r', mfc='none',
@@ -269,6 +267,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         fname = os.path.join(TFF, 'data_calc', 'test_case02_sampling.ini')
         tmpdir = tempfile.mkdtemp()
         imls, afes, _ = propagate(fname, override_folder_out=tmpdir)
+        # TODO: there is no comparison with anything
 
     def test_comparison(self):
         # Comparing results from convolution and sampling
@@ -278,34 +277,39 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         tmpdir = tempfile.mkdtemp()
         h, _ = propagate(fname, override_folder_out=tmpdir)
 
-        # Mean and median from convolution
-        res_conv = h.get_stats([-1, 0.50])
-
         # Compute sampling
         fname = os.path.join(TFF, 'data_calc', 'test_case02_sampling.ini')
         tmpdir = tempfile.mkdtemp()
-        imls, afes, _ = propagate(fname, override_folder_out=tmpdir)
+        self.imls, self.afes, _ = propagate(fname, override_folder_out=tmpdir)
 
         # Mean and median from sampling
-        mean_sampl = np.mean(np.sum(afes[0, :, :, 0], axis=0), axis=0)
-        median_sampl = np.median(np.sum(afes[0, :, :, 0], axis=0), axis=0)
+        mean_sampl = np.mean(self.afes[0, :, :, 0].sum(axis=0), axis=0)
+        median_sampl = np.median(self.afes[0, :, :, 0].sum(axis=0), axis=0)
+
+        # Plotting
+        self.plot_comparison(h, mean_sampl, median_sampl)
+
+    def plot_comparison(self, h, mean_sampl, median_sampl):
+        # Mean and median from convolution
+        res_conv = h.get_stats([-1, 0.50])
 
         # Testing statistics
         aac(mean_sampl, res_conv[:, 0], rtol=1e-0)
         aac(median_sampl, res_conv[:, 1], rtol=1e-0)
 
-        # Plotting
         if PLOTTING:
             fig, _ = plt.subplots(1, 1)
 
-            plt.plot(imls['PGA'], mean_sampl, '-', label='Mean sampling')
+            plt.plot(self.imls['PGA'], mean_sampl, '-', label='Mean sampling')
             lab = 'Mean convolution'
-            plt.plot(imls['PGA'], res_conv[:, 0], 'o', mfc='none', label=lab)
+            plt.plot(self.imls['PGA'], res_conv[:, 0], 'o', mfc='none',
+                     label=lab)
 
             lab = 'Median sampling'
-            plt.plot(imls['PGA'], median_sampl, '-', label=lab)
+            plt.plot(self.imls['PGA'], median_sampl, '-', label=lab)
             lab = 'Median convolution'
-            plt.plot(imls['PGA'], res_conv[:, 1], 'o', mfc='none', label=lab)
+            plt.plot(self.imls['PGA'], res_conv[:, 1], 'o', mfc='none',
+                     label=lab)
 
             plt.yscale('log')
             plt.xscale('log')
@@ -319,26 +323,25 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             plt.show()
 
         # Mean and median from sampling
-        pct_16 = np.percentile(np.sum(afes[0, :, :, 0], axis=0), 16, axis=0)
-        pct_84 = np.percentile(np.sum(afes[0, :, :, 0], axis=0), 84, axis=0)
+        pct_16 = np.percentile(self.afes[0, :, :, 0].sum(axis=0), 16, axis=0)
+        pct_84 = np.percentile(self.afes[0, :, :, 0].sum(axis=0), 84, axis=0)
 
         # Quantiles from convolution
         res_conv = h.get_stats([0.16, 0.84])
 
-        # Plotting
         if PLOTTING:
             fig, _ = plt.subplots(1, 1)
 
-            plt.plot(imls['PGA'], pct_16, '-', label='16th perc. sampling')
+            plt.plot(self.imls['PGA'], pct_16, '-', label='16th perc. sampling')
             lab = '16th perc. convolution'
             plt.plot(
-                imls['PGA'], res_conv[:, 0], 'o', mfc='none', label=lab)
+                self.imls['PGA'], res_conv[:, 0], 'o', mfc='none', label=lab)
 
             lab = '84th perc. sampling'
-            plt.plot(imls['PGA'], pct_84, '-', label=lab)
+            plt.plot(self.imls['PGA'], pct_84, '-', label=lab)
             lab = '84th perc. convolution'
             plt.plot(
-                imls['PGA'], res_conv[:, 1], 'o', mfc='none', label=lab)
+                self.imls['PGA'], res_conv[:, 1], 'o', mfc='none', label=lab)
 
             plt.yscale('log')
             plt.xscale('log')
