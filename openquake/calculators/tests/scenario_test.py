@@ -240,8 +240,8 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('gmf-data.csv', fname)
 
         # check that stations are discarded when extracting avg_gmf
-        aw = extract(self.calc.datastore, 'avg_gmf?imt=PGA')
-        self.assertEqual(len(aw.PGA), 571)
+        aw = extract(self.calc.datastore, 'avg_gmf?imt=SA(0.1)')
+        self.assertEqual(len(aw['SA(0.1)']), 571)
 
     def test_case_21_different_columns_stations(self):
         # conditioned gmfs
