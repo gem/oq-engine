@@ -106,14 +106,15 @@ class HistoGroup:
         """
         Convert the hazard curves distribution into a matrix and afes
         """
+        minpow = np.array(self.minpow, dtype=int)
         nump = np.array(self.numpow, dtype=float)
         idx, = np.where(np.isfinite(nump))
-        minp = self.minpow[idx].min()
-        maxp = (self.minpow[idx] + nump[idx]).max()
+        minp = minpow[idx].min()
+        maxp = (minpow[idx] + nump[idx]).max()
         n = int(maxp - minp) * self.res
         mat = np.full((n, len(self.pmfs)), np.nan)
         for i in idx:
-            i0 = int(self.minpow[i] - minp) * self.res
+            i0 = (minpow[i] - minp) * self.res
             i1 = i0 + int(nump[i]) * self.res
             mat[i0:i1, i] = self.pmfs[i]
         afes = 10**np.linspace(minp, maxp, n)

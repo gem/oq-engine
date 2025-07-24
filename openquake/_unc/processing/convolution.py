@@ -82,13 +82,11 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
 
         # Update the final distribution
         if iset == 0:
-            fhis, fmin_pow, fnum_pow = h.pmfs, h.minpow, h.numpow
+            acc = h
         else:
-            h *= HistoGroup(fhis, fmin_pow, fnum_pow)
-            fhis, fmin_pow, fnum_pow = h.pmfs, h.minpow, h.numpow
+            acc *= h
 
-    return HistoGroup(fhis, np.array(fmin_pow), np.array(fnum_pow),
-                      normalized=False)
+    return acc
 
 
 def _get_path_info(sset, bset, an01, grp_curves):
