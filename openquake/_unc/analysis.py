@@ -370,8 +370,6 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
                 logging.info(f"   Source: {srcid}")
                 logging.debug(rlzs[srcid])
 
-            # Create the general pattern. This will select everything
-            # e.g. '.+.+.+~.+'
             patterns[bsid][srcid] = {}
             rpaths = rlzs[srcid]
             smpaths = [r[:-2] for r in rpaths]
@@ -380,11 +378,12 @@ def get_patterns(rlzs: dict, an01: Analysis, verbose=False):
             ssc = '..' + ''.join('.' for i in range(2, nssc))
             ngmc = len(gspaths[0])
             gmc = ''.join('.' for i in range(ngmc))
+            # Create the general pattern. This will select everything
             pattern = '^' + ssc + '~' + gmc
             # Find the index in the pattern where we replace the '.' with the
             # ID of the branches that are correlated.
             ordinal = an01.bsets[bsid]['data'][srcid]['ordinal']
-            # + 1 for the initial ~
+
             # + 1 for the first element (that uses two letters)
             idx = ordinal + 1 + 1
             is_gmc = an01.bsets[bsid]['utype'] == b'gmpeModel'
