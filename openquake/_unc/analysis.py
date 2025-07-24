@@ -212,15 +212,14 @@ class Analysis:
         dstore = list(self.dstores.values())[0]
         return dstore['oqparam'].hazard_imtls
 
-    def get_rpaths_weights(self, dstore, srcid):
+    def get_rpaths_weights(self, srcid):
         """
-        :param dstore:
-            A :class:`openquake.commonlib.datastore.DataStore` instance
         :param srcid:
-            The ID of the source
+            The ID of a source
         :returns:
             Realization paths and corresponding weights
         """
+        dstore = self.dstores[srcid]
         weights = dstore['weights'][:]
         bpaths = dstore['full_lt'].rlzs['branch_path']
         return bpaths, weights
@@ -360,7 +359,7 @@ class Analysis:
                 gmc = ''.join('.' for i in range(ngmc))
                 # Create the general pattern. This will select everything
                 pattern = '^' + ssc + '~' + gmc
-                # Find the index in the pattern where we replace the '.' with the
+                # Find the index iwhere we replace the '.' with the
                 # ID of the branches that are correlated.
                 ordinal = self.bsets[bsid][srcid]['ordinal']
 

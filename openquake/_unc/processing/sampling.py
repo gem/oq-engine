@@ -101,8 +101,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
                 bs_sids = list(an01.bsets[bsid])
 
                 # Realisations for the first source
-                rlzs, wei = an01.get_rpaths_weights(
-                    dstores[bs_sids[0]], bs_sids[0])
+                rlzs, wei = an01.get_rpaths_weights(bs_sids[0])
 
                 # These are the weights assigned to each group of correlated
                 # results for this uncertainty
@@ -154,11 +153,11 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
                 # investigated. `wei` contains the weights assigned to each one
                 # of the realizations admitted by the logic tree of the current
                 # source
-                _, wei = an01.get_rpaths_weights(dstores[srcid], srcid)
+                _, wei = an01.get_rpaths_weights(srcid)
 
                 # Array where we store the indexes of the sampled realisations
                 idx_rlzs = np.zeros(nsam, dtype=int)
-                poes = dstores[srcid].getitem('hcurves-rlzs')[:]
+                poes = dstores[srcid]['hcurves-rlzs'][:]
 
                 # Index of the current source
                 kkk, = np.where(srcids == srcid)
@@ -189,7 +188,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
 
             # Get realisations and weights for the source currently
             # investigated
-            rlzs, wei = an01.get_rpaths_weights(dstores[srcid], srcid)
+            rlzs, wei = an01.get_rpaths_weights(srcid)
 
             # Sampling of results
             idx_rlzs = np.random.choice(len(wei), size=nsam, p=wei)
