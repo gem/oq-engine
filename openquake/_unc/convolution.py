@@ -27,6 +27,7 @@
 # coding: utf-8
 
 import numpy as np
+from openquake.baselib import hdf5
 from openquake._unc.bins import get_bins_from_params
 from openquake._unc.utils import weighted_percentile
 
@@ -142,6 +143,16 @@ class HistoGroup:
             out.append(tmp)
         return np.array(out)
 
+    def save(self, fname):
+        """
+        Save to a .hdf5 file
+        """
+        mtx, afes = self.to_matrix()
+        with hdf5.File(fname, "w") as fout:
+            fout.create_dataset("histograms", data=mtx)
+            fout.create_dataset("mininum_power", data=np.array(self.minpow))
+            fout.create_dataset("number_of_powers", data=np.array(self.numpow))
+            fout.create_dataset("afes", data=afes)
 
 def conv(pmfa, min_power_a, num_powers_a, pmfb, min_power_b, num_powers_b):
     """

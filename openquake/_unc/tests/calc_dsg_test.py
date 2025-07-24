@@ -36,8 +36,7 @@ import matplotlib.pyplot as plt
 from openquake._unc.tests.utils_plot_dsg import plot_dsg_md
 from openquake.calculators.base import dcache
 from openquake._unc.hazard_pmf import get_md_from_2d
-from openquake._unc.calc.propagate_uncertainties import (
-    propagate, write_results_convolution)
+from openquake._unc.calc.propagate_uncertainties import propagate
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
@@ -100,8 +99,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
         # Results
         computed_mtx, afes = h.to_matrix()
-        fname_out = os.path.join(tmpdir, 'res.hdf5')
-        write_results_convolution(fname_out, h)
+        h.save(os.path.join(tmpdir, 'res.hdf5'))
 
         # Expected results
         ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
@@ -181,9 +179,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
         # Results
         computed_mtx, afes = h.to_matrix()
-        fname_out = os.path.join(tmpdir, 'res.hdf5')
-
-        write_results_convolution(fname_out, h)
+        h.save(os.path.join(tmpdir, 'res.hdf5'))
 
         # Expected results - Realizations
         ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',

@@ -39,8 +39,7 @@ import matplotlib.pyplot as plt
 
 from openquake.baselib import hdf5
 from openquake.calculators.base import dcache
-from openquake._unc.calc.propagate_uncertainties import (
-    propagate, write_results_convolution)
+from openquake._unc.calc.propagate_uncertainties import propagate
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
@@ -207,8 +206,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
 
         # Results
         computed_mtx, afes = h.to_matrix()
-        fname = os.path.join(tmpdir, 'res.hdf5')
-        write_results_convolution(fname, h)
+        h.save(os.path.join(tmpdir, 'res.hdf5'))
 
         # Expected results
         fname = os.path.join(

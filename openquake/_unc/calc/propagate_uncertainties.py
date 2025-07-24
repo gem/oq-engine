@@ -192,23 +192,6 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
     raise ValueError(f'Calculation type {analysis_type} not supported')
 
 
-def write_results_convolution(fname: str, h: HistoGroup):
-    """
-    Save results to a .hdf5 file
-
-    :param fname:
-        Name of the output .hdf5 file
-    :param h:
-        HistoGroup of the afes for a given iml.
-    """
-    mtx, afes = h.to_matrix()
-    with hdf5.File(fname, "w") as fout:
-        fout.create_dataset("histograms", data=mtx)
-        fout.create_dataset("mininum_power", data=np.array(h.minpow))
-        fout.create_dataset("number_of_powers", data=np.array(h.numpow))
-        fout.create_dataset("afes", data=afes)
-
-
 def write_results_sampling(fname: str, imls: np.ndarray, afes: np.ndarray):
     """
     Save the results to a .hdf5 file
