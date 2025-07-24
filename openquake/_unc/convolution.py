@@ -106,21 +106,16 @@ class HistoGroup:
         Convert the hazard curves distribution into a matrix and afes
         """
         nump = np.array(self.numpow, dtype=float)
-        idx = np.array(np.where(np.isfinite(nump)), dtype=int)[0]
-        # Find the number of samples per power
-        samples = int(self.res)
-        # samples = int(len(his[0])/nump[0])
-        maxp = np.empty_like(self.minpow)
-        maxp[idx] = self.minpow[idx] + nump[idx]
-        mrange = int(np.amax(maxp[idx]) - np.amin(self.minpow[idx]))
-        mtx = np.full((mrange*samples, len(self.pmfs)), np.nan)
+        idx, = np.where(np.isfinite(nump))
+        maxp = (self.minpow[idx] + nump[idx]).max()
+        n = int(maxp - self.minpow[idx].min()) * self.res
+        mat = np.full((n, len(self.pmfs)), np.nan)
         for i in idx:
-            i0 = int((self.minpow[i] - min(self.minpow[idx])) * samples)
-            i1 = int(i0 + nump[i] * samples)
-            mtx[i0:i1, i] = self.pmfs[i]
-        afes = 10**np.linspace(np.amin(self.minpow[idx]), np.amax(maxp[idx]),
-                               mrange*samples)
-        return mtx, afes
+            i0 = int((self.minpow[i] - self.minpow[idx].min())) * self.res
+            i1 = i0 + int(nump[i]) * self.res
+            mat[i0:i1, i] = self.pmfs[i]
+        afes = 10**np.linspace(self.minpow[idx].min(), maxp, n)
+        return mat, afes
 
     def get_stats(self, result_types):
         """
@@ -147,9 +142,9 @@ class HistoGroup:
         """
         Save to a .hdf5 file
         """
-        mtx, afes = self.to_matrix()
+        mat, afes = self.to_matrix()
         with hdf5.File(fname, "w") as fout:
-            fout.create_dataset("histograms", data=mtx)
+            fout.create_dataset("histograms", data=mat)
             fout.create_dataset("mininum_power", data=np.array(self.minpow))
             fout.create_dataset("number_of_powers", data=np.array(self.numpow))
             fout.create_dataset("afes", data=afes)
