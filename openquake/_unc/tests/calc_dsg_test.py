@@ -83,6 +83,12 @@ class BasicCalcsTestCase(unittest.TestCase):
 
 class ResultsDisaggregationTestCase(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        figs = str(TFF / 'figs')
+        if not os.path.exists(figs):
+            os.mkdir(figs)
+
     @unittest.skip('not ready')
     def test_mde_convolution(self):
         pass
