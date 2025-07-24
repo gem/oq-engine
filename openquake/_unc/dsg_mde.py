@@ -27,7 +27,7 @@
 
 import numpy as np
 from openquake._unc.bins import get_bins_data, get_bins_from_params
-from openquake._unc.convolution import Histograms
+from openquake._unc.convolution import HistoGroup
 
 # We use a PMF-matrix to store the results of a number of disaggregation
 # results obtained from a set of realisations admitted by a logic tree for a
@@ -173,4 +173,4 @@ def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
                 min_powers.append(int(min_power))
                 num_powers.append(int(num_pow))
 
-    return Histograms(ohis, min_powers, num_powers)
+    return HistoGroup(ohis, min_powers, num_powers)

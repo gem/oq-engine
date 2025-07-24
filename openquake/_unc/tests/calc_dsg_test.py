@@ -36,7 +36,7 @@ import matplotlib.pyplot as plt
 from openquake._unc.tests.utils_plot_dsg import plot_dsg_md
 from openquake.calculators.base import dcache
 from openquake._unc.hazard_pmf import get_md_from_2d
-from openquake._unc.hcurves_dist import to_matrix, get_stats
+from openquake._unc.hcurves_dist import to_matrix
 from openquake._unc.calc.propagate_uncertainties import (
     propagate, write_results_convolution)
 
@@ -96,14 +96,13 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
                              'test_case01_convolution_md.ini')
 
         tmpdir = tempfile.mkdtemp()
-        his, minp, nump, alys = propagate(
+        h, alys = propagate(
             fname, calc_type='disaggregation', override_folder_out=tmpdir)
 
         # Results
-        computed_mtx, afes = to_matrix(his, minp, nump)
+        computed_mtx, afes = to_matrix(h)
         fname_out = os.path.join(tmpdir, 'res.hdf5')
-        write_results_convolution(fname_out, his, np.array(minp, dtype=float),
-                                  np.array(nump, dtype=float))
+        write_results_convolution(fname_out, h)
 
         # Expected results
         ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
@@ -133,19 +132,19 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
                 cnt += 1
 
         # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
+        res_conv = h.get_stats([-1, 0.50])
 
         # Test the indexes
-        aae(idxs, idxe)
+        aae(h.idxs, idxe)
 
         assert len(oute) == len(res_conv[:, 0])
 
         # Mean matrix (17 x 17)
         tmp = alys.shapes[:-1]
-        out = get_md_from_2d(res_conv[:, 0], tmp, idxs)
+        out = get_md_from_2d(res_conv[:, 0], tmp, h.idxs)
 
         # Expected mean
-        mtxe = get_md_from_2d(oute, tmp, idxs)
+        mtxe = get_md_from_2d(oute, tmp, h.idxs)
 
         # Test the mean
         rounded = np.round(mtxe[0], 10)
@@ -178,15 +177,14 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         fname = os.path.join(TFF, 'data_calc', 'disaggregation',
                              'test_case01', 'test_case01_convolution_m.ini')
         tmpdir = tempfile.mkdtemp()
-        his, minp, nump, alys = propagate(
+        h, alys = propagate(
             fname, calc_type='disaggregation', override_folder_out=tmpdir)
 
         # Results
-        computed_mtx, afes = to_matrix(his, minp, nump)
+        computed_mtx, afes = to_matrix(h)
         fname_out = os.path.join(tmpdir, 'res.hdf5')
 
-        write_results_convolution(fname_out, his, np.array(minp, dtype=float),
-                                  np.array(nump, dtype=float))
+        write_results_convolution(fname_out, h)
 
         # Expected results - Realizations
         ini = os.path.join(TFF, 'data_calc', 'disaggregation', 'test_case01',
@@ -201,10 +199,10 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         oute, idxe = alys.extract_afes(expct[:, None], weights)
 
         # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50], his, minp, nump)
+        res_conv = h.get_stats([-1, 0.50])
 
         # Test the indexes
-        aae(idxs, idxe)
+        aae(h.idxs, idxe)
         assert len(oute) == len(res_conv[:, 0])
 
         # Test the mean

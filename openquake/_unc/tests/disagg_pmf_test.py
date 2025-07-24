@@ -89,7 +89,7 @@ class HistogramMDETestCase(unittest.TestCase):
         if PLOT:
             from bokeh.models import HoverTool
             from bokeh.plotting import figure, show
-            p = figure(title="Histograms", x_axis_label='AfE',
+            p = figure(title="HistoGroup", x_axis_label='AfE',
                        tools=[HoverTool()],
                        y_axis_label='Normalised frequency',
                        x_axis_type="log", width=1200, height=600)

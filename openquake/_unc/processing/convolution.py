@@ -32,7 +32,7 @@ import numpy as np
 from openquake._unc.analysis import Analysis
 from openquake._unc.hazard_pmf import (
     afes_matrix_from_dstore, get_histograms, mixture)
-from openquake._unc.convolution import Histograms
+from openquake._unc.convolution import HistoGroup
 
 
 def convolution(ssets: list, bsets: list, an01: Analysis,
@@ -41,7 +41,7 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
     This processes the hazard curves and computes the final results
 
     :param ssets: sets of sources
-    :param bsets: sets if branchset IDs
+    :param bsets: sets of branchset IDs
     :param an01:
         An instance of :class:`openquake._unc.analysis.Analysis`
     :param grp_curves:
@@ -84,10 +84,11 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
         if iset == 0:
             fhis, fmin_pow, fnum_pow = h.pmfs, h.minpow, h.numpow
         else:
-            h *= Histograms(fhis, fmin_pow, fnum_pow)
+            h *= HistoGroup(fhis, fmin_pow, fnum_pow)
             fhis, fmin_pow, fnum_pow = h.pmfs, h.minpow, h.numpow
 
-    return fhis, np.array(fmin_pow), np.array(fnum_pow)
+    return HistoGroup(fhis, np.array(fmin_pow), np.array(fnum_pow),
+                      normalized=False)
 
 
 def _get_path_info(sset, bset, an01, grp_curves):
@@ -191,14 +192,14 @@ def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
                 ares[path] = [h.pmfs, h.minpow, h.numpow, wei_sum]
             else:
                 his_t, m_pow_t, n_pow_t, wei = ares[path]
-                h *= Histograms(his_t, m_pow_t, n_pow_t)
+                h *= HistoGroup(his_t, m_pow_t, n_pow_t)
                 his, m_pow, n_pow = h.pmfs, h.minpow, h.numpow
                 ares[path] = [his, m_pow, n_pow, wei + wei_sum]
 
     results = []
     for i, path in enumerate(paths):
         ares[path][3] /= len(sset)  # fix weight
-        results.append(Histograms(*ares[path]))
+        results.append(HistoGroup(*ares[path]))
 
     # Taking the mixture MFD
     return mixture(results)

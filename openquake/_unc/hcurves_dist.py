@@ -26,27 +26,27 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 import numpy as np
-from openquake._unc.convolution import Histograms
+from openquake._unc.convolution import HistoGroup
 
 
-def to_matrix(his: list, minp: np.ndarray, nump: np.ndarray) -> np.ndarray:
+def to_matrix(h: HistoGroup) -> np.ndarray:
     """
     Convert the hazard curves distribution into a matrix
     """
-    nump = np.array(nump, dtype=float)
+    nump = np.array(h.numpow, dtype=float)
     idx = np.array(np.where(np.isfinite(nump)), dtype=int)[0]
     # Find the number of samples per power
-    samples = int(len(his[idx[0]])/nump[idx[0]])
+    samples = int(h.res)
     # samples = int(len(his[0])/nump[0])
-    maxp = np.empty_like(minp)
-    maxp[idx] = minp[idx] + nump[idx]
-    mrange = int(np.amax(maxp[idx]) - np.amin(minp[idx]))
-    mtx = np.empty((mrange*samples, len(his))) * np.nan
+    maxp = np.empty_like(h.minpow)
+    maxp[idx] = h.minpow[idx] + nump[idx]
+    mrange = int(np.amax(maxp[idx]) - np.amin(h.minpow[idx]))
+    mtx = np.full((mrange*samples, len(h.pmfs)), np.nan)
     for i in idx:
-        i0 = int((minp[i] - min(minp[idx])) * samples)
+        i0 = int((h.minpow[i] - min(h.minpow[idx])) * samples)
         i1 = int(i0 + nump[i] * samples)
-        mtx[i0:i1, i] = his[i]
-    afes = 10**np.linspace(np.amin(minp[idx]), np.amax(maxp[idx]),
+        mtx[i0:i1, i] = h.pmfs[i]
+    afes = 10**np.linspace(np.amin(h.minpow[idx]), np.amax(maxp[idx]),
                            mrange*samples)
     return mtx, afes
 
@@ -68,5 +68,5 @@ def get_stats(result_types, hiss, minp, nump):
         contains the requested results (one for each column) the second one
         includes the indexes of the original list with finite values.
     """
-    h = Histograms(hiss, minp, nump, normalized=False)
+    h = HistoGroup(hiss, minp, nump, normalized=False)
     return h.get_stats(result_types), h.idxs

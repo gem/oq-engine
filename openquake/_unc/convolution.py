@@ -32,7 +32,7 @@ from openquake._unc.utils import weighted_percentile
 
 TOLERANCE = 1e-6
 
-class Histograms:
+class HistoGroup:
     """
     A container of histograms (some of them can be None).
  
@@ -99,7 +99,7 @@ class Histograms:
             out2.append(min_power_o)
             out3.append(num_powers_o)
 
-        return Histograms(out1, out2, out3, histo_a.weight + histo_b.weight)
+        return HistoGroup(out1, out2, out3, histo_a.weight + histo_b.weight)
 
     def get_stats(self, result_types):
         """
@@ -134,10 +134,10 @@ def conv(pmfa, min_power_a, num_powers_a, pmfb, min_power_b, num_powers_b):
     :param min_power_b: minimim power of the second histogram
     :param num_powers_b: number of powers of the second histogram
     :returns:
-        :class:`Histograms` instance with a single histogram
+        :class:`HistoGroup` instance with a single histogram
     """
     # Checking input
-    h = Histograms([pmfa, pmfb], [min_power_a, min_power_b],
+    h = HistoGroup([pmfa, pmfb], [min_power_a, min_power_b],
                    [num_powers_a, num_powers_b])
 
     # Compute bin data and bins for output
@@ -161,4 +161,4 @@ def conv(pmfa, min_power_a, num_powers_a, pmfb, min_power_b, num_powers_b):
     for i in np.unique(idxs):
         pmfo[i] = yvals[idxs == i].sum()
 
-    return Histograms([pmfo], [min_power_o], [num_powers_o])
+    return HistoGroup([pmfo], [min_power_o], [num_powers_o])
