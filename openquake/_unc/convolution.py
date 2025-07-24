@@ -36,25 +36,24 @@ class HistoGroup:
     """
     A container of histograms (some of them can be None).
  
-    :param pmfs: list of Probability Mass Functions (can contain None) 
+    :param pmfs: list of histogram arrays (can contain None) 
     :param minpow: list of minimum powers (can contain None)
     :param numpow: list of number of powers (can contain None)
-    :param res: resolution (the same) satisfying res = len(pmf)/numpow
+    :param normalized: if True, each histogram must be normalized
     """
     def __init__(self, pmfs, minpow, numpow, weight=0, normalized=True):
         assert len(pmfs) == len(minpow) == len(numpow)
         self.idxs, = np.where([pmf is not None for pmf in pmfs])
         # all histograms must have the same resolution
         i, *idx = self.idxs
-        res = len(pmfs[i]) // numpow[i]
+        self.res = len(pmfs[i]) // int(numpow[i])
         for i in idx:
-            assert len(pmfs[i]) / numpow[i] == res
+            assert len(pmfs[i]) / numpow[i] == self.res
         self.pmfs = pmfs
         self.minpow = minpow
         self.numpow = numpow
         self.normalized = normalized
         self.weight = weight
-        self.res = res
         for pmf, minp, nump in zip(pmfs, minpow, numpow):
             if normalized and pmf is not None and np.abs(
                     1.0 - np.sum(pmf)) > TOLERANCE:
@@ -100,6 +99,27 @@ class HistoGroup:
             out3.append(num_powers_o)
 
         return HistoGroup(out1, out2, out3, histo_a.weight + histo_b.weight)
+
+    def to_matrix(self):
+        """
+        Convert the hazard curves distribution into a matrix and afes
+        """
+        nump = np.array(self.numpow, dtype=float)
+        idx = np.array(np.where(np.isfinite(nump)), dtype=int)[0]
+        # Find the number of samples per power
+        samples = int(self.res)
+        # samples = int(len(his[0])/nump[0])
+        maxp = np.empty_like(self.minpow)
+        maxp[idx] = self.minpow[idx] + nump[idx]
+        mrange = int(np.amax(maxp[idx]) - np.amin(self.minpow[idx]))
+        mtx = np.full((mrange*samples, len(self.pmfs)), np.nan)
+        for i in idx:
+            i0 = int((self.minpow[i] - min(self.minpow[idx])) * samples)
+            i1 = int(i0 + nump[i] * samples)
+            mtx[i0:i1, i] = self.pmfs[i]
+        afes = 10**np.linspace(np.amin(self.minpow[idx]), np.amax(maxp[idx]),
+                               mrange*samples)
+        return mtx, afes
 
     def get_stats(self, result_types):
         """

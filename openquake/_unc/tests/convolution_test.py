@@ -28,7 +28,10 @@
 
 import unittest
 import numpy as np
-from openquake._unc.convolution import conv
+from openquake._unc.convolution import conv, HistoGroup
+
+aae = np.testing.assert_almost_equal
+
 
 class ConvolutionTest(unittest.TestCase):
 
@@ -71,3 +74,20 @@ class ConvolutionTest(unittest.TestCase):
         pmfo = conv(hia, min_power_a, num_powers_a,
                     hib, min_power_b, num_powers_b).pmfs[0]
         np.testing.assert_allclose(pmfo, [0., 0., 0.3, 0.68, 0.02, 0., 0., 0.])
+
+
+class TestCase(unittest.TestCase):
+
+    def test_to_matrix(self):
+        his = [np.array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19]),
+               np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])]
+        minp = np.array([0, 1])
+        nump = np.array([2, 2])
+
+        computed, _ = HistoGroup(his, minp, nump, normalized=False).to_matrix()
+        expected = np.empty((15, 2)) * np.nan
+        expected[0:10, 0] = his[0]
+        expected[5:15, 1] = his[1]
+        aae(expected, computed)
+        for hi, col in zip(his, computed.T):
+            aae(hi, col[np.isfinite(col)])

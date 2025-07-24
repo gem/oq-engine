@@ -39,7 +39,6 @@ import matplotlib.pyplot as plt
 
 from openquake.baselib import hdf5
 from openquake.calculators.base import dcache
-from openquake._unc.hcurves_dist import to_matrix, get_stats
 from openquake._unc.calc.propagate_uncertainties import (
     propagate, write_results_convolution)
 
@@ -207,7 +206,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         h, alys = propagate(fname, override_folder_out=tmpdir)
 
         # Results
-        computed_mtx, afes = to_matrix(h)
+        computed_mtx, afes = h.to_matrix()
         fname = os.path.join(tmpdir, 'res.hdf5')
         write_results_convolution(fname, h)
 
@@ -401,10 +400,10 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         conf_conv = {s: dict(conf_conv.items(s)) for s in conf_conv.sections()}
         conf_conv['analysis']['resolution'] = '100'
         conf_conv['analysis']['conf_file_path'] = file_path
-        his, minp, nump, _ = propagate(conf_conv, override_folder_out=tmpdir)
+        h, _ = propagate(conf_conv, override_folder_out=tmpdir)
 
         # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50, 0.16, 0.84], his, minp, nump)
+        res_conv = h.get_stats([-1, 0.50, 0.16, 0.84])
 
         exec_time = time.time() - start_time
         mem = tracemalloc.get_traced_memory()
@@ -520,7 +519,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             # Mean and median from sampling
             mean_sampl = np.mean(np.sum(afes[0, :, :, 0], axis=0), axis=0)
             median_sampl = np.median(np.sum(afes[0, :, :, 0], axis=0), axis=0)
-            tmp = np.sum(afes[0, :, :, 0], axis=0)
+            tmp = afes[0, :, :, 0].sum(axis=0)
             pct_16 = np.percentile(tmp, 16, axis=0)
             pct_84 = np.percentile(tmp, 84, axis=0)
 
@@ -539,10 +538,10 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         conf_conv = {s: dict(conf_conv.items(s)) for s in conf_conv.sections()}
         conf_conv['analysis']['resolution'] = '100'
         conf_conv['analysis']['conf_file_path'] = file_path
-        his, minp, nump, _ = propagate(conf_conv, override_folder_out=tmpdir)
+        h, _ = propagate(conf_conv, override_folder_out=tmpdir)
 
         # Mean and median from convolution
-        res_conv, idxs = get_stats([-1, 0.50, 0.16, 0.84], his, minp, nump)
+        res_conv = h.get_stats([-1, 0.50, 0.16, 0.84])
 
         exec_time = time.time() - start_time
         mem = tracemalloc.get_traced_memory()

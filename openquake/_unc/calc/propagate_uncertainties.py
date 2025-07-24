@@ -37,7 +37,6 @@ from openquake.baselib import sap
 from openquake.baselib import hdf5
 from openquake._unc.analysis import (
     Analysis, get_patterns, get_hcurves_ids)
-from openquake._unc.hcurves_dist import to_matrix
 from openquake._unc.processing.sampling import sampling
 from openquake._unc.processing.convolution import convolution
 from openquake._unc.convolution import HistoGroup
@@ -202,7 +201,7 @@ def write_results_convolution(fname: str, h: HistoGroup):
     :param h:
         HistoGroup of the afes for a given iml.
     """
-    mtx, afes = to_matrix(h)
+    mtx, afes = h.to_matrix()
     with hdf5.File(fname, "w") as fout:
         fout.create_dataset("histograms", data=mtx)
         fout.create_dataset("mininum_power", data=np.array(h.minpow))
