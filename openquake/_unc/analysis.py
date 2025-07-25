@@ -336,26 +336,26 @@ class Analysis:
         :param verbose:
             A boolean controlling the logging
         :returns:
-            A dictionary with key the ID of the branch set with correlated
-            uncertainties (IDs as defined in the `analysis.xml` input file) and
-            with value a dictionary with key the IDs of the sources with
+            A list of dictionaries, one for each uncertainty in the
+            `analysis.xml`, with key the IDs of the sources with
             correlated uncertainties and with values a list of patterns than
             can be used to select the realizations belonging to each set of
             correlated uncertainties.
         """
-        patterns = {}
-        for bsid, dic in enumerate(self.bsets):
+        patterns = []
+        for unc, dic in enumerate(self.bsets):
             if verbose:
-                logging.info(f"Creating patterns for branch set {bsid}")
+                logging.info(f"Creating patterns for branch set {unc}")
 
-            # Processing the sources in the branchset bsid
-            patterns[bsid] = {}
+            # Processing the sources in the branchset unc
+            pat = {}
+            patterns.append(pat)
             for srcid, ordinal in zip(dic['srcid'], dic['ordinal']):
                 if verbose:
                     logging.info(f"   Source: {srcid}")
                     logging.debug(rlzs[srcid])
 
-                patterns[bsid][srcid] = {}
+                pat[srcid] = {}
                 rpaths = rlzs[srcid]
                 smpaths = [r[:-2] for r in rpaths]
                 gspaths = [r[-1] for r in rpaths]
@@ -369,7 +369,7 @@ class Analysis:
                 # ID of the branches that are correlated
                 # + 1 for the first element (that uses two letters)
                 idx = ordinal + 1 + 1
-                is_gmc = self.utypes[bsid] == b'gmpeModel'
+                is_gmc = self.utypes[unc] == b'gmpeModel'
                 if is_gmc:
                     paths = gspaths
                     idx += nssc
@@ -378,12 +378,12 @@ class Analysis:
                     paths = [path[ordinal + 1] for path in smpaths]
                 patt = [pattern[:idx] + path + pattern[idx+1:]
                         for path in np.unique(paths)]
-                patterns[bsid][srcid] = patt
-        """# in the analysis_test, `patterns` is the following dictionary:
-        {'bs1': {'b': ['^...A.~.', '^...B.~.'],
-                 'c': ['^....A.~.', '^....B.~.']},
-         'bs2': {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
-                 'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}}
+                pat[srcid] = patt
+        """# in the analysis_test, `patterns` is the following list:
+        [{'b': ['^...A.~.', '^...B.~.'],
+          'c': ['^....A.~.', '^....B.~.']},
+         {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
+          'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}]
         """
         return patterns
 
@@ -397,27 +397,26 @@ def get_hcurves_ids(rlzs, patterns):
         A dictionary with keys the IDs of the sources. The values are lists
         of pairs (smpaths, gspaths) for each realisation.
     :param patterns:
-        A dictionary with keys the IDs of the branch sets of correlated
-        uncertainties. The value is a dictionary with key the source ID.
+        A list of ictionaries with key the source ID.
         The values are lists of strings. Each string is a regular expression
         (e.g.  ^.+A.+.+~.+') that can be used to select the subset of
         realizations involving the current source that are correlated.
     :returns:
-        A double dictionary bsid -> srcid -> idxs
+        A double dictionary unc -> srcid -> idxs
     """
     # These are two dictionaries with key the branch set ID and value a
     # dictionary with key the source IDs
     grp_hcurves = {}
-    for bsid in patterns:
-        grp_hcurves[bsid] = {}
-        for srcid in patterns[bsid]:
+    for unc, pat in enumerate(patterns):
+        grp_hcurves[unc] = {}
+        for srcid in pat:
             rpath = rlzs[srcid]
             # Loop over the patterns of all the realizations for a given source
-            grp_hcurves[bsid][srcid] = []
-            for p in patterns[bsid][srcid]:
+            grp_hcurves[unc][srcid] = []
+            for p in pat[srcid]:
                 idxs = []
                 for i, rlz in enumerate(rpath):
                     if re.search(p, rlz):
                         idxs.append(i)
-                grp_hcurves[bsid][srcid].append(idxs)
+                grp_hcurves[unc][srcid].append(idxs)
     return grp_hcurves
