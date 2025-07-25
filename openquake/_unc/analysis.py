@@ -132,8 +132,7 @@ class Analysis:
         bsets = []
 
         # For each branchset in the .xml
-        for bsid, bs in enumerate(root.findall(PATH_UNC)):
-
+        for bs in root.findall(PATH_UNC):
             utype = bs.attrib['uncertaintyType'].encode()
             srcids = bs.findall(PATH_SRCIDS)[0].text.split(' ')
             bsids = bs.findall(PATH_BSIDS)[0].text.split(' ')
@@ -147,9 +146,8 @@ class Analysis:
                 smlt = dstore.getitem('full_lt/source_model_lt')[:]
                 utype2ord = {u: i for i, u in enumerate(
                     collections.Counter(smlt['utype']))}
-                # Find the ordinal of the uncertainty branchset
-                idx = utype2ord.get(utype, 0)  # for gmpeModel ordinal=0
-                ordinal.append(idx)
+                # Find the ordinal of the uncertainty branchset, 0 for gmpeModel
+                ordinal.append(utype2ord.get(utype, 0))
 
             utypes.append(utype)
             bsets.append({'srcid': srcids, 'bsid': bsids, 'ordinal': ordinal})
@@ -182,7 +180,7 @@ class Analysis:
         ssets = []
         bsets = []
         # Process all the correlated branch sets
-        for bsid, dic in enumerate(self.bsets):
+        for i, dic in enumerate(self.bsets):
             found = False
             srcids = set(dic['srcid'])
 
@@ -190,12 +188,12 @@ class Analysis:
             for i, sset in enumerate(ssets):
                 if srcids & sset:
                     ssets[i] |= srcids
-                    bsets[i] |= {bsid}
+                    bsets[i] |= {i}
                     found = True
                     continue
             if not found:
                 ssets.append(srcids)
-                bsets.append({bsid})
+                bsets.append({i})
 
         # Adding uncorrelated sources
         for src_id in self.dstores:
