@@ -180,20 +180,20 @@ class Analysis:
         ssets = []
         bsets = []
         # Process all the correlated branch sets
-        for bsid, dic in enumerate(self.bsets):
+        for unc, dic in enumerate(self.bsets):
             found = False
             srcids = set(dic['srcid'])
 
             # If true, this source is in the current branch set
-            for i, sset in enumerate(ssets):
+            for bset, sset in zip(bsets, ssets):
                 if srcids & sset:
-                    ssets[i] |= srcids
-                    bsets[i] |= {bsid}
+                    sset |= srcids
+                    bset |= {unc}
                     found = True
                     continue
             if not found:
                 ssets.append(srcids)
-                bsets.append({bsid})
+                bsets.append({unc})
 
         # Adding uncorrelated sources
         for src_id in self.dstores:
