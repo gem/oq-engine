@@ -55,13 +55,13 @@ class Analysis:
     Stores information and provides methods required to process the results
     computed from various sources.
 
+    :param utypes:
+        A list of uncertainty types as listed in the analysis.xml file
     :param bsets:
-        A dictionary with branchset ID as keys and a dictionary with various
-        information as value. Dictionary content:
-        - srcids: IDs of the sources
-        - bsids: IDs of the branches in the original LTs
-        - utype: Type of uncertainty
-        - ordinal: Ordinal of the branchsets in their LTs
+        A list of dictionaries (one for each utype) with keys
+        - srcid: IDs of the sources
+        - bsid: IDs of the branches in the original LTs
+        - ordinal: Ordinals of the branchsets in their LTs
     :param dstores:
         A dictionary with source IDs as keys and a string with the path to
         the datastore containing the results (i.e. hazard curves) as value.
@@ -128,13 +128,12 @@ class Analysis:
             srcids.add(calc.attrib['sourceID'])
 
         # Branch sets
-        utypes = {}
-        bsets = {}
+        utypes = []
+        bsets = []
 
         # For each branchset in the .xml
-        for bs in root.findall(PATH_UNC):
+        for bsid, bs in enumerate(root.findall(PATH_UNC)):
 
-            bsid = bs.attrib['branchSetID']
             utype = bs.attrib['uncertaintyType'].encode()
             srcids = bs.findall(PATH_SRCIDS)[0].text.split(' ')
             bsids = bs.findall(PATH_BSIDS)[0].text.split(' ')
@@ -152,8 +151,8 @@ class Analysis:
                 idx = utype2ord.get(utype, 0)  # for gmpeModel ordinal=0
                 ordinal.append(idx)
 
-            utypes[bsid] = utype
-            bsets[bsid] = {'srcid': srcids, 'bsid': bsids, 'ordinal': ordinal}
+            utypes.append(utype)
+            bsets.append({'srcid': srcids, 'bsid': bsids, 'ordinal': ordinal})
 
         # Initializing the Analysis object
         self = cls(utypes, bsets, dstores, fname, seed)
@@ -163,9 +162,8 @@ class Analysis:
         """
         Debug utility print the bsets as a DataFrame
         """
-        dic = {'unc': [], 'bsid': [], 'srcid': [], 'ordinal': []}
-        for bsid, d in self.bsets.items():
-            dic['unc'].extend([bsid] * len(d['srcid']))
+        dic = {'bsid': [], 'srcid': [], 'ordinal': []}
+        for i, d in enumerate(self.bsets):
             dic['bsid'].extend(d['bsid'])
             dic['srcid'].extend(d['srcid'])
             dic['ordinal'].extend(d['ordinal'])
@@ -184,9 +182,9 @@ class Analysis:
         ssets = []
         bsets = []
         # Process all the correlated branch sets
-        for bsid in sorted(self.bsets):
+        for bsid, dic in enumerate(self.bsets):
             found = False
-            srcids = set(self.bsets[bsid]['srcid'])
+            srcids = set(dic['srcid'])
 
             # If true, this source is in the current branch set
             for i, sset in enumerate(ssets):
@@ -348,14 +346,13 @@ class Analysis:
             correlated uncertainties.
         """
         patterns = {}
-        for bsid in self.bsets:
+        for bsid, dic in enumerate(self.bsets):
             if verbose:
                 logging.info(f"Creating patterns for branch set {bsid}")
 
             # Processing the sources in the branchset bsid
             patterns[bsid] = {}
-            for srcid, ordinal in zip(self.bsets[bsid]['srcid'],
-                                      self.bsets[bsid]['ordinal']):
+            for srcid, ordinal in zip(dic['srcid'], dic['ordinal']):
                 if verbose:
                     logging.info(f"   Source: {srcid}")
                     logging.debug(rlzs[srcid])

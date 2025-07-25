@@ -51,10 +51,17 @@ class AnalysisTestCase(unittest.TestCase):
 
     def test_get_sets_01(self):
         # Check the groups with correlated uncertainties
-        an01 = self.an01
-        computed, _ = an01.get_sets()
+        computed, _ = self.an01.get_sets()
         expected = [{'b', 'a', 'c'}, {'d'}]
         self.assertEqual(computed, expected)
+
+        exp = '''\
+  bsid srcid  ordinal
+0  bs3     b        2
+1  bs4     c        3
+2  bs1     a        0
+3  bs1     b        0'''
+        self.assertEqual(str(self.an01.to_dframe()), exp)
 
     def test_get_imtls(self):
         # Check the IMLs for PGA
@@ -83,10 +90,10 @@ class AnalysisTestCase(unittest.TestCase):
         # Overall the SSC LT for source 'b' contains 4 branchsets and the
         # correlated uncertainty is the third one.
         expected = ['^...A.~.', '^...B.~.']
-        self.assertEqual(patterns['bs1']['b'], expected)
+        self.assertEqual(patterns[0]['b'], expected)
         # Checking the patterns for the GMC
         expected = ['^.....~A', '^.....~B', '^.....~C', '^.....~D']
-        self.assertEqual(patterns['bs2']['b'], expected)
+        self.assertEqual(patterns[1]['b'], expected)
 
     def test_get_curves_and_weights(self):
         # Test the curve IDs
@@ -100,7 +107,7 @@ class AnalysisTestCase(unittest.TestCase):
         hcids = get_hcurves_ids(rlzs, patterns)
         # Test
         expected = [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19]
-        aeq(hcids['bs1']['b'][0], expected)
+        aeq(hcids[0]['b'][0], expected)
 
 
 class AnalysisDisaggregationTestCase(unittest.TestCase):
