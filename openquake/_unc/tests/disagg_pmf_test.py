@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -34,7 +33,8 @@ import numpy as np
 
 from openquake._unc.bins import get_bins_from_params
 from openquake.calculators.base import dcache
-from openquake._unc.dsg_mde import get_afes_from_dstore, get_histograms
+from openquake._unc.convolution import HistoGroup
+from openquake._unc.dsg_mde import get_afes_from_dstore
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
@@ -66,7 +66,7 @@ class HistogramMDETestCase(unittest.TestCase):
 
         # Get the histograms
         res = 10
-        h = get_histograms(afes, weights, res)
+        h = HistoGroup.new(afes.reshape(len(weights), -1), weights, res)
 
         # Check that the list of histograms has the same shape of the number of
         # bins composing the disaggregation matrix

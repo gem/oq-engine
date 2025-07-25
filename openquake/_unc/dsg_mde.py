@@ -26,8 +26,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 import numpy as np
-from openquake._unc.bins import get_bins_data, get_bins_from_params
-from openquake._unc.convolution import HistoGroup
 
 # We use a PMF-matrix to store the results of a number of disaggregation
 # results obtained from a set of realisations admitted by a logic tree for a
@@ -110,67 +108,3 @@ def get_afes_from_dstore(dstore, name, imt_idx: int,
         print(f'{tmps:s}: {len(poes):d}')
 
     return binc, afes, weights, shapes
-
-
-def get_histograms(afes_mtx: np.ndarray, weights: np.ndarray, res: int,
-                   idxs: np.ndarray=None):
-    """
-    Computes the histograms of the AfE for each M-D-e combination
-
-    :param afes_mtx:
-        A 4D :class:`numpy.ndarray` instance with cardinality:
-        |Mag| x |Dist| x |Eps| x |Rlz|
-    :param weights:
-        The weights for the realisations
-    :param res:
-        The number of samples per each power of 10
-    :param idxs:
-        Indexes of the realisations to consider
-    :returns:
-        A tuple with three lists. The first list contains the histograms for
-        all the intensity measure levels. The second list contains the first
-        integer (a multiple of 10) defining the lower edge of the first bin of
-        the histogram. The second list contains integers defining the range
-        covered by the histogram (i.e. number of powers of 10).
-    """
-    if idxs is not None:
-        afes_mtx = afes_mtx[idxs, :]
-        weights = weights[idxs]
-
-    # Loop over each M-D-e combination
-    ohis = []
-    min_powers = []
-    num_powers = []
-    for imag in range(afes_mtx.shape[0]):
-        for idst in range(afes_mtx.shape[1]):
-            for ieps in range(afes_mtx.shape[2]):
-
-                dat = np.array(afes_mtx[imag, idst, ieps, :])
-
-                # Filling the output list with a None for the combinations
-                # without contributions
-                if not np.any(dat > 1e-30):
-                    ohis.append(None)
-                    min_powers.append(None)
-                    num_powers.append(None)
-                    continue
-
-                # Computing bins
-                min_power, num_pow = get_bins_data(dat)
-                bins = get_bins_from_params(min_power, res, num_powers=num_pow)
-
-                # Computing histogram
-                his, _ = np.histogram(dat, bins, weights=weights)
-                his = his / np.sum(his)
-
-                # Checking
-                assert len(his) == num_pow * res
-                eps = np.abs(np.sum(his) - 1.0)
-                assert eps < 1.5e-7, eps
-
-                # Updating output
-                ohis.append(his)
-                min_powers.append(int(min_power))
-                num_powers.append(int(num_pow))
-
-    return HistoGroup(ohis, min_powers, num_powers)
