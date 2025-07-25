@@ -27,7 +27,6 @@
 # coding: utf-8
 
 import logging
-import numpy as np
 
 from openquake._unc.analysis import Analysis
 from openquake._unc.hazard_pmf import (
@@ -35,13 +34,13 @@ from openquake._unc.hazard_pmf import (
 from openquake._unc.convolution import HistoGroup
 
 
-def convolution(ssets: list, bsets: list, an01: Analysis,
+def convolution(ssets: list, usets: list, an01: Analysis,
                 grp_curves: dict, imt: str, atype: str, res: int=50):
     """
     This processes the hazard curves and computes the final results
 
     :param ssets: sets of sources
-    :param bsets: sets of branchset IDs
+    :param usets: sets of branchset IDs
     :param an01:
         An instance of :class:`openquake._unc.analysis.Analysis`
     :param grp_curves:
@@ -61,12 +60,12 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
 
     # Process the sets of sources. When a set contains a single source,
     # this means that the source does not have correlations with other sources.
-    for iset, (sset, bset) in enumerate(zip(ssets, bsets)):
-        logging.info(f'Processing sources {sset} correlated bs {bset}')
+    for iset, (sset, uset) in enumerate(zip(ssets, usets)):
+        logging.info(f'Processing sources {sset} correlated bs {uset}')
 
-        # When bset is not None there are correlated sources
-        if bset is not None:
-            h = process_bset(sset, bset, an01, grp_curves, res, imt, atype)
+        # When uset is not None there are correlated sources
+        if uset is not None:
+            h = process_uset(sset, uset, an01, grp_curves, res, imt, atype)
         else:
             srcid = list(sset)[0]
             # Load the matrix containing the annual frequencies of exceedance.
@@ -89,20 +88,20 @@ def convolution(ssets: list, bsets: list, an01: Analysis,
     return acc
 
 
-def _get_path_info(sset, bset, an01, grp_curves):
+def _get_path_info(sset, uset, an01, grp_curves):
     """
     :param sset: set of sources
-    :param bset: set of branchset IDs
+    :param uset: set of branchset IDs
     :param an01: Analysis instance
     :param grp_curves: dictionary
     """
     paths = []
-    bset_list = []
+    uset_list = []
     weight_redux = {srcid: 1 for srcid in sset}
-    for bset_i, bsid in enumerate(bset):
-        bset_list.append(bsid)
+    for uset_i, bsid in enumerate(uset):
+        uset_list.append(bsid)
         srcids = an01.bsets[bsid]['srcid']
-        if bset_i == 0:
+        if uset_i == 0:
             for i in range(len(grp_curves[bsid][srcids[0]])):
                 paths.append(f'{i}')
         else:
@@ -116,14 +115,14 @@ def _get_path_info(sset, bset, an01, grp_curves):
         srcids_not = sset - set(srcids)
         for srcid in srcids_not:
             weight_redux[srcid] *= len(grp_curves[bsid][srcids[0]])
-    return paths, bset_list, weight_redux
+    return paths, uset_list, weight_redux
 
 
-def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
+def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
     """
     Process a branchset
 
-    :param bset:
+    :param uset:
     :param an01:
     :param grp_curves:
     :param res:
@@ -132,13 +131,13 @@ def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
     """
     # Compute the number of groups of correlated uncertainties
     num_paths = 1
-    for bset_i, bsid in enumerate(bset):
+    for uset_i, bsid in enumerate(uset):
         srcids = an01.bsets[bsid]['srcid']
         num_paths *= len(grp_curves[bsid][srcids[0]])
 
     # Paths
-    paths, bset_list, weight_redux = _get_path_info(
-        sset, bset, an01, grp_curves)
+    paths, uset_list, weight_redux = _get_path_info(
+        sset, uset, an01, grp_curves)
 
     ares = {}
     chk_idxs = {}
@@ -158,7 +157,7 @@ def process_bset(sset, bset, an01, grp_curves, res, imt, atype):
             for i, grp_i in enumerate(group_idxs):
 
                 # Check if the current source is in this group
-                bsid = bset_list[i]
+                bsid = uset_list[i]
                 if srcid in an01.bsets[bsid]['srcid']:
                     tmp = set(grp_curves[bsid][srcid][grp_i])
                     if len(rlz_idx) == 0:

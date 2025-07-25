@@ -85,8 +85,8 @@ def prepare(fname: str, atype: str, imtstr: str=None):
     # Source sets and associated correlated branch sets. 'ssets' is a list of
     # sets each one containing sources with some correlation. 'bsets' is a list
     # of sets with correlated branch sets IDs
-    ssets, bsets = an01.get_sets()
-    return ssets, bsets, grp_curves, an01
+    ssets, usets = an01.get_sets()
+    return ssets, usets, grp_curves, an01
 
 
 def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
@@ -172,18 +172,18 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
     pathlib.Path(fig_folder).mkdir(parents=True, exist_ok=True)
 
     # Preparing required info
-    ssets, bsets, grp_curves, an01 = prepare(fname, atype, imt)
+    ssets, usets, grp_curves, an01 = prepare(fname, atype, imt)
 
     if analysis_type == 'convolution':
         # getting the frequency histograms
         # for the intensity levels considered
         logging.info("Running convolution")
-        h = convolution(ssets, bsets, an01, grp_curves, imt, atype, res)
+        h = convolution(ssets, usets, an01, grp_curves, imt, atype, res)
         return h, an01
 
     elif analysis_type == 'sampling':
         logging.info("Running sampling")
-        imls, afes = sampling(ssets, bsets, an01, grp_curves, nsam)
+        imls, afes = sampling(ssets, usets, an01, grp_curves, nsam)
         return imls, afes, an01
 
     raise ValueError(f'Calculation type {analysis_type} not supported')

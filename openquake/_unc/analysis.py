@@ -167,49 +167,42 @@ class Analysis:
             dic['ipath'].extend(d['ipath'])
         return pd.DataFrame(dic).set_index('unc')
 
+
+    # used in propagate_uncertainties
     def get_sets(self):
         """
         :returns:
-            A pair of lists of sets. In the first
-            each set contains source IDs sharing some correlation.
-            In the second each set contains the IDs of the branch sets with
-            correlations (note that the branch set ID refers to the ones
-            included in the .xml file used to instantiate the `Analysis`
-            object).
+            Two lists of sets. The first has source IDs sharing correlation.
+            The second has indices to the correlated uncertainties defined in
+            the analysis.xml file.
         """
         ssets = []
-        bsets = []
+        usets = []
         # Process all the correlated branch sets
         for unc, dic in enumerate(self.bsets):
-            found = False
             srcids = set(dic['srcid'])
-
-            # If true, this source is in the current branch set
-            for bset, sset in zip(bsets, ssets):
+            for uset, sset in zip(usets, ssets):
+                # if any source is in the current branch set
                 if srcids & sset:
                     sset |= srcids
-                    bset |= {unc}
-                    found = True
-                    continue
-            if not found:
+                    uset |= {unc}
+                    break
+            else:
+                # at the first loop ssets and usets are empty
                 ssets.append(srcids)
-                bsets.append({unc})
+                usets.append({unc})
 
         # Adding uncorrelated sources
         for src_id in self.dstores:
-            found = False
-            for sset in ssets:
-                if src_id in sset:
-                    found = True
-                    continue
+            found = any(src_id in sset for sset in ssets)
             if not found:
                 ssets.append({src_id})
-                bsets.append(None)
+                usets.append(None)
 
         # in analysis_test we have
         # ssets = [{'b', 'a', 'c'}, {'d'}]
-        # bsets = [{'bs2', 'bs1'}, None]
-        return ssets, bsets
+        # usets = [{0, 1}, None]
+        return ssets, usets
 
     def get_imtls(self):
         """
