@@ -217,7 +217,7 @@ def ensure(pip=None, pyvenv=None):
     """
     Create venv and install pip
     """
-    CI = sys.platform == 'darwin'  # temporary hack
+    CI = os.environ.get('branch')
     try:
         if pyvenv:
             if os.path.exists:
