@@ -1,4 +1,3 @@
-#
 # --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
 # Copyright (C) 2025 GEM Foundation
 #
@@ -33,7 +32,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import EngFormatter
 
 from openquake.calculators.base import dcache
-from openquake._unc.hazard_pmf import get_histograms
+from openquake._unc.convolution import HistoGroup
 from openquake._unc.hazard_pmf import afes_matrix_from_dstore
 
 # This file folder
@@ -83,7 +82,7 @@ def _test(dstore):
     # propagating epistemic uncertainties)
     _, afes, weights = afes_matrix_from_dstore(
             dstore, imtstr=imt, info=False, rlzs=iii, atype=atype)
-    h = get_histograms(afes, weights, res)
+    h = HistoGroup.new(afes, weights, res)
 
     # Get statistics out of the histogram. Mean and median
     hists = h.get_stats([-1, 0.50])

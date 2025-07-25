@@ -32,8 +32,8 @@ import unittest
 import numpy as np
 
 from openquake.calculators.base import dcache
-from openquake._unc.hazard_pmf import get_histograms
 from openquake._unc.hazard_pmf import afes_matrix_from_dstore
+from openquake._unc.convolution import HistoGroup
 
 from openquake._unc.tests.calc_dsg_single_source_test import (
     plot_comparison)
@@ -89,7 +89,7 @@ class SingleSourceTestCase(unittest.TestCase):
 
         # Get histogram
         res = 300
-        h = get_histograms(afes, weights, res)
+        h = HistoGroup.new(afes, weights, res)
         hists = h.get_stats([-1, 0.50])
 
         # Check the sum

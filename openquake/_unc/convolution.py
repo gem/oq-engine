@@ -28,7 +28,7 @@
 
 import numpy as np
 from openquake.baselib import hdf5
-from openquake._unc.bins import get_bins_from_params
+from openquake._unc.bins import get_bins_from_params, get_bins_data
 from openquake._unc.utils import weighted_percentile
 
 TOLERANCE = 1e-6
@@ -42,6 +42,54 @@ class HistoGroup:
     :param numpow: list of number of powers (can contain None)
     :param normalized: if True, each histogram must be normalized
     """
+    @classmethod
+    def new(cls, afesRL: np.ndarray,  weights: np.ndarray, res: int,
+            rlzs=slice(None)):
+        """
+        Computes the PMFs of the AfE for each intensity measure level
+
+        :param afesRL:
+            A 2D :class:`numpy.ndarray` instance of shape (R, L)
+        :param weights:
+            The weights for the realisations
+        :param res:
+            The number of samples per each power of 10
+        :param rlzs:
+            Indexes of the realisations to consider
+        :returns:
+            A HistoGroup instance
+        """
+        afesRL = afesRL[rlzs]
+        weights = weights[rlzs]
+
+        # Loop over each column of afesRL i.e. each set of afes computed for a
+        # given intensity level
+        ohis = []
+        min_powers = []
+        num_powers = []
+        for lvl in range(afesRL.shape[1]):
+            dat = afesRL[:, lvl]
+            if not np.any(dat > 1e-20):
+                ohis.append(None)
+                min_powers.append(None)
+                num_powers.append(None)
+                continue
+
+            # Computing bins
+            min_power, num_power = get_bins_data(dat)
+            bins = get_bins_from_params(min_power, res, num_power)
+
+            # Computing histogram
+            his, _ = np.histogram(dat, bins, weights=weights)
+            his /= his.sum()  # with numpy 2 with could use normed = True
+
+            # Updating output
+            ohis.append(his)
+            min_powers.append(min_power)
+            num_powers.append(num_power)
+
+        return cls(ohis, min_powers, num_powers)
+
     def __init__(self, pmfs, minpow, numpow, weight=0, normalized=True):
         assert len(pmfs) == len(minpow) == len(numpow)
         self.idxs, = np.where([pmf is not None for pmf in pmfs])

@@ -84,7 +84,13 @@ class TestCase(unittest.TestCase):
         minp = np.array([0, 1])
         nump = np.array([2, 2])
 
-        computed, _ = HistoGroup(his, minp, nump, normalized=False).to_matrix()
+        computed, afes = HistoGroup(
+            his, minp, nump, normalized=False).to_matrix()
+        exp_afes = np.array([1.  ,    1.64,    2.68,    4.39,    7.2 ,
+                             11.79,   19.31,  31.62,   51.79,   84.83,
+                             138.95,  227.58,  372.76,  610.54,  1000.])
+        aae(np.round(afes, 2), exp_afes)
+
         expected = np.empty((15, 2)) * np.nan
         expected[0:10, 0] = his[0]
         expected[5:15, 1] = his[1]

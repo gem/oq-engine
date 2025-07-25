@@ -29,8 +29,7 @@
 import logging
 
 from openquake._unc.analysis import Analysis
-from openquake._unc.hazard_pmf import (
-    afes_matrix_from_dstore, get_histograms, mixture)
+from openquake._unc.hazard_pmf import afes_matrix_from_dstore, mixture
 from openquake._unc.convolution import HistoGroup
 
 
@@ -77,7 +76,7 @@ def convolution(ssets: list, usets: list, an01: Analysis,
 
             # Convert the matrix into a list of histograms, one for each
             # intensity measure level considered
-            h = get_histograms(afes, weights, res)
+            h = HistoGroup.new(afes, weights, res)
 
         # Update the final distribution
         if iset == 0:
@@ -170,7 +169,7 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
                 an01.dstores[srcid], imt, atype, False, sorted(rlz_idx))
 
             # Get histogram
-            h = get_histograms(afes, weights, res)
+            h = HistoGroup.new(afes, weights, res)
 
             # Computing weight
             wei_sum = sum(weights) / weight_redux[srcid]

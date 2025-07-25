@@ -128,6 +128,8 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         A triple with the intensity measure levels, the annual frequencies of
         exceedance and the weights of the realisations.
     """
+    assert len(dstore['sitecol/sids']) == 1
+
     # Intensity measure levels
     oqp = dstore['oqparam']
     imls = oqp.hazard_imtls[imtstr]
@@ -137,7 +139,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
 
     # Poes
     if atype == 'hcurves':
-        poes = dstore['hcurves-rlzs'][0, rlzs, imt_idx, :]
+        poes = dstore['hcurves-rlzs'][0, rlzs, imt_idx, :]  # shape (R, L1)
     elif atype == 'mde':
         # Number of sites
         # Number of IMTs
@@ -183,64 +185,6 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         print('{:s}: {:d}'.format(tmps, len(poes)))
 
     return imls, afes, weights
-
-
-def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
-                   rlzs=slice(None)):
-    """
-    Computes the PMFs of the AfE for each intensity measure level
-
-    :param afes_mtx:
-        A 2D :class:`numpy.ndarray` instance
-    :param weights:
-        The weights for the realisations
-    :param res:
-        The number of samples per each power of 10
-    :param rlzs:
-        Indexes of the realisations to consider
-    :returns:
-        A tuple with three lists. The first list contains the histograms
-        for all the intensity measure levels. The second list contains the
-        first integer (a multiple of 10) defining the lower edge of the first
-        bin of the histogram. The second list contains integers defining the
-        range covered by the histogram (i.e. number of powers of 10).
-    """
-    afes_mtx = afes_mtx[rlzs, :]
-    weights = weights[rlzs]
-
-    # Loop over each column of afes_mtx i.e. each set of afes computed for a
-    # given intensity level
-    ohis = []
-    min_powers = []
-    num_powers = []
-    for i in range(afes_mtx.shape[1]):
-        dat = np.array(afes_mtx[:, i])
-        if not np.any(dat > 1e-20):
-            ohis.append(None)
-            min_powers.append(None)
-            num_powers.append(None)
-            continue
-
-        # Computing bins
-        min_power, num_power = get_bins_data(dat)
-        bins = get_bins_from_params(min_power, res, num_powers=num_power)
-
-        # Computing histogram
-        his, _ = np.histogram(dat, bins, weights=weights)
-        his = his / np.sum(his)
-
-        # Checking
-        computed = np.sum(his)
-        assert len(his) == num_power*res
-        msg = f'Computed value {computed}'
-        assert np.abs(computed - 1.0) < 1e-6, msg
-
-        # Updating output
-        ohis.append(his)
-        min_powers.append(int(min_power))
-        num_powers.append(int(num_power))
-
-    return HistoGroup(ohis, min_powers, num_powers)
 
 
 def mixture(results: list[HistoGroup]) -> HistoGroup:
