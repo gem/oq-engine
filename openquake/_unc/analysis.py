@@ -160,12 +160,13 @@ class Analysis:
         """
         Debug utility print the bsets as a DataFrame
         """
-        dic = {'bsid': [], 'srcid': [], 'ordinal': []}
-        for i, d in enumerate(self.bsets):
+        dic = {'unc': [], 'bsid': [], 'srcid': [], 'ordinal': []}
+        for unc, d in enumerate(self.bsets):
+            dic['unc'].extend([unc] * len(d['bsid']))
             dic['bsid'].extend(d['bsid'])
             dic['srcid'].extend(d['srcid'])
             dic['ordinal'].extend(d['ordinal'])
-        return pd.DataFrame(dic)
+        return pd.DataFrame(dic).set_index('unc')
 
     def get_sets(self):
         """
