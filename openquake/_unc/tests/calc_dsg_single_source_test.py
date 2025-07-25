@@ -33,7 +33,7 @@ from matplotlib.ticker import EngFormatter
 
 from openquake.calculators.base import dcache
 from openquake._unc.convolution import HistoGroup
-from openquake._unc.hazard_pmf import afes_matrix_from_dstore
+from openquake._unc.hazard_pmf import afes_matrix_from_dstore, extract_afes_rlzs
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
@@ -58,19 +58,8 @@ def _test(dstore):
     mean_dsg = np.squeeze(mean_dsg)
 
     # For each magnitude we compute the average rate of exceedance
-    oute = np.zeros((realizations.shape[0]))
-    idxe = []
-    cnt = 0
-    for imag in range(realizations.shape[0]):
-        poes = realizations[imag, :]
-        poes[poes > CLOSE_TO_ONE] = CLOSE_TO_ONE
-        afes = -np.log(1.-poes) / oqp.investigation_time
-        tmp = np.sum(afes*weights)
-        oute[imag] = tmp
-        # This contains the indexes of the bins where the AfE is larger than 0
-        if tmp > 0.0:
-            idxe.append(cnt)
-        cnt += 1
+    oute, idxe = extract_afes_rlzs(
+        realizations[:, None], weights, oqp.investigation_time)
 
     # Set parameters
     imt = 'PGA'

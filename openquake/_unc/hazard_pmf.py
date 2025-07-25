@@ -59,7 +59,7 @@ def extract_afes_rlzs(mag_dst_rlz, weights, itime):
                 oute.append(afe)
                 idxe.append(cnt)
             cnt += 1
-    return oute, idxe
+    return np.array(oute), idxe
 
 
 def get_md_from_2d(poes, shapes, idxs):
