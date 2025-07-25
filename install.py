@@ -220,8 +220,7 @@ def ensure(pip=None, pyvenv=None):
     try:
         if pyvenv:
             if os.path.exists(pyvenv):
-                CI = os.environ.get('branch')
-                if CI or input(REMOVE_VENV % pyvenv).lower() == "y":
+                if input(REMOVE_VENV % pyvenv).lower() == "y":
                     shutil.rmtree(pyvenv)
                 else:
                     sys.exit(0)
