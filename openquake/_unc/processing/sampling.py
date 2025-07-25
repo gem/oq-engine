@@ -71,8 +71,8 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
     # R - realizations
     # I - IMTs
     # L - IMLs
-    shps = dstores[srcids[0]].getitem('hcurves-rlzs')[:].shape
-    afes = np.zeros((shps[0], len(an01.dstores), nsam, shps[2], shps[3]))
+    shp = dstores[srcids[0]].getitem('hcurves-rlzs')[:].shape
+    afes = np.zeros((shp[0], len(an01.dstores), nsam, shp[2], shp[3]))
     weir = np.ones(nsam)
 
     # Process the sets of results. When a set contains a single source,
@@ -89,29 +89,28 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
 
             # For each correlated branch-set we draw a number of indexes of the
             # realizations
-            bset_sampled_indexes = {}
+            sampled_indexes = {}
             for bsid in sorted(bset):
 
                 # ID of the sources in this set with a given correlated
                 # uncertainty
-                bs_sids = list(an01.bsets[bsid])
+                srcids = an01.bsets[bsid]['srcid']
 
                 # Realisations for the first source
-                rlzs, wei = an01.get_rpaths_weights(bs_sids[0])
+                rlzs, wei = an01.get_rpaths_weights(srcids[0])
 
                 # These are the weights assigned to each group of correlated
                 # results for this uncertainty
-                weights_per_group = []
-                for iii in grp_curves[bsid][bs_sids[0]]:
-                    weights_per_group.append(wei[iii].sum())
+                weights_per_group = [
+                    wei[iii].sum() for iii in grp_curves[bsid][srcids[0]]]
+                weights = rounding(weights_per_group, 2)
 
-                # 'bset_sampled_indexes' contains the indexes of the sampled
+                # 'sampled_indexes' contains the indexes of the sampled
                 # set of correlated realisations
-                weights_per_group = rounding(weights_per_group, 2)
-                bset_sampled_indexes[bsid] = an01.rng.choice(
-                    len(weights_per_group), nsam, p=weights_per_group)
+                sampled_indexes[bsid] = an01.rng.choice(
+                    len(weights), nsam, p=weights)
 
-            sample_set(an01, sset, bset, nsam, grp_curves, bset_sampled_indexes,
+            sample_set(an01, sset, bset, nsam, grp_curves, sampled_indexes,
                        afes, weir)
         else:
 

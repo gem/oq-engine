@@ -154,8 +154,7 @@ class Analysis:
                 ordinal.append(idx)
 
             utypes[bsid] = utype
-            bsets[bsid] = {srcid: {'bsid': bsids[i], 'ordinal': ordinal[i]}
-                           for i, srcid in enumerate(srcids)}
+            bsets[bsid] = {'srcid': srcids, 'bsid': bsids, 'ordinal': ordinal}
 
         # Initializing the Analysis object
         self = cls(utypes, bsets, dstores, fname, seed)
@@ -176,7 +175,7 @@ class Analysis:
         # Process all the correlated branch sets
         for bsid in sorted(self.bsets):
             found = False
-            srcids = set(self.bsets[bsid])
+            srcids = set(self.bsets[bsid]['srcid'])
 
             # If true, this source is in the current branch set
             for i, sset in enumerate(ssets):
@@ -344,7 +343,8 @@ class Analysis:
 
             # Processing the sources in the branchset bsid
             patterns[bsid] = {}
-            for srcid in self.bsets[bsid]:
+            for srcid, ordinal in zip(self.bsets[bsid]['srcid'],
+                                      self.bsets[bsid]['ordinal']):
                 if verbose:
                     logging.info(f"   Source: {srcid}")
                     logging.debug(rlzs[srcid])
@@ -360,9 +360,7 @@ class Analysis:
                 # Create the general pattern. This will select everything
                 pattern = '^' + ssc + '~' + gmc
                 # Find the index iwhere we replace the '.' with the
-                # ID of the branches that are correlated.
-                ordinal = self.bsets[bsid][srcid]['ordinal']
-
+                # ID of the branches that are correlated
                 # + 1 for the first element (that uses two letters)
                 idx = ordinal + 1 + 1
                 is_gmc = self.utypes[bsid] == b'gmpeModel'
