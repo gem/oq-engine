@@ -217,10 +217,10 @@ def ensure(pip=None, pyvenv=None):
     """
     Create venv and install pip
     """
-    CI = os.environ.get('branch')
     try:
         if pyvenv:
-            if os.path.exists:
+            if os.path.exists(pyvenv):
+                CI = os.environ.get('branch')
                 if CI or input(REMOVE_VENV % pyvenv).lower() == "y":
                     shutil.rmtree(pyvenv)
                 else:
