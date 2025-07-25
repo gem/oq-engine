@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 
 from openquake._unc.tests.utils_plot_dsg import plot_dsg_md
 from openquake.calculators.base import dcache
-from openquake._unc.hazard_pmf import get_md_from_2d
+from openquake._unc.hazard_pmf import get_md_from_2d, extract_afes_rlzs
 from openquake._unc.calc.propagate_uncertainties import propagate
 
 # This file folder
@@ -119,7 +119,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
 
         rmap = dstore['best_rlzs'][:]
         weights = dstore['weights'][:][rmap]
-        oute, idxe = alys.extract_afes_rlzs(expct, weights)
+        oute, idxe = extract_afes_rlzs(expct, weights, alys.itime)
 
         # Mean and median from convolution
         res_conv = h.get_stats([-1, 0.50])
@@ -186,7 +186,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         # Expected results - Mean disaggregation
         expct = dstore['disagg-rlzs/Mag'][0, :, 0, 0, :]
         weights = dstore['weights'][:][rmap]
-        oute, idxe = alys.extract_afes_rlzs(expct[:, None], weights)
+        oute, idxe = extract_afes_rlzs(expct[:, None], weights, alys.itime)
 
         # Mean and median from convolution
         res_conv = h.get_stats([-1, 0.50])

@@ -37,8 +37,8 @@ import numpy as np
 #      frequencies of exceeedance """
 
 
-def get_afes_from_dstore(dstore, name, imt_idx: int,
-                         info: bool=False, idxs: list=[]):
+def get_afes_from_dstore(dstore, name, imt_idx: int, info: bool=False,
+                         idxs=slice(None)):
     """
     Pulls from the datastore the poes for a given IMT and convert them to afes
     (we assume the dstore contains only 1 site).
@@ -59,13 +59,6 @@ def get_afes_from_dstore(dstore, name, imt_idx: int,
         weights of the realisations and an array with the shape of the
         disaggregation matrix.
     """
-
-    # Indexes of the realizations
-    if len(idxs) > 0:
-        idxs = np.array(idxs, dtype=int)
-    else:
-        idxs = slice(None)
-
     # Read oq parameters
     oqp = dstore['oqparam']
     imtstr = list(oqp.imtls)[imt_idx]

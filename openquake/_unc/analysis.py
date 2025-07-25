@@ -297,27 +297,6 @@ class Analysis:
 
         return rlzs, poes, weights
 
-    def extract_afes_rlzs(self, mag_dst_rlz, weights):
-        """
-        Extract nonzero afes and indices from the array mag_dst_rlz,
-        by averaging on the realization weights.
-        """
-        oute = []
-        idxe = []
-        cnt = 0
-        Ma, D, R = mag_dst_rlz.shape
-        for imag in range(Ma):
-            for idst in range(D):
-                poes = mag_dst_rlz[imag, idst, :]
-                poes[poes > 0.99999] = 0.99999
-                afes = -np.log(1. - poes) / self.itime
-                afe = np.sum(afes * weights)
-                if afe > 0:
-                    oute.append(afe)
-                    idxe.append(cnt)
-                cnt += 1
-        return oute, idxe
-
     def get_patterns(self, rlzs: dict, verbose=False):
         """
         Computes the patterns needed to select realizations from a

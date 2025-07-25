@@ -64,7 +64,7 @@ def _test(dstore):
     for imag in range(realizations.shape[0]):
         poes = realizations[imag, :]
         poes[poes > CLOSE_TO_ONE] = CLOSE_TO_ONE
-        afes = -np.log(1.-poes)/oqp.investigation_time
+        afes = -np.log(1.-poes) / oqp.investigation_time
         tmp = np.sum(afes*weights)
         oute[imag] = tmp
         # This contains the indexes of the bins where the AfE is larger than 0
@@ -81,7 +81,7 @@ def _test(dstore):
     # Read realizations and get the histogram (the one that we would use for
     # propagating epistemic uncertainties)
     _, afes, weights = afes_matrix_from_dstore(
-            dstore, imtstr=imt, info=False, rlzs=iii, atype=atype)
+        dstore, imt, rlzs=iii, atype=atype)
     h = HistoGroup.new(afes, weights, res)
 
     # Get statistics out of the histogram. Mean and median

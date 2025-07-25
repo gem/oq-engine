@@ -36,10 +36,30 @@ For the description of a PMF we use:
 """
 
 import numpy as np
-from openquake._unc.bins import get_bins_data, get_bins_from_params
 from openquake._unc.convolution import HistoGroup
 
 TOLERANCE = 1e-6
+
+def extract_afes_rlzs(mag_dst_rlz, weights, itime):
+    """
+    Extract nonzero afes and indices from the array mag_dst_rlz,
+    by averaging on the realization weights.
+    """
+    oute = []
+    idxe = []
+    cnt = 0
+    Ma, D, R = mag_dst_rlz.shape
+    for imag in range(Ma):
+        for idst in range(D):
+            poes = mag_dst_rlz[imag, idst, :]
+            poes[poes > 0.99999] = 0.99999
+            afes = -np.log(1. - poes) / itime
+            afe = np.sum(afes * weights)
+            if afe > 0:
+                oute.append(afe)
+                idxe.append(cnt)
+            cnt += 1
+    return oute, idxe
 
 
 def get_md_from_2d(poes, shapes, idxs):

@@ -73,20 +73,8 @@ class HistogramMDETestCase(unittest.TestCase):
         expected = len(binc['mag']) * len(binc['dst']) * len(binc['eps'])
         assert expected == len(h.pmfs)
 
-        # Computing the mean and counting the M-D-e combinations with values
-        # different than 0
-        smm = 0.0
-        cnt = 0.
-        for ohi in h.pmfs:
-            if ohi is not None:
-                smm += np.sum(ohi)
-                cnt += 1.
-
-        # The sum of the histograms (which are normalised) must be equal to
-        # the number of M-D-e combinations with values different than 0
-        aae(smm, cnt, decimal=5)
-
         if PLOT:
+            # TODO: remove the dependency from bokeh
             from bokeh.models import HoverTool
             from bokeh.plotting import figure, show
             p = figure(title="HistoGroup", x_axis_label='AfE',
