@@ -537,3 +537,37 @@ input[type="radio"] {
     margin-left: 40px;
     margin-bottom: 8px;
 }
+
+#extracted_html_table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    margin-top: 20px;
+}
+
+#extracted_html_table th,
+#extracted_html_table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    vertical-align: top;
+}
+
+#extracted_html_table thead {
+    background-color: #f4f4f4;
+}
+
+#extracted_html_table th {
+    background-color: #1b75a7;
+    color: white;
+    font-weight: bold;
+}
+
+#extracted_html_table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#extracted_html_table tr:hover {
+    background-color: #f1f1f1;
+}

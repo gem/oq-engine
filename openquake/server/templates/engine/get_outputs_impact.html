@@ -38,14 +38,18 @@
               {% endif %}
 
               {% if user_level >= 2 %}
+              {% if aggrisk_tags %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/aggrisk_tags" class="btn btn-sm">
                   Show impact table</a>
               </div>
+              {% endif %}
+              {% if mmi_tags %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/extract_html_table/mmi_tags" class="btn btn-sm">
                   Show exposure by MMI table</a>
               </div>
+              {% endif %}
               {% endif %}
             </div>
             <div class="outputs-general-btns-center"></div>
