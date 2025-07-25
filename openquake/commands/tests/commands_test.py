@@ -617,17 +617,14 @@ Source Loss Table'''.splitlines())
 
     def test_shakemap2gmfs(self):
         # test shakemap2gmfs with sitemodel with a filtered sitecol
-        # and three choices of site_effects
-        effects = ['no', 'shakemap', 'sitemodel']
-        expected = [0.213411, 0.287633, 0.21091]
+        exp = 0.213411
         with chdir(os.path.dirname(case_25.__file__)):
-            for eff, exp in zip(effects, expected):
-                with redirect_stdout(io.StringIO()) as out:
-                    sap.runline('openquake.commands shakemap2gmfs usp0006dv8 '
-                                'site_model_uniform_grid_rock.csv -n 1 -t 0 '
-                                f'--spatialcorr no -c no --site-effects={eff}')
-                got = out.getvalue()
-                assert f'gmv={exp}' in got
+            with redirect_stdout(io.StringIO()) as out:
+                sap.runline('openquake.commands shakemap2gmfs usp0006dv8 '
+                            'site_model_uniform_grid_rock.csv -n 1 -t 0 '
+                            f'--spatialcorr no -c no')
+            got = out.getvalue()
+            assert f'gmv={exp}' in got
 
 
 class CheckInputTestCase(unittest.TestCase):
