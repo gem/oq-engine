@@ -56,7 +56,7 @@ def prepare(fname: str, atype: str, imtstr: str=None):
         A tuple with the following four elements:
             - ssets: A list of sets. Each set contains the IDs of sources
                 belonging to it.
-            - bsets: A list of sets. Each set contains the IDs of correlated
+            - usets: A list of sets. Each set contains the IDs of correlated
                 branchsets.
             - grp_curves: a dictionary of dictionaries. The keys at the first
                 level are the IDs of the correlated branches. The keys at the
