@@ -37,8 +37,7 @@ from openquake._unc.analysis import Analysis
 
 
 # tested in test_01_performance
-def sampling(ssets: list, bsets: list, an01: Analysis,
-             grp_curves, nsam: int):
+def sampling(ssets: list, bsets: list, an01: Analysis, grp_curves, nsam: int):
     """
     Propagates epistemic uncertainties by sampling. It accounts for the
     correlations between the source-specific logic trees.
@@ -51,6 +50,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
     :param an01:
         A :class:`openquake._unc.analysis.Analysis` instance
     :param grp_curves:
+        Double dictionary
     :param nsam:
         Total number of samples
     :returns:
@@ -71,7 +71,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
     # R - realizations
     # I - IMTs
     # L - IMLs
-    shp = dstores[srcids[0]].getitem('hcurves-rlzs')[:].shape
+    shp = dstores[srcids[0]]['hcurves-rlzs'].shape
     afes = np.zeros((shp[0], len(an01.dstores), nsam, shp[2], shp[3]))
     weir = np.ones(nsam)
 
@@ -92,17 +92,16 @@ def sampling(ssets: list, bsets: list, an01: Analysis,
             sampled_indexes = {}
             for bsid in sorted(bset):
 
-                # ID of the sources in this set with a given correlated
-                # uncertainty
-                srcids = an01.bsets[bsid]['srcid']
+                # ID of the first source with a given correlated uncertainty
+                srcid = an01.bsets[bsid]['srcid'][0]
 
                 # Realisations for the first source
-                rlzs, wei = an01.get_rpaths_weights(srcids[0])
+                rlzs, wei = an01.get_rpaths_weights(srcid)
 
                 # These are the weights assigned to each group of correlated
                 # results for this uncertainty
                 weights_per_group = [
-                    wei[iii].sum() for iii in grp_curves[bsid][srcids[0]]]
+                    wei[iii].sum() for iii in grp_curves[bsid][srcid]]
                 weights = rounding(weights_per_group, 2)
 
                 # 'sampled_indexes' contains the indexes of the sampled
