@@ -1583,12 +1583,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     logging.info('Building GMFs')
     oq = calc.oqparam
     with calc.monitor('building/saving GMFs'):
-        if oq.site_effects == 'no':
-            vs30 = None  # do not amplify
-        elif oq.site_effects == 'shakemap':
-            vs30 = shakemap['vs30']
-        elif oq.site_effects == 'sitemodel':
-            vs30 = sitecol.vs30
+        vs30 = None  # do not amplify, the ShakeMap takes care of that already
         imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
