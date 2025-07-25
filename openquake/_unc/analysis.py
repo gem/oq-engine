@@ -47,7 +47,6 @@ PATH_CALC = "{0:s}calculations/{0:s}calc".format(NS)
 PATH_UNC = "{0:s}uncertainties/".format(NS)
 PATH_SRCIDS = "{:s}sourceIDs".format(NS)
 PATH_BSIDS = "{:s}branchSetID".format(NS)
-PATH_ORDINAL = "{:s}branchSetOrdinal".format(NS)
 
 
 class Analysis:
@@ -61,7 +60,7 @@ class Analysis:
         A list of dictionaries (one for each utype) with keys
         - srcid: IDs of the sources
         - bsid: IDs of the branches in the original LTs
-        - ordinal: Ordinals of the branchsets in their LTs
+        - ipath: Ipaths of the branchsets in their LTs
     :param dstores:
         A dictionary with source IDs as keys and a string with the path to
         the datastore containing the results (i.e. hazard curves) as value.
@@ -139,18 +138,18 @@ class Analysis:
 
             # Here we should check that the uncertainties in the analysis .xml
             # file are the same used for the various sources
-            ordinal = []
+            ipath = []
             for srcid in srcids:
                 dstore = dstores[srcid]
                 # List of unique uncertainty types
                 smlt = dstore.getitem('full_lt/source_model_lt')[:]
                 utype2ord = {u: i for i, u in enumerate(
                     collections.Counter(smlt['utype']))}
-                # Find the ordinal of the uncertainty branchset, 0 for gmpeModel
-                ordinal.append(utype2ord.get(utype, 0))
+                # Find the ipath of the uncertainty branchset, 0 for gmpeModel
+                ipath.append(utype2ord.get(utype, 0))
 
             utypes.append(utype)
-            bsets.append({'srcid': srcids, 'bsid': bsids, 'ordinal': ordinal})
+            bsets.append({'srcid': srcids, 'bsid': bsids, 'ipath': ipath})
 
         # Initializing the Analysis object
         self = cls(utypes, bsets, dstores, fname, seed)
@@ -160,12 +159,12 @@ class Analysis:
         """
         Debug utility print the bsets as a DataFrame
         """
-        dic = {'unc': [], 'bsid': [], 'srcid': [], 'ordinal': []}
+        dic = {'unc': [], 'bsid': [], 'srcid': [], 'ipath': []}
         for unc, d in enumerate(self.bsets):
             dic['unc'].extend([unc] * len(d['bsid']))
             dic['bsid'].extend(d['bsid'])
             dic['srcid'].extend(d['srcid'])
-            dic['ordinal'].extend(d['ordinal'])
+            dic['ipath'].extend(d['ipath'])
         return pd.DataFrame(dic).set_index('unc')
 
     def get_sets(self):
@@ -351,7 +350,7 @@ class Analysis:
             # Processing the sources in the branchset unc
             pat = {}
             patterns.append(pat)
-            for srcid, ordinal in zip(dic['srcid'], dic['ordinal']):
+            for srcid, ipath in zip(dic['srcid'], dic['ipath']):
                 if verbose:
                     logging.info(f"   Source: {srcid}")
                     logging.debug(rlzs[srcid])
@@ -369,14 +368,14 @@ class Analysis:
                 # Find the index iwhere we replace the '.' with the
                 # ID of the branches that are correlated
                 # + 1 for the first element (that uses two letters)
-                idx = ordinal + 1 + 1
+                idx = ipath + 1 + 1
                 is_gmc = self.utypes[unc] == b'gmpeModel'
                 if is_gmc:
                     paths = gspaths
                     idx += nssc
-                    ordinal = 0
+                    ipath = 0
                 else:
-                    paths = [path[ordinal + 1] for path in smpaths]
+                    paths = [path[ipath + 1] for path in smpaths]
                 patt = [pattern[:idx] + path + pattern[idx+1:]
                         for path in np.unique(paths)]
                 pat[srcid] = patt
