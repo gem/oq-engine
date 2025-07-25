@@ -402,21 +402,20 @@ def get_hcurves_ids(rlzs, patterns):
         (e.g.  ^.+A.+.+~.+') that can be used to select the subset of
         realizations involving the current source that are correlated.
     :returns:
-        A double dictionary unc -> srcid -> idxs
+        A list of dictionaries srcid -> idxs
     """
-    # These are two dictionaries with key the branch set ID and value a
-    # dictionary with key the source IDs
-    grp_hcurves = {}
-    for unc, pat in enumerate(patterns):
-        grp_hcurves[unc] = {}
+    grp_hcurves = []
+    for pat in patterns:
+        hcurves = {}
         for srcid in pat:
             rpath = rlzs[srcid]
             # Loop over the patterns of all the realizations for a given source
-            grp_hcurves[unc][srcid] = []
+            hcurves[srcid] = []
             for p in pat[srcid]:
                 idxs = []
                 for i, rlz in enumerate(rpath):
                     if re.search(p, rlz):
                         idxs.append(i)
-                grp_hcurves[unc][srcid].append(idxs)
+                hcurves[srcid].append(idxs)
+        grp_hcurves.append(hcurves)
     return grp_hcurves
