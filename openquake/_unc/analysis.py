@@ -34,6 +34,7 @@ import collections
 import xml.etree.ElementTree as ET
 import logging
 import numpy as np
+import pandas as pd
 
 from openquake.calculators.base import dcache
 from openquake._unc.dsg_mde import get_afes_from_dstore as afes_from
@@ -144,13 +145,11 @@ class Analysis:
             for srcid in srcids:
                 dstore = dstores[srcid]
                 # List of unique uncertainty types
-                us = dstore.getitem('full_lt/source_model_lt')['utype']
-                us = list(collections.Counter(us))
-                # Find the index of the uncertainty
-                try:
-                    idx = us.index(utype)
-                except ValueError:  # for gmpeModel there ia a single bset
-                    idx = 0
+                smlt = dstore.getitem('full_lt/source_model_lt')[:]
+                utype2ord = {u: i for i, u in enumerate(
+                    collections.Counter(smlt['utype']))}
+                # Find the ordinal of the uncertainty branchset
+                idx = utype2ord.get(utype, 0)  # for gmpeModel ordinal=0
                 ordinal.append(idx)
 
             utypes[bsid] = utype
@@ -159,6 +158,18 @@ class Analysis:
         # Initializing the Analysis object
         self = cls(utypes, bsets, dstores, fname, seed)
         return self
+
+    def to_dframe(self):
+        """
+        Debug utility print the bsets as a DataFrame
+        """
+        dic = {'unc': [], 'bsid': [], 'srcid': [], 'ordinal': []}
+        for bsid, d in self.bsets.items():
+            dic['unc'].extend([bsid] * len(d['srcid']))
+            dic['bsid'].extend(d['bsid'])
+            dic['srcid'].extend(d['srcid'])
+            dic['ordinal'].extend(d['ordinal'])
+        return pd.DataFrame(dic)
 
     def get_sets(self):
         """
