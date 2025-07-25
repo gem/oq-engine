@@ -1,21 +1,67 @@
+#
+# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
+# Copyright (C) 2025 GEM Foundation
+#
+#                `.......      `....     `..`...     `..`... `......
+#                `..    `..  `..    `..  `..`. `..   `..     `..
+#                `..    `..`..        `..`..`.. `..  `..     `..
+#                `.......  `..        `..`..`..  `.. `..     `..
+#                `..       `..        `..`..`..   `. `..     `..
+#                `..         `..     `.. `..`..    `. ..     `..
+#                `..           `....     `..`..      `..     `..
+#
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# -----------------------------------------------------------------------------
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# coding: utf-8
 
 import unittest
 import numpy as np
 from openquake._unc.bins import get_bins_data, get_bins_from_params
 
 
+class CreatePMFTest(unittest.TestCase):
+    """
+    Tests the calculation of the PMF with np.histogram
+    """
+    def test_pmf(self):
+        res = 10
+        vals = np.array([0.011, 0.051, 0.052, 0.83])
+        wei = np.ones_like(vals) / len(vals)
+
+        # Compute bins data and bins
+        min_power, num_powers = get_bins_data(vals)
+        assert (min_power, num_powers) == (-2, 2)
+        bins = get_bins_from_params(min_power, res, num_powers)
+        assert len(bins) == 10*2 + 1
+
+        # Compute the histogram of size num_powers * res
+        his, _ = np.histogram(vals, bins=bins, weights=wei)
+        assert len(his) == 20
+        expected = np.array([0.25, 0., 0., 0., 0., 0.,
+                             0., 0.5, 0., 0., 0.,
+                             0., 0., 0., 0., 0.,
+                             0., 0., 0., 0.25])
+        np.testing.assert_array_equal(expected, his)
+
+
 class BinsDataTest(unittest.TestCase):
     """
     Tests the calculation of bins data
     """
-    def test_get_data1(self):
-        # bins for simple case
-        vals = np.array([0.011, 0.051, 0.052, 0.83])
-        min_power, num_powers = get_bins_data(vals)
-        np.testing.assert_equal(min_power, -2)
-        np.testing.assert_equal(num_powers, 2)
-
-    def test_get_data2(self):
+    def test_get_data(self):
         # bins for small values and negative zeros
         vals = np.array([
             -0.000000e+00, -0.000000e+00, +1.870947e-11, -0.000000e+00,
@@ -48,4 +94,4 @@ class GetBinsTest(unittest.TestCase):
         num_powers = 3
         nsampl_per_power = 5
         bins = get_bins_from_params(min_power, nsampl_per_power, num_powers)
-        np.testing.assert_equal(len(bins), num_powers*nsampl_per_power+1)
+        np.testing.assert_equal(len(bins), num_powers * nsampl_per_power + 1)

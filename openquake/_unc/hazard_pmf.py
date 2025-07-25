@@ -1,20 +1,29 @@
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2025, GEM Foundation
-# 
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# OpenQuake is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-# 
+# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
+# Copyright (C) 2025 GEM Foundation
+#
+#                `.......      `....     `..`...     `..`... `......
+#                `..    `..  `..    `..  `..`. `..   `..     `..
+#                `..    `..`..        `..`..`.. `..  `..     `..
+#                `.......  `..        `..`..`..  `.. `..     `..
+#                `..       `..        `..`..`..   `. `..     `..
+#                `..         `..     `.. `..`..    `. ..     `..
+#                `..           `....     `..`..      `..     `..
+#
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+# details.
+#
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# -----------------------------------------------------------------------------
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 We use a hazard PMF to store the results of a number of a hazard curves
 representing a set of realisations admitted by a logic tree for a single
@@ -25,72 +34,34 @@ For the description of a PMF we use:
     - A numpy array (cardinality: L x |number of bins|) containing the annual
       frequencies of exceeedance
 """
-import copy
+
 import numpy as np
-from typing import Tuple
-from collections.abc import Sequence
-from openquake._unc.convolution import conv
 from openquake._unc.bins import get_bins_data, get_bins_from_params
+from openquake._unc.convolution import HistoGroup
 
 TOLERANCE = 1e-6
 
 
-def get_m_from_2d(poes, shapes, idxs=None):
-    cnt = 0
-    counter = 0
-    out = np.empty((shapes))
-    for imag in range(shapes[0]):
-        if cnt in idxs:
-            out[imag] = poes[counter]
-            counter += 1
-        cnt += 1
-    return out
-
-
-def get_md_from_2d(poes, shapes, idxs=None):
-    cnt = 0
-    counter = 0
-    out = np.empty((shapes))
-    for imag in range(shapes[0]):
-        for idst in range(shapes[1]):
-            if cnt in idxs:
-                out[imag, idst] = poes[counter]
-                counter += 1
-            cnt += 1
-    return out
-
-
-def get_mde_from_2d(poes, shapes, idxs=None):
-    cnt = 0
-    counter = 0
-    out = np.empty((shapes))
-    for imag in range(shapes[0]):
-        for idst in range(shapes[1]):
-            if cnt in idxs:
-                out[imag, idst] = poes[counter]
-                counter += 1
-            cnt += 1
-    return out
-
-
-def get_2d_from_m(poes):
+def get_md_from_2d(poes, shapes, idxs):
     """
-    Reshape the array containing the results of a M disaggregation analysis.
+    Reshape the array containing the results of a MD disaggregation analysis.
 
     :param poes:
-        The m disaggregation matrix for a given site, imt and iml. This is
+        The MD disaggregation matrix for a given site, imt and iml. This is
         a 1d array.
     :returns:
         An array with the same information that can be used in the
         convolution
     """
-    num_rlzs = poes.shape[-1]
-    num_rows = int(poes.size/num_rlzs)
-    out = np.zeros((num_rlzs, num_rows))
     cnt = 0
-    for imag in range(poes.shape[0]):
-        out[:, cnt] = poes[imag, :]
-        cnt += 1
+    counter = 0
+    out = np.zeros(shapes)
+    for imag in range(shapes[0]):
+        for idst in range(shapes[1]):
+            if cnt in idxs:
+                out[imag, idst] = poes[counter]
+                counter += 1
+            cnt += 1
     return out
 
 
@@ -139,8 +110,8 @@ def get_2d_from_mde(poes):
     return out
 
 
-def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
-                            idxs: list = []):
+def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
+                            rlzs=slice(None)):
     """
     Pulls from the datastore the afes matrix for a given IMT (we assume the
     dstore contains only 1 site)
@@ -151,18 +122,13 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
         A string specifying the intensity measure type of interest
     :param info:
         A boolean controlling the amont of information provided
-    :param idxs:
+    :param rlzs:
         [optional] the indexes of the realisations to read
     :returns:
         A triple with the intensity measure levels, the annual frequencies of
         exceedance and the weights of the realisations.
     """
-
-    # Indexes of the realisations
-    if len(idxs) > 0:
-        idxs = np.array(idxs, dtype=int)
-    else:
-        idxs = slice(None)
+    assert len(dstore['sitecol/sids']) == 1
 
     # Intensity measure levels
     oqp = dstore['oqparam']
@@ -173,7 +139,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
 
     # Poes
     if atype == 'hcurves':
-        poes = dstore.getitem('hcurves-rlzs')[0, idxs, imt_idx, :]
+        poes = dstore['hcurves-rlzs'][0, rlzs, imt_idx, :]  # shape (R, L1)
     elif atype == 'mde':
         # Number of sites
         # Number of IMTs
@@ -182,19 +148,19 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
         # Number of distances
         # Number of epsilons
         # Number of realisations
-        poes = dstore.getitem('disagg-rlzs/Mag_Dist_Eps')[
-            0, imt_idx, 0, :, :, :, idxs]
+        poes = dstore['disagg-rlzs/Mag_Dist_Eps'][
+            0, imt_idx, 0, :, :, :, rlzs]
         poes = get_2d_from_mde(poes)
     elif atype == 'md':
         # The shape of the final `poes` is: R X A where R is the number of
         # realizations and A is the number of the annual frequencies of
         # exceedance
-        poes = dstore.getitem('disagg-rlzs/Mag_Dist')[0, :, :, imt_idx, 0, idxs]
+        poes = dstore['disagg-rlzs/Mag_Dist'][0, :, :, imt_idx, 0, rlzs]
         poes = get_2d_from_md(poes)
-        assert len(idxs) == poes.shape[0]
+        assert len(rlzs) == poes.shape[0]
     elif atype == 'm':
-        poes = dstore.getitem('disagg-rlzs/Mag')[0, :, imt_idx, 0, idxs]
-        poes = get_2d_from_m(poes)
+        poes = dstore['disagg-rlzs/Mag'][0, :, imt_idx, 0, rlzs].T
+        # shape (R, Ma) i.e. (6, 17) in test_m_correlation
     else:
         raise ValueError(f'Unsupported atype: {atype}')
 
@@ -204,10 +170,10 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
     # Weights
     weights = dstore.getitem('weights')[:]
     if atype in ['mde', 'md', 'm']:
-        rmap = dstore.get('best_rlzs', None)[:][0]
-        weights = weights[rmap][idxs]
+        rmap = dstore['best_rlzs'][0]
+        weights = weights[rmap][rlzs]
     else:
-        weights = weights[idxs]
+        weights = weights[rlzs]
 
     if info:
         len_description = 30
@@ -221,200 +187,48 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool = False,
     return imls, afes, weights
 
 
-def get_hazard_pmf(afes_mtx: np.ndarray, weights: np.ndarray = None,
-                   samples: int = 30, idxs: np.ndarray = None):
+def mixture(results: list[HistoGroup]) -> HistoGroup:
     """
-    :param afes_mtx:
-        Annual frequency of exceedance matrix
-    :param weights:
-        Weights for the realisations included in the `afes_mtx`
-    :param samples:
-        The number of samples per each power of 10
-    :param idxs:
-        The indexes of the realizations to use
-    """
-    if idxs is not None:
-        afes_mtx = afes_mtx[idxs, :]
-        weights = weights[idxs]
-
-    # Computing histograms
-    his, min_powers, num_powers = get_histograms(afes_mtx, weights=weights,
-                                                 res=samples)
-
-    return his, min_powers, num_powers
-
-
-def get_histograms(afes_mtx: np.ndarray,  weights: np.ndarray, res: int,
-                   idxs: np.ndarray = None):
-    """
-    Computes the PMFs of the AfE for each intensity measure level
-
-    :param afes_mtx:
-        A 2D :class:`numpy.ndarray` instance
-    :param weights:
-        The weights for the realisations
-    :param res:
-        The number of samples per each power of 10
-    :param idxs:
-        Indexes of the realisations to consider
-    :returns:
-        A tuple with three lists. The first list contains the histograms
-        for all the intensity measure levels. The second list contains the
-        first integer (a multiple of 10) defining the lower edge of the first
-        bin of the histogram. The second list contains integers defining the
-        range covered by the histogram (i.e. number of powers of 10).
-    """
-
-    if idxs is not None:
-        afes_mtx = afes_mtx[idxs, :]
-        weights = weights[idxs]
-
-    # Loop over each column of afes_mtx i.e. each set of afes computed for a
-    # given intensity level
-    ohis = []
-    min_powers = []
-    num_powers = []
-    for i in range(afes_mtx.shape[1]):
-
-        dat = np.array(afes_mtx[:, i])
-
-        if not np.any(dat > 1e-20):
-            ohis.append(None)
-            min_powers.append(None)
-            num_powers.append(None)
-            continue
-
-        # Computing bins
-        min_power, num_power = get_bins_data(dat)
-        bins = get_bins_from_params(min_power, res, num_powers=num_power)
-
-        # Computing histogram
-        his, _ = np.histogram(dat, bins, weights=weights)
-        his = his / np.sum(his)
-
-        # Checking
-        computed = np.sum(his)
-        assert len(his) == num_power*res
-        msg = f'Computed value {computed}'
-        assert np.abs(computed - 1.0) < 1e-6, msg
-
-        # Updating output
-        ohis.append(his)
-        min_powers.append(int(min_power))
-        num_powers.append(int(num_power))
-
-    return ohis, min_powers, num_powers
-
-
-# TODO: use numba?
-def convolve(hpmfa: list, hpmfb: list, min_power_a: int, rea: int,
-             num_powers_a: int, min_power_b: int, reb: int, num_powers_b: int,
-             res: int):
-    """
-    Convolves two hazard PMFs
-
-    :param hpmfa:
-    :param hpmfb:
-    :param min_power_a:
-    :param rea:
-    :param num_powers_a:
-    :param min_power_b:
-    :param reb:
-    :param num_powers_b:
-
-    :returns:
-        A tuple with the output pmf, the minimum power, the resolution and the
-        number of powers required
-    """
-    assert len(hpmfa) == len(hpmfb)
-
-    out1 = []
-    out2 = []
-    out3 = []
-    for i in range(len(hpmfa)):
-
-        ha = hpmfa[i]
-        npa = num_powers_a[i]
-        mpa = min_power_a[i]
-
-        hb = hpmfb[i]
-        npb = num_powers_b[i]
-        mpb = min_power_b[i]
-
-        if ha is None and hb is None:
-            min_power_o, res, num_powers_o, pmfo = (
-                None, None, None, None)
-        elif ha is None:
-            min_power_o, res, num_powers_o, pmfo = mpb, reb, npb, hb
-        elif hb is None:
-            min_power_o, res, num_powers_o, pmfo = mpa, rea, npa, ha
-        else:
-            min_power_o, res, num_powers_o, pmfo = conv(
-                ha, mpa, rea, npa, hb, mpb, reb, npb, res)
-
-        out1.append(pmfo)
-        out2.append(min_power_o)
-        out3.append(num_powers_o)
-
-    # out3 contains the number of powers used to represent the PMFs for each
-    # IMT considered
-
-    return out1, out2, out3
-
-
-def mixture(results: Sequence[list[list]],
-            resolution: float) -> Tuple[list, list, list]:
-    """
-    Given a list of PMFs this computes for each IML a mixture distribution
-    corresponding to a weighted sum of input PMFs.
+    Given a list of HistoGroup this computes a mixture distribution
+    corresponding to a weighted sum of the inputs.
 
     :param results:
-        It's a list of lists. The number of elements is equal to the number of
-        correlated groups. Each element contains the following:
-        his_t, min_pow_t, num_pow_t, weight_t
-    :param resolution:
-        The number of points per power interval (i.e. the resolution used to
-        represent the pmf)
+        It's a list of HistoGroup. The number of elements is equal to the
+        number of correlated groups
     :returns:
-        A triple with the pmfs, the min power and the range (num of powers).
+        Not normalized HistoGroup
     """
-    num_imls = len(results[0][0])
+    resolution = results[0].res  # all equal resolutions
+    num_imls = len(results[0].pmfs)  # all equal lenghts
 
     # The minimum power is IMT dependent
-    minpow = np.empty((num_imls))
-    minpow[:] = np.nan
-    maxpow = np.empty((num_imls))
-    maxpow[:] = np.nan
+    minpow = np.full(num_imls, np.nan)
+    maxpow = np.full(num_imls, np.nan)
     for i, res in enumerate(results):
 
-        tmp_minpow = np.array(res[1], dtype=float)
-        tmp_numpow = np.array(res[2], dtype=float)
-        idx = ~np.isnan(tmp_minpow)
+        minp = np.array(res.minpow, dtype=float)
+        nump = np.array(res.numpow, dtype=float)
+        ok = ~np.isnan(minp)
 
         if i == 0:
-            minpow[idx] = tmp_minpow[idx]
-            maxpow[idx] = tmp_numpow[idx] + tmp_minpow[idx]
+            minpow[ok] = minp[ok]
+            maxpow[ok] = nump[ok] + minp[ok]
         else:
-            minpow[idx] = np.minimum(minpow[idx], tmp_minpow[idx])
-            maxpow[idx] = np.maximum(maxpow[idx], tmp_minpow[idx] +
-                                                  tmp_numpow[idx])
+            minpow[ok] = np.minimum(minpow[ok], minp[ok])
+            maxpow[ok] = np.maximum(maxpow[ok], minp[ok] + nump[ok])
 
-    idx = ~np.isnan(minpow)
-    maxrange = copy.copy(minpow)
-    maxrange[idx] = maxpow[idx] - minpow[idx]
-
-    # Check
-    # for i in range(0, len(results)):
-    #    assert len(results[0][0][0]) == len(results[i][0][0])
+    ok = ~np.isnan(minpow)
+    maxrange = minpow.copy()
+    maxrange[ok] = maxpow[ok] - minpow[ok]
 
     # Create output. For each IML we create the mixture PMF as a weighted sum
     # of the two original PMFs. In the case of disaggregation the number of
     # imls `num_imls` corresponds to the number of cells (i.e. the number of
     # M-R combinations)
-    olst = []
-    for i_iml in range(0, num_imls):
+    olst = [None] * num_imls
+    for i_iml in np.where(ok)[0]:
 
-        tmp = None
+        out = np.zeros(int(resolution * maxrange[i_iml]))
         tot_wei = 0.0
         for j, res in enumerate(results):
 
@@ -423,40 +237,20 @@ def mixture(results: Sequence[list[list]],
                 break
 
             # Skipping this realization if the lower limit is None
-            if res[1][i_iml] is None:
+            if res.minpow[i_iml] is None:
                 continue
 
-            # Initialize the array where we store the output distribution
-            if j == 0:
-                tmp = np.zeros((int(resolution*maxrange[i_iml])))
-
             # Find where to add the current PMF
-            try:
-                low = int(resolution*(res[1][i_iml]-minpow[i_iml]))
-            except:
-                breakpoint()
-            upp = int(low + resolution*(res[2][i_iml]))
+            low = int(resolution * (res.minpow[i_iml] - minpow[i_iml]))
+            upp = int(low + resolution *  res.numpow[i_iml])
 
             # Sum the PMF
-            try:
-                idxs = np.arange(low, upp)
-                tmp[idxs] += np.array(res[0][i_iml])*res[3]
-                tot_wei += res[3]
-            except:
-                breakpoint()
+            out[low:upp] += res.pmfs[i_iml] * res.weight
+            tot_wei += res.weight
 
-        if tmp is not None:
-            chk = np.sum(tmp)
-            chk = np.sum(tmp)/tot_wei
-            msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
-            assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
-            olst.append(tmp)
-        else:
-            olst.append(None)
+        chk = np.sum(out) / tot_wei
+        msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
+        assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
+        olst[i_iml] = out
 
-    # Check output dimension
-    minpow = [i if ~np.isnan(i) else None for i in minpow]
-    maxrange = [i if ~np.isnan(i) else None for i in maxrange]
-    assert len(olst) == len(minpow) == len(maxrange)
-
-    return olst, minpow, maxrange
+    return HistoGroup(olst, minpow, maxrange, normalized=False)

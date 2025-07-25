@@ -29,7 +29,7 @@
 import os
 import unittest
 import numpy as np
-from openquake._unc.analysis import Analysis, get_patterns, get_hcurves_ids
+from openquake._unc.analysis import Analysis, get_hcurves_ids
 
 # Base Data Path
 BDP = os.path.join(os.path.dirname(__file__), 'data_calc')
@@ -44,23 +44,26 @@ class AnalysisTestCase(unittest.TestCase):
     Tests various methods of the :class:`openquake._unc.analysis.Analysis`
     class.
     """
-    def setUp(self):
-        self.fname = os.path.join(BDP, 'test_case02', 'analysis.xml')
-        self.an01 = Analysis.read(self.fname)
-
-    def test01(self):
-        # Check the info describing correlation
-        an01 = self.an01
-        expected = {('b', 2, 'ssc'): 'bs1', ('c', 3, 'ssc'): 'bs1',
-                    ('a', 0, 'gmc'): 'bs2', ('b', 0, 'gmc'): 'bs2'}
-        self.assertEqual(an01.corbs_per_src, expected)
+    @classmethod
+    def setUpClass(cls):
+        fname = os.path.join(BDP, 'test_case02', 'analysis.xml')
+        cls.an01 = Analysis.read(fname)
 
     def test_get_sets_01(self):
         # Check the groups with correlated uncertainties
-        an01 = self.an01
-        computed, _ = an01.get_sets()
-        expected = [set(['b', 'a', 'c']), set(['d'])]
+        computed, _ = self.an01.get_sets()
+        expected = [{'b', 'a', 'c'}, {'d'}]
         self.assertEqual(computed, expected)
+
+        # check the correlation dataframe
+        exp = '''\
+    bsid srcid  ipath
+unc                  
+0    bs3     b      2
+0    bs4     c      3
+1    bs1     a      0
+1    bs1     b      0'''
+        self.assertEqual(str(self.an01.to_dframe()), exp)
 
     def test_get_imtls(self):
         # Check the IMLs for PGA
@@ -72,44 +75,33 @@ class AnalysisTestCase(unittest.TestCase):
     def test_get_patterns(self):
         # Test the patterns created to select the realizations
         an01 = self.an01
-        root_path = os.path.dirname(self.fname)
-        # This returns a triple. The first element is a dictionary with key the
-        # ID of each source and with value a list. The list contains three
-        # elements: an array with the paths for each realization of the SSClt,
-        # and array witht the paths for each realization of the GMClt and a
-        # list with the final paths for all the realizations.
-        # -  Source 'a' in the current test overall it has 24 realizations (6 in
-        #    the SSClt and 4 in the GMClt). It does not have correlated
-        #    uncertainties
-        # - Source 'b' has also 24 realizations (3x2) in the SSC and 4 in the
+        # - Source 'd' in the current test overall has 24 realizations (6 in
+        #   the SSClt and 4 in the GMClt). It does not have correlated
+        #   uncertainties
+        # - Source 'c' has also 24 realizations (3x2) in the SSC and 4 in the
         #   GMClt. This source has correlated uncertainties with sources 'b'
         #   and 'c'
-        rlzs, _, _ = an01.read_dstores(root_path, 'hcurves', 'PGA')
-        patterns = get_patterns(rlzs, an01)
+        rlzs, _, _ = an01.read_dstores('hcurves', 'PGA')
+        patterns = an01.get_patterns(rlzs)
         # These are the patterns for the first uncertainty and source 'b'.
         # Overall the SSC LT for source 'b' contains 4 branchsets and the
         # correlated uncertainty is the third one.
-        expected = ['^...A.~.', '^...B.~.']
-        self.assertEqual(patterns['bs1']['b'], expected)
+        self.assertEqual(patterns[0]['b'], ['^...A.~.', '^...B.~.'])
+
         # Checking the patterns for the GMC
         expected = ['^.....~A', '^.....~B', '^.....~C', '^.....~D']
-        self.assertEqual(patterns['bs2']['b'], expected)
+        self.assertEqual(patterns[1]['b'], expected)
 
     def test_get_curves_and_weights(self):
         # Test the curve IDs
-        an01 = self.an01
-        root_path = os.path.dirname(self.fname)
-        rlzs, poes, weights = an01.read_dstores(root_path, 'hcurves', 'PGA')
-        # Get the patterns
-        patterns = get_patterns(rlzs, an01)
+        rlzs, poes, weights = self.an01.read_dstores('hcurves', 'PGA')
+        patterns = self.an01.get_patterns(rlzs)
         # Get for each set of correlated uncertainties the source IDs
         # and the IDs of the realizations belonging to a sub-set of
-        # correlated branches and the corresponding weights
-        hcids, weis = get_hcurves_ids(rlzs, patterns, weights)
-        # Test
+        # correlated branches
+        hcids = get_hcurves_ids(rlzs, patterns)
         expected = [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19]
-        aeq(hcids['bs1']['b'][0], expected)
-        aac(weis['bs1']['b'][0], 0.8)
+        aeq(hcids[0]['b'][0], expected)
 
 
 class AnalysisDisaggregationTestCase(unittest.TestCase):
@@ -118,7 +110,7 @@ class AnalysisDisaggregationTestCase(unittest.TestCase):
         fname = os.path.join(
             BDP, 'disaggregation', 'test_case01', 'analysis.xml')
         an01 = Analysis.read(fname)
-        root_path = os.path.dirname(fname)
-        rlzs, poes, weights = an01.read_dstores(root_path, 'mde', 'PGA')
+        rlzs, poes, weights = an01.read_dstores('mde', 'PGA')
+        self.assertEqual(['a', 'b'], list(rlzs))
         self.assertEqual(['a', 'b'], list(poes))
         self.assertEqual((17, 17, 8, 24), poes['a'].shape)

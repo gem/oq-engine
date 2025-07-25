@@ -4,12 +4,12 @@
       xmlns="http://openquake.org/xmlns/nrml/0.5">
 
     <calculations>
-        <calc sourceID="a" ini="job_a.ini"/>
-        <calc sourceID="b" ini="job_b.ini"/>
+        <calc sourceID="a" ini="./job_a.ini"/>
+        <calc sourceID="b" ini="./job_b.ini"/>
     </calculations>
 
     <uncertainties>
-        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1">
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2">
             <sourceIDs>a b</sourceIDs>
             <branchSetID>bs1 bs1</branchSetID>
         </logicTreeBranchSet>
