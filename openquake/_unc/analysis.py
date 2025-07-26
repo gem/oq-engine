@@ -359,12 +359,13 @@ class Analysis:
                 # + 1 for the first element (that uses two letters)
                 idx = ipath + 1 + 1
                 if self.utypes[unc] == b'gmpeModel':
-                    paths = [r[-1] for r in rpaths]
-                    idx += nssc
+                    chars = [r[-1] for r in rpaths]
+                    patt = [pattern[:-1] + char
+                            for char in np.unique(chars)]
                 else:
                     paths = [path[ipath + 1] for path in smpaths]
-                patt = [pattern[:idx] + path + pattern[idx+1:]
-                        for path in np.unique(paths)]
+                    patt = [pattern[:idx] + path + pattern[idx+1:]
+                            for path in np.unique(paths)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:
         [{'b': ['^...A.~.', '^...B.~.'],
