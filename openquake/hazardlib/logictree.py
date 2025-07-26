@@ -54,6 +54,7 @@ U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 TWO24 = 2 ** 24
+ONE_LETTER_BASE = True
 
 rlz_dt = numpy.dtype([
     ('ordinal', U32),
@@ -642,7 +643,7 @@ class SourceModelLogicTree(object):
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
             # use two-letter abbrev for the first branchset (sourceModel)
-            base = BASE183 if bsno else BASE33489
+            base = BASE183 if ONE_LETTER_BASE or bsno else BASE33489
             self.shortener[branch_id] = keyno(branch_id, bsno, brno, base)
             weight_sum += weight
         if zeros:

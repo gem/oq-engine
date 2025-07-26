@@ -61,8 +61,8 @@ class AnalysisTestCase(unittest.TestCase):
 unc                  
 0    bs3     b      2
 0    bs4     c      3
-1    bs1     a      0
-1    bs1     b      0'''
+1    bs1     a     -1
+1    bs1     b     -1'''
         self.assertEqual(str(self.an01.to_dframe()), exp)
 
     def test_get_imtls(self):
@@ -86,10 +86,10 @@ unc
         # These are the patterns for the first uncertainty and source 'b'.
         # Overall the SSC LT for source 'b' contains 4 branchsets and the
         # correlated uncertainty is the third one.
-        self.assertEqual(patterns[0]['b'], ['^...A.~.', '^...B.~.'])
+        self.assertEqual(patterns[0]['b'], ['...A.~.', '...B.~.'])
 
         # Checking the patterns for the GMC
-        expected = ['^.....~A', '^.....~B', '^.....~C', '^.....~D']
+        expected = ['.....~A', '.....~B', '.....~C', '.....~D']
         self.assertEqual(patterns[1]['b'], expected)
 
     def test_get_curves_and_weights(self):
