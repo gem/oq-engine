@@ -353,14 +353,14 @@ class Analysis:
                 rpaths = rlzs[srcid]
                 n = len(rpaths[0])
                 # Create the general pattern. This will select everything
-                pattern = '^..' + ''.join('.' for i in range(4, n)) + '~.'
+                pattern = '..' + ''.join('.' for i in range(4, n)) + '~.'
                 # Find the index iwhere we replace the '.' with the
                 # ID of the branches that are correlated
                 # + 1 for the first element (that uses two letters)
                 if ipath == -1:
                     ipath = n - 2
                 chars = [path[ipath+1] for path in rpaths]
-                patt = [pattern[:ipath+2] + char + pattern[ipath+3:]
+                patt = [pattern[:ipath+1] + char + pattern[ipath+2:]
                         for char in np.unique(chars)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:
@@ -398,7 +398,7 @@ def get_hcurves_ids(rlzs, patterns):
             for p in pat[srcid]:
                 idxs = []
                 for i, rlz in enumerate(rpath):
-                    if re.search(p, rlz):
+                    if re.match(p, rlz):
                         idxs.append(i)
                 hcurves[srcid].append(idxs)
         grp_hcurves.append(hcurves)
