@@ -351,8 +351,7 @@ class Analysis:
                 pat[srcid] = {}
                 rpaths = rlzs[srcid]
                 smpaths = [r[:-2] for r in rpaths]
-                gspaths = [r[-1] for r in rpaths]
-                nssc = len(smpaths[0])
+                nssc = len(rpaths[0]) - 2
                 # Create the general pattern. This will select everything
                 pattern = '^..' + ''.join('.' for i in range(2, nssc)) + '~.'
                 # Find the index iwhere we replace the '.' with the
@@ -360,7 +359,7 @@ class Analysis:
                 # + 1 for the first element (that uses two letters)
                 idx = ipath + 1 + 1
                 if self.utypes[unc] == b'gmpeModel':
-                    paths = gspaths
+                    paths = [r[-1] for r in rpaths]
                     idx += nssc
                     ipath = 0
                 else:
