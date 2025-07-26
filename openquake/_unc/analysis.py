@@ -357,14 +357,12 @@ class Analysis:
                 # ID of the branches that are correlated
                 # + 1 for the first element (that uses two letters)
                 if self.utypes[unc] == b'gmpeModel':
-                    chars = [r[-1] for r in rpaths]
-                    patt = [pattern[:-1] + char
-                            for char in np.unique(chars)]
+                    idx = n
                 else:
                     idx = ipath + 2
-                    chars = [path[idx - 1] for path in rpaths]
-                    patt = [pattern[:idx] + char + pattern[idx+1:]
-                            for char in np.unique(chars)]
+                chars = [path[idx - 1] for path in rpaths]
+                patt = [pattern[:idx] + char + pattern[idx+1:]
+                        for char in np.unique(chars)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:
         [{'b': ['^...A.~.', '^...B.~.'],
