@@ -350,7 +350,6 @@ class Analysis:
 
                 pat[srcid] = {}
                 rpaths = rlzs[srcid]
-                smpaths = [r[:-2] for r in rpaths]
                 nssc = len(rpaths[0]) - 2
                 # Create the general pattern. This will select everything
                 pattern = '^..' + ''.join('.' for i in range(2, nssc)) + '~.'
@@ -363,9 +362,9 @@ class Analysis:
                             for char in np.unique(chars)]
                 else:
                     idx = ipath + 2
-                    paths = [path[idx - 1] for path in smpaths]
+                    chars = [path[idx - 1] for path in rpaths]
                     patt = [pattern[:idx] + path + pattern[idx+1:]
-                            for path in np.unique(paths)]
+                            for path in np.unique(chars)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:
         [{'b': ['^...A.~.', '^...B.~.'],
