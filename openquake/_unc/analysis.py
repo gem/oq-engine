@@ -361,7 +361,6 @@ class Analysis:
                 if self.utypes[unc] == b'gmpeModel':
                     paths = [r[-1] for r in rpaths]
                     idx += nssc
-                    ipath = 0
                 else:
                     paths = [path[ipath + 1] for path in smpaths]
                 patt = [pattern[:idx] + path + pattern[idx+1:]
