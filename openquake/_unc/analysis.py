@@ -356,7 +356,6 @@ class Analysis:
                 pattern = '..' + ''.join('.' for i in range(4, n)) + '~.'
                 # Find the index iwhere we replace the '.' with the
                 # ID of the branches that are correlated
-                # + 1 for the first element (that uses two letters)
                 if ipath == -1:
                     ipath = n - 2
                 chars = [path[ipath+1] for path in rpaths]
@@ -364,10 +363,10 @@ class Analysis:
                         for char in np.unique(chars)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:
-        [{'b': ['^...A.~.', '^...B.~.'],
-          'c': ['^....A.~.', '^....B.~.']},
-         {'a': ['^...~A', '^...~B', '^...~C', '^...~D'],
-          'b': ['^.....~A', '^.....~B', '^.....~C', '^.....~D']}]
+        [{'b': ['..A.~.', '..B.~.'],
+          'c': ['...A.~.', '...B.~.']},
+         {'a': ['..~A', '..~B', '..~C', '..~D'],
+          'b': ['....~A', '....~B', '....~C', '....~D']}]
         """
         return patterns
 
@@ -383,7 +382,7 @@ def get_hcurves_ids(rlzs, patterns):
     :param patterns:
         A list of ictionaries with key the source ID.
         The values are lists of strings. Each string is a regular expression
-        (e.g.  ^.+A.+.+~.+') that can be used to select the subset of
+        (e.g. .+A.+.+~.+') that can be used to select the subset of
         realizations involving the current source that are correlated.
     :returns:
         A list of dictionaries srcid -> idxs

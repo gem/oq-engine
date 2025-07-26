@@ -36,7 +36,6 @@ For the description of a PMF we use:
 """
 
 import numpy as np
-from openquake._unc.bins import get_bins_data, get_bins_from_params
 from openquake._unc.convolution import HistoGroup
 
 TOLERANCE = 1e-6
