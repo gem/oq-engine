@@ -350,9 +350,9 @@ class Analysis:
 
                 pat[srcid] = {}
                 rpaths = rlzs[srcid]
-                nssc = len(rpaths[0]) - 2
+                n = len(rpaths[0])
                 # Create the general pattern. This will select everything
-                pattern = '^..' + ''.join('.' for i in range(2, nssc)) + '~.'
+                pattern = '^..' + ''.join('.' for i in range(4, n)) + '~.'
                 # Find the index iwhere we replace the '.' with the
                 # ID of the branches that are correlated
                 # + 1 for the first element (that uses two letters)
@@ -363,8 +363,8 @@ class Analysis:
                 else:
                     idx = ipath + 2
                     chars = [path[idx - 1] for path in rpaths]
-                    patt = [pattern[:idx] + path + pattern[idx+1:]
-                            for path in np.unique(chars)]
+                    patt = [pattern[:idx] + char + pattern[idx+1:]
+                            for char in np.unique(chars)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:
         [{'b': ['^...A.~.', '^...B.~.'],
