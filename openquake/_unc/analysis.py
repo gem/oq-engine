@@ -145,8 +145,9 @@ class Analysis:
                 smlt = dstore.getitem('full_lt/source_model_lt')[:]
                 utype2ord = {u: i for i, u in enumerate(
                     collections.Counter(smlt['utype']))}
-                # Find the ipath of the uncertainty branchset, 0 for gmpeModel
-                ipath.append(utype2ord.get(utype, 0))
+                # Find the path index of the uncertainty branchset
+                i = -1 if utype == b'gmpeModel' else utype2ord[utype]
+                ipath.append(i)
 
             utypes.append(utype)
             bsets.append({'srcid': srcids, 'bsid': bsids, 'ipath': ipath})
@@ -356,12 +357,10 @@ class Analysis:
                 # Find the index iwhere we replace the '.' with the
                 # ID of the branches that are correlated
                 # + 1 for the first element (that uses two letters)
-                if self.utypes[unc] == b'gmpeModel':
-                    idx = n
-                else:
-                    idx = ipath + 2
-                chars = [path[idx - 1] for path in rpaths]
-                patt = [pattern[:idx] + char + pattern[idx+1:]
+                if ipath == -1:
+                    ipath = n - 2
+                chars = [path[ipath+1] for path in rpaths]
+                patt = [pattern[:ipath+2] + char + pattern[ipath+3:]
                         for char in np.unique(chars)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:
