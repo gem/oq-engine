@@ -353,17 +353,13 @@ class Analysis:
                 smpaths = [r[:-2] for r in rpaths]
                 gspaths = [r[-1] for r in rpaths]
                 nssc = len(smpaths[0])
-                ssc = '..' + ''.join('.' for i in range(2, nssc))
-                ngmc = len(gspaths[0])
-                gmc = ''.join('.' for i in range(ngmc))
                 # Create the general pattern. This will select everything
-                pattern = '^' + ssc + '~' + gmc
+                pattern = '^..' + ''.join('.' for i in range(2, nssc)) + '~.'
                 # Find the index iwhere we replace the '.' with the
                 # ID of the branches that are correlated
                 # + 1 for the first element (that uses two letters)
                 idx = ipath + 1 + 1
-                is_gmc = self.utypes[unc] == b'gmpeModel'
-                if is_gmc:
+                if self.utypes[unc] == b'gmpeModel':
                     paths = gspaths
                     idx += nssc
                     ipath = 0
