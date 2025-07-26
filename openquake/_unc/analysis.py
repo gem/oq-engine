@@ -357,13 +357,13 @@ class Analysis:
                 # Find the index iwhere we replace the '.' with the
                 # ID of the branches that are correlated
                 # + 1 for the first element (that uses two letters)
-                idx = ipath + 1 + 1
                 if self.utypes[unc] == b'gmpeModel':
                     chars = [r[-1] for r in rpaths]
                     patt = [pattern[:-1] + char
                             for char in np.unique(chars)]
                 else:
-                    paths = [path[ipath + 1] for path in smpaths]
+                    idx = ipath + 2
+                    paths = [path[idx - 1] for path in smpaths]
                     patt = [pattern[:idx] + path + pattern[idx+1:]
                             for path in np.unique(paths)]
                 pat[srcid] = patt
