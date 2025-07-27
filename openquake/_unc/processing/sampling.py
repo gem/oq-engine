@@ -113,7 +113,7 @@ def sampling(ssets: list, bsets: list, an01: Analysis, grp_curves, nsam: int):
                        afes, weir)
         else:
 
-            srcid = list(sset)[0]
+            srcid, = sset
             kkk, = np.where(srcids == srcid)
 
             # Get realisations and weights for the source currently
