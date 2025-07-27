@@ -465,6 +465,7 @@ def utc_to_local_time(utc_timestamp, lon, lat):
     """
     Convert a timestamp '%Y-%m-%dT%H:%M:%S.%fZ' into a datetime object
     """
+    utc_time = datetime.strptime(utc_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
     try:
         from timezonefinder import TimezoneFinder
     except ImportError:
@@ -473,8 +474,7 @@ def utc_to_local_time(utc_timestamp, lon, lat):
         timezone_str = TimezoneFinder().timezone_at(lng=lon, lat=lat)
     if timezone_str is None:
         logging.warning('Could not determine the timezone. Using the UTC time')
-        return utc_timestamp
-    utc_time = datetime.strptime(utc_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ')
+        return utc_time
     local_timestamp = utc_time.astimezone(ZoneInfo(timezone_str))
     # NOTE: the validated timestamp format has no microseconds
     return local_timestamp.replace(microsecond=0)
