@@ -48,6 +48,21 @@ PATH_UNC = "{0:s}uncertainties/".format(NS)
 PATH_SRCIDS = "{:s}sourceIDs".format(NS)
 
 
+def get_weights(smlt, utype):
+    return smlt[smlt['utype'] == utype]['weight']
+
+
+def check_consistent(utype, smlts):
+    """
+    Make sure all the SMLTs have consistent weights
+    """
+    ws = get_weights(smlts[0], utype)
+    for smlt in smlts[1:]:
+        weights = get_weights(smlt, utype)
+        assert len(weights) == len(ws), (len(weights), len(ws))
+        assert (weights == ws).all(), (weights, ws)
+
+
 class Analysis:
     """
     Stores information and provides methods required to process the results
@@ -94,13 +109,6 @@ class Analysis:
             calculations performed and the possible correlation of
             uncertainties between the LTs of individual sources
         """
-        # TODO
-        # Add the following checks:
-        # - We have a datastore for each source correlated
-        # - The datastores are all different
-        # - The original correlated branch sets must have the same number of
-        #   branches
-
         # Set the path to the folder with the .xml file
         root_path = os.path.dirname(fname)
 
@@ -136,16 +144,19 @@ class Analysis:
             # Here we should check that the uncertainties in the analysis .xml
             # file are the same used for the various sources
             ipath = []
+            smlts = []
             for srcid in srcids:
                 dstore = dstores[srcid]
                 # List of unique uncertainty types
                 smlt = dstore.getitem('full_lt/source_model_lt')[:]
+                smlts.append(smlt)
                 utype2ord = {u: i for i, u in enumerate(
                     collections.Counter(smlt['utype']))}
                 # Find the path index of the uncertainty branchset
                 i = -1 if utype == b'gmpeModel' else utype2ord[utype]
                 ipath.append(i)
 
+            check_consistent(utype, smlts)
             utypes.append(utype)
             bsets.append({'srcid': srcids, 'ipath': ipath})
 
@@ -163,7 +174,6 @@ class Analysis:
             dic['srcid'].extend(d['srcid'])
             dic['ipath'].extend(d['ipath'])
         return pd.DataFrame(dic).set_index('unc')
-
 
     # used in propagate_uncertainties
     def get_sets(self):
