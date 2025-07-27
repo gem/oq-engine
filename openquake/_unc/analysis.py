@@ -46,7 +46,6 @@ NS = "{http://openquake.org/xmlns/nrml/0.5}"
 PATH_CALC = "{0:s}calculations/{0:s}calc".format(NS)
 PATH_UNC = "{0:s}uncertainties/".format(NS)
 PATH_SRCIDS = "{:s}sourceIDs".format(NS)
-PATH_BSIDS = "{:s}branchSetID".format(NS)
 
 
 class Analysis:
@@ -59,7 +58,6 @@ class Analysis:
     :param bsets:
         A list of dictionaries (one for each utype) with keys
         - srcid: IDs of the sources
-        - bsid: IDs of the branches in the original LTs
         - ipath: Ipaths of the branchsets in their LTs
     :param dstores:
         A dictionary with source IDs as keys and a string with the path to
@@ -134,7 +132,6 @@ class Analysis:
         for bs in root.findall(PATH_UNC):
             utype = bs.attrib['uncertaintyType'].encode()
             srcids = bs.findall(PATH_SRCIDS)[0].text.split(' ')
-            bsids = bs.findall(PATH_BSIDS)[0].text.split(' ')
 
             # Here we should check that the uncertainties in the analysis .xml
             # file are the same used for the various sources
@@ -150,7 +147,7 @@ class Analysis:
                 ipath.append(i)
 
             utypes.append(utype)
-            bsets.append({'srcid': srcids, 'bsid': bsids, 'ipath': ipath})
+            bsets.append({'srcid': srcids, 'ipath': ipath})
 
         # Initializing the Analysis object
         self = cls(utypes, bsets, dstores, fname, seed)
@@ -160,10 +157,9 @@ class Analysis:
         """
         Debug utility print the bsets as a DataFrame
         """
-        dic = {'unc': [], 'bsid': [], 'srcid': [], 'ipath': []}
+        dic = {'unc': [], 'srcid': [], 'ipath': []}
         for unc, d in enumerate(self.bsets):
-            dic['unc'].extend([unc] * len(d['bsid']))
-            dic['bsid'].extend(d['bsid'])
+            dic['unc'].extend([unc] * len(d['srcid']))
             dic['srcid'].extend(d['srcid'])
             dic['ipath'].extend(d['ipath'])
         return pd.DataFrame(dic).set_index('unc')

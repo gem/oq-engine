@@ -57,12 +57,12 @@ class AnalysisTestCase(unittest.TestCase):
 
         # check the correlation dataframe
         exp = '''\
-    bsid srcid  ipath
-unc                  
-0    bs3     b      2
-0    bs4     c      3
-1    bs1     a     -1
-1    bs1     b     -1'''
+    srcid  ipath
+unc             
+0       b      2
+0       c      3
+1       a     -1
+1       b     -1'''
         self.assertEqual(str(self.an01.to_dframe()), exp)
 
     def test_get_imtls(self):

@@ -13,11 +13,9 @@
     <uncertainties>
         <logicTreeBranchSet uncertaintyType="setLowerSeismDepthAbsolute">
             <sourceIDs>b c</sourceIDs>
-            <branchSetID>bs3 bs4</branchSetID>
         </logicTreeBranchSet>
         <logicTreeBranchSet uncertaintyType="gmpeModel">
             <sourceIDs>a b</sourceIDs>
-            <branchSetID>bs1 bs1</branchSetID>
         </logicTreeBranchSet>
     </uncertainties>
 
