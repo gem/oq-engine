@@ -36,7 +36,7 @@ import matplotlib.pyplot as plt
 from openquake._unc.tests.utils_plot_dsg import plot_dsg_md
 from openquake.calculators.base import dcache
 from openquake._unc.hazard_pmf import get_md_from_2d
-from openquake._unc.calc.propagate_uncertainties import propagate
+from openquake._unc.propagate_uncertainties import propagate
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()

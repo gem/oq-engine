@@ -39,7 +39,7 @@ import matplotlib.pyplot as plt
 
 from openquake.baselib import hdf5
 from openquake.calculators.base import dcache
-from openquake._unc.calc.propagate_uncertainties import propagate
+from openquake._unc.propagate_uncertainties import propagate
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
