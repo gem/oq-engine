@@ -165,8 +165,8 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
             if path not in ares:
                 ares[path] = HistoGroup(h.pmfs, h.minpow, h.numpow, wei_sum)
             else:
-                hs = ares[path] * h
-                ares[path] = HistoGroup(hs.pmfs, hs.minpow, hs.numpow, hs.weight + wei_sum)
+                ares[path] *= h
+                ares[path].weight += wei_sum
 
     results = []
     for i, path in enumerate(paths):
