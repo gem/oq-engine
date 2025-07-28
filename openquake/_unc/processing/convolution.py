@@ -166,7 +166,7 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
                 ares[path] = HistoGroup(h.pmfs, h.minpow, h.numpow, wei_sum)
             else:
                 hs = ares[path]
-                h *= HistoGroup(hs.pmfs, hs.minpow, hs.numpow)
+                h *= hs
                 his, m_pow, n_pow = h.pmfs, h.minpow, h.numpow
                 ares[path] = HistoGroup(his, m_pow, n_pow, hs.weight + wei_sum)
 
