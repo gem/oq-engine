@@ -87,31 +87,27 @@ def convolution(ssets: list, usets: list, an01: Analysis,
 
 
 # tested in test_02_performance 
-def _get_path_info(sset, uset, an01, grp_curves):
+def _get_path_info(sset, uncs, an01, grp_curves):
     """
     :param sset: set of sources
-    :param uset: uncertainty indices
+    :param uncs: uncertainty indices
     :param an01: Analysis instance
     :param grp_curves: dictionary
     """
-    paths = []
     weight_redux = {srcid: 1 for srcid in sset}
-    for unc in uset:
+    print('-----------', uncs)
+    for unc in uncs:
         srcids = an01.bsets[unc]['srcid']
+        n = len(grp_curves[unc][srcids[0]])
         if unc == 0:
-            for i in range(len(grp_curves[unc][srcids[0]])):
-                paths.append(f'{i}')
+            paths = [(i,) for i in range(n)]
         else:
-            tmp = []
-            for path in paths:
-                for i in range(len(grp_curves[unc][srcids[0]])):
-                    tmp.append(f'{path}_{i}')
-            paths = tmp
+            paths = [path + (i,) for path in paths for i in range(n)]
         # Update the weight reduction factors for the sources not having this
         # branch set of correlated uncertainties
         srcids_not = sset - set(srcids)
         for srcid in srcids_not:
-            weight_redux[srcid] *= len(grp_curves[unc][srcids[0]])
+            weight_redux[srcid] *= n
     return paths, weight_redux
 
 
@@ -140,9 +136,6 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
     chk_wei = {}
     for path in paths:
 
-        # Get the indexes of the groups in each branchset
-        group_idxs = [int(s) for s in path.split('_')]
-
         # For each source
         for srcid in sorted(sset):
 
@@ -150,7 +143,7 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
             # realizations (i.e. the hazard curves) for the current source
             # obtained for the path in question.
             rlz_idx = set()
-            for unc, grp_i in enumerate(group_idxs):
+            for unc, grp_i in enumerate(path):
 
                 # Check if the current source is in this group
                 if srcid in an01.bsets[unc]['srcid']:
