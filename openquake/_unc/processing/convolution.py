@@ -163,10 +163,10 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
 
             # Updating results for the current set of correlated uncertainties
             if path not in ares:
-                ares[path] = HistoGroup(h.pmfs, h.minpow, h.numpow, wei_sum)
+                ares[path] = h
             else:
                 ares[path] *= h
-                ares[path].weight += wei_sum
+            ares[path].weight += wei_sum
 
     results = []
     for i, path in enumerate(paths):
