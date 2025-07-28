@@ -175,31 +175,29 @@ def sample_set(an01, sset, uset, nsam, grp_curves, sampled_indexes, afes, weir):
         # source
         _, wei = an01.get_rpaths_weights(srcid)
 
-        # Array where we store the indexes of the sampled realisations
-        idx_rlzs = np.zeros(nsam, dtype=int)
         poes = an01.dstores[srcid]['hcurves-rlzs'][:]
 
         # Index of the current source
-        kkk, = np.where(srcids == srcid)
+        isrc, = np.where(srcids == srcid)
 
         # Process each sample for the current source
         for sam in range(nsam):
 
             # These are the indexes from which we draw a sample
-            idxs = np.sort(list(ridx[sam]))
+            idxs = sorted(ridx[sam])
 
             # Normalised weights
             norm_wei = wei[idxs] / wei[idxs].sum()
 
             # Pick the index of the hazard curve for the current sample
-            idx_rlzs[sam] = np.random.choice(idxs, p=norm_wei)
+            idx_rlzs = np.random.choice(idxs, p=norm_wei)
 
             # Save the probabilities of exceedance for the current
             # source and sample
-            afes[:, kkk, sam, :, :] = poes[:, idx_rlzs[sam]]
+            afes[:, isrc, sam, :, :] = poes[:, idx_rlzs]
 
             # Save the weight for this sample
-            weir[sam] *= wei[idx_rlzs[sam]]
+            weir[sam] *= wei[idx_rlzs]
 
 
 def rounding(weights, digits):
