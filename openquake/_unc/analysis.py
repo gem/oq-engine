@@ -204,7 +204,7 @@ class Analysis:
             found = any(src_id in sset for sset in ssets)
             if not found:
                 ssets.append({src_id})
-                usets.append(None)
+                usets.append(set())
 
         # in analysis_test we have
         # ssets = [{'b', 'a', 'c'}, {'d'}]

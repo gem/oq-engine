@@ -62,8 +62,8 @@ def convolution(ssets: list, usets: list, an01: Analysis,
     for iset, (sset, uset) in enumerate(zip(ssets, usets)):
         logging.info(f'Processing sources {sset} correlated bs {uset}')
 
-        # When uset is not None there are correlated sources
-        if uset is not None:
+        # When uset is not empty there are correlated sources
+        if uset:
             h = process_uset(sset, uset, an01, grp_curves, res, imt, atype)
         else:
             srcid = list(sset)[0]
