@@ -383,16 +383,15 @@ def get_hcurves_ids(rlzs, patterns):
     """
     Given the realizations for each source and the patterns returned by
     get_patterns return a list of dictionaries srcid -> rlzids, one
-    for each pattern.
+    for each uncertainty.
     """
     grp_hcurves = []
     for pat in patterns:
         hcurves = {}
         for srcid in pat:
-            rpath = rlzs[srcid]
             # Loop over the patterns of all the realizations for a given source
             hcurves[srcid] = [
-                [i for i, rlz in enumerate(rpath) if re.match(p, rlz)]
+                [i for i, rlz in enumerate(rlzs[srcid]) if re.match(p, rlz)]
                 for p in pat[srcid]]
         grp_hcurves.append(hcurves)
     return grp_hcurves
