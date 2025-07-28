@@ -87,6 +87,7 @@ def convolution(ssets: list, usets: list, an01: Analysis,
     return acc
 
 
+# tested in test_02_performance 
 def _get_path_info(sset, uset, an01, grp_curves):
     """
     :param sset: set of sources
@@ -95,26 +96,24 @@ def _get_path_info(sset, uset, an01, grp_curves):
     :param grp_curves: dictionary
     """
     paths = []
-    uset_list = []
     weight_redux = {srcid: 1 for srcid in sset}
-    for uset_i, bsid in enumerate(uset):
-        uset_list.append(bsid)
-        srcids = an01.bsets[bsid]['srcid']
-        if uset_i == 0:
-            for i in range(len(grp_curves[bsid][srcids[0]])):
+    for unc in uset:
+        srcids = an01.bsets[unc]['srcid']
+        if unc == 0:
+            for i in range(len(grp_curves[unc][srcids[0]])):
                 paths.append(f'{i}')
         else:
             tmp = []
             for path in paths:
-                for i in range(len(grp_curves[bsid][srcids[0]])):
+                for i in range(len(grp_curves[unc][srcids[0]])):
                     tmp.append(f'{path}_{i}')
             paths = tmp
         # Update the weight reduction factors for the sources not having this
         # branch set of correlated uncertainties
         srcids_not = sset - set(srcids)
         for srcid in srcids_not:
-            weight_redux[srcid] *= len(grp_curves[bsid][srcids[0]])
-    return paths, uset_list, weight_redux
+            weight_redux[srcid] *= len(grp_curves[unc][srcids[0]])
+    return paths, weight_redux
 
 
 def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
@@ -130,13 +129,12 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
     """
     # Compute the number of groups of correlated uncertainties
     num_paths = 1
-    for uset_i, bsid in enumerate(uset):
-        srcids = an01.bsets[bsid]['srcid']
-        num_paths *= len(grp_curves[bsid][srcids[0]])
+    for unc in uset:
+        srcids = an01.bsets[unc]['srcid']
+        num_paths *= len(grp_curves[unc][srcids[0]])
 
     # Paths
-    paths, uset_list, weight_redux = _get_path_info(
-        sset, uset, an01, grp_curves)
+    paths, weight_redux = _get_path_info(sset, uset, an01, grp_curves)
 
     ares = {}
     chk_idxs = {}
@@ -153,12 +151,11 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
             # realizations (i.e. the hazard curves) for the current source
             # obtained for the path in question.
             rlz_idx = set()
-            for i, grp_i in enumerate(group_idxs):
+            for unc, grp_i in enumerate(group_idxs):
 
                 # Check if the current source is in this group
-                bsid = uset_list[i]
-                if srcid in an01.bsets[bsid]['srcid']:
-                    tmp = set(grp_curves[bsid][srcid][grp_i])
+                if srcid in an01.bsets[unc]['srcid']:
+                    tmp = set(grp_curves[unc][srcid][grp_i])
                     if len(rlz_idx) == 0:
                         rlz_idx = tmp
                     else:

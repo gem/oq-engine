@@ -369,6 +369,8 @@ class Analysis:
                         for char in np.unique(chars)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:
+        unc=0: setLowerSeismDepthAbsolute: b c
+        unc=1: gmpeModel: a b
         [{'b': ['..A.~.', '..B.~.'],
           'c': ['...A.~.', '...B.~.']},
          {'a': ['..~A', '..~B', '..~C', '..~D'],
@@ -379,19 +381,9 @@ class Analysis:
 
 def get_hcurves_ids(rlzs, patterns):
     """
-    Given the realizations for each source as specified in the `rlzs`
-    dictionary, the patterns describing the
-
-    :param rlzs:
-        A dictionary with keys the IDs of the sources. The values are lists
-        of pairs (smpaths, gspaths) for each realisation.
-    :param patterns:
-        A list of ictionaries with key the source ID.
-        The values are lists of strings. Each string is a regular expression
-        (e.g. .+A.+.+~.+') that can be used to select the subset of
-        realizations involving the current source that are correlated.
-    :returns:
-        A list of dictionaries srcid -> idxs
+    Given the realizations for each source and the patterns returned by
+    get_patterns return a list of dictionaries srcid -> rlzids, one
+    for each pattern.
     """
     grp_hcurves = []
     for pat in patterns:
@@ -399,12 +391,8 @@ def get_hcurves_ids(rlzs, patterns):
         for srcid in pat:
             rpath = rlzs[srcid]
             # Loop over the patterns of all the realizations for a given source
-            hcurves[srcid] = []
-            for p in pat[srcid]:
-                idxs = []
-                for i, rlz in enumerate(rpath):
-                    if re.match(p, rlz):
-                        idxs.append(i)
-                hcurves[srcid].append(idxs)
+            hcurves[srcid] = [
+                [i for i, rlz in enumerate(rpath) if re.match(p, rlz)]
+                for p in pat[srcid]]
         grp_hcurves.append(hcurves)
     return grp_hcurves
