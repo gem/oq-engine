@@ -57,7 +57,7 @@ class HistoGroup:
         :param rlzs:
             Indexes of the realisations to consider
         :returns:
-            A HistoGroup instance
+            A HistoGroup instance with L histograms of R elements each
         """
         afesRL = afesRL[rlzs]
         weights = weights[rlzs]
@@ -81,7 +81,7 @@ class HistoGroup:
 
             # Computing histogram
             his, _ = np.histogram(dat, bins, weights=weights)
-            his /= his.sum()  # with numpy 2 with could use normed = True
+            his /= his.sum()  # with numpy 2 we could use normed = True
 
             # Updating output
             ohis.append(his)
@@ -199,6 +199,7 @@ class HistoGroup:
             fout.create_dataset("mininum_power", data=np.array(self.minpow))
             fout.create_dataset("number_of_powers", data=np.array(self.numpow))
             fout.create_dataset("afes", data=afes)
+
 
 def conv(pmfa, min_power_a, num_powers_a, pmfb, min_power_b, num_powers_b):
     """

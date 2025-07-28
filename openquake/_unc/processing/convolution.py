@@ -39,11 +39,11 @@ def convolution(ssets: list, usets: list, an01: Analysis,
     This processes the hazard curves and computes the final results
 
     :param ssets: sets of sources
-    :param usets: sets of branchset IDs
+    :param usets: sets of uncertainty indices
     :param an01:
         An instance of :class:`openquake._unc.analysis.Analysis`
     :param grp_curves:
-        A dictionary of dictionaries
+        A list of dictionaries
     :param imt:
         A string specifying an intensity measure type
     :param atype:
@@ -52,8 +52,7 @@ def convolution(ssets: list, usets: list, an01: Analysis,
         An integer that defines the resolution of the histograms i.e. number of
         intervals for each log unit
     :returns:
-        A triple containing the output histogram, and two arrays with the
-        lowest power and the number of powers used to define the histogram
+        A HistoGroup containing the convolution histogram
     """
     logging.info('Computing convolution')
 
@@ -66,9 +65,9 @@ def convolution(ssets: list, usets: list, an01: Analysis,
         if uset:
             h = process_uset(sset, uset, an01, grp_curves, res, imt, atype)
         else:
-            srcid = list(sset)[0]
+            srcid, = sset
             # Load the matrix containing the annual frequencies of exceedance.
-            # afes is an array with shape I x L where I is the number of
+            # afes is an array with shape M x L where M is the number of
             # intensity measure levels and L is the number of intensity measure
             # levels
             imls, afes, weights = afes_matrix_from_dstore(
@@ -91,7 +90,7 @@ def convolution(ssets: list, usets: list, an01: Analysis,
 def _get_path_info(sset, uset, an01, grp_curves):
     """
     :param sset: set of sources
-    :param uset: set of branchset IDs
+    :param uset: uncertainty indices
     :param an01: Analysis instance
     :param grp_curves: dictionary
     """
@@ -134,14 +133,14 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
         num_paths *= len(grp_curves[unc][srcids[0]])
 
     # Paths
-    paths, weight_redux = _get_path_info(sset, uset, an01, grp_curves)
+    paths, weight_redux = _get_path_info(sset, sorted(uset), an01, grp_curves)
 
     ares = {}
     chk_idxs = {}
     chk_wei = {}
     for path in paths:
 
-        # Get the indexes of the groups in each branch set
+        # Get the indexes of the groups in each branchset
         group_idxs = [int(s) for s in path.split('_')]
 
         # For each source
