@@ -94,8 +94,8 @@ def _get_path_info(sset, uncs, an01, grp_curves):
     :param an01: Analysis instance
     :param grp_curves: dictionary
     """
+    assert uncs[0] == 0  # starts with 0 always
     weight_redux = {srcid: 1 for srcid in sset}
-    print('-----------', uncs)
     for unc in uncs:
         srcids = an01.bsets[unc]['srcid']
         n = len(grp_curves[unc][srcids[0]])
@@ -132,8 +132,6 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
     paths, weight_redux = _get_path_info(sset, sorted(uset), an01, grp_curves)
 
     ares = {}
-    chk_idxs = {}
-    chk_wei = {}
     for path in paths:
 
         # For each source
@@ -148,10 +146,10 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
                 # Check if the current source is in this group
                 if srcid in an01.bsets[unc]['srcid']:
                     tmp = set(grp_curves[unc][srcid][grp_i])
-                    if len(rlz_idx) == 0:
+                    if not rlz_idx:
                         rlz_idx = tmp
                     else:
-                        rlz_idx = rlz_idx.intersection(tmp)
+                        rlz_idx = rlz_idx & tmp
 
             # Get hazard curves
             _, afes, weights = afes_matrix_from_dstore(
@@ -162,14 +160,6 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
 
             # Computing weight
             wei_sum = sum(weights) / weight_redux[srcid]
-
-            # Checking the weights
-            if srcid not in chk_idxs:
-                chk_idxs[srcid] = rlz_idx
-                chk_wei[srcid] = wei_sum
-            else:
-                chk_idxs[srcid] = chk_idxs[srcid].union(rlz_idx)
-                chk_wei[srcid] += wei_sum
 
             # Updating results for the current set of correlated uncertainties
             if path not in ares:
