@@ -163,17 +163,17 @@ def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
 
             # Updating results for the current set of correlated uncertainties
             if path not in ares:
-                ares[path] = [h.pmfs, h.minpow, h.numpow, wei_sum]
+                ares[path] = HistoGroup(h.pmfs, h.minpow, h.numpow, wei_sum)
             else:
-                his_t, m_pow_t, n_pow_t, wei = ares[path]
-                h *= HistoGroup(his_t, m_pow_t, n_pow_t)
+                hs = ares[path]
+                h *= HistoGroup(hs.pmfs, hs.minpow, hs.numpow)
                 his, m_pow, n_pow = h.pmfs, h.minpow, h.numpow
-                ares[path] = [his, m_pow, n_pow, wei + wei_sum]
+                ares[path] = HistoGroup(his, m_pow, n_pow, hs.weight + wei_sum)
 
     results = []
     for i, path in enumerate(paths):
-        ares[path][3] /= len(sset)  # fix weight
-        results.append(HistoGroup(*ares[path]))
+        ares[path].weight /= len(sset)  # fix weight
+        results.append(ares[path])
 
     # Taking the mixture MFD
     return mixture(results)
