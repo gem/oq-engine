@@ -263,7 +263,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             plt.show()
 
     def test_sampling(self):
-        # Sampling test case
+        # Sampling test case with 1 million samples
         fname = os.path.join(TFF, 'data_calc', 'test_case02_sampling.ini')
         tmpdir = tempfile.mkdtemp()
         imls, afes, _ = propagate(fname, override_folder_out=tmpdir)

@@ -53,9 +53,7 @@ def convolution(an01: Analysis, rlzgroups: dict, imt: str, atype: str, res: int=
     """
     logging.info('Computing convolution')
 
-    # Source sets and associated correlated branch sets. 'ssets' is a list of
-    # sets each one containing sources with some correlation. 'bsets' is a list
-    # of sets with correlated branch sets IDs
+    # Source sets and associated correlated uncertainties
     ssets, usets = an01.get_sets()
 
     # Process the sets of sources. When a set contains a single source,

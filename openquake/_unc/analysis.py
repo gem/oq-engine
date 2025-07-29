@@ -218,18 +218,6 @@ class Analysis:
         dstore = list(self.dstores.values())[0]
         return dstore['oqparam'].hazard_imtls
 
-    def get_rpaths_weights(self, srcid):
-        """
-        :param srcid:
-            The ID of a source
-        :returns:
-            Realization paths and corresponding weights
-        """
-        dstore = self.dstores[srcid]
-        weights = dstore['weights'][:]
-        bpaths = dstore['full_lt'].rlzs['branch_path']
-        return bpaths, weights
-
     def read_dstores(self, atype: str, imtstr: str):
         """
         Reads the information in the datastore for each realizations, the

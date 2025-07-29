@@ -42,11 +42,6 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
     Propagates epistemic uncertainties by sampling. It accounts for the
     correlations between the source-specific logic trees.
 
-    :param ssets:
-        A list where each element contains the set of sources sharing
-        correlated uncertainties
-    :param usets:
-        A list with the id of the branch sets with correlated uncertainties
     :param an01:
         A :class:`openquake._unc.analysis.Analysis` instance
     :param rlzgroups:
@@ -59,22 +54,17 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
         exceedance
     """
     logging.info('Computing sampling')
-    # Source sets and associated correlated branch sets. 'ssets' is a list of
-    # sets each one containing sources with some correlation. 'bsets' is a list
-    # of sets with correlated branch sets IDs
+
+    # Source sets and associated correlated uncertainties
     ssets, usets = an01.get_sets()
 
     # Create a dictionary with the datastores, one for each source
-    srcids = np.array(list(an01.dstores))
     dstores = an01.dstores
+    srcids = np.array(list(dstores))
 
     # Create the mtx where we store results for all the IMTs. The shape
-    # of this matrix - called afes - is: S x SRC x R x I x L
-    # S - number of sites
-    # SRC - number of sources
-    # R - realizations
-    # I - IMTs
-    # L - IMLs
+    # of this array - called afes - is: N x SRC x R x M x L
+    # NB: the afes array can easily run out of memory with large nsam
     shp = dstores[srcids[0]]['hcurves-rlzs'].shape
     afes = np.zeros((shp[0], len(an01.dstores), nsam, shp[2], shp[3]))
     weir = np.ones(nsam)
@@ -84,27 +74,18 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
     for sset, uset in zip(ssets, usets):
         logging.info(f'Processing sources {sset} correlated with {uset}')
 
-        # When uset is not empty, it contains sources with correlated
-        # uncertainties. Firstly we create a dictionary with key the
-        # 'unc' and values a set of indexes of the sampled sets of
-        # correlated uncertainties
         if uset:
-
-            # For each correlated branch-set we draw a number of indexes of the
-            # realizations
+            # For each correlated branchset we draw a number of realizations
             sampled_indexes = {}
-            for unc in sorted(uset):
+            for unc in sorted(uset):  # ordered fixed for reproducibility
 
                 # ID of the first source with a given correlated uncertainty
                 srcid = an01.bsets[unc]['srcid'][0]
+                wei = an01.dstores[srcid]['weights'][:]
 
-                # Realisations for the first source
-                rlzs, wei = an01.get_rpaths_weights(srcid)
-
-                # These are the weights assigned to each group of correlated
-                # results for this uncertainty
+                # These are the weights assigned to each group
                 weights_per_group = [
-                    wei[ridx].sum() for ridx in rlzgroups[unc, srcid]]
+                    wei[grp].sum() for grp in rlzgroups[unc, srcid]]
                 weights = rounding(weights_per_group, 2)
 
                 # 'sampled_indexes' contains the indexes of the sampled
@@ -115,20 +96,21 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
             sample_set(an01, sset, uset, nsam, rlzgroups, sampled_indexes,
                        afes, weir)
         else:
+            # sset contains a single uncorrelated source
 
             srcid, = sset
-            kkk, = np.where(srcids == srcid)
+            srci, = np.where(srcids == srcid)
 
-            # Get realisations and weights for the source currently
-            # investigated
-            rlzs, wei = an01.get_rpaths_weights(srcid)
+            # for instance [0.25, 0.25, 0.25, 0.25]
+            wei = an01.dstores[srcid]['weights'][:]
 
-            # Sampling of results
-            idx_rlzs = np.random.choice(len(wei), size=nsam, p=wei)
+            # Sampling
+            # for instance [3, 3, 0, ..., 2, 3, 3] with 1E6 elements
+            idx_rlzs = an01.rng.choice(len(wei), size=nsam, p=wei)
 
             # Updating the afes matrix
             poes = dstores[srcid]['hcurves-rlzs'][:]
-            afes[:, kkk, :, :, :] = poes[:, idx_rlzs]
+            afes[:, srci, :, :, :] = poes[:, idx_rlzs]
             weir *= wei[idx_rlzs]
 
     # Converting the final matrix into annual frequencies of exceedance
@@ -177,8 +159,7 @@ def sample_set(an01, sset, uset, nsam, rlzgroups, sampled_indexes, afes, weir):
         # investigated. `wei` contains the weights assigned to each one
         # of the realizations admitted by the logic tree of the current
         # source
-        _, wei = an01.get_rpaths_weights(srcid)
-
+        wei = an01.dstores[srcid]['weights'][:]
         poes = an01.dstores[srcid]['hcurves-rlzs'][:]
 
         # Index of the current source
