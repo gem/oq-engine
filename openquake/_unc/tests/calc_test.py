@@ -264,7 +264,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
             plt.show()
 
     def test_sampling(self):
-        # Sampling test case with 1 million samples
+        # Sampling test case with 100,000 samples
         fname = os.path.join(TFF, 'data_calc', 'test_case02_sampling.ini')
         tmpdir = tempfile.mkdtemp()
         imtls, afes, _ = propagate(fname, override_folder_out=tmpdir)
@@ -272,7 +272,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         assert imts == ['PGA', 'SA(0.3)', 'SA(1.0)']
 
         mean0, mean1, mean2, mean3 = afes.mean(axis=2)[0]  # only site 0
-        # mean afe for each source, there are 3 IMTs and 25 levels
+        # mean afes for each source, there are 3 IMTs and 25 levels
 
         org = text_table(mean0.T, header=imts, ext='org')
         fname = os.path.join(TFF, 'data_calc', 'expected_afes.org')
