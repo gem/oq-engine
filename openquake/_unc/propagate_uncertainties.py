@@ -80,13 +80,13 @@ def prepare(fname: str, atype: str, imtstr: str=None):
     patterns = an01.get_patterns(rlzs)
 
     # Get the indexes of the hazard curves to be combined
-    grp_curves = get_hcurves_ids(rlzs, patterns)
+    hcurves = get_hcurves_ids(rlzs, patterns)
 
     # Source sets and associated correlated branch sets. 'ssets' is a list of
     # sets each one containing sources with some correlation. 'bsets' is a list
     # of sets with correlated branch sets IDs
     ssets, usets = an01.get_sets()
-    return ssets, usets, grp_curves, an01
+    return ssets, usets, hcurves, an01
 
 
 def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',

@@ -96,12 +96,12 @@ unc
         # Test the curve IDs
         rlzs, poes, weights = self.an01.read_dstores('hcurves', 'PGA')
         patterns = self.an01.get_patterns(rlzs)
-        # Get for each set of correlated uncertainties the source IDs
-        # and the IDs of the realizations belonging to a sub-set of
-        # correlated branches
         hcids = get_hcurves_ids(rlzs, patterns)
-        expected = [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19]
-        aeq(hcids[0]['b'][0], expected)
+        aeq(hcids[0, 'b'][0], [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19])
+        aeq(hcids[0, 'c'][0], [0, 1, 2, 6, 7, 8, 12, 13, 14, 18, 19, 20,
+                               24, 25, 26, 30, 31, 32])
+        aeq(hcids[1, 'a'][0], [0, 4, 8, 12, 16, 20])
+        aeq(hcids[1, 'b'][0], [0, 4, 8, 12, 16, 20])
 
 
 class AnalysisDisaggregationTestCase(unittest.TestCase):

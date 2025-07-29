@@ -34,7 +34,7 @@ from openquake._unc.convolution import HistoGroup
 
 
 def convolution(ssets: list, usets: list, an01: Analysis,
-                grp_curves: dict, imt: str, atype: str, res: int=50):
+                hcurves: dict, imt: str, atype: str, res: int=50):
     """
     This processes the hazard curves and computes the final results
 
@@ -42,7 +42,7 @@ def convolution(ssets: list, usets: list, an01: Analysis,
     :param usets: sets of uncertainty indices
     :param an01:
         An instance of :class:`openquake._unc.analysis.Analysis`
-    :param grp_curves:
+    :param hcurves:
         A list of dictionaries
     :param imt:
         A string specifying an intensity measure type
@@ -63,7 +63,7 @@ def convolution(ssets: list, usets: list, an01: Analysis,
 
         # When uset is not empty there are correlated sources
         if uset:
-            h = process(sset, uset, an01, grp_curves, res, imt, atype)
+            h = process(sset, uset, an01, hcurves, res, imt, atype)
         else:
             srcid, = sset
             # Load the matrix containing the annual frequencies of exceedance.
@@ -87,18 +87,18 @@ def convolution(ssets: list, usets: list, an01: Analysis,
 
 
 # tested in test_02_performance 
-def _get_path_info(sset, uncs, an01, grp_curves):
+def _get_path_info(sset, uncs, an01, hcurves):
     """
     :param sset: set of sources
     :param uncs: uncertainty indices
     :param an01: Analysis instance
-    :param grp_curves: dictionary
+    :param hcurves: dictionary
     """
     assert uncs[0] == 0  # starts with 0 always
     weight_redux = {srcid: 1 for srcid in sset}
     for unc in uncs:
         srcids = an01.bsets[unc]['srcid']
-        n = len(grp_curves[unc][srcids[0]])
+        n = len(hcurves[unc, srcids[0]])
         if unc == 0:
             paths = [(i,) for i in range(n)]
         else:
@@ -111,7 +111,7 @@ def _get_path_info(sset, uncs, an01, grp_curves):
     return paths, weight_redux
 
 
-def process(sset, uset, an01, grp_curves, res, imt, atype):
+def process(sset, uset, an01, hcurves, res, imt, atype):
     """
     Process correlated sources
     """
@@ -119,10 +119,10 @@ def process(sset, uset, an01, grp_curves, res, imt, atype):
     num_paths = 1
     for unc in uset:
         srcids = an01.bsets[unc]['srcid']
-        num_paths *= len(grp_curves[unc][srcids[0]])
+        num_paths *= len(hcurves[unc, srcids[0]])
 
     # Paths
-    paths, weight_redux = _get_path_info(sset, sorted(uset), an01, grp_curves)
+    paths, weight_redux = _get_path_info(sset, sorted(uset), an01, hcurves)
 
     histos = {}
     for path in paths:
@@ -137,7 +137,7 @@ def process(sset, uset, an01, grp_curves, res, imt, atype):
 
                 # Check if the current source is in this group
                 if srcid in an01.bsets[unc]['srcid']:
-                    idx = set(grp_curves[unc][srcid][grp_i])
+                    idx = set(hcurves[unc, srcid][grp_i])
                     if not rlz_idx:  # first time
                         rlz_idx = idx
                     else:
