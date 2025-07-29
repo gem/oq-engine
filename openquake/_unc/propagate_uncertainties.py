@@ -35,7 +35,7 @@ import configparser
 from typing import Union
 from openquake.baselib import sap
 from openquake.baselib import hdf5
-from openquake._unc.analysis import Analysis, get_hcurves_ids
+from openquake._unc.analysis import Analysis, rlz_groups
 from openquake._unc.processing.sampling import sampling
 from openquake._unc.processing.convolution import convolution
 
@@ -79,14 +79,10 @@ def prepare(fname: str, atype: str, imtstr: str=None):
     # correlated realizations.
     patterns = an01.get_patterns(rlzs)
 
-    # Get the indexes of the hazard curves to be combined
-    hcurves = get_hcurves_ids(rlzs, patterns)
+    # dictionary (unc, srcid) -> groups of realizations
+    groups = rlz_groups(rlzs, patterns)
 
-    # Source sets and associated correlated branch sets. 'ssets' is a list of
-    # sets each one containing sources with some correlation. 'bsets' is a list
-    # of sets with correlated branch sets IDs
-    ssets, usets = an01.get_sets()
-    return ssets, usets, hcurves, an01
+    return groups, an01
 
 
 def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
@@ -172,18 +168,18 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
     pathlib.Path(fig_folder).mkdir(parents=True, exist_ok=True)
 
     # Preparing required info
-    ssets, usets, grp_curves, an01 = prepare(fname, atype, imt)
+    grps, an01 = prepare(fname, atype, imt)
 
     if analysis_type == 'convolution':
         # getting the frequency histograms
         # for the intensity levels considered
         logging.info("Running convolution")
-        h = convolution(ssets, usets, an01, grp_curves, imt, atype, res)
+        h = convolution(an01, grps, imt, atype, res)
         return h, an01
 
     elif analysis_type == 'sampling':
         logging.info("Running sampling")
-        imls, afes = sampling(ssets, usets, an01, grp_curves, nsam)
+        imls, afes = sampling(an01, grps, nsam)
         return imls, afes, an01
 
     raise ValueError(f'Calculation type {analysis_type} not supported')

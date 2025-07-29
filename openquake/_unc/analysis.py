@@ -379,7 +379,7 @@ class Analysis:
         return patterns
 
 
-def get_hcurves_ids(rlzs, patterns):
+def rlz_groups(rlzs, patterns):
     """
     Given the realizations for each source and the patterns returned by
     get_patterns return a list of dictionaries srcid -> rlzids, one

@@ -37,7 +37,7 @@ from openquake._unc.analysis import Analysis
 
 
 # tested in test_01_performance
-def sampling(ssets: list, usets: list, an01: Analysis, hcurves, nsam: int):
+def sampling(an01: Analysis, rlzgroups, nsam: int):
     """
     Propagates epistemic uncertainties by sampling. It accounts for the
     correlations between the source-specific logic trees.
@@ -49,7 +49,7 @@ def sampling(ssets: list, usets: list, an01: Analysis, hcurves, nsam: int):
         A list with the id of the branch sets with correlated uncertainties
     :param an01:
         A :class:`openquake._unc.analysis.Analysis` instance
-    :param hcurves:
+    :param rlzgroups:
         Dictionary unc, srcid -> groups of indices
     :param nsam:
         Total number of samples
@@ -59,6 +59,10 @@ def sampling(ssets: list, usets: list, an01: Analysis, hcurves, nsam: int):
         exceedance
     """
     logging.info('Computing sampling')
+    # Source sets and associated correlated branch sets. 'ssets' is a list of
+    # sets each one containing sources with some correlation. 'bsets' is a list
+    # of sets with correlated branch sets IDs
+    ssets, usets = an01.get_sets()
 
     # Create a dictionary with the datastores, one for each source
     srcids = np.array(list(an01.dstores))
@@ -100,7 +104,7 @@ def sampling(ssets: list, usets: list, an01: Analysis, hcurves, nsam: int):
                 # These are the weights assigned to each group of correlated
                 # results for this uncertainty
                 weights_per_group = [
-                    wei[ridx].sum() for ridx in hcurves[unc, srcid]]
+                    wei[ridx].sum() for ridx in rlzgroups[unc, srcid]]
                 weights = rounding(weights_per_group, 2)
 
                 # 'sampled_indexes' contains the indexes of the sampled
@@ -108,7 +112,7 @@ def sampling(ssets: list, usets: list, an01: Analysis, hcurves, nsam: int):
                 sampled_indexes[unc] = an01.rng.choice(
                     len(weights), nsam, p=weights)
 
-            sample_set(an01, sset, uset, nsam, hcurves, sampled_indexes,
+            sample_set(an01, sset, uset, nsam, rlzgroups, sampled_indexes,
                        afes, weir)
         else:
 
@@ -135,7 +139,7 @@ def sampling(ssets: list, usets: list, an01: Analysis, hcurves, nsam: int):
     return oqp.hazard_imtls, afes
 
 
-def sample_set(an01, sset, uset, nsam, hcurves, sampled_indexes, afes, weir):
+def sample_set(an01, sset, uset, nsam, rlzgroups, sampled_indexes, afes, weir):
 
     # Sample hazard curves for each source in this set
     srcids = np.array(list(an01.dstores))
@@ -154,7 +158,7 @@ def sample_set(an01, sset, uset, nsam, hcurves, sampled_indexes, afes, weir):
         # For each set of correlated results
         for unc in uset:
             try:
-                grp = hcurves[unc, srcid]
+                grp = rlzgroups[unc, srcid]
             except KeyError:
                 continue
             # If the logic tree of the current source includes this correlation
