@@ -39,6 +39,7 @@ import matplotlib.pyplot as plt
 
 from openquake.baselib import hdf5
 from openquake.calculators.base import dcache
+from openquake.calculators.views import text_table
 from openquake._unc.propagate_uncertainties import propagate
 
 # This file folder
@@ -266,8 +267,16 @@ class ResultsCalculationTestCase02(unittest.TestCase):
         # Sampling test case with 1 million samples
         fname = os.path.join(TFF, 'data_calc', 'test_case02_sampling.ini')
         tmpdir = tempfile.mkdtemp()
-        imls, afes, _ = propagate(fname, override_folder_out=tmpdir)
-        # TODO: there is no comparison with anything
+        imtls, afes, _ = propagate(fname, override_folder_out=tmpdir)
+        imts = list(imtls)
+        assert imts == ['PGA', 'SA(0.3)', 'SA(1.0)']
+
+        mean0, mean1, mean2, mean3 = afes.mean(axis=2)[0]  # only site 0
+        # mean afe for each source, there are 3 IMTs and 25 levels
+
+        org = text_table(mean0.T, header=imts, ext='org')
+        fname = os.path.join(TFF, 'data_calc', 'expected_afes.org')
+        assert open(fname, 'rt').read() == org + '\n'
 
     def test_comparison(self):
         # Comparing results from convolution and sampling

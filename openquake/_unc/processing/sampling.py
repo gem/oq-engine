@@ -133,27 +133,22 @@ def sample_set(an01, sset, uset, nsam, rlzgroups, sampled_indexes, afes, weir):
         # in question
         ridx = [None] * nsam
 
-        # This is a counter for the branch set of correlated
-        # uncertainties in a group
-        first = True
-
         # For each set of correlated results
         for unc in uset:
             try:
-                grp = rlzgroups[unc, srcid]
+                grps = rlzgroups[unc, srcid]
             except KeyError:
                 continue
             # If the logic tree of the current source includes this correlation
             for sam in range(nsam):
                 # Get the sequence of indexes of the curves for the
                 # sampled set of correlated results
-                idxs = sampled_indexes[unc][sam]
-                rlzids = set(grp[idxs])
-                if first:
+                idx = sampled_indexes[unc][sam]
+                rlzids = set(grps[idx])
+                if ridx[sam] is None:
                     ridx[sam] = rlzids
                 else:
                     ridx[sam] &= rlzids
-            first = False
 
         # Get realisations and weights for the source currently
         # investigated. `wei` contains the weights assigned to each one
@@ -168,21 +163,23 @@ def sample_set(an01, sset, uset, nsam, rlzgroups, sampled_indexes, afes, weir):
         # Process each sample for the current source
         for sam in range(nsam):
 
-            # These are the indexes from which we draw a sample
+            # These are the indexes from which we draw a sample, for instance
+            # [0, 4, 8, 12, 16, 20]
             idxs = sorted(ridx[sam])
 
-            # Normalised weights
+            # Normalised weights, for instance
+            # [0.166, 0.166, 0.166, 0.166, 0.166, 0.170]
             norm_wei = wei[idxs] / wei[idxs].sum()
 
-            # Pick the index of the hazard curve for the current sample
-            idx_rlzs = np.random.choice(idxs, p=norm_wei)
+            # Pick the realization index for the current sample
+            # for instance [0, 4, 8, 12, 16, 20] => 20
+            idx = an01.rng.choice(idxs, p=norm_wei)
 
-            # Save the probabilities of exceedance for the current
-            # source and sample
-            afes[:, isrc, sam, :, :] = poes[:, idx_rlzs]
+            # Save the probabilities of exceedance for the current source
+            afes[:, isrc, sam, :, :] = poes[:, idx]
 
             # Save the weight for this sample
-            weir[sam] *= wei[idx_rlzs]
+            weir[sam] *= wei[idx]
 
 
 def rounding(weights, digits):
