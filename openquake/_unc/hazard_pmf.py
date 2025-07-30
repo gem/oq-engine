@@ -228,11 +228,11 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
     for lvl in np.where(ok)[0]:
 
         olst[lvl] = out = np.zeros(int(resolution * maxrange[lvl]))
-        for j, res in enumerate(results):
+        # Skipping this level if the maxrange is nan
+        if np.isnan(maxrange[lvl]):
+            break
 
-            # Skipping this IML if the maxrange is nan
-            if np.isnan(maxrange[lvl]):
-                break
+        for j, res in enumerate(results):
 
             # Skipping this realization if the lower limit is None
             if res.minpow[lvl] is None:
