@@ -33,7 +33,8 @@ from openquake._unc.hazard_pmf import afes_matrix_from_dstore, mixture
 from openquake._unc.convolution import HistoGroup
 
 
-def convolution(an01: Analysis, rlzgroups: dict, imt: str, atype: str, res: int=50):
+def convolution(an01: Analysis, rlzgroups: dict, imt: str, atype: str,
+                res: int=50):
     """
     This processes the hazard curves and computes the final results
 
@@ -87,57 +88,54 @@ def convolution(an01: Analysis, rlzgroups: dict, imt: str, atype: str, res: int=
 
 
 # tested in test_02_performance 
-def _get_path_info(sset, uncs, an01, rlzgroups):
+def get_grp_ids(sset, uncs, an01, rlzgroups):
     """
     :param sset: set of sources
     :param uncs: uncertainty indices
     :param an01: Analysis instance
     :param rlzgroups: dictionary
+    :returns: list of group indices, group weights
     """
     assert uncs[0] == 0  # starts with 0 always
-    weight_redux = {srcid: 1 for srcid in sset}
+    gweights = {srcid: 1 for srcid in sset}
     for unc in uncs:
         srcids = an01.bsets[unc]['srcid']
         n = len(rlzgroups[unc, srcids[0]])
         if unc == 0:
-            paths = [(i,) for i in range(n)]
+            grp_ids = [(i,) for i in range(n)]
         else:
-            paths = [path + (i,) for path in paths for i in range(n)]
+            grp_ids = [grpids + (i,) for grpids in grp_ids for i in range(n)]
         # Update the weight reduction factors for the sources not having this
         # branch set of correlated uncertainties
         srcids_not = sset - set(srcids)
         for srcid in srcids_not:
-            weight_redux[srcid] *= n
-    return paths, weight_redux
+            gweights[srcid] *= n
+    # number of grp_ids = prod(num_groups(unc) for unc in uncs)
+    return grp_ids, gweights
 
 
 def process(sset, uset, an01, rlzgroups, res, imt, atype):
     """
     Process correlated sources
     """ 
-    # Compute the number of groups of correlated uncertainties
-    num_paths = 1
-    for unc in uset:
-        srcids = an01.bsets[unc]['srcid']
-        num_paths *= len(rlzgroups[unc, srcids[0]])
-
-    # Paths
-    paths, weight_redux = _get_path_info(sset, sorted(uset), an01, rlzgroups)
+    # Uncertainty grp_ids; for instance, in test_02_performance 
+    # grp_ids = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    # gweights = {'a': 2, 'c': 4, 'b': 1}
+    grp_ids, gweights = get_grp_ids(sset, sorted(uset), an01, rlzgroups)
 
     histos = {}
-    for path in paths:
-
-        # For each source
+    for grpids in grp_ids:
+        # build a HistoGroup for each grpids, for instance (1, 3)
         for srcid in sorted(sset):
 
-            # For each group. Here we find the indexes 'rlz_idx' of the
-            # realizations for the current source for the path in question.
+            # Here we find the indexes 'rlz_idx' of the
+            # realizations for the current source for the grpids in question.
             rlz_idx = set()
-            for unc, grp_i in enumerate(path):
+            for unc, grpid in enumerate(grpids):
 
                 # Check if the current source is in this group
                 if srcid in an01.bsets[unc]['srcid']:
-                    idx = set(rlzgroups[unc, srcid][grp_i])
+                    idx = set(rlzgroups[unc, srcid][grpid])
                     if not rlz_idx:  # first time
                         rlz_idx = idx
                     else:
@@ -151,14 +149,14 @@ def process(sset, uset, an01, rlzgroups, res, imt, atype):
             h = HistoGroup.new(afes, weights, res)
 
             # Updating results for the current set of correlated uncertainties
-            if path not in histos:
-                histos[path] = h
+            if grpids not in histos:
+                histos[grpids] = h
             else:
-                histos[path] *= h
-            histos[path].weight += weights.sum() / weight_redux[srcid]
+                histos[grpids] *= h
+            histos[grpids].weight += weights.sum() / gweights[srcid]
 
-    for path in paths:
-        histos[path].weight /= len(sset)  # fix weight
+    for grpids in grp_ids:
+        histos[grpids].weight /= len(sset)  # fix weight
 
     # Taking the mixture MFD
     return mixture(list(histos.values()))
