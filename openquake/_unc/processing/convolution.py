@@ -114,6 +114,21 @@ def get_grp_ids(sset, uncs, an01, rlzgroups):
     return grp_ids, gweights
 
 
+def get_rlzs(an01, srcid, rlzgroups, grpids):
+    # Get the indexes of the realizations for the current source
+    # for the grpids in question
+    rset = set()
+    for unc, grpid in enumerate(grpids):
+        # Check if the current source is in this group
+        if srcid in an01.bsets[unc]['srcid']:
+            idx = set(rlzgroups[unc, srcid][grpid])
+            if not rset:  # first time
+                rset = idx
+            else:
+                rset &= idx
+    return sorted(rset)
+
+
 def process(sset, uset, an01, rlzgroups, res, imt, atype):
     """
     Process correlated sources
@@ -127,23 +142,11 @@ def process(sset, uset, an01, rlzgroups, res, imt, atype):
     for grpids in grp_ids:
         # build a HistoGroup for each grpids, for instance (1, 3)
         for srcid in sorted(sset):
-
-            # Here we find the indexes 'rlz_idx' of the
-            # realizations for the current source for the grpids in question.
-            rlz_idx = set()
-            for unc, grpid in enumerate(grpids):
-
-                # Check if the current source is in this group
-                if srcid in an01.bsets[unc]['srcid']:
-                    idx = set(rlzgroups[unc, srcid][grpid])
-                    if not rlz_idx:  # first time
-                        rlz_idx = idx
-                    else:
-                        rlz_idx &= idx
+            rlzs = get_rlzs(an01, srcid, rlzgroups, grpids)
 
             # Get hazard curves
             _, afes, weights = afes_matrix_from_dstore(
-                an01.dstores[srcid], imt, atype, False, sorted(rlz_idx))
+                an01.dstores[srcid], imt, atype, rlzs=rlzs)
 
             # Get histograms
             h = HistoGroup.new(afes, weights, res)
