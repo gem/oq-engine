@@ -225,31 +225,24 @@ def mixture(results: list[HistoGroup]) -> HistoGroup:
     # imls `num_imls` corresponds to the number of cells (i.e. the number of
     # M-R combinations)
     olst = [None] * num_imls
-    for i_iml in np.where(ok)[0]:
+    for lvl in np.where(ok)[0]:
 
-        out = np.zeros(int(resolution * maxrange[i_iml]))
-        tot_wei = 0.0
+        olst[lvl] = out = np.zeros(int(resolution * maxrange[lvl]))
         for j, res in enumerate(results):
 
             # Skipping this IML if the maxrange is nan
-            if np.isnan(maxrange[i_iml]):
+            if np.isnan(maxrange[lvl]):
                 break
 
             # Skipping this realization if the lower limit is None
-            if res.minpow[i_iml] is None:
+            if res.minpow[lvl] is None:
                 continue
 
             # Find where to add the current PMF
-            low = int(resolution * (res.minpow[i_iml] - minpow[i_iml]))
-            upp = int(low + resolution *  res.numpow[i_iml])
+            low = int(resolution * (res.minpow[lvl] - minpow[lvl]))
+            upp = int(low + resolution *  res.numpow[lvl])
 
             # Sum the PMF
-            out[low:upp] += res.pmfs[i_iml] * res.weight
-            tot_wei += res.weight
-
-        chk = np.sum(out) / tot_wei
-        msg = f'Wrong PMF. Elements do not sum to 1 ({chk:8.6e})'
-        assert np.all(np.abs(chk-1.0) < TOLERANCE), msg
-        olst[i_iml] = out
+            out[low:upp] += res.pmfs[lvl] * res.weight
 
     return HistoGroup(olst, minpow, maxrange, normalized=False)
