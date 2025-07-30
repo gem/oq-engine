@@ -140,12 +140,12 @@ def process(sset, uset, an01, rlzgroups, res, imt, atype):
 
     histos = {}
     for grpids in grp_ids:
-        # build a HistoGroup for each grpids, for instance (1, 3)
+        # build a HistoGroup for each grpids, for instance grpids = (1, 3)
         for srcid in sorted(sset):
             rlzs = get_rlzs(an01, srcid, rlzgroups, grpids)
+            # for instance rlzs = [3, 7, 11, 15, 19, 23]
 
-            # Get hazard curves
-            _, afes, weights = afes_matrix_from_dstore(
+            _imls, afes, weights = afes_matrix_from_dstore(
                 an01.dstores[srcid], imt, atype, rlzs=rlzs)
 
             # Get histograms
