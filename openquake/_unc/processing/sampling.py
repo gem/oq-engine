@@ -80,7 +80,7 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
             for unc in sorted(uset):  # ordered fixed for reproducibility
 
                 # ID of the first source with a given correlated uncertainty
-                srcid = an01.bsets[unc]['srcid'][0]
+                srcid = an01.bsets[unc].srcid.to_numpy()[0]
                 wei = an01.dstores[srcid]['weights'][:]
 
                 # These are the weights assigned to each group

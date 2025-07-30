@@ -49,6 +49,9 @@ PATH_SRCIDS = "{:s}sourceIDs".format(NS)
 
 
 def get_weights(smlt, utype):
+    """
+    Get the weights associated to the given uncertainty type
+    """
     return smlt[smlt['utype'] == utype]['weight']
 
 
@@ -137,7 +140,7 @@ class Analysis:
         bsets = []
 
         # For each branchset in the .xml
-        for bs in root.findall(PATH_UNC):
+        for unc, bs in enumerate(root.findall(PATH_UNC)):
             utype = bs.attrib['uncertaintyType'].encode()
             srcids = bs.findall(PATH_SRCIDS)[0].text.split(' ')
 
@@ -158,7 +161,7 @@ class Analysis:
 
             check_consistent(utype, smlts)
             utypes.append(utype)
-            bsets.append({'srcid': srcids, 'ipath': ipath})
+            bsets.append(pd.DataFrame(dict(srcid=srcids, ipath=ipath)))
 
         # Initializing the Analysis object
         self = cls(utypes, bsets, dstores, fname, seed)
@@ -168,12 +171,9 @@ class Analysis:
         """
         Debug utility print the bsets as a DataFrame
         """
-        dic = {'unc': [], 'srcid': [], 'ipath': []}
-        for unc, d in enumerate(self.bsets):
-            dic['unc'].extend([unc] * len(d['srcid']))
-            dic['srcid'].extend(d['srcid'])
-            dic['ipath'].extend(d['ipath'])
-        return pd.DataFrame(dic).set_index('unc')
+        for unc, df in enumerate(self.bsets):
+            df['unc'] = unc
+        return pd.concat(self.bsets).set_index('unc')
 
     # used in propagate_uncertainties
     def get_sets(self):
@@ -186,8 +186,8 @@ class Analysis:
         ssets = []
         usets = []
         # Process all the correlated branch sets
-        for unc, dic in enumerate(self.bsets):
-            srcids = set(dic['srcid'])
+        for unc, df in enumerate(self.bsets):
+            srcids = set(df['srcid'])
             for uset, sset in zip(usets, ssets):
                 # if any source is in the current branch set
                 if srcids & sset:
@@ -331,14 +331,14 @@ class Analysis:
             correlated uncertainties.
         """
         patterns = []
-        for unc, dic in enumerate(self.bsets):
+        for unc, df in enumerate(self.bsets):
             if verbose:
                 logging.info(f"Creating patterns for branch set {unc}")
 
             # Processing the sources in the branchset unc
             pat = {}
             patterns.append(pat)
-            for srcid, ipath in zip(dic['srcid'], dic['ipath']):
+            for srcid, ipath in zip(df['srcid'], df['ipath']):
                 if verbose:
                     logging.info(f"   Source: {srcid}")
                     logging.debug(rlzs[srcid])
