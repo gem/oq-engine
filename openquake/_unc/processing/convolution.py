@@ -99,7 +99,7 @@ def get_grp_ids(sset, uncs, an01, rlzgroups):
     assert uncs[0] == 0  # starts with 0 always
     gweights = {srcid: 1 for srcid in sset}
     for unc in uncs:
-        srcids = an01.bsets[unc].srcid.to_numpy()
+        srcids = an01.dfs[unc].srcid.to_numpy()
         n = len(rlzgroups[unc, srcids[0]])
         if unc == 0:
             grp_ids = [(i,) for i in range(n)]
@@ -120,7 +120,7 @@ def get_rlzs(an01, srcid, rlzgroups, grpids):
     rset = set()
     for unc, grpid in enumerate(grpids):
         # Check if the current source is in this group
-        if srcid in an01.bsets[unc].srcid.to_numpy():
+        if srcid in an01.dfs[unc].srcid.to_numpy():
             idx = set(rlzgroups[unc, srcid][grpid])
             if not rset:  # first time
                 rset = idx
