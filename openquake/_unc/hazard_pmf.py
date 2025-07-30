@@ -38,10 +38,9 @@ For the description of a PMF we use:
 import numpy as np
 from openquake._unc.convolution import HistoGroup
 
-TOLERANCE = 1e-6
 
-
-def get_md_from_2d(poes, shapes, idxs):
+# used only in test_md_convolution
+def get_md_from_1d(poes, shapes, idxs):
     """
     Reshape the array containing the results of a MD disaggregation analysis.
 
@@ -64,35 +63,13 @@ def get_md_from_2d(poes, shapes, idxs):
     return out
 
 
-def get_2d_from_md(poes):
-    """
-    Reshape the array containing the results of a MD disaggregation analysis.
-
-    :param poes:
-        The mde disaggregation matrix for a gives site, imt and iml. This is
-        a 3d array.
-    :returns:
-        A 2d array with the same information that can be used in the
-        convolution
-    """
-    num_rlzs = poes.shape[-1]
-    num_rows = int(poes.size/num_rlzs)
-    out = np.zeros((num_rlzs, num_rows))
-    cnt = 0
-    for imag in range(poes.shape[0]):
-        for idst in range(poes.shape[1]):
-            out[:, cnt] = poes[imag, idst, :]
-            cnt += 1
-    return out
-
-
 def get_2d_from_mde(poes):
     """
     Reshape the array containing the results of a MDe disaggregation analysis.
 
     :param poes:
         The mde disaggregation matrix for a gives site, imt and iml. This is
-        a 4 array.
+        a 4d array.
     :returns:
         A 2d array with the same information that can be used in the
         convolution
@@ -155,7 +132,7 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         # realizations and A is the number of the annual frequencies of
         # exceedance
         poes = dstore['disagg-rlzs/Mag_Dist'][0, :, :, imt_idx, 0, rlzs]
-        poes = get_2d_from_md(poes)
+        poes = get_2d_from_mde(poes[:, :, None])
         assert len(rlzs) == poes.shape[0]
     elif atype == 'm':
         poes = dstore['disagg-rlzs/Mag'][0, :, imt_idx, 0, rlzs].T
