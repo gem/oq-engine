@@ -97,20 +97,19 @@ def sampling(an01: Analysis, rlzgroups, nsam: int):
                        afes, weir)
         else:
             # sset contains a single uncorrelated source
-
             srcid, = sset
-            srci, = np.where(srcids == srcid)
+            isrc, = np.where(srcids == srcid)
 
             # for instance [0.25, 0.25, 0.25, 0.25]
             wei = an01.dstores[srcid]['weights'][:]
 
             # Sampling
-            # for instance [3, 3, 0, ..., 2, 3, 3] with 1E6 elements
+            # for instance [3, 3, 0, ..., 2, 3, 3] with 1E5 elements
             idx_rlzs = an01.rng.choice(len(wei), size=nsam, p=wei)
 
             # Updating the afes matrix
             poes = dstores[srcid]['hcurves-rlzs'][:]
-            afes[:, srci, :, :, :] = poes[:, idx_rlzs]
+            afes[:, isrc, :, :, :] = poes[:, idx_rlzs]
             weir *= wei[idx_rlzs]
 
     # Converting the final matrix into annual frequencies of exceedance
