@@ -39,6 +39,7 @@ import matplotlib.pyplot as plt
 
 from openquake.baselib import hdf5
 from openquake.calculators.base import dcache
+from openquake.calculators.checkers import assert_close
 from openquake.calculators.views import text_table
 from openquake._unc.propagate_uncertainties import propagate
 
@@ -276,7 +277,7 @@ class ResultsCalculationTestCase02(unittest.TestCase):
 
         org = text_table(mean0.T, header=imts, ext='org')
         fname = os.path.join(TFF, 'data_calc', 'expected_afes.org')
-        assert open(fname, 'rt').read() == org + '\n'
+        assert_close(org, fname)
 
     def test_comparison(self):
         # Comparing results from convolution and sampling
