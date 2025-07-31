@@ -29,7 +29,7 @@
 import os
 import unittest
 import numpy as np
-from openquake._unc.analysis import Analysis, get_hcurves_ids
+from openquake._unc.analysis import Analysis, rlz_groups
 
 # Base Data Path
 BDP = os.path.join(os.path.dirname(__file__), 'data_calc')
@@ -57,12 +57,12 @@ class AnalysisTestCase(unittest.TestCase):
 
         # check the correlation dataframe
         exp = '''\
-    bsid srcid  ipath
-unc                  
-0    bs3     b      2
-0    bs4     c      3
-1    bs1     a     -1
-1    bs1     b     -1'''
+    srcid  ipath
+unc             
+0       b      2
+0       c      3
+1       a     -1
+1       b     -1'''
         self.assertEqual(str(self.an01.to_dframe()), exp)
 
     def test_get_imtls(self):
@@ -92,16 +92,20 @@ unc
         expected = ['.....~A', '.....~B', '.....~C', '.....~D']
         self.assertEqual(patterns[1]['b'], expected)
 
-    def test_get_curves_and_weights(self):
-        # Test the curve IDs
+    def test_rlz_groups(self):
         rlzs, poes, weights = self.an01.read_dstores('hcurves', 'PGA')
         patterns = self.an01.get_patterns(rlzs)
-        # Get for each set of correlated uncertainties the source IDs
-        # and the IDs of the realizations belonging to a sub-set of
-        # correlated branches
-        hcids = get_hcurves_ids(rlzs, patterns)
-        expected = [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19]
-        aeq(hcids[0]['b'][0], expected)
+        grp = rlz_groups(rlzs, patterns)
+        aeq(grp[0, 'b'], [[0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19],
+                          [4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23]])
+        aeq(grp[0, 'c'], [[0, 1, 2, 6, 7, 8, 12, 13, 14, 18, 19, 20, 24,
+                           25, 26, 30, 31, 32],
+                          [3, 4, 5, 9, 10, 11, 15, 16, 17, 21, 22, 23,
+                           27, 28, 29, 33, 34, 35]])
+        aeq(grp[1, 'a'], [[0, 4, 8, 12, 16, 20], [1, 5, 9, 13, 17, 21],
+                          [2, 6, 10, 14, 18, 22], [3, 7, 11, 15, 19, 23]])
+        aeq(grp[1, 'b'], [[0, 4, 8, 12, 16, 20], [1, 5, 9, 13, 17, 21],
+                          [2, 6, 10, 14, 18, 22], [3, 7, 11, 15, 19, 23]])
 
 
 class AnalysisDisaggregationTestCase(unittest.TestCase):

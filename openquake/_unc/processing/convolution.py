@@ -33,17 +33,15 @@ from openquake._unc.hazard_pmf import afes_matrix_from_dstore, mixture
 from openquake._unc.convolution import HistoGroup
 
 
-def convolution(ssets: list, usets: list, an01: Analysis,
-                grp_curves: dict, imt: str, atype: str, res: int=50):
+def convolution(an01: Analysis, rlzgroups: dict, imt: str, atype: str,
+                res: int=50):
     """
     This processes the hazard curves and computes the final results
 
-    :param ssets: sets of sources
-    :param usets: sets of branchset IDs
     :param an01:
         An instance of :class:`openquake._unc.analysis.Analysis`
-    :param grp_curves:
-        A dictionary of dictionaries
+    :param rlzgroups:
+        A dictionary (unc, srcid) -> groups of realizations
     :param imt:
         A string specifying an intensity measure type
     :param atype:
@@ -52,23 +50,25 @@ def convolution(ssets: list, usets: list, an01: Analysis,
         An integer that defines the resolution of the histograms i.e. number of
         intervals for each log unit
     :returns:
-        A triple containing the output histogram, and two arrays with the
-        lowest power and the number of powers used to define the histogram
+        A HistoGroup containing the convolution histogram
     """
     logging.info('Computing convolution')
+
+    # Source sets and associated correlated uncertainties
+    ssets, usets = an01.get_sets()
 
     # Process the sets of sources. When a set contains a single source,
     # this means that the source does not have correlations with other sources.
     for iset, (sset, uset) in enumerate(zip(ssets, usets)):
         logging.info(f'Processing sources {sset} correlated bs {uset}')
 
-        # When uset is not None there are correlated sources
-        if uset is not None:
-            h = process_uset(sset, uset, an01, grp_curves, res, imt, atype)
+        # When uset is not empty there are correlated sources
+        if uset:
+            h = process(sset, uset, an01, rlzgroups, res, imt, atype)
         else:
-            srcid = list(sset)[0]
+            srcid, = sset
             # Load the matrix containing the annual frequencies of exceedance.
-            # afes is an array with shape I x L where I is the number of
+            # afes is an array with shape M x L where M is the number of
             # intensity measure levels and L is the number of intensity measure
             # levels
             imls, afes, weights = afes_matrix_from_dstore(
@@ -87,114 +87,79 @@ def convolution(ssets: list, usets: list, an01: Analysis,
     return acc
 
 
-def _get_path_info(sset, uset, an01, grp_curves):
+# tested in test_02_performance 
+def get_grp_ids(sset, uncs, an01, rlzgroups):
     """
     :param sset: set of sources
-    :param uset: set of branchset IDs
+    :param uncs: uncertainty indices
     :param an01: Analysis instance
-    :param grp_curves: dictionary
+    :param rlzgroups: dictionary
+    :returns: list of group indices, group weights
     """
-    paths = []
-    uset_list = []
-    weight_redux = {srcid: 1 for srcid in sset}
-    for uset_i, bsid in enumerate(uset):
-        uset_list.append(bsid)
-        srcids = an01.bsets[bsid]['srcid']
-        if uset_i == 0:
-            for i in range(len(grp_curves[bsid][srcids[0]])):
-                paths.append(f'{i}')
+    assert uncs[0] == 0  # starts with 0 always
+    gweights = {srcid: 1 for srcid in sset}
+    for unc in uncs:
+        srcids = an01.dfs[unc].srcid.to_numpy()
+        n = len(rlzgroups[unc, srcids[0]])
+        if unc == 0:
+            grp_ids = [(i,) for i in range(n)]
         else:
-            tmp = []
-            for path in paths:
-                for i in range(len(grp_curves[bsid][srcids[0]])):
-                    tmp.append(f'{path}_{i}')
-            paths = tmp
+            grp_ids = [grpids + (i,) for grpids in grp_ids for i in range(n)]
         # Update the weight reduction factors for the sources not having this
         # branch set of correlated uncertainties
         srcids_not = sset - set(srcids)
         for srcid in srcids_not:
-            weight_redux[srcid] *= len(grp_curves[bsid][srcids[0]])
-    return paths, uset_list, weight_redux
+            gweights[srcid] *= n
+    # number of grp_ids = prod(num_groups(unc) for unc in uncs)
+    return grp_ids, gweights
 
 
-def process_uset(sset, uset, an01, grp_curves, res, imt, atype):
+def get_rlzs(an01, srcid, rlzgroups, grpids):
+    # Get the indexes of the realizations for the current source
+    # for the grpids in question
+    rset = set()
+    for unc, grpid in enumerate(grpids):
+        # Check if the current source is in this group
+        if srcid in an01.dfs[unc].srcid.to_numpy():
+            idx = set(rlzgroups[unc, srcid][grpid])
+            if not rset:  # first time
+                rset = idx
+            else:
+                rset &= idx
+    return sorted(rset)
+
+
+def process(sset, uset, an01, rlzgroups, res, imt, atype):
     """
-    Process a branchset
+    Process correlated sources
+    """ 
+    # Uncertainty grp_ids; for instance, in test_02_performance 
+    # grp_ids = [(0, 0), (0, 1), (0, 2), (0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]
+    # gweights = {'a': 2, 'c': 4, 'b': 1}
+    grp_ids, gweights = get_grp_ids(sset, sorted(uset), an01, rlzgroups)
 
-    :param uset:
-    :param an01:
-    :param grp_curves:
-    :param res:
-    :param imt:
-        The intensity measure type of interest
-    """
-    # Compute the number of groups of correlated uncertainties
-    num_paths = 1
-    for uset_i, bsid in enumerate(uset):
-        srcids = an01.bsets[bsid]['srcid']
-        num_paths *= len(grp_curves[bsid][srcids[0]])
-
-    # Paths
-    paths, uset_list, weight_redux = _get_path_info(
-        sset, uset, an01, grp_curves)
-
-    ares = {}
-    chk_idxs = {}
-    chk_wei = {}
-    for path in paths:
-
-        # Get the indexes of the groups in each branch set
-        group_idxs = [int(s) for s in path.split('_')]
-
-        # For each source
+    histos = {}
+    for grpids in grp_ids:
+        # build a HistoGroup for each grpids, for instance grpids = (1, 3)
         for srcid in sorted(sset):
+            rlzs = get_rlzs(an01, srcid, rlzgroups, grpids)
+            # for instance rlzs = [3, 7, 11, 15, 19, 23]
 
-            # For each group. Here we find the indexes 'rlz_idx' of the
-            # realizations (i.e. the hazard curves) for the current source
-            # obtained for the path in question.
-            rlz_idx = set()
-            for i, grp_i in enumerate(group_idxs):
+            _imls, afes, weights = afes_matrix_from_dstore(
+                an01.dstores[srcid], imt, atype, rlzs=rlzs)
 
-                # Check if the current source is in this group
-                bsid = uset_list[i]
-                if srcid in an01.bsets[bsid]['srcid']:
-                    tmp = set(grp_curves[bsid][srcid][grp_i])
-                    if len(rlz_idx) == 0:
-                        rlz_idx = tmp
-                    else:
-                        rlz_idx = rlz_idx.intersection(tmp)
-
-            # Get hazard curves
-            _, afes, weights = afes_matrix_from_dstore(
-                an01.dstores[srcid], imt, atype, False, sorted(rlz_idx))
-
-            # Get histogram
+            # Get histograms
             h = HistoGroup.new(afes, weights, res)
 
-            # Computing weight
-            wei_sum = sum(weights) / weight_redux[srcid]
-
-            # Checking the weights
-            if srcid not in chk_idxs:
-                chk_idxs[srcid] = rlz_idx
-                chk_wei[srcid] = wei_sum
-            else:
-                chk_idxs[srcid] = chk_idxs[srcid].union(rlz_idx)
-                chk_wei[srcid] += wei_sum
-
             # Updating results for the current set of correlated uncertainties
-            if path not in ares:
-                ares[path] = [h.pmfs, h.minpow, h.numpow, wei_sum]
+            if grpids not in histos:
+                histos[grpids] = h
             else:
-                his_t, m_pow_t, n_pow_t, wei = ares[path]
-                h *= HistoGroup(his_t, m_pow_t, n_pow_t)
-                his, m_pow, n_pow = h.pmfs, h.minpow, h.numpow
-                ares[path] = [his, m_pow, n_pow, wei + wei_sum]
+                histos[grpids] *= h
+            histos[grpids].weight += weights.sum() / gweights[srcid]
 
-    results = []
-    for i, path in enumerate(paths):
-        ares[path][3] /= len(sset)  # fix weight
-        results.append(HistoGroup(*ares[path]))
+    for grpids in grp_ids:
+        histos[grpids].weight /= len(sset)  # fix weight
 
     # Taking the mixture MFD
-    return mixture(results)
+    return mixture(list(histos.values()))

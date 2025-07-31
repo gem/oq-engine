@@ -35,8 +35,8 @@ import matplotlib.pyplot as plt
 
 from openquake._unc.tests.utils_plot_dsg import plot_dsg_md
 from openquake.calculators.base import dcache
-from openquake._unc.hazard_pmf import get_md_from_2d
-from openquake._unc.calc.propagate_uncertainties import propagate
+from openquake._unc.hazard_pmf import get_md_from_1d
+from openquake._unc.propagate_uncertainties import propagate
 
 # This file folder
 TFF = pathlib.Path(__file__).parent.resolve()
@@ -122,19 +122,18 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         oute, idxe = alys.extract_afes_rlzs(expct, weights)
 
         # Mean and median from convolution
-        res_conv = h.get_stats([-1, 0.50])
+        mea, med = h.get_stats([-1, 0.50]).T
 
         # Test the indexes
         aae(h.idxs, idxe)
-
-        assert len(oute) == len(res_conv[:, 0])
+        assert len(oute) == len(mea)
 
         # Mean matrix (17 x 17)
         shape = alys.shapes[:-1]
-        out = get_md_from_2d(res_conv[:, 0], shape, h.idxs)
+        out = get_md_from_1d(mea, shape, h.idxs)
 
         # Expected mean
-        mate = get_md_from_2d(oute, shape, h.idxs)
+        mate = get_md_from_1d(oute, shape, h.idxs)
 
         # Test the mean
         rounded = np.round(mate[1], 10)
@@ -189,17 +188,17 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
         oute, idxe = alys.extract_afes_rlzs(expct[:, None], weights)
 
         # Mean and median from convolution
-        res_conv = h.get_stats([-1, 0.50])
+        mea, med = h.get_stats([-1, 0.50]).T
 
         # Test the indexes
         aae(h.idxs, idxe)
-        assert len(oute) == len(res_conv[:, 0])
+        assert len(oute) == len(mea)
 
         # Test the mean
-        aac(oute, res_conv[:, 0], atol=1e-5, rtol=1e-3)
+        aac(oute, mea, atol=1e-5, rtol=1e-3)
 
         print('\nOQ rlzs ', sum(oute))
-        print('Conv    ', sum(res_conv[:, 0]))
+        print('Conv    ', mea.sum())
 
         if PLOTTING:
             mags = alys.dsg_mag[:-1] + np.diff(alys.dsg_mag) / 2
@@ -207,7 +206,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
             fig.set_size_inches(8, 6)
 
             # plt.plot(oute, res_conv[:, 0], 'og', label='oq rlz Vs. conv')
-            plt.plot(res[idxe], res_conv[:, 0], 'or', mfc='None',
+            plt.plot(res[idxe], mea, 'or', mfc='None',
                      label='oq mean Vs. conv')
             # plt.plot(oute, res[idxe], 'bx', label='oq rlz Vs. oq mean')
 
@@ -218,7 +217,7 @@ class ResultsDisaggregationTestCase(unittest.TestCase):
             plt.grid(which='major', color='lightgrey', ls='--')
             plt.grid(which='minor', color='lightgrey', ls=':')
             for i in range(len(oute)):
-                plt.text(res[idxe[i]], res_conv[i, 0], f'{i} - {mags[i]:.2f}',
+                plt.text(res[idxe[i]], mea[i], f'{i} - {mags[i]:.2f}',
                          fontsize=8)
             plt.xlabel('AfE - Convolution')
             plt.ylabel('AfE - OQ')

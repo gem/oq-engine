@@ -98,6 +98,16 @@ ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 OQ_REDUCE = os.environ.get('OQ_REDUCE') == 'smlt'
 
 
+def check_unique_uncertainties(source_specific_lts):
+    """
+    Make sure that each uncertainty in the underlying logic trees is unique
+    """
+    for sslt in source_specific_lts:
+        utypes = [bset.uncertainty_type for bset in sslt.branchsets]
+        if len(utypes) > len(set(utypes)):
+            raise nrml.DuplicatedID(utypes)
+
+
 # this is very fast
 def get_trt_by_src(source_model_file, source_id=''):
     """
@@ -465,8 +475,9 @@ class SourceModelLogicTree(object):
             bset.applied is None for bset in self.branchsets)
         if self.is_source_specific:
             # fast algorithm, otherwise models like ZAF would hang
-            self.num_paths = prod(
-                sslt.num_paths for sslt in self.decompose().values())
+            sslts = self.decompose().values()
+            self.num_paths = prod(sslt.num_paths for sslt in sslts)
+            check_unique_uncertainties(sslts)
         else:  # slow algorithm
             self.num_paths = count_paths(self.root_branchset.branches)
 

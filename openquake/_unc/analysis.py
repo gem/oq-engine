@@ -46,7 +46,24 @@ NS = "{http://openquake.org/xmlns/nrml/0.5}"
 PATH_CALC = "{0:s}calculations/{0:s}calc".format(NS)
 PATH_UNC = "{0:s}uncertainties/".format(NS)
 PATH_SRCIDS = "{:s}sourceIDs".format(NS)
-PATH_BSIDS = "{:s}branchSetID".format(NS)
+
+
+def get_weights(smlt, utype):
+    """
+    Get the weights associated to the given uncertainty type
+    """
+    return smlt[smlt['utype'] == utype]['weight']
+
+
+def check_consistent(utype, smlts):
+    """
+    Make sure all the SMLTs have consistent weights
+    """
+    ws = get_weights(smlts[0], utype)
+    for smlt in smlts[1:]:
+        weights = get_weights(smlt, utype)
+        assert len(weights) == len(ws), (len(weights), len(ws))
+        assert (weights == ws).all(), (weights, ws)
 
 
 class Analysis:
@@ -56,23 +73,22 @@ class Analysis:
 
     :param utypes:
         A list of uncertainty types as listed in the analysis.xml file
-    :param bsets:
-        A list of dictionaries (one for each utype) with keys
+    :param dfs:
+        A list of DataFrames (one for each utype) with keys
         - srcid: IDs of the sources
-        - bsid: IDs of the branches in the original LTs
-        - ipath: Ipaths of the branchsets in their LTs
+        - ipath: indices of the branchsets
     :param dstores:
         A dictionary with source IDs as keys and a string with the path to
         the datastore containing the results (i.e. hazard curves) as value.
     :param fname:
         The path to the analysis.xml file
     """
-    def __init__(self, utypes: dict, bsets: dict,
+    def __init__(self, utypes: dict, dfs: dict,
                  dstores: dict, fname: str, seed: int):
 
         # The branch sets for which we have correlated uncertainties
         self.utypes = utypes
-        self.bsets = bsets
+        self.dfs = dfs
 
         # A dictionary with key the IDs of the sources. The value is a string
         # with the path to the datastore containing the results.
@@ -96,13 +112,6 @@ class Analysis:
             calculations performed and the possible correlation of
             uncertainties between the LTs of individual sources
         """
-        # TODO
-        # Add the following checks:
-        # - We have a datastore for each source correlated
-        # - The datastores are all different
-        # - The original correlated branch sets must have the same number of
-        #   branches
-
         # Set the path to the folder with the .xml file
         root_path = os.path.dirname(fname)
 
@@ -128,46 +137,43 @@ class Analysis:
 
         # Branch sets
         utypes = []
-        bsets = []
+        dfs = []
 
         # For each branchset in the .xml
-        for bs in root.findall(PATH_UNC):
+        for unc, bs in enumerate(root.findall(PATH_UNC)):
             utype = bs.attrib['uncertaintyType'].encode()
             srcids = bs.findall(PATH_SRCIDS)[0].text.split(' ')
-            bsids = bs.findall(PATH_BSIDS)[0].text.split(' ')
 
             # Here we should check that the uncertainties in the analysis .xml
             # file are the same used for the various sources
             ipath = []
+            smlts = []
             for srcid in srcids:
                 dstore = dstores[srcid]
                 # List of unique uncertainty types
                 smlt = dstore.getitem('full_lt/source_model_lt')[:]
+                smlts.append(smlt)
                 utype2ord = {u: i for i, u in enumerate(
                     collections.Counter(smlt['utype']))}
                 # Find the path index of the uncertainty branchset
                 i = -1 if utype == b'gmpeModel' else utype2ord[utype]
                 ipath.append(i)
 
+            check_consistent(utype, smlts)
             utypes.append(utype)
-            bsets.append({'srcid': srcids, 'bsid': bsids, 'ipath': ipath})
+            dfs.append(pd.DataFrame(dict(srcid=srcids, ipath=ipath)))
 
         # Initializing the Analysis object
-        self = cls(utypes, bsets, dstores, fname, seed)
+        self = cls(utypes, dfs, dstores, fname, seed)
         return self
 
     def to_dframe(self):
         """
-        Debug utility print the bsets as a DataFrame
+        Debug utility print the dfs as a DataFrame
         """
-        dic = {'unc': [], 'bsid': [], 'srcid': [], 'ipath': []}
-        for unc, d in enumerate(self.bsets):
-            dic['unc'].extend([unc] * len(d['bsid']))
-            dic['bsid'].extend(d['bsid'])
-            dic['srcid'].extend(d['srcid'])
-            dic['ipath'].extend(d['ipath'])
-        return pd.DataFrame(dic).set_index('unc')
-
+        for unc, df in enumerate(self.dfs):
+            df['unc'] = unc
+        return pd.concat(self.dfs).set_index('unc')
 
     # used in propagate_uncertainties
     def get_sets(self):
@@ -180,8 +186,8 @@ class Analysis:
         ssets = []
         usets = []
         # Process all the correlated branch sets
-        for unc, dic in enumerate(self.bsets):
-            srcids = set(dic['srcid'])
+        for unc, df in enumerate(self.dfs):
+            srcids = set(df['srcid'])
             for uset, sset in zip(usets, ssets):
                 # if any source is in the current branch set
                 if srcids & sset:
@@ -198,7 +204,7 @@ class Analysis:
             found = any(src_id in sset for sset in ssets)
             if not found:
                 ssets.append({src_id})
-                usets.append(None)
+                usets.append(set())
 
         # in analysis_test we have
         # ssets = [{'b', 'a', 'c'}, {'d'}]
@@ -211,18 +217,6 @@ class Analysis:
         """
         dstore = list(self.dstores.values())[0]
         return dstore['oqparam'].hazard_imtls
-
-    def get_rpaths_weights(self, srcid):
-        """
-        :param srcid:
-            The ID of a source
-        :returns:
-            Realization paths and corresponding weights
-        """
-        dstore = self.dstores[srcid]
-        weights = dstore['weights'][:]
-        bpaths = dstore['full_lt'].rlzs['branch_path']
-        return bpaths, weights
 
     def read_dstores(self, atype: str, imtstr: str):
         """
@@ -337,14 +331,14 @@ class Analysis:
             correlated uncertainties.
         """
         patterns = []
-        for unc, dic in enumerate(self.bsets):
+        for unc, df in enumerate(self.dfs):
             if verbose:
                 logging.info(f"Creating patterns for branch set {unc}")
 
             # Processing the sources in the branchset unc
             pat = {}
             patterns.append(pat)
-            for srcid, ipath in zip(dic['srcid'], dic['ipath']):
+            for srcid, ipath in zip(df['srcid'], df['ipath']):
                 if verbose:
                     logging.info(f"   Source: {srcid}")
                     logging.debug(rlzs[srcid])
@@ -363,6 +357,8 @@ class Analysis:
                         for char in np.unique(chars)]
                 pat[srcid] = patt
         """# in the analysis_test, `patterns` is the following list:
+        unc=0: setLowerSeismDepthAbsolute: b c
+        unc=1: gmpeModel: a b
         [{'b': ['..A.~.', '..B.~.'],
           'c': ['...A.~.', '...B.~.']},
          {'a': ['..~A', '..~B', '..~C', '..~D'],
@@ -371,34 +367,17 @@ class Analysis:
         return patterns
 
 
-def get_hcurves_ids(rlzs, patterns):
+def rlz_groups(rlzs, patterns):
     """
-    Given the realizations for each source as specified in the `rlzs`
-    dictionary, the patterns describing the
-
-    :param rlzs:
-        A dictionary with keys the IDs of the sources. The values are lists
-        of pairs (smpaths, gspaths) for each realisation.
-    :param patterns:
-        A list of ictionaries with key the source ID.
-        The values are lists of strings. Each string is a regular expression
-        (e.g. .+A.+.+~.+') that can be used to select the subset of
-        realizations involving the current source that are correlated.
-    :returns:
-        A list of dictionaries srcid -> idxs
+    Given the realizations for each source and the patterns returned by
+    get_patterns return a list of dictionaries srcid -> rlzids, one
+    for each uncertainty.
     """
-    grp_hcurves = []
-    for pat in patterns:
-        hcurves = {}
+    hcurves = {}
+    for unc, pat in enumerate(patterns):
         for srcid in pat:
-            rpath = rlzs[srcid]
             # Loop over the patterns of all the realizations for a given source
-            hcurves[srcid] = []
-            for p in pat[srcid]:
-                idxs = []
-                for i, rlz in enumerate(rpath):
-                    if re.match(p, rlz):
-                        idxs.append(i)
-                hcurves[srcid].append(idxs)
-        grp_hcurves.append(hcurves)
-    return grp_hcurves
+            hcurves[unc, srcid] = [
+                [i for i, rlz in enumerate(rlzs[srcid]) if re.match(p, rlz)]
+                for p in pat[srcid]]
+    return hcurves
