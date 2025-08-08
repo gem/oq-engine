@@ -1236,7 +1236,7 @@ def calc_results(request, calc_id):
             outtypes=outtypes, url=url_with_query, size_mb=result.size_mb)
         response_data.append(datum)
 
-    return HttpResponse(content=json.dumps(response_data))
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @require_http_methods(['GET'])
