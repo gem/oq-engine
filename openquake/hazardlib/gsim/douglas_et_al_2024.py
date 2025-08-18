@@ -262,14 +262,14 @@ class Douglas_Et_Al_2024Rjb(GMPE):
     
     :param branch:
         Branch number for the selected model:
-            1 to 162 for the 162-branch model
-            1 to 5 for the 5-branch model
-            1 to 3, for the 3-branch model.
+        1 to 162 for the 162-branch model
+        1 to 5 for the 5-branch model
+        1 to 3, for the 3-branch model.
     :param weightopt:
         A string specifying the set of coefficients to use. Admitted values:
-            'original': coefficients derived using the a priori branch weights
-            'updated': coefficients derived using updated branch weights
-                following a Bayesian update using instrumental data.
+        'original': coefficients derived using the a priori branch weights
+        'updated': coefficients derived using updated branch weights
+        following a Bayesian update using instrumental data.
         Default is 'original'. This parameter is only relevant for the
         5-branch and 3-branch models.
     """
@@ -362,14 +362,14 @@ class Douglas_Et_Al_2024Rrup(GMPE):
     
     :param branch:
         Branch number for the selected model:
-            1 to 162 for the 162-branch model
-            1 to 5 for the 5-branch model
-            1 to 3, for the 3-branch model.
+        1 to 162 for the 162-branch model
+        1 to 5 for the 5-branch model
+        1 to 3, for the 3-branch model.
     :param weightopt:
         A string specifying the set of coefficients to use. Admitted values:
-            'original': coefficients derived using the a priori branch weights
-            'updated': coefficients derived using updated branch weights
-                following a Bayesian update using instrumental data.
+        'original': coefficients derived using the a priori branch weights
+        'updated': coefficients derived using updated branch weights
+        following a Bayesian update using instrumental data.
         Default is 'original'. This parameter is only relevant for the
         5-branch and 3-branch models.
     """
