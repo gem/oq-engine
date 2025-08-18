@@ -198,8 +198,8 @@ class PostProcTestCase(CalculatorTestCase):
         if rtgmpy is None:
             return
         
-        [fname] = export(('mce_default', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/mce_default.csv', fname)
+        [fname] = export(('mce_governing', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mce_governing.csv', fname)
         
         asce07 = self.calc.datastore['asce07'][0].decode('ascii')
         dic07 = json.loads(asce07)
