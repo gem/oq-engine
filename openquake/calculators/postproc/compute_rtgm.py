@@ -736,7 +736,7 @@ def to_array(dic):
 
 
 # tested in test_rtgm
-def compute_mce_default(dstore, sitecol, locs):
+def compute_mce_governing(dstore, sitecol, locs):
     """
     For ASCE7-22 the site is multiplied 3 times with different
     values of the vs30 and the MCE is computed as the maximum MCE
@@ -839,5 +839,5 @@ def main(dstore, csm):
     if len(notifications):
         dstore['notifications'] = notifications
 
-    df = compute_mce_default(dstore, sitecol, locs)
-    dstore.create_df('mce_default', df)
+    df = compute_mce_governing(dstore, sitecol, locs)
+    dstore.create_df('mce_governing', df)
