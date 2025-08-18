@@ -275,11 +275,3 @@ class DogulasEtAl24Rrup3b_b3Updated_TestCase(BaseGSIMTestCase):
         self.check('DouglasEtAl24/Douglas_et_al_2024Rrup_3branch_b3Updated_MEAN.csv',
                    'DouglasEtAl24/Douglas_et_al_2024Rrup_STD_TOTAL.csv',
                    max_discrep_percentage=0.1, branch=3, weightopt='updated')
-
-
-        
-
-## running tests
-# if __name__ == '__main__':
-#     import unittest
-#     unittest.main()
