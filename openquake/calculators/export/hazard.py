@@ -752,12 +752,14 @@ def export_rtgm(ekey, dstore):
     return [fname]
 
 
-@export.add(('mce', 'csv'), ('mce_default', 'csv'))
+@export.add(('mce', 'csv'), ('mce_governing', 'csv'))
 def export_mce(ekey, dstore):
     key = ekey[0]
     df = dstore.read_df(key)
     if key == 'mce':
         df = df.replace(columns={'PGA': 'PGA_G'})  # at Manuela's request
+    if key == 'mce_governing':
+        df = df[df.period != 0]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.export_path(f'{key}.csv')
     comment = dstore.metadata.copy()
