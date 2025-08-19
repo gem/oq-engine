@@ -470,9 +470,11 @@ def export_gmf_data_csv(ekey, dstore):
 @export.add(('site_model', 'csv'))
 def export_site_model_csv(ekey, dstore):
     sitecol = dstore['sitecol']
+    keep = [name for name in sitecol.array.dtype.names
+            if name not in ('region', 'xvf')]
     fname = dstore.build_fname(ekey[0], '', ekey[1])
     writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
-        sitecol.array, fname, comment=dstore.metadata)
+        sitecol.array[keep], fname, comment=dstore.metadata)
     return [fname]
 
 
