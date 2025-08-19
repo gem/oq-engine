@@ -469,13 +469,16 @@ def export_gmf_data_csv(ekey, dstore):
 @export.add(('site_model', 'csv'))
 def export_site_model_csv(ekey, dstore):
     sitecol = dstore['sitecol']
-    keep = [name for name in sitecol.array.dtype.names
-            if name not in ('region', 'xvf')]
+    if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
+        core_params = ('custom_site_id', 'site_id', 'sids', 'lat', 'lon', 'depth',
+                       'vs30', 'vs30measured', 'z1pt0', 'z2pt5')
+        keep = [name for name in sitecol.array.dtype.names if name in core_params]
+        arr = sitecol.array[keep]
+    else:
+        arr = sitecol.array
     fname = dstore.build_fname(ekey[0], '', ekey[1])
-    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
-        sitecol.array[keep], fname, comment=dstore.metadata)
+    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(arr, fname, comment=dstore.metadata)
     return [fname]
-
 
 
 @export.add(('gmf_data', 'hdf5'))
