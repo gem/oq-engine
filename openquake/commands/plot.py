@@ -1150,7 +1150,10 @@ def main(what,
         return
     if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
-        plt.show()
+        if to_file:
+            plt.savefig(f'{what}_{calc_id}.png')
+        else:
+            plt.show()
         return
     if what == 'examples':
         help_msg = ['Examples of possible plots:']
