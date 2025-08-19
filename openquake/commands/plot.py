@@ -1139,7 +1139,9 @@ def main(what,
          calc_id: int = -1,
          others: int = [],
          webapi=False,
-         local=False):
+         local=False,
+         to_file=False,
+         ):
     """
     Generic plotter for local and remote calculations.
     """
@@ -1182,7 +1184,10 @@ def main(what,
             xs.append(Extractor(other_id))
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
-    plt.show()
+    if to_file:
+        plt.savefig(f'{what}.png')
+    else:
+        plt.show()
 
 
 main.what = 'what to extract (try examples)'
@@ -1190,3 +1195,4 @@ main.calc_id = 'computation ID'
 main.others = dict(help='IDs of other computations', nargs='*')
 main.webapi = 'if given, pass through the WebAPI'
 main.local = 'if passed, use the local WebAPI'
+main.to_file = 'if passed, save the plot to file instead of showing it'
