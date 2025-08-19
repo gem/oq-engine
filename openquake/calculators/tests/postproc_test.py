@@ -24,6 +24,7 @@ try:
 except ImportError:
     rtgmpy = None
 from openquake.baselib.performance import Monitor
+from openquake.baselib import hdf5, writers
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
@@ -198,7 +199,12 @@ class PostProcTestCase(CalculatorTestCase):
         if rtgmpy is None:
             return
         
-        [fname] = export(('mce_governing', 'csv'), self.calc.datastore)
+        df = self.calc.datastore.read_df("mce_governing")
+        df = df[df.period != 0]
+        writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+        fname = self.calc.datastore.export_path('mce_governing.csv')
+        comment = self.calc.datastore.metadata.copy()
+        writer.save(df, fname, comment=comment)
         self.assertEqualFiles('expected/mce_governing.csv', fname)
         
         asce07 = self.calc.datastore['asce07'][0].decode('ascii')
