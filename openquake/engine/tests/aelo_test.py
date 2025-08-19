@@ -37,14 +37,8 @@ aac = numpy.testing.assert_allclose
 # values for the CCA model
 SITES = ['far -90.071 16.60'.split(), 'close -85.071 10.606'.split()]
 EXPECTED_asce7_16 = [
-    [0.265314, 0.273735, 0.275943, 0.309681, 0.346075, 0.383423,
-     0.486398, 0.519964, 0.568014, 0.60647, 0.650083, 0.650722,
-     0.563917, 0.475211, 0.362233, 0.268729, 0.205666, 0.194352,
-     0.207831, 0.194923, 0.149143],
-    [0.708552, 0.766141, 0.819514,
-     0.992218, 1.19921, 1.33306, 1.54593, 1.60616, 1.61089, 1.59131,
-     1.51552, 1.40373, 1.13522, 0.942543, 0.702805, 0.523597,
-     0.415245, 0.401764, 0.43762, 0.402472, 0.305589]]
+    [0.264787, 0.519197, 0.474441],
+    [0.706366, 1.602620, 0.940669]]
 EXPECTED_asce7_22 = [
     [0.265314, 0.29862, 0.301028, 0.337834, 0.377537, 0.41828,
      0.530616, 0.567234, 0.614497, 0.650135, 0.685131, 0.67509,
@@ -90,14 +84,14 @@ def test_PAC():
         r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
         if rtgmpy:
             a7 = json.loads(calc.datastore['asce07'][0].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.038337, 0.041893, 0.83427],
+            aac([r0, r1, a7['PGA']], [0.03833709, 0.041892905, 0.8378],
                 atol=1E-6)
 
         # site (160, -9.4), first level of PGA
         r0, r1 = calc.datastore['hcurves-rlzs'][1, :, 0, 0]  # 2 rlzs
         if rtgmpy:
             a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.038544, 0.041979, 0.7959],
+            aac([r0, r1, a7['PGA']], [0.038543947, 0.041978877, 0.79682],
                 atol=1E-6)
 
             # check that there are not warnings about results
@@ -123,7 +117,7 @@ def test_KOR():
     if rtgmpy:
         s = calc.datastore['asce07'][0].decode('ascii')
         asce07 = json.loads(s)
-        aac(asce07['PGA'], 1.60312, atol=5E-5)
+        aac(asce07['PGA'], 1.59077, atol=5E-5)
         # check all plots created
         assert 'png/governing_mce.png' in calc.datastore
         assert 'png/hcurves.png' in calc.datastore
@@ -256,11 +250,12 @@ def test_WAF():
         assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
 
-def test_JPN():
+def test_JPN_asce7_22():
     # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
     expected = os.path.join(MOSAIC_DIR, 'JPN/in/expected/uhs.csv')
-    dic = dict(sites='139 36', site='JPN-site', vs30='760')
+    dic = dict(sites='139 36', site='JPN-site', vs30='760',
+               asce_version='ASCE7-22')
     with logs.init(job_ini) as log:
         params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
         params['maximum_distance'] = '300'
