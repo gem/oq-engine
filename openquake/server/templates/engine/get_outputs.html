@@ -10,7 +10,7 @@
         <div id="oq-body-wrapper">
           <div class="span12">
             {% if application_mode == 'AELO' %}
-            <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}</h2>
+            <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}, {{ asce_version }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}</h2>
             {% else %}
             <h2>Outputs from calculation {{ calc_id }}</h2>
             {% endif %}

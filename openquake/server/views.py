@@ -1546,12 +1546,25 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        if len(vs30) == 1:
+            [vs30] = vs30
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
+        try:
+            asce_version = ds['oqparam'].asce_version
+        except AttributeError:
+            # for backwards compatibility on old calculations
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
+            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
+                       calc_aelo_version=calc_aelo_version,
+                       asce_version=oqvalidation.ASCE_VERSIONS[asce_version],
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
                   )
 
@@ -1678,7 +1691,9 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         if 'png' in ds:
             site = 'site.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
+        if len(vs30_in) == 1:
+            [vs30_in] = vs30_in
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         notifications = numpy.array([], dtype=notification_dtype)
         sid_to_vs30 = {}
@@ -1712,9 +1727,9 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name, site=site,
+                       lon=lon, lat=lat, vs30=vs30_in, site_name=site_name, site=site,
                        calc_aelo_version=calc_aelo_version,
-                       asce_version=asce_version,
+                       asce_version=oqvalidation.ASCE_VERSIONS[asce_version],
                        warnings=warnings_str, notes=notes_str))
 
 
