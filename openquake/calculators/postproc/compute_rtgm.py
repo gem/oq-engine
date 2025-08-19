@@ -744,7 +744,6 @@ def compute_mce_governing(dstore, sitecol, locs):
     """
     # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
     mce_df = dstore.read_df('mce')
-    mce_df = mce_df[mce_df.IMT != 'PGA']  # requested by Nico Luco
     mce_df['period'] = [from_string(x).period for x in mce_df.IMT]
     del mce_df['IMT']
     out = []
@@ -827,17 +826,17 @@ def main(dstore, csm):
         [sids] = locs.values()
         for sid in sids:
             sid_notifications = notifications[notifications['sid'] == sid]
-            if len(sid_notifications) ==0:
-                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-                plot_governing_mce(dstore, sid, update_dstore=True)
-                plot_disagg_by_src(dstore, sid, update_dstore=True)
-            elif sid_notifications['name'][0] not in [
+            if  sid_notifications['name'][0 ] not in [
                     'zero_hazard', 'low_hazard']:
                 plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
                 plot_governing_mce(dstore, sid, update_dstore=True)
+                plot_disagg_by_src(dstore, sid, update_dstore=True)
 
     if len(notifications):
         dstore['notifications'] = notifications
 
     df = compute_mce_governing(dstore, sitecol, locs)
+    df.columns = ["period",	"SaM","custom_site_id"]
+
+    breakpoint()
     dstore.create_df('mce_governing', df)
