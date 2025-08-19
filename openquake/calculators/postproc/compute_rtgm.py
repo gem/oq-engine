@@ -830,15 +830,14 @@ def main(dstore, csm):
                 plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
                 plot_governing_mce(dstore, sid, update_dstore=True)
                 plot_disagg_by_src(dstore, sid, update_dstore=True)
-            elif sid_notifications['name'][0 ] not in [
+            elif sid_notifications['name'][0] not in [
                     'zero_hazard', 'low_hazard']:
                 plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
                 plot_governing_mce(dstore, sid, update_dstore=True)
-                
 
     if len(notifications):
         dstore['notifications'] = notifications
 
     df = compute_mce_governing(dstore, sitecol, locs)
-    df.columns = ["period",	"SaM","custom_site_id"]
+    df.columns = ["period", "SaM", "custom_site_id"]
     dstore.create_df('mce_governing', df)
