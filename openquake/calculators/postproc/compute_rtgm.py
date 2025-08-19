@@ -837,6 +837,4 @@ def main(dstore, csm):
 
     df = compute_mce_governing(dstore, sitecol, locs)
     df.columns = ["period",	"SaM","custom_site_id"]
-
-    breakpoint()
     dstore.create_df('mce_governing', df)

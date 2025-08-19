@@ -757,7 +757,7 @@ def export_mce(ekey, dstore):
     key = ekey[0]
     df = dstore.read_df(key)
     if key == 'mce':
-        df = df.replace(columns={'PGA': 'PGA_G'})  # at Manuela's request
+        df.iloc[:, 0] = df.iloc[:, 0].replace('PGA', 'PGA_G')
     if key == 'mce_governing':
         df = df[df.period != 0]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
