@@ -338,7 +338,7 @@ def export_median_spectra(ekey, dstore):
         for p, poe in enumerate(oq.poes):
             aw = extract(dstore, f'median_spectra?site_id={n}&poe_id={p}')
             Gt = len(aw.array)
-            aggr = aw.array.sum(axis=0) # shape (3, P)
+            aggr = aw.array.sum(axis=0)  # shape (3, P)
             df = aw.to_dframe().sort_values(['grp_id', 'period'])
             comment = dstore.metadata.copy()
             comment['site_id'] = n
@@ -356,7 +356,6 @@ def export_median_spectra(ekey, dstore):
             writer.save(aggdf, fname, comment=comment)
             fnames.append(fname)
     return fnames
-
 
 
 @export.add(('median_spectrum_disagg', 'csv'))
@@ -780,8 +779,7 @@ def export_asce(ekey, dstore):
         comment['lat'] = sitecol.lats[s]
         comment['vs30'] = sitecol.vs30[s]
         comment['site_name'] = dstore['oqparam'].description  # 'CCA example'
-        writer.save(dic.items(), fname, header=['parameter', 'value'],
-                comment=comment)
+        writer.save(dic.items(), fname, header=['parameter', 'value'], comment=comment)
     return [fname]
 
 
@@ -799,7 +797,7 @@ def _export_mde(writer, dstore, key, site, descr, suffix=''):
 
 @export.add(('mag_dst_eps_sig', 'csv'))
 def export_mag_dst_eps_sig(ekey, dstore):
-    site_ids= list(dstore[ekey[0]])
+    site_ids = list(dstore[ekey[0]])
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     writer = writers.CsvWriter(fmt='%.5f')
