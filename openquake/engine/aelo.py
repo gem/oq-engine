@@ -103,9 +103,9 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
         'asce_version', oqvalidation.OqParam.asce_version.default)
     if params['asce_version'] == 'ASCE7-16':
         params['intensity_measure_types_and_levels'] = (
-            '{"PGA": logscale(0.005, 3.00, 20),'
-            ' "SA(0.2)": logscale(0.005, 4.00, 20),'
-            ' "SA(1.0)": logscale(0.005, 2.00, 20)}')
+            '{"PGA": logscale(0.005, 3.00, 25),'
+            ' "SA(0.2)": logscale(0.005, 9.00, 25),'
+            ' "SA(1.0)": logscale(0.005, 3.00, 25)}')
     return params
 
 
