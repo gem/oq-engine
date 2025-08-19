@@ -826,11 +826,15 @@ def main(dstore, csm):
         [sids] = locs.values()
         for sid in sids:
             sid_notifications = notifications[notifications['sid'] == sid]
-            if  sid_notifications['name'][0 ] not in [
-                    'zero_hazard', 'low_hazard']:
+            if len(sid_notifications) == 0:
                 plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
                 plot_governing_mce(dstore, sid, update_dstore=True)
                 plot_disagg_by_src(dstore, sid, update_dstore=True)
+            elif sid_notifications['name'][0 ] not in [
+                    'zero_hazard', 'low_hazard']:
+                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+                plot_governing_mce(dstore, sid, update_dstore=True)
+                
 
     if len(notifications):
         dstore['notifications'] = notifications
