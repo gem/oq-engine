@@ -1185,7 +1185,7 @@ def main(what,
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
     if to_file:
-        plt.savefig(f'{what}.png')
+        plt.savefig(f'{what}_{calc_id}.png')
     else:
         plt.show()
 
