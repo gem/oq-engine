@@ -94,8 +94,7 @@ AELO_WARNINGS = {
         ' For further information, please refer to the user manual.'),
     'below_min': (
         'The ASCE 7 and/or ASCE 41 parameter values at the site are very low.'
-        ' User may need to increase the values to user-specified minimums'
-        ' (e.g., Ss=0.11g and S1=0.04g).'
+        ' User may need to increase the values to user-specified minimums.'
         ' For further information, please refer to the user manual.'),
 }
 
