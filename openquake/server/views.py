@@ -1559,7 +1559,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             calc_aelo_version = ds.get_attr('/', 'aelo_version')
         except KeyError:
             calc_aelo_version = '1.0.0'
-        asce_version_full = oqvalidation.ASCE_VERSIONS[asce_version],
+        asce_version_full = oqvalidation.ASCE_VERSIONS[asce_version]
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
