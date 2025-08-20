@@ -808,7 +808,7 @@ def export_mag_dst_eps_sig(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.5f')
     if len(site_ids) == 1:
         [site] = sitecol
-        return _export_mde(writer, dstore, ekey[0], site, oq.description)
+        return [_export_mde(writer, dstore, ekey[0], site, oq.description)]
     else:
         return [_export_mde(writer, dstore, ekey[0], site, oq.description,
                             f'-{site.id}') for site in sitecol]
