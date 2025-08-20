@@ -1546,7 +1546,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
-        if len(vs30) == 1:
+        if hasattr(vs30, '__len__') and len(vs30) == 1:
+            # NOTE: in old calculations, vs30_in was a float
             [vs30] = vs30
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         try:
@@ -1558,7 +1559,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             calc_aelo_version = ds.get_attr('/', 'aelo_version')
         except KeyError:
             calc_aelo_version = '1.0.0'
-        asce_version_full=oqvalidation.ASCE_VERSIONS[asce_version],
+        asce_version_full = oqvalidation.ASCE_VERSIONS[asce_version],
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
