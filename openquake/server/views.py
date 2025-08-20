@@ -1693,7 +1693,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             site = 'site.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
-        if len(vs30_in) == 1:
+        if hasattr(vs30_in, '__len__') and len(vs30_in) == 1:
+            # NOTE: in old calculations, vs30_in was a float
             [vs30_in] = vs30_in
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         notifications = numpy.array([], dtype=notification_dtype)
