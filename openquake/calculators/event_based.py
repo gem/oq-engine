@@ -383,10 +383,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                    oq.maximum_distance['default'][-1][1])
         station_data, station_sites = filter_stations(
             station_df, sitecol.complete, rup, maxdist)
+        dstore['stations_considered'] = station_sites
     else:
         station_data, station_sites = None, None
 
-    dstore['stations_considered'] = station_sites
     maxw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     logging.info('maxw = {:_d}'.format(round(maxw)))
