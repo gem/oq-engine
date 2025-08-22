@@ -100,9 +100,10 @@ def main(calc_id: int = -1, site_model=False,
         if 'stations_considered' in dstore:
             # NOTE: overlapping the used ones on top of the full set
             stations_considered = dstore['stations_considered']
-            p.scatter(stations_considered['lon'], stations_considered['lat'],
-                      marker='D', c='brown', label='considered stations',
-                      s=markersize_site_model)
+            if len(stations_considered) > 0:
+                p.scatter(stations_considered['lon'], stations_considered['lat'],
+                          marker='D', c='brown', label='considered stations',
+                          s=markersize_site_model)
     if oq.rupture_xml or oq.rupture_dict:
         use_shakemap = dstore['oqparam'].shakemap_uri
         if use_shakemap:
