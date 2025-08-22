@@ -28,6 +28,7 @@ import numpy
 import pandas
 from scipy.stats import linregress
 from shapely.geometry import Polygon, LineString
+from openquake.baselib.general import unique_filename
 from openquake.commonlib import readinput
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
@@ -1148,10 +1149,12 @@ def main(what,
     if what.endswith('.csv'):
         plot_csv(what)
         return
+    if to_file:
+        outfile = unique_filename(f'{what}_{calc_id}.png')
     if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
         if to_file:
-            plt.savefig(f'{what}_{calc_id}.png')
+            plt.savefig(outfile)
         else:
             plt.show()
         return
@@ -1188,7 +1191,7 @@ def main(what,
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
     if to_file:
-        plt.savefig(f'{what}_{calc_id}.png')
+        plt.savefig(outfile)
     else:
         plt.show()
 
