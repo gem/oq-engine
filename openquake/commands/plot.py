@@ -742,11 +742,13 @@ def make_figure_tot_curves(extractors, what):
 
 def make_figure_mean_hcurves_rtgm(extractors, what):
     """
-    $ oq plot "mean_hcurves_rtgm?"
+    $ oq plot "mean_hcurves_rtgm?sid=0"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_mean_hcurves_rtgm(dstore)
+    kwargs = parse_qs(what.split('?')[1])
+    [sid] = kwargs.get('sid', ['0'])
+    plt = plot_mean_hcurves_rtgm(dstore, sid=int(sid))
     return plt
 
 
@@ -762,11 +764,13 @@ def make_figure_governing_mce(extractors, what):
 
 def make_figure_disagg_by_src(extractors, what):
     """
-    $ oq plot "disagg_by_src?"
+    $ oq plot "disagg_by_src?sid=0"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_disagg_by_src(dstore)
+    kwargs = parse_qs(what.split('?')[1])
+    [sid] = kwargs.get('sid', ['0'])
+    plt = plot_disagg_by_src(dstore, sid=int(sid))
     return plt
 
 
