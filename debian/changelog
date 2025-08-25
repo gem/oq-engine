@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the parameter `site_effects` since it is useless
   * Changed num_cores to be equal to the pool size when explicit
   * On Windows use as default num_cores
     num_threads/2 if num_threads > 8 else num_threads

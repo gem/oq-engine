@@ -98,6 +98,7 @@ def cross_correlation_matrix(imts, corr='yes'):
     return cross_matrix
 
 
+# not used since the ShakeMap does it already
 def amplify_gmfs(imts, vs30s, gmfs):
     """
     Amplify the ground shaking depending on the vs30s

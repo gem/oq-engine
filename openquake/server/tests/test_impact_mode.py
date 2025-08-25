@@ -24,8 +24,6 @@ import tempfile
 import string
 import unittest
 import secrets
-import io
-import numpy
 
 import django
 from django.test import Client, override_settings
@@ -35,6 +33,7 @@ from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.dbapi import db
 from openquake.commonlib.logs import dbcmd
+from openquake.commonlib.readinput import loadnpz
 from openquake.engine.engine import create_jobs
 
 # NOTE: before importing User or any other model, django.setup() is needed,
@@ -52,11 +51,6 @@ except RuntimeError:
     # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
     # ./openquake/server/manage.py test tests.views_test
     raise unittest.SkipTest('Authentication not configured')
-
-
-def loadnpz(lines):
-    bio = io.BytesIO(b''.join(ln for ln in lines))
-    return numpy.load(bio)
 
 
 def get_email_content(directory, search_string):

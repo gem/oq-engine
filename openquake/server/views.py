@@ -1526,6 +1526,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
+    avg_gmf = []
+    disagg_by_src = []
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
@@ -1539,20 +1541,33 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             governing_mce = 'governing_mce.png' in ds['png']
         else:
             hmaps = assets = hcurves = governing_mce = False
-            avg_gmf = []
-            disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    lon = lat = vs30 = site_name = None
+    lon = lat = vs30 = site_name = asce_version_full = calc_aelo_version = None
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        if hasattr(vs30, '__len__') and len(vs30) == 1:
+            # NOTE: in old calculations, vs30_in was a float
+            [vs30] = vs30
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
+        try:
+            asce_version = ds['oqparam'].asce_version
+        except AttributeError:
+            # for backwards compatibility on old calculations
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
+            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
+        asce_version_full = oqvalidation.ASCE_VERSIONS[asce_version]
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
+                       calc_aelo_version=calc_aelo_version,
+                       asce_version=asce_version_full,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name)
                   )
 
 
@@ -1678,7 +1693,10 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         if 'png' in ds:
             site = 'site.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
+        if hasattr(vs30_in, '__len__') and len(vs30_in) == 1:
+            # NOTE: in old calculations, vs30_in was a float
+            [vs30_in] = vs30_in
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         notifications = numpy.array([], dtype=notification_dtype)
         sid_to_vs30 = {}
@@ -1712,9 +1730,9 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name, site=site,
+                       lon=lon, lat=lat, vs30=vs30_in, site_name=site_name, site=site,
                        calc_aelo_version=calc_aelo_version,
-                       asce_version=asce_version,
+                       asce_version=oqvalidation.ASCE_VERSIONS[asce_version],
                        warnings=warnings_str, notes=notes_str))
 
 

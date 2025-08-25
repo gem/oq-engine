@@ -9,10 +9,8 @@
     </calculations>
 
     <uncertainties>
-        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
-                logicTree="gmc">
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1">
             <sourceIDs>a b</sourceIDs>
-            <branchSetID>bs1 bs1</branchSetID>
         </logicTreeBranchSet>
     </uncertainties>
 

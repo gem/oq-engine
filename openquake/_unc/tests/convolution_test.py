@@ -1,43 +1,42 @@
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
-# Copyright (C) 2025, GEM Foundation
-# 
-# OpenQuake is free software: you can redistribute it and/or modify it
-# under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# OpenQuake is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-# 
+# --------------- POINT - Propagation Of epIstemic uNcerTainty ----------------
+# Copyright (C) 2025 GEM Foundation
+#
+#                `.......      `....     `..`...     `..`... `......
+#                `..    `..  `..    `..  `..`. `..   `..     `..
+#                `..    `..`..        `..`..`.. `..  `..     `..
+#                `.......  `..        `..`..`..  `.. `..     `..
+#                `..       `..        `..`..`..   `. `..     `..
+#                `..         `..     `.. `..`..    `. ..     `..
+#                `..           `....     `..`..      `..     `..
+#
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU Affero General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU Affero General Public License for more
+# details.
+#
 # You should have received a copy of the GNU Affero General Public License
-# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# -----------------------------------------------------------------------------
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# coding: utf-8
+
 import unittest
 import numpy as np
-from openquake._unc.convolution import get_pmf, conv
+from openquake._unc.convolution import conv, HistoGroup
 
-
-class CreatePMFTest(unittest.TestCase):
-
-    def test_pmf_01(self):
-        vals = np.array([0.011, 0.051, 0.052, 0.83])
-        min_power, num_powers, pmf = get_pmf(vals)
-        expected = np.array([0.25, 0., 0., 0., 0., 0.,
-                             0., 0.5, 0., 0., 0.,
-                             0., 0., 0., 0., 0.,
-                             0., 0., 0., 0.25])
-        np.testing.assert_array_equal(expected, pmf)
+aae = np.testing.assert_almost_equal
 
 
 class ConvolutionTest(unittest.TestCase):
 
     def test_simple_convolution(self):
         # We start from PMFs
-        res_a = 4
-        res_b = 4
         min_power_a = -1
         num_powers_a = 1
         min_power_b = -1
@@ -72,7 +71,29 @@ class ConvolutionTest(unittest.TestCase):
         #      0.1 * 0.8 + 0.0 * 0.0 = 0.08
 
         # Computing convolution
-        _, _, _, pmfo = conv(
-            hia, min_power_a, res_a, num_powers_a, hib, min_power_b, res_b,
-            num_powers_b)
+        pmfo = conv(hia, min_power_a, num_powers_a,
+                    hib, min_power_b, num_powers_b).pmfs[0]
         np.testing.assert_allclose(pmfo, [0., 0., 0.3, 0.68, 0.02, 0., 0., 0.])
+
+
+class TestCase(unittest.TestCase):
+
+    def test_to_matrix(self):
+        his = [np.array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19]),
+               np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])]
+        minp = np.array([0, 1])
+        nump = np.array([2, 2])
+
+        computed, afes = HistoGroup(
+            his, minp, nump, normalized=False).to_matrix()
+        exp_afes = np.array([1.  ,    1.64,    2.68,    4.39,    7.2 ,
+                             11.79,   19.31,  31.62,   51.79,   84.83,
+                             138.95,  227.58,  372.76,  610.54,  1000.])
+        aae(np.round(afes, 2), exp_afes)
+
+        expected = np.empty((15, 2)) * np.nan
+        expected[0:10, 0] = his[0]
+        expected[5:15, 1] = his[1]
+        aae(expected, computed)
+        for hi, col in zip(his, computed.T):
+            aae(hi, col[np.isfinite(col)])

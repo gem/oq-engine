@@ -94,8 +94,7 @@ AELO_WARNINGS = {
         ' For further information, please refer to the user manual.'),
     'below_min': (
         'The ASCE 7 and/or ASCE 41 parameter values at the site are very low.'
-        ' User may need to increase the values to user-specified minimums'
-        ' (e.g., Ss=0.11g and S1=0.04g).'
+        ' User may need to increase the values to user-specified minimums.'
         ' For further information, please refer to the user manual.'),
 }
 
@@ -736,7 +735,7 @@ def to_array(dic):
 
 
 # tested in test_rtgm
-def compute_mce_default(dstore, sitecol, locs):
+def compute_mce_governing(dstore, sitecol, locs):
     """
     For ASCE7-22 the site is multiplied 3 times with different
     values of the vs30 and the MCE is computed as the maximum MCE
@@ -744,7 +743,6 @@ def compute_mce_default(dstore, sitecol, locs):
     """
     # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
     mce_df = dstore.read_df('mce')
-    mce_df = mce_df[mce_df.IMT != 'PGA']  # requested by Nico Luco
     mce_df['period'] = [from_string(x).period for x in mce_df.IMT]
     del mce_df['IMT']
     out = []
@@ -889,7 +887,7 @@ def main(dstore, csm):
         [sids] = locs.values()
         n_sids = len(sids)
         vs30s = oq.override_vs30
-        assert n_sids == len(vs30s), (f'The number of seeds ({n_sids}) must be equal to'
+        assert n_sids == len(vs30s), (f'The number of sites ({n_sids}) must be equal to'
                                       f' the number of values of vs30 ({len(vs30s)})')
         plt = import_plt()
 
@@ -907,5 +905,6 @@ def main(dstore, csm):
     if len(notifications):
         dstore['notifications'] = notifications
 
-    df = compute_mce_default(dstore, sitecol, locs)
-    dstore.create_df('mce_default', df)
+    df = compute_mce_governing(dstore, sitecol, locs)
+    df.columns = ["period", "SaM", "custom_site_id"]
+    dstore.create_df('mce_governing', df)

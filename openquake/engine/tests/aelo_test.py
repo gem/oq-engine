@@ -37,14 +37,8 @@ aac = numpy.testing.assert_allclose
 # values for the CCA model
 SITES = ['far -90.071 16.60'.split(), 'close -85.071 10.606'.split()]
 EXPECTED_asce7_16 = [
-    [0.265314, 0.273735, 0.275943, 0.309681, 0.346075, 0.383423,
-     0.486398, 0.519964, 0.568014, 0.60647, 0.650083, 0.650722,
-     0.563917, 0.475211, 0.362233, 0.268729, 0.205666, 0.194352,
-     0.207831, 0.194923, 0.149143],
-    [0.708552, 0.766141, 0.819514,
-     0.992218, 1.19921, 1.33306, 1.54593, 1.60616, 1.61089, 1.59131,
-     1.51552, 1.40373, 1.13522, 0.942543, 0.702805, 0.523597,
-     0.415245, 0.401764, 0.43762, 0.402472, 0.305589]]
+    [0.265314, 0.519964, 0.475211],
+    [0.708552, 1.60616, 0.942543]]
 EXPECTED_asce7_22 = [
     [0.265314, 0.29862, 0.301028, 0.337834, 0.377537, 0.41828,
      0.530616, 0.567234, 0.614497, 0.650135, 0.685131, 0.67509,
@@ -260,7 +254,8 @@ def test_JPN():
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
     expected = os.path.join(MOSAIC_DIR, 'JPN/in/expected/uhs.csv')
     # testing the vs30 values corresponding to the "default" site class
-    dic = dict(sites='139 36', site='JPN-site', vs30='260 365 530')
+    dic = dict(sites='139 36', site='JPN-site', vs30='260 365 530',
+               asce_version='ASCE7-22')
     with logs.init(job_ini) as log:
         params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
         params['maximum_distance'] = '300'

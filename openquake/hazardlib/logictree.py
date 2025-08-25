@@ -54,6 +54,7 @@ U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 TWO24 = 2 ** 24
+ONE_LETTER_BASE = True
 
 rlz_dt = numpy.dtype([
     ('ordinal', U32),
@@ -95,6 +96,16 @@ branch_dt = numpy.dtype([
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 OQ_REDUCE = os.environ.get('OQ_REDUCE') == 'smlt'
+
+
+def check_unique_uncertainties(source_specific_lts):
+    """
+    Make sure that each uncertainty in the underlying logic trees is unique
+    """
+    for sslt in source_specific_lts:
+        utypes = [bset.uncertainty_type for bset in sslt.branchsets]
+        if len(utypes) > len(set(utypes)):
+            raise nrml.DuplicatedID(utypes)
 
 
 # this is very fast
@@ -464,8 +475,9 @@ class SourceModelLogicTree(object):
             bset.applied is None for bset in self.branchsets)
         if self.is_source_specific:
             # fast algorithm, otherwise models like ZAF would hang
-            self.num_paths = prod(
-                sslt.num_paths for sslt in self.decompose().values())
+            sslts = self.decompose().values()
+            self.num_paths = prod(sslt.num_paths for sslt in sslts)
+            check_unique_uncertainties(sslts)
         else:  # slow algorithm
             self.num_paths = count_paths(self.root_branchset.branches)
 
@@ -642,7 +654,7 @@ class SourceModelLogicTree(object):
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
             # use two-letter abbrev for the first branchset (sourceModel)
-            base = BASE183 if bsno else BASE33489
+            base = BASE183 if ONE_LETTER_BASE or bsno else BASE33489
             self.shortener[branch_id] = keyno(branch_id, bsno, brno, base)
             weight_sum += weight
         if zeros:

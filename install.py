@@ -220,8 +220,7 @@ def ensure(pip=None, pyvenv=None):
     try:
         if pyvenv:
             if os.path.exists(pyvenv):
-                answer = input(REMOVE_VENV % pyvenv)
-                if answer.lower() == "y":
+                if input(REMOVE_VENV % pyvenv).lower() == "y":
                     shutil.rmtree(pyvenv)
                 else:
                     sys.exit(0)
@@ -233,8 +232,8 @@ def ensure(pip=None, pyvenv=None):
             shutil.rmtree(inst.VENV)
             raise RuntimeError(
                 "Could not execute ensurepip --upgrade: %s"
-                % ("Probably you are using the system Python (%s)" % sys.executable)
-            )
+                % ("Probably you are using the system Python (%s)" %
+                   sys.executable))
 
 
 def get_requirements_branch(version, inst, from_fork):
