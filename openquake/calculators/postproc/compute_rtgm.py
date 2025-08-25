@@ -900,7 +900,11 @@ def main(dstore, csm):
             plot_governing_mce(dstore, update_dstore=True)
 
         # Disaggregation by Source (3 rows, n_sids columns)
-        make_figure_disagg_by_src(plt, sids, dstore, notifications, vs30s)
+        # NOTE: avoiding to add columns for vs30 for which no deterministic is computed
+        sids_to_exclude = notifications['sid'][
+            notifications['name'] == 'only_prob_mce'].tolist()
+        sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
+        make_figure_disagg_by_src(plt, sids_to_plot, dstore, notifications, vs30s)
 
     if len(notifications):
         dstore['notifications'] = notifications
