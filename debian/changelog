@@ -1,3 +1,6 @@
+  [Myles Turner, Guillermo Aldama-Bustos]
+  * Added GMM of Douglas et al. (2024)
+
   [Michele Simionato]
   * Removed the parameter `site_effects` since it is useless
   * Changed num_cores to be equal to the pool size when explicit
