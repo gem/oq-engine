@@ -38,13 +38,15 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import (
     npoints_towards, distance, azimuth)
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
-from openquake.hazardlib.geo.surface.gridded import GriddedSurface
+#from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 
 TOL = 0.4
 SMALL = 1e-5
 VERY_SMALL = 1e-20
 VERY_BIG = 1e20
 ALMOST_RIGHT_ANGLE = 89.9
+# Vertical component of the unit vector of an almost vertical fault (dip > 88)
+STEEPER_THAN_88DEG = 0.035
 
 
 class KiteSurface(BaseSurface):
@@ -284,6 +286,8 @@ class KiteSurface(BaseSurface):
         found = False
         irow = 0
         icol = 0
+
+        # Search for a quadrilateral with finite vertexes
         while not found:
             if np.all(np.isfinite(self.mesh.lons[irow:irow + 2,
                                                  icol:icol + 2])):
@@ -292,20 +296,47 @@ class KiteSurface(BaseSurface):
                 icol += 1
                 if (icol + 1) >= self.mesh.lons.shape[1]:
                     irow += 1
-                    icol = 1
+                    icol = 0
                     if (irow + 1) >= self.mesh.lons.shape[0]:
                         break
+
+        # Check strike
         if found:
-            azi_strike = azimuth(self.mesh.lons[irow, icol],
-                                 self.mesh.lats[irow, icol],
-                                 self.mesh.lons[irow, icol + 1],
-                                 self.mesh.lats[irow, icol + 1])
+
+            # Get the azimuth direction for the strike and dip
             azi_dip = azimuth(self.mesh.lons[irow, icol],
                               self.mesh.lats[irow, icol],
                               self.mesh.lons[irow + 1, icol],
                               self.mesh.lats[irow + 1, icol])
 
-            if abs((azi_strike - 90) % 360 - azi_dip) < 40:
+            coo = np.empty((4, 3))
+            coo[0, 0] = self.mesh.lons[irow, icol]
+            coo[0, 1] = self.mesh.lats[irow, icol]
+            coo[0, 2] = self.mesh.depths[irow, icol]
+            coo[1, 0] = self.mesh.lons[irow + 1, icol]
+            coo[1, 1] = self.mesh.lats[irow + 1, icol]
+            coo[1, 2] = self.mesh.depths[irow + 1, icol]
+            coo[2, 0] = self.mesh.lons[irow + 1, icol + 1]
+            coo[2, 1] = self.mesh.lats[irow + 1, icol + 1]
+            coo[2, 2] = self.mesh.depths[irow + 1, icol + 1]
+            coo[3, 0] = self.mesh.lons[irow, icol + 1]
+            coo[3, 1] = self.mesh.lats[irow, icol + 1]
+            coo[3, 2] = self.mesh.depths[irow, icol + 1]
+
+            from openquake.hazardlib.geo.utils import (
+                get_strike_from_plane_normal)
+
+            _, nrml_plane = _get_plane(coo[:, 0].flatten(),
+                                       coo[:, 1].flatten(),
+                                       coo[:, 2].flatten())
+
+            tmp_strike = get_strike_from_plane_normal(nrml_plane)
+            a_low = (tmp_strike + 10) % 360
+            a_upp = (tmp_strike + 80) % 360
+
+            # Check that the dip direction is within a range
+            tmp = geo_utils.angles_within(a_low, a_upp, azi_dip)
+            if not tmp:
                 tlo = np.fliplr(self.mesh.lons)
                 tla = np.fliplr(self.mesh.lats)
                 tde = np.fliplr(self.mesh.depths)
@@ -456,8 +487,11 @@ class KiteSurface(BaseSurface):
         # Create mesh
         msh = _create_mesh(rprof, ref_idx, edge_sd, idl, align)
 
-        return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
-                   profiles, sec_id)
+        out = cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
+                  profiles, sec_id)
+        out._fix_right_hand()
+
+        return out
 
     def get_center(self):
         """
@@ -564,7 +598,9 @@ def geom_to_kite(geom):
     """
     shape_y, shape_z = int(geom[1]), int(geom[2])
     array = geom[3:].astype(np.float64).reshape(3, shape_y, shape_z)
-    return KiteSurface(RectangularMesh(*array))
+    sfc = KiteSurface(RectangularMesh(*array))
+    sfc._fix_right_hand()
+    return sfc
 
 
 def get_profiles_from_simple_fault_data(
@@ -778,12 +814,12 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     _edges_fix_sorting(msh)
 
     # Fix the orientation of the mesh
-    msh = _fix_right_hand(msh)
+    out = _fix_right_hand(msh)
 
     # INFO: this is just for debugging
     # _dbg_plot_mesh(msh)
 
-    return msh
+    return out
 
 
 def _edges_fix_sorting(msh):
@@ -821,53 +857,155 @@ def _dbg_plot_mesh(mesh):
     ax.plot(mesh[:, :, 0].flatten(),
             mesh[:, :, 1].flatten(),
             mesh[:, :, 2].flatten() * scl, '.')
-    ax.invert_zaxis()
+    ax.plot(mesh[0, 0, 0].flatten(),
+            mesh[0, 0, 1].flatten(),
+            mesh[0, 0, 2].flatten() * scl, 'or')
     set_axes_equal(ax)
+    ax.invert_zaxis()
     plt.show()
 
 
 def _fix_right_hand(msh):
     # This function checks that the array describing the surface complies with
-    # the right hand rule.
+    # the right hand rule and, if required, flips the mesh to make it compliant
     #
     # :param msh:
-    #   A :class:`numpy.ndarray` instance
-    #
+    #   A :class:`numpy.ndarray` instance describing the mesh
 
-    # Compute the average azimuth for the top edge of the surface
-    tmp = msh[0, :, 0]
-    idx = np.isfinite(tmp)
-    top = Line([Point(c[0], c[1]) for c in msh[0, idx, :]])
+    # Fit a plane through the four points of a non-null cell
+    lons, lats, deps, ia = _get_non_null_cell(msh)
 
-    # Compute the strike of the surface
-    coo = msh.reshape(-1, 3)
-    coo = coo[np.isfinite(coo[:, 0]), :]
-    pnts = [Point(c[0], c[1], c[2]) for c in coo]
-    grdd = GriddedSurface.from_points_list(pnts)
-    strike = grdd.get_strike()
+    # NOTE This function projects the coordinates
+    _, vers = _get_plane(lons, lats, deps)
 
-    # Check if we need to flip the grid
-    if not np.abs(_angles_diff(strike, top.azimuth)) < 60:
+    # Check if the plane is vertical.
+    tmp = np.dot(vers, [0, 0, 1])
+    if tmp < STEEPER_THAN_88DEG:
+        return msh
+
+    # Check if the mesh complies with the right hand rule and flip it if
+    # required
+    chk = _does_mesh_comply_with_right_hand_rule(msh, vers=vers, ia=ia)
+
+    if not chk:
 
         # Flip the grid to make it compliant with the right hand rule
-        nmsh = np.flip(msh, axis=1)
-
-        # Compute the average azimuth for the top edge of the surface
-        tmp = nmsh[0, :, 0]
-        idx = np.isfinite(tmp)
-        top = Line([Point(c[0], c[1]) for c in nmsh[0, idx, :]])
+        nmsh = np.empty_like(msh)
+        nmsh[:, :, :] = msh[:, ::-1, :]
 
         # Check again the average azimuth for the top edge of the surface
         msg = "The mesh still does not comply with the right hand rule"
-        assert np.abs(_angles_diff(strike, top.azimuth)) < 60, msg
+        chk1 = _does_mesh_comply_with_right_hand_rule(nmsh)
+
+        # NOTE this is for debugging purposes
+        if True and not chk1:
+            _plot_mesh(nmsh, 'New Mesh')
+            _plot_mesh(msh, 'Old Mesh')
+            _does_mesh_comply_with_right_hand_rule(nmsh, debug=True)
+
+        assert chk1, msg
         return nmsh
 
     return msh
 
 
-def _angles_diff(ang_a, ang_b):
-    dff = ang_a - ang_b
-    return (dff + 180) % 360 - 180
+def _does_mesh_comply_with_right_hand_rule(
+        msh, tolerance=45., vers=None, ia=None
+):
+    # Given a mesh, this function checks if it complies with the right hand
+    # rule
+    #
+    # :param msh:
+    #   A :class:`openquake.hazardlib.geo.mesh.Mesh` instance
+    # :param tolerance:
+    #   A float defining the maximum absolute difference between the azimuth of
+    #   the top edge of the selected cell and the strike of the plane passingg
+    #   through the cell.
+
+    if vers is None or ia is None:
+        lons, lats, deps, ia = _get_non_null_cell(msh)
+        # Fit a plane through the four points and get the unit vector
+        _, vers = _get_plane(lons, lats, deps)
+
+    # Find the strike
+    strike = geo_utils.get_strike_from_plane_normal(vers)
+
+    # Next we find the azimuth of the top segment of the cell
+    top = Line([Point(*msh[ia[0][0], ia[1][0], :]),
+                Point(*msh[ia[0][0], ia[1][0] + 1, :])])
+
+    # Compute the difference between strike from the plane and cell top
+    # direction
+    abs_angle_dff = np.abs(geo_utils._angles_diff(top.azimuth, strike))
+
+    return abs_angle_dff < tolerance
+
+
+def _get_non_null_cell(msh):
+
+    ul = np.isfinite(msh[:-1, :-1, 0])
+    ur = np.isfinite(msh[:-1, 1:, 0])
+    ll = np.isfinite(msh[1:, :-1, 0])
+    lr = np.isfinite(msh[1:, 1:, 0])
+    ia = np.nonzero(ur & ul & ll & lr)
+
+    # Coordinates of the cell with finite vertexes
+    lons = [msh[ia[0][0], ia[1][0], 0],
+            msh[ia[0][0], ia[1][0] + 1, 0],
+            msh[ia[0][0] + 1, ia[1][0] + 1, 0],
+            msh[ia[0][0] + 1, ia[1][0], 0]]
+    lats = [msh[ia[0][0], ia[1][0], 1],
+            msh[ia[0][0], ia[1][0] + 1, 1],
+            msh[ia[0][0] + 1, ia[1][0] + 1, 1],
+            msh[ia[0][0] + 1, ia[1][0], 1]]
+    deps = [msh[ia[0][0], ia[1][0], 2],
+            msh[ia[0][0], ia[1][0] + 1, 2],
+            msh[ia[0][0] + 1, ia[1][0] + 1, 2],
+            msh[ia[0][0] + 1, ia[1][0], 2]]
+    lons = np.array(lons)
+    lats = np.array(lats)
+    deps = np.array(deps)
+
+    return lons, lats, deps, ia
+
+
+def _plot_mesh(nmsh, title=''):
+    scl = -0.01
+    ax = plt.figure().add_subplot(projection='3d')
+    ax.set_aspect('equal')
+    for i in range(0, nmsh.shape[0]):
+        j = np.isfinite(nmsh[i, :, 0])
+        plt.plot(
+            nmsh[i, j, 0], nmsh[i, j, 1], nmsh[i, j, 2] * scl, '-b', lw=.25)
+    for i in range(0, nmsh.shape[1]):
+        j = np.isfinite(nmsh[:, i, 0])
+        plt.plot(
+            nmsh[j, i, 0], nmsh[j, i, 1], nmsh[j, i, 2] * scl, '-r', lw=.25)
+    assert np.sum(np.isfinite(nmsh[:, 0, 0])) > 0
+    plt.plot(nmsh[:, 0, 0], nmsh[:, 0, 1], nmsh[:, 0, 2] * scl, '-g', lw=2.0)
+    plt.title(title)
+    plt.show()
+
+
+def _get_plane(lons, lats, deps):
+    # NOTE: We assume that input depths are positive in downward direction
+
+    from openquake.hazardlib.geo import utils as geo_utils
+
+    # Create a projection centered in the center of the cloud of points
+    proj = geo_utils.OrthographicProjection(
+        *geo_utils.get_spherical_bounding_box(lons, lats)
+    )
+
+    # Find the plane passing through the points
+    coo = np.zeros((len(lons), 3))
+    tmp = np.transpose(proj(lons, lats))
+    coo[:, 0] = tmp[:, 0]
+    coo[:, 1] = tmp[:, 1]
+    coo[:, 2] = deps
+    coo[:, 2] *= -1
+
+    return geo_utils.plane_fit(coo)
 
 
 def _align_profiles(prfr: list, prfl: list):
@@ -1177,16 +1315,16 @@ def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
     if new_edges is not None:
         for key in new_edges:
             edg = np.array(new_edges[key])
-            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'g-x', lw=1)
+            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'g-x', lw=.5)
             for ie, ee in enumerate(edg):
                 ax.text(ee[0], ee[1], ee[2], s=f'{ie}')
 
     if profs is not None:
         for pro in profs:
             edg = np.array(pro)
-            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'r', lw=3)
+            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'r', lw=.5)
         edg = np.array(profs[ref_idx])
-        plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'y--', lw=3, zorder=100)
+        plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'y--', lw=.5, zorder=100)
 
     if npr is not None:
         for pro in npr:

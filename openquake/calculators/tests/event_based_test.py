@@ -596,7 +596,7 @@ class EventBasedTestCase(CalculatorTestCase):
                       infer_occur_rates='true', ground_motion_fields='false')
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures2.csv', f, delta=1E-5)
-        
+
         # check the full_ruptures can be imported in a scenario
         self.run_calc(case_29.__file__, 'scenario.ini')
 

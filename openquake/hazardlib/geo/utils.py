@@ -836,6 +836,49 @@ def plane_fit(points):
     return ctr, numpy.linalg.svd(M)[0][:, -1]
 
 
+def get_strike_from_plane_normal(nrml):
+    """
+    Computes the strike direction using the vector defining the normal to the
+    plane. The positive z-direction is pointing upwards.
+
+    :param nrml:
+        A vector with 3 elements defining the normal to the plane
+    :returns:
+        A float defining the strike direction
+    """
+
+    # Make sure the vector normal to the plane points upwards. Note that this
+    # unit vector corresponds to the normal to the plane passing through the
+    # mesh surface with DEPTHS UPWARDS POSITIVE
+    if nrml[2] < 0:
+        nrml *= -1
+
+    # Get strike unit vector
+    suv = numpy.cross([0, 0, 1], nrml)
+
+    if numpy.abs(suv[0]) < 1e-5 and suv[1] > 0:
+        return 0
+    elif numpy.abs(suv[0]) < 1e-5 and suv[1] < 0:
+        return 180
+
+    if suv[0] > 0 and suv[1] >= 0:
+        # First quadrant
+        return 90 - numpy.rad2deg(numpy.arctan(suv[1] / suv[0]))
+    elif suv[0] > 0 and suv[1] < 0:
+        # Second quadrant
+        return 90 + numpy.abs(numpy.rad2deg(numpy.arctan(suv[1] / suv[0])))
+    elif suv[0] < 0 and suv[1] <= 0:
+        # Third quadrant
+        return 270 - numpy.abs(numpy.rad2deg(numpy.arctan(suv[1] / suv[0])))
+    elif suv[0] < 0 and suv[1] > 0:
+        # Fourth quadrant
+        return 270 + numpy.abs(numpy.rad2deg(numpy.arctan(suv[1] / suv[0])))
+    else:
+        msg = 'Unknown case \n'
+        msg += f'{suv[0]:.5f} {suv[1]:.5f} {suv[2]:.5f}'
+        raise ValueError(msg)
+
+
 def bbox2poly(bbox):
     """
     :param bbox: a geographic bounding box West-East-North-South
@@ -947,6 +990,13 @@ def geolocate(lonlats, geom_df, exclude=()):
     return codes
 
 
+def _angles_diff(ang_a, ang_b):
+    # Computes the difference between the first and the second angle. Both are
+    # in decimal degrees.
+    dff = ang_a - ang_b
+    return (dff + 180.0) % 360.0 - 180.0
+
+
 def geolocate_geometries(geometries, geom_df, exclude=()):
     """
     :param geometries: NumPy array of Shapely geometries to check
@@ -958,10 +1008,30 @@ def geolocate_geometries(geometries, geom_df, exclude=()):
     result_codes = numpy.empty(len(geometries), dtype=object)
     filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
     for i, input_geom in enumerate(geometries):
-        intersecting_codes = set()  # to store intersecting codes for current geometry
+        # to store intersecting codes for current geometry
+        intersecting_codes = set()
         for code, df in filtered_geom_df.groupby('code'):
-            target_geoms = df['geom'].values  # geometries associated with this code
-            if any(target_geom.intersects(input_geom) for target_geom in target_geoms):
+            # geometries associated with this code
+            target_geoms = df['geom'].values
+            if any(target_geom.intersects(input_geom) for
+                    target_geom in target_geoms):
                 intersecting_codes.add(code)
         result_codes[i] = sorted(intersecting_codes)
     return result_codes
+
+
+def angles_within(a_first, a_second, angle):
+    """
+    Check is 'angle' is within 'a_first' and 'a_second'. The interval
+    starts at 'a_first' and in clockwise direction goes to 'a_second'
+
+    :param a_first:
+    :param a_second:
+    :param angle:
+    """
+    out = numpy.zeros_like(angle)
+    if a_first < a_second:
+        out = (a_first <= angle) & (angle <= a_second)
+    else:
+        out = (a_first >= angle) & (angle >= a_second)
+    return out
