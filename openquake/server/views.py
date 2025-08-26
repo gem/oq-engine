@@ -1709,9 +1709,9 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             notifications = numpy.concatenate(
                 (notifications, preliminary_model_warning))
             sid_to_vs30.update({-1: ''})  # warning about preliminary model
+        sitecol = ds['sitecol']
         if 'notifications' in ds:
             notifications = numpy.concatenate((notifications, ds['notifications']))
-            sitecol = ds['sitecol']
             # NOTE: the variable name 'site' is already used
             sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
         notes = {}
@@ -1724,9 +1724,17 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 warnings[vs30] = notification['description'].decode('utf8')
         notes = group_keys_by_value(notes)
         warnings = group_keys_by_value(warnings)
-        notes_str = '\n'.join([f'For {vs30=}: {msg}' for (vs30, msg) in notes.items()])
-        warnings_str = '\n'.join([f'For {vs30=}: {msg}' if vs30 else msg
-                                  for (vs30, msg) in warnings.items()])
+        if len(sitecol) == 1:
+            # NOTE: specifying the vs30 is not needed if there is only one
+            notes_str = '\n'.join([note for vs30, note in notes.items()])
+            warnings_str = '\n'.join([warning for vs30, warning in warnings.items()])
+        else:
+            notes_str = '\n'.join(
+                [f'For {vs30=}: {msg}' for vs30, msg in notes.items()])
+            # NOTE: vs30 is -1 is a placeholder indicating a non-site-specific warning
+            warnings_str = '\n'.join(
+                [f'For {vs30=}: {msg}' if vs30 != -1 else msg
+                 for vs30, msg in warnings.items()])
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,

@@ -101,7 +101,7 @@ AELO_WARNINGS = {
 AELO_NOTES = {
     'only_prob_mce': (
         'The final MCE is derived solely from the Probabilistic MCE,'
-        ' which is below the DLLs. Outputs specific to the deterministic'
+        ' since it is below the DLLs. Outputs specific to the deterministic'
         ' analysis are not included.'
         ' For further information, please refer to the user manual.'),
 }
