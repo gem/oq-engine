@@ -46,12 +46,12 @@ from openquake.calculators.postproc.aelo_plots import (
 def getparams(what):
     """
     >>> getparams('rupture?')
-    {}, False
+    ({}, False)
     {'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10')
-    {'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False)
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10&with_borders=True')
-    {'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True)
     """
     assert '?' in what, what
     params = {}
