@@ -246,7 +246,6 @@ def test_WAF():
         # check that 2 of 3 plots have been created
         assert 'png/hcurves.png' in calc.datastore
         assert 'png/governing_mce.png' in calc.datastore
-        assert 'png/hcurves.png' in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
 
@@ -254,7 +253,8 @@ def test_JPN():
     # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
     expected = os.path.join(MOSAIC_DIR, 'JPN/in/expected/uhs.csv')
-    dic = dict(sites='139 36', site='JPN-site', vs30='760',
+    # testing the vs30 values corresponding to the "default" site class
+    dic = dict(sites='139 36', site='JPN-site', vs30='260 365 530',
                asce_version='ASCE7-22')
     with logs.init(job_ini) as log:
         params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
@@ -281,7 +281,7 @@ def test_JPN():
     df2 = pandas.read_csv(uhs_fname, skiprows=1, index_col='period')
     assert len(df1) == size
     assert len(df2) == M
-    expected_uhs = pandas.read_csv(expected, skiprows=1, index_col='period')
+    expected_uhs = pandas.read_csv(expected, index_col='period')
     expected_uhs.columns = ["poe-0.02", "poe-0.05", "poe-0.1", "poe-0.2",
                             "poe-0.5"]
     for col in expected_uhs.columns:
