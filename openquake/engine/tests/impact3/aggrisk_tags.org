@@ -1,4 +1,4 @@
-| ID_2                    | loss_type     | value         | lossmea   | lossq05   | lossq95   | NAME_2                          |
+| ID_2                    | loss_type     | value         | lossmea   | q05       | q95       | NAME_2                          |
 |-------------------------+---------------+---------------+-----------+-----------+-----------+---------------------------------|
 | 1001                    | contents      | 200_707       | 204.6     | 0.0       | 4_448     | Autauga County                  |
 | 1001                    | nonstructural | 301_060       | 797.4     | 0.0       | 12_290    | Autauga County                  |

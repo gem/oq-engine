@@ -1,4 +1,4 @@
-| NAME_1  | OCCUPANCY | loss_type     | value         | lossmea    | lossq05   | lossq95     |
+| NAME_1  | OCCUPANCY | loss_type     | value         | lossmea    | q05       | q95         |
 |---------+-----------+---------------+---------------+------------+-----------+-------------|
 | 568     | Com       | contents      | 18_597_770    | 3.161E-04  | 0.0       | 0.0045      |
 | 568     | Com       | nonstructural | 13_948_329    | 2.371E-04  | 0.0       | 0.0034      |

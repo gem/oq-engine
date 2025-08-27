@@ -1,4 +1,4 @@
-| ID_2                    | loss_type     | value      | lossmea   | lossq05   | lossq95   | NAME_2               |
+| ID_2                    | loss_type     | value      | lossmea   | q05       | q95       | NAME_2               |
 |-------------------------+---------------+------------+-----------+-----------+-----------+----------------------|
 | ERI-ADM1-1590546715-B2  | contents      | 48_803     | 2_126     | 0.0       | 9_268     | Gash-Barka Region    |
 | ERI-ADM1-1590546715-B2  | nonstructural | 73_956     | 1_711     | 0.0       | 6_703     | Gash-Barka Region    |
