@@ -1,200 +1,200 @@
-| ID_2                    | loss_type     | value      | lossmea   | q05       | q95       | NAME_2               |
-|-------------------------+---------------+------------+-----------+-----------+-----------+----------------------|
-| ERI-ADM1-1590546715-B2  | contents      | 48_803     | 2_126     | 0.0       | 9_268     | Gash-Barka Region    |
-| ERI-ADM1-1590546715-B2  | nonstructural | 73_956     | 1_711     | 0.0       | 6_703     | Gash-Barka Region    |
-| ERI-ADM1-1590546715-B2  | structural    | 123_608    | 3_448     | 0.0       | 18_585    | Gash-Barka Region    |
-| ERI-ADM1-1590546715-B2  | occupants     | 77.5000    | 0.0024    | 0.0       | 0.0128    | Gash-Barka Region    |
-| ERI-ADM1-1590546715-B2  | area          | 1_565      | 14.4281   | 0.0       | 76.5914   | Gash-Barka Region    |
-| ERI-ADM1-1590546715-B2  | number        | 20.0000    | 0.1433    | 0.0       | 0.7599    | Gash-Barka Region    |
-| ERI-ADM1-1590546715-B2  | residents     | 94.3000    | 1.1611    | 0.0       | 5.4503    | Gash-Barka Region    |
-| ERI-ADM1-1590546715-B2  | affectedpop   | 94.3000    | 1.9174    | 0.0       | 11.5421   | Gash-Barka Region    |
-| ERI-ADM1-1590546715-B2  | injured       | 77.5000    | 0.0089    | 0.0       | 0.0438    | Gash-Barka Region    |
-| ETH-ADM1-1590546715-B11 | contents      | 139_750    | 1_650     | 0.0       | 3_987     | Tigray               |
-| ETH-ADM1-1590546715-B11 | nonstructural | 134_151    | 2_257     | 0.0       | 10_219    | Tigray               |
-| ETH-ADM1-1590546715-B11 | structural    | 287_521    | 10_862    | 0.0       | 39_309    | Tigray               |
-| ETH-ADM1-1590546715-B11 | occupants     | 374.1      | 0.0606    | 0.0       | 0.1365    | Tigray               |
-| ETH-ADM1-1590546715-B11 | area          | 3_001      | 43.6959   | 0.0       | 95.1267   | Tigray               |
-| ETH-ADM1-1590546715-B11 | number        | 26.0000    | 0.1697    | 0.0       | 0.3659    | Tigray               |
-| ETH-ADM1-1590546715-B11 | residents     | 86.0000    | 0.0239    | 0.0       | 0.0353    | Tigray               |
-| ETH-ADM1-1590546715-B11 | affectedpop   | 86.0000    | 0.0426    | 0.0       | 0.0595    | Tigray               |
-| ETH-ADM1-1590546715-B11 | injured       | 374.1      | 0.3522    | 0.0       | 0.9082    | Tigray               |
-| ETH-ADM1-1590546715-B3  | contents      | 11_294_204 | 50_140    | 894.5     | 145_803   | Amhara               |
-| ETH-ADM1-1590546715-B3  | nonstructural | 14_009_579 | 36_318    | 257.6     | 87_463    | Amhara               |
-| ETH-ADM1-1590546715-B3  | structural    | 29_100_968 | 141_338   | 2_552     | 368_863   | Amhara               |
-| ETH-ADM1-1590546715-B3  | occupants     | 13_756     | 0.5345    | 1.504E-05 | 1.7649    | Amhara               |
-| ETH-ADM1-1590546715-B3  | area          | 370_277    | 712.7     | 6.2835    | 2_075     | Amhara               |
-| ETH-ADM1-1590546715-B3  | number        | 5_912      | 4.3831    | 0.0202    | 14.0973   | Amhara               |
-| ETH-ADM1-1590546715-B3  | residents     | 28_043     | 29.9784   | 0.0339    | 99.5785   | Amhara               |
-| ETH-ADM1-1590546715-B3  | affectedpop   | 28_043     | 49.5863   | 0.0329    | 159.7346  | Amhara               |
-| ETH-ADM1-1590546715-B3  | injured       | 13_756     | 1.6161    | 4.742E-06 | 9.3912    | Amhara               |
-| ETH-ADM1-1590546715-B4  | contents      | 1_575_449  | 223_014   | 3_450     | 894_505   | Beneshangul Gumu     |
-| ETH-ADM1-1590546715-B4  | nonstructural | 2_070_279  | 104_490   | 406.1     | 353_755   | Beneshangul Gumu     |
-| ETH-ADM1-1590546715-B4  | structural    | 1_656_214  | 13_994    | 488.9     | 33_123    | Beneshangul Gumu     |
-| ETH-ADM1-1590546715-B4  | occupants     | 1_176      | 0.1373    | 0.0295    | 0.2185    | Beneshangul Gumu     |
-| ETH-ADM1-1590546715-B4  | area          | 32_256     | 153.0306  | 32.1440   | 401.3     | Beneshangul Gumu     |
-| ETH-ADM1-1590546715-B4  | number        | 526.0      | 1.8916    | 0.4324    | 3.9374    | Beneshangul Gumu     |
-| ETH-ADM1-1590546715-B4  | residents     | 2_483      | 9.8090    | 2.6296    | 20.0408   | Beneshangul Gumu     |
-| ETH-ADM1-1590546715-B4  | affectedpop   | 2_483      | 17.4426   | 3.1160    | 39.7336   | Beneshangul Gumu     |
-| ETH-ADM1-1590546715-B4  | injured       | 1_176      | 0.1075    | 1.457E-04 | 0.2687    | Beneshangul Gumu     |
-| ETH-ADM1-1590546715-B6  | contents      | 119_595    | 4_660     | 5.6823    | 16_246    | Gambela              |
-| ETH-ADM1-1590546715-B6  | nonstructural | 154_414    | 5_345     | 43.7545   | 15_170    | Gambela              |
-| ETH-ADM1-1590546715-B6  | structural    | 225_563    | 10_765    | 14.6633   | 62_018    | Gambela              |
-| ETH-ADM1-1590546715-B6  | occupants     | 89.0333    | 0.0880    | 4.700E-07 | 0.6875    | Gambela              |
-| ETH-ADM1-1590546715-B6  | area          | 3_013      | 74.7338   | 0.2646    | 427.2     | Gambela              |
-| ETH-ADM1-1590546715-B6  | number        | 44.0000    | 1.0479    | 0.0038    | 7.0268    | Gambela              |
-| ETH-ADM1-1590546715-B6  | residents     | 211.8      | 7.1756    | 0.0639    | 43.0533   | Gambela              |
-| ETH-ADM1-1590546715-B6  | affectedpop   | 211.8      | 11.6661   | 0.0092    | 66.8529   | Gambela              |
-| ETH-ADM1-1590546715-B6  | injured       | 89.0333    | 0.0426    | 4.440E-07 | 0.1880    | Gambela              |
-| ETH-ADM1-1590546715-B8  | contents      | 6_170_456  | 141_173   | 12_882    | 309_653   | Oromia               |
-| ETH-ADM1-1590546715-B8  | nonstructural | 7_913_026  | 143_649   | 16_737    | 250_052   | Oromia               |
-| ETH-ADM1-1590546715-B8  | structural    | 15_134_627 | 270_666   | 50_267    | 518_332   | Oromia               |
-| ETH-ADM1-1590546715-B8  | occupants     | 6_755      | 1.9109    | 0.0676    | 4.9909    | Oromia               |
-| ETH-ADM1-1590546715-B8  | area          | 188_368    | 1_957     | 185.8     | 3_732     | Oromia               |
-| ETH-ADM1-1590546715-B8  | number        | 2_391      | 22.4208   | 1.8407    | 47.6472   | Oromia               |
-| ETH-ADM1-1590546715-B8  | residents     | 11_608     | 152.8583  | 14.6936   | 324.2     | Oromia               |
-| ETH-ADM1-1590546715-B8  | affectedpop   | 11_608     | 231.7     | 39.2755   | 482.4     | Oromia               |
-| ETH-ADM1-1590546715-B8  | injured       | 6_755      | 3.3756    | 0.0941    | 16.6484   | Oromia               |
-| ETH-ADM1-1590546715-B9  | contents      | 13_569_579 | 45_664    | 440.6     | 146_649   | SNNPR                |
-| ETH-ADM1-1590546715-B9  | nonstructural | 17_024_786 | 39_809    | 451.7     | 147_299   | SNNPR                |
-| ETH-ADM1-1590546715-B9  | structural    | 31_813_662 | 70_762    | 878.4     | 263_835   | SNNPR                |
-| ETH-ADM1-1590546715-B9  | occupants     | 11_579     | 0.0898    | 1.773E-05 | 0.4503    | SNNPR                |
-| ETH-ADM1-1590546715-B9  | area          | 410_807    | 364.3     | 2.3659    | 1_434     | SNNPR                |
-| ETH-ADM1-1590546715-B9  | number        | 5_127      | 3.6469    | 0.0238    | 15.9768   | SNNPR                |
-| ETH-ADM1-1590546715-B9  | residents     | 24_689     | 28.9613   | 0.3677    | 117.6848  | SNNPR                |
-| ETH-ADM1-1590546715-B9  | affectedpop   | 24_689     | 48.9672   | 0.4567    | 135.3833  | SNNPR                |
-| ETH-ADM1-1590546715-B9  | injured       | 11_579     | 0.1220    | 1.773E-05 | 0.5500    | SNNPR                |
-| KEN-ADM1-1590546715-B32 | contents      | 2_060      | 0.1899    | 0.0       | 0.6441    | Marsabit             |
-| KEN-ADM1-1590546715-B32 | nonstructural | 2_575      | 0.2613    | 0.0       | 1.1239    | Marsabit             |
-| KEN-ADM1-1590546715-B32 | structural    | 5_665      | 3.4262    | 0.0       | 25.4628   | Marsabit             |
-| KEN-ADM1-1590546715-B32 | occupants     | 1.6000     | 7.200E-09 | 0.0       | 1.600E-08 | Marsabit             |
-| KEN-ADM1-1590546715-B32 | area          | 60.0000    | 0.0012    | 0.0       | 0.0090    | Marsabit             |
-| KEN-ADM1-1590546715-B32 | number        | 1.0000     | 2.044E-05 | 0.0       | 1.507E-04 | Marsabit             |
-| KEN-ADM1-1590546715-B32 | residents     | 3.7000     | 3.668E-04 | 0.0       | 0.0021    | Marsabit             |
-| KEN-ADM1-1590546715-B32 | affectedpop   | 3.7000     | 0.0014    | 0.0       | 3.855E-04 | Marsabit             |
-| KEN-ADM1-1590546715-B32 | injured       | 1.6000     | 7.200E-09 | 0.0       | 1.600E-08 | Marsabit             |
-| KEN-ADM1-1590546715-B43 | contents      | 4_464      | 3.5913    | 0.0       | 0.0469    | Turkana              |
-| KEN-ADM1-1590546715-B43 | nonstructural | 7_983      | 9.3791    | 0.0       | 53.4906   | Turkana              |
-| KEN-ADM1-1590546715-B43 | structural    | 16_739     | 27.9033   | 0.0       | 122.5358  | Turkana              |
-| KEN-ADM1-1590546715-B43 | occupants     | 6.4333     | 3.302E-08 | 0.0       | 6.433E-08 | Turkana              |
-| KEN-ADM1-1590546715-B43 | area          | 240.0      | 0.3113    | 0.0       | 0.6552    | Turkana              |
-| KEN-ADM1-1590546715-B43 | number        | 4.0000     | 0.0052    | 0.0       | 0.0109    | Turkana              |
-| KEN-ADM1-1590546715-B43 | residents     | 14.8000    | 0.0471    | 0.0       | 0.1263    | Turkana              |
-| KEN-ADM1-1590546715-B43 | affectedpop   | 14.8000    | 0.0210    | 0.0       | 0.0140    | Turkana              |
-| KEN-ADM1-1590546715-B43 | injured       | 6.4333     | 3.060E-08 | 0.0       | 6.433E-08 | Turkana              |
-| SDN-ADM1-1590546715-B12 | contents      | 487_436    | 1_144     | 0.0       | 2_889     | Khartoum State       |
-| SDN-ADM1-1590546715-B12 | nonstructural | 550_118    | 73.3078   | 0.0       | 51.2203   | Khartoum State       |
-| SDN-ADM1-1590546715-B12 | structural    | 353_541    | 43.9651   | 0.0       | 255.0     | Khartoum State       |
-| SDN-ADM1-1590546715-B12 | occupants     | 648.7      | 3.258E-06 | 0.0       | 6.487E-06 | Khartoum State       |
-| SDN-ADM1-1590546715-B12 | area          | 4_300      | 43.3773   | 0.0       | 1.8108    | Khartoum State       |
-| SDN-ADM1-1590546715-B12 | number        | 19.0000    | 0.1671    | 0.0       | 0.0070    | Khartoum State       |
-| SDN-ADM1-1590546715-B12 | residents     | 18.2000    | 0.0043    | 0.0       | 0.0043    | Khartoum State       |
-| SDN-ADM1-1590546715-B12 | affectedpop   | 18.2000    | 0.0015    | 0.0       | 0.0102    | Khartoum State       |
-| SDN-ADM1-1590546715-B12 | injured       | 648.7      | 0.0780    | 0.0       | 6.487E-06 | Khartoum State       |
-| SDN-ADM1-1590546715-B13 | contents      | 1_758_197  | 155_147   | 187.9     | 444_441   | Gezira State         |
-| SDN-ADM1-1590546715-B13 | nonstructural | 2_130_812  | 178_665   | 571.3     | 458_269   | Gezira State         |
-| SDN-ADM1-1590546715-B13 | structural    | 4_266_648  | 419_143   | 1_559     | 1_006_042 | Gezira State         |
-| SDN-ADM1-1590546715-B13 | occupants     | 2_742      | 1.7967    | 6.388E-06 | 4.9901    | Gezira State         |
-| SDN-ADM1-1590546715-B13 | area          | 54_332     | 2_760     | 0.7490    | 7_773     | Gezira State         |
-| SDN-ADM1-1590546715-B13 | number        | 652.0      | 24.2871   | 0.0114    | 68.4437   | Gezira State         |
-| SDN-ADM1-1590546715-B13 | residents     | 3_902      | 181.4     | 0.2728    | 476.9     | Gezira State         |
-| SDN-ADM1-1590546715-B13 | affectedpop   | 3_902      | 248.1     | 3.5899    | 598.1     | Gezira State         |
-| SDN-ADM1-1590546715-B13 | injured       | 2_742      | 3.6082    | 6.388E-06 | 12.0680   | Gezira State         |
-| SDN-ADM1-1590546715-B14 | contents      | 445_846    | 22_738    | 2_513     | 49_270    | Gedarif State        |
-| SDN-ADM1-1590546715-B14 | nonstructural | 600_980    | 58_669    | 3_263     | 109_608   | Gedarif State        |
-| SDN-ADM1-1590546715-B14 | structural    | 1_201_431  | 135_785   | 25_734    | 313_005   | Gedarif State        |
-| SDN-ADM1-1590546715-B14 | occupants     | 783.3      | 0.2719    | 0.0561    | 0.5853    | Gedarif State        |
-| SDN-ADM1-1590546715-B14 | area          | 15_593     | 1_001     | 118.6691  | 2_013     | Gedarif State        |
-| SDN-ADM1-1590546715-B14 | number        | 218.0      | 9.9729    | 0.7334    | 19.9762   | Gedarif State        |
-| SDN-ADM1-1590546715-B14 | residents     | 1_305      | 82.3533   | 4.0300    | 149.0835  | Gedarif State        |
-| SDN-ADM1-1590546715-B14 | affectedpop   | 1_305      | 123.0678  | 7.9660    | 214.2     | Gedarif State        |
-| SDN-ADM1-1590546715-B14 | injured       | 783.3      | 0.5265    | 9.558E-05 | 0.8888    | Gedarif State        |
-| SDN-ADM1-1590546715-B15 | contents      | 278_140    | 22_104    | 10.6509   | 68_668    | White Nile State     |
-| SDN-ADM1-1590546715-B15 | nonstructural | 440_534    | 42_601    | 108.0026  | 187_038   | White Nile State     |
-| SDN-ADM1-1590546715-B15 | structural    | 872_107    | 151_030   | 514.6     | 436_738   | White Nile State     |
-| SDN-ADM1-1590546715-B15 | occupants     | 549.2      | 0.3727    | 2.697E-06 | 1.2592    | White Nile State     |
-| SDN-ADM1-1590546715-B15 | area          | 9_458      | 964.5     | 1.5506    | 3_585     | White Nile State     |
-| SDN-ADM1-1590546715-B15 | number        | 94.0000    | 8.9977    | 0.0117    | 33.4901   | White Nile State     |
-| SDN-ADM1-1590546715-B15 | residents     | 577.3      | 69.4178   | 0.2101    | 222.6     | White Nile State     |
-| SDN-ADM1-1590546715-B15 | affectedpop   | 577.3      | 112.4212  | 0.3563    | 267.9     | White Nile State     |
-| SDN-ADM1-1590546715-B15 | injured       | 549.2      | 0.8350    | 1.890E-06 | 2.7813    | White Nile State     |
-| SDN-ADM1-1590546715-B16 | contents      | 213_912    | 24_234    | 2_496     | 48_263    | Blue Nile State      |
-| SDN-ADM1-1590546715-B16 | nonstructural | 273_023    | 30_353    | 634.6     | 59_092    | Blue Nile State      |
-| SDN-ADM1-1590546715-B16 | structural    | 577_867    | 88_937    | 6_998     | 149_048   | Blue Nile State      |
-| SDN-ADM1-1590546715-B16 | occupants     | 463.1      | 0.2571    | 0.0140    | 0.6159    | Blue Nile State      |
-| SDN-ADM1-1590546715-B16 | area          | 8_352      | 820.9     | 60.2460   | 1_773     | Blue Nile State      |
-| SDN-ADM1-1590546715-B16 | number        | 113.0000   | 10.4778   | 0.8532    | 25.0842   | Blue Nile State      |
-| SDN-ADM1-1590546715-B16 | residents     | 717.2      | 84.3181   | 11.8493   | 179.9212  | Blue Nile State      |
-| SDN-ADM1-1590546715-B16 | affectedpop   | 717.2      | 121.5258  | 3.4650    | 228.6     | Blue Nile State      |
-| SDN-ADM1-1590546715-B16 | injured       | 463.1      | 0.9518    | 0.0081    | 2.2844    | Blue Nile State      |
-| SDN-ADM1-1590546715-B2  | contents      | 60_619     | 2_874     | 0.0       | 16_647    | South Kordofan State |
-| SDN-ADM1-1590546715-B2  | nonstructural | 77_983     | 1_356     | 0.0       | 4_317     | South Kordofan State |
-| SDN-ADM1-1590546715-B2  | structural    | 146_100    | 3_959     | 0.0       | 14_226    | South Kordofan State |
-| SDN-ADM1-1590546715-B2  | occupants     | 108.6333   | 0.0404    | 0.0       | 0.2197    | South Kordofan State |
-| SDN-ADM1-1590546715-B2  | area          | 1_872      | 27.4510   | 0.0       | 134.2785  | South Kordofan State |
-| SDN-ADM1-1590546715-B2  | number        | 23.0000    | 0.1786    | 0.0       | 0.8225    | South Kordofan State |
-| SDN-ADM1-1590546715-B2  | residents     | 136.0000   | 1.1234    | 0.0       | 4.5402    | South Kordofan State |
-| SDN-ADM1-1590546715-B2  | affectedpop   | 136.0000   | 2.4214    | 0.0       | 11.8158   | South Kordofan State |
-| SDN-ADM1-1590546715-B2  | injured       | 108.6333   | 0.0836    | 0.0       | 0.1685    | South Kordofan State |
-| SDN-ADM1-1590546715-B4  | contents      | 391_772    | 29_438    | 5.529E-04 | 100_033   | Kassala State        |
-| SDN-ADM1-1590546715-B4  | nonstructural | 440_295    | 31_012    | 9.455E-04 | 94_558    | Kassala State        |
-| SDN-ADM1-1590546715-B4  | structural    | 718_720    | 71_924    | 0.7935    | 223_144   | Kassala State        |
-| SDN-ADM1-1590546715-B4  | occupants     | 513.4      | 0.2454    | 1.525E-06 | 0.9546    | Kassala State        |
-| SDN-ADM1-1590546715-B4  | area          | 9_257      | 567.4     | 1.401E-05 | 2_171     | Kassala State        |
-| SDN-ADM1-1590546715-B4  | number        | 103.0000   | 5.5167    | 4.000E-08 | 21.5384   | Kassala State        |
-| SDN-ADM1-1590546715-B4  | residents     | 607.6      | 40.7613   | 0.0       | 135.7410  | Kassala State        |
-| SDN-ADM1-1590546715-B4  | affectedpop   | 607.6      | 55.0956   | 0.0       | 137.3487  | Kassala State        |
-| SDN-ADM1-1590546715-B4  | injured       | 513.4      | 0.4789    | 1.430E-06 | 2.2927    | Kassala State        |
-| SDN-ADM1-1590546715-B6  | contents      | 594_539    | 65_653    | 13_322    | 232_894   | Sennar State         |
-| SDN-ADM1-1590546715-B6  | nonstructural | 741_842    | 78_105    | 18_150    | 228_864   | Sennar State         |
-| SDN-ADM1-1590546715-B6  | structural    | 947_544    | 116_187   | 23_633    | 253_181   | Sennar State         |
-| SDN-ADM1-1590546715-B6  | occupants     | 731.4      | 0.3660    | 0.0492    | 0.8084    | Sennar State         |
-| SDN-ADM1-1590546715-B6  | area          | 12_127     | 1_010     | 363.0     | 2_407     | Sennar State         |
-| SDN-ADM1-1590546715-B6  | number        | 169.0000   | 11.4206   | 3.6320    | 34.2084   | Sennar State         |
-| SDN-ADM1-1590546715-B6  | residents     | 967.9      | 80.1163   | 27.4743   | 270.8     | Sennar State         |
-| SDN-ADM1-1590546715-B6  | affectedpop   | 967.9      | 86.1917   | 10.7715   | 248.0     | Sennar State         |
-| SDN-ADM1-1590546715-B6  | injured       | 731.4      | 1.2211    | 0.0063    | 4.9938    | Sennar State         |
-| SDN-ADM1-1590546715-B8  | contents      | 125_076    | 1_455     | 0.0       | 4_183     | North Kordofan State |
-| SDN-ADM1-1590546715-B8  | nonstructural | 123_230    | 1_227     | 0.0       | 2_587     | North Kordofan State |
-| SDN-ADM1-1590546715-B8  | structural    | 160_290    | 2_676     | 0.0       | 13_292    | North Kordofan State |
-| SDN-ADM1-1590546715-B8  | occupants     | 175.5000   | 0.0012    | 0.0       | 1.755E-06 | North Kordofan State |
-| SDN-ADM1-1590546715-B8  | area          | 1_811      | 11.5832   | 0.0       | 57.4223   | North Kordofan State |
-| SDN-ADM1-1590546715-B8  | number        | 15.0000    | 0.0729    | 0.0       | 0.3730    | North Kordofan State |
-| SDN-ADM1-1590546715-B8  | residents     | 74.7000    | 0.7341    | 0.0       | 3.8593    | North Kordofan State |
-| SDN-ADM1-1590546715-B8  | affectedpop   | 74.7000    | 1.3137    | 0.0       | 8.0640    | North Kordofan State |
-| SDN-ADM1-1590546715-B8  | injured       | 175.5000   | 0.0076    | 0.0       | 0.0060    | North Kordofan State |
-| SSD-ADM1-1590546715-B3  | contents      | 582_756    | 13_946    | 22.1304   | 51_688    | Eastern Equatoria    |
-| SSD-ADM1-1590546715-B3  | nonstructural | 724_958    | 26_283    | 17.9513   | 83_675    | Eastern Equatoria    |
-| SSD-ADM1-1590546715-B3  | structural    | 1_104_610  | 61_069    | 31.2493   | 195_687   | Eastern Equatoria    |
-| SSD-ADM1-1590546715-B3  | occupants     | 855.4      | 0.1780    | 1.571E-06 | 0.5973    | Eastern Equatoria    |
-| SSD-ADM1-1590546715-B3  | area          | 13_446     | 453.1     | 0.3238    | 1_375     | Eastern Equatoria    |
-| SSD-ADM1-1590546715-B3  | number        | 152.0000   | 3.9588    | 0.0032    | 12.5005   | Eastern Equatoria    |
-| SSD-ADM1-1590546715-B3  | residents     | 821.5      | 33.1042   | 0.0696    | 100.0187  | Eastern Equatoria    |
-| SSD-ADM1-1590546715-B3  | affectedpop   | 821.5      | 48.5009   | 0.1212    | 139.1490  | Eastern Equatoria    |
-| SSD-ADM1-1590546715-B3  | injured       | 855.4      | 0.5859    | 1.488E-06 | 1.8275    | Eastern Equatoria    |
-| SSD-ADM1-1590546715-B4  | contents      | 328_670    | 21_642    | 439.2     | 55_748    | Upper Nile           |
-| SSD-ADM1-1590546715-B4  | nonstructural | 402_630    | 30_977    | 1_086     | 70_856    | Upper Nile           |
-| SSD-ADM1-1590546715-B4  | structural    | 652_294    | 72_168    | 1_086     | 155_027   | Upper Nile           |
-| SSD-ADM1-1590546715-B4  | occupants     | 366.8      | 0.1626    | 7.177E-04 | 0.4525    | Upper Nile           |
-| SSD-ADM1-1590546715-B4  | area          | 7_486      | 469.1     | 14.2382   | 1_349     | Upper Nile           |
-| SSD-ADM1-1590546715-B4  | number        | 67.0000    | 4.6493    | 0.1575    | 13.2919   | Upper Nile           |
-| SSD-ADM1-1590546715-B4  | residents     | 470.8      | 39.2760   | 2.5992    | 97.8104   | Upper Nile           |
-| SSD-ADM1-1590546715-B4  | affectedpop   | 470.8      | 61.0543   | 7.1837    | 134.0787  | Upper Nile           |
-| SSD-ADM1-1590546715-B4  | injured       | 366.8      | 0.2798    | 1.715E-05 | 0.7691    | Upper Nile           |
-| SSD-ADM1-1590546715-B8  | contents      | 293_532    | 8_881     | 166.0931  | 27_184    | Jonglei              |
-| SSD-ADM1-1590546715-B8  | nonstructural | 376_695    | 11_393    | 342.6     | 31_172    | Jonglei              |
-| SSD-ADM1-1590546715-B8  | structural    | 630_670    | 30_000    | 360.3     | 79_953    | Jonglei              |
-| SSD-ADM1-1590546715-B8  | occupants     | 434.8      | 0.1430    | 1.543E-04 | 0.5236    | Jonglei              |
-| SSD-ADM1-1590546715-B8  | area          | 8_210      | 191.3     | 1.8875    | 707.6     | Jonglei              |
-| SSD-ADM1-1590546715-B8  | number        | 104.0000   | 1.6597    | 0.0239    | 6.1638    | Jonglei              |
-| SSD-ADM1-1590546715-B8  | residents     | 608.4      | 12.5049   | 0.4094    | 38.0098   | Jonglei              |
-| SSD-ADM1-1590546715-B8  | affectedpop   | 608.4      | 17.2065   | 1.0577    | 35.1261   | Jonglei              |
-| SSD-ADM1-1590546715-B8  | injured       | 434.8      | 0.6918    | 1.695E-06 | 1.6935    | Jonglei              |
-| *total*                 | affectedpop   | 77_440     | 1_238     | 77.4017   | 2_918     | *total*              |
-| *total*                 | area          | 1_155_830  | 11_640    | 787.5     | 31_589    | *total*              |
-| *total*                 | contents      | 38_484_856 | 837_687   | 36_830    | 2_628_019 | *total*              |
-| *total*                 | injured       | 42_188     | 14.9730   | 0.1088    | 57.7719   | *total*              |
-| *total*                 | nonstructural | 48_273_852 | 824_304   | 42_070    | 2_200_801 | *total*              |
-| *total*                 | number        | 15_780     | 115.0677  | 7.7472    | 325.7     | *total*              |
-| *total*                 | occupants     | 42_188     | 6.6585    | 0.2174    | 19.2682   | *total*              |
-| *total*                 | residents     | 77_440     | 855.1     | 64.7033   | 2_289     | *total*              |
-| *total*                 | structural    | 89_996_392 | 1_674_788 | 114_118   | 4_143_812 | *total*              |
+| ID                      | loss_type     | value      | lossmea   | q05       | q50       | q95       | NAME                 |
+|-------------------------+---------------+------------+-----------+-----------+-----------+-----------+----------------------|
+| ERI-ADM1-1590546715-B2  | contents      | 48_803     | 2_126     | 0.0       | 220.0     | 9_268     | Gash-Barka Region    |
+| ERI-ADM1-1590546715-B2  | nonstructural | 73_956     | 1_711     | 0.0       | 189.3     | 6_703     | Gash-Barka Region    |
+| ERI-ADM1-1590546715-B2  | structural    | 123_608    | 3_448     | 0.0       | 174.0982  | 18_585    | Gash-Barka Region    |
+| ERI-ADM1-1590546715-B2  | occupants     | 77.5000    | 0.0024    | 0.0       | 1.049E-04 | 0.0128    | Gash-Barka Region    |
+| ERI-ADM1-1590546715-B2  | area          | 1_565      | 14.4281   | 0.0       | 1.2379    | 76.5914   | Gash-Barka Region    |
+| ERI-ADM1-1590546715-B2  | number        | 20.0000    | 0.1433    | 0.0       | 0.0123    | 0.7599    | Gash-Barka Region    |
+| ERI-ADM1-1590546715-B2  | residents     | 94.3000    | 1.1611    | 0.0       | 0.1745    | 5.4503    | Gash-Barka Region    |
+| ERI-ADM1-1590546715-B2  | affectedpop   | 94.3000    | 1.9174    | 0.0       | 0.5252    | 11.5421   | Gash-Barka Region    |
+| ERI-ADM1-1590546715-B2  | injured       | 77.5000    | 0.0089    | 0.0       | 6.043E-07 | 0.0438    | Gash-Barka Region    |
+| ETH-ADM1-1590546715-B11 | contents      | 139_750    | 1_650     | 0.0       | 64.4079   | 3_987     | Tigray               |
+| ETH-ADM1-1590546715-B11 | nonstructural | 134_151    | 2_257     | 0.0       | 358.0     | 10_219    | Tigray               |
+| ETH-ADM1-1590546715-B11 | structural    | 287_521    | 10_862    | 0.0       | 765.3     | 39_309    | Tigray               |
+| ETH-ADM1-1590546715-B11 | occupants     | 374.1      | 0.0606    | 0.0       | 3.500E-06 | 0.1365    | Tigray               |
+| ETH-ADM1-1590546715-B11 | area          | 3_001      | 43.6959   | 0.0       | 4.5352    | 95.1267   | Tigray               |
+| ETH-ADM1-1590546715-B11 | number        | 26.0000    | 0.1697    | 0.0       | 0.0174    | 0.3659    | Tigray               |
+| ETH-ADM1-1590546715-B11 | residents     | 86.0000    | 0.0239    | 0.0       | 2.870E-07 | 0.0353    | Tigray               |
+| ETH-ADM1-1590546715-B11 | affectedpop   | 86.0000    | 0.0426    | 0.0       | 1.957E-07 | 0.0595    | Tigray               |
+| ETH-ADM1-1590546715-B11 | injured       | 374.1      | 0.3522    | 0.0       | 2.328E-06 | 0.9082    | Tigray               |
+| ETH-ADM1-1590546715-B3  | contents      | 11_294_204 | 50_140    | 894.5     | 26_129    | 145_803   | Amhara               |
+| ETH-ADM1-1590546715-B3  | nonstructural | 14_009_579 | 36_318    | 257.6     | 20_139    | 87_463    | Amhara               |
+| ETH-ADM1-1590546715-B3  | structural    | 29_100_968 | 141_338   | 2_552     | 93_702    | 368_863   | Amhara               |
+| ETH-ADM1-1590546715-B3  | occupants     | 13_756     | 0.5345    | 1.504E-05 | 0.1767    | 1.7649    | Amhara               |
+| ETH-ADM1-1590546715-B3  | area          | 370_277    | 712.7     | 6.2835    | 401.2     | 2_075     | Amhara               |
+| ETH-ADM1-1590546715-B3  | number        | 5_912      | 4.3831    | 0.0202    | 3.2758    | 14.0973   | Amhara               |
+| ETH-ADM1-1590546715-B3  | residents     | 28_043     | 29.9784   | 0.0339    | 9.9438    | 99.5785   | Amhara               |
+| ETH-ADM1-1590546715-B3  | affectedpop   | 28_043     | 49.5863   | 0.0329    | 15.4835   | 159.7346  | Amhara               |
+| ETH-ADM1-1590546715-B3  | injured       | 13_756     | 1.6161    | 4.742E-06 | 0.0552    | 9.3912    | Amhara               |
+| ETH-ADM1-1590546715-B4  | contents      | 1_575_449  | 223_014   | 3_450     | 87_209    | 894_505   | Beneshangul Gumu     |
+| ETH-ADM1-1590546715-B4  | nonstructural | 2_070_279  | 104_490   | 406.1     | 25_667    | 353_755   | Beneshangul Gumu     |
+| ETH-ADM1-1590546715-B4  | structural    | 1_656_214  | 13_994    | 488.9     | 9_891     | 33_123    | Beneshangul Gumu     |
+| ETH-ADM1-1590546715-B4  | occupants     | 1_176      | 0.1373    | 0.0295    | 0.1296    | 0.2185    | Beneshangul Gumu     |
+| ETH-ADM1-1590546715-B4  | area          | 32_256     | 153.0306  | 32.1440   | 90.5240   | 401.3     | Beneshangul Gumu     |
+| ETH-ADM1-1590546715-B4  | number        | 526.0      | 1.8916    | 0.4324    | 1.2518    | 3.9374    | Beneshangul Gumu     |
+| ETH-ADM1-1590546715-B4  | residents     | 2_483      | 9.8090    | 2.6296    | 7.4063    | 20.0408   | Beneshangul Gumu     |
+| ETH-ADM1-1590546715-B4  | affectedpop   | 2_483      | 17.4426   | 3.1160    | 10.0240   | 39.7336   | Beneshangul Gumu     |
+| ETH-ADM1-1590546715-B4  | injured       | 1_176      | 0.1075    | 1.457E-04 | 0.0152    | 0.2687    | Beneshangul Gumu     |
+| ETH-ADM1-1590546715-B6  | contents      | 119_595    | 4_660     | 5.6823    | 500.3     | 16_246    | Gambela              |
+| ETH-ADM1-1590546715-B6  | nonstructural | 154_414    | 5_345     | 43.7545   | 1_774     | 15_170    | Gambela              |
+| ETH-ADM1-1590546715-B6  | structural    | 225_563    | 10_765    | 14.6633   | 1_306     | 62_018    | Gambela              |
+| ETH-ADM1-1590546715-B6  | occupants     | 89.0333    | 0.0880    | 4.700E-07 | 0.0030    | 0.6875    | Gambela              |
+| ETH-ADM1-1590546715-B6  | area          | 3_013      | 74.7338   | 0.2646    | 9.9629    | 427.2     | Gambela              |
+| ETH-ADM1-1590546715-B6  | number        | 44.0000    | 1.0479    | 0.0038    | 0.1284    | 7.0268    | Gambela              |
+| ETH-ADM1-1590546715-B6  | residents     | 211.8      | 7.1756    | 0.0639    | 1.5415    | 43.0533   | Gambela              |
+| ETH-ADM1-1590546715-B6  | affectedpop   | 211.8      | 11.6661   | 0.0092    | 3.4949    | 66.8529   | Gambela              |
+| ETH-ADM1-1590546715-B6  | injured       | 89.0333    | 0.0426    | 4.440E-07 | 1.185E-05 | 0.1880    | Gambela              |
+| ETH-ADM1-1590546715-B8  | contents      | 6_170_456  | 141_173   | 12_882    | 113_364   | 309_653   | Oromia               |
+| ETH-ADM1-1590546715-B8  | nonstructural | 7_913_026  | 143_649   | 16_737    | 110_656   | 250_052   | Oromia               |
+| ETH-ADM1-1590546715-B8  | structural    | 15_134_627 | 270_666   | 50_267    | 206_939   | 518_332   | Oromia               |
+| ETH-ADM1-1590546715-B8  | occupants     | 6_755      | 1.9109    | 0.0676    | 1.0000    | 4.9909    | Oromia               |
+| ETH-ADM1-1590546715-B8  | area          | 188_368    | 1_957     | 185.8     | 1_319     | 3_732     | Oromia               |
+| ETH-ADM1-1590546715-B8  | number        | 2_391      | 22.4208   | 1.8407    | 14.6237   | 47.6472   | Oromia               |
+| ETH-ADM1-1590546715-B8  | residents     | 11_608     | 152.8583  | 14.6936   | 104.8709  | 324.2     | Oromia               |
+| ETH-ADM1-1590546715-B8  | affectedpop   | 11_608     | 231.7     | 39.2755   | 146.7161  | 482.4     | Oromia               |
+| ETH-ADM1-1590546715-B8  | injured       | 6_755      | 3.3756    | 0.0941    | 0.9852    | 16.6484   | Oromia               |
+| ETH-ADM1-1590546715-B9  | contents      | 13_569_579 | 45_664    | 440.6     | 12_474    | 146_649   | SNNPR                |
+| ETH-ADM1-1590546715-B9  | nonstructural | 17_024_786 | 39_809    | 451.7     | 14_660    | 147_299   | SNNPR                |
+| ETH-ADM1-1590546715-B9  | structural    | 31_813_662 | 70_762    | 878.4     | 28_420    | 263_835   | SNNPR                |
+| ETH-ADM1-1590546715-B9  | occupants     | 11_579     | 0.0898    | 1.773E-05 | 0.0084    | 0.4503    | SNNPR                |
+| ETH-ADM1-1590546715-B9  | area          | 410_807    | 364.3     | 2.3659    | 85.6983   | 1_434     | SNNPR                |
+| ETH-ADM1-1590546715-B9  | number        | 5_127      | 3.6469    | 0.0238    | 0.8492    | 15.9768   | SNNPR                |
+| ETH-ADM1-1590546715-B9  | residents     | 24_689     | 28.9613   | 0.3677    | 8.1762    | 117.6848  | SNNPR                |
+| ETH-ADM1-1590546715-B9  | affectedpop   | 24_689     | 48.9672   | 0.4567    | 30.1184   | 135.3833  | SNNPR                |
+| ETH-ADM1-1590546715-B9  | injured       | 11_579     | 0.1220    | 1.773E-05 | 0.0033    | 0.5500    | SNNPR                |
+| KEN-ADM1-1590546715-B32 | contents      | 2_060      | 0.1899    | 0.0       | 0.0       | 0.6441    | Marsabit             |
+| KEN-ADM1-1590546715-B32 | nonstructural | 2_575      | 0.2613    | 0.0       | 0.0       | 1.1239    | Marsabit             |
+| KEN-ADM1-1590546715-B32 | structural    | 5_665      | 3.4262    | 0.0       | 0.0       | 25.4628   | Marsabit             |
+| KEN-ADM1-1590546715-B32 | occupants     | 1.6000     | 7.200E-09 | 0.0       | 0.0       | 1.600E-08 | Marsabit             |
+| KEN-ADM1-1590546715-B32 | area          | 60.0000    | 0.0012    | 0.0       | 0.0       | 0.0090    | Marsabit             |
+| KEN-ADM1-1590546715-B32 | number        | 1.0000     | 2.044E-05 | 0.0       | 0.0       | 1.507E-04 | Marsabit             |
+| KEN-ADM1-1590546715-B32 | residents     | 3.7000     | 3.668E-04 | 0.0       | 0.0       | 0.0021    | Marsabit             |
+| KEN-ADM1-1590546715-B32 | affectedpop   | 3.7000     | 0.0014    | 0.0       | 0.0       | 3.855E-04 | Marsabit             |
+| KEN-ADM1-1590546715-B32 | injured       | 1.6000     | 7.200E-09 | 0.0       | 0.0       | 1.600E-08 | Marsabit             |
+| KEN-ADM1-1590546715-B43 | contents      | 4_464      | 3.5913    | 0.0       | 1.678E-13 | 0.0469    | Turkana              |
+| KEN-ADM1-1590546715-B43 | nonstructural | 7_983      | 9.3791    | 0.0       | 2.323E-05 | 53.4906   | Turkana              |
+| KEN-ADM1-1590546715-B43 | structural    | 16_739     | 27.9033   | 0.0       | 8.498E-05 | 122.5358  | Turkana              |
+| KEN-ADM1-1590546715-B43 | occupants     | 6.4333     | 3.302E-08 | 0.0       | 4.833E-08 | 6.433E-08 | Turkana              |
+| KEN-ADM1-1590546715-B43 | area          | 240.0      | 0.3113    | 0.0       | 1.800E-06 | 0.6552    | Turkana              |
+| KEN-ADM1-1590546715-B43 | number        | 4.0000     | 0.0052    | 0.0       | 3.000E-08 | 0.0109    | Turkana              |
+| KEN-ADM1-1590546715-B43 | residents     | 14.8000    | 0.0471    | 0.0       | 1.110E-07 | 0.1263    | Turkana              |
+| KEN-ADM1-1590546715-B43 | affectedpop   | 14.8000    | 0.0210    | 0.0       | 1.110E-07 | 0.0140    | Turkana              |
+| KEN-ADM1-1590546715-B43 | injured       | 6.4333     | 3.060E-08 | 0.0       | 4.833E-08 | 6.433E-08 | Turkana              |
+| SDN-ADM1-1590546715-B12 | contents      | 487_436    | 1_144     | 0.0       | 3.428E-04 | 2_889     | Khartoum State       |
+| SDN-ADM1-1590546715-B12 | nonstructural | 550_118    | 73.3078   | 0.0       | 3.186E-04 | 51.2203   | Khartoum State       |
+| SDN-ADM1-1590546715-B12 | structural    | 353_541    | 43.9651   | 0.0       | 2.295E-04 | 255.0     | Khartoum State       |
+| SDN-ADM1-1590546715-B12 | occupants     | 648.7      | 3.258E-06 | 0.0       | 3.593E-07 | 6.487E-06 | Khartoum State       |
+| SDN-ADM1-1590546715-B12 | area          | 4_300      | 43.3773   | 0.0       | 2.796E-06 | 1.8108    | Khartoum State       |
+| SDN-ADM1-1590546715-B12 | number        | 19.0000    | 0.1671    | 0.0       | 2.000E-08 | 0.0070    | Khartoum State       |
+| SDN-ADM1-1590546715-B12 | residents     | 18.2000    | 0.0043    | 0.0       | 6.100E-08 | 0.0043    | Khartoum State       |
+| SDN-ADM1-1590546715-B12 | affectedpop   | 18.2000    | 0.0015    | 0.0       | 6.100E-08 | 0.0102    | Khartoum State       |
+| SDN-ADM1-1590546715-B12 | injured       | 648.7      | 0.0780    | 0.0       | 3.593E-07 | 6.487E-06 | Khartoum State       |
+| SDN-ADM1-1590546715-B13 | contents      | 1_758_197  | 155_147   | 187.9     | 107_253   | 444_441   | Gezira State         |
+| SDN-ADM1-1590546715-B13 | nonstructural | 2_130_812  | 178_665   | 571.3     | 94_867    | 458_269   | Gezira State         |
+| SDN-ADM1-1590546715-B13 | structural    | 4_266_648  | 419_143   | 1_559     | 200_913   | 1_006_042 | Gezira State         |
+| SDN-ADM1-1590546715-B13 | occupants     | 2_742      | 1.7967    | 6.388E-06 | 0.6875    | 4.9901    | Gezira State         |
+| SDN-ADM1-1590546715-B13 | area          | 54_332     | 2_760     | 0.7490    | 1_194     | 7_773     | Gezira State         |
+| SDN-ADM1-1590546715-B13 | number        | 652.0      | 24.2871   | 0.0114    | 10.6865   | 68.4437   | Gezira State         |
+| SDN-ADM1-1590546715-B13 | residents     | 3_902      | 181.4     | 0.2728    | 107.0844  | 476.9     | Gezira State         |
+| SDN-ADM1-1590546715-B13 | affectedpop   | 3_902      | 248.1     | 3.5899    | 164.2166  | 598.1     | Gezira State         |
+| SDN-ADM1-1590546715-B13 | injured       | 2_742      | 3.6082    | 6.388E-06 | 0.3423    | 12.0680   | Gezira State         |
+| SDN-ADM1-1590546715-B14 | contents      | 445_846    | 22_738    | 2_513     | 17_911    | 49_270    | Gedarif State        |
+| SDN-ADM1-1590546715-B14 | nonstructural | 600_980    | 58_669    | 3_263     | 45_402    | 109_608   | Gedarif State        |
+| SDN-ADM1-1590546715-B14 | structural    | 1_201_431  | 135_785   | 25_734    | 121_303   | 313_005   | Gedarif State        |
+| SDN-ADM1-1590546715-B14 | occupants     | 783.3      | 0.2719    | 0.0561    | 0.2485    | 0.5853    | Gedarif State        |
+| SDN-ADM1-1590546715-B14 | area          | 15_593     | 1_001     | 118.6691  | 900.8     | 2_013     | Gedarif State        |
+| SDN-ADM1-1590546715-B14 | number        | 218.0      | 9.9729    | 0.7334    | 9.0192    | 19.9762   | Gedarif State        |
+| SDN-ADM1-1590546715-B14 | residents     | 1_305      | 82.3533   | 4.0300    | 83.2189   | 149.0835  | Gedarif State        |
+| SDN-ADM1-1590546715-B14 | affectedpop   | 1_305      | 123.0678  | 7.9660    | 127.5203  | 214.2     | Gedarif State        |
+| SDN-ADM1-1590546715-B14 | injured       | 783.3      | 0.5265    | 9.558E-05 | 0.2367    | 0.8888    | Gedarif State        |
+| SDN-ADM1-1590546715-B15 | contents      | 278_140    | 22_104    | 10.6509   | 6_717     | 68_668    | White Nile State     |
+| SDN-ADM1-1590546715-B15 | nonstructural | 440_534    | 42_601    | 108.0026  | 6_414     | 187_038   | White Nile State     |
+| SDN-ADM1-1590546715-B15 | structural    | 872_107    | 151_030   | 514.6     | 71_889    | 436_738   | White Nile State     |
+| SDN-ADM1-1590546715-B15 | occupants     | 549.2      | 0.3727    | 2.697E-06 | 0.0625    | 1.2592    | White Nile State     |
+| SDN-ADM1-1590546715-B15 | area          | 9_458      | 964.5     | 1.5506    | 168.4127  | 3_585     | White Nile State     |
+| SDN-ADM1-1590546715-B15 | number        | 94.0000    | 8.9977    | 0.0117    | 1.6557    | 33.4901   | White Nile State     |
+| SDN-ADM1-1590546715-B15 | residents     | 577.3      | 69.4178   | 0.2101    | 22.4049   | 222.6     | White Nile State     |
+| SDN-ADM1-1590546715-B15 | affectedpop   | 577.3      | 112.4212  | 0.3563    | 39.7058   | 267.9     | White Nile State     |
+| SDN-ADM1-1590546715-B15 | injured       | 549.2      | 0.8350    | 1.890E-06 | 0.0569    | 2.7813    | White Nile State     |
+| SDN-ADM1-1590546715-B16 | contents      | 213_912    | 24_234    | 2_496     | 19_502    | 48_263    | Blue Nile State      |
+| SDN-ADM1-1590546715-B16 | nonstructural | 273_023    | 30_353    | 634.6     | 28_631    | 59_092    | Blue Nile State      |
+| SDN-ADM1-1590546715-B16 | structural    | 577_867    | 88_937    | 6_998     | 98_507    | 149_048   | Blue Nile State      |
+| SDN-ADM1-1590546715-B16 | occupants     | 463.1      | 0.2571    | 0.0140    | 0.1909    | 0.6159    | Blue Nile State      |
+| SDN-ADM1-1590546715-B16 | area          | 8_352      | 820.9     | 60.2460   | 689.4     | 1_773     | Blue Nile State      |
+| SDN-ADM1-1590546715-B16 | number        | 113.0000   | 10.4778   | 0.8532    | 7.6213    | 25.0842   | Blue Nile State      |
+| SDN-ADM1-1590546715-B16 | residents     | 717.2      | 84.3181   | 11.8493   | 66.0140   | 179.9212  | Blue Nile State      |
+| SDN-ADM1-1590546715-B16 | affectedpop   | 717.2      | 121.5258  | 3.4650    | 86.4203   | 228.6     | Blue Nile State      |
+| SDN-ADM1-1590546715-B16 | injured       | 463.1      | 0.9518    | 0.0081    | 0.6312    | 2.2844    | Blue Nile State      |
+| SDN-ADM1-1590546715-B2  | contents      | 60_619     | 2_874     | 0.0       | 4.8036    | 16_647    | South Kordofan State |
+| SDN-ADM1-1590546715-B2  | nonstructural | 77_983     | 1_356     | 0.0       | 46.5658   | 4_317     | South Kordofan State |
+| SDN-ADM1-1590546715-B2  | structural    | 146_100    | 3_959     | 0.0       | 302.9     | 14_226    | South Kordofan State |
+| SDN-ADM1-1590546715-B2  | occupants     | 108.6333   | 0.0404    | 0.0       | 6.223E-07 | 0.2197    | South Kordofan State |
+| SDN-ADM1-1590546715-B2  | area          | 1_872      | 27.4510   | 0.0       | 0.3362    | 134.2785  | South Kordofan State |
+| SDN-ADM1-1590546715-B2  | number        | 23.0000    | 0.1786    | 0.0       | 0.0024    | 0.8225    | South Kordofan State |
+| SDN-ADM1-1590546715-B2  | residents     | 136.0000   | 1.1234    | 0.0       | 0.0355    | 4.5402    | South Kordofan State |
+| SDN-ADM1-1590546715-B2  | affectedpop   | 136.0000   | 2.4214    | 0.0       | 0.1212    | 11.8158   | South Kordofan State |
+| SDN-ADM1-1590546715-B2  | injured       | 108.6333   | 0.0836    | 0.0       | 7.282E-07 | 0.1685    | South Kordofan State |
+| SDN-ADM1-1590546715-B4  | contents      | 391_772    | 29_438    | 5.529E-04 | 794.8     | 100_033   | Kassala State        |
+| SDN-ADM1-1590546715-B4  | nonstructural | 440_295    | 31_012    | 9.455E-04 | 6_316     | 94_558    | Kassala State        |
+| SDN-ADM1-1590546715-B4  | structural    | 718_720    | 71_924    | 0.7935    | 4_466     | 223_144   | Kassala State        |
+| SDN-ADM1-1590546715-B4  | occupants     | 513.4      | 0.2454    | 1.525E-06 | 0.0321    | 0.9546    | Kassala State        |
+| SDN-ADM1-1590546715-B4  | area          | 9_257      | 567.4     | 1.401E-05 | 33.4240   | 2_171     | Kassala State        |
+| SDN-ADM1-1590546715-B4  | number        | 103.0000   | 5.5167    | 4.000E-08 | 0.2367    | 21.5384   | Kassala State        |
+| SDN-ADM1-1590546715-B4  | residents     | 607.6      | 40.7613   | 0.0       | 3.7594    | 135.7410  | Kassala State        |
+| SDN-ADM1-1590546715-B4  | affectedpop   | 607.6      | 55.0956   | 0.0       | 5.1977    | 137.3487  | Kassala State        |
+| SDN-ADM1-1590546715-B4  | injured       | 513.4      | 0.4789    | 1.430E-06 | 0.0050    | 2.2927    | Kassala State        |
+| SDN-ADM1-1590546715-B6  | contents      | 594_539    | 65_653    | 13_322    | 32_169    | 232_894   | Sennar State         |
+| SDN-ADM1-1590546715-B6  | nonstructural | 741_842    | 78_105    | 18_150    | 41_399    | 228_864   | Sennar State         |
+| SDN-ADM1-1590546715-B6  | structural    | 947_544    | 116_187   | 23_633    | 90_301    | 253_181   | Sennar State         |
+| SDN-ADM1-1590546715-B6  | occupants     | 731.4      | 0.3660    | 0.0492    | 0.2986    | 0.8084    | Sennar State         |
+| SDN-ADM1-1590546715-B6  | area          | 12_127     | 1_010     | 363.0     | 694.9     | 2_407     | Sennar State         |
+| SDN-ADM1-1590546715-B6  | number        | 169.0000   | 11.4206   | 3.6320    | 6.7718    | 34.2084   | Sennar State         |
+| SDN-ADM1-1590546715-B6  | residents     | 967.9      | 80.1163   | 27.4743   | 44.6620   | 270.8     | Sennar State         |
+| SDN-ADM1-1590546715-B6  | affectedpop   | 967.9      | 86.1917   | 10.7715   | 56.1573   | 248.0     | Sennar State         |
+| SDN-ADM1-1590546715-B6  | injured       | 731.4      | 1.2211    | 0.0063    | 0.7672    | 4.9938    | Sennar State         |
+| SDN-ADM1-1590546715-B8  | contents      | 125_076    | 1_455     | 0.0       | 31.9424   | 4_183     | North Kordofan State |
+| SDN-ADM1-1590546715-B8  | nonstructural | 123_230    | 1_227     | 0.0       | 99.0158   | 2_587     | North Kordofan State |
+| SDN-ADM1-1590546715-B8  | structural    | 160_290    | 2_676     | 0.0       | 298.6     | 13_292    | North Kordofan State |
+| SDN-ADM1-1590546715-B8  | occupants     | 175.5000   | 0.0012    | 0.0       | 8.733E-07 | 1.755E-06 | North Kordofan State |
+| SDN-ADM1-1590546715-B8  | area          | 1_811      | 11.5832   | 0.0       | 0.3521    | 57.4223   | North Kordofan State |
+| SDN-ADM1-1590546715-B8  | number        | 15.0000    | 0.0729    | 0.0       | 0.0023    | 0.3730    | North Kordofan State |
+| SDN-ADM1-1590546715-B8  | residents     | 74.7000    | 0.7341    | 0.0       | 0.0225    | 3.8593    | North Kordofan State |
+| SDN-ADM1-1590546715-B8  | affectedpop   | 74.7000    | 1.3137    | 0.0       | 0.1559    | 8.0640    | North Kordofan State |
+| SDN-ADM1-1590546715-B8  | injured       | 175.5000   | 0.0076    | 0.0       | 9.340E-07 | 0.0060    | North Kordofan State |
+| SSD-ADM1-1590546715-B3  | contents      | 582_756    | 13_946    | 22.1304   | 1_881     | 51_688    | Eastern Equatoria    |
+| SSD-ADM1-1590546715-B3  | nonstructural | 724_958    | 26_283    | 17.9513   | 3_740     | 83_675    | Eastern Equatoria    |
+| SSD-ADM1-1590546715-B3  | structural    | 1_104_610  | 61_069    | 31.2493   | 10_173    | 195_687   | Eastern Equatoria    |
+| SSD-ADM1-1590546715-B3  | occupants     | 855.4      | 0.1780    | 1.571E-06 | 0.0100    | 0.5973    | Eastern Equatoria    |
+| SSD-ADM1-1590546715-B3  | area          | 13_446     | 453.1     | 0.3238    | 32.7345   | 1_375     | Eastern Equatoria    |
+| SSD-ADM1-1590546715-B3  | number        | 152.0000   | 3.9588    | 0.0032    | 0.2887    | 12.5005   | Eastern Equatoria    |
+| SSD-ADM1-1590546715-B3  | residents     | 821.5      | 33.1042   | 0.0696    | 4.0467    | 100.0187  | Eastern Equatoria    |
+| SSD-ADM1-1590546715-B3  | affectedpop   | 821.5      | 48.5009   | 0.1212    | 13.7448   | 139.1490  | Eastern Equatoria    |
+| SSD-ADM1-1590546715-B3  | injured       | 855.4      | 0.5859    | 1.488E-06 | 0.0204    | 1.8275    | Eastern Equatoria    |
+| SSD-ADM1-1590546715-B4  | contents      | 328_670    | 21_642    | 439.2     | 11_155    | 55_748    | Upper Nile           |
+| SSD-ADM1-1590546715-B4  | nonstructural | 402_630    | 30_977    | 1_086     | 21_614    | 70_856    | Upper Nile           |
+| SSD-ADM1-1590546715-B4  | structural    | 652_294    | 72_168    | 1_086     | 44_932    | 155_027   | Upper Nile           |
+| SSD-ADM1-1590546715-B4  | occupants     | 366.8      | 0.1626    | 7.177E-04 | 0.0644    | 0.4525    | Upper Nile           |
+| SSD-ADM1-1590546715-B4  | area          | 7_486      | 469.1     | 14.2382   | 183.0     | 1_349     | Upper Nile           |
+| SSD-ADM1-1590546715-B4  | number        | 67.0000    | 4.6493    | 0.1575    | 1.9340    | 13.2919   | Upper Nile           |
+| SSD-ADM1-1590546715-B4  | residents     | 470.8      | 39.2760   | 2.5992    | 21.0744   | 97.8104   | Upper Nile           |
+| SSD-ADM1-1590546715-B4  | affectedpop   | 470.8      | 61.0543   | 7.1837    | 35.8203   | 134.0787  | Upper Nile           |
+| SSD-ADM1-1590546715-B4  | injured       | 366.8      | 0.2798    | 1.715E-05 | 0.0535    | 0.7691    | Upper Nile           |
+| SSD-ADM1-1590546715-B8  | contents      | 293_532    | 8_881     | 166.0931  | 4_780     | 27_184    | Jonglei              |
+| SSD-ADM1-1590546715-B8  | nonstructural | 376_695    | 11_393    | 342.6     | 8_315     | 31_172    | Jonglei              |
+| SSD-ADM1-1590546715-B8  | structural    | 630_670    | 30_000    | 360.3     | 14_791    | 79_953    | Jonglei              |
+| SSD-ADM1-1590546715-B8  | occupants     | 434.8      | 0.1430    | 1.543E-04 | 0.0551    | 0.5236    | Jonglei              |
+| SSD-ADM1-1590546715-B8  | area          | 8_210      | 191.3     | 1.8875    | 82.2967   | 707.6     | Jonglei              |
+| SSD-ADM1-1590546715-B8  | number        | 104.0000   | 1.6597    | 0.0239    | 0.7769    | 6.1638    | Jonglei              |
+| SSD-ADM1-1590546715-B8  | residents     | 608.4      | 12.5049   | 0.4094    | 8.5393    | 38.0098   | Jonglei              |
+| SSD-ADM1-1590546715-B8  | affectedpop   | 608.4      | 17.2065   | 1.0577    | 12.1941   | 35.1261   | Jonglei              |
+| SSD-ADM1-1590546715-B8  | injured       | 434.8      | 0.6918    | 1.695E-06 | 0.1570    | 1.6935    | Jonglei              |
+| *total*                 | affectedpop   | 77_440     | 1_238     | 77.4017   | 747.6     | 2_918     | *total*              |
+| *total*                 | area          | 1_155_830  | 11_640    | 787.5     | 5_892     | 31_589    | *total*              |
+| *total*                 | contents      | 38_484_856 | 837_687   | 36_830    | 442_159   | 2_628_019 | *total*              |
+| *total*                 | injured       | 42_188     | 14.9730   | 0.1088    | 3.3294    | 57.7719   | *total*              |
+| *total*                 | nonstructural | 48_273_852 | 824_304   | 42_070    | 430_288   | 2_200_801 | *total*              |
+| *total*                 | number        | 15_780     | 115.0677  | 7.7472    | 59.1542   | 325.7     | *total*              |
+| *total*                 | occupants     | 42_188     | 6.6585    | 0.2174    | 2.9675    | 19.2682   | *total*              |
+| *total*                 | residents     | 77_440     | 855.1     | 64.7033   | 493.0     | 2_289     | *total*              |
+| *total*                 | structural    | 89_996_392 | 1_674_788 | 114_118   | 999_073   | 4_143_812 | *total*              |
