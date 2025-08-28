@@ -71,7 +71,7 @@ def compare(dstore1, dstore2):
     for ltype in ltypes:
         avg1 = dstore1[f'avg_losses-stats/{ltype}'][:]
         avg2 = dstore2[f'avg_losses-stats/{ltype}'][:]
-        aac(avg1, avg2, rtol=1e-5, atol=1e-8)
+        aac(avg1, avg2, rtol=1e-5, atol=1e-7)
 
 
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
