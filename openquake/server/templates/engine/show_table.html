@@ -10,28 +10,33 @@
           <div class="span12">
             <h2>{{ table_name }}</h2>
             <table id="extracted_html_table">
-                <thead>
+              <thead>
                 <tr>
-                    {% for header in table_header %}
-                    <th>{{ header|safe }}</th>
-                    {% endfor %}
+                  {% for header in table_header %}
+                  <th>{{ header|safe }}</th>
+                  {% endfor %}
                 </tr>
-                </thead>
-                <tbody>
+              </thead>
+              <tbody>
                 {% for row in table_contents %}
                 <tr>
-                    {% for item in row %}
-                    <td>
+                  {% for item in row %}
+                    {% if forloop.first %}
+                      {# assuming ID is the first column, otherwise it requires more work to avoid humanizing it by name #}
+                      <td>{{ item|stringformat:"s"|linebreaksbr }}</td>
+                    {% else %}
+                      <td>
                         {% if item|stringformat:"s"|floatformat %}
-                            {{ item|humanize_number }}
+                          {{ item|humanize_number }}
                         {% else %}
-                            {{ item|stringformat:"s"|linebreaksbr }}
+                          {{ item|stringformat:"s"|linebreaksbr }}
                         {% endif %}
-                    </td>
-                    {% endfor %}
+                      </td>
+                    {% endif %}
+                  {% endfor %}
                 </tr>
                 {% endfor %}
-                </tbody>
+              </tbody>
             </table>
           </div>
         </div>
