@@ -29,6 +29,7 @@ import pandas
 from scipy.stats import linregress
 from shapely.geometry import Polygon, LineString
 from openquake.commonlib import readinput
+from openquake.commonlib.util import unique_filename
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
@@ -1167,17 +1168,26 @@ def plot_csv(fname):
 def main(what,
          calc_id: int = -1,
          others: int = [],
+         *,
+         save_to: str = None,
          webapi=False,
-         local=False):
+         local=False,
+         ):
     """
     Generic plotter for local and remote calculations.
     """
     if what.endswith('.csv'):
         plot_csv(what)
         return
+    if save_to:
+        save_to = unique_filename(save_to)
     if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
-        plt.show()
+        if save_to:
+            plt.savefig(save_to, dpi=300)
+            logging.info(f'Plot saved to {save_to}')
+        else:
+            plt.show()
         return
     if what == 'examples':
         help_msg = ['Examples of possible plots:']
@@ -1211,11 +1221,16 @@ def main(what,
             xs.append(Extractor(other_id))
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
-    plt.show()
+    if save_to:
+        plt.savefig(save_to, dpi=300)
+        logging.info(f'Plot saved to {save_to}')
+    else:
+        plt.show()
 
 
 main.what = 'what to extract (try examples)'
 main.calc_id = 'computation ID'
 main.others = dict(help='IDs of other computations', nargs='*')
+main.save_to = 'if passed, save the plot to file instead of showing it'
 main.webapi = 'if given, pass through the WebAPI'
 main.local = 'if passed, use the local WebAPI'
