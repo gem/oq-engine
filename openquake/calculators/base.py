@@ -600,7 +600,7 @@ class HazardCalculator(BaseCalculator):
             gsim_lt = self.full_lt.gsim_lt
         else:
             gsim_lt = readinput.get_gsim_lt(oq)
-        if self.amplifier:            
+        if self.amplifier:
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
 

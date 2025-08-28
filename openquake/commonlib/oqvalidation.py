@@ -1096,7 +1096,7 @@ class OqParam(valid.ParamSet):
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param( # Can be positive float, -999 or nan
-        valid.positivefloatorsentinel, numpy.nan) 
+        valid.positivefloatorsentinel, numpy.nan)
     reference_depth_to_2pt5km_per_sec = valid.Param( # Can be positive float, -999 or nan
         valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(
@@ -1910,7 +1910,7 @@ class OqParam(valid.ParamSet):
         yes = exposures and exposures[0].endswith('.hdf5')
         if yes:
             if not self.quantiles:
-                self.quantiles = [0.05, 0.95]
+                self.quantiles = [0.05, 0.50, 0.95]
             if not self.aggregate_by:
                 # self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
                 self.aggregate_by = [['ID_2']]

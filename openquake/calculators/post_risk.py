@@ -349,7 +349,7 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
                 if oq.quantiles and not col.startswith('dmg_'):
                     ls, ws = quantiles[agg_id, loss_id]
                     ls.extend(sorted_losses)
-                    ws.extend([weights[rlz_id]]* len(sorted_losses))
+                    ws.extend([weights[rlz_id]] * len(sorted_losses))
                 agg = sorted_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)
@@ -371,7 +371,7 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     aggrisk_quantiles = pandas.DataFrame(out)
     return aggrisk, aggrisk_quantiles, columns, builder
 
-    
+
 # aggcurves are built in parallel, aggrisk sequentially
 def build_store_agg(dstore, oq, rbe_df, num_events):
     """
