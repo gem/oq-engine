@@ -45,18 +45,28 @@ from openquake.calculators.postproc.aelo_plots import (
 
 def getparams(what):
     """
+    >>> getparams('rupture?')
+    ({}, False)
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10')
-    {'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False)
+    >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10&with_borders=True')
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True)
     """
     assert '?' in what, what
-    dic = {}
+    params = {}
+    with_borders = False
     for namevalue in what.split('?')[1].split('&'):
+        if not namevalue:
+            continue
         name, value = namevalue.split('=')
-        try:
-            dic[name] = ast.literal_eval(value)
-        except ValueError:
-            dic[name] = value
-    return dic
+        if name == 'with_borders':
+            with_borders = ast.literal_eval(value)
+        else:
+            try:
+                params[name] = ast.literal_eval(value)
+            except ValueError:
+                params[name] = value
+    return params, with_borders
 
 
 def make_figure_magdist(extractors, what):
@@ -1054,20 +1064,37 @@ def make_figure_rupture(extractors, what):
 
     $ oq plot "rupture?"
 
-    extracts the rupture from an already performed scenario calculation;
+    plots the first rupture from an already performed scenario calculation
 
-    $ oq plot "rupture?mag=6&lon=10&lat=45&dep=10&rake=45&msr=WC1994"
+    $ oq plot "rupture?rup_id=1"
+
+    plots the rupture with the given id;
+
+    $ oq plot "rupture?with_borders=True"
+
+    also plots country borders
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    params, with_borders = getparams(what)
+    rup_id = params['rup_id'] if 'rup_id' in params else 0
+    rup = get_ebrupture(dstore, rup_id=rup_id).rupture
+    return plot_rupture(rup, with_borders=with_borders)
+
+
+def make_figure_build_rupture(extractors, what):
+    """
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994"
 
     builds a new planar rupture.
+
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994&with_borders=True"
+
+    also plots country borders.
     """
-    params = getparams(what)
-    if params:
-        rup = build_planar_rupture_from_dict(params)
-    else:
-        [ex] = extractors
-        dstore = ex.dstore
-        rup = get_ebrupture(dstore, rup_id=0).rupture
-    return plot_rupture(rup, with_borders=False)
+    params, with_borders = getparams(what)
+    rup = build_planar_rupture_from_dict(params)
+    return plot_rupture(rup, with_borders=with_borders)
 
 
 def make_figure_rupture_3d(extractors, what):
@@ -1076,7 +1103,9 @@ def make_figure_rupture_3d(extractors, what):
     """
     [ex] = extractors
     dstore = ex.dstore
-    ebr = get_ebrupture(dstore, rup_id=0)
+    params, _ = getparams(what)
+    rup_id = params['rup_id'] if 'rup_id' in params else 0
+    ebr = get_ebrupture(dstore, rup_id=rup_id)
     return plot_rupture_3d(ebr.rupture)
 
 
