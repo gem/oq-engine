@@ -250,9 +250,10 @@ def create_tag(request):
     if user_level < 2:
         return HttpResponseForbidden()
     tag_string = request.GET['tag_string']  # FIXME POST
-    logs.dbcmd('create_tag', tag_string)
-    return HttpResponse(content=f'Tag {tag_string} successfully created',
-                        content_type='text/plain', status=200)
+    resp = logs.dbcmd('create_tag', tag_string)
+    status = 200 if resp['status'] == 'success' else 400
+    return HttpResponse(content=resp['message'], content_type='text/plain',
+                        status=status)
 
 
 @csrf_exempt
@@ -267,9 +268,10 @@ def assign_tag_to_job(request):
         return HttpResponseForbidden()
     tag_string = request.GET['tag_string']
     job_id = request.GET['job_id']
-    logs.dbcmd('assign_tag_to_job', tag_string, job_id, 0)
-    return HttpResponse(content=f'Tag {tag_string} successfully updated',
-                        content_type='text/plain', status=200)
+    resp = logs.dbcmd('assign_tag_to_job', tag_string, job_id, 0)
+    status = 200 if resp['status'] == 'success' else 400
+    return HttpResponse(content=resp['message'], content_type='text/plain',
+                        status=status)
 
 
 @csrf_exempt
@@ -285,9 +287,10 @@ def set_preferred_job_for_tag(request):
     tag_string = request.GET['tag_string']
     job_id = request.GET['job_id']
     is_preferred = int(request.GET['is_preferred'])
-    logs.dbcmd('set_preferred_job_for_tag', tag_string, job_id, is_preferred)
-    return HttpResponse(content=f'Tag {tag_string} successfully updated',
-                        content_type='text/plain', status=200)
+    resp = logs.dbcmd('set_preferred_job_for_tag', tag_string, job_id, is_preferred)
+    status = 200 if resp['status'] == 'success' else 400
+    return HttpResponse(content=resp['message'], content_type='text/plain',
+                        status=status)
 
 
 @cross_domain_ajax

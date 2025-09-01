@@ -1,7 +1,7 @@
 -- Create the new table
 CREATE TABLE tag (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    tag_string   TEXT NOT NULL,
+    tag_string   TEXT NOT NULL CHECK (trim(tag_string) <> ''),
     job_id       INTEGER REFERENCES job(id) ON DELETE SET NULL,
     is_preferred BOOLEAN NOT NULL DEFAULT 0 CHECK (is_preferred IN (0,1))
 );

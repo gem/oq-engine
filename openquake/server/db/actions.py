@@ -451,7 +451,14 @@ def create_tag(db, tag_string):
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
     :param tag_string: the name of the tag
     """
-    db(f"INSERT INTO tag (tag_string) VALUES ('{tag_string}')")
+    try:
+        db(f"INSERT INTO tag (tag_string) VALUES ('{tag_string}')")
+    except Exception as exc:
+        msg = f'Unable to create tag {tag_string}: {str(exc)}',
+        return {'status': 'failed', 'message': msg}
+    else:
+        return {'status': 'success',
+                'message': f'Tag "{tag_string}" was created'}
 
 
 def assign_tag_to_job(db, tag_string, job_id):
@@ -462,7 +469,14 @@ def assign_tag_to_job(db, tag_string, job_id):
     :param tag_string: the name of the tag
     :param job_id: a job ID
     """
-    db(f"INSERT INTO tag (tag_string, job_id) VALUES ('{tag_string}', {job_id})")
+    try:
+        db(f"INSERT INTO tag (tag_string, job_id) VALUES ('{tag_string}', {job_id})")
+    except Exception as exc:
+        msg = f'Unable to assign tag "{tag_string}" to job {job_id}: {str(exc)}'
+        return {'status': 'failed', 'message': msg}
+    else:
+        return {'status': 'success',
+                'message': f'Tag "{tag_string}" was assigned to job {job_id}'}
 
 
 def set_preferred_job_for_tag(db, tag_string, job_id, is_preferred):
@@ -478,28 +492,35 @@ def set_preferred_job_for_tag(db, tag_string, job_id, is_preferred):
     :param is_preferred:
         a int (0 or 1) indicating if the given job_id is the preferred one for that tag
     """
-    if is_preferred:
-        # Assign the specified job as the preferred one for the given tag
-        db(f"""
+    try:
+        if is_preferred:
+            # Assign the specified job as the preferred one for the given tag
+            db(f"""
 INSERT INTO tag (tag_string, job_id, is_preferred)
 VALUES ('{tag_string}', {job_id}, 1)
 ON CONFLICT(tag_string, job_id) DO UPDATE
 SET is_preferred = 1;
-        """)
-        # Clear any existing preferred job for this tag_string
-        db(f"""
+            """)
+            # Clear any existing preferred job for this tag_string
+            db(f"""
 UPDATE tag
 SET is_preferred = 0
 WHERE tag_string = '{tag_string}'
-  AND job_id != {job_id};
-        """)
+AND job_id != {job_id};
+            """)
+        else:
+            db(f"""
+UPDATE tag
+SET is_preferred = 0
+WHERE tag_string = '{tag_string}'
+AND job_id = {job_id};
+            """)
+    except Exception as exc:
+        return {'status': 'failed', 'message': str(exc)}
     else:
-        db(f"""
-UPDATE tag
-SET is_preferred = 0
-WHERE tag_string = '{tag_string}'
-  AND job_id = {job_id};
-        """)
+        return {'status': 'success',
+                'message': (f'Job {job_id} was assigned as the preferred'
+                            f' one for tag "{tag_string}"')}
 
 
 # ########################## upgrade operations ########################## #
