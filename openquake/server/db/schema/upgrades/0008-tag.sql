@@ -1,0 +1,12 @@
+CREATE TABLE tag (
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE
+);
+
+ALTER TABLE job ADD COLUMN tag_id INTEGER REFERENCES tag(id);
+
+ALTER TABLE job ADD COLUMN preferred BOOLEAN NOT NULL DEFAULT 0;
+
+CREATE UNIQUE INDEX unique_preferred_job_per_tag
+ON job(tag_id)
+WHERE preferred = 1;

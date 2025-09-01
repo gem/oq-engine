@@ -811,6 +811,11 @@ steps_per_interval:
   Example: *steps_per_interval = 4*.
   Default: 1
 
+tag:
+  Tag associated to the job.
+  Example: *tag = Year_Mag_Name-Country
+  Default: None
+
 tectonic_region_type:
    Used to specify a tectonic region type.
    Example: *tectonic_region_type = Active Shallow Crust*.
@@ -1140,6 +1145,7 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     split_by_gsim = valid.Param(valid.positiveint, 0)
     outs_per_task = valid.Param(valid.positiveint, 4)
+    tag = valid.Param(valid.utf8_not_empty, None)
     tectonic_region_type = valid.Param(valid.utf8, '*')
     time_event = valid.Param(
         valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
