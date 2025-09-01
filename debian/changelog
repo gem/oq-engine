@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the MIMETYPE to application/x-zip when needed in the WebUI
   * Removed the parameter `site_effects` since it is useless
   * Changed num_cores to be equal to the pool size when explicit
   * On Windows use as default num_cores
