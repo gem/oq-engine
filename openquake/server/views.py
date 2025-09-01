@@ -239,6 +239,57 @@ def ajax_logout(request):
                         content_type='text/plain', status=200)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])  # FIXME POST
+def create_tag(request):
+    """
+    Accept a POST request to create a new tag with the given tag_string
+    """
+    user_level = get_user_level(request)
+    if user_level < 2:
+        return HttpResponseForbidden()
+    tag_string = request.GET['tag_string']  # FIXME POST
+    logs.dbcmd('create_tag', tag_string)
+    return HttpResponse(content=f'Tag {tag_string} successfully created',
+                        content_type='text/plain', status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])  # FIXME POST
+def assign_tag_to_job(request):
+    """
+    Accept a POST request to update the tag with the given tag_string.
+    """
+    user_level = get_user_level(request)
+    if user_level < 2:
+        return HttpResponseForbidden()
+    tag_string = request.GET['tag_string']
+    job_id = request.GET['job_id']
+    logs.dbcmd('assign_tag_to_job', tag_string, job_id, 0)
+    return HttpResponse(content=f'Tag {tag_string} successfully updated',
+                        content_type='text/plain', status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])  # FIXME POST
+def set_preferred_job_for_tag(request):
+    """
+    Accept a POST request to set the preferred job among those with a same tag.
+    """
+    user_level = get_user_level(request)
+    if user_level < 2:
+        return HttpResponseForbidden()
+    tag_string = request.GET['tag_string']
+    job_id = request.GET['job_id']
+    is_preferred = int(request.GET['is_preferred'])
+    logs.dbcmd('set_preferred_job_for_tag', tag_string, job_id, is_preferred)
+    return HttpResponse(content=f'Tag {tag_string} successfully updated',
+                        content_type='text/plain', status=200)
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def get_engine_version(request):

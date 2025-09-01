@@ -37,6 +37,9 @@ urlpatterns = [
     re_path(r'^(\d+)/result/list$', views.calc_results),
     re_path(r'^(\d+)/share$', views.calc_share),
     re_path(r'^(\d+)/unshare$', views.calc_unshare),
+    re_path(r'^create_tag$', views.create_tag),
+    re_path(r'^assign_tag_to_job$', views.assign_tag_to_job),
+    re_path(r'^set_preferred_job_for_tag$', views.set_preferred_job_for_tag),
 ]
 if settings.APPLICATION_MODE == 'AELO':
     urlpatterns.extend([
