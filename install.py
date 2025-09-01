@@ -630,6 +630,7 @@ if __name__ == "__main__":
         else:
             errors = install(inst, args.version, args.from_fork)
             if errors:
+                # NB: even if one of the tools is missing, the engine will work
                 sys.exit('\n'.join(errors))
     else:
         sys.exit("Please specify the kind of installation")
