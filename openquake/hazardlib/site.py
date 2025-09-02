@@ -548,7 +548,7 @@ class SiteCollection(object):
                         rec[name] = orig_rec[name]
                 j += 1
                 continue
-            # override the vs30
+            # else override the vs30
             for cl, vs30 in zip(classes, vs30s):
                 rec = array[j]
                 for name in names:
