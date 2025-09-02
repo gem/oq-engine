@@ -181,8 +181,6 @@ class EngineServerTestCase(django.test.TestCase):
         cls.user1.delete()
         super().tearDownClass()
 
-
-
     def impact_run_then_remove(
             self, endpoint, data, expected_error=None):
         with tempfile.TemporaryDirectory() as email_dir:
@@ -240,19 +238,23 @@ class EngineServerTestCase(django.test.TestCase):
                 'Unable to remove job %s:\n%s' % (job_id, ret))
 
     def test_run_by_usgs_id_then_remove_calc_failure(self):
+        shakemap_version = 'urn:usgs-product:us:shakemap:us6000jllz:1675824364065'
         data = dict(usgs_id='us6000jllz',
                     approach='use_shakemap_from_usgs',
-                    shakemap_version='usgs_preferred',
-                    lon=37.0143, lat=37.2256, dep=10.0, mag=7.8,
-                    rake=0.0, dip=90, strike=0,
-                    time_event='night',
+                    shakemap_version=shakemap_version,
+                    lon=37.60602, lat=37.6446,
+                    dep=9.0, mag=7.8,
+                    rake=0.0, dip=90, strike=51.88112,
+                    time_event='day',
                     maximum_distance=100,
-                    mosaic_model='MIE',
-                    trt='Active Shallow Crust', truncation_level=3,
+                    mosaic_model='ARB',
+                    trt='TECTONIC_REGION_1',
+                    truncation_level=3,
                     number_of_ground_motion_fields=2,
                     asset_hazard_distance=15, ses_seed=42,
-                    local_timestamp='2023-02-06 04:17:34+03:00',
-                    maximum_distance_stations='')
+                    maximum_distance_stations='', msr='WC1994',
+                    description=('us6000jllz: M 7.8 - Pazarcik earthquake,'
+                                 ' Kahramanmaras earthquake sequence'))
         expected_error = 'IMT SA(0.6) is required'
         self.impact_run_then_remove('impact_run', data, expected_error)
 

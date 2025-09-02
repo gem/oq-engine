@@ -482,7 +482,7 @@ function capitalizeFirstLetter(val) {
     function require_usgs_id() {
         approach_selector = $('input[name="impact_approach"]');
         if (approach_selector.length > 0) {
-            const selected_approach = $('input[name="impact_approach"]:checked').val();
+            const selected_approach = get_selected_approach();
             if (selected_approach == 'provide_rup') {
                 // usgs_id is expected to be 'FromFile'
                 return true;
@@ -797,7 +797,7 @@ function capitalizeFirstLetter(val) {
 
             $('input[name="usgs_id"]').on('input', function() {
                 reset_rupture_form_inputs();
-                var selected_approach = $('input[name="impact_approach"]:checked').val();
+                const selected_approach = get_selected_approach();
                 if (approaches_requiring_shakemap_version.includes(selected_approach)) {
                     set_shakemap_version_selector();
                 }

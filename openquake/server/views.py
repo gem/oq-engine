@@ -972,12 +972,18 @@ def impact_run_with_shakemap(request):
 
     :param request:
         a `django.http.HttpRequest` object containing a usgs_id and
-        optionally the time of the day ('day', 'night' or 'transit')
+        optionally:
+        the time_event, i.e. the time of the day ('day', 'night' or 'transit')
+        the shakemap_version, the shakemap id in the format returned by
+        the impact_get_shakemap_versions API endpoint
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
     post = dict(usgs_id=request.POST['usgs_id'],
                 use_shakemap='true', approach='use_shakemap_from_usgs')
+    if 'shakemap_version' in request.POST:
+        shakemap_version = request.POST['shakemap_version']
+        post['shakemap_version'] = shakemap_version
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
@@ -987,6 +993,8 @@ def impact_run_with_shakemap(request):
         post['time_event'] = request.POST['time_event']
     post['approach'] = 'use_shakemap_from_usgs'
     post['use_shakemap'] = 'true'
+    if 'shakemap_version' in request.POST:
+        post['shakemap_version'] = shakemap_version
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
@@ -1236,7 +1244,7 @@ def calc_results(request, calc_id):
             outtypes=outtypes, url=url_with_query, size_mb=result.size_mb)
         response_data.append(datum)
 
-    return HttpResponse(content=json.dumps(response_data))
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @require_http_methods(['GET'])
@@ -1312,11 +1320,11 @@ def calc_result(request, result_id):
         archname = ds_key + '-' + export_type + '.zip'
         zipfiles(exported, os.path.join(tmpdir, archname))
         exported = os.path.join(tmpdir, archname)
+        content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
     else:  # single file
         exported = exported[0]
-
-    content_type = EXPORT_CONTENT_TYPE_MAP.get(
-        export_type, DEFAULT_CONTENT_TYPE)
+        content_type = EXPORT_CONTENT_TYPE_MAP.get(
+            export_type, DEFAULT_CONTENT_TYPE)
 
     fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
     return stream_response(exported, content_type, fname)
