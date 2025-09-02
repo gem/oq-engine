@@ -514,7 +514,8 @@ class SiteCollection(object):
                  soil_values=F64([152, 213, 305, 442, 640, 914, 1500])):
         """
         Multiply a site collection with the given vs30 values.
-        NB: only the sites with vs30 = -999. are multiplied.
+        NB: if there are multiple values the sites with vs30 = -999. are multiplied,
+        otherwise the given value is applied to all sites.
         """
         classes = general.find_among(soil_classes, soil_values, vs30s)
         n = len(vs30s)
@@ -535,8 +536,9 @@ class SiteCollection(object):
         tot = sites_to_multiply * n + (N - sites_to_multiply)
         array = numpy.empty(tot, dt)
         j = 0
+        multi_vs30 = len(vs30s) > 1
         for i, orig_rec in enumerate(self.array):
-            if not ok[i]:  # do not multiply
+            if multi_vs30 and not ok[i]:  # do not multiply
                 rec = array[j]
                 for name in names:
                     if name == 'custom_site_id':
@@ -546,6 +548,7 @@ class SiteCollection(object):
                         rec[name] = orig_rec[name]
                 j += 1
                 continue
+            # override the vs30
             for cl, vs30 in zip(classes, vs30s):
                 rec = array[j]
                 for name in names:
