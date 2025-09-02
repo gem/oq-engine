@@ -1298,7 +1298,7 @@ def calc_results(request, calc_id):
             outtypes=outtypes, url=url_with_query, size_mb=result.size_mb)
         response_data.append(datum)
 
-    return HttpResponse(content=json.dumps(response_data))
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @require_http_methods(['GET'])
@@ -1374,11 +1374,11 @@ def calc_result(request, result_id):
         archname = ds_key + '-' + export_type + '.zip'
         zipfiles(exported, os.path.join(tmpdir, archname))
         exported = os.path.join(tmpdir, archname)
+        content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
     else:  # single file
         exported = exported[0]
-
-    content_type = EXPORT_CONTENT_TYPE_MAP.get(
-        export_type, DEFAULT_CONTENT_TYPE)
+        content_type = EXPORT_CONTENT_TYPE_MAP.get(
+            export_type, DEFAULT_CONTENT_TYPE)
 
     fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
     return stream_response(exported, content_type, fname)
