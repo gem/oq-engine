@@ -242,7 +242,6 @@ class EngineServerTestCase(django.test.TestCase):
         data = dict(usgs_id='us6000jllz',
                     approach='use_shakemap_from_usgs',
                     shakemap_version=shakemap_version,
-                    use_shakemap=True,
                     lon=37.60602, lat=37.6446,
                     dep=9.0, mag=7.8,
                     rake=0.0, dip=90, strike=51.88112,
@@ -253,7 +252,6 @@ class EngineServerTestCase(django.test.TestCase):
                     truncation_level=3,
                     number_of_ground_motion_fields=2,
                     asset_hazard_distance=15, ses_seed=42,
-                    local_timestamp='2023-02-06 04:17:34+03:00',
                     maximum_distance_stations='', msr='WC1994',
                     description=('us6000jllz: M 7.8 - Pazarcik earthquake,'
                                  ' Kahramanmaras earthquake sequence'))
