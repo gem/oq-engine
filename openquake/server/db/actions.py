@@ -755,7 +755,7 @@ def add_checksum(db, job_id, value):
     :param value:
         value of the checksum (32 bit integer)
     :returns:
-        None if the checksum is new, the unique job_id with that checksum otherwise
+        The unique job_id with that checksum or None
     """
     try:
         jid = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',

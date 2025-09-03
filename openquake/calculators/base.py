@@ -228,11 +228,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
-            assert config.dbserver.cache in ('on', 'off')
-            if config.dbserver.cache == 'on' and not self.test_mode:
-                # return the job_id of a previous calculation with the
-                # same checksum, if any; otherwise return None
-                return logs.dbcmd('add_checksum', self.datastore.calc_id, check)
+            return logs.dbcmd('add_checksum', self.datastore.calc_id, check)
 
     def check_precalc(self, precalc_mode):
         """
@@ -278,7 +274,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
             old_job_id = self.save_params(**kw)
-            if old_job_id:
+            assert config.dbserver.cache in ('on', 'off')
+            if (old_job_id and config.dbserver.cache == 'on' and
+                    not self.test_mode):
                 logging.info(f"Already calculated, {old_job_id=}")
                 calc_id = self.datastore.calc_id
                 self.datastore = datastore.read(old_job_id)
