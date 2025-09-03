@@ -1,3 +1,6 @@
+  [Myles Turner, Guillermo Aldama-Bustos]
+  * Added GMM of Douglas et al. (2024)
+
   [Michele Simionato]
   * Added a parameter config.dbserver.cache to avoid repeating calculations
   * Removed the --reuse-input flag, since it was not used (use --hc instead)
