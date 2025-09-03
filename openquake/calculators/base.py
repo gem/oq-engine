@@ -173,6 +173,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     precalc = None
     accept_precalc = []
     from_engine = False  # set by engine.run_calc
+    test_mode = False  # set in the tests
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
@@ -227,6 +228,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
+            if config.dbserver.cache and not self.test_mode:
+                # return the job_id of a previous calculation with the same checksum,
+                # if any; otherwise return None
+                return logs.dbcmd('add_checksum', self.datastore.calc_id, check)
 
     def check_precalc(self, precalc_mode):
         """
@@ -271,7 +276,16 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if self.precalc is None:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
-            self.save_params(**kw)
+            old_job_id = self.save_params(**kw)
+            if old_job_id:
+                logging.info(f"Already calculated, {old_job_id=}")
+                calc_id = self.datastore.calc_id
+                self.datastore = datastore.read(old_job_id)
+                logs.dbcmd("UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
+                           self.datastore.filename[:-5], calc_id)  # strip .hdf5
+                expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
+                self.export(kw.get('exports', ''))
+                return self.exported
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -383,14 +397,13 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     def _export(self, ekey):
         if ekey not in exp or self.exported.get(ekey):  # already exported
             return
-        with self.monitor('export'):
-            try:
-                self.exported[ekey] = fnames = exp(ekey, self.datastore)
-            except Exception as exc:
-                fnames = []
-                logging.error('Could not export %s: %s', ekey, exc)
-            if fnames:
-                logging.info('exported %s: %s', ekey[0], fnames)
+        try:
+            self.exported[ekey] = fnames = exp(ekey, self.datastore)
+        except Exception as exc:
+            fnames = []
+            logging.error('Could not export %s: %s', ekey, exc)
+        if fnames:
+            logging.info('exported %s: %s', ekey[0], fnames)
 
     def __repr__(self):
         return '<%s#%d>' % (self.__class__.__name__, self.datastore.calc_id)
@@ -1743,7 +1756,7 @@ def run_calc(job_ini, **kw):
         return calc
 
 
-def expose_outputs(dstore, owner=USER, status='complete'):
+def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -1806,4 +1819,4 @@ def expose_outputs(dstore, owner=USER, status='complete'):
         if size_mb:
             keysize.append((key, size_mb))
     ds_size = dstore.getsize() / MB
-    logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
+    logs.dbcmd('create_outputs', calc_id or dstore.calc_id, keysize, ds_size)
