@@ -129,7 +129,7 @@ class EngineServerTestCase(django.test.TestCase):
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
         if not resp.status_code == 200:
-            raise RuntimeError(resp.reason_phrase)
+            raise RuntimeError(resp.content.decode('utf8'))
         return resp
 
     @classmethod
