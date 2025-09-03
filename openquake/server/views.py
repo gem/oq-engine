@@ -1467,6 +1467,26 @@ def calc_datastore(request, job_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
+def jobs_from_inis(request):
+    """
+    :returns:
+        list of job IDs; the ID is 0 if there is no job with the given checksum
+    """
+    jids = []
+    for ini in request.GET.getlist('ini'):
+        oq = readinput.get_oqparam(ini)
+        checksum = readinput.get_checksum32(oq)
+        jobs = logs.dbcmd('SELECT job_id FROM checksum '
+                          'WHERE hazard_checksum=?x', checksum)
+        if jobs:
+            jids.append(jobs[0].job_id)
+        else:
+            jids.append(0)
+    return HttpResponse(content=json.dumps(jids), content_type=JSON)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
 def calc_zip(request, job_id):
     """
     Download job.zip file
@@ -1785,8 +1805,9 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses = views.view('aggrisk', ds)
         except KeyError:
             max_avg_gmf = ds['avg_gmf'][0].max()
-            losses = (f'The risk can not be computed since the hazard is too low:'
-                      f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+            losses = (
+                f'The risk can not be computed since the hazard is too low:'
+                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
             losses_header = None
             weights_precision = None
         else:
@@ -1838,7 +1859,8 @@ def web_engine_get_outputs_impact(request, calc_id):
                        losses_header=losses_header,
                        weights_precision=weights_precision,
                        avg_gmf=avg_gmf, assets=assets,
-                       warnings=warnings, mmi_tags=mmi_tags, aggrisk_tags=aggrisk_tags))
+                       warnings=warnings, mmi_tags=mmi_tags, aggrisk_tags=aggrisk_tags)
+                  )
 
 
 @cross_domain_ajax
