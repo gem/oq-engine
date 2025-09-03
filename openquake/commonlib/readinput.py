@@ -999,17 +999,6 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
 
-# tested in test_mosaic
-def get_cache_path(oqparam, h5=None):
-    """
-    :returns: cache path of the form OQ_DATA/csm_<checksum>.hdf5
-    """
-    if oqparam.cachedir:
-        checksum = get_checksum32(oqparam, h5)
-        return os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
-    return ''
-
-
 def get_composite_source_model(oqparam, dstore=None):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -1026,15 +1015,8 @@ def get_composite_source_model(oqparam, dstore=None):
     h5 = dstore.hdf5 if dstore else None
     with Monitor('building full_lt', measuremem=True, h5=h5):
         full_lt = get_full_lt(oqparam)  # builds the weights
-    path = get_cache_path(oqparam, h5)
-    if os.path.exists(path):
-        from openquake.commonlib import datastore  # avoid circular import
-        with datastore.read(os.path.realpath(path)) as ds:
-            csm = ds['_csm']
-            csm.init(full_lt)
-    else:
-        csm = source_reader.get_csm(oqparam, full_lt, dstore)
-        _check_csm(csm, oqparam, dstore)
+    csm = source_reader.get_csm(oqparam, full_lt, dstore)
+    _check_csm(csm, oqparam, dstore)
     return csm
 
 
