@@ -283,14 +283,14 @@ class EngineServerTestCase(django.test.TestCase):
         self.impact_run_then_remove('impact_run', data, expected_error)
 
     def test_run_by_usgs_id_then_remove_calc_success(self):
+        # NOTE: this case tests the extractor for losses_by_site in the case discarding
+        # sites that do not correspond to any assets
         usgs_id = 'us6000phrk'
         resp = self.post('impact_get_shakemap_versions',
                          prefix='/v1/', data={'usgs_id': usgs_id})
         js = json.loads(resp.content.decode('utf8'))
         [shakemap_id] = [version['id'] for version in js['shakemap_versions']
                          if version['number'] == '5']
-        # NOTE: this case tests the extractor for losses_by_site in the case discarding
-        # sites that do not correspond to any assets
         data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id)
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
