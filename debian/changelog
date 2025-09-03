@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed install.py to exit if any of the tools is not installed
   * Fixed small negative damages due to numeric errors
   * Fixed the MIMETYPE to application/x-zip when needed in the WebUI
   * Removed the parameter `site_effects` since it is useless
