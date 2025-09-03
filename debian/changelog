@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the --reuse-input flag, since it was not used (use --hc instead)
   * Changed install.py to exit if any of the tools is not installed
   * Fixed small negative damages due to numeric errors
   * Fixed the MIMETYPE to application/x-zip when needed in the WebUI
