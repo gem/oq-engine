@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a parameter config.dbserver.cache to avoid repeating calculations
   * Removed the --reuse-input flag, since it was not used (use --hc instead)
   * Changed install.py to exit if any of the tools is not installed
   * Fixed small negative damages due to numeric errors
