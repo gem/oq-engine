@@ -24,6 +24,9 @@ import tempfile
 import string
 import unittest
 import secrets
+import numpy
+import pandas
+from io import BytesIO
 
 import django
 from django.test import Client, override_settings
@@ -165,6 +168,17 @@ class EngineServerTestCase(django.test.TestCase):
                 return job_dic
 
     @classmethod
+    def get_response_content(cls, response):
+        """
+        Extract content from either HttpResponse or FileResponse
+        NOTE: the django test client works differently with respect to requests.Session
+        """
+        if hasattr(response, 'content'):
+            return response.content
+        else:
+            return b''.join(response.streaming_content)
+
+    @classmethod
     def setUpClass(cls):
         super().setUpClass()
         dbcmd('reset_is_running')  # cleanup stuck calculations
@@ -231,7 +245,17 @@ class EngineServerTestCase(django.test.TestCase):
         ret = self.get('%s/download_aggrisk' % job_id)
         ret = self.get('%s/extract_html_table/aggrisk_tags' % job_id)
         ret = self.get('%s/extract_html_table/mmi_tags' % job_id)
+        ret = self.get('%s/extract/losses_by_asset' % job_id)
+        content = self.get_response_content(ret)
+        losses_by_asset_mean = numpy.load(BytesIO(content))['rlz-000']
+        dic = {key: losses_by_asset_mean[key]
+               for key in losses_by_asset_mean.dtype.names}
+        pandas.DataFrame(dic)
         ret = self.get('%s/extract/losses_by_site' % job_id)
+        content = self.get_response_content(ret)
+        losses_by_site = numpy.load(BytesIO(content))
+        pandas.DataFrame.from_dict(
+            {item: losses_by_site[item] for item in losses_by_site})
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError(
@@ -259,7 +283,15 @@ class EngineServerTestCase(django.test.TestCase):
         self.impact_run_then_remove('impact_run', data, expected_error)
 
     def test_run_by_usgs_id_then_remove_calc_success(self):
-        data = dict(usgs_id='us7000n05d')
+        usgs_id = 'us6000phrk'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '5']
+        # NOTE: this case tests the extractor for losses_by_site in the case discarding
+        # sites that do not correspond to any assets
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id)
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     # check that the URL 'run' cannot be accessed in ARISTOTLE mode
