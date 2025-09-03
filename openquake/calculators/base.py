@@ -228,9 +228,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
-            if config.dbserver.cache and not self.test_mode:
-                # return the job_id of a previous calculation with the same checksum,
-                # if any; otherwise return None
+            assert config.dbserver.cache in ('on', 'off')
+            if config.dbserver.cache == 'on' and not self.test_mode:
+                # return the job_id of a previous calculation with the
+                # same checksum, if any; otherwise return None
                 return logs.dbcmd('add_checksum', self.datastore.calc_id, check)
 
     def check_precalc(self, precalc_mode):
