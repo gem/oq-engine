@@ -295,7 +295,8 @@ def get_ini_defaults(request):
 @require_http_methods(['GET'])
 def get_impact_form_defaults(request):
     """
-    Return a json string with a dictionary of oq-impact form field names and defaults
+    Return a json string with a dictionary of oq-impact form field names
+    and defaults
     """
     return JsonResponse(IMPACT_FORM_DEFAULTS)
 
@@ -1019,7 +1020,8 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
-        vs30s_in = sorted([float(val) for val in request.POST.get('vs30').split()])
+        vs30s_in = sorted(
+            float(val) for val in request.POST.get('vs30').split())
         vs30s_out = []
         for vs30 in vs30s_in:
             vs30s_out.append(validate_vs30(vs30))
@@ -1082,7 +1084,7 @@ def aelo_run(request):
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': str(exc)}
-        logging.error('', exc_info=True)
+        logging.exception(str(exc))
         return JsonResponse(response_data, status=400)
     [jobctx] = engine.create_jobs(
         [params],
@@ -1472,17 +1474,11 @@ def jobs_from_inis(request):
     :returns:
         list of job IDs; the ID is 0 if there is no job with the given checksum
     """
-    jids = []
-    for ini in request.GET.getlist('ini'):
-        oq = readinput.get_oqparam(ini)
-        checksum = readinput.get_checksum32(oq)
-        jobs = logs.dbcmd('SELECT job_id FROM checksum '
-                          'WHERE hazard_checksum=?x', checksum)
-        if jobs:
-            jids.append(jobs[0].job_id)
-        else:
-            jids.append(0)
-    return HttpResponse(content=json.dumps(jids), content_type=JSON)
+    dic = readinput.jobs_from_inis(request.GET.getlist('ini'))
+    if dic['error']:
+        logging.error(dic['error'])
+        return JsonResponse(dic, status=500)
+    return HttpResponse(content=json.dumps(dic), content_type=JSON)
 
 
 @cross_domain_ajax
@@ -1859,7 +1855,8 @@ def web_engine_get_outputs_impact(request, calc_id):
                        losses_header=losses_header,
                        weights_precision=weights_precision,
                        avg_gmf=avg_gmf, assets=assets,
-                       warnings=warnings, mmi_tags=mmi_tags, aggrisk_tags=aggrisk_tags)
+                       warnings=warnings, mmi_tags=mmi_tags,
+                       aggrisk_tags=aggrisk_tags)
                   )
 
 
