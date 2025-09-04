@@ -32,6 +32,7 @@ import pathlib
 import logging
 import tempfile
 import functools
+import traceback
 import configparser
 import collections
 import itertools
@@ -60,10 +61,11 @@ from openquake.hazardlib import (
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.geo.utils import (
-    spherical_to_cartesian, geohash3, get_dist)
+    spherical_to_cartesian, geohash3)
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
+from openquake.commonlib import logs
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.qa_tests_data import mosaic, global_risk
 
@@ -1834,3 +1836,26 @@ def loadnpz(resp):
         raise RuntimeError(resp.content.decode('utf-8'))
     bio = io.BytesIO(b''.join(ln for ln in resp))
     return numpy.load(bio)
+
+
+# tested in commands_test
+def jobs_from_inis(inis):
+    """
+    :param inis: list of pathnames
+    :returns:
+        {'success': jids or [], 'error': '' or traceback string}
+    """
+    jids = []
+    try:
+        for ini in inis:
+            oq = get_oqparam(ini)
+            checksum = get_checksum32(oq)
+            jobs = logs.dbcmd('SELECT job_id FROM checksum '
+                              'WHERE hazard_checksum=?x', checksum)
+            if jobs:
+                jids.append(jobs[0].job_id)
+            else:
+                jids.append(0)
+    except Exception:
+        return {'success': [], 'error': traceback.format_exc()}
+    return {'success': jids, 'error': ''}

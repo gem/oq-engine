@@ -295,7 +295,8 @@ def get_ini_defaults(request):
 @require_http_methods(['GET'])
 def get_impact_form_defaults(request):
     """
-    Return a json string with a dictionary of oq-impact form field names and defaults
+    Return a json string with a dictionary of oq-impact form field names
+    and defaults
     """
     return JsonResponse(IMPACT_FORM_DEFAULTS)
 
@@ -1019,7 +1020,8 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
-        vs30s_in = sorted([float(val) for val in request.POST.get('vs30').split()])
+        vs30s_in = sorted(
+            float(val) for val in request.POST.get('vs30').split())
         vs30s_out = []
         for vs30 in vs30s_in:
             vs30s_out.append(validate_vs30(vs30))
@@ -1082,7 +1084,7 @@ def aelo_run(request):
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': str(exc)}
-        logging.error('', exc_info=True)
+        logging.exception(str(exc))
         return JsonResponse(response_data, status=400)
     [jobctx] = engine.create_jobs(
         [params],
@@ -1467,6 +1469,20 @@ def calc_datastore(request, job_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
+def jobs_from_inis(request):
+    """
+    :returns:
+        list of job IDs; the ID is 0 if there is no job with the given checksum
+    """
+    dic = readinput.jobs_from_inis(request.GET.getlist('ini'))
+    if dic['error']:
+        logging.error(dic['error'])
+        return JsonResponse(dic, status=500)
+    return HttpResponse(content=json.dumps(dic), content_type=JSON)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
 def calc_zip(request, job_id):
     """
     Download job.zip file
@@ -1785,8 +1801,9 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses = views.view('aggrisk', ds)
         except KeyError:
             max_avg_gmf = ds['avg_gmf'][0].max()
-            losses = (f'The risk can not be computed since the hazard is too low:'
-                      f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+            losses = (
+                f'The risk can not be computed since the hazard is too low:'
+                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
             losses_header = None
             weights_precision = None
         else:
@@ -1838,7 +1855,9 @@ def web_engine_get_outputs_impact(request, calc_id):
                        losses_header=losses_header,
                        weights_precision=weights_precision,
                        avg_gmf=avg_gmf, assets=assets,
-                       warnings=warnings, mmi_tags=mmi_tags, aggrisk_tags=aggrisk_tags))
+                       warnings=warnings, mmi_tags=mmi_tags,
+                       aggrisk_tags=aggrisk_tags)
+                  )
 
 
 @cross_domain_ajax

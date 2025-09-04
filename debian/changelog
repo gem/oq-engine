@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Added a private endpoint `/v1/calc/jobs_from_inis`
+
   [Myles Turner, Guillermo Aldama-Bustos]
   * Added GMM of Douglas et al. (2024)
 

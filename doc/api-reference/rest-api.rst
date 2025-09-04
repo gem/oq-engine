@@ -447,6 +447,20 @@ GET /v1/available_gsims
 
 Return a list of strings with the available GSIMs
 
+***************************
+GET /v1/calc/jobs_from_inis
+***************************
+
+Given a list of job.ini pathnames returns a list with the job_id of the corresponding
+calculation (if already performed) or zero for each .ini
+
+Parameters: 'ini', list of pathnames
+
+Example of Response::
+
+	[0, 0, 42]  # if the first two inis are new and the third one is old
+
+
 Extracting data from calculations
 ---------------------------------
 

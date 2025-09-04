@@ -23,6 +23,7 @@ from openquake.server import views
 # each url is prefixed with /v1/calc/
 urlpatterns = [
     re_path(r'^list$', views.calc_list),
+    re_path(r'^jobs_from_inis$', views.jobs_from_inis),
     re_path(r'^(\d+)/status$', views.calc_list),
     re_path(r'^(\d+)$', views.calc),
     re_path(r'^(\d+)/datastore$', views.calc_datastore),
