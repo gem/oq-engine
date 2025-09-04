@@ -284,7 +284,13 @@ class EngineServerTestCase(django.test.TestCase):
 
     def test_run_by_usgs_id_then_remove_calc_success(self):
         # NOTE: this case tests the extractor for losses_by_site in the case discarding
-        # sites that do not correspond to any assets
+        # sites that do not correspond to any assets, e.g. for the JRC script that uses
+        # shakemap_id = 'urn:usgs-product:us:shakemap:us6000phrk:1735953132990'
+        # {
+        #     "id": "urn:usgs-product:us:shakemap:us6000phrk:1736792435199",
+        #     "number": "5",
+        #     "utc_date_time": "2025-01-13 18:20:35"
+        # },
         usgs_id = 'us6000phrk'
         resp = self.post('impact_get_shakemap_versions',
                          prefix='/v1/', data={'usgs_id': usgs_id})
