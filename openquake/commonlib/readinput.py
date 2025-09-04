@@ -1838,6 +1838,7 @@ def loadnpz(resp):
     return numpy.load(bio)
 
 
+# tested in commands_test
 def jobs_from_inis(inis):
     """
     :param inis: list of pathnames
