@@ -676,6 +676,33 @@ def calc_run(request):
     return JsonResponse(response_data, status=status)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_run_ini(request):
+    """
+    Run a calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object.
+        The request must contain the full path to a job.ini file
+    """
+    ini = request.POST.get('job_ini')
+    user = utils.get_user(request)
+    try:
+        job_id = submit_job([], ini, user, hc_id=None)
+    except Exception as exc:  # job failed, for instance missing .ini file
+        # get the exception message
+        exc_msg = traceback.format_exc() + str(exc)
+        logging.error(exc_msg)
+        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
+        status = 500
+    else:
+        response_data = dict(status='created', job_id=job_id)
+        status = 200
+    return JsonResponse(response_data, status=status)
+
+
 def aelo_callback(
         job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
     if not job_owner_email:
@@ -1138,7 +1165,10 @@ def submit_job(request_files, ini, username, hc_id):
 
     # store the request files and perform some validation
     try:
-        job_ini = store(request_files, ini, job.calc_id)
+        if request_files:
+            job_ini = store(request_files, ini, job.calc_id)
+        else:  # called by calc_run_ini
+            job_ini = ini
         job.oqparam = oq = readinput.get_oqparam(
             job_ini, kw={'hazard_calculation_id': hc_id})
         dic = dict(calculation_mode=oq.calculation_mode,

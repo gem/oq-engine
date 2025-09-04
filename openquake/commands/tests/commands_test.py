@@ -170,15 +170,6 @@ class InfoTestCase(unittest.TestCase):
             sap.runline('openquake.commands info ' + path)
         self.assertIn('Classical Hazard QA Test, Case 9', str(p))
 
-        # testing jobs_from_inis
-        dic = jobs_from_inis([path])
-        self.assertGreater(dic['success'][0], 0)  # already computed
-        self.assertEqual(dic['error'], '')
-
-        dic = jobs_from_inis(['/non/existing/job.ini'])
-        self.assertEqual(dic['success'], [])
-        self.assertIn('File not found', dic['error'])
-
     def test_logictree(self):
         path = os.path.join(os.path.dirname(case_09.__file__),
                             'source_model_logic_tree.xml')
@@ -278,6 +269,16 @@ class RunShowExportTestCase(unittest.TestCase):
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         with Print.patch():
             cls.calc_id = sap.runline(f'openquake.commands run {job_ini} -c 0')
+        cls.job_ini = job_ini
+
+    def test_jobs_from_inis(self):
+        dic = jobs_from_inis([self.job_ini])
+        self.assertGreater(dic['success'][0], 0)  # already computed
+        self.assertEqual(dic['error'], '')
+
+        dic = jobs_from_inis(['/non/existing/job.ini'])
+        self.assertEqual(dic['success'], [])
+        self.assertIn('File not found', dic['error'])
 
     def test_show_calc(self):
         with Print.patch() as p:
