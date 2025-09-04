@@ -39,7 +39,7 @@ from openquake.baselib.tests.flake8_test import check_newlines
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
-from openquake.commonlib.readinput import get_params
+from openquake.commonlib.readinput import get_params, jobs_from_inis
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
@@ -169,6 +169,15 @@ class InfoTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline('openquake.commands info ' + path)
         self.assertIn('Classical Hazard QA Test, Case 9', str(p))
+
+        # testing jobs_from_inis
+        dic = jobs_from_inis([path])
+        self.assertGreater(dic['success'][0], 0)  # already computed
+        self.assertEqual(dic['error'], '')
+
+        dic = jobs_from_inis(['/non/existing/job.ini'])
+        self.assertEqual(dic['success'], [])
+        self.assertIn('File not found', dic['error'])
 
     def test_logictree(self):
         path = os.path.join(os.path.dirname(case_09.__file__),
