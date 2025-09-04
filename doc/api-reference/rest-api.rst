@@ -279,17 +279,25 @@ Remove the calculation specified by the parameter ``calc_id``.
 POST /v1/calc/run
 *****************
 
-Run a new calculation with the specified job config file, input models, and other parameters.
-
-Files::
-
-	* job_config: an oq engine job config INI-style file
-	* input_model_1 - input_model_N: any number (including zero) of input model files
+Run a new calculation with the specified files (or a single job.zip).
 
 Parameters::
 
 	* hazard_job_id: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
 	* hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_job_id (only for risk calculations)
+
+Response: Redirects to /v1/calc/:calc_id, where ``calc_id`` is the ID of the newly created calculation.
+
+************************
+POST /v1/calc/run_ini
+************************
+
+Run a new calculation with the specified job.ini file (full path on
+the server).
+
+Parameters::
+
+	* job_ini: full path to the job.ini file in the server
 
 Response: Redirects to /v1/calc/:calc_id, where ``calc_id`` is the ID of the newly created calculation.
 

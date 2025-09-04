@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added a private endpoint `/v1/calc/run_ini` to run remote calculations
   * Added a private endpoint `/v1/calc/jobs_from_inis`
 
   [Myles Turner, Guillermo Aldama-Bustos]
