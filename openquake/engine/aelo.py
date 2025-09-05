@@ -44,8 +44,8 @@ def get_mosaic_df(buffer):
     mosaic_boundaries_file = config.directory.mosaic_boundaries_file
     if not mosaic_boundaries_file:
         mosaic_boundaries_file = os.path.join(
-            os.path.dirname(mosaic.__file__), 'ModelBoundaries_Year4.gpkg')
-    df = readinput.read_geometries(mosaic_boundaries_file, 'name', buffer)
+            os.path.dirname(mosaic.__file__), 'ModelBoundaries.gpkg')
+    df = readinput.read_geometries(mosaic_boundaries_file, 'code', buffer)
     return df
 
 
