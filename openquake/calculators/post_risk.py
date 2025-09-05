@@ -120,22 +120,22 @@ def reagg_idxs(num_tags, tagnames):
 
     For instance reaggregating by taxonomy and region would give:
 
-    >>> list(reagg_idxs(num_tags, ['taxonomy', 'region']))  # 4x3
+    >>> [int(x) for x in reagg_idxs(num_tags, ['taxonomy', 'region'])]  # 4x3
     [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11]
 
     Reaggregating by taxonomy and country would give:
 
-    >>> list(reagg_idxs(num_tags, ['taxonomy', 'country']))  # 4x2
+    >>> [int(x) for x in reagg_idxs(num_tags, ['taxonomy', 'country'])]  # 4x2
     [0, 1, 0, 1, 0, 1, 2, 3, 2, 3, 2, 3, 4, 5, 4, 5, 4, 5, 6, 7, 6, 7, 6, 7]
 
     Reaggregating by region and country would give:
 
-    >>> list(reagg_idxs(num_tags, ['region', 'country']))  # 3x2
+    >>> [int(x) for x in  reagg_idxs(num_tags, ['region', 'country'])]  # 3x2
     [0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5]
 
     Here is an example of single tag aggregation:
 
-    >>> list(reagg_idxs(num_tags, ['taxonomy']))  # 4
+    >>> [int(x) for x in reagg_idxs(num_tags, ['taxonomy'])]  # 4
     [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3]
     """
     shape = list(num_tags.values())
