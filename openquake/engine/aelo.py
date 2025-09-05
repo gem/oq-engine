@@ -41,12 +41,11 @@ def get_mosaic_df(buffer):
     """
     :returns: a DataFrame with the mosaic geometries used in AELO
     """
-    mosaic_model_boundaries_file = config.directory.mosaic_model_boundaries_file
-    if not mosaic_model_boundaries_file:
-        mosaic_model_boundaries_file = os.path.join(
+    mosaic_boundaries_file = config.directory.mosaic_boundaries_file
+    if not mosaic_boundaries_file:
+        mosaic_boundaries_file = os.path.join(
             os.path.dirname(mosaic.__file__), 'ModelBoundaries_Year4.gpkg')
-    df = readinput.read_geometries(
-        mosaic_model_boundaries_file, 'name', buffer)
+    df = readinput.read_geometries(mosaic_boundaries_file, 'name', buffer)
     return df
 
 
