@@ -9,7 +9,7 @@ oq info venv
 oq info cfg
 
 # create .tmp.ini files with oqparam.to_ini()
-python -c"import os
+python -c"import os, sys
 from openquake.calculators.checkers import check_ini
 for cwd, dirs, files in os.walk('$1'):
      for f in files:
