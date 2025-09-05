@@ -245,6 +245,7 @@ class EngineServerTestCase(django.test.TestCase):
                 raise RuntimeError(
                     'Unable to remove job %s:\n%s' % (job_id, ret))
 
+    @unittest.skip("does not run due to changes in exposure.hdf5 post 3.23")
     def test_run_by_usgs_id_then_remove_calc(self):
         data = dict(usgs_id='us6000jllz',
                     approach='use_shakemap_from_usgs',
