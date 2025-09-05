@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+    <calculations>
+        <calc sourceID="a" ini="job_a.ini"/>
+        <calc sourceID="b" ini="job_b.ini"/>
+    </calculations>
+
+    <uncertainties>
+        <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1">
+            <sourceIDs>a b</sourceIDs>
+        </logicTreeBranchSet>
+    </uncertainties>
+
+</nrml>

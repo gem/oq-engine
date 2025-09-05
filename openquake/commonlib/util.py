@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+import os
 import numpy
 from openquake.baselib import config, python3compat
 from openquake.commonlib import datastore
@@ -203,3 +204,19 @@ def shared_dir_on():
     :returns: True if a shared_dir has been set in openquake.cfg, else False
     """
     return config.directory.shared_dir
+
+
+def unique_filename(path):
+    """
+    Return a unique filename by appending a counter if needed.
+    Example: 'plot.png' -> 'plot_1.png' if 'plot.png' exists.
+    """
+    if not os.path.exists(path):
+        return path
+    root, ext = os.path.splitext(path)
+    counter = 1
+    new_path = f"{root}_{counter}{ext}"
+    while os.path.exists(new_path):
+        counter += 1
+        new_path = f"{root}_{counter}{ext}"
+    return new_path

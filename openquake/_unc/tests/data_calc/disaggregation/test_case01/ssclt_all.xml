@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+
+        <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+            <logicTreeBranch branchID="b11">
+                <uncertaintyModel>
+                    ssm_a.xml
+                    ssm_b.xml
+                </uncertaintyModel>
+                <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet uncertaintyType="truncatedGRFromSlipAbsolute" 
+                branchSetID="bs2" applyToSources="b">
+            <logicTreeBranch branchID="bs21">
+                <uncertaintyModel>
+                    <faultActivityData slipRate="10.0" rigidity="32" />
+                </uncertaintyModel>
+                <uncertaintyWeight>0.2</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b22">
+               <uncertaintyModel>
+                    <faultActivityData slipRate="13.0" rigidity="32" />
+                </uncertaintyModel>
+                <uncertaintyWeight>0.6</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b23">
+               <uncertaintyModel>
+                    <faultActivityData slipRate="16.0" rigidity="32" />
+                </uncertaintyModel>
+                <uncertaintyWeight>0.2</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet uncertaintyType="setMSRAbsolute" branchSetID="bs3" 
+            applyToSources="b">
+            <logicTreeBranch branchID="b31">
+                <uncertaintyModel>WC1994</uncertaintyModel>
+                <uncertaintyWeight>0.8</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b32">
+                <uncertaintyModel>Leonard2014_Interplate</uncertaintyModel>
+                <uncertaintyWeight>0.2</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet uncertaintyType="setLowerSeismDepthAbsolute" branchSetID="bs4"
+            applyToSources="b">
+            <logicTreeBranch branchID="b41">
+                <uncertaintyModel>40</uncertaintyModel>
+                <uncertaintyWeight>0.8</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b42">
+                <uncertaintyModel>50</uncertaintyModel>
+                <uncertaintyWeight>0.2</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet uncertaintyType="recomputeMmax" branchSetID="bs4b" 
+                applyToSources="b">
+            <logicTreeBranch branchID="b4b1">
+                <uncertaintyModel>0</uncertaintyModel>
+                <uncertaintyWeight>1.0</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                            applyToSources="a"
+                            branchSetID="bs5">
+            <logicTreeBranch branchID="b51">
+                <uncertaintyModel>4.5 1.1</uncertaintyModel>
+                <uncertaintyWeight>0.166</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b52">
+                <uncertaintyModel>4.5 1.0</uncertaintyModel>
+                <uncertaintyWeight>0.166</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b53">
+                <uncertaintyModel>4.5 0.9</uncertaintyModel>
+                <uncertaintyWeight>0.166</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b54">
+                <uncertaintyModel>4.6 1.1</uncertaintyModel>
+                <uncertaintyWeight>0.166</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b55">
+                <uncertaintyModel>4.6 1.0</uncertaintyModel>
+                <uncertaintyWeight>0.166</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch branchID="b56">
+                <uncertaintyModel>4.6 0.9</uncertaintyModel>
+                <uncertaintyWeight>0.17</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+    </logicTree>
+</nrml>

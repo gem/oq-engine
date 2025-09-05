@@ -29,6 +29,7 @@ import pandas
 from scipy.stats import linregress
 from shapely.geometry import Polygon, LineString
 from openquake.commonlib import readinput
+from openquake.commonlib.util import unique_filename
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
@@ -37,28 +38,36 @@ from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import (
     Extractor, WebExtractor, clusterize)
 from openquake.calculators.postproc.plots import (
-    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d)
+    plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d,
+    adjust_limits, auto_limits)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites)
 
 
-ZOOM_MARGIN = 8
-
-
 def getparams(what):
     """
+    >>> getparams('rupture?')
+    ({}, False)
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10')
-    {'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False)
+    >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10&with_borders=True')
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True)
     """
     assert '?' in what, what
-    dic = {}
+    params = {}
+    with_borders = False
     for namevalue in what.split('?')[1].split('&'):
+        if not namevalue:
+            continue
         name, value = namevalue.split('=')
-        try:
-            dic[name] = ast.literal_eval(value)
-        except ValueError:
-            dic[name] = value
-    return dic
+        if name == 'with_borders':
+            with_borders = ast.literal_eval(value)
+        else:
+            try:
+                params[name] = ast.literal_eval(value)
+            except ValueError:
+                params[name] = value
+    return params, with_borders
 
 
 def make_figure_magdist(extractors, what):
@@ -330,7 +339,7 @@ def make_figure_disagg(extractors, what):
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    y = disagg.array[..., 0, 0]  # shape (..., M, P)
+    y = disagg.array[..., 0, 0, 0]  # shape (..., M, P, Z) => (...)
     ndims = len(kind)  # number of dimensions of the array
     assert ndims == len(y.shape), (ndims, len(y.shape))
     print(y)
@@ -546,7 +555,7 @@ def make_figure_ebruptures(extractors, what):
     [ex] = extractors
     hypo = ex.get(what)['hypo']
     _fig, ax = plt.subplots()
-    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     ax.grid(True)
     ax.scatter(hypo[:, 0], hypo[:, 1])
     ax.set_title('%d ruptures' % len(hypo))
@@ -875,7 +884,7 @@ def filter_sources(csm, src_ids, codes, excluded_codes):
     return srcs
 
 
-def plot_multi_fault_sources(mfs, src_ids, ax, min_x, max_x, min_y, max_y):
+def plot_multi_fault_sources(mfs, src_ids, ax):
     print('Plotting multi-fault sources...')
     t0 = time.time()
     src = mfs[0]
@@ -893,18 +902,12 @@ def plot_multi_fault_sources(mfs, src_ids, ax, min_x, max_x, min_y, max_y):
     print(f'Found {len(secs)} sections')
     for sec in secs:
         trace, poly = get_boundary_2d(sec)
-        min_x_, min_y_, max_x_, max_y_ = poly.bounds
-        min_x = min(min_x, min_x_)
-        max_x = max(max_x, max_x_)
-        min_y = min(min_y, min_y_)
-        max_y = max(max_y, max_y_)
         plot_geom(poly, ax, 'blue', 'Multi-fault sections')
         plot_geom(trace, ax, 'red', 'Multi-fault traces')
     print(f'...took {time.time() - t0} seconds')
-    return min_x, max_x, min_y, max_y
 
 
-def plot_polygon_sources(srcs, ax, min_x, max_x, min_y, max_y, kind):
+def plot_polygon_sources(srcs, ax, kind):
     print(f'Plotting {kind} sources...')
     if kind == 'Non-parametric':
         color = 'orange'
@@ -927,15 +930,10 @@ def plot_polygon_sources(srcs, ax, min_x, max_x, min_y, max_y, kind):
         poly = src.polygon
         min_x_, min_y_, max_x_, max_y_ = poly.get_bbox()
         ax.fill(poly.lons, poly.lats, alpha=0.3, color=color, label=kind)
-        min_x = min(min_x, min_x_)
-        max_x = max(max_x, max_x_)
-        min_y = min(min_y, min_y_)
-        max_y = max(max_y, max_y_)
     print(f'...took {time.time() - t0} seconds')
-    return min_x, max_x, min_y, max_y
 
 
-def plot_point_sources(srcs, ax, min_x, max_x, min_y, max_y):
+def plot_point_sources(srcs, ax):
     print('Plotting point sources...')
     t0 = time.time()
     for point in srcs:
@@ -954,15 +952,10 @@ def plot_point_sources(srcs, ax, min_x, max_x, min_y, max_y):
             raise NotImplementedError(f'Unexpected code {point.code}')
         ax.plot(lon, lat, 'o', alpha=0.7, color=color,
                 markersize=2, label=label)
-        min_x = min(min_x, min_x_)
-        max_x = max(max_x, max_x_)
-        min_y = min(min_y, min_y_)
-        max_y = max(max_y, max_y_)
     print(f'...took {time.time() - t0} seconds')
-    return min_x, max_x, min_y, max_y
 
 
-def plot_sources(srcs, ax, min_x, max_x, min_y, max_y):
+def plot_sources(srcs, ax):
     PLOTTABLE_CODES = (
         b'N', b'M', b'X', b'S', b'C', b'P', b'p', b'P', b'F', b'A', b'K')
     ax.set_aspect('equal')
@@ -972,58 +965,49 @@ def plot_sources(srcs, ax, min_x, max_x, min_y, max_y):
     # NonParametricSource
     np_sources = [src for src in srcs if src.code == b'N']
     if np_sources:
-        min_x, max_x, min_y, max_y = plot_polygon_sources(
-            np_sources, ax, min_x, max_x, min_y, max_y, 'Non-parametric')
+        plot_polygon_sources(np_sources, ax, 'Non-parametric')
         any_sources_were_plotted = True
     # MultiPointSource
     mp_sources = [src for src in srcs if src.code == b'M']
     if mp_sources:
         # NOTE: perhaps plotting the polygon gives not enough detail?
-        min_x, max_x, min_y, max_y = plot_polygon_sources(
-            mp_sources, ax, min_x, max_x, min_y, max_y, 'Multi-point')
+        plot_polygon_sources(mp_sources, ax, 'Multi-point')
         any_sources_were_plotted = True
     # CharacteristicFaultSource
     ch_sources = [src for src in srcs if src.code == b'X']
     if ch_sources:
-        min_x, max_x, min_y, max_y = plot_polygon_sources(
-            ch_sources, ax, min_x, max_x, min_y, max_y, 'Characteristic fault')
+        plot_polygon_sources(ch_sources, ax, 'Characteristic fault')
         any_sources_were_plotted = True
     # SimpleFaultSource
     s_sources = [src for src in srcs if src.code == b'S']
     if s_sources:
-        min_x, max_x, min_y, max_y = plot_polygon_sources(
-            s_sources, ax, min_x, max_x, min_y, max_y, 'Simple fault')
+        plot_polygon_sources(s_sources, ax, 'Simple fault')
         any_sources_were_plotted = True
     # ComplexFaultSource
     comp_sources = [src for src in srcs if src.code == b'C']
     if comp_sources:
-        min_x, max_x, min_y, max_y = plot_polygon_sources(
-            comp_sources, ax, min_x, max_x, min_y, max_y, 'Complex fault')
+        plot_polygon_sources(comp_sources, ax, 'Complex fault')
         any_sources_were_plotted = True
     # AreaSource
     a_sources = [src for src in srcs if src.code == b'A']
     if a_sources:
-        min_x, max_x, min_y, max_y = plot_polygon_sources(
-            a_sources, ax, min_x, max_x, min_y, max_y, 'Area')
+        plot_polygon_sources(a_sources, ax, 'Area')
         any_sources_were_plotted = True
     # KiteFaultSource
     k_sources = [src for src in srcs if src.code == b'K']
     if k_sources:
-        min_x, max_x, min_y, max_y = plot_polygon_sources(
-            k_sources, ax, min_x, max_x, min_y, max_y, 'Kite fault')
+        plot_polygon_sources(k_sources, ax, 'Kite fault')
         any_sources_were_plotted = True
     # PointSource or CollapsedPointSource
     p_sources = [src for src in srcs if src.code in (b'p', b'P')]
     if p_sources:
-        min_x, max_x, min_y, max_y = plot_point_sources(
-            p_sources, ax, min_x, max_x, min_y, max_y)
+        plot_point_sources(p_sources, ax)
         any_sources_were_plotted = True
     # MultiFaultSource
     mf_sources = [src for src in srcs if src.code == b'F']
     if mf_sources:
         src_ids = [src.source_id for src in srcs]
-        min_x, max_x, min_y, max_y = plot_multi_fault_sources(
-            mf_sources, src_ids, ax, min_x, max_x, min_y, max_y)
+        plot_multi_fault_sources(mf_sources, src_ids, ax)
         any_sources_were_plotted = True
     unplottable = [(src.source_id, src.code)
                    for src in srcs if src.code not in PLOTTABLE_CODES]
@@ -1031,7 +1015,6 @@ def plot_sources(srcs, ax, min_x, max_x, min_y, max_y):
         print(f'Plotting the following sources is not'
               f'implemented yet: {unplottable}')
     assert any_sources_were_plotted, 'No sources were plotted'
-    return min_x, max_x, min_y, max_y
 
 
 def make_figure_sources(extractors, what):
@@ -1064,13 +1047,11 @@ def make_figure_sources(extractors, what):
     srcs = filter_sources(csm, src_ids, codes, excluded_codes)
     assert srcs, ('All sources were filtered out')
     _fig, ax = plt.subplots()
-    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
-    min_x, max_x, min_y, max_y = plot_sources(
-        srcs, ax, min_x, max_x, min_y, max_y)
+    plot_sources(srcs, ax)
     print('Plotting mosaic borders...')
-    ax = add_borders(ax, readinput.read_mosaic_df, buffer=0.)
-    ax.set_xlim(min_x - ZOOM_MARGIN, max_x + ZOOM_MARGIN)
-    ax.set_ylim(min_y - ZOOM_MARGIN, max_y + ZOOM_MARGIN)
+    xlim, ylim = auto_limits(ax)
+    add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    adjust_limits(ax, xlim, ylim, padding=8)
     ax.set_title('Sources')
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
@@ -1084,20 +1065,37 @@ def make_figure_rupture(extractors, what):
 
     $ oq plot "rupture?"
 
-    extracts the rupture from an already performed scenario calculation;
+    plots the first rupture from an already performed scenario calculation
 
-    $ oq plot "rupture?mag=6&lon=10&lat=45&dep=10&rake=45&msr=WC1994"
+    $ oq plot "rupture?rup_id=1"
+
+    plots the rupture with the given id;
+
+    $ oq plot "rupture?with_borders=True"
+
+    also plots country borders
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    params, with_borders = getparams(what)
+    rup_id = params['rup_id'] if 'rup_id' in params else 0
+    rup = get_ebrupture(dstore, rup_id=rup_id).rupture
+    return plot_rupture(rup, with_borders=with_borders)
+
+
+def make_figure_build_rupture(extractors, what):
+    """
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994"
 
     builds a new planar rupture.
+
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994&with_borders=True"
+
+    also plots country borders.
     """
-    params = getparams(what)
-    if params:
-        rup = build_planar_rupture_from_dict(params)
-    else:
-        [ex] = extractors
-        dstore = ex.dstore
-        rup = get_ebrupture(dstore, rup_id=0).rupture
-    return plot_rupture(rup, with_borders=False)
+    params, with_borders = getparams(what)
+    rup = build_planar_rupture_from_dict(params)
+    return plot_rupture(rup, with_borders=with_borders)
 
 
 def make_figure_rupture_3d(extractors, what):
@@ -1106,7 +1104,9 @@ def make_figure_rupture_3d(extractors, what):
     """
     [ex] = extractors
     dstore = ex.dstore
-    ebr = get_ebrupture(dstore, rup_id=0)
+    params, _ = getparams(what)
+    rup_id = params['rup_id'] if 'rup_id' in params else 0
+    ebr = get_ebrupture(dstore, rup_id=rup_id)
     return plot_rupture_3d(ebr.rupture)
 
 
@@ -1168,17 +1168,26 @@ def plot_csv(fname):
 def main(what,
          calc_id: int = -1,
          others: int = [],
+         *,
+         save_to: str = None,
          webapi=False,
-         local=False):
+         local=False,
+         ):
     """
     Generic plotter for local and remote calculations.
     """
     if what.endswith('.csv'):
         plot_csv(what)
         return
+    if save_to:
+        save_to = unique_filename(save_to)
     if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
-        plt.show()
+        if save_to:
+            plt.savefig(save_to, dpi=300)
+            logging.info(f'Plot saved to {save_to}')
+        else:
+            plt.show()
         return
     if what == 'examples':
         help_msg = ['Examples of possible plots:']
@@ -1212,11 +1221,16 @@ def main(what,
             xs.append(Extractor(other_id))
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
-    plt.show()
+    if save_to:
+        plt.savefig(save_to, dpi=300)
+        logging.info(f'Plot saved to {save_to}')
+    else:
+        plt.show()
 
 
 main.what = 'what to extract (try examples)'
 main.calc_id = 'computation ID'
 main.others = dict(help='IDs of other computations', nargs='*')
+main.save_to = 'if passed, save the plot to file instead of showing it'
 main.webapi = 'if given, pass through the WebAPI'
 main.local = 'if passed, use the local WebAPI'

@@ -18,6 +18,7 @@
 
 import copy
 import pickle
+import operator
 import itertools
 import numpy
 
@@ -904,15 +905,39 @@ class CompositeLogicTree(object):
         return paths
 
     def __iter__(self):
-        nb = len(self.branchsets)
-        ordinal = 0
-        for weight, branches in self.branchsets[0].enumerate_paths():
-            value = [br.value for br in branches]
-            # NB: the branch_ids must be one-character long if we want to use
-            # apply_all
-            lt_path = ''.join(br.id for br in branches)
-            yield Realization(value, weight, ordinal, lt_path.ljust(nb, '.'))
-            ordinal += 1
+        """
+        Yield Realization tuples. Notice that the weight is homogeneous when
+        sampling is enabled, since it is accounted for in the sampling
+        procedure.
+        """
+        if self.num_samples:
+            # random sampling of the logic tree
+            probs = random((self.num_samples, len(self.branchsets)),
+                           self.seed, self.sampling_method)
+            ordinal = 0
+            for branches in self.branchsets[0].sample(
+                    probs, self.sampling_method):
+                value = [br.value for br in branches]
+                smlt_path_ids = [br.branch_id for br in branches]
+                if self.sampling_method.startswith('early_'):
+                    weight = 1. / self.num_samples  # already accounted
+                elif self.sampling_method.startswith('late_'):
+                    weight = numpy.prod([br.weight for br in branches])
+                else:
+                    raise NotImplementedError(self.sampling_method)
+                yield Realization(value, weight, ordinal, tuple(smlt_path_ids))
+                ordinal += 1
+        else:  # full enumeration
+            rlzs = []
+            for weight, branches in self.branchsets[0].enumerate_paths():
+                value = [br.value for br in branches]
+                branch_ids = [branch.branch_id for branch in branches]
+                rlz = Realization(value, weight, 0, tuple(branch_ids))
+                rlzs.append(rlz)
+            rlzs.sort(key=operator.attrgetter('pid'))
+            for r, rlz in enumerate(rlzs):
+                rlz.ordinal = r
+                yield rlz
 
     def get_num_paths(self):
         """

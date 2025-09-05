@@ -187,7 +187,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
                      mem_gb, len(light), len(data))
     else:
         logging.info('Required mem_gb = %.2f', req_gb)
-    max_gb = float(config.memory.pmap_max_gb or parallel.Starmap.num_cores/8)
+    max_gb = float(config.memory.pmap_max_gb or parallel.num_cores/8)
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
     if oq.tiling is None:
@@ -198,7 +198,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         tiling = oq.tiling
 
     # store source_groups
-    dstore.create_dset('source_groups', data, fillvalue=None,
+    dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
@@ -367,24 +367,13 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         if not hasattr(self, 'csm'):  # used only for post_process
             return
-        cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
-        if os.path.exists(cachepath):
-            realpath = os.path.realpath(cachepath)
-            logging.info('Copying csm from %s', realpath)
-            with h5py.File(realpath, 'r') as cache:  # copy _csm
-                cache.copy(cache['_csm'], self.datastore.hdf5)
-            self.store()  # full_lt, toms
-        else:
-            self.populate_csm()
-            try:
-                self.datastore['_csm'] = self.csm
-            except RuntimeError as exc:
-                # this happens when setrecursionlimit is too low
-                # we can continue anyway, this is not critical
-                logging.error(str(exc), exc_info=True)
-            else:
-                if cachepath:
-                    os.symlink(self.datastore.filename, cachepath)
+        self.populate_csm()
+        try:
+            self.datastore['_csm'] = self.csm
+        except RuntimeError as exc:
+            # this happens when setrecursionlimit is too low
+            # we can continue anyway, this is not critical
+            logging.error(str(exc), exc_info=True)
         return self.csm
 
     def post_execute(self, csm):

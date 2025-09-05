@@ -223,6 +223,21 @@ class WeightedSequence(MutableSequence):
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
 
+def find_among(strings, sortedvalues, value):
+    """
+    >>> find_among('ABCD', [.1, .2, .3], .0)
+    'A'
+    >>> find_among('ABCD', [.1, .2, .3], .19)
+    'B'
+    >>> find_among('ABCD', [.1, .2, .3], .3)
+    'C'
+    >>> find_among('ABCD', [.1, .2, .3], .4)
+    'D'
+    """
+    assert len(strings) == len(sortedvalues) + 1, (
+        len(strings), len(sortedvalues))
+    return strings[numpy.searchsorted(sortedvalues, value)]
+
 
 def distinct(keys):
     """
@@ -1589,10 +1604,11 @@ def get_nbytes_msg(sizedict, size=8):
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
 
-    >>> get_nbytes_msg(dict(nsites=2, nbins=5))
-    (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
+    >>> nbytes, msg = get_nbytes_msg(dict(nsites=2, nbins=5))
+    >>> assert nbytes == 80
+    >>> assert msg == '(nsites=2) * (nbins=5) * 8 bytes = 80 B'
     """
-    nbytes = int(numpy.prod(list(sizedict.values())) * size)
+    nbytes = numpy.prod(list(sizedict.values())) * size
     prod = ' * '.join('({}={:_d})'.format(k, int(v))
                       for k, v in sizedict.items())
     return nbytes, '%s * %d bytes = %s' % (prod, size, humansize(nbytes))
@@ -1653,8 +1669,9 @@ class RecordBuilder(object):
     Builder for numpy records or arrays.
 
     >>> rb = RecordBuilder(a=numpy.int64(0), b=1., c="2")
-    >>> rb()
-    np.void((0, 1.0, b'2'), dtype=[('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
+    >>> rb.dtype
+    dtype([('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
+    >>> assert tuple(rb()) == (0, 1, b'2')
     """
     def __init__(self, **defaults):
         self.names = []

@@ -22,7 +22,7 @@ import functools
 import numpy
 from shapely.geometry import Point
 
-from openquake.baselib import performance, parallel, hdf5, general
+from openquake.baselib import performance, parallel, hdf5, general, config
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import map_array, geo
 from openquake.hazardlib.source.rupture import get_events
@@ -411,6 +411,29 @@ def get_counts(idxs, N):
     return counts
 
 
+def split(sbe, max_gmvs_chunk):
+    """
+    :yield: blocks of slices by event
+    """
+    dic = general.AccumDict(accum=[])
+    for rec in sbe:
+        dic[rec['stop'] // max_gmvs_chunk].append(rec)
+    for recs in dic.values():
+        yield numpy.array(recs, sbe[0].dtype)
+
+
+def count_outputs(eids, sbe, maxw, weight,
+                  size=int(config.memory.max_gmvs_chunk)):
+    """
+    Count the alt and avg outputs for each task
+    """
+    tot = 0
+    for blk in general.block_splitter(sbe, maxw, weight):
+        alts = list(split(blk, size))
+        tot += len(alts) + 1  # 1 avg output, multiple alt outputs
+    return tot
+
+
 def get_slices(sbe, data, num_assets):
     """
     :returns: a list of triple (start, stop, weight)
@@ -435,13 +458,16 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     :param dstore: DataStore instance where the GMFs are stored
     :returns: a Starmap object used for event based calculations
     """
+    ct = int(oq.concurrent_tasks * .95) or 1
     data = dstore['gmf_data']
+    gmvs_per_task = len(data['sid']) // ct
+    logging.info('gmvs_per_task =~ {:_d}'.format(gmvs_per_task))
     if 'gmf_data' in dstore.parent:
         ds = dstore.parent
-        gb = sum(data[k].nbytes for k in data) / 1024 ** 3
-        logging.info('There are %.1f GB of GMFs', gb)
     else:
         ds = dstore
+    nbytes = sum(data[k].nbytes for k in data)
+    logging.info('There are %.1f GB of GMFs', nbytes / 1024 ** 3)
     try:
         N = len(ds['complete'])
     except KeyError:
@@ -462,15 +488,19 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         for slc in general.gen_slices(0, len(sbe), 100_000):
             slices.append(get_slices(sbe[slc], data, num_assets))
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
-    dstore.swmr_on()
-    maxw = slices['weight'].sum() / (oq.concurrent_tasks or 1) or 1.
+
+    maxw = slices['weight'].sum() // ct or 1.
     logging.info('maxw = {:_d}'.format(int(maxw)))
+    w = operator.itemgetter('weight')
+    if oq.calculation_mode == 'event_based_risk':
+        expected_outputs = count_outputs(data['eid'], slices, maxw, w)
+        logging.info('Expected outputs = %d', expected_outputs)
+    dstore.swmr_on()
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
-        # maxweight=200M is the limit to run Chile with 2 GB per core
-        maxweight=min(maxw, 200_000_000),
-        weight=operator.itemgetter('weight'),
-        h5=dstore.hdf5)
+        maxweight=maxw, weight=w, h5=dstore.hdf5)
+    if oq.calculation_mode == 'event_based_risk':
+        smap.expected_outputs = expected_outputs
     return smap
 
 

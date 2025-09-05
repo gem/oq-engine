@@ -69,8 +69,7 @@ def _store(rates, num_chunks, h5, mon=None, gzip=GZIP):
         try:
             h5.create_df(
                 '_rates', [(n, rates_dt[n]) for n in rates_dt.names], gzip)
-            hdf5.create(
-                h5, '_rates/slice_by_idx', getters.slice_dt, fillvalue=None)
+            hdf5.create(h5, '_rates/slice_by_idx', getters.slice_dt)
         except ValueError:  # already created
             offset = len(h5['_rates/sid'])
         else:
@@ -171,7 +170,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         return
 
     for tileno, tileget in enumerate(tilegetters):
-        result = hazclassical(sources, tileget(sitecol, cmaker.label), cmaker)
+        result = hazclassical(sources, tileget(sitecol, cmaker.ilabel), cmaker)
         if tileno:
             # source_data has keys src_id, grp_id, nsites, esites, nrupts,
             # weight, ctimes, taskno
@@ -209,7 +208,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
         arr = dstore.getitem('_csm')[cmaker.grp_id]
         sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
-    result = hazclassical(sources, tilegetter(sitecol, cmaker.label), cmaker)
+    result = hazclassical(sources, tilegetter(sitecol, cmaker.ilabel), cmaker)
     rmap = result.pop('rmap').remove_zeros()
     if config.directory.custom_tmp:
         rates = rmap.to_array(cmaker.gid)
@@ -304,8 +303,8 @@ def postclassical(pgetter, wget, hstats, individual_rlzs,
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc[:, r].reshape(M, L1))
             if hstats:
-                if len(pgetter.labels):
-                    weights = pgetter.weights[pgetter.labels[sid]]
+                if len(pgetter.ilabels):
+                    weights = pgetter.weights[pgetter.ilabels[sid]]
                 else:
                     weights = pgetter.weights[0]
                 for s, (statname, stat) in enumerate(hstats.items()):
@@ -411,6 +410,15 @@ class ClassicalCalculator(base.HazardCalculator):
             # accumulate the rates for the given source
             oq = self.oqparam
             M = len(oq.imtls)
+            """
+            afename = '_afes/' + source_id
+            try:
+                rm = self.datastore[afename]
+            except KeyError:  # store the rates
+                self.datastore[afename] = rmap / oq.investigation_time
+            else:  # update the rates
+                self.datastore[afename] = rm + rmap / oq.investigation_time
+            """
             acc[source_id] += get_rates(rmap, grp_id, M, oq.investigation_time)
         if rmap is None:
             # already stored in the workers, case_22
@@ -559,8 +567,12 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def _pre_execute(self):
         oq = self.oqparam
+        if 'ilabel' in self.sitecol.array.dtype.names and not oq.site_labels:
+            logging.warning('The site model has a field `ilabel` but it will '
+                            'be ignored since site_labels is missing in %s',
+                            oq.inputs['job_ini'])
         if oq.disagg_by_src and oq.site_labels:
-            assert len(numpy.unique(self.sitecol.label)) == 1, \
+            assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
         sgs = self.datastore['source_groups']
         self.tiling = sgs.attrs['tiling']

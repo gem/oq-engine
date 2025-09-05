@@ -24,7 +24,7 @@ import numpy
 import pandas
 from scipy.spatial import distance
 from shapely import geometry
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 from openquake.baselib.general import not_equal, get_duplicates, cached_property
 from openquake.hazardlib.geo.utils import (
     fix_lon, cross_idl, _GeographicObjects, geohash, geohash3, CODE32,
@@ -33,6 +33,7 @@ from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
+F64 = numpy.float64
 ampcode_dt = (numpy.bytes_, 4)
 param = dict(
     vs30measured='reference_vs30_type',
@@ -116,13 +117,13 @@ class TileGetter:
         self.tileno = tileno
         self.ntiles = ntiles
 
-    def __call__(self, complete, label=None):
-        if self.ntiles == 1 and label is None:
+    def __call__(self, complete, ilabel=None):
+        if self.ntiles == 1 and ilabel is None:
             return complete
         sc = SiteCollection.__new__(SiteCollection)
         array = complete.array[complete.sids % self.ntiles == self.tileno]
-        if label is not None:
-            sc.array = array[array['label'] == label]
+        if ilabel is not None:
+            sc.array = array[array['ilabel'] == ilabel]
         else:
             sc.array = array
         sc.complete = complete
@@ -147,7 +148,11 @@ class Site(object):
         start to propagate with a speed above 2.5 km/sec, in km.
 
     :raises ValueError:
-        If any of ``vs30``, ``z1pt0`` or ``z2pt5`` is zero or negative.
+        If ``vs30`` is zero or negative
+        OR
+        ``z1pt0`` or ``z2pt5`` is zero or negative AND not -999 (a value of
+        -999 informs basin param using GMMs to estimate values for such sites
+        with median value from GMM's own vs30 to z1pt0 or z2pt5 relationship).
 
     .. note::
 
@@ -158,10 +163,10 @@ class Site(object):
                  z1pt0=numpy.nan, z2pt5=numpy.nan, **extras):
         if not numpy.isnan(vs30) and vs30 <= 0:
             raise ValueError('vs30 must be positive')
-        if not numpy.isnan(z1pt0) and z1pt0 <= 0:
-            raise ValueError('z1pt0 must be positive')
-        if not numpy.isnan(z2pt5) and z2pt5 <= 0:
-            raise ValueError('z2pt5 must be positive')
+        if not numpy.isnan(z1pt0) and z1pt0 <= 0 and z1pt0 != -999:
+            raise ValueError('z1pt0 must be positive or set to -999')
+        if not numpy.isnan(z2pt5) and z2pt5 <= 0 and z2pt5 != -999:
+            raise ValueError('z2pt5 must be positive or set to -999')
 
         self.location = location
         self.vs30 = vs30
@@ -223,7 +228,7 @@ site_param_dt = {
     'z2pt5': numpy.float64,
     'z_sed': numpy.float64,
     'siteclass': (numpy.bytes_, 1),
-    'label': numpy.uint8,
+    'ilabel': numpy.uint8,
     'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
@@ -290,6 +295,21 @@ site_param_dt = {
     'in_cshm': bool  # used in mcverry
 }
 
+def add(string, suffix, maxlen):
+    """
+    Add a suffix to a string staying within the maxlen limit
+
+    >>> add('pippo', ':xxx', 8)
+    'pipp:xxx'
+    >>> add('pippo', ':x', 8)
+    'pippo:x'
+    """
+    L = len(string)
+    assert L < maxlen, string
+    assert len(suffix) < maxlen, suffix
+    n = len(suffix)
+    return string[:maxlen-n] + suffix
+
 
 class SiteCollection(object):
     """\
@@ -317,6 +337,16 @@ class SiteCollection(object):
                     for item in sorted(site_param_dt.items())
                     if item[0] not in ('lon', 'lat'))
     req_site_params = ()
+
+    @classmethod
+    def from_(cls, array):
+        """
+        Build a site collection from a site model array
+        """
+        self = object.__new__(cls)
+        self.array = array
+        self.complete = self
+        return self
 
     @classmethod
     def from_usgs_shakemap(cls, shakemap_array):
@@ -477,6 +507,69 @@ class SiteCollection(object):
         new.complete = self.complete
         return new
 
+    # tested in classical/case_38
+    def multiply(self, vs30s,
+                 soil_classes=numpy.array(
+                     [b'E', b'DE', b'D', b'CD', b'C', b'BC', b'B', b'A']),
+                 soil_values=F64([152, 213, 305, 442, 640, 914, 1500])):
+        """
+        Multiply a site collection with the given vs30 values.
+        NB: if there are multiple values the sites with vs30 = -999. are multiplied,
+        otherwise the given value is applied to all sites.
+        """
+        classes = general.find_among(soil_classes, soil_values, vs30s)
+        n = len(vs30s)
+        N = len(self)
+        dt = self.array.dtype
+        names = list(dt.names)
+        try:
+            dt['custom_site_id']
+        except KeyError:
+            new_csi = True
+            dt = [('custom_site_id', site_param_dt['custom_site_id'])] + [
+                (n, dt[n]) for n in names]
+            names.insert(0, 'custom_site_id')
+        else:
+            new_csi = False
+        ok = self['vs30'] == -999.
+        sites_to_multiply = ok.sum()
+        tot = sites_to_multiply * n + (N - sites_to_multiply)
+        array = numpy.empty(tot, dt)
+        j = 0
+        multi_vs30 = len(vs30s) > 1
+        for i, orig_rec in enumerate(self.array):
+            if multi_vs30 and not ok[i]:  # do not multiply
+                rec = array[j]
+                for name in names:
+                    if name == 'custom_site_id':
+                        rec[name] = (f'{j}'.encode('ascii') if new_csi
+                                     else orig_rec[name])
+                    else:
+                        rec[name] = orig_rec[name]
+                j += 1
+                continue
+            # else override the vs30
+            for cl, vs30 in zip(classes, vs30s):
+                rec = array[j]
+                for name in names:
+                    if name == 'custom_site_id' and new_csi:
+                        # tested in classical/case_08
+                        rec[name] = add(f'{i}'.encode('ascii'), b':' + cl, 8)
+                    elif name == 'custom_site_id':
+                        # tested in classical/case_38
+                        rec[name] = add(orig_rec[name], b':' + cl, 8)
+                    elif name == 'vs30':
+                        rec[name] = vs30
+                    elif name == 'sids':
+                        rec[name] = j
+                    else:
+                        rec[name] = orig_rec[name]
+                j += 1
+        new = object.__new__(self.__class__)
+        new.array = array
+        new.complete = new
+        return new
+
     def reduce(self, nsites):
         """
         :returns: a filtered SiteCollection with around nsites (if nsites<=N)
@@ -539,7 +632,7 @@ class SiteCollection(object):
         Build a complete SiteCollection from a list of Site objects
         """
         extra = [(p, site_param_dt[p]) for p in sorted(vars(sites[0]))
-                 if p in site_param_dt]
+                 if p in site_param_dt and p != 'depth']
         dtlist = [(p, site_param_dt[p])
                   for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
@@ -824,8 +917,13 @@ class SiteCollection(object):
         return self.array[sid]
 
     def __getattr__(self, name):
-        if name in ('lons', 'lats', 'depths'):  # legacy names
+        if name in ('lons', 'lats'):  # legacy names
             return self.array[name[:-1]]
+        if name == 'depths':
+            try:
+                return self.array['depth']
+            except ValueError:  # missing depth
+                return numpy.zeros_like(self.array['lon'])
         if name not in site_param_dt:
             raise AttributeError(name)
         return self.array[name]

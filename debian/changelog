@@ -1,4 +1,101 @@
   [Michele Simionato]
+  * Added a private endpoint `/v1/calc/run_ini` to run remote calculations
+  * Added a private endpoint `/v1/calc/jobs_from_inis`
+
+  [Myles Turner, Guillermo Aldama-Bustos]
+  * Added GMM of Douglas et al. (2024)
+
+  [Michele Simionato]
+  * Added a parameter config.dbserver.cache to avoid repeating calculations
+  * Removed the --reuse-input flag, since it was not used (use --hc instead)
+  * Changed install.py to exit if any of the tools is not installed
+  * Fixed small negative damages due to numeric errors
+  * Fixed the MIMETYPE to application/x-zip when needed in the WebUI
+  * Removed the parameter `site_effects` since it is useless
+  * Changed num_cores to be equal to the pool size when explicit
+  * On Windows use as default num_cores
+    num_threads/2 if num_threads > 8 else num_threads
+  * Extended the aggregation by `site_id` to multiple tags
+  * Fixed an extract bug in disagg-traditional with realizations
+  * Fixed a bug with the quantiles in event_based_damage
+  * Improved loggin the progress in event based risk
+  * Reduced slow tasks in the USA model
+  * Added output `mce_default` in AELO calculations
+  * Extended `oq export_mean_disagg_by_src` to multiple sites
+  * Extended `oq export_mag_dst_eps_sig` to multiple sites
+  * Extended aggexp_tags and aggrisk_tags to multi-tags
+
+  [Paolo Tormene]
+  * The OQ-Impact workflow option 'Use finite rupture from the USGS' was
+    replaced by two options 'Use ShakeMap fault rupture from the USGS'
+    and 'Use finite-fault model from the USGS', making it possible to convert
+    a wider set of ruptures from the USGS data
+  * A sanity check was added to make sure that the hypocenter is inside the
+    surface of the rupture. Otherwise, it is relocated to the middle point of
+    the surface and a warning indicates the original and translated
+    coordinates.
+
+  [Christopher Brooks]
+  * Fixed bug in ParkerEtAl2020 epistemic uncertainty scaling factors.
+
+  [Michele Simionato]
+  * Fixed indentation errors in nearly all secondary peril classes
+  * Reduced the data transfer in avg_losses (20x for Philippines),
+    thus solving an out-of-memory error; also improved the performance
+    (25% for Philippines) and reduced the memory occupation on the workers
+  * Print a warning if there are vs30 values distant more than 10% from
+    DEFINED_FOR_REFERENCE_VELOCITY
+
+  [Anirudh Rao]
+  * Fixed a bug when generating the aggregate curves for `affectedpop` and
+    `injured` loss types, due to missing units
+
+  [Michele Simionato]
+  * Extended `override_vs30` to multiple values
+  * Forbidden GMF correlation with more then `max_sites_correl=1000`
+  * Made `minimum_intensity` and `minimum_magnitude` mandatory with event based
+    calculations with many sites
+
+  [Paolo Tormene]
+  * When a job is deleted, also the corresponding calc_CALCID_tmp.hdf5 file is
+    removed, if present
+
+  [Astha Poudel, Catarina Costa]
+  * Modified infrastructure risk to avoid calculating efficiency loss for
+    large networks
+
+  [Paolo Tormene]
+  * AELO: the management of warnings was made more robust
+
+  [Michele Simionato]
+  * OQImpact: reading the sites around the rupture and not around the hypocenter
+  * Raised an error if the ShakeMap does not contain SA(0.6) when required
+  * Fixed the multi-peril implementation (imt_by_lt)
+  * Raised an error for risk IMTs not covered by the secondary IMTs
+  * Optimized build_global_exposure
+
+  [Michele Simionato, Paolo Tormene]
+  * OQ-Impact: fixed aggregation by ID_2, which was using indices instead
+    of strings
+
+  [Marco Pagani]
+  * Storing also `tau` in the mean spectrum calculator
+
+  [Christopher Brooks]
+  * Added ability to specify z1pt0 and z2pt5 as -999 within site model
+    to inform (basin term considering) GMMs to use their own vs30 to
+    z1pt0 or z2pt5 relationship to estimate these site parameters, in
+    effect preventing additional adjustment to GMM basin terms based
+    on unknown site information. QA tests (classical case_89) + unit
+    tests (`utils_infer_basin_params_test.py`) added
+  * Added validation checks for core site params (lon, lat, vs30, z1pt0
+    and z2pt5) when building the site collection within a calculation
+
+  [Paolo Tormene]
+  * In the API endpoint listing the outputs for a job, the first available
+    export_type is specified in each output url
+
+  [Michele Simionato]
   * Added a new uncertainty `abMaxMagAbsolute` to the logic tree
   * Internal: refactored lt.Branch, lt.BranchSet and lt.CompositeLogicTree
   * Avoided out of memory in calculations starting from the global SES
@@ -141,7 +238,7 @@
     GrantEtAl2016RockSlopeFailure, NowickiJessee2018Landslides
 
   [Michele Simionato]
-  * Extended the output loss types to `affected` and `injured`
+  * Extended the output loss types to `affectedpop` and `injured`
   * Fixed `oq plot?hcurves`: the disaggregation PoEs were plotted in linear
     scale and not in logarithmic scale
   * Internal: introduced parameter `config.memory.gmf_data_rows`

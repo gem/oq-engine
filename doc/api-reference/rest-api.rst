@@ -129,7 +129,7 @@ Response:
 
 A JSON object containing:
 
-- an 'impact' key containing a pandas DataFrame; the names of the columns are "ID_1", "loss_type",
+- an 'impact' key containing a pandas DataFrame; the names of the columns are "ID_2", "loss_type",
   "value", "lossmea", "lossq05", "lossq95".
 - a 'loss_type_description' dictionary containing a description for each loss type.
 
@@ -151,7 +151,7 @@ Response:
 A JSON object containing:
 
 - an 'exposure_by_mmi' key corresponding to a pandas DataFrame; the names of the
-  columns are "ID_1", "number", "contents", "nonstructural", "structural",
+  columns are "ID_2", "number", "contents", "nonstructural", "structural",
   "residents", "area",  "occupants_day", "occupants_night", "occupants_transit",
   "occupants_avg",  "mmi".
 - a 'column_descriptions' dictionary containing a description for each exposure type.
@@ -279,17 +279,25 @@ Remove the calculation specified by the parameter ``calc_id``.
 POST /v1/calc/run
 *****************
 
-Run a new calculation with the specified job config file, input models, and other parameters.
-
-Files::
-
-	* job_config: an oq engine job config INI-style file
-	* input_model_1 - input_model_N: any number (including zero) of input model files
+Run a new calculation with the specified files (or a single job.zip).
 
 Parameters::
 
 	* hazard_job_id: the hazard calculation ID upon which to run the risk calculation; specify this or hazard_result (only for risk calculations)
 	* hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_job_id (only for risk calculations)
+
+Response: Redirects to /v1/calc/:calc_id, where ``calc_id`` is the ID of the newly created calculation.
+
+************************
+POST /v1/calc/run_ini
+************************
+
+Run a new calculation with the specified job.ini file (full path on
+the server).
+
+Parameters::
+
+	* job_ini: full path to the job.ini file in the server
 
 Response: Redirects to /v1/calc/:calc_id, where ``calc_id`` is the ID of the newly created calculation.
 
@@ -446,6 +454,20 @@ GET /v1/available_gsims
 ***********************
 
 Return a list of strings with the available GSIMs
+
+***************************
+GET /v1/calc/jobs_from_inis
+***************************
+
+Given a list of job.ini pathnames returns a list with the job_id of the corresponding
+calculation (if already performed) or zero for each .ini
+
+Parameters: 'ini', list of pathnames
+
+Example of Response::
+
+	[0, 0, 42]  # if the first two inis are new and the third one is old
+
 
 Extracting data from calculations
 ---------------------------------

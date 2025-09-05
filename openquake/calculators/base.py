@@ -26,6 +26,7 @@ import inspect
 import logging
 import operator
 import traceback
+import tempfile
 import getpass
 from datetime import datetime
 from shapely import wkt
@@ -48,7 +49,6 @@ from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
@@ -173,6 +173,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     precalc = None
     accept_precalc = []
     from_engine = False  # set by engine.run_calc
+    test_mode = False  # set in the tests
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
@@ -227,6 +228,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
+            return logs.dbcmd('add_checksum', self.datastore.calc_id, check)
 
     def check_precalc(self, precalc_mode):
         """
@@ -271,7 +273,18 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if self.precalc is None:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
-            self.save_params(**kw)
+            old_job_id = self.save_params(**kw)
+            assert config.dbserver.cache in ('on', 'off')
+            if (old_job_id and config.dbserver.cache == 'on' and
+                    not self.test_mode):
+                logging.info(f"Already calculated, {old_job_id=}")
+                calc_id = self.datastore.calc_id
+                self.datastore = datastore.read(old_job_id)
+                logs.dbcmd("UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
+                           self.datastore.filename[:-5], calc_id)  # strip .hdf5
+                expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
+                self.export(kw.get('exports', ''))
+                return self.exported
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -383,14 +396,13 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     def _export(self, ekey):
         if ekey not in exp or self.exported.get(ekey):  # already exported
             return
-        with self.monitor('export'):
-            try:
-                self.exported[ekey] = fnames = exp(ekey, self.datastore)
-            except Exception as exc:
-                fnames = []
-                logging.error('Could not export %s: %s', ekey, exc)
-            if fnames:
-                logging.info('exported %s: %s', ekey[0], fnames)
+        try:
+            self.exported[ekey] = fnames = exp(ekey, self.datastore)
+        except Exception as exc:
+            fnames = []
+            logging.error('Could not export %s: %s', ekey, exc)
+        if fnames:
+            logging.info('exported %s: %s', ekey[0], fnames)
 
     def __repr__(self):
         return '<%s#%d>' % (self.__class__.__name__, self.datastore.calc_id)
@@ -428,6 +440,14 @@ def check_amplification(ampl_df, sitecol):
         raise ValueError('The site collection contains references to missing '
                          'amplification functions: %s' % b' '.join(missing).
                          decode('utf8'))
+
+
+def delta(vs30, vs30ref):
+    """
+    >>> print(round(delta(760, 800), 3))
+    0.051
+    """
+    return 2 * (numpy.abs(vs30 - vs30ref) / (vs30 + vs30ref)).max()
 
 
 class HazardCalculator(BaseCalculator):
@@ -520,7 +540,7 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         dist = parallel.oq_distribute()
         avail = psutil.virtual_memory().available / 1024**3
-        required = .25 * (1 if dist == 'no' else parallel.Starmap.num_cores)
+        required = .25 * (1 if dist == 'no' else parallel.num_cores)
         if (dist == 'processpool' and avail < required and
                 sys.platform != 'darwin'):
             # macos tells that there is no memory when there is, so we
@@ -538,6 +558,12 @@ class HazardCalculator(BaseCalculator):
         self._read_risk1()
         self._read_risk2()
         self._read_risk3()
+
+        if (oq.calculation_mode == 'event_based' and
+                oq.ground_motion_correlation_model and
+                len(self.sitecol) > oq.max_sites_correl):
+            raise ValueError('You cannot use a correlation model with '
+                             f'{self.N} sites [{oq.max_sites_correl=}]')
         if hasattr(self, 'assetcol'):
             self.check_consequences()
         self.check_overflow()  # check if self.sitecol is too large
@@ -582,11 +608,13 @@ class HazardCalculator(BaseCalculator):
             self.gzip_inputs()
 
         # check DEFINED_FOR_REFERENCE_VELOCITY
-        if self.amplifier:
+        if hasattr(self, 'full_lt'):
+            gsim_lt = self.full_lt.gsim_lt
+        else:
             gsim_lt = readinput.get_gsim_lt(oq)
+        if self.amplifier:
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
-
 
     def import_perils(self):  # called in pre_execute
         """
@@ -675,9 +703,12 @@ class HazardCalculator(BaseCalculator):
             if oq.impact and 'mmi' in oq.inputs:
                 logging.info('Computing MMI-aggregated values')
                 mmi_df = self.assetcol.get_mmi_values(
-                    oq.aggregate_by, oq.inputs['mmi'])
+                    oq.aggregate_by, oq.inputs['mmi'], oq.inputs['exposure'][0])
                 if len(mmi_df):
                     self.datastore.hdf5.create_df('mmi_tags', mmi_df)
+                else:
+                    logging.info('Missing mmi_tags, there are no assets in '
+                                 'the MMI geometries provided by the ShakeMap')
 
     def pre_execute_from_parent(self):
         """
@@ -874,6 +905,30 @@ class HazardCalculator(BaseCalculator):
         logging.info(f'Saving {fig_path} into the datastore')
         self.datastore[fig_path] = Image.open(bio)
 
+    def _read_no_exposure(self, haz_sitecol):
+        oq = self.oqparam
+        if oq.hazard_calculation_id:
+            # NB: this is tested in event_based case_27 and case_31
+            child = readinput.get_site_collection(oq, self.datastore.hdf5)
+            assoc_dist = (oq.region_grid_spacing * 1.414
+                          if oq.region_grid_spacing else 5)  # Graeme's 5km
+            # keep the sites of the parent close to the sites of the child
+            self.sitecol, _array, _discarded = geo.utils.assoc(
+                child, haz_sitecol, assoc_dist, 'filter')
+            self.datastore['sitecol'] = self.sitecol
+        else:  # base case
+            self.sitecol = haz_sitecol
+        if self.sitecol and oq.imtls:
+            logging.info('Read N=%d hazard sites and L=%d hazard levels',
+                         len(self.sitecol), oq.imtls.size)
+        manysites = (oq.calculation_mode=='event_based'
+                     and oq.ground_motion_fields
+                     and len(self.sitecol) > oq.max_sites_disagg)
+        if manysites and not oq.minimum_magnitude:
+            oq.raise_invalid('missing minimum_magnitude, suggested 5')
+        if manysites and not oq.minimum_intensity:
+            oq.raise_invalid('missing minimum_intensity, suggested .05')
+
     def _read_risk1(self):
         # read the risk model (if any) and then the site collection,
         # possibly extracted from the exposure
@@ -890,7 +945,8 @@ class HazardCalculator(BaseCalculator):
                 haz_sitecol, _ = site.merge_sitecols(
                     oq.inputs['gmfs'], oq.mosaic_model, check_gmfs=True)
             else:
-                haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
+                haz_sitecol = readinput.get_site_collection(
+                    oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
@@ -933,22 +989,10 @@ class HazardCalculator(BaseCalculator):
                     assetcol.tagcol.add_tagname('site_id')
                     assetcol.tagcol.site_id.extend(range(self.N))
         else:  # no exposure
-            if oq.hazard_calculation_id:
-                # NB: this is tested in event_based case_27 and case_31
-                child = readinput.get_site_collection(oq, self.datastore.hdf5)
-                assoc_dist = (oq.region_grid_spacing * 1.414
-                              if oq.region_grid_spacing else 5)  # Graeme's 5km
-                # keep the sites of the parent close to the sites of the child
-                self.sitecol, _array, _discarded = geo.utils.assoc(
-                    child, haz_sitecol, assoc_dist, 'filter')
-                self.datastore['sitecol'] = self.sitecol
-            else:  # base case
-                self.sitecol = haz_sitecol
-            if self.sitecol and oq.imtls:
-                logging.info('Read N=%d hazard sites and L=%d hazard levels',
-                             len(self.sitecol), oq.imtls.size)
+            self._read_no_exposure(haz_sitecol)
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
-                self.N > 1000 and len(oq.min_iml) == 0):
+                oq.ground_motion_fields and self.N > 1000 and
+                len(oq.min_iml) == 0):
             oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
 
         if oq_hazard:
@@ -1019,21 +1063,25 @@ class HazardCalculator(BaseCalculator):
                 else:
                     # use the site model parameters
                     self.sitecol.assoc(sm, assoc_dist)
-                if oq.override_vs30:
-                    # override vs30, z1pt0 and z2pt5
-                    names = self.sitecol.array.dtype.names
-                    self.sitecol.array['vs30'] = oq.override_vs30
-                    if 'z1pt0' in names:
-                        self.sitecol.calculate_z1pt0()
-                    if 'z2pt5' in names:
-                        self.sitecol.calculate_z2pt5()
 
-                self.datastore['sitecol'] = self.sitecol
-                if self.sitecol is not self.sitecol.complete:
-                    self.datastore['complete'] = self.sitecol.complete
-                elif 'complete' in self.datastore.parent:
-                    # fix: the sitecol is not complete
-                    self.sitecol.complete = self.datastore.parent['complete']
+            if oq.override_vs30:
+                # override vs30, z1pt0 and z2pt5
+                if len(self.sitecol) == 1:
+                    # tested in classical/case_08
+                    self.sitecol.array['vs30'] = -999
+                self.sitecol = self.sitecol.multiply(oq.override_vs30)
+                names = self.sitecol.array.dtype.names
+                if 'z1pt0' in names:
+                    self.sitecol.calculate_z1pt0()
+                if 'z2pt5' in names:
+                    self.sitecol.calculate_z2pt5()
+
+            self.datastore['sitecol'] = self.sitecol
+            if self.sitecol is not self.sitecol.complete:
+                self.datastore['complete'] = self.sitecol.complete
+            elif 'complete' in self.datastore.parent:
+                # fix: the sitecol is not complete
+                self.sitecol.complete = self.datastore.parent['complete']
 
         # store amplification functions if any
         if 'amplification' in oq.inputs:
@@ -1173,7 +1221,8 @@ class RiskCalculator(HazardCalculator):
         if len(self.crmodel.tmap_df) == 0:
             taxonomies = self.assetcol.tagcol.taxonomy[1:]
             taxidx = {taxo: i for i, taxo in enumerate(taxonomies, 1)}
-            self.crmodel.tmap_df = readinput.taxonomy_mapping(self.oqparam, taxidx)
+            self.crmodel.tmap_df = readinput.taxonomy_mapping(
+                self.oqparam, taxidx)
         with self.monitor('building riskinputs'):
             if self.oqparam.hazard_calculation_id:
                 dstore = self.datastore.parent
@@ -1546,12 +1595,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     logging.info('Building GMFs')
     oq = calc.oqparam
     with calc.monitor('building/saving GMFs'):
-        if oq.site_effects == 'no':
-            vs30 = None  # do not amplify
-        elif oq.site_effects == 'shakemap':
-            vs30 = shakemap['vs30']
-        elif oq.site_effects == 'sitemodel':
-            vs30 = sitecol.vs30
+        vs30 = None  # do not amplify, the ShakeMap takes care of that already
         imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
@@ -1580,30 +1624,10 @@ def store_gmfs_from_shakemap(calc, haz_sitecol, assetcol):
     and stored in the datastore.
     """
     oq = calc.oqparam
-    imtls = oq.imtls or calc.datastore.parent['oqparam'].imtls
-    oq.risk_imtls = {imt: list(imls) for imt, imls in imtls.items()}
-    logging.info('Getting/reducing shakemap')
     with calc.monitor('getting/reducing shakemap'):
-        # for instance for the test case_shakemap the haz_sitecol
-        # has sids in range(0, 26) while sitecol.sids is
-        # [8, 9, 10, 11, 13, 15, 16, 17, 18];
-        # the total assetcol has 26 assets on the total sites
-        # and the reduced assetcol has 9 assets on the reduced sites
-        if oq.shakemap_id:
-            uridict = {'kind': 'usgs_id', 'id': oq.shakemap_id}
-        elif 'shakemap' in oq.inputs:
-            uridict = {'kind': 'file_npy', 'fname': oq.inputs['shakemap']}
-        else:
-            uridict = oq.shakemap_uri
-        sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict, oq.risk_imtls, haz_sitecol,
-            oq.asset_hazard_distance['default'])
-        if len(discarded):
-            calc.datastore['discarded'] = discarded
-        assetcol.reduce_also(sitecol)
+        sitecol, shakemap = readinput.assoc_to_shakemap(
+            oq, haz_sitecol, assetcol)  # also reducing assetcol
         calc.datastore['assetcol'] = assetcol
-        logging.info('Extracted %d assets', len(assetcol))
-
     # assemble dictionary to decide on the calculation method for the gmfs
     if 'MMI' in oq.imtls:
         # calculations with MMI should be executed
@@ -1678,6 +1702,44 @@ def create_risk_by_event(calc):
                          L=len(oq.loss_types), limit_states=dmgs)
 
 
+class DstoreCache:
+    """
+    Datastore cache based on a file called 'ini_hdf5.csv'
+    containing associations job.ini -> calc_XXX.hdf5
+    """
+    def __init__(self, dirpath):
+        self.ini_hdf5_csv = os.path.join(dirpath or tempfile.gettempdir(),
+                                         'ini_hdf5.csv')
+
+    def read(self):
+        cache = {}
+        if not os.path.exists(self.ini_hdf5_csv):
+            return cache
+        with open(self.ini_hdf5_csv, 'rt') as f:
+            for line in f:
+                ini, hdf5 = line.split(',')
+                cache[ini] = hdf5[:-1]  # strip trailing \n
+        return cache
+
+    def get(self, ini):
+        assert ',' not in ini, ini
+        cache = self.read()
+        if ini in cache:
+            return datastore.read(cache[ini])
+        dstore = run_calc(ini).datastore
+        cache[ini] = dstore.filename
+        assert ',' not in cache[ini], cache[ini]
+        with open(self.ini_hdf5_csv, 'w') as f:
+            for ini, h5 in sorted(cache.items()):
+                print(f'{ini},{h5}', file=f)
+        return dstore
+
+    def clear(self):
+        os.remove(self.ini_hdf5_csv)
+
+dcache = DstoreCache(config.directory.custom_tmp)
+
+
 def run_calc(job_ini, **kw):
     """
     Helper to run calculations programmatically.
@@ -1693,7 +1755,7 @@ def run_calc(job_ini, **kw):
         return calc
 
 
-def expose_outputs(dstore, owner=USER, status='complete'):
+def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -1756,4 +1818,4 @@ def expose_outputs(dstore, owner=USER, status='complete'):
         if size_mb:
             keysize.append((key, size_mb))
     ds_size = dstore.getsize() / MB
-    logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
+    logs.dbcmd('create_outputs', calc_id or dstore.calc_id, keysize, ds_size)

@@ -17,39 +17,81 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import time
 import logging
 import operator
 import pandas
 import numpy
-import h5py
-from openquake.baselib import hdf5, sap, general
+from openquake.baselib import hdf5, sap, general, performance
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import create_job_dstore
-from openquake.risklib.asset import _get_exposure
+from openquake.risklib.asset import _get_exposure, Exposure
+from openquake.qa_tests_data import mosaic
 
+MOSAIC_DIR = os.path.dirname(mosaic.__file__)
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
+B32 = (numpy.bytes_, 32)
 CONV = {n: F32 for n in '''
 BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD
 COST_STRUCTURAL_USD LATITUDE LONGITUDE OCCUPANTS_PER_ASSET
 OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM'''.split()}
-CONV['ASSET_ID'] = (numpy.bytes_, 24)
-for f in (None, 'ID_1', 'ID_2'):
-    CONV[f] = str
-TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'ID_2': [], 'OCCUPANCY': []}
-IGNORE = set('NAME_0 NAME_1 NAME_2 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
-             .split())
+CONV['ASSET_ID'] = B32
+for f in (None, 'ID_1', 'ID_2', 'ID_3', 'ID_4', 'BARRIO_ID', 'PARROQUIA_ID',
+          'ZONA_ID', 'NAME_3', 'NAME_4_LGD', 'WFP_ID_1', 'WFP_ID_2'):
+    CONV[f] = B32
+TAGS = ['TAXONOMY', 'ID_0', 'ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY']
+IGNORE = set('NAME_0 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'.split())
 FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'COST_CONTENTS_USD', 'ASSET_ID', 'OCCUPANCY',
           'OCCUPANTS_PER_ASSET', 'OCCUPANTS_PER_ASSET_AVERAGE',
           'OCCUPANTS_PER_ASSET_DAY', 'OCCUPANTS_PER_ASSET_NIGHT',
           'OCCUPANTS_PER_ASSET_TRANSIT', 'TOTAL_AREA_SQM',
-          'BUILDINGS', 'COST_STRUCTURAL_USD',
+          'BUILDINGS', 'COST_STRUCTURAL_USD', 'NAME_1', 'NAME_2',
           'LATITUDE', 'ID_0', 'ID_1', 'ID_2'}
+
+
+class Indexer(object):
+    """
+    Class fine-tuned for our current world exposure containing ~72M assets
+    """
+    def __init__(self, name, maxsize=99_000_000):
+        self.name = name
+        self.maxsize = maxsize
+        self.dic = {}
+        self.indices = numpy.zeros(maxsize, U32)
+        self.size = 0
+
+    def add1(self, value):
+        try:
+            idx = self.dic[value]
+        except KeyError:
+            idx = len(self.dic)
+            self.dic[value] = idx
+        self.indices[self.size] = idx
+        self.size += 1
+
+    def add(self, values):
+        for value in values:
+            self.add1(value)
+
+    def save(self, h5):
+        tags = numpy.concatenate([[b'?'], numpy.array(list(self.dic))])
+        indices = self.indices[:self.size]
+        name = 'taxonomy' if self.name == 'TAXONOMY' else self.name
+        # NOTE: with errors='ignore' encoding errors in the NAME_2 values due to the
+        # truncation to 32 bytes will be ignored
+        hdf5.create(
+            h5, f'tagcol/{name}', hdf5.vstr, (len(tags),)
+        )[:] = [x.decode('utf8', errors='ignore') for x in tags]
+        hdf5.extend(h5[f'assets/{self.name}'], indices)
+
+    def __repr__(self):
+        return f'<Indexer[{self.name}]>'
 
 
 def add_geohash3(array):
@@ -71,23 +113,24 @@ def fix(arr):
     # prepend the country to ASSET_ID and ID_1
     ID0 = arr['ID_0']
     ID1 = arr['ID_1']
-    arr['ASSET_ID'] = numpy.char.add(numpy.array(ID0, 'S3'), arr['ASSET_ID'])
+    country = numpy.array(ID0, 'S3')
+    arr['ASSET_ID'] = numpy.char.add(country, arr['ASSET_ID'])
     for i, (id0, id1) in enumerate(zip(ID0, ID1)):
         if not id1.startswith(id0):
-            ID1[i] = '%s-%s' % (id0, ID1[i])
+            ID1[i] = country[i] + ID1[i]
 
 
 def exposure_by_geohash(array, monitor):
     """
-    Yields pairs (geohash, array)
+    Yields triples (geohash, array, name2dic)
     """
     array = add_geohash3(array)
     fix(array)
     for gh in numpy.unique(array['geohash3']):
-        yield gh, array[array['geohash3']==gh]
+        yield gh, array[array['geohash3'] == gh]
 
 
-def store_tagcol(dstore):
+def store_tagcol(dstore, indexer):
     """
     A TagCollection is stored as arrays like taxonomy = [
     "?", "Adobe", "Concrete", "Stone-Masonry", "Unreinforced-Brick-Masonry",
@@ -95,28 +138,29 @@ def store_tagcol(dstore):
     """
     tagsizes = []
     tagnames = []
-    for tagname in TAGS:
-        name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
-        tagnames.append(name)
-        tagvalues = numpy.concatenate(TAGS[tagname])
-        uvals, inv, counts = numpy.unique(
-            tagvalues, return_inverse=1, return_counts=1)
-        size = len(uvals) + 1
-        tagsizes.append(size)
-        logging.info('Storing %s[%d/%d]', tagname, size, len(inv))
-        hdf5.extend(dstore[f'assets/{tagname}'], inv + 1)  # indices from 1
-        dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
-        if name == 'ID_0':
-            dtlist = [('country', (numpy.bytes_, 3)), ('counts', int)]
-            arr = numpy.empty(len(uvals), dtlist)
-            arr['country'] = uvals
-            arr['counts'] = counts
-            dstore['assets_by_country'] = arr
-
+    for idx in indexer.values():
+        idx.save(dstore.hdf5)
+        tagsizes.append(len(idx.dic) + 1)
+        if idx.name == 'TAXONOMY':
+            tagnames.append('taxonomy')
+        else:
+            tagnames.append(idx.name)
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(tagnames, hdf5.vstr),
                tagsizes=tagsizes)
     dstore.getitem('tagcol').attrs.update(dic)
+
+
+def save_by_country(dstore):
+    from openquake.calculators.views import text_table
+    logging.info('Computing/storing assets_by_country')
+    countries = dstore['tagcol/ID_0'][:]
+    id0s, counts = numpy.unique(dstore['assets/ID_0'][:], return_counts=1)
+    abc = numpy.zeros(len(id0s), [('country', 'S3'), ('counts', U32)])
+    abc['country'] = countries[id0s + 1]
+    abc['counts'] = counts
+    dstore['assets_by_country'] = abc
+    print(text_table(abc, ext='org'))
 
 
 # in parallel
@@ -126,7 +170,12 @@ def gen_tasks(files, wfp, sample_assets, monitor):
     """
     for file in files:
         # read CSV in chunks
-        usecols = file.fields | ({'ID_2'} if file.admin2 else set())
+        if file.admin2 and 'NAME_2' in file.header:
+            usecols = file.fields | {'ID_2', 'NAME_2'}
+        elif file.admin2:
+            usecols = file.fields | {'ID_2'}
+        else:
+            usecols = file.fields
         dfs = pandas.read_csv(
             file.fname, names=file.header, dtype=CONV,
             usecols=usecols, skiprows=1, chunksize=1_000_000)
@@ -144,12 +193,24 @@ def gen_tasks(files, wfp, sample_assets, monitor):
             nrows += len(df)
             if 'ID_1' not in df.columns:  # happens for many islands
                 df['ID_1'] = '???'
-            if 'ID_2' not in df.columns:  # happens for many contries in Africa
-                df['ID_2'] = '???'
+            if 'ID_2' not in df.columns:  # happens for many contries
+                df['ID_2'] = df['ID_1']
+            if 'NAME_2' not in df.columns:  # happens in Taiwan
+                df['NAME_2'] = df['NAME_1']
+            elif wfp:  # work around bad exposures with ID_2 ending with ".0"
+                df['ID_2'] = [x[:-2] if x.endswith(b'.0') else x
+                              for x in df['ID_2']]
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
             array = numpy.zeros(len(df), dt)
             for col in df.columns:
-                array[col] = df[col].to_numpy()
+                arr = df[col].to_numpy()
+                if len(arr) and hasattr(arr[0], 'encode'):
+                    try:
+                        array[col] = [x.encode('utf8') for x in arr]
+                    except AttributeError:
+                        raise ValueError(f'{file.fname=}: {col=}')
+                else:
+                    array[col] = arr
             if i == 0:
                 yield from exposure_by_geohash(array, monitor)
             else:
@@ -157,61 +218,118 @@ def gen_tasks(files, wfp, sample_assets, monitor):
         print(os.path.basename(file.fname), nrows)
 
 
-def store(exposures_xml, wfp, dstore):
+def keep_wfp(csvfile):
+    return any(col.startswith('WFP_') for col in csvfile.header)
+
+
+def store(exposures_xml, wfp, dstore, sanity_check=True):
     """
     Store the given exposures in the datastore
     """
+    t0 = time.time()
+    logging.info('Preallocating tag indices')
+    indexer = {tagname: Indexer(tagname) for tagname in TAGS}
     csvfiles = []
     for xml in exposures_xml:
         exposure, _ = _get_exposure(xml)
         csvfiles.extend(exposure.datafiles)
-    files = hdf5.sniff(csvfiles, ',', IGNORE)
+    files = hdf5.sniff(csvfiles, ',', IGNORE,
+                       keep=keep_wfp if wfp else lambda csvfile: True)
     if wfp:
         files = [f for f in files if any(field.startswith('WFP_')
                                          for field in f.header)]
+    commonfields = sorted({'ID_2', 'NAME_2'} | files[0].fields & FIELDS)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
-        [('ASSET_ID', h5py.string_dtype('ascii', 25))]
+        [('ASSET_ID', B32)]
     for name, dt in dtlist:
         logging.info('Creating assets/%s', name)
     dstore['exposure'] = exposure
-    dstore.create_df('assets', dtlist, 'gzip')
+    for name, dt in dtlist:
+        hdf5.create(dstore.hdf5, f'assets/{name}', dt,
+                    compression='gzip' if name in TAGS else None)
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
-    dstore.create_dset('assets/slice_by_gh3', slc_dt, fillvalue=None)
+    dstore.create_dset('assets/slice_by_gh3', slc_dt)
     dstore.swmr_on()
     sa = os.environ.get('OQ_SAMPLE_ASSETS')
     smap = Starmap.apply(gen_tasks, (files, wfp, sa),
-                         weight=operator.attrgetter('size'), h5=dstore.hdf5)
+                         concurrent_tasks=128,
+                         weight=operator.attrgetter('size'),
+                         h5=dstore.hdf5)
     num_assets = 0
-    # NB: we need to keep everything in memory to make gzip efficient
-    acc = general.AccumDict(accum=[])
+    name2dic = {b'?': b'?'}
+    mon = performance.Monitor('tag indexing', h5=dstore)
     for gh3, arr in smap:
-        for name in FIELDS:
+        name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
+        for name in commonfields:
             if name in TAGS:
-                TAGS[name].append(arr[name])
+                with mon:
+                    indexer[name].add(arr[name])
             else:
-                acc[name].append(arr[name])
+                hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
         slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         num_assets += n
     Starmap.shutdown()
-    for name in sorted(acc):
-        lst = acc.pop(name)
-        arr = numpy.concatenate(lst, dtype=lst[0].dtype)
-        logging.info(f'Storing assets/{name}')
-        hdf5.extend(dstore['assets/' + name], arr)
-    store_tagcol(dstore)
+    store_tagcol(dstore, indexer)
+    save_by_country(dstore)
+    ID2s = dstore['tagcol/ID_2'][:]
+    # NOTE: with errors='ignore' encoding errors in the NAME_2 values due to the
+    # truncation to 32 bytes will be ignored
+    dstore.create_dset('NAME_2', hdf5.vstr, len(ID2s))[:] = [
+        name2dic[id2].decode('utf8', errors='ignore') for id2 in ID2s]
 
-    # sanity check
-    for name in FIELDS:
-        n = len(dstore['assets/' + name])
-        assert n == num_assets, (name, n, num_assets)
+    dt = time.time() - t0
+    logging.info('Stored {:_d} assets in {} in {:_d} seconds'.format(
+        n, dstore.filename, int(dt)))
 
-    logging.info('Stored {:_d} assets in {}'.format(n, dstore.filename))
+    if sanity_check:
+        for name in commonfields:
+            n = len(dstore['assets/' + name])
+            assert n == num_assets, (name, n, num_assets)
+
+        # check readable
+        exp = Exposure.read_around(dstore.filename, gh3s=[12396])
+        assert len(exp.assets), exp
 
 
-def main(exposures_xml, wfp=False):
+def read_world_tmap(grm_dir):
+    """
+    :returns: a dict pathname -> longname
+    """
+    summary = os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv')
+    tmap_df = pandas.read_csv(summary, index_col=['country'])
+    dic = {}
+    for fname, df in tmap_df.groupby('fname'):
+        dic[fname] = '_'.join(sorted(df.index))
+    n = len(dic)
+    out = {}
+    assert len(set(dic.values())) == n, sorted(dic.values())
+    for cwd, dirs, files in os.walk(grm_dir):
+        for f in files:
+            if f in dic:
+                out[os.path.join(cwd, f)] = dic[f]
+            elif f.startswith('taxonomy_mapping'):
+                raise NameError(f'{f} is not listed in {summary}')
+    return out
+
+
+def store_world_tmap(grm_dir, dstore):
+    """
+    Store the world taxonomy mapping
+    """
+    dic = read_world_tmap(grm_dir)
+    for f, name in dic.items():
+        df = pandas.read_csv(f)
+        try:
+            dstore.create_df('tmap/' + name, df)
+        except ValueError:  # exists already
+            print('Repeated %s' % name)
+    return len(dic)
+
+
+def main(exposures_xml, grm_dir='', wfp=False, sanity_check=False):
     """
     An utility to convert an exposure from XML+CSV format into HDF5.
     NB: works only for the exposures of the global risk model, having
@@ -219,11 +337,17 @@ def main(exposures_xml, wfp=False):
     """
     log, dstore = create_job_dstore()
     with dstore, log:
-        store(exposures_xml, wfp, dstore)
+        if grm_dir:
+            n = store_world_tmap(grm_dir, dstore)
+            logging.info('Stored %d taxonomy mappings', n)
+        store(exposures_xml, wfp, dstore, sanity_check)
     return dstore.filename
 
-main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
 
+main.exposures_xml = dict(help='Exposure pathnames', nargs='+')
+main.grm_dir = 'Global risk model directory'
+main.wfp = "WFP exposure"
+main.sanity_check = "Perform a sanity check"
 
 if __name__ == '__main__':
     # python -m openquake.commonlib.expo_to_hdf5 exposure.xml

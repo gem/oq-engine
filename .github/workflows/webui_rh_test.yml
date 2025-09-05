@@ -66,7 +66,7 @@ jobs:
         eval '$mypython -m pip install -e . '
         ## Standalone apps
         echo "Downloading standalone apps"
-        for app in oq-platform-standalone oq-platform-ipt oq-platform-taxtweb oq-platform-taxonomy; do
+        for app in oq-platform-standalone oq-platform-ipt oq-platform-taxonomy; do
          # do not fail on exit code 2 if the branch
          # does not exist in the app repository
          set +e
@@ -84,11 +84,6 @@ jobs:
          echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
          git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
          eval '$mypython -m pip install -e ./${app}'
-         if [ "$app" = "oq-platform-taxtweb" ]; then
-             export PYBUILD_NAME="oq-taxonomy"
-             eval '$mypython -m pip install -e ./${app}'
-             unset PYBUILD_NAME
-         fi
         done
         deactivate
     - name: Actualize 'default' templates for email notifications
@@ -138,7 +133,6 @@ jobs:
          curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
          echo -n "Test Standalone Tools pages"
          curl --fail -I -L -X GET http://127.0.0.1:8800/
-         curl --fail -I -L -X GET http://127.0.0.1:8800/taxtweb
          curl --fail -I -L -X GET http://127.0.0.1:8800/taxonomy
          curl --fail -I -L -X GET http://127.0.0.1:8800/ipt
          echo -n "TEST DJANGO LOGIN "
@@ -168,3 +162,5 @@ jobs:
          fi
          # Run a calcs using https
          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+         sleep 5
+         $CURL_BIN -v --fail -G http://127.0.0.1:8800/engine/1/outputs

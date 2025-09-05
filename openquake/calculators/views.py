@@ -52,6 +52,7 @@ TWO24 = 2**24
 F32 = numpy.float32
 F64 = numpy.float64
 U32 = numpy.uint32
+U64 = numpy.uint64
 U8 = numpy.uint8
 
 # a dictionary of views datastore -> array
@@ -246,7 +247,8 @@ def view_high_hazard(token, dstore):
     """
     oq = dstore['oqparam']
     max_poe= max(oq.poes)
-    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]  # NSML1 -> NM
+    max_hazard = dstore.sel('hcurves-stats', stat='mean', lvl=0)[:, 0, :, 0]
+    # NSML1 -> NM
     high = (max_hazard > max_poe).all(axis=1)
     return max_hazard[high]
 
@@ -1629,7 +1631,7 @@ def asce_fix(asce, siteid):
 @view.add('asce')
 def view_asce(token, dstore):
     """
-    Returns asce:41 and asce:07 arrays
+    Returns asce:41 and asce:07 tables
     """
     key = token.replace(':', '')
     array = dstore[key][:]
@@ -1638,17 +1640,10 @@ def view_asce(token, dstore):
     if len(siteids) != len(array):
         siteids = [f'SITE{i}' for i in range(len(array))]
     dics = [asce_fix(a, siteid) for siteid, a in zip(siteids, array)]
-    header = dics[0]
-    dtlist = []
-    for k in header:
-        if isinstance(header[k], str):
-            dtlist.append((k, object))
-        else:
-            dtlist.append((k, float))
-    res = numpy.zeros(len(dics), dtlist)
-    for i, dic in enumerate(dics):
-        for k in header:
-            res[i][k] = dic[k]
+    header = list(dics[0])
+    res = [header] + [[None]*len(header)] * len(dics)
+    for i, dic in enumerate(dics, 1):
+        res[i] = list(dic.values())
     return res
 
 
@@ -1704,12 +1699,12 @@ def _irate(df, imt, src, iml, imls):
     return numpy.exp(interp)
 
 
-# used only in AELO calculations
+# used only in single site AELO calculations
 # NB: in presence of !-sources the comparison makes no sense
 @view.add('compare_disagg_rates')
 def compare_disagg_rates(token, dstore):
     oq = dstore['oqparam']
-    aw = dstore['mean_disagg_by_src']
+    aw = dstore['mean_disagg_by_src/0']
     mrs = dstore['mean_rates_by_src']
     mean_rates_df = mrs.to_dframe()
     iml_disagg = dict(zip(aw.imt, aw.iml))
@@ -1862,3 +1857,24 @@ def view_excessive_losses(token, dstore):
     array = dstore['assetcol'].array
     values = array['value-structural']
     return array[losses > values]
+
+
+@view.add('assets_events')
+def view_assets_events(token, dstore):
+    """
+    Displays the maximum number of assets and events
+    """
+    e_sids, events = numpy.unique(dstore['gmf_data/sid'][:], return_counts=1)
+    a_sids, assets = numpy.unique(dstore['assetcol/array']['site_id'],
+                                  return_counts=1)
+    assets = dict(zip(a_sids, assets))
+    events = dict(zip(e_sids, events))
+    out = []
+    for sid in set(e_sids) | set(e_sids):
+        a = assets.get(sid, 0)
+        e = events.get(sid, 0)
+        out.append((sid, a, e, a*e))
+    dtlist = [('sid', U32), ('assets', U32), ('events', U32), ('a*e', U64)]
+    arr = numpy.array(out, dtlist)
+    arr.sort(order='a*e')
+    return arr[-10:]

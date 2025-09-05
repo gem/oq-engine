@@ -347,9 +347,9 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
                 sorted_losses, _, eperiods = scientific.fix_losses(
                     losses, ne, builder.eff_time)
                 if oq.quantiles and not col.startswith('dmg_'):
-                    ls, ws = quantiles[agg_id, loss_id, col]
+                    ls, ws = quantiles[agg_id, loss_id]
                     ls.extend(sorted_losses)
-                    ws.extend([weights[rlz_id]]* len(sorted_losses))
+                    ws.extend([weights[rlz_id]] * len(sorted_losses))
                 agg = sorted_losses.sum()
                 acc[col].append(
                     agg * tr if oq.investigation_time else agg/ne)
@@ -361,17 +361,17 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     aggrisk = pandas.DataFrame(acc)
     out = general.AccumDict(accum=[])
     if quantiles:
-        for (agg_id, loss_id, col), (losses, ws) in quantiles.items():
+        for (agg_id, loss_id), (losses, ws) in quantiles.items():
             qs = weighted_quantiles(oq.quantiles, losses, ws)
             out['agg_id'].append(agg_id)
             out['loss_id'].append(loss_id)
             for q, qvalue in zip(oq.quantiles, qs):
-                qstring = ('%.2f' % q)[2:]  # ie. '05' or '95'
-                out[f'{col}q{qstring}'].append(qvalue)
+                qstring = ('%.2f' % q).replace('0.', 'q')  # ie. 'q05' or 'q95'
+                out[qstring].append(qvalue)
     aggrisk_quantiles = pandas.DataFrame(out)
     return aggrisk, aggrisk_quantiles, columns, builder
 
-    
+
 # aggcurves are built in parallel, aggrisk sequentially
 def build_store_agg(dstore, oq, rbe_df, num_events):
     """

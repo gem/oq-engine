@@ -21,11 +21,11 @@ import numpy
 import shapely
 import logging
 from openquake.commonlib import datastore
-from openquake.hazardlib.geo.utils import cross_idl, get_bbox
+from openquake.hazardlib.geo.utils import cross_idl
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes, add_rupture,
-    adjust_limits)
+    adjust_limits, auto_limits)
 
 
 def main(calc_id: int = -1, site_model=False,
@@ -89,7 +89,6 @@ def main(calc_id: int = -1, site_model=False,
         stations = complete[station_sites]
         p.scatter(stations['lon'], stations['lat'], marker='D', c='brown',
                   label='stations', s=markersize_site_model)
-    min_x, max_x, min_y, max_y = (180, -180, 90, -90)
     if oq.rupture_xml or oq.rupture_dict:
         use_shakemap = dstore['oqparam'].shakemap_uri
         if use_shakemap:
@@ -104,42 +103,39 @@ def main(calc_id: int = -1, site_model=False,
                 and not use_shakemap):
             # assuming there is only 1 rupture, so rup_id=0
             rup = get_ebrupture(dstore, rup_id=0).rupture
-            ax, min_x, min_y, max_x, max_y = add_rupture(ax, rup)
+            ax, add_rupture(ax, rup)
         else:
             p.scatter(xlon, xlat, marker='*', color='orange',
                       label='hypocenter', alpha=.5)
     else:
         xlon, xlat = [], []
 
-    ax = add_borders(ax)
-
     if region:
         minx, miny, maxx, maxy = region_geom.bounds
+        xlim = (minx, maxx)
+        ylim = (miny, maxy)
     else:
-        minx, miny, maxx, maxy = get_bbox(
-            assetcol['lon'], assetcol['lat'], xlon, xlat)
-    minx = min(minx, min_x)
-    maxx = max(maxx, max_x)
-    miny = min(miny, min_y)
-    maxy = max(maxy, max_y)
-    xlim, ylim = adjust_limits(minx, maxx, miny, maxy)
-    ax.set_xlim(*xlim)
-    ax.set_ylim(*ylim)
+        xlim, ylim = auto_limits(ax)
+
+    add_borders(ax)
+    adjust_limits(ax, xlim, ylim, padding=3)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
+    legend_params = dict(loc='upper left', bbox_to_anchor=(1.05, 1.0), borderaxespad=0.)
     if country_iso_codes is not None:
         # NOTE: use following lines to add custom items without changing title
         # ax.plot([], [], ' ', label=country_iso_codes)
         # ax.legend()
         title = 'Countries: %s' % country_iso_codes
-        ax.legend(title=title)
+        ax.legend(title=title, **legend_params)
     else:
-        ax.legend()
+        ax.legend(**legend_params)
 
     if save_to:
         p.savefig(save_to, alpha=True, dpi=300)
         logging.info(f'Plot saved to {save_to}')
     if show:
+        p.tight_layout()  # adjust to prevent clipping
         p.show()
     return p
 

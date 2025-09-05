@@ -149,6 +149,7 @@ def print_peril(what):
 
 def print_geohash(what):
     lon, lat = lon_lat(what.split(':')[1])
+    # print(geo.utils.geohash3(F32([lon]), F32([lat])))
     arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
     gh = b''.join([row.tobytes() for row in arr])
     print(gh.decode('ascii'))
@@ -165,7 +166,7 @@ def print_usgs_rupture(what):
         usgs_id = what.split(':', 1)[1]
     except IndexError:
         return 'Example: oq info usgs_rupture:us70006sj8'
-    dic = dict(usgs_id=usgs_id, approach='use_finite_rup_from_usgs')
+    dic = dict(usgs_id=usgs_id, approach='use_shakemap_fault_rup_from_usgs')
     print(get_rup_dic(dic)[1])
 
 
@@ -290,8 +291,9 @@ def main(what, report=False):
                   if '+' not in ltype and '_ins' not in ltype]
         for ltype in sorted(ltypes):
             print(ltype)
-    elif what == 'apply_uncertainty':
+    elif what == 'uncertainty_types':
         uncs = [unc for unc in lt.apply_uncertainty if unc != 'dummy']
+        uncs.extend(lt.NOAPPLY_UNCERTAINTIES)
         for i, unc in enumerate(sorted(uncs), 1):
             print('%02d' % i, unc)
     elif what.startswith('mfd'):

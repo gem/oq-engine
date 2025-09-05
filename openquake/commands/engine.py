@@ -65,8 +65,9 @@ def del_calculation(job_id, confirmed=False):
             safeprint(err)
         else:
             if 'success' in resp:
-                if os.path.exists(resp['hdf5path']):
-                    os.remove(resp['hdf5path'])
+                for hdf5path in resp['hdf5paths']:
+                    if os.path.exists(hdf5path):
+                        os.remove(hdf5path)
                 print('Removed %d' % job.id)
             else:
                 print(resp['error'])
@@ -82,7 +83,6 @@ def main(
         list_risk_calculations=False,
         delete_uncompleted_calculations=False,
         multi=False,
-        reuse_input=False,
         *,
         log_file=None,
         make_html_report=None,
@@ -162,8 +162,6 @@ def main(
         hc_id = None
     if run:
         pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
-        if reuse_input:
-            pars['cachedir'] = datadir
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
@@ -237,8 +235,7 @@ main.list_risk_calculations = dict(
     abbrev='--lrc', help='List risk calculation information')
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
-main.seq = 'Run multiple job.inis sequentially'
-main.reuse_input = 'Read the CompositeSourceModel from the cache (if any)'
+main.multi = 'Run multiple job.inis in parallel'
 
 # options
 main.log_file = dict(

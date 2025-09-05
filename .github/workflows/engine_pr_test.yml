@@ -36,6 +36,11 @@ jobs:
           source ~/openquake/bin/activate
           pip install https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.1-py3-none-any.whl
           oq engine --upgrade-db
+
+          # Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
+          pytest openquake/baselib/tests/pyproj_wheel_test.py
+          pytest openquake/hazardlib/tests/pyproj_wheel_test.py
+
           pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
 
   hazardlib:
@@ -142,6 +147,7 @@ jobs:
           oq engine --upgrade-db
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_read_only_mode.py
+          pytest -m "not slow" -v openquake/_unc
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}

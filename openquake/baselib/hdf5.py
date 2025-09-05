@@ -85,7 +85,7 @@ def sanitize(value):
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
-           fillvalue=0, attrs=None):
+           fillvalue=None, attrs=None):
     """
     :param hdf5: a h5py.File object
     :param name: an hdf5 key string
@@ -668,6 +668,12 @@ class ArrayWrapper(object):
         self.extra = list(extra)
         if len(array):
             self.array = array
+        n = len(extra)
+        if 'shape_descr' in attrs and n > 1:
+            assert len(attrs['shape_descr']) == len(array.shape[:-1]), (
+                attrs['shape_descr'], array.shape[:-1])
+        if n > 1:
+            assert array.shape[-1] == n, (array.shape[-1], n)
 
     def __iter__(self):
         if hasattr(self, 'array'):
@@ -945,13 +951,13 @@ def find_error(fname, errors, dtype):
 
 
 # called in `oq info file.csv`, used expecially for the exposures
-def sniff(fnames, sep=',', ignore=set()):
+def sniff(fnames, sep=',', ignore=set(), keep=lambda csvfile: True):
     """
     Read the first line of a set of CSV files by stripping the pre-headers.
 
     :returns: a list of CSVFile namedtuples.
     """
-    common = None
+    common = set()
     files = []
     for fname in fnames:
         df = pandas.read_csv(fname, encoding='utf-8-sig', nrows=1)
@@ -962,12 +968,14 @@ def sniff(fnames, sep=',', ignore=set()):
         else:
             header = df.columns
             skip = 1  # only header
-        if common is None:
-            common = set(header)
-        else:
-            common &= set(header)
-        files.append(CSVFile(fname, header, common, os.path.getsize(fname),
-                             skip, 'ID_2' in header))
+        csvfile = CSVFile(fname, header, common, os.path.getsize(fname),
+                          skip, 'ID_2' in header)
+        if keep(csvfile):
+            if not common:
+                common.update(header)
+            else:
+                common &= set(header)
+            files.append(csvfile)
     common -= ignore
     assert common, 'There is no common header subset among %s' % fnames
     return files
