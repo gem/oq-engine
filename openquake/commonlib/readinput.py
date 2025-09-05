@@ -59,8 +59,7 @@ from openquake.hazardlib import (
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.geo.utils import (
-    spherical_to_cartesian, geohash3, get_dist)
+from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
@@ -560,7 +559,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
                 else:
                     z[name] = valid.positivefloatsorsentinels(pars)
             else:
-                z[name] = vals # None-core site parameter
+                z[name] = vals  # None-core site parameter
 
         else:
             # If missing use the global parameter
@@ -1771,14 +1770,11 @@ def read_mosaic_df(buffer):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """
-    '''
-    fname = os.path.join(os.path.dirname(mosaic.__file__), 'mosaic.geojson')
-    if os.path.exists(fname):
-        return read_geometries(fname, 'name', buffer)
-    '''
-    fname = os.path.join(os.path.dirname(mosaic.__file__),
-                         'mosaic.geojson')
-    return read_geometries(fname, 'name', buffer)
+    mosaic_boundaries_file = config.directory.mosaic_boundaries_file
+    if not mosaic_boundaries_file:
+        mosaic_boundaries_file = os.path.join(
+            os.path.dirname(mosaic.__file__), 'ModelBoundaries.gpkg')
+    return read_geometries(mosaic_boundaries_file, 'code', buffer)
 
 
 def read_countries_df(buffer=0.1):
