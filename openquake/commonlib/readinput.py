@@ -1776,7 +1776,7 @@ def read_mosaic_df(buffer):
     if not mosaic_boundaries_file:
         mosaic_boundaries_file = os.path.join(
             os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
-    return read_geometries(mosaic_boundaries_file, 'code', buffer)
+    return read_geometries(mosaic_boundaries_file, 'name', buffer)
 
 
 def read_countries_df(buffer=0.1):
