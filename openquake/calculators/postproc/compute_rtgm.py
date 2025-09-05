@@ -51,7 +51,7 @@ from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites,
-    _find_fact_maxC)
+    _find_fact_maxC, import_plt)
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
@@ -101,7 +101,7 @@ AELO_WARNINGS = {
 AELO_NOTES = {
     'only_prob_mce': (
         'The final MCE is derived solely from the Probabilistic MCE,'
-        ' which is below the DLLs. Outputs specific to the deterministic'
+        ' since it is below the DLLs. Outputs specific to the deterministic'
         ' analysis are not included.'
         ' For further information, please refer to the user manual.'),
 }
@@ -755,6 +755,68 @@ def compute_mce_governing(dstore, sitecol, locs):
     return pd.concat(out).reset_index()
 
 
+def save_figure_to_dstore(fig, dstore, key):
+    """
+    Save a matplotlib figure to the datastore as a PNG image.
+
+    :param fig: The matplotlib figure object
+    :param dstore: The datastore to write to
+    :param key: The key under which to store the PNG (e.g., 'png/fig1.png')
+    """
+    from PIL import Image
+    bio = io.BytesIO()
+    fig.savefig(bio, format='png', bbox_inches='tight')
+    bio.seek(0)
+    dstore[key] = Image.open(bio)
+
+
+def add_footer_referencing_user_guide(fig):
+    fig.tight_layout(rect=[0, 0.03, 1, 1])
+    fig.text(0.5, 0.015,  # y = 0.015 is the vertical position of the footer
+             'See WebUI User Guide for complete explanation of plot contents.',
+             ha='center', fontsize='small', color='black', alpha=0.85)
+
+
+def display_vs30_in_subplot_title(axes, n_rows, sid_idx, vs30):
+    for row in range(n_rows):
+        axes[row, sid_idx].set_title(f"{vs30=} m/s", fontsize=13)
+
+
+def make_figure_hcurves(plt, sids, dstore, notifications, vs30s):
+    n_rows = 1
+    n_sids = len(sids)
+    fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 6), squeeze=False)
+    for i, sid in enumerate(sids):
+        vs30 = vs30s[i]
+        sid_notifications = notifications[notifications['sid'] == sid]
+        if len(sid_notifications) == 0 or sid_notifications['name'][0] not in [
+                'zero_hazard', 'low_hazard']:
+            plot_mean_hcurves_rtgm(dstore, sid, axes=axes[0, i])
+            display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+    add_footer_referencing_user_guide(fig)
+    save_figure_to_dstore(fig, dstore, 'png/hcurves.png')
+    plt.close(fig)
+
+
+def make_figure_disagg_by_src(plt, sids, dstore, notifications, vs30s):
+    n_rows = 3  # 3 imts: [PGA, SA(0.2), SA(1.0)]
+    n_sids = len(sids)
+    fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 15), squeeze=False)
+    for i, sid in enumerate(sids):
+        vs30 = vs30s[i]
+        sid_notifications = notifications[notifications['sid'] == sid]
+        if len(sid_notifications) == 0:
+            plot_disagg_by_src(
+                dstore, sid, axes=[axes[0, i], axes[1, i], axes[2, i]])
+            display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+    has_data = any(ax.has_data() for row in axes for ax in row)
+    if has_data:
+        add_footer_referencing_user_guide(fig)
+        fig.subplots_adjust(hspace=0.3)  # avoid overlapping titles and xlabels
+        save_figure_to_dstore(fig, dstore, 'png/disagg_by_src-All-IMTs.png')
+    plt.close(fig)
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -823,16 +885,26 @@ def main(dstore, csm):
     plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and len(locs) == 1:
         [sids] = locs.values()
-        for sid in sids:
-            sid_notifications = notifications[notifications['sid'] == sid]
-            if len(sid_notifications) == 0:
-                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-                plot_governing_mce(dstore, sid, update_dstore=True)
-                plot_disagg_by_src(dstore, sid, update_dstore=True)
-            elif sid_notifications['name'][0] not in [
-                    'zero_hazard', 'low_hazard']:
-                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-                plot_governing_mce(dstore, sid, update_dstore=True)
+        n_sids = len(sids)
+        vs30s = oq.override_vs30
+        assert n_sids == len(vs30s), (f'The number of sites ({n_sids}) must be equal to'
+                                      f' the number of values of vs30 ({len(vs30s)})')
+        plt = import_plt()
+
+        # Mean Hazard Curves (1 row, n_sids columns)
+        make_figure_hcurves(plt, sids, dstore, notifications, vs30s)
+
+        # Governing MCE (2 rows, 1 column) (regardless from the number of sids)
+        if len(notifications) == 0 or notifications['name'][0] not in [
+                'zero_hazard', 'low_hazard']:
+            plot_governing_mce(dstore, update_dstore=True)
+
+        # Disaggregation by Source (3 rows, n_sids columns)
+        # NOTE: avoiding to add columns for vs30 for which no deterministic is computed
+        sids_to_exclude = notifications['sid'][
+            notifications['name'] == 'only_prob_mce'].tolist()
+        sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
+        make_figure_disagg_by_src(plt, sids_to_plot, dstore, notifications, vs30s)
 
     if len(notifications):
         dstore['notifications'] = notifications
