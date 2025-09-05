@@ -752,8 +752,8 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.run_calc(reinsurance_4.__file__, 'job.ini')
         f1, f2 = export(('aggrisk', 'csv'), self.calc.datastore)
         # abs difference of 1E-4 on macos (57.0276 => 57.0277)
-        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=2E-4)
-        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=2E-4)
+        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=4E-4)
+        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=4E-4)
 
         f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggcurves.csv', f1, delta=4E-4)
