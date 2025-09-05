@@ -1,4 +1,5 @@
-  [Michele Simionato]
+  [Christopher Brooks, Michele Simionato]
+  * Improved error management for missing tools in install.py
   * Backported fix to Parker (2020)
 
 python3-oq-engine (3.23.2-1~xenial01) xenial; urgency=low
