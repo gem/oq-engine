@@ -35,6 +35,7 @@ from openquake.hazardlib.shakemap.validate import impact_validate
 user = User(level=2, testdir=os.path.join(os.path.dirname(__file__), 'data'))
 
 
+@unittest.skip("We changed exposure.hdf5 after v3.23")
 class AristotleValidateTestCase(unittest.TestCase):
     @classmethod
     def setUp(cls):

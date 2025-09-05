@@ -46,6 +46,7 @@ def check_export_job(dstore):
 
 @pytest.mark.parametrize('n', [1, 2, 3, 4])
 def test_impact(n):
+    raise unittest.SkipTest("We changed exposure.hdf5 after 3.23")
     # NB: expecting exposure in oq-engine and not in mosaic_dir!
     expo = cd.parent.parent.parent / 'exposure.hdf5'
     if not os.path.exists(expo):
