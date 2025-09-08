@@ -383,6 +383,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                    oq.maximum_distance['default'][-1][1])
         station_data, station_sites = filter_stations(
             station_df, sitecol.complete, rup, maxdist)
+        dstore['stations_considered'] = station_sites if station_sites else []
     else:
         station_data, station_sites = None, None
 
