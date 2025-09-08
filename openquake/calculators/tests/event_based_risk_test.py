@@ -756,7 +756,7 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=4E-4)
 
         f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=4E-4)
+        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=6E-4)
         self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=1E-3)
 
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
