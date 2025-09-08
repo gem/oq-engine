@@ -29,6 +29,7 @@ import pandas
 from scipy.stats import linregress
 from shapely.geometry import Polygon, LineString
 from openquake.commonlib import readinput
+from openquake.commonlib.util import unique_filename
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
@@ -45,18 +46,28 @@ from openquake.calculators.postproc.aelo_plots import (
 
 def getparams(what):
     """
+    >>> getparams('rupture?')
+    ({}, False)
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10')
-    {'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False)
+    >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10&with_borders=True')
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True)
     """
     assert '?' in what, what
-    dic = {}
+    params = {}
+    with_borders = False
     for namevalue in what.split('?')[1].split('&'):
+        if not namevalue:
+            continue
         name, value = namevalue.split('=')
-        try:
-            dic[name] = ast.literal_eval(value)
-        except ValueError:
-            dic[name] = value
-    return dic
+        if name == 'with_borders':
+            with_borders = ast.literal_eval(value)
+        else:
+            try:
+                params[name] = ast.literal_eval(value)
+            except ValueError:
+                params[name] = value
+    return params, with_borders
 
 
 def make_figure_magdist(extractors, what):
@@ -1058,20 +1069,37 @@ def make_figure_rupture(extractors, what):
 
     $ oq plot "rupture?"
 
-    extracts the rupture from an already performed scenario calculation;
+    plots the first rupture from an already performed scenario calculation
 
-    $ oq plot "rupture?mag=6&lon=10&lat=45&dep=10&rake=45&msr=WC1994"
+    $ oq plot "rupture?rup_id=1"
+
+    plots the rupture with the given id;
+
+    $ oq plot "rupture?with_borders=True"
+
+    also plots country borders
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    params, with_borders = getparams(what)
+    rup_id = params['rup_id'] if 'rup_id' in params else 0
+    rup = get_ebrupture(dstore, rup_id=rup_id).rupture
+    return plot_rupture(rup, with_borders=with_borders)
+
+
+def make_figure_build_rupture(extractors, what):
+    """
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994"
 
     builds a new planar rupture.
+
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994&with_borders=True"
+
+    also plots country borders.
     """
-    params = getparams(what)
-    if params:
-        rup = build_planar_rupture_from_dict(params)
-    else:
-        [ex] = extractors
-        dstore = ex.dstore
-        rup = get_ebrupture(dstore, rup_id=0).rupture
-    return plot_rupture(rup, with_borders=False)
+    params, with_borders = getparams(what)
+    rup = build_planar_rupture_from_dict(params)
+    return plot_rupture(rup, with_borders=with_borders)
 
 
 def make_figure_rupture_3d(extractors, what):
@@ -1080,7 +1108,9 @@ def make_figure_rupture_3d(extractors, what):
     """
     [ex] = extractors
     dstore = ex.dstore
-    ebr = get_ebrupture(dstore, rup_id=0)
+    params, _ = getparams(what)
+    rup_id = params['rup_id'] if 'rup_id' in params else 0
+    ebr = get_ebrupture(dstore, rup_id=rup_id)
     return plot_rupture_3d(ebr.rupture)
 
 
@@ -1142,17 +1172,26 @@ def plot_csv(fname):
 def main(what,
          calc_id: int = -1,
          others: int = [],
+         *,
+         save_to: str = None,
          webapi=False,
-         local=False):
+         local=False,
+         ):
     """
     Generic plotter for local and remote calculations.
     """
     if what.endswith('.csv'):
         plot_csv(what)
         return
+    if save_to:
+        save_to = unique_filename(save_to)
     if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
-        plt.show()
+        if save_to:
+            plt.savefig(save_to, dpi=300)
+            logging.info(f'Plot saved to {save_to}')
+        else:
+            plt.show()
         return
     if what == 'examples':
         help_msg = ['Examples of possible plots:']
@@ -1186,11 +1225,16 @@ def main(what,
             xs.append(Extractor(other_id))
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
-    plt.show()
+    if save_to:
+        plt.savefig(save_to, dpi=300)
+        logging.info(f'Plot saved to {save_to}')
+    else:
+        plt.show()
 
 
 main.what = 'what to extract (try examples)'
 main.calc_id = 'computation ID'
 main.others = dict(help='IDs of other computations', nargs='*')
+main.save_to = 'if passed, save the plot to file instead of showing it'
 main.webapi = 'if given, pass through the WebAPI'
 main.local = 'if passed, use the local WebAPI'

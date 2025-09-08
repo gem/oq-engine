@@ -38,6 +38,7 @@ from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
 from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
+from openquake.qa_tests_data.classical import case_01
 
 django.setup()
 
@@ -265,6 +266,11 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         logging.disable(logging.NOTSET)
         self.assertIn('There are no .ini files in the archive', resp['tb_str'])
         self.post('%s/remove' % resp['job_id'])
+
+    def test_run_ini(self):
+        job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
+        resp = self.post('run_ini', dict(job_ini=job_ini))
+        self.assertEqual(resp.status_code, 200)
 
     def test_available_gsims(self):
         resp = self.c.get('/v1/available_gsims')

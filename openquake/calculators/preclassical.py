@@ -367,24 +367,13 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         if not hasattr(self, 'csm'):  # used only for post_process
             return
-        cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
-        if os.path.exists(cachepath):
-            realpath = os.path.realpath(cachepath)
-            logging.info('Copying csm from %s', realpath)
-            with h5py.File(realpath, 'r') as cache:  # copy _csm
-                cache.copy(cache['_csm'], self.datastore.hdf5)
-            self.store()  # full_lt, toms
-        else:
-            self.populate_csm()
-            try:
-                self.datastore['_csm'] = self.csm
-            except RuntimeError as exc:
-                # this happens when setrecursionlimit is too low
-                # we can continue anyway, this is not critical
-                logging.error(str(exc), exc_info=True)
-            else:
-                if cachepath:
-                    os.symlink(self.datastore.filename, cachepath)
+        self.populate_csm()
+        try:
+            self.datastore['_csm'] = self.csm
+        except RuntimeError as exc:
+            # this happens when setrecursionlimit is too low
+            # we can continue anyway, this is not critical
+            logging.error(str(exc), exc_info=True)
         return self.csm
 
     def post_execute(self, csm):

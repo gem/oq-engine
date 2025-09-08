@@ -32,6 +32,7 @@ import pathlib
 import logging
 import tempfile
 import functools
+import traceback
 import configparser
 import collections
 import itertools
@@ -59,11 +60,11 @@ from openquake.hazardlib import (
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.geo.utils import (
-    spherical_to_cartesian, geohash3, get_dist)
+from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
+from openquake.commonlib import logs
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.qa_tests_data import mosaic, global_risk
 
@@ -560,7 +561,7 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
                 else:
                     z[name] = valid.positivefloatsorsentinels(pars)
             else:
-                z[name] = vals # None-core site parameter
+                z[name] = vals  # None-core site parameter
 
         else:
             # If missing use the global parameter
@@ -999,17 +1000,6 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
 
-# tested in test_mosaic
-def get_cache_path(oqparam, h5=None):
-    """
-    :returns: cache path of the form OQ_DATA/csm_<checksum>.hdf5
-    """
-    if oqparam.cachedir:
-        checksum = get_checksum32(oqparam, h5)
-        return os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
-    return ''
-
-
 def get_composite_source_model(oqparam, dstore=None):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -1026,15 +1016,8 @@ def get_composite_source_model(oqparam, dstore=None):
     h5 = dstore.hdf5 if dstore else None
     with Monitor('building full_lt', measuremem=True, h5=h5):
         full_lt = get_full_lt(oqparam)  # builds the weights
-    path = get_cache_path(oqparam, h5)
-    if os.path.exists(path):
-        from openquake.commonlib import datastore  # avoid circular import
-        with datastore.read(os.path.realpath(path)) as ds:
-            csm = ds['_csm']
-            csm.init(full_lt)
-    else:
-        csm = source_reader.get_csm(oqparam, full_lt, dstore)
-        _check_csm(csm, oqparam, dstore)
+    csm = source_reader.get_csm(oqparam, full_lt, dstore)
+    _check_csm(csm, oqparam, dstore)
     return csm
 
 
@@ -1789,23 +1772,20 @@ def read_mosaic_df(buffer):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """
-    '''
-    fname = os.path.join(os.path.dirname(mosaic.__file__), 'mosaic.geojson')
-    if os.path.exists(fname):
-        return read_geometries(fname, 'name', buffer)
-    '''
-    fname = os.path.join(os.path.dirname(mosaic.__file__),
-                         'mosaic.geojson')
-    return read_geometries(fname, 'name', buffer)
+    mosaic_boundaries_file = config.directory.mosaic_boundaries_file
+    if not mosaic_boundaries_file:
+        mosaic_boundaries_file = os.path.join(
+            os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+    return read_geometries(mosaic_boundaries_file, 'name', buffer)
 
 
 def read_countries_df(buffer=0.1):
     """
     :returns: a DataFrame of geometries for the world countries
     """
-    logging.info('Reading geoBoundariesCGAZ_ADM0.sh')  # slow
+    logging.info('Reading geoBoundariesCGAZ_ADM0.gpkg')  # slow
     fname = os.path.join(os.path.dirname(global_risk.__file__),
-                         'geoBoundariesCGAZ_ADM0.shp')
+                         'geoBoundariesCGAZ_ADM0.gpkg')
     return read_geometries(fname, 'shapeGroup', buffer)
 
 
@@ -1852,3 +1832,26 @@ def loadnpz(resp):
         raise RuntimeError(resp.content.decode('utf-8'))
     bio = io.BytesIO(b''.join(ln for ln in resp))
     return numpy.load(bio)
+
+
+# tested in commands_test
+def jobs_from_inis(inis):
+    """
+    :param inis: list of pathnames
+    :returns:
+        {'success': jids or [], 'error': '' or traceback string}
+    """
+    jids = []
+    try:
+        for ini in inis:
+            oq = get_oqparam(ini)
+            checksum = get_checksum32(oq)
+            jobs = logs.dbcmd('SELECT job_id FROM checksum '
+                              'WHERE hazard_checksum=?x', checksum)
+            if jobs:
+                jids.append(jobs[0].job_id)
+            else:
+                jids.append(0)
+    except Exception:
+        return {'success': [], 'error': traceback.format_exc()}
+    return {'success': jids, 'error': ''}

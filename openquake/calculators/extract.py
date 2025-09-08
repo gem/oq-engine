@@ -854,7 +854,12 @@ def extract_mmi_tags(dstore, what):
     """
     Aggregates exposure by MMI regions and tags. Use it as /extract/mmi_tags?
     """
-    return dstore.read_df('mmi_tags')
+    df = dstore.read_df('mmi_tags')
+
+    # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1 values
+    df.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
+
+    return df
 
 
 # tested in impact_test and partially in case_1_ins
@@ -920,6 +925,11 @@ def extract_aggrisk_tags(dstore, what):
         total[aggby] = '*total*'
         if aggby == ['ID_2']:
             total['NAME_2'] = '*total*'
+
+        # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1 values
+        out.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
+        total.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
+
         outs.append(pandas.concat([out, total], ignore_index=True))
     return pandas.concat(outs)
 
@@ -1056,8 +1066,9 @@ def extract_losses_by_site(dstore, what):
     :returns: a DataFrame (lon, lat, number, structural, ...)
     """
     sitecol = dstore['sitecol']
-    dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
+    ok_sids = sitecol.sids[numpy.unique(array['site_id'])]
+    dic = {'lon': F32(sitecol.lons[ok_sids]), 'lat': F32(sitecol.lats[ok_sids])}
     try:
         grp = dstore.getitem('avg_losses-stats')
     except KeyError:

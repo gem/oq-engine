@@ -1738,7 +1738,7 @@ def view_gh3(token, dstore):
 def view_sites_by_country(token, dstore):
     """
     Returns a table with the number of sites per country. The countries
-    are defined as in the file geoBoundariesCGAZ_ADM0.shp
+    are defined as in the file geoBoundariesCGAZ_ADM0.gpkg
     """
     return dstore['sitecol'].by_country()
 

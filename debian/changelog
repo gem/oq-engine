@@ -1,4 +1,16 @@
   [Michele Simionato]
+  * Added a private endpoint `/v1/calc/run_ini` to run remote calculations
+  * Added a private endpoint `/v1/calc/jobs_from_inis`
+
+  [Myles Turner, Guillermo Aldama-Bustos]
+  * Added GMM of Douglas et al. (2024)
+
+  [Michele Simionato]
+  * Added a parameter config.dbserver.cache to avoid repeating calculations
+  * Removed the --reuse-input flag, since it was not used (use --hc instead)
+  * Changed install.py to exit if any of the tools is not installed
+  * Fixed small negative damages due to numeric errors
+  * Fixed the MIMETYPE to application/x-zip when needed in the WebUI
   * Removed the parameter `site_effects` since it is useless
   * Changed num_cores to be equal to the pool size when explicit
   * On Windows use as default num_cores

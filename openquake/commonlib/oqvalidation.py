@@ -134,9 +134,6 @@ avg_losses:
 base_path:
   INTERNAL
 
-cachedir:
-  INTERNAL
-
 cache_distances:
   Useful in UCERF calculations.
   Example: *cache_distances = true*.
@@ -1013,7 +1010,6 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
-    cachedir = valid.Param(valid.utf8, '')
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
@@ -1096,7 +1092,7 @@ class OqParam(valid.ParamSet):
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param( # Can be positive float, -999 or nan
-        valid.positivefloatorsentinel, numpy.nan) 
+        valid.positivefloatorsentinel, numpy.nan)
     reference_depth_to_2pt5km_per_sec = valid.Param( # Can be positive float, -999 or nan
         valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(
@@ -1910,7 +1906,7 @@ class OqParam(valid.ParamSet):
         yes = exposures and exposures[0].endswith('.hdf5')
         if yes:
             if not self.quantiles:
-                self.quantiles = [0.05, 0.95]
+                self.quantiles = [0.05, 0.50, 0.95]
             if not self.aggregate_by:
                 # self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
                 self.aggregate_by = [['ID_2']]

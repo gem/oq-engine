@@ -295,7 +295,8 @@ def get_ini_defaults(request):
 @require_http_methods(['GET'])
 def get_impact_form_defaults(request):
     """
-    Return a json string with a dictionary of oq-impact form field names and defaults
+    Return a json string with a dictionary of oq-impact form field names
+    and defaults
     """
     return JsonResponse(IMPACT_FORM_DEFAULTS)
 
@@ -675,6 +676,33 @@ def calc_run(request):
     return JsonResponse(response_data, status=status)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_run_ini(request):
+    """
+    Run a calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object.
+        The request must contain the full path to a job.ini file
+    """
+    ini = request.POST.get('job_ini')
+    user = utils.get_user(request)
+    try:
+        job_id = submit_job([], ini, user, hc_id=None)
+    except Exception as exc:  # job failed, for instance missing .ini file
+        # get the exception message
+        exc_msg = traceback.format_exc() + str(exc)
+        logging.error(exc_msg)
+        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
+        status = 500
+    else:
+        response_data = dict(status='created', job_id=job_id)
+        status = 200
+    return JsonResponse(response_data, status=status)
+
+
 def aelo_callback(
         job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
     if not job_owner_email:
@@ -972,12 +1000,18 @@ def impact_run_with_shakemap(request):
 
     :param request:
         a `django.http.HttpRequest` object containing a usgs_id and
-        optionally the time of the day ('day', 'night' or 'transit')
+        optionally:
+        the time_event, i.e. the time of the day ('day', 'night' or 'transit')
+        the shakemap_version, the shakemap id in the format returned by
+        the impact_get_shakemap_versions API endpoint
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
     post = dict(usgs_id=request.POST['usgs_id'],
                 use_shakemap='true', approach='use_shakemap_from_usgs')
+    if 'shakemap_version' in request.POST:
+        shakemap_version = request.POST['shakemap_version']
+        post['shakemap_version'] = shakemap_version
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
@@ -987,6 +1021,8 @@ def impact_run_with_shakemap(request):
         post['time_event'] = request.POST['time_event']
     post['approach'] = 'use_shakemap_from_usgs'
     post['use_shakemap'] = 'true'
+    if 'shakemap_version' in request.POST:
+        post['shakemap_version'] = shakemap_version
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
@@ -1011,7 +1047,8 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
-        vs30s_in = sorted([float(val) for val in request.POST.get('vs30').split()])
+        vs30s_in = sorted(
+            float(val) for val in request.POST.get('vs30').split())
         vs30s_out = []
         for vs30 in vs30s_in:
             vs30s_out.append(validate_vs30(vs30))
@@ -1074,7 +1111,7 @@ def aelo_run(request):
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': str(exc)}
-        logging.error('', exc_info=True)
+        logging.exception(str(exc))
         return JsonResponse(response_data, status=400)
     [jobctx] = engine.create_jobs(
         [params],
@@ -1128,7 +1165,10 @@ def submit_job(request_files, ini, username, hc_id):
 
     # store the request files and perform some validation
     try:
-        job_ini = store(request_files, ini, job.calc_id)
+        if request_files:
+            job_ini = store(request_files, ini, job.calc_id)
+        else:  # called by calc_run_ini
+            job_ini = ini
         job.oqparam = oq = readinput.get_oqparam(
             job_ini, kw={'hazard_calculation_id': hc_id})
         dic = dict(calculation_mode=oq.calculation_mode,
@@ -1236,7 +1276,7 @@ def calc_results(request, calc_id):
             outtypes=outtypes, url=url_with_query, size_mb=result.size_mb)
         response_data.append(datum)
 
-    return HttpResponse(content=json.dumps(response_data))
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @require_http_methods(['GET'])
@@ -1312,11 +1352,11 @@ def calc_result(request, result_id):
         archname = ds_key + '-' + export_type + '.zip'
         zipfiles(exported, os.path.join(tmpdir, archname))
         exported = os.path.join(tmpdir, archname)
+        content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
     else:  # single file
         exported = exported[0]
-
-    content_type = EXPORT_CONTENT_TYPE_MAP.get(
-        export_type, DEFAULT_CONTENT_TYPE)
+        content_type = EXPORT_CONTENT_TYPE_MAP.get(
+            export_type, DEFAULT_CONTENT_TYPE)
 
     fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
     return stream_response(exported, content_type, fname)
@@ -1455,6 +1495,20 @@ def calc_datastore(request, job_id):
         'attachment; filename=%s' % os.path.basename(fname))
     response['Content-Length'] = str(os.path.getsize(fname))
     return response
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def jobs_from_inis(request):
+    """
+    :returns:
+        list of job IDs; the ID is 0 if there is no job with the given checksum
+    """
+    dic = readinput.jobs_from_inis(request.GET.getlist('ini'))
+    if dic['error']:
+        logging.error(dic['error'])
+        return JsonResponse(dic, status=500)
+    return HttpResponse(content=json.dumps(dic), content_type=JSON)
 
 
 @cross_domain_ajax
@@ -1785,8 +1839,9 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses = views.view('aggrisk', ds)
         except KeyError:
             max_avg_gmf = ds['avg_gmf'][0].max()
-            losses = (f'The risk can not be computed since the hazard is too low:'
-                      f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+            losses = (
+                f'The risk can not be computed since the hazard is too low:'
+                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
             losses_header = None
             weights_precision = None
         else:
@@ -1838,7 +1893,9 @@ def web_engine_get_outputs_impact(request, calc_id):
                        losses_header=losses_header,
                        weights_precision=weights_precision,
                        avg_gmf=avg_gmf, assets=assets,
-                       warnings=warnings, mmi_tags=mmi_tags, aggrisk_tags=aggrisk_tags))
+                       warnings=warnings, mmi_tags=mmi_tags,
+                       aggrisk_tags=aggrisk_tags)
+                  )
 
 
 @cross_domain_ajax
