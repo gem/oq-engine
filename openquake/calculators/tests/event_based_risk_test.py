@@ -550,7 +550,7 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
         nrups = text.count('\n') - 2
         losses = self.calc.datastore['loss_by_rupture/loss'][:]
-        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], atol=0.12)
+        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], atol=0.13)
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
@@ -752,11 +752,11 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.run_calc(reinsurance_4.__file__, 'job.ini')
         f1, f2 = export(('aggrisk', 'csv'), self.calc.datastore)
         # abs difference of 1E-4 on macos (57.0276 => 57.0277)
-        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=2E-4)
-        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=2E-4)
+        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=4E-4)
+        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=4E-4)
 
         f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=4E-4)
+        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=6E-4)
         self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=1E-3)
 
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)

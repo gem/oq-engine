@@ -185,13 +185,13 @@ def get_lvl(hcurve, imls, poe):
 
     >>> imls = numpy.array([.1, .2, .3, .4])
     >>> hcurve = numpy.array([1., .99, .90, .8])
-    >>> get_lvl(hcurve, imls, 1)
+    >>> int(get_lvl(hcurve, imls, 1))
     0
-    >>> get_lvl(hcurve, imls, .99)
+    >>> int(get_lvl(hcurve, imls, .99))
     1
-    >>> get_lvl(hcurve, imls, .91)
+    >>> int(get_lvl(hcurve, imls, .91))
     2
-    >>> get_lvl(hcurve, imls, .8)
+    >>> int(get_lvl(hcurve, imls, .8))
     3
     """
     [[iml]] = compute_hazard_maps(hcurve.reshape(1, -1), imls, [poe])

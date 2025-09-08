@@ -1478,7 +1478,7 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting=True):
     :returns: Maximum Probable Loss at the given return period
 
     >>> losses = [1000., 0., 2000., 1500., 780., 900., 1700., 0., 100., 200.]
-    >>> maximum_probable_loss(losses, 2000, 10_000)
+    >>> float(maximum_probable_loss(losses, 2000, 10_000))
     900.0
     """
     return losses_by_period(losses, [return_period], len(losses), eff_time,
