@@ -1023,6 +1023,37 @@ def dictionary(value):
     return dic
 
 
+def uint8dict(value):
+    """
+    :param value:
+        input string corresponding to a literal Python dictionary
+    :returns:
+        dictionary string -> uint8 number
+
+    >>> uint8dict('')
+    {}
+    >>> uint8dict('{}')
+    {}
+    >>> uint8dict('{"a": 1}')
+    {'a': 1}
+    >>> uint8dict('"vs30_clustering: true"')  # an error really done by a user
+    Traceback (most recent call last):
+       ...
+    ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
+    """
+    if not value:
+        return {}
+    try:
+        dic = dict(ast.literal_eval(value))
+    except Exception:
+        raise ValueError('%r is not a valid Python dictionary' % value)
+
+    for key, val in dic.items():
+        assert isinstance(val, int), val
+        assert 0 <= val <= 255, val
+    return dic
+
+
 def list_of_dict(value):
     """
     :param value:
