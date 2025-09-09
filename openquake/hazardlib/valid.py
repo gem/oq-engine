@@ -998,8 +998,8 @@ def dictionary(value):
     Traceback (most recent call last):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
-    >>> dictionary('{"ls": logscale(0.01, 2, 5)}')
-    {'ls': [0.01, 0.03760603093086393, 0.14142135623730948, 0.5318295896944986, 1.9999999999999991]}
+    >>> numpy.array(dictionary('{"ls": logscale(0.01, 2, 5)}')['ls'])
+    array([0.01      , 0.03760603, 0.14142136, 0.53182959, 2.        ])
     """
     if not value:
         return {}
@@ -1036,10 +1036,10 @@ def uint8dict(value):
     {}
     >>> uint8dict('{"a": 1}')
     {'a': 1}
-    >>> uint8dict('"vs30_clustering: true"')  # an error really done by a user
+    >>> uint8dict('{"a": 0}')
     Traceback (most recent call last):
        ...
-    ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
+    AssertionError: a must be in the range 1-255, got 0
     """
     if not value:
         return {}
@@ -1050,7 +1050,7 @@ def uint8dict(value):
 
     for key, val in dic.items():
         assert isinstance(val, int), val
-        assert 0 <= val <= 255, val
+        assert 0 < val < 256, f'{key} must be in the range 1-255, got {val}'
     return dic
 
 
