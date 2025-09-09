@@ -1049,7 +1049,7 @@ def uint8dict(value):
         raise ValueError('%r is not a valid Python dictionary' % value)
 
     for key, val in dic.items():
-        assert isinstance(val, int), val
+        assert isinstance(val, int), f'{key} must be integer, got {val}'
         assert 0 < val < 256, f'{key} must be in the range 1-255, got {val}'
     return dic
 
