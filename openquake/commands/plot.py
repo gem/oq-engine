@@ -1138,6 +1138,11 @@ def plot_wkt(wkt_string):
 
 
 def plot_h3(hexes):
+    """
+    $ oq plot "H3 811ebffffffffff 81387fffffffff"
+
+    plots H3 hexagons given a list of hexes
+    """
     import h3
     import shapely
     plt = import_plt()
