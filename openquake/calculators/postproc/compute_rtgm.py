@@ -882,6 +882,10 @@ def main(dstore, csm):
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
+    df = compute_mce_governing(dstore, sitecol, locs)
+    df.columns = ["period", "SaM", "custom_site_id"]
+    dstore.create_df('mce_governing', df)
+
     plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and len(locs) == 1:
         [sids] = locs.values()
@@ -894,8 +898,10 @@ def main(dstore, csm):
         # Mean Hazard Curves (1 row, n_sids columns)
         make_figure_hcurves(plt, sids, dstore, notifications, vs30s)
 
-        # Governing MCE (2 rows, 1 column) (regardless from the number of sids)
-        if len(notifications) == 0 or notifications['name'][0] not in [
+        # Governing MCE (2 rows, 1 column)
+        # we plot the current mce governing plot only if the site class IS NOT the
+        # default site class (i.e. if there is only one sid)
+        if n_sids == 1 and len(notifications) == 0 or notifications['name'][0] not in [
                 'zero_hazard', 'low_hazard']:
             plot_governing_mce(dstore, update_dstore=True)
 
@@ -909,7 +915,3 @@ def main(dstore, csm):
 
     if len(notifications):
         dstore['notifications'] = notifications
-
-    df = compute_mce_governing(dstore, sitecol, locs)
-    df.columns = ["period", "SaM", "custom_site_id"]
-    dstore.create_df('mce_governing', df)
