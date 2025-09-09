@@ -1148,6 +1148,7 @@ def plot_h3(hexes):
         # NOTE: x and y are intentionally inverted (x is the lat, y is the lon)
         ax.fill(y, x, alpha=0.5, fc="lightblue", ec="blue")
     add_borders(ax, readinput.read_countries_df, buffer=0.)
+    ax.set_aspect('equal')
     return plt
 
 
