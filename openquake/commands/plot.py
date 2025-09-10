@@ -1146,6 +1146,14 @@ def plot_h3(hexes):
     import h3
     import shapely
     plt = import_plt()
+    # normalize the hexes to 15 characters
+    for i, hex in enumerate(hexes):
+        lenh = len(hex)
+        if lenh < 15:
+            hexes[i] = hex + 'f' * (15-lenh)
+        elif lenh > 15:
+            raise ValueError('%s must have <= 15 characters, got %d' %
+                             (hex, lenh))
     mp = shapely.MultiPolygon([h3.h3_set_to_multi_polygon(hexes)[0]])
     _fig, ax = plt.subplots()
     for poly in mp.geoms:
