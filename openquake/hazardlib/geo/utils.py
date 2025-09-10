@@ -970,6 +970,7 @@ def geolocate_geometries(geometries, geom_df, exclude=()):
     return result_codes
 
 
+# resolution=3 means 12,386 square km (Connecticut)
 def hex6(lons, lats):
     """
     :returns: a list of H3 strings of length 6
