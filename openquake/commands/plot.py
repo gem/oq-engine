@@ -1137,6 +1137,33 @@ def plot_wkt(wkt_string):
     return plt
 
 
+def plot_h3(hexes):
+    """
+    $ oq plot "H3 811ebffffffffff 81387ffffffffff"
+
+    plots H3 hexagons given a list of hexes
+    """
+    import h3
+    import shapely
+    plt = import_plt()
+    # normalize the hexes to 15 characters
+    for i, hex in enumerate(hexes):
+        lenh = len(hex)
+        if lenh < 15:
+            hexes[i] = hex + 'f' * (15-lenh)
+        elif lenh > 15:
+            raise ValueError('%s must have <= 15 characters, got %d' %
+                             (hex, lenh))
+    mp = shapely.MultiPolygon([h3.h3_set_to_multi_polygon(hexes)[0]])
+    _fig, ax = plt.subplots()
+    for poly in mp.geoms:
+        lat, lon = poly.exterior.xy
+        ax.fill(lon, lat, alpha=0.5, fc="lightblue", ec="blue")
+    add_borders(ax, readinput.read_countries_df, buffer=0.)
+    ax.set_aspect('equal')
+    return plt
+
+
 def plot_csv(fname):
     """
     Plot a CSV with columns (title, time1, time2, ...)
@@ -1183,6 +1210,14 @@ def main(what,
         save_to = unique_filename(save_to)
     if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
+        if save_to:
+            plt.savefig(save_to, dpi=300)
+            logging.info(f'Plot saved to {save_to}')
+        else:
+            plt.show()
+        return
+    if what.startswith('H3'):
+        plt = plot_h3(what[2:].split())
         if save_to:
             plt.savefig(save_to, dpi=300)
             logging.info(f'Plot saved to {save_to}')
