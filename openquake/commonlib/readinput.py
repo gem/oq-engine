@@ -60,7 +60,7 @@ from openquake.hazardlib import (
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.geo.utils import spherical_to_cartesian, geohash3
+from openquake.hazardlib.geo.utils import spherical_to_cartesian, hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
@@ -1121,8 +1121,8 @@ def get_exposure(oqparam, h5=None):
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
-            gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
-            exposure = asset.Exposure.read_around(fnames[0], gh3)
+            h6 = numpy.array(sorted(set(hex6(sm['lon'], sm['lat']))))
+            exposure = asset.Exposure.read_around(fnames[0], h6)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
