@@ -1121,7 +1121,7 @@ def get_exposure(oqparam, h5=None):
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
-            h6 = numpy.array(sorted(set(hex6(sm['lon'], sm['lat']))))
+            h6 = [x.encode('ascii') for x in sorted(set(hex6(sm['lon'], sm['lat'])))]
             exposure = asset.Exposure.read_around(fnames[0], h6)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:

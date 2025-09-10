@@ -223,11 +223,14 @@ def keep_wfp(csvfile):
     return any(col.startswith('WFP_') for col in csvfile.header)
 
 
-def store(exposures_xml, wfp, dstore, sanity_check=True):
+def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
     """
     Store the given exposures in the datastore
     """
     t0 = time.time()
+    if grm_dir:
+        n = store_world_tmap(grm_dir, dstore)
+        logging.info('Stored %d taxonomy mappings', n)
     logging.info('Preallocating tag indices')
     indexer = {tagname: Indexer(tagname) for tagname in TAGS}
     csvfiles = []
@@ -338,9 +341,6 @@ def main(exposures_xml, grm_dir='', wfp=False, sanity_check=False):
     """
     log, dstore = create_job_dstore()
     with dstore, log:
-        if grm_dir:
-            n = store_world_tmap(grm_dir, dstore)
-            logging.info('Stored %d taxonomy mappings', n)
         store(exposures_xml, wfp, dstore, sanity_check)
     return dstore.filename
 
