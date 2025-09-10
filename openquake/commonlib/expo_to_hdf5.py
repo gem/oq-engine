@@ -120,14 +120,15 @@ def fix(arr):
             ID1[i] = country[i] + ID1[i]
 
 
-def exposure_by_geohash(array, monitor):
+def exposure_by_hex6(array, monitor):
     """
-    Yields triples (geohash, array, name2dic)
+    Group the assets by a H3 string with 6 characters.
+    Yields triples (hex6, array, name2dic)
     """
     array = add_hex6(array)
     fix(array)
-    for gh in numpy.unique(array['hex6']):
-        yield gh, array[array['hex6'] == gh]
+    for h6 in numpy.unique(array['hex6']):
+        yield h6, array[array['hex6'] == h6]
 
 
 def store_tagcol(dstore, indexer):
@@ -166,7 +167,7 @@ def save_by_country(dstore):
 # in parallel
 def gen_tasks(files, wfp, sample_assets, monitor):
     """
-    Generate tasks of kind exposure_by_geohash for large files
+    Generate tasks of kind exposure_by_hex6 for large files
     """
     for file in files:
         # read CSV in chunks
@@ -212,9 +213,9 @@ def gen_tasks(files, wfp, sample_assets, monitor):
                 else:
                     array[col] = arr
             if i == 0:
-                yield from exposure_by_geohash(array, monitor)
+                yield from exposure_by_hex6(array, monitor)
             else:
-                yield exposure_by_geohash, array
+                yield exposure_by_hex6, array
         print(os.path.basename(file.fname), nrows)
 
 
@@ -259,7 +260,7 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
     num_assets = 0
     name2dic = {b'?': b'?'}
     mon = performance.Monitor('tag indexing', h5=dstore)
-    for gh3, arr in smap:
+    for h6, arr in smap:
         name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
@@ -268,7 +269,7 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
             else:
                 hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
-        slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
+        slc = numpy.array([(h6, num_assets, num_assets + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_hex6'], slc)
         num_assets += n
     Starmap.shutdown()
