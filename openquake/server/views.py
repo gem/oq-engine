@@ -1028,6 +1028,8 @@ def impact_run_with_shakemap(request):
             post[field] = IMPACT_FORM_DEFAULTS[field]
     _rup, rupdic, params, err = impact_validate(
         post, request.user, post['rupture_file'])
+    if err:
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
