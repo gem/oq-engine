@@ -1139,7 +1139,7 @@ def plot_wkt(wkt_string):
 
 def plot_h3(hexes):
     """
-    $ oq plot "H3 811ebffffffffff 81387fffffffff"
+    $ oq plot "H3 811ebffffffffff 81387ffffffffff"
 
     plots H3 hexagons given a list of hexes
     """
@@ -1149,9 +1149,8 @@ def plot_h3(hexes):
     mp = shapely.MultiPolygon([h3.h3_set_to_multi_polygon(hexes)[0]])
     _fig, ax = plt.subplots()
     for poly in mp.geoms:
-        x, y = poly.exterior.xy
-        # NOTE: x and y are intentionally inverted (x is the lat, y is the lon)
-        ax.fill(y, x, alpha=0.5, fc="lightblue", ec="blue")
+        lat, lon = poly.exterior.xy
+        ax.fill(lon, lat, alpha=0.5, fc="lightblue", ec="blue")
     add_borders(ax, readinput.read_countries_df, buffer=0.)
     ax.set_aspect('equal')
     return plt
