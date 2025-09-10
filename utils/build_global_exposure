@@ -230,7 +230,7 @@ def main(mosaic_dir, grm_dir, wfp=False, action='build'):
             n = read_world_vulnerability(grm_dir, dstore)
             logging.info('Read %d vulnerability functions', n)
             fnames = collect_exposures(grm_dir)
-            expo_to_hdf5.store(fnames, grm_dir, wfp, dstore)
+            expo_to_hdf5.store(fnames, wfp, dstore)
         logging.info(mon)
 
 
