@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: changed `Exposure.read_around` to work in terms of h3 hexagons;
+    changed the exposure.hdf5 accordingly
   * Added a private endpoint `/v1/calc/run_ini` to run remote calculations
   * Added a private endpoint `/v1/calc/jobs_from_inis`
 

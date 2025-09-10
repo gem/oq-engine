@@ -1011,21 +1011,21 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, gh3s):
+    def read_around(exposure_hdf5, hexes):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
         """
         with hdf5.File(exposure_hdf5) as f:
             exp = f['exposure']
-            sbg = f['assets/slice_by_gh3'][:]
-            slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
+            sbg = f['assets/slice_by_hex6'][:]
+            slices = sbg[numpy.isin(sbg['hex6'], hexes)]
             if len(slices) == 0:
                 raise SiteAssociationError(
                     'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
                 impact_read_assets(f, start, stop)
-                for gh3, start, stop in slices)
+                for _hex6, start, stop in slices)
             tagcol = f['tagcol']
             # revert the tagnames so that taxonomy becomes the first field,
             # ex. sorted_tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
