@@ -1148,7 +1148,6 @@ def plot_h3(hexes):
     import shapely
     plt = import_plt()
     # normalize the hexes to 15 characters
-    hexes = hexes[:25]
     for i, hex in enumerate(hexes):
         lenh = len(hex)
         if lenh < 15:
