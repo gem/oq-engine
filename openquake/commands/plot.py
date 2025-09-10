@@ -28,6 +28,7 @@ import numpy
 import pandas
 from scipy.stats import linregress
 from shapely.geometry import Polygon, LineString
+from openquake.baselib import hdf5
 from openquake.commonlib import readinput
 from openquake.commonlib.util import unique_filename
 from openquake.hazardlib.geo.utils import PolygonPlotter
@@ -1139,7 +1140,7 @@ def plot_wkt(wkt_string):
 
 def plot_h3(hexes):
     """
-    $ oq plot "H3 811ebffffffffff 81387ffffffffff"
+    $ oq plot "H3 811ebffffff 81387fffff"
 
     plots H3 hexagons given a list of hexes
     """
@@ -1147,6 +1148,7 @@ def plot_h3(hexes):
     import shapely
     plt = import_plt()
     # normalize the hexes to 15 characters
+    hexes = hexes[:25]
     for i, hex in enumerate(hexes):
         lenh = len(hex)
         if lenh < 15:
@@ -1154,10 +1156,10 @@ def plot_h3(hexes):
         elif lenh > 15:
             raise ValueError('%s must have <= 15 characters, got %d' %
                              (hex, lenh))
-    mp = shapely.MultiPolygon([h3.h3_set_to_multi_polygon(hexes)[0]])
     _fig, ax = plt.subplots()
-    for poly in mp.geoms:
-        lat, lon = poly.exterior.xy
+    for hex in hexes:
+        mp = shapely.MultiPolygon(h3.h3_set_to_multi_polygon([hex]))
+        lat, lon = mp.geoms[0].exterior.xy
         ax.fill(lon, lat, alpha=0.5, fc="lightblue", ec="blue")
     add_borders(ax, readinput.read_countries_df, buffer=0.)
     ax.set_aspect('equal')
@@ -1217,7 +1219,12 @@ def main(what,
             plt.show()
         return
     if what.startswith('H3'):
-        plt = plot_h3(what[2:].split())
+        hexes = what[2:].split()
+        if what.endswith('.hdf5'):
+            with hdf5.File(hexes[0]) as h5:
+                hexes = [h.decode('ascii') for h in numpy.unique(
+                    h5['assets/slice_by_hex6']['hex6'])]
+        plt = plot_h3(hexes)
         if save_to:
             plt.savefig(save_to, dpi=300)
             logging.info(f'Plot saved to {save_to}')
