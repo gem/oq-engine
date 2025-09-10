@@ -103,5 +103,5 @@ def test_expo_to_hdf5():
         NAME2s = sorted(dstore['NAME_2'][:])
         assert [x.decode('utf8') for x in NAME2s] == EXPECTED_NAME2s
 
-        slices = dstore['assets/slice_by_gh3'][:]
-        assert len(slices) == 13
+        slices = dstore['assets/slice_by_hex6'][:]
+        assert len(slices) == 16
