@@ -724,7 +724,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'collect_rlzs=true can be specified only if '
                     'the realizations have identical weights')
-        if oqparent.imtls:
+        if oqparent.imtls and oq.calculation_mode in ('classical', 'disagg'):
             check_imtls(oq.imtls, oqparent.imtls)
         self.check_precalc(oqparent.calculation_mode)
         self.datastore.parent = parent
