@@ -1340,11 +1340,8 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     eids.sort()
     if eids[0] != 0:
         raise ValueError('The event_id must start from zero in %s' % fname)
-    E = len(eids)
-    events = numpy.zeros(E, rupture.events_dt)
-    events['id'] = eids
-    logging.info('Storing %d events, all relevant', E)
-    dstore['events'] = events
+    store_events(dstore, eids)
+    logging.info('Storing %d events, all relevant', len(eids))
     # store the GMFs
     dic = general.group_array(arr, 'sid')
     offset = 0
@@ -1591,12 +1588,18 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
 
 
-def store_events(dstore, E):
+def store_events(dstore, eids):
     """
     Store E events associated to a single realization
     """
-    events = numpy.zeros(E, rupture.events_dt)
-    events['id'] = numpy.arange(E, dtype=U32)
+    if isinstance(eids, numpy.ndarray):
+        E = len(eids)
+        events = numpy.zeros(E, rupture.events_dt)
+        events['id'] = eids
+    else:  # scalar
+        E = eids
+        events = numpy.zeros(E, rupture.events_dt)
+        events['id'] = numpy.arange(E, dtype=U32)
     dstore['events'] = events
     dstore['weights'] = [1.]
     return events
