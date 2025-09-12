@@ -200,12 +200,12 @@ class EngineServerTestCase(django.test.TestCase):
         with tempfile.TemporaryDirectory() as email_dir:
             with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
                 resp = self.post(endpoint, data=data)
-                if resp.status_code == 400:
-                    self.assertIsNotNone(expected_error)
+                if resp.status_code != 200:
                     content = json.loads(resp.content)
+                    print(content, file=sys.stderr)
+                    self.assertIsNotNone(expected_error)
                     self.assertIn(expected_error, content['error_msg'])
                     return
-                self.assertEqual(resp.status_code, 200)
                 # the job is supposed to start
                 # and, if expected_error is not None, to fail afterwards
                 try:

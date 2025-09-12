@@ -75,24 +75,21 @@ EXPECTED_ID1s = sorted([
     b'TWNB'])
 
 EXPECTED_NAME2s = [
-    '?', 'ACIGÖL', 'ANTAKYA', 'Arauquita', 'Bogota', 'Cali', 'Croix-des-Bouquets',
-    'Iles', 'KOCASİNAN', 'Port-de-Paix', 'Saint-Marc', 'Sincelejo', 'Taitung County',
-    'Taitung County', 'TÜRKELİ', 'le Cap-Haïtien', 'le Trou-du-Nord', 'les Cayes',
-    'ÇAYIRALAN']
+    '?', 'ACIGÖL', 'ANTAKYA', 'Arauquita', 'Bogota', 'Cali',
+    'Croix-des-Bouquets', 'Iles', 'KOCASİNAN', 'Port-de-Paix', 'Saint-Marc',
+    'Sincelejo', 'Taitung County', 'Taitung County', 'TÜRKELİ',
+    'le Cap-Haïtien', 'le Trou-du-Nord', 'les Cayes', 'ÇAYIRALAN']
 
 
 def test_expo_to_hdf5():
-    expo1_xml = os.path.join(os.path.dirname(__file__),
-                             'data', 'Exposure_Taiwan.xml')
-    expo2_xml = os.path.join(os.path.dirname(__file__),
-                             'data', 'Exposure_Haiti.xml')
-    expo3_xml = os.path.join(os.path.dirname(__file__),
-                             'data', 'Exposure_Colombia.xml')
-    expo4_xml = os.path.join(os.path.dirname(__file__),
-                             'data', 'Exposure_Turkiye.xml')
+    grm_dir = os.path.join(os.path.dirname(__file__), 'data')
+    expo1_xml = os.path.join(grm_dir, 'Exposure_Taiwan.xml')
+    expo2_xml = os.path.join(grm_dir, 'Exposure_Haiti.xml')
+    expo3_xml = os.path.join(grm_dir, 'Exposure_Colombia.xml')
+    expo4_xml = os.path.join(grm_dir, 'Exposure_Turkiye.xml')
     job, dstore = create_job_dstore()
     with job, dstore:
-        store([expo1_xml, expo2_xml, expo3_xml, expo4_xml], True, dstore)
+        store([expo1_xml, expo2_xml, expo3_xml, expo4_xml], grm_dir, True, dstore)
         assets = sorted(dstore['assets/ASSET_ID'][:])
         ae(assets, EXPECTED_ASSETS)
         assert len(dstore['assets/ID_1']) == 30
@@ -103,5 +100,5 @@ def test_expo_to_hdf5():
         NAME2s = sorted(dstore['NAME_2'][:])
         assert [x.decode('utf8') for x in NAME2s] == EXPECTED_NAME2s
 
-        slices = dstore['assets/slice_by_gh3'][:]
-        assert len(slices) == 13
+        slices = dstore['assets/slice_by_hex6'][:]
+        assert len(slices) == 16
