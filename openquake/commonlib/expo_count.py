@@ -28,7 +28,7 @@ def count_assets(expo_hdf5):
     with hdf5.File(expo_hdf5) as h5:
         for row in h5['assets/slice_by_hex6'][:]:
             acc[row['hex6'].decode('ascii')] += int(row['stop'] - row['start'])
-    return [item for item in sorted(acc.items(), key=lambda i: i[1])]
+    return [item for item in sorted(acc.items(), key=lambda i: (i[1], i[0]))]
 
 
 def count_sites(expo_hdf5):
@@ -38,7 +38,7 @@ def count_sites(expo_hdf5):
     with hdf5.File(expo_hdf5) as h5:
         sm = h5['site_model'][:]
         acc = Counter(hex6(sm['lon'], sm['lat']))
-    return [item for item in sorted(acc.items(), key=lambda i: i[1])]
+    return [item for item in sorted(acc.items(), key=lambda i: (i[1], i[0]))]
 
 
 def main(expo_hdf5):
