@@ -793,13 +793,6 @@ class EventBasedCalculator(base.HazardCalculator):
         else:  # scenario
             if 'rupture_model' in oq.inputs or oq.rupture_dict:
                 self._read_scenario_ruptures()
-            elif oq.shakemap_uri:
-                # this is creating gmf_data
-                base.store_gmfs_from_shakemap(self, self.sitecol, self.assetcol)
-                dstore['full_lt'] = self.full_lt = \
-                    logictree.FullLogicTree.fake()
-                dstore['weights'] = [1.]
-                return {}
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
