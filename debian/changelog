@@ -1,3 +1,6 @@
+  [Claudia Mascandola]
+  * Added a Ramadan et al (2023) gsim
+
   [Michele Simionato]
   * Internal: changed `Exposure.read_around` to work in terms of h3 hexagons;
     changed the exposure.hdf5 accordingly
