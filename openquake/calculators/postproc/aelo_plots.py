@@ -206,7 +206,73 @@ def plot_mean_hcurves_rtgm(dstore, sid=0, plot_mce=False, axes=None):
     return plt
 
 
-def plot_governing_mce(dstore, update_dstore=False):
+def plot_governing_mce_single_vs30(dstore, site_idx=0, update_dstore=False):
+    """
+    :param dstore: the datastore
+    :returns: image of governing MCE
+    """
+    plt = import_plt()
+    _fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
+    # get imls and imts, make arrays
+    mce_df = dstore.read_df('mce', sel=dict(sid=site_idx))
+    det_mce = mce_df['DetMCE']
+    mce = mce_df['MCE']
+    prob_mce = mce_df['ProbMCE']
+    imts = mce_df['IMT']
+    T = [from_string(imt).period for imt in imts]
+    DLL = mce_df['DLL']
+    ax1.plot(T[1:], DLL[1:], 'kx', markersize=8, label='DLL', linewidth=1,
+             linestyle='-')
+    ax1.plot(T[1:], prob_mce[1:], 'bX', markersize=8,
+             label='Probabilisitc $MCE_r$',
+             linewidth=1, linestyle='-')
+    upperlim = max(max(prob_mce), max(mce), max(det_mce), max(DLL))
+    ax1.plot(T[1:], det_mce[1:], 'c^', markersize=8,
+             label='Deterministic $MCE_r$',
+             linewidth=1, linestyle='-')
+    ax1.set_ylim([0.01, upperlim + 0.2])
+    ax1.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$',
+             linewidth=4, linestyle=':')
+    ax1.grid('both')
+    ax1.set_ylabel('Spectral Acceleration (g)', fontsize=20)
+    ax1.set_xlabel('Period (s)', fontsize=20)
+    ax1.legend(loc="lower left", fontsize='13')
+    ax1.set_xlim([min(T[1:]), max(T)])
+
+    plt.rcParams.update({'font.size': 15})
+    ax2.plot(T[1:], DLL[1:], 'kx', markersize=8, label='DLL', linewidth=1,
+             linestyle='-')
+    ax2.plot(T[1:], prob_mce[1:], 'bX', markersize=8,
+             label='Probabilisitc $MCE_r$',
+             linewidth=1, linestyle='-')
+    ax2.plot(T[1:], det_mce[1:], 'c^', markersize=8,
+             label='Deterministic $MCE_r$',
+             linewidth=1, linestyle='-')
+    plt.ylim([0.01, upperlim + 0.2])
+    ax2.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$',
+             linewidth=4, linestyle=':')
+    ax2.grid('both')
+    ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
+    ax2.set_xlabel('Period (s)', fontsize=20)
+    ax2.legend(loc="upper right", fontsize='13')
+    ax2.set_xlim([0, 2.0])
+    ax1.set_xscale('log')
+    ax1.set_yscale('log')
+    ax2.set_xscale('linear')
+    ax2.set_yscale('linear')
+
+    # add user guide message
+    message = 'See WebUI User Guide for complete explanation of plot contents.'
+    plt.text(0.03, -upperlim*0.2, message, fontsize='small', color='black',
+             alpha=0.85)
+    if update_dstore:
+        bio = io.BytesIO()
+        plt.savefig(bio, format='png', bbox_inches='tight')
+        dstore['png/governing_mce.png'] = Image.open(bio)
+    return plt
+
+
+def plot_governing_mce_multi_vs30(dstore, update_dstore=False):
     """
     :param dstore: the datastore
     :returns: image of governing MCE (log-log plot)
@@ -216,25 +282,25 @@ def plot_governing_mce(dstore, update_dstore=False):
     plt.subplots_adjust(bottom=0.2)
 
     # read dataframe
-    mce_df = dstore.read_df('mce')
+    # mce_df = dstore.read_df('mce')
     governing_mce_df = dstore.read_df('mce_governing')
-    det_mce = mce_df['DetMCE']
+    # det_mce = mce_df['DetMCE']
     # mce = mce_df['MCE']
-    prob_mce = mce_df['ProbMCE']
-    imts = mce_df['IMT']
-    T = [from_string(imt).period for imt in imts]
-    DLL = mce_df['DLL']
+    # prob_mce = mce_df['ProbMCE']
+    # imts = mce_df['IMT']
+    # T = [from_string(imt).period for imt in imts]
+    # DLL = mce_df['DLL']
     governing_mce_period = governing_mce_df['period']
     governing_mce_sam = governing_mce_df['SaM']
 
-    ax1.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,
-             linestyle='-')
-    ax1.plot(T, prob_mce, 'bX', markersize=8,
-             label='Probabilistic $MCE_r$',
-             linewidth=1, linestyle='-')
-    ax1.plot(T, det_mce, 'c^', markersize=8,
-             label='Deterministic $MCE_r$',
-             linewidth=1, linestyle='-')
+    # ax1.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,
+    #          linestyle='-')
+    # ax1.plot(T, prob_mce, 'bX', markersize=8,
+    #          label='Probabilistic $MCE_r$',
+    #          linewidth=1, linestyle='-')
+    # ax1.plot(T, det_mce, 'c^', markersize=8,
+    #          label='Deterministic $MCE_r$',
+    #          linewidth=1, linestyle='-')
     ax1.plot(governing_mce_period, governing_mce_sam, 'r', label='Governing $MCE_r$',
              linewidth=4, linestyle=':')
 

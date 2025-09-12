@@ -50,8 +50,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites,
-    _find_fact_maxC, import_plt)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce_single_vs30,
+    plot_governing_mce_multi_vs30, plot_sites, _find_fact_maxC, import_plt)
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
@@ -788,11 +788,8 @@ def make_figure_hcurves(plt, sids, dstore, notifications, vs30s):
     fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 6), squeeze=False)
     for i, sid in enumerate(sids):
         vs30 = vs30s[i]
-        sid_notifications = notifications[notifications['sid'] == sid]
-        if len(sid_notifications) == 0 or sid_notifications['name'][0] not in [
-                'zero_hazard', 'low_hazard']:
-            plot_mean_hcurves_rtgm(dstore, sid, axes=axes[0, i])
-            display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+        plot_mean_hcurves_rtgm(dstore, sid, axes=axes[0, i])
+        display_vs30_in_subplot_title(axes, n_rows, i, vs30)
     add_footer_referencing_user_guide(fig)
     save_figure_to_dstore(fig, dstore, 'png/hcurves.png')
     plt.close(fig)
@@ -804,11 +801,9 @@ def make_figure_disagg_by_src(plt, sids, dstore, notifications, vs30s):
     fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 15), squeeze=False)
     for i, sid in enumerate(sids):
         vs30 = vs30s[i]
-        sid_notifications = notifications[notifications['sid'] == sid]
-        if len(sid_notifications) == 0:
-            plot_disagg_by_src(
-                dstore, sid, axes=[axes[0, i], axes[1, i], axes[2, i]])
-            display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+        plot_disagg_by_src(
+            dstore, sid, axes=[axes[0, i], axes[1, i], axes[2, i]])
+        display_vs30_in_subplot_title(axes, n_rows, i, vs30)
     has_data = any(ax.has_data() for row in axes for ax in row)
     if has_data:
         add_footer_referencing_user_guide(fig)
@@ -896,14 +891,20 @@ def main(dstore, csm):
         plt = import_plt()
 
         # Mean Hazard Curves (1 row, n_sids columns)
-        make_figure_hcurves(plt, sids, dstore, notifications, vs30s)
+        sids_to_exclude = notifications['sid'][
+            notifications['name'] in ('zero_hazard', 'low_hazard')].tolist()
+        sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
+        if sids_to_plot:
+            make_figure_hcurves(plt, sids_to_plot, dstore, notifications, vs30s)
 
         # Governing MCE (2 rows, 1 column)
-        # we plot the current mce governing plot only if the site class IS NOT the
-        # default site class (i.e. if there is only one sid)
-        if n_sids == 1 and len(notifications) == 0 or notifications['name'][0] not in [
+        if n_sids == 1:
+            if len(notifications) == 0 or notifications[0]['name'] not in [
                 'zero_hazard', 'low_hazard']:
-            plot_governing_mce(dstore, update_dstore=True)
+                plot_governing_mce_single_vs30(dstore, update_dstore=True)
+        elif len(notifications) == 0 or notifications[0]['name'] not in [
+                'zero_hazard', 'low_hazard']:
+            plot_governing_mce_multi_vs30(dstore, update_dstore=True)
 
         # Disaggregation by Source (3 rows, n_sids columns)
         # NOTE: avoiding to add columns for vs30 for which no deterministic is computed
