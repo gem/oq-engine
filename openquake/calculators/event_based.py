@@ -751,9 +751,9 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
-        if 'gmf_data' in self.datastore or oq.impact and oq.shakemap_uri:
-            return {}
         dstore = self.datastore
+        if 'gmf_data' in dstore:  # already computed
+            return {}
         E = None
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
