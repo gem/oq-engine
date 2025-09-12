@@ -315,7 +315,9 @@ def get_csm(oq, full_lt, dstore=None):
     except (KeyError, TypeError):  # 'NoneType' object is not subscriptable
         sitecol = None
     else:
-        if len(sitecol) > 1:
+        # NB: in AELO we can have multiple vs30 on the same location
+        lonlats = set(zip(sitecol.lons, sitecol.lats))
+        if len(lonlats) > 1:
             sitecol = None
     # must be called *after* _fix_dupl_ids
     fix_geometry_sections(
