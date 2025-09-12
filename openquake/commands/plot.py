@@ -42,7 +42,8 @@ from openquake.calculators.postproc.plots import (
     plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d,
     adjust_limits, auto_limits)
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce_single_vs30,
+    plot_governing_mce_multi_vs30, plot_sites)
 
 
 def getparams(what):
@@ -754,31 +755,45 @@ def make_figure_tot_curves(extractors, what):
 
 def make_figure_mean_hcurves_rtgm(extractors, what):
     """
-    $ oq plot "mean_hcurves_rtgm?"
+    $ oq plot "mean_hcurves_rtgm?sid=0"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_mean_hcurves_rtgm(dstore)
+    kwargs = parse_qs(what.split('?')[1])
+    [sid] = kwargs.get('sid', ['0'])
+    plt = plot_mean_hcurves_rtgm(dstore, sid=int(sid))
     return plt
 
 
-def make_figure_governing_mce(extractors, what):
+def make_figure_governing_mce_single_vs30(extractors, what):
     """
-    $ oq plot "governing_mce?"
+    $ oq plot "governing_mce_single_vs30?"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_governing_mce(dstore)
+    plt = plot_governing_mce_single_vs30(dstore)
+    return plt
+
+
+def make_figure_governing_mce_multi_vs30(extractors, what):
+    """
+    $ oq plot "governing_mce_multi_vs30?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_governing_mce_multi_vs30(dstore)
     return plt
 
 
 def make_figure_disagg_by_src(extractors, what):
     """
-    $ oq plot "disagg_by_src?"
+    $ oq plot "disagg_by_src?sid=0"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_disagg_by_src(dstore)
+    kwargs = parse_qs(what.split('?')[1])
+    [sid] = kwargs.get('sid', ['0'])
+    plt = plot_disagg_by_src(dstore, sid=int(sid))
     return plt
 
 
