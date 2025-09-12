@@ -20,6 +20,7 @@ import os
 import time
 import logging
 import operator
+from collections import Counter
 import pandas
 import numpy
 from openquake.baselib import hdf5, sap, general, performance
@@ -331,6 +332,27 @@ def store_world_tmap(grm_dir, dstore):
         except ValueError:  # exists already
             print('Repeated %s' % name)
     return len(dic)
+
+
+def count_aasets(expo_hdf5):
+    """
+    Count the number of assets per hexagon hex6 in exposure.hdf5
+    """
+    acc = Counter()
+    with hdf5.File(expo_hdf5) as h5:
+        for row in h5['assets/slice_by_hex6'][:]:
+            acc[row['hex6'].decode('ascii')] += int(row['stop'] - row['start'])
+    return {k: c for k, c in sorted(acc.items(), key=lambda i: i[1])}
+
+
+def count_sites(expo_hdf5):
+    """
+    Count the number of assets per hexagon hex6 in exposure.hdf5
+    """
+    with hdf5.File(expo_hdf5) as h5:
+        sm = h5['site_model'][:]
+        acc = Counter(hex6(sm['lon'], sm['lat']))
+    return {k: c for k, c in sorted(acc.items(), key=lambda i: i[1])}
 
 
 def main(exposures_xml, grm_dir='', wfp=False, sanity_check=False):
