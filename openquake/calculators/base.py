@@ -1340,11 +1340,8 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     eids.sort()
     if eids[0] != 0:
         raise ValueError('The event_id must start from zero in %s' % fname)
-    E = len(eids)
-    events = numpy.zeros(E, rupture.events_dt)
-    events['id'] = eids
-    logging.info('Storing %d events, all relevant', E)
-    dstore['events'] = events
+    store_events(dstore, eids)
+    logging.info('Storing %d events, all relevant', len(eids))
     # store the GMFs
     dic = general.group_array(arr, 'sid')
     offset = 0
@@ -1537,6 +1534,9 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
     Create and possibly populate the datasets in the gmf_data group
     """
     oq = dstore['oqparam']
+    if not R and 'full_lt' not in dstore:  # from shakemap
+        dstore['full_lt'] = logictree.FullLogicTree.fake()
+        store_events(dstore, E)
     R = R or dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
     if data is None:
@@ -1588,6 +1588,23 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
 
 
+def store_events(dstore, eids):
+    """
+    Store E events associated to a single realization
+    """
+    if isinstance(eids, numpy.ndarray):
+        E = len(eids)
+        events = numpy.zeros(E, rupture.events_dt)
+        events['id'] = eids
+    else:  # scalar
+        E = eids
+        events = numpy.zeros(E, rupture.events_dt)
+        events['id'] = numpy.arange(E, dtype=U32)
+    dstore['events'] = events
+    dstore['weights'] = [1.]
+    return events
+
+
 def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
@@ -1601,9 +1618,7 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
         N, E, _M = gmfs.shape
-        events = numpy.zeros(E, rupture.events_dt)
-        events['id'] = numpy.arange(E, dtype=U32)
-        calc.datastore['events'] = events
+        events = store_events(calc.datastore, E)
         # convert into an array of dtype gmv_data_dt
         lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                for ei, event in enumerate(events)

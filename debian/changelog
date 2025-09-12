@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made it possible to merge pre_job.ini and job.ini in ShakeMap calculations
   * Internal: changed `Exposure.read_around` to work in terms of h3 hexagons;
     changed the exposure.hdf5 accordingly
   * Added a private endpoint `/v1/calc/run_ini` to run remote calculations
