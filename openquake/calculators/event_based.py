@@ -752,7 +752,12 @@ class EventBasedCalculator(base.HazardCalculator):
     def execute(self):
         oq = self.oqparam
         dstore = self.datastore
-        if 'gmf_data' in dstore:  # already computed
+        if oq.impact and oq.shakemap_uri:
+            # when calling `oqi usgs_id`
+            base.store_gmfs_from_shakemap(self, self.sitecol, self.assetcol)
+            return {}
+        elif 'gmf_data' in dstore:
+            # already computed
             return {}
         E = None
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
