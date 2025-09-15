@@ -749,10 +749,10 @@ sites:
   Example: *sites = 10.1 45, 10.2 45*.
 
 site_labels:
-  Specify a list of labels (i.e. strings without spaces) assuming each site
+  Specify a dictionary label_string -> label_index assuming each site
   have a field "label" corresponding to the label index.
-  Example: *site_labels = Cascadia*.
-  Default: []
+  Example: *site_labels = {"Cascadia": 1}*.
+  Default: {}
 
 tile_spec:
   INTERNAL
@@ -1123,7 +1123,7 @@ class OqParam(valid.ParamSet):
     # example: shakemap_uri = {'kind': 'usgs_id', 'id': 'XXX'}
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
-    site_labels = valid.Param(valid.namelist, [])
+    site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)
     tiling = valid.Param(valid.boolean, None)

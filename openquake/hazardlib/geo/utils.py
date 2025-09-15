@@ -25,7 +25,6 @@ import math
 import logging
 import collections
 
-import h3
 import numpy
 import numba
 from scipy.spatial import cKDTree
@@ -978,4 +977,5 @@ def hex6(lons, lats):
     >>> hex6(F64([10., 10.]), F64([45., 46.]))
     ['831ea6', '831f99']
     """
+    import h3  # import it only when needed
     return [h3.geo_to_h3(lat, lon, 3)[:6] for lon, lat in zip(lons, lats)]

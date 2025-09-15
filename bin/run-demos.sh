@@ -17,8 +17,8 @@ for cwd, dirs, files in os.walk('$1'):
              path = os.path.join(cwd, f)
              check_ini(path, hc='risk' in f)  # creating .tmp.ini
              if 'MedianSpectrum' in path:
-                 # this demo hangs on the M1 machine with python 3.11, skip it
-                 if sys.platform == 'darwin' and sys.version.startswith('3.11'):
+                 # this demo hangs on the M1 machine
+                 if sys.platform == 'darwin':
                      os.remove(path.replace('.ini', '.tmp.ini'))
 "
 # run the demos with the generated file

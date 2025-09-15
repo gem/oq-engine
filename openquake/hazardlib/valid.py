@@ -998,8 +998,8 @@ def dictionary(value):
     Traceback (most recent call last):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
-    >>> dictionary('{"ls": logscale(0.01, 2, 5)}')
-    {'ls': [0.01, 0.03760603093086393, 0.14142135623730948, 0.5318295896944986, 1.9999999999999991]}
+    >>> numpy.array(dictionary('{"ls": logscale(0.01, 2, 5)}')['ls'])
+    array([0.01      , 0.03760603, 0.14142136, 0.53182959, 2.        ])
     """
     if not value:
         return {}
@@ -1020,6 +1020,37 @@ def dictionary(value):
                 dic[key] = list(logscale(*val[1:]))
             elif val[0] == 'linscale':
                 dic[key] = list(linscale(*val[1:]))
+    return dic
+
+
+def uint8dict(value):
+    """
+    :param value:
+        input string corresponding to a literal Python dictionary
+    :returns:
+        dictionary string -> uint8 number
+
+    >>> uint8dict('')
+    {}
+    >>> uint8dict('{}')
+    {}
+    >>> uint8dict('{"a": 1}')
+    {'a': 1}
+    >>> uint8dict('{"a": 0}')
+    Traceback (most recent call last):
+       ...
+    AssertionError: a must be in the range 1-255, got 0
+    """
+    if not value:
+        return {}
+    try:
+        dic = dict(ast.literal_eval(value))
+    except Exception:
+        raise ValueError('%r is not a valid Python dictionary' % value)
+
+    for key, val in dic.items():
+        assert isinstance(val, int), f'{key} must be integer, got {val}'
+        assert 0 < val < 256, f'{key} must be in the range 1-255, got {val}'
     return dic
 
 

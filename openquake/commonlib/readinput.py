@@ -665,6 +665,13 @@ def get_site_model(oqparam, h5=None):
                     f' {this_sm_fname} were not found in {other_sm_fname}')
 
     sm = numpy.concatenate(arrays, dtype=arrays[0].dtype)
+    if oqparam.site_labels:
+        assert 'ilabel' in sm.dtype.names, 'Missing ilabel in site_model.csv'
+        ilabels = set(sm['ilabel']) - {0}  # 0 means no label
+        for ilabel in ilabels:
+            if ilabel not in oqparam.site_labels.values():
+                raise KeyError(
+                    f'{oqparam.inputs["job_ini"]}: Unknown {ilabel=}')
     if h5:
         h5['site_model'] = sm
 
@@ -1121,7 +1128,8 @@ def get_exposure(oqparam, h5=None):
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
-            h6 = [x.encode('ascii') for x in sorted(set(hex6(sm['lon'], sm['lat'])))]
+            h6 = [x.encode('ascii') for x in sorted(set(
+                hex6(sm['lon'], sm['lat'])))]
             exposure = asset.Exposure.read_around(fnames[0], h6)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
