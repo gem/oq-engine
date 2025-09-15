@@ -587,7 +587,10 @@ class HazardCalculator(BaseCalculator):
                     oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
                 if oq.site_labels:
-                    dic = GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
+                    trts = {sg.trt for sg in csm.src_groups}
+                    dic = GsimLogicTree.read_dict(
+                        oq.inputs['gsim_logic_tree'], trts)
+                    assert list(dic)[0] == 'Default', list(dic)
                     for label in list(dic)[1:]:
                         self.datastore['gsim_lt' + label] = dic[label]
                 oq.mags_by_trt = csm.get_mags_by_trt(oq.maximum_distance)
