@@ -759,7 +759,7 @@ class EventBasedCalculator(base.HazardCalculator):
         elif 'gmf_data' in dstore:
             # already computed
             return {}
-        E = None
+        E = getattr(oq, 'number_of_ground_motion_fields', None)
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
