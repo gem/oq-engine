@@ -759,7 +759,7 @@ class EventBasedCalculator(base.HazardCalculator):
         elif 'gmf_data' in dstore:
             # already computed
             return {}
-        E = None
+        E = getattr(oq, 'number_of_ground_motion_fields', None)
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
                             'you may want to set a minimum_intensity')
@@ -778,6 +778,9 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
+        elif 'grid_url' in oq.shakemap_uri:
+            base.store_gmfs_from_shakemap(self, self.sitecol, self.assetcol)
+            return {}
         elif (not oq.rupture_dict and not oq.shakemap_uri
               and 'rupture_model' not in oq.inputs):
             logging.warning(
