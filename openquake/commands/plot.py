@@ -43,8 +43,8 @@ from openquake.calculators.postproc.plots import (
     adjust_limits, auto_limits)
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src,
-    plot_governing_mce_asce_7_16, plot_governing_mce_single_vs30,
-    plot_governing_mce_multi_vs30, plot_sites)
+    plot_governing_mce_asce_7_16, plot_governing_mce_single_vs30, plot_governing_mce,
+    plot_sites)
 
 
 def getparams(what):
@@ -786,13 +786,13 @@ def make_figure_governing_mce_single_vs30(extractors, what):
     return plt
 
 
-def make_figure_governing_mce_multi_vs30(extractors, what):
+def make_figure_governing_mce(extractors, what):
     """
-    $ oq plot "governing_mce_multi_vs30?"
+    $ oq plot "governing_mce?"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_governing_mce_multi_vs30(dstore)
+    plt = plot_governing_mce(dstore)
     return plt
 
 

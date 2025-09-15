@@ -246,7 +246,7 @@ def test_WAF():
         # check that 2 of 3 plots have been created
         assert 'png/hcurves.png' in calc.datastore
         assert 'png/governing_mce.png' in calc.datastore
-        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
 
 
 def test_JPN():

@@ -52,7 +52,7 @@ from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src,
     plot_governing_mce_asce_7_16, plot_governing_mce_single_vs30,
-    plot_governing_mce_multi_vs30, plot_sites, _find_fact_maxC, import_plt)
+    plot_governing_mce, plot_sites, _find_fact_maxC, import_plt)
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
@@ -780,7 +780,7 @@ def add_footer_referencing_user_guide(fig):
 
 def display_vs30_in_subplot_title(axes, n_rows, sid_idx, vs30):
     for row in range(n_rows):
-        axes[row, sid_idx].set_title(f"{vs30=} m/s", fontsize=13)
+        axes[row, sid_idx].set_title("$V_{S30}$ = %s m/s" % vs30, fontsize=13)
 
 
 def make_figure_hcurves(plt, sids, dstore, notifications, vs30s):
@@ -885,22 +885,22 @@ def main(dstore, csm):
                                       f' the number of values of vs30 ({len(vs30s)})')
         plt = import_plt()
         # Mean Hazard Curves (1 row, n_sids columns)
-        sids_to_exclude = notifications['sid'][
-            notifications['name'] in ('zero_hazard', 'low_hazard')].tolist()
+        mask = np.isin(notifications['name'], ['zero_hazard', 'low_hazard'])
+        sids_to_exclude = notifications['sid'][mask].tolist()
         sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
         if sids_to_plot:
             make_figure_hcurves(plt, sids_to_plot, dstore, notifications, vs30s)
-        # Governing MCE
-        if len(notifications) == 0 or notifications[0]['name'] not in [
-                'zero_hazard', 'low_hazard']:
+            # Governing MCE
             if oq.asce_version == 'ASCE7-16':
                 plot_governing_mce_asce_7_16(dstore, update_dstore=True)
             elif n_sids == 1:
                 plot_governing_mce_single_vs30(dstore, update_dstore=True)
+                plot_governing_mce(dstore, update_dstore=True) # in simplified page
             else:
-                plot_governing_mce_multi_vs30(dstore, update_dstore=True)
-        # Disaggregation by Source (3 rows, n_sids columns)
-        if not notifications:
-            make_figure_disagg_by_src(plt, sids, dstore, vs30s)
+                plot_governing_mce(dstore, update_dstore=True)
+            # TODO: "Replace Show governing MCE" -> "Show MCE spectra"
+            #       New button in simplified page: "Show governing MCE"
+            # Disaggregation by Source (3 rows, n_sids columns)
+            make_figure_disagg_by_src(plt, sids_to_plot, dstore, vs30s)
     if len(notifications):
         dstore['notifications'] = notifications

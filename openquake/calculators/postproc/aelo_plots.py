@@ -335,7 +335,7 @@ def plot_governing_mce_single_vs30(dstore, site_idx=0, update_dstore=False):
     return plt
 
 
-def plot_governing_mce_multi_vs30(dstore, update_dstore=False):
+def plot_governing_mce(dstore, update_dstore=False):
     """
     :param dstore: the datastore
     :returns: image of governing MCE (log-log plot)
