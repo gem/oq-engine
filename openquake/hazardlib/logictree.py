@@ -47,7 +47,7 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    dummy_branchset, LogicTreeError, parse_uncertainty, random)
+    dummy_branchset, LogicTreeError, parse_uncertainty)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -400,8 +400,8 @@ class SourceModelLogicTree(object):
             self.tectonic_region_types = set()
             self.collect_source_model_data('br0', source_model_file)
         self.source_data = numpy.array(self.source_data, source_dt)
-        self.info = Info([source_model_file], [], collections.defaultdict(list))
-
+        self.info = Info([source_model_file], [],
+                         collections.defaultdict(list))
         arr = numpy.array(
             [('bs0', 'br0', 'sourceModel', source_model_file, 1)], branch_dt)
         dic = dict(filename=source_model_file, seed=0, num_samples=0,
@@ -606,7 +606,7 @@ class SourceModelLogicTree(object):
         # branches; however, you can actually raise the limit to 33489 branches
         # by commenting/uncommenting the two lines below, if you really need
         maxlen = 183
-        # maxlen = 183 if bsno else 33489  # sourceModel branchset can be longer
+        # maxlen=183 if bsno else 33489  # sourceModel branchset can be longer
         if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
