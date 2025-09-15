@@ -348,7 +348,7 @@ def plot_governing_mce_multi_vs30(dstore, update_dstore=False):
     governing_mce_period = governing_mce_df['period']
     governing_mce_sam = governing_mce_df['SaM']
 
-    ax1.plot(governing_mce_period, governing_mce_sam, 'black',
+    ax1.plot(governing_mce_period[1:], governing_mce_sam[1:], 'black',
              label='Governing $MCE_r$', linewidth=2, linestyle='-')
 
     ax1.set_xscale('log')
@@ -362,7 +362,7 @@ def plot_governing_mce_multi_vs30(dstore, update_dstore=False):
 
     plt.rcParams.update({'font.size': 15})
 
-    ax2.plot(governing_mce_period, governing_mce_sam, 'black',
+    ax2.plot(governing_mce_period[1:], governing_mce_sam[1:], 'black',
              label='Governing $MCE_r$', linewidth=2, linestyle='-')
     # plt.ylim([0.01, upperlim + 0.2])
     ax2.grid('both')
