@@ -778,6 +778,9 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
+        elif 'grid_url' in oq.shakemap_uri:
+            base.store_gmfs_from_shakemap(self, self.sitecol, self.assetcol)
+            return {}
         elif (not oq.rupture_dict and not oq.shakemap_uri
               and 'rupture_model' not in oq.inputs):
             logging.warning(
