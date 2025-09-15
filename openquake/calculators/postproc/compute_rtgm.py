@@ -796,7 +796,7 @@ def make_figure_hcurves(plt, sids, dstore, notifications, vs30s):
     plt.close(fig)
 
 
-def make_figure_disagg_by_src(plt, sids, dstore, notifications, vs30s):
+def make_figure_disagg_by_src(plt, sids, dstore, vs30s):
     n_rows = 3  # 3 imts: [PGA, SA(0.2), SA(1.0)]
     n_sids = len(sids)
     fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 15), squeeze=False)
@@ -861,27 +861,21 @@ def main(dstore, csm):
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
     notifications = np.array(notification_items, dtype=notification_dtype)
-
     for sid, mdes, a07, a41, mce_df in calc_asce(
             dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
         asce07[sid] = a07
         asce41[sid] = a41
         dstore[f'mag_dst_eps_sig/{sid}'] = mdes
         mce_dfs.append(mce_df)
-
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)
-
     if mce_dfs:
         dstore.create_df('mce', pd.concat(mce_dfs))
-
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
-
     df = compute_mce_governing(dstore, sitecol, locs)
     df.columns = ["period", "SaM", "custom_site_id"]
     dstore.create_df('mce_governing', df)
-
     plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and len(locs) == 1:
         [sids] = locs.values()
@@ -890,14 +884,12 @@ def main(dstore, csm):
         assert n_sids == len(vs30s), (f'The number of sites ({n_sids}) must be equal to'
                                       f' the number of values of vs30 ({len(vs30s)})')
         plt = import_plt()
-
         # Mean Hazard Curves (1 row, n_sids columns)
         sids_to_exclude = notifications['sid'][
             notifications['name'] in ('zero_hazard', 'low_hazard')].tolist()
         sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
         if sids_to_plot:
             make_figure_hcurves(plt, sids_to_plot, dstore, notifications, vs30s)
-
         # Governing MCE
         if len(notifications) == 0 or notifications[0]['name'] not in [
                 'zero_hazard', 'low_hazard']:
@@ -907,14 +899,8 @@ def main(dstore, csm):
                 plot_governing_mce_single_vs30(dstore, update_dstore=True)
             else:
                 plot_governing_mce_multi_vs30(dstore, update_dstore=True)
-
         # Disaggregation by Source (3 rows, n_sids columns)
-        # NOTE: avoiding to add columns for vs30 for which no deterministic is computed
-        sids_to_exclude = notifications['sid'][
-            notifications['name'] == 'only_prob_mce'].tolist()
-        sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
-        if sids_to_plot:
-            make_figure_disagg_by_src(plt, sids_to_plot, dstore, notifications, vs30s)
-
+        if not notifications:
+            make_figure_disagg_by_src(plt, sids, dstore, vs30s)
     if len(notifications):
         dstore['notifications'] = notifications
