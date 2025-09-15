@@ -277,9 +277,6 @@ def plot_governing_mce_single_vs30(dstore, site_idx=0, update_dstore=False):
     _fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
     # get imls and imts, make arrays
     mce_df = dstore.read_df('mce', sel=dict(sid=site_idx))
-    # governing_mce_df = dstore.read_df('mce_governing')
-    # governing_mce_period = governing_mce_df['period']
-    # governing_mce_sam = governing_mce_df['SaM']
     det_mce = mce_df['DetMCE']
     mce = mce_df['MCE']
     prob_mce = mce_df['ProbMCE']
@@ -298,9 +295,8 @@ def plot_governing_mce_single_vs30(dstore, site_idx=0, update_dstore=False):
     ax1.set_ylim([0.01, upperlim + 0.2])
     ax1.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$',
              linewidth=4, linestyle=':')
-    # ax1.plot(governing_mce_period, governing_mce_sam, 'r', label='Governing $MCE_r$',
-    #          linewidth=4, linestyle=':')
-    ax1.grid('both')
+    ax1.grid(which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    ax1.minorticks_on()
     ax1.set_ylabel('Spectral Acceleration (g)', fontsize=20)
     ax1.set_xlabel('Period (s)', fontsize=20)
     ax1.legend(loc="lower left", fontsize='13')
@@ -346,28 +342,14 @@ def plot_governing_mce_multi_vs30(dstore, update_dstore=False):
     """
     plt = import_plt()
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
-    plt.subplots_adjust(bottom=0.2)
+    plt.subplots_adjust(bottom=0.1)
 
     governing_mce_df = dstore.read_df('mce_governing')
-    # det_mce = mce_df['DetMCE']
-    # mce = mce_df['MCE']
-    # prob_mce = mce_df['ProbMCE']
-    # imts = mce_df['IMT']
-    # T = [from_string(imt).period for imt in imts]
-    # DLL = mce_df['DLL']
     governing_mce_period = governing_mce_df['period']
     governing_mce_sam = governing_mce_df['SaM']
 
-    # ax1.plot(T, DLL, 'kx', markersize=8, label='DLL', linewidth=1,
-    #          linestyle='-')
-    # ax1.plot(T, prob_mce, 'bX', markersize=8,
-    #          label='Probabilistic $MCE_r$',
-    #          linewidth=1, linestyle='-')
-    # ax1.plot(T, det_mce, 'c^', markersize=8,
-    #          label='Deterministic $MCE_r$',
-    #          linewidth=1, linestyle='-')
-    ax1.plot(governing_mce_period, governing_mce_sam, 'r', label='Governing $MCE_r$',
-             linewidth=4, linestyle=':')
+    ax1.plot(governing_mce_period, governing_mce_sam, 'black',
+             label='Governing $MCE_r$', linewidth=2, linestyle='-')
 
     ax1.set_xscale('log')
     ax1.set_yscale('log')
@@ -375,17 +357,18 @@ def plot_governing_mce_multi_vs30(dstore, update_dstore=False):
     ax1.set_ylabel('Spectral Acceleration (g)', fontsize=13)
     ax1.set_xlabel('Period (s)', fontsize=13)
     ax1.legend(loc="lower left", fontsize=11)
-    ax1.grid('both')
+    ax1.grid(which='both', linestyle='--', linewidth=0.5, alpha=0.7)
+    ax1.minorticks_on()
 
     plt.rcParams.update({'font.size': 15})
 
-    ax2.plot(governing_mce_period, governing_mce_sam, 'r', label='Governing $MCE_r$',
-             linewidth=4, linestyle=':')
+    ax2.plot(governing_mce_period, governing_mce_sam, 'black',
+             label='Governing $MCE_r$', linewidth=2, linestyle='-')
     # plt.ylim([0.01, upperlim + 0.2])
     ax2.grid('both')
-    ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
-    ax2.set_xlabel('Period (s)', fontsize=20)
-    ax2.legend(loc="upper right", fontsize='13')
+    ax2.set_ylabel('Spectral Acceleration (g)', fontsize=13)
+    ax2.set_xlabel('Period (s)', fontsize=13)
+    ax2.legend(loc="lower left", fontsize='11')
     ax2.set_xlim([0, 2.0])
     ax2.set_xscale('linear')
     ax2.set_yscale('linear')
@@ -393,9 +376,9 @@ def plot_governing_mce_multi_vs30(dstore, update_dstore=False):
     # add user guide message as a footer, centered below the x-axis
     message = 'See WebUI User Guide for complete explanation of plot contents.'
     fig.text(
-        0.5, 0.05,   # x=0.5 centers horizontally
+        0.5, 0.01,   # x=0.5 centers horizontally
         message,
-        ha='center', va='top',
+        ha='center', va='bottom',
         fontsize='small', color='black', alpha=0.85
     )
 
