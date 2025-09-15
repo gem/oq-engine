@@ -50,7 +50,8 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce_single_vs30,
+    plot_mean_hcurves_rtgm, plot_disagg_by_src,
+    plot_governing_mce_asce_7_16, plot_governing_mce_single_vs30,
     plot_governing_mce_multi_vs30, plot_sites, _find_fact_maxC, import_plt)
 
 DLL_df = pd.read_csv(io.StringIO('''\
@@ -897,14 +898,15 @@ def main(dstore, csm):
         if sids_to_plot:
             make_figure_hcurves(plt, sids_to_plot, dstore, notifications, vs30s)
 
-        # Governing MCE (2 rows, 1 column)
-        if n_sids == 1:
-            if len(notifications) == 0 or notifications[0]['name'] not in [
+        # Governing MCE
+        if len(notifications) == 0 or notifications[0]['name'] not in [
                 'zero_hazard', 'low_hazard']:
+            if oq.asce_version == 'ASCE7-16':
+                plot_governing_mce_asce_7_16(dstore, update_dstore=True)
+            elif n_sids == 1:
                 plot_governing_mce_single_vs30(dstore, update_dstore=True)
-        elif len(notifications) == 0 or notifications[0]['name'] not in [
-                'zero_hazard', 'low_hazard']:
-            plot_governing_mce_multi_vs30(dstore, update_dstore=True)
+            else:
+                plot_governing_mce_multi_vs30(dstore, update_dstore=True)
 
         # Disaggregation by Source (3 rows, n_sids columns)
         # NOTE: avoiding to add columns for vs30 for which no deterministic is computed

@@ -42,7 +42,8 @@ from openquake.calculators.postproc.plots import (
     plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d,
     adjust_limits, auto_limits)
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce_single_vs30,
+    plot_mean_hcurves_rtgm, plot_disagg_by_src,
+    plot_governing_mce_asce_7_16, plot_governing_mce_single_vs30,
     plot_governing_mce_multi_vs30, plot_sites)
 
 
@@ -762,6 +763,16 @@ def make_figure_mean_hcurves_rtgm(extractors, what):
     kwargs = parse_qs(what.split('?')[1])
     [sid] = kwargs.get('sid', ['0'])
     plt = plot_mean_hcurves_rtgm(dstore, sid=int(sid))
+    return plt
+
+
+def make_figure_governing_mce_asce_7_16(extractors, what):
+    """
+    $ oq plot "governing_mce_asce_7_16?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_governing_mce_asce_7_16(dstore)
     return plt
 
 
