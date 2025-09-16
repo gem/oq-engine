@@ -561,6 +561,10 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
         return out
 
 
+# NB: the engine is already parallelizing, so we must disable the
+# parallelization internal to onnxruntime to avoid oversubscription;
+# it is the same reason why in baselib/__init__.py we have a line
+# os.environ['OPENBLAS_NUM_THREADS'] = '1'
 def get_session(model):
     """
     :param model: path to a machine learning model
