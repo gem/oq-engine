@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Disabled the low level threads in TodorovicSilva2022NonParametric model
+
   [Christopher Brooks, Michele Simionato]
   * Improved error management for missing tools in install.py
   * Backported fix to Parker (2020)

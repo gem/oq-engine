@@ -710,12 +710,22 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
         return out
 
 
+def get_session(model):
+    """
+    :param model: path to a machine learning model
+    :returns: an InferenceSession with threads disabled suitable for the engine
+    """
+    opt = onnxruntime.SessionOptions()
+    opt.inter_op_num_threads = 1
+    opt.intra_op_num_threads = 1
+    return onnxruntime.InferenceSession(
+        model, opt, providers=onnxruntime.get_available_providers())
+
+
 class PicklableInferenceSession:
     def __init__(self, model):
         self.model = model
-        self.inference_session = onnxruntime.InferenceSession(
-            self.model, providers=onnxruntime.get_available_providers()
-        )
+        self.inference_session = get_session(self.model)
 
     def run(self, *args):
         return self.inference_session.run(*args)
@@ -725,9 +735,7 @@ class PicklableInferenceSession:
 
     def __setstate__(self, values):
         self.model = values["model"]
-        self.inference_session = onnxruntime.InferenceSession(
-            self.model, providers=onnxruntime.get_available_providers()
-        )
+        self.inference_session = get_session(self.model)
 
 
 class TodorovicSilva2022NonParametric(SecondaryPeril):
