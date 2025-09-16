@@ -103,7 +103,7 @@ class RamadanEtAl2023shallow(GMPE):
     two different attenuations with distances.
 
     Test tables are generated from a spreadsheet provided by the authors,
-    and modified according to OQ format (e.g. conversion from cm/s2 to m/s2).
+    and modified according to OQ format (e.g. conversion from cm/s2 to fractions of g).
     """
     kind = 'shallow'
 
@@ -155,7 +155,6 @@ class RamadanEtAl2023shallow(GMPE):
                 mean[m] = np.log(10.0 ** imean)
             # Return stddevs in terms of natural log scaling
             sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
-            # mean_LogNaturale = np.log((10 ** mean) * 1e-2 / g)
 
     # Sigma values in log10
     COEFFS = CoeffsTable(sa_damping=5, table="""
