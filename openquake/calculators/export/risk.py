@@ -809,6 +809,7 @@ def export_exposure(ekey, dstore):
     return [exposure_xml, assetcol_csv]
 
 
+# tested in impact_test[1]
 @export.add(('job', 'zip'))
 def export_job_zip(ekey, dstore):
     """
