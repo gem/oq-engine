@@ -100,8 +100,11 @@ def test_PAC():
                 warnings = notifications[notifications['level'] == b'warning']
                 assert len(warnings) == 0, f'{list(notifications)=}'
 
-            # check no plots created
+            assert 'png/site.png' in calc.datastore
+            # check no other plots created
+            assert 'png/mce.png' not in calc.datastore
             assert 'png/governing_mce.png' not in calc.datastore
+            assert 'png/mce_spectra.png' not in calc.datastore
             assert 'png/hcurves.png' not in calc.datastore
             assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
@@ -119,7 +122,8 @@ def test_KOR():
         asce07 = json.loads(s)
         aac(asce07['PGA'], 1.60312, atol=5E-5)
         # check all plots created
-        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/site.png' in calc.datastore
+        assert 'png/mce.png' in calc.datastore
         assert 'png/hcurves.png' in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
 
@@ -168,8 +172,11 @@ def test_CCA():
         assert len(warnings) == 1, f'{list(notifications)=}'
         assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
 
-        # check no plots created
+        assert 'png/site.png' in calc.datastore
+        # check no other plots created
+        assert 'png/mce.png' not in calc.datastore
         assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/mce_spectra.png' not in calc.datastore
         assert 'png/hcurves.png' not in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
@@ -222,8 +229,11 @@ def test_WAF():
         assert len(warnings) == 1, f'{list(notifications)=}'
         assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
 
-        # check no plots created
+        assert 'png/site.png' in calc.datastore
+        # check no other plots created
+        assert 'png/mce.png' not in calc.datastore
         assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/mce_spectra.png' not in calc.datastore
         assert 'png/hcurves.png' not in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
@@ -243,9 +253,11 @@ def test_WAF():
         assert len(warnings) == 1, f'{list(notifications)=}'
         assert warnings[0]['name'].decode('utf8') == 'below_min'
 
-        # check that 2 of 3 plots have been created
+        assert 'png/site.png' in calc.datastore
         assert 'png/hcurves.png' in calc.datastore
-        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/mce.png' in calc.datastore
+        assert 'png/mce_spectra.png' not in calc.datastore
+        assert 'png/governing_mce.png' not in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
 
 
@@ -288,10 +300,11 @@ def test_JPN():
         aac(df2[col], expected_uhs[col], atol=1E-5)
 
     if rtgmpy:
-        # check all plots created
-        assert 'png/governing_mce.png' in calc.datastore, 'governing'
-        assert 'png/hcurves.png' in calc.datastore, 'hcurves'
-        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore, 'disagg'
+        assert 'png/mce.png' not in calc.datastore
+        assert 'png/mce_spectra.png' not in calc.datastore
+        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/hcurves.png' in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
 
 
 def test_MFK():

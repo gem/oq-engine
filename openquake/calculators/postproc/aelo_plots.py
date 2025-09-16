@@ -252,26 +252,26 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
                 label='Governing $MCE_R$', linewidth=2,
                 facecolors='none', edgecolors='r')
     plt.grid('both')
-    plt.ylabel('Spectral Acceleration (g)', fontsize=20)
-    plt.xlabel('Period (s)', fontsize=20)
-    plt.legend(loc="upper right", fontsize='13')
+    plt.ylabel('Spectral Acceleration (g)', fontsize=13)
+    plt.xlabel('Period (s)', fontsize=13)
+    plt.legend(loc="upper right", fontsize='11')
     plt.xlim([-0.02, 1.2])
 
     # add user guide message
     message = 'See WebUI User Guide for complete explanation of plot contents.'
-    plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85 )
+    plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85)
 
     if update_dstore:
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
-        dstore['png/governing_mce.png'] = Image.open(bio)
+        dstore['png/mce.png'] = Image.open(bio)
     return plt
 
 
 def plot_governing_mce_single_vs30(dstore, site_idx=0, update_dstore=False):
     """
     :param dstore: the datastore
-    :returns: image of governing MCE
+    :returns: image of MCE spectra
     """
     plt = import_plt()
     _fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 15))
@@ -297,9 +297,9 @@ def plot_governing_mce_single_vs30(dstore, site_idx=0, update_dstore=False):
              linewidth=4, linestyle=':')
     ax1.grid(which='both', linestyle='--', linewidth=0.5, alpha=0.7)
     ax1.minorticks_on()
-    ax1.set_ylabel('Spectral Acceleration (g)', fontsize=20)
-    ax1.set_xlabel('Period (s)', fontsize=20)
-    ax1.legend(loc="lower left", fontsize='13')
+    ax1.set_ylabel('Spectral Acceleration (g)', fontsize=13)
+    ax1.set_xlabel('Period (s)', fontsize=13)
+    ax1.legend(loc="lower left", fontsize='11')
     ax1.set_xlim([min(T[1:]), max(T)])
 
     plt.rcParams.update({'font.size': 15})
@@ -315,9 +315,9 @@ def plot_governing_mce_single_vs30(dstore, site_idx=0, update_dstore=False):
     ax2.plot(T[1:], mce[1:], 'r', label='Governing $MCE_r$',
              linewidth=4, linestyle=':')
     ax2.grid('both')
-    ax2.set_ylabel('Spectral Acceleration (g)', fontsize=20)
-    ax2.set_xlabel('Period (s)', fontsize=20)
-    ax2.legend(loc="upper right", fontsize='13')
+    ax2.set_ylabel('Spectral Acceleration (g)', fontsize=13)
+    ax2.set_xlabel('Period (s)', fontsize=13)
+    ax2.legend(loc="upper right", fontsize='11')
     ax2.set_xlim([0, 2.0])
     ax1.set_xscale('log')
     ax1.set_yscale('log')
@@ -331,7 +331,7 @@ def plot_governing_mce_single_vs30(dstore, site_idx=0, update_dstore=False):
     if update_dstore:
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
-        dstore['png/governing_mce.png'] = Image.open(bio)
+        dstore['png/mce_spectra.png'] = Image.open(bio)
     return plt
 
 
