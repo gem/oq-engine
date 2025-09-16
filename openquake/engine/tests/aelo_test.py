@@ -316,6 +316,12 @@ def test_MFK():
     with (mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}),
           mock.patch('openquake.hazardlib.source.multi_fault.BLOCKSIZE', 5),
           logs.init(job_ini) as log):
+        sites = log.get_oqparam().sites
+        lon = sites[0][0]
+        lat = sites[0][1]
+        site = 'MFK'
+        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760')
+        log.params.update(get_params_from(dic, MOSAIC_DIR, (), job_ini))
         base.calculators(log.get_oqparam(), log.calc_id).run()
 
 
