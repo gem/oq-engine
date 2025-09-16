@@ -24,7 +24,7 @@ import getpass
 import cProfile
 import pandas
 import collections
-from openquake.baselib import config, performance
+from openquake.baselib import config, performance, sap
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
@@ -345,3 +345,5 @@ impact.number_of_ground_motion_fields = 'Number of ground motion fields'
 
 main = dict(run_site=run_site, impact=impact,
             sample_rups=sample_rups)
+if __name__ == '__main__':
+    sap.run(main)
