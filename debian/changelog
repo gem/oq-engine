@@ -1,3 +1,6 @@
+  [Claudia Mascandola]
+  * Added a Ramadan et al (2023) gsim
+
   [Michele Simionato]
   * Disabled the threads in PicklableInferenceSession, making it possible
     to use the TodorovicSilva2022NonParametric model in high concurrency
