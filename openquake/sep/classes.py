@@ -576,10 +576,11 @@ def get_session(model):
 class PicklableInferenceSession:
     def __init__(self, model):
         self.model = model
-        self.inference_session = get_session(self.model)
+        self.inference_session = None
 
     def run(self, *args):
-        return self.inference_session.run(*args)
+        session = self.inference_session or get_session(self.model)
+        return session.run(*args)
 
     def __getstate__(self):
         return {"model": self.model}
