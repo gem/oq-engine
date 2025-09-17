@@ -268,7 +268,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     return plt
 
 
-def plot_governing_mce_single_vs30(dstore, site_idx=0, update_dstore=False):
+def plot_mce_spectra(dstore, site_idx=0, update_dstore=False):
     """
     :param dstore: the datastore
     :returns: image of MCE spectra

@@ -51,7 +51,7 @@ from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
     plot_mean_hcurves_rtgm, plot_disagg_by_src,
-    plot_governing_mce_asce_7_16, plot_governing_mce_single_vs30,
+    plot_governing_mce_asce_7_16, plot_mce_spectra,
     plot_governing_mce, plot_sites, _find_fact_maxC, import_plt)
 
 DLL_df = pd.read_csv(io.StringIO('''\
@@ -894,12 +894,10 @@ def main(dstore, csm):
             if oq.asce_version == 'ASCE7-16':
                 plot_governing_mce_asce_7_16(dstore, update_dstore=True)
             elif n_sids == 1:
-                plot_governing_mce_single_vs30(dstore, update_dstore=True)
+                plot_mce_spectra(dstore, update_dstore=True)
                 plot_governing_mce(dstore, update_dstore=True) # in simplified page
             else:
                 plot_governing_mce(dstore, update_dstore=True)
-            # TODO: "Replace Show governing MCE" -> "Show MCE spectra"
-            #       New button in simplified page: "Show governing MCE"
             # Disaggregation by Source (3 rows, n_sids columns)
             make_figure_disagg_by_src(plt, sids_to_plot, dstore, vs30s)
     if len(notifications):
