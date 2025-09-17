@@ -446,7 +446,7 @@ def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, sid,
             rtgm_probmce, mrs, dstore):
     # identify the sources that have a contribution > than fact (here 10%) of
     # the largest contributor
-
+    fig1, ax1 = plt.subplots()
     # annual frequency of exceedance:
     T = from_string(imt).period
     f = 1 if imt == "PGA" else _find_fact_maxC(T, ASCE_version)
@@ -455,8 +455,10 @@ def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, sid,
     imls = numpy.array([iml * f for iml in imls_o])
     # have to compute everything for max comp. and for geom. mean
     RTGM = rtgm_probmce[m]
+    RTGM_o = rtgm_probmce[m] / f
 
     afe_target = _find_afe_target(imls, AFE[m], RTGM)
+    afe_target_o = _find_afe_target(imls_o, AFE[m], RTGM_o)
 
     # maximum component
     ax[n].loglog(imls, AFE[m], 'k', label=_get_label(imt),
@@ -466,6 +468,15 @@ def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, sid,
     ax[n].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2, zorder=3)
     ax[n].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
                  linewidth=2, zorder=3)
+    # populate individual plots
+    ax1.loglog(imls_o, AFE[m], 'k', label=imt + ' - Geom. mean',
+               linewidth=2, zorder=3)
+    ax1.loglog([numpy.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
+               'k--', linewidth=2, zorder=3)
+    ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2,
+               zorder=3)
+    ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
+               linewidth=2, zorder=3)
 
     _plot(ax, None, sid, plot_idx, m, n, imls, imls_o,
           mrs, rtgm_probmce, afe_target, fact)
@@ -476,6 +487,25 @@ def _plot_m(plt, plot_idx, ax, m, n, imt, AFE, fact, imtls, sid,
     ax[n].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='11')
     ax[n].set_ylim([10E-6, 1.1])
     ax[n].set_xlim([0.01, 5])
+
+    # populate single imt plots - geometric mean
+    ax1.grid('both')
+    ax1.set_xlabel(imt+' (g)', fontsize=16)
+    ax1.set_ylabel('Annual Freq. Exceedance', fontsize=16)
+    ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
+    ax1.set_ylim([10E-6, 1.1])
+    ax1.set_xlim([0.01, 5])
+    # save single imt plot
+    bio1 = io.BytesIO()
+    fig1.savefig(bio1, format='png', bbox_inches='tight')
+    # keep these in webui until we finish checks and have a command
+    # line exporter, then we can change the name to _{imt} and they
+    # will not appear in the webui
+    oq = dstore['oqparam']
+    vs30s = oq.override_vs30
+    vs30 = vs30s[sid]
+    dstore[f'png/disagg_by_src-{imt}-vs30_{vs30}.png'] = Image.open(bio1)
+    fig1.tight_layout()
 
 
 def plot_disagg_by_src(dstore, sid=0, axes=None):
