@@ -1101,11 +1101,12 @@ the user has to prepare the site model file, the logic tree file
 and the job.ini file carefully.
 
 Let's start from the job.ini file. Here the user just needs to specify
-the ``site_labels`` i.e. the list of regions with specific logic trees.
-An example could be::
+the ``site_labels`` dictionary. This is a dictionary which explicitly
+links each region-specific GMM logic tree with the ``ilabel`` in the
+site model. An example could be::
 
   # add to the job.ini
-  site_labels = Cascadia LosAngeles
+  site_labels = {"Cascadia": 1, "LosAngeles": 2}
 
 This means that there are two special regions ("Cascadia" and "LosAngeles",
 notice that the site label cannot contain spaces), plus a default region
@@ -1118,7 +1119,10 @@ an integer label starting from 1, i.e. in this example::
 The site model file has to be prepared accordingly: externally to the engine
 the user has to associate the sites belonging to the "Cascadia" region
 with the ``ilabel`` 1 and the sites belonging to the "LosAngeles" region
-with the ``ilabel`` 2. All the other sites get the default ``ilabel=0``.
+with the ``ilabel`` 2. All the other sites get the default ``ilabel=0``. The
+default GMM logic trees for each TRT will be applied to sites with ``ilabel=0``,
+and otherwise the region-specific GMM logic tree associated with each ``ilabel``
+will be applied. 
 
 Finally the ``source_model_logic_tree_file`` has to be prepared by
 collecting together the default source model, the source model for
