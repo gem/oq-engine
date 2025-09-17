@@ -33,6 +33,12 @@
                   Show site</a>
               </div>
               {% endif %}
+              {% if governing_mce %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
+                  Show Multi-Period MCEr Spectrum</a>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>

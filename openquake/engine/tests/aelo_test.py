@@ -100,8 +100,11 @@ def test_PAC():
                 warnings = notifications[notifications['level'] == b'warning']
                 assert len(warnings) == 0, f'{list(notifications)=}'
 
-            # check no plots created
+            assert 'png/site.png' in calc.datastore
+            # check no other plots created
+            assert 'png/mce.png' not in calc.datastore
             assert 'png/governing_mce.png' not in calc.datastore
+            assert 'png/mce_spectra.png' not in calc.datastore
             assert 'png/hcurves.png' not in calc.datastore
             assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
@@ -119,7 +122,8 @@ def test_KOR():
         asce07 = json.loads(s)
         aac(asce07['PGA'], 1.60312, atol=5E-5)
         # check all plots created
-        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/site.png' in calc.datastore
+        assert 'png/mce.png' in calc.datastore
         assert 'png/hcurves.png' in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
 
@@ -168,8 +172,11 @@ def test_CCA():
         assert len(warnings) == 1, f'{list(notifications)=}'
         assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
 
-        # check no plots created
+        assert 'png/site.png' in calc.datastore
+        # check no other plots created
+        assert 'png/mce.png' not in calc.datastore
         assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/mce_spectra.png' not in calc.datastore
         assert 'png/hcurves.png' not in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
@@ -222,8 +229,11 @@ def test_WAF():
         assert len(warnings) == 1, f'{list(notifications)=}'
         assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
 
-        # check no plots created
+        assert 'png/site.png' in calc.datastore
+        # check no other plots created
+        assert 'png/mce.png' not in calc.datastore
         assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/mce_spectra.png' not in calc.datastore
         assert 'png/hcurves.png' not in calc.datastore
         assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
@@ -243,18 +253,20 @@ def test_WAF():
         assert len(warnings) == 1, f'{list(notifications)=}'
         assert warnings[0]['name'].decode('utf8') == 'below_min'
 
-        # check that 2 of 3 plots have been created
+        assert 'png/site.png' in calc.datastore
         assert 'png/hcurves.png' in calc.datastore
-        assert 'png/governing_mce.png' in calc.datastore
-        assert 'png/hcurves.png' in calc.datastore
-        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+        assert 'png/mce.png' in calc.datastore
+        assert 'png/mce_spectra.png' not in calc.datastore
+        assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
 
 
 def test_JPN():
     # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
     expected = os.path.join(MOSAIC_DIR, 'JPN/in/expected/uhs.csv')
-    dic = dict(sites='139 36', site='JPN-site', vs30='760',
+    # testing the vs30 values corresponding to the "default" site class
+    dic = dict(sites='139 36', site='JPN-site', vs30='260 365 530',
                asce_version='ASCE7-22')
     with logs.init(job_ini) as log:
         params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
@@ -281,17 +293,18 @@ def test_JPN():
     df2 = pandas.read_csv(uhs_fname, skiprows=1, index_col='period')
     assert len(df1) == size
     assert len(df2) == M
-    expected_uhs = pandas.read_csv(expected, skiprows=1, index_col='period')
+    expected_uhs = pandas.read_csv(expected, index_col='period')
     expected_uhs.columns = ["poe-0.02", "poe-0.05", "poe-0.1", "poe-0.2",
                             "poe-0.5"]
     for col in expected_uhs.columns:
         aac(df2[col], expected_uhs[col], atol=1E-5)
 
     if rtgmpy:
-        # check all plots created
-        assert 'png/governing_mce.png' in calc.datastore, 'governing'
-        assert 'png/hcurves.png' in calc.datastore, 'hcurves'
-        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore, 'disagg'
+        assert 'png/mce.png' not in calc.datastore
+        assert 'png/mce_spectra.png' not in calc.datastore
+        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/hcurves.png' in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
 
 
 def test_MFK():
@@ -303,6 +316,12 @@ def test_MFK():
     with (mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'no'}),
           mock.patch('openquake.hazardlib.source.multi_fault.BLOCKSIZE', 5),
           logs.init(job_ini) as log):
+        sites = log.get_oqparam().sites
+        lon = sites[0][0]
+        lat = sites[0][1]
+        site = 'MFK'
+        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760')
+        log.params.update(get_params_from(dic, MOSAIC_DIR, (), job_ini))
         base.calculators(log.get_oqparam(), log.calc_id).run()
 
 
