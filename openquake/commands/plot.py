@@ -1147,6 +1147,22 @@ def make_figure_sites(extractors, what):
     return plt
 
 
+def make_figure_show_png(extractors, what):
+    """
+    oq plot "show_png?site.png"
+
+    shows an image stored in 'png/IMAGE_NAME'
+    """
+    plt = import_plt()
+    [ex] = extractors
+    dstore = ex.dstore
+    name = what.split('?')[1]
+    img = dstore['png'][name]
+    plt.imshow(img)
+    plt.axis('off')
+    return plt
+
+
 def plot_wkt(wkt_string):
     """
     Plot a WKT string describing a polygon
