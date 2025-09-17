@@ -1124,13 +1124,12 @@ default GMM logic trees for each TRT will be applied to sites with ``ilabel=0``,
 and otherwise the region-specific GMM logic tree associated with each ``ilabel``
 will be applied. 
 
-Finally the ``source_model_logic_tree_file`` has to be prepared by
-collecting together the default source model, the source model for
-region 1 and the source model for region 2. If all the logic trees
-have the same number of branches per branchset
-there is nothing more to do. However, if some branches are missing,
-you will get an error. The solution is to add the missing branches
-by using a ``DummyGMPE`` with a weight of zero:
+Finally the ``gsim_logic_tree_file`` has to be prepared by
+collecting together the default GMM logic trees, the GMM logic tree
+for region 1 and the GMM logic tree for region 2. If all the logic trees
+have the same number of branches per branchset there is nothing more to do.
+However, if some branches are missing, you will get an error. The solution
+is to add the missing branches by using a ``DummyGMPE`` with a weight of zero:
 
 .. code-block:: xml
 
