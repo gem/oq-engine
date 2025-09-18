@@ -80,8 +80,6 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
 
     available_imts = set(shakemap['val'].dtype.names)
 
-    bbox = (shakemap['lon'].min(), shakemap['lat'].min(),
-            shakemap['lon'].max(), shakemap['lat'].max())
     check_required_imts(required_imts, available_imts)
 
     # build a copy of the ShakeMap with only the relevant IMTs
@@ -90,7 +88,6 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
     if sitecol is None:
         return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
 
-    sitecol = apply_bounding_box(sitecol, bbox)
     return geo.utils.assoc(shakemap, sitecol, assoc_dist, mode)
 
 
