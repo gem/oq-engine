@@ -323,6 +323,7 @@ may be tweaked depending on the model)::
   
   source_model_logic_tree_file = ssmLT.xml
   gsim_logic_tree_file = gmmLT.xml
+  intensity_measure_types = PGA SA(0.1)
   truncation_level = 3
   maximum_distance = 300.0
   minimum_magnitude = 5
