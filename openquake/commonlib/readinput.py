@@ -39,8 +39,6 @@ import itertools
 
 import numpy
 import pandas
-from scipy.spatial import cKDTree
-from scipy.spatial.distance import cdist
 import requests
 from shapely import wkt, geometry
 
@@ -53,14 +51,13 @@ from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
-from openquake.hazardlib.calc.filters import getdefault, get_distances
+from openquake.hazardlib.calc.filters import getdefault
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.geo.utils import spherical_to_cartesian, hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
@@ -461,44 +458,6 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
-def rup_radius(rup):
-    """
-    Maximum distance from the rupture mesh to the hypocenter
-    """
-    hypo = rup.hypocenter
-    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
-    radius = cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
-    return radius
-
-
-def filter_site_array_around(array, rup, dist):
-    """
-    :param array: array with fields 'lon', 'lat'
-    :param rup: a rupture object
-    :param dist: integration distance in km
-    :returns: slice to the rupture
-    """
-    hypo = rup.hypocenter
-    x, y, z = hypo.x, hypo.y, hypo.z
-    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
-    xyz = spherical_to_cartesian(x, y, z)
-
-    # first raw filtering
-    tree = cKDTree(xyz_all)
-    # NB: on macOS query_ball returns the indices in a different order
-    # than on linux and windows, hence the need to sort
-    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
-    idxs.sort()
-
-    # then fine filtering
-    r_sites = site.SiteCollection.from_(array[idxs])
-    dists = get_distances(rup, r_sites, 'rrup')
-    ids, = numpy.where(dists < dist)
-    if len(ids) < len(idxs):
-        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
-    return r_sites.array[ids]
-
-
 def get_site_model_around(site_model_hdf5, rup, dist):
     """
     :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
@@ -508,7 +467,7 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
-    return filter_site_array_around(sm, rup, dist)
+    return asset.filter_site_array_around(sm, rup, dist)
 
 
 def _smparse(fname, oqparam, arrays, sm_fieldsets):
@@ -1129,7 +1088,7 @@ def get_exposure(oqparam, h5=None):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             h6 = [x.encode('ascii') for x in sorted(set(
-                hex6(sm['lon'], sm['lat'])))]
+                geo.utils.hex6(sm['lon'], sm['lat'])))]
             exposure = asset.Exposure.read_around(fnames[0], h6)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:

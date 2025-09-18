@@ -19,18 +19,23 @@ import operator
 import itertools
 import logging
 import time
+import copy
 import os
 
 import numpy
 import pandas
 import fiona
+from scipy.spatial import cKDTree
+from scipy.spatial.distance import cdist
 from shapely import geometry, prepare, contains_xy
 
 from openquake.baselib import hdf5, general, config
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import valid, nrml, geo, InvalidFile
+from openquake.hazardlib import valid, nrml, geo, InvalidFile, site
 from openquake.hazardlib.geo.utils import SiteAssociationError
+from openquake.hazardlib.geo.utils import spherical_to_cartesian
+from openquake.hazardlib.calc.filters import get_distances
 
 U8 = numpy.uint8
 U32 = numpy.uint32
@@ -191,6 +196,44 @@ def to_tuple(rec, aggby):
         else:
             lst.append(k)
     return tuple(lst)
+
+
+def rup_radius(rup):
+    """
+    Maximum distance from the rupture mesh to the hypocenter
+    """
+    hypo = rup.hypocenter
+    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
+    radius = cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
+    return radius
+
+
+def filter_site_array_around(array, rup, dist):
+    """
+    :param array: array with fields 'lon', 'lat' or Mesh instance
+    :param rup: a rupture object
+    :param dist: integration distance in km
+    :returns: slice to the rupture
+    """
+    hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
+    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+
+    # first raw filtering
+    tree = cKDTree(xyz_all)
+    # NB: on macOS query_ball returns the indices in a different order
+    # than on linux and windows, hence the need to sort
+    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+    idxs.sort()
+
+    # then fine filtering
+    r_sites = site.SiteCollection.from_(array[idxs])
+    dists = get_distances(rup, r_sites, 'rrup')
+    ids, = numpy.where(dists < dist)
+    if len(ids) < len(idxs):
+        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
+    return r_sites.array[ids]
 
 
 class TagCollection(object):
@@ -570,7 +613,8 @@ class AssetCollection(object):
             if aggby == ['id']:
                 aggids[ag] = self['ordinal']
             else:
-                aggids[ag] = [key2i[ag, to_tuple(rec, aggby)] for rec in self[aggby]]
+                aggids[ag] = [key2i[ag, to_tuple(rec, aggby)]
+                              for rec in self[aggby]]
         return aggids, [decode(vals) for vals in aggkey.values()]
 
     def reduce(self, sitecol):
@@ -1149,6 +1193,16 @@ class Exposure(object):
         self.mesh = mesh
         self.assets = array
         self.occupancy_periods = ofields
+
+    def around(self, rup, dist):
+        """
+        Reduce the mesh and the assets around the rupture and returns
+        a new Exposure instance
+        """
+        new = copy.copy(self)
+        new.mesh = filter_site_array_around(self.mesh, rup, dist)
+        new.array = filter_site_array_around(self.array, rup, dist)
+        return new
 
     def _csv_header(self, value='value-', occupants='occupants_'):
         """
