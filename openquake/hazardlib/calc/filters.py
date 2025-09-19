@@ -366,12 +366,6 @@ def filter_site_array_around(array, rup, dist):
     :param dist: integration distance in km
     :returns: slice to the rupture
     """
-    if isinstance(array, pandas.DataFrame):
-        # filtering the assets computing all distances the slow way
-        mesh = Mesh(array.lon, array.lat)
-        dists = get_distances(rup, mesh, 'rrup')
-        return array[dists < dist]
-
     # first raw filtering
     hypo = rup.hypocenter
     x, y, z = hypo.x, hypo.y, hypo.z
@@ -401,8 +395,13 @@ class RuptureFilter(object):
         self.rup = rup
         self.dist = dist
 
-    def __call__(self, array):
-        return filter_site_array_around(array, self.rup, self.dist)
+    def __call__(self, array_df):
+        if isinstance(array_df, pandas.DataFrame):
+            # filtering assets computing all the distances the slow way
+            mesh = Mesh(array_df.lon, array_df.lat)
+            dists = get_distances(self.rup, mesh, 'rrup')
+            return array_df[dists < self.dist]
+        return filter_site_array_around(array_df, self.rup, self.dist)
 
 
 class SourceFilter(object):
