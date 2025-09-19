@@ -33,6 +33,7 @@ from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
+F32 = numpy.float32
 U32 = numpy.uint32
 MINMAG = 2.5
 MAXMAG = 10.2  # to avoid breaking PAC
@@ -398,7 +399,7 @@ class RuptureFilter(object):
     def __call__(self, array_df):
         if isinstance(array_df, pandas.DataFrame):
             # filtering assets computing all the distances the slow way
-            mesh = Mesh(array_df.lon, array_df.lat)
+            mesh = Mesh(F32(array_df.lon), F32(array_df.lat))
             dists = get_distances(self.rup, mesh, 'rrup')
             return array_df[dists < self.dist]
         return filter_site_array_around(array_df, self.rup, self.dist)
