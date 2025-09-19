@@ -399,6 +399,12 @@ def get_mesh_exp(oqparam, h5=None):
         sm = get_site_model(oqparam, h5)
         mesh = geo.Mesh(sm['lon'], sm['lat'])
         return mesh, exposure
+    elif exposure and oqparam.rupture_xml or oqparam.rupture_dict:
+        rup = get_rupture(oqparam)
+        dist = oqparam.maximum_distance('*')(rup.mag)
+        exposure = exposure.around(rup, dist)
+        breakpoint()
+        return exposure.mesh, exposure
     if oqparam.sites:
         mesh = geo.Mesh.from_coords(oqparam.sites)
         return mesh, exposure

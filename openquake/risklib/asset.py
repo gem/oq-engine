@@ -210,14 +210,20 @@ def rup_radius(rup):
 
 def filter_site_array_around(array, rup, dist):
     """
-    :param array: array with fields 'lon', 'lat' or Mesh instance
+    :param array: array with fields 'lon', 'lat'
     :param rup: a rupture object
     :param dist: integration distance in km
     :returns: slice to the rupture
     """
+    if len(array.shape) > 1: # comes from a Mesh
+        lons = array[:, 0]
+        lats = array[:, 1]
+    else:
+        lons = array['lon']
+        lats = array['lat']
     hypo = rup.hypocenter
     x, y, z = hypo.x, hypo.y, hypo.z
-    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
+    xyz_all = spherical_to_cartesian(lons, lats, 0)
     xyz = spherical_to_cartesian(x, y, z)
 
     # first raw filtering
@@ -228,7 +234,11 @@ def filter_site_array_around(array, rup, dist):
     idxs.sort()
 
     # then fine filtering
-    r_sites = site.SiteCollection.from_(array[idxs])
+    if len(array.shape) > 1: # comes from a Mesh
+        r_sites = site.SiteCollection.from_points(
+            array[idxs, 0], array[idxs, 1])
+    else:
+        r_sites = site.SiteCollection.from_(array[idxs])
     dists = get_distances(rup, r_sites, 'rrup')
     ids, = numpy.where(dists < dist)
     if len(ids) < len(idxs):
@@ -1200,8 +1210,8 @@ class Exposure(object):
         a new Exposure instance
         """
         new = copy.copy(self)
-        new.mesh = filter_site_array_around(self.mesh, rup, dist)
-        new.array = filter_site_array_around(self.array, rup, dist)
+        new.mesh = filter_site_array_around(self.mesh.array, rup, dist)
+        new.array = filter_site_array_around(self.mesh.array, rup, dist)
         return new
 
     def _csv_header(self, value='value-', occupants='occupants_'):
