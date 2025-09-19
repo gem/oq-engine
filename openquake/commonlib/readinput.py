@@ -1097,12 +1097,18 @@ def get_exposure(oqparam, h5=None):
                     oq.all_cost_types = loss_types
                     oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
         else:
+            if oqparam.rupture_xml or oqparam.rupture_dict:
+                rup = get_rupture(oqparam)
+                dist = oqparam.maximum_distance('*')(rup.mag)
+                rupfilter = RuptureFilter(rup, dist)
+            else:
+                rupfilter = None
             exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,
                 oq.ignore_missing_costs,
                 errors='ignore' if oq.ignore_encoding_errors else None,
                 infr_conn_analysis=oq.infrastructure_connectivity_analysis,
-                aggregate_by=oq.aggregate_by)
+                aggregate_by=oq.aggregate_by, rupfilter=rupfilter)
     return exposure
 
 

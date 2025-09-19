@@ -1043,7 +1043,7 @@ class Exposure(object):
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, tagcol=None, errors=None,
-                 infr_conn_analysis=False, aggregate_by=None):
+                 infr_conn_analysis=False, aggregate_by=None, rupfilter=None):
         """
         :returns: an :class:`Exposure` instance keeping all the assets in
             memory
@@ -1063,7 +1063,7 @@ class Exposure(object):
         exp = None
         dfs = []
         for exposure, df in itertools.starmap(read_exp_df, allargs):
-            dfs.append(df)
+            dfs.append(rupfilter(df) if rupfilter else df)
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)

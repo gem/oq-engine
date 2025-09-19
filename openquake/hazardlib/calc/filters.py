@@ -22,11 +22,13 @@ import logging
 import operator
 from contextlib import contextmanager
 import numpy
+import pandas
 from scipy.spatial import KDTree, distance
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
@@ -346,6 +348,7 @@ def close_ruptures(ruptures, sites, dist=800.):
 
 default = IntegrationDistance({'default': [(MINMAG, 1000), (MAXMAG, 1000)]})
 
+
 def rup_radius(rup):
     """
     Maximum distance from the rupture mesh to the hypocenter
@@ -363,12 +366,18 @@ def filter_site_array_around(array, rup, dist):
     :param dist: integration distance in km
     :returns: slice to the rupture
     """
+    if isinstance(array, pandas.DataFrame):
+        # filtering the assets computing all distances the slow way
+        mesh = Mesh(array.lon, array.lat)
+        dists = get_distances(rup, mesh, 'rrup')
+        return array[dists < dist]
+
+    # first raw filtering
     hypo = rup.hypocenter
     x, y, z = hypo.x, hypo.y, hypo.z
     xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
     xyz = spherical_to_cartesian(x, y, z)
 
-    # first raw filtering
     tree = KDTree(xyz_all)
     # NB: on macOS query_ball returns the indices in a different order
     # than on linux and windows, hence the need to sort
