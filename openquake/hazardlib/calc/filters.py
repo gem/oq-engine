@@ -346,6 +346,55 @@ def close_ruptures(ruptures, sites, dist=800.):
 
 default = IntegrationDistance({'default': [(MINMAG, 1000), (MAXMAG, 1000)]})
 
+def rup_radius(rup):
+    """
+    Maximum distance from the rupture mesh to the hypocenter
+    """
+    hypo = rup.hypocenter
+    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
+    radius = distance.cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
+    return radius
+
+
+def filter_site_array_around(array, rup, dist):
+    """
+    :param array: array with fields 'lon', 'lat'
+    :param rup: a rupture object
+    :param dist: integration distance in km
+    :returns: slice to the rupture
+    """
+    hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
+    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+
+    # first raw filtering
+    tree = KDTree(xyz_all)
+    # NB: on macOS query_ball returns the indices in a different order
+    # than on linux and windows, hence the need to sort
+    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+    idxs.sort()
+
+    # then fine filtering
+    r_sites = site.SiteCollection.from_(array[idxs])
+    dists = get_distances(rup, r_sites, 'rrup')
+    ids, = numpy.where(dists < dist)
+    if len(ids) < len(idxs):
+        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
+    return r_sites.array[ids]
+
+
+class RuptureFilter(object):
+    """
+    Filter arrays/dataframes with lon, lat around a rupture
+    """
+    def __init__(self, rup, dist):
+        self.rup = rup
+        self.dist = dist
+
+    def __call__(self, array):
+        return filter_site_array_around(array, self.rup, self.dist)
+
 
 class SourceFilter(object):
     """
