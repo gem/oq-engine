@@ -570,7 +570,8 @@ class AssetCollection(object):
             if aggby == ['id']:
                 aggids[ag] = self['ordinal']
             else:
-                aggids[ag] = [key2i[ag, to_tuple(rec, aggby)] for rec in self[aggby]]
+                aggids[ag] = [key2i[ag, to_tuple(rec, aggby)]
+                              for rec in self[aggby]]
         return aggids, [decode(vals) for vals in aggkey.values()]
 
     def reduce(self, sitecol):
