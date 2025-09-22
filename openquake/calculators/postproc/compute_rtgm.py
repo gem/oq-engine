@@ -452,24 +452,24 @@ class MCEGetter:
             yield (sid, mag_dst_eps_sig, mce_df)
 
 def compute_mce_governing(dstore, sitecol, locs):
-        """
-        Note that for ASCE7-22 and default site class the site is multiplied 3 times 
-        with different values of the vs30 and the MCE is computed as the maximum MCE
-        across the sites for each IMT. For all other site class, the same mce computed 
-        before is used.
-        """
-        # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
-        mce_df = dstore.read_df('mce')
-        mce_df['period'] = [from_string(x).period for x in mce_df.IMT]
-        del mce_df['IMT']
-        out = []
-        for sids in locs.values():
-            csi = sitecol.custom_site_id[sids[0]].decode('ascii').split(':')[0]
-            mcedf = mce_df[np.isin(mce_df.sid, sids)]
-            df = mcedf.groupby('period').MCE.max().to_frame()  # MCE by period
-            df['custom_site_id'] = csi
-            out.append(df)
-        return pd.concat(out).reset_index()
+    """
+    Note that for ASCE7-22 and default site class the site is multiplied 3 times 
+    with different values of the vs30 and the MCE is computed as the maximum MCE
+    across the sites for each IMT. For all other site class, the same mce computed 
+    before is used.
+    """
+    # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
+    mce_df = dstore.read_df('mce')
+    mce_df['period'] = [from_string(x).period for x in mce_df.IMT]
+    del mce_df['IMT']
+    out = []
+    for sids in locs.values():
+        csi = sitecol.custom_site_id[sids[0]].decode('ascii').split(':')[0]
+        mcedf = mce_df[np.isin(mce_df.sid, sids)]
+        df = mcedf.groupby('period').MCE.max().to_frame()  # MCE by period
+        df['custom_site_id'] = csi
+        out.append(df)
+    return pd.concat(out).reset_index()
 
 def uhs_1site(dstore, sid):
     oq = dstore['oqparam']
@@ -689,17 +689,17 @@ def get_spectra_orig(dstore, sid, custom_id, mce, facts):
         BSE2E = [min(n, e) for n, e in zip(BSE2N, BSE2E_uhs)]
         BSE1E_uhs = [f * h for f, h in zip(facts, hmap[:, poe20_50])]
         BSE1E = [min(n, e) for n, e in zip(BSE1N, BSE1E_uhs)]
-        uhs_475 = poe10_50
+        uhs_475 = hmap[:, poe10_50]
     
-        sa_data = {'custom_site_id': custom_id * len(imts),
-                   'sid': sid * len(imts),
+        sa_data = {'custom_site_id': [custom_id] * len(imts),
+                   'sid': [sid] * len(imts),
                     'IMT': imts,
                     'period': periods,
                     'BSE2N': BSE2N,
                     'BSE2E': BSE2E,
                     'BSE1N': BSE1N,
                     'BSE1E': BSE1E,
-                    "uhs_475": uhs_475}
+                    'uhs_475': uhs_475}
 
         return sa_data
         
@@ -760,19 +760,26 @@ def get_zero_hazard_asce41(asce_version):
         ]
     return {key: na for key in keys}
 
-def compute_max_sa_asce41(sa_asce41,sitecol,locs):
+def compute_max_sa_asce41(dstore,sitecol,locs):
 
     # replace the maximum per each poe for sites in the default site class
-    asce41_final = []
+   
     keys_asce41 = ['BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
+
+    asce41_df = dstore.read_df('spectra_asce41')
+    asce41_df['period'] = [from_string(x).period for x in asce41_df.IMT]
+    del asce41_df['IMT']
+    out = []
     for sids in locs.values():
-        csi = sitecol.custom_site_id[sids[0]].decode('ascii').split(':')[0]       
-       # take max across sites, per period, for all poes
-        df = df_all.groupby("period")[keys_asce41].max().reset_index()
+        
+        csi = sitecol.custom_site_id[sids[0]].split(':')[0]
+        asce41df = asce41_df[np.isin(asce41_df.sid, sids)]
+        df = asce41df.groupby('period')[keys_asce41].max()#.to_frame()  # ASCE41 by period
         df['custom_site_id'] = csi
-        asce41_final.append(df)
-    return asce41_final
-    
+        out.append(df)
+ 
+    return pd.concat(out).reset_index()
+            
 def calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     """
     :yields: (sid, mag_dst_eps_sig, mce_df)
@@ -861,7 +868,9 @@ def main(dstore, csm):
 
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
+        
    
+    ####################
 
     # final MCE spectra, results for ASCE7:
     df = compute_mce_governing(dstore, sitecol, locs)
@@ -892,6 +901,8 @@ def main(dstore, csm):
     df_asce = pd.DataFrame.from_dict(asce07, orient="index")
     dstore["asce07"] = df_asce.to_dict() 
 
+    ####################
+
     # compute ASCE 41:
     
     # 1) get spectra asce41 for each sid and each Vs30
@@ -900,39 +911,48 @@ def main(dstore, csm):
     mce_df = dstore.read_df('mce')
     rtgm_df = dstore.read_df('rtgm')
     sitecol = dstore.read_df('sitecol')    
-    sa_asce41 = []
-    for sid in sids:
+    
+    sa_asce41 = []  # list to collect DataFrames for each site
+
+    for sid in sitecol['sids']:
         uhs_site = df_uhs[df_uhs['sid'] == sid]
-        print(uhs_site)
-        mce_df_site =  mce_df[mce_df['sid']==sid]['MCE']
-        custom_id = sitecol[sitecol['sids']==sid]['custom_site_id']
-        facts = rtgm_df[rtgm_df['sid']==sid]['fact']
-        uhs_asce41 = get_spectra(dstore, sid, custom_id, uhs_site, mce_df_site, facts)
-        test = get_spectra_orig(dstore, sid, custom_id, mce_df_site, facts)
-        print(test['BSE2E'])
-        print(uhs_asce41['BSE2E'])
-        breakpoint()
-        sa_asce41.append(uhs_asce41)
-        logging.info(f'{uhs_asce41=}')
+        mce_df_site = mce_df[mce_df['sid'] == sid]['MCE']
+        custom_id = sitecol[sitecol['sids'] == sid]['custom_site_id'].values[0]  # get single value
+        facts = rtgm_df[rtgm_df['sid'] == sid]['fact']
+    
+        # Get the spectra for this site
+        uhs_asce41 = get_spectra_orig(dstore, sid, custom_id, mce_df_site, facts)
+    
+        # Convert to DataFrame and reset index
+        df_out = pd.DataFrame(uhs_asce41).reset_index(drop=True)
+        sa_asce41.append(df_out)
+    
+        logging.info(f'{df_out=}')  # optional
+    
+    df_final = pd.concat(sa_asce41, ignore_index=True)
+    df_final = df_final.astype({col: "string" for col in df_final.select_dtypes("object").columns})
+    df_final = df_final.reset_index(drop=True)
+    dstore.create_df("spectra_asce41", df_final)
 
     
     # 2) compute max of asce41 spectra for default site class:
-    
-    asce41_spectra = compute_max_sa_asce41(sa_asce41,sitecol,locs)
+    asce41_spectra = compute_max_sa_asce41(dstore,sitecol,locs)
     asce41_spectra.columns = ['period', 'custom_site_id','BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
-    dstore.create_df('asce41_sa', asce41_spectra)
+    dstore.create_df('asce41_sa_final', asce41_spectra)
 
     # 3) compute asce41 parameters:
     keys_asce41 = ['BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
-    asce_version == dstore['oqparam'].asce_version
+    oq = dstore['oqparam']
+    asce_version = oq.asce_version
     for sid in custom_ids:
         asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] ==sid]
         if np.all(asce_sa[keys_asce41] == 0) or asce_sa[keys_asce41].isna().all():  
             param_asce41 = get_zero_hazard_asce41(asce_version)
         else:  
             param_asce41 = get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS)
+    print(param_asce41)
+    ####################
     
-
     # make figures
     plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and len(locs) == 1:
