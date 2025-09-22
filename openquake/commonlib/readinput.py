@@ -39,8 +39,6 @@ import itertools
 
 import numpy
 import pandas
-from scipy.spatial import cKDTree
-from scipy.spatial.distance import cdist
 import requests
 from shapely import wkt, geometry
 
@@ -53,14 +51,14 @@ from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
-from openquake.hazardlib.calc.filters import getdefault, get_distances
+from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.geo.utils import spherical_to_cartesian, hex6
+from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
@@ -461,44 +459,6 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
-def rup_radius(rup):
-    """
-    Maximum distance from the rupture mesh to the hypocenter
-    """
-    hypo = rup.hypocenter
-    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
-    radius = cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
-    return radius
-
-
-def filter_site_array_around(array, rup, dist):
-    """
-    :param array: array with fields 'lon', 'lat'
-    :param rup: a rupture object
-    :param dist: integration distance in km
-    :returns: slice to the rupture
-    """
-    hypo = rup.hypocenter
-    x, y, z = hypo.x, hypo.y, hypo.z
-    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
-    xyz = spherical_to_cartesian(x, y, z)
-
-    # first raw filtering
-    tree = cKDTree(xyz_all)
-    # NB: on macOS query_ball returns the indices in a different order
-    # than on linux and windows, hence the need to sort
-    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
-    idxs.sort()
-
-    # then fine filtering
-    r_sites = site.SiteCollection.from_(array[idxs])
-    dists = get_distances(rup, r_sites, 'rrup')
-    ids, = numpy.where(dists < dist)
-    if len(ids) < len(idxs):
-        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
-    return r_sites.array[ids]
-
-
 def get_site_model_around(site_model_hdf5, rup, dist):
     """
     :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
@@ -508,7 +468,7 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
-    return filter_site_array_around(sm, rup, dist)
+    return RuptureFilter(rup, dist)(sm)
 
 
 def _smparse(fname, oqparam, arrays, sm_fieldsets):
@@ -1137,12 +1097,18 @@ def get_exposure(oqparam, h5=None):
                     oq.all_cost_types = loss_types
                     oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
         else:
+            if oqparam.rupture_xml or oqparam.rupture_dict:
+                rup = get_rupture(oqparam)
+                dist = oqparam.maximum_distance('*')(rup.mag)
+                rupfilter = RuptureFilter(rup, dist)
+            else:
+                rupfilter = None
             exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,
                 oq.ignore_missing_costs,
                 errors='ignore' if oq.ignore_encoding_errors else None,
                 infr_conn_analysis=oq.infrastructure_connectivity_analysis,
-                aggregate_by=oq.aggregate_by)
+                aggregate_by=oq.aggregate_by, rupfilter=rupfilter)
     return exposure
 
 
@@ -1284,7 +1250,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     try:
         exp = haz_sitecol.exposure
     except AttributeError:
-        exp = get_exposure(oqparam)
+        exp = get_exposure(oqparam, h5)
 
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
@@ -1325,6 +1291,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and 'station_data' not in oqparam.inputs
+            and not oqparam.rupture_dict  # and not oqparam.rupture_xml
             and sitecol is not sitecol.complete):
         # for predefined hazard you cannot reduce the site collection; instead
         # you can in other cases, typically with a grid which is mostly empty

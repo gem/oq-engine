@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Filtering the assets around the rupture according to the maximum distance
+    in scenario calculations
+
   [Claudia Mascandola]
   * Added a Ramadan et al (2023) gsim
 
