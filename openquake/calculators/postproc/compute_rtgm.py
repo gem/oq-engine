@@ -862,29 +862,13 @@ def main(dstore, csm):
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
    
-    plot_sites(dstore, update_dstore=True)
-    if rtgm_dfs and len(locs) == 1:
-        [sids] = locs.values()
-        for sid in sids:
-            sid_notifications = notifications[notifications['sid'] == sid]
-            if len(sid_notifications) ==0:
-                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-                plot_governing_mce(dstore, sid, update_dstore=True)
-                plot_disagg_by_src(dstore, sid, update_dstore=True)
-            elif sid_notifications['name'][0] not in [
-                    'zero_hazard', 'low_hazard']:
-                plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-                plot_governing_mce(dstore, sid, update_dstore=True)
-                plot_disagg_by_src(dstore, sid, update_dstore=True)
 
-    if len(notifications):
-        dstore['notifications'] = notifications
-
+    # final MCE spectra, results for ASCE7:
     df = compute_mce_governing(dstore, sitecol, locs)
     dstore.create_df('mce_governing', df)
         
 
-    # compute ASCE 7:
+    # compute ASCE 7 parameters from MCE:
     
     df = compute_mce_governing(dstore, sitecol, locs)
     df.columns = ["period", "SaM", "custom_site_id"]
