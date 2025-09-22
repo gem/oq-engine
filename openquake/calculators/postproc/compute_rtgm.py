@@ -704,9 +704,9 @@ def get_spectra_orig(dstore, sid, custom_id, mce, facts):
         return sa_data
         
 def get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS):
-    if asce_version == 'ASCE41-17':
+    if asce_version == 'ASCE7-16':
         return asce41_17(asce_sa, ASCE_DECIMALS)
-    elif asce_version == 'ASCE41-23':
+    elif asce_version == 'ASCE7-22':
         return asce41_23(asce_sa, vs30, ASCE_DECIMALS)
 
 def asce41_17(sa_data, ASCE_DECIMALS):
@@ -725,11 +725,11 @@ def asce41_17(sa_data, ASCE_DECIMALS):
         'BSE1E_S1': round(sa_data['BSE1E'][sa10], ASCE_DECIMALS),
     }
 
-def asce41_23(sa_data, vs30, ASCE_DECIMALS):
-    design_BSE2N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2N'], vs30)
-    design_BSE1N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1N'], vs30)
-    design_BSE2E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2E'], vs30)
-    design_BSE1E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1E'], vs30)
+def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
+    design_BSE2N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2N'], Vs30)
+    design_BSE1N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1N'], Vs30)
+    design_BSE2E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2E'], Vs30)
+    design_BSE1E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1E'], Vs30)
 
     return {
         'BSE2N_Sxs': round(design_BSE2N[0], ASCE_DECIMALS),
@@ -937,7 +937,8 @@ def main(dstore, csm):
     
     # 2) compute max of asce41 spectra for default site class:
     asce41_spectra = compute_max_sa_asce41(dstore,sitecol,locs)
-    asce41_spectra.columns = ['period', 'custom_site_id','BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
+    asce41_spectra.columns = ['period','BSE2N','BSE2E','BSE1N','BSE1E','uhs_475','custom_site_id']
+    
     dstore.create_df('asce41_sa_final', asce41_spectra)
 
     # 3) compute asce41 parameters:
@@ -946,11 +947,12 @@ def main(dstore, csm):
     asce_version = oq.asce_version
     for sid in custom_ids:
         asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] ==sid]
-        if np.all(asce_sa[keys_asce41] == 0) or asce_sa[keys_asce41].isna().all():  
-            param_asce41 = get_zero_hazard_asce41(asce_version)
-        else:  
-            param_asce41 = get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS)
-    print(param_asce41)
+        #if np.all(asce_sa[keys_asce41] == 0) or asce_sa[keys_asce41].isna().all():  
+        #    param_asce41 = get_zero_hazard_asce41(asce_version)
+        #else:  
+        param_asce41 = get_params(asce_version, Vs30, asce_sa, ASCE_DECIMALS)
+    dstore["asce41"] = param_asce41
+    
     ####################
     
     # make figures
