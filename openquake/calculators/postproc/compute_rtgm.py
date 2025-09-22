@@ -924,16 +924,58 @@ def main(dstore, csm):
         custom_id = sitecol[sitecol['sids']==sid]['custom_site_id']
         facts = rtgm_df[rtgm_df['sid']==sid]['fact']
         uhs_asce41 = get_spectra(dstore, sid, custom_id, uhs_site, mce_df_site, facts)
-        test = get_spectra_orig(dstore, sid, custom_id, mce, facts)
-        print(test)
-        print(uhs_asce41)
+        test = get_spectra_orig(dstore, sid, custom_id, mce_df_site, facts)
+        print(test['BSE2E'])
+        print(uhs_asce41['BSE2E'])
         breakpoint()
         sa_asce41.append(uhs_asce41)
         logging.info(f'{uhs_asce41=}')
 
     
+    # 2) compute max of asce41 spectra for default site class:
     
+    asce41_spectra = compute_max_sa_asce41(sa_asce41,sitecol,locs)
+    asce41_spectra.columns = ['period', 'custom_site_id','BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
+    dstore.create_df('asce41_sa', asce41_spectra)
+
+    # 3) compute asce41 parameters:
+    keys_asce41 = ['BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
+    asce_version == dstore['oqparam'].asce_version
+    for sid in custom_ids:
+        asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] ==sid]
+        if np.all(asce_sa[keys_asce41] == 0) or asce_sa[keys_asce41].isna().all():  
+            param_asce41 = get_zero_hazard_asce41(asce_version)
+        else:  
+            param_asce41 = get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS)
     
+
+    # make figures
+    plot_sites(dstore, update_dstore=True)
+    if rtgm_dfs and len(locs) == 1:
+        [sids] = locs.values()
+        n_sids = len(sids)
+        vs30s = oq.override_vs30
+        assert n_sids == len(vs30s), (f'The number of sites ({n_sids}) must be equal to'
+                                      f' the number of values of vs30 ({len(vs30s)})')
+        plt = import_plt()
+        # Mean Hazard Curves (1 row, n_sids columns)
+        mask = np.isin(notifications['name'], ['zero_hazard', 'low_hazard'])
+        sids_to_exclude = notifications['sid'][mask].tolist()
+        sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
+        if sids_to_plot:
+            make_figure_hcurves(plt, sids_to_plot, dstore, notifications, vs30s)
+            # Governing MCE
+            if oq.asce_version == 'ASCE7-16':
+                plot_governing_mce_asce_7_16(dstore, update_dstore=True)
+            elif n_sids == 1:
+                plot_mce_spectra(dstore, update_dstore=True)
+                plot_governing_mce(dstore, update_dstore=True) # in simplified page
+            else:
+                plot_governing_mce(dstore, update_dstore=True)
+            # Disaggregation by Source (3 rows, n_sids columns)
+            make_figure_disagg_by_src(plt, sids_to_plot, dstore, vs30s)
+    if len(notifications):
+        dstore['notifications'] = notifications
         
     
          
