@@ -326,6 +326,7 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     sds_indices = [index for index, period in enumerate(periods) if 0.2 <= period <= 5]
 
     # sds is 90% of the maximum from 0.2-5.0s
+    breakpoint()
     sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
 
     # For sd1, depending on vs30, take periods from 1-2s or 1-5s

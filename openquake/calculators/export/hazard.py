@@ -174,7 +174,6 @@ def export_aelo_csv(key, dstore):
 
     return [fname]
 
-
 def get_all_imtls(dstore):
     """
     :returns: a DictArray imt->imls if the datastore contains 'all_imtls'
@@ -756,6 +755,16 @@ def export_rtgm(ekey, dstore):
     return [fname]
 
 
+@export.add(('spectra_asce41', 'csv'), ('asce41_sa_final', 'csv'))
+def export_mce(ekey, dstore):
+    key = ekey[0]
+    df = dstore.read_df(key)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path(f'{key}.csv')
+    comment = dstore.metadata.copy()
+    writer.save(df, fname, comment=comment)
+    return [fname]
+
 @export.add(('mce', 'csv'), ('mce_governing', 'csv'))
 def export_mce(ekey, dstore):
     key = ekey[0]
@@ -770,11 +779,11 @@ def export_mce(ekey, dstore):
     writer.save(df, fname, comment=comment)
     return [fname]
 
-
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
     for s, site in enumerate(sitecol):
+        breakpoint()
         js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
