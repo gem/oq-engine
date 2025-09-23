@@ -622,7 +622,6 @@ class PostRiskCalculator(base.RiskCalculator):
             return
         oq = self.oqparam
         if 'risk' in oq.calculation_mode:
-            self.datastore['oqparam'] = oq
             for ln in self.oqparam.loss_types:
                 li = scientific.LOSSID[ln]
                 dloss = views.view('delta_loss:%d' % li, self.datastore)

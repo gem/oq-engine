@@ -1381,8 +1381,8 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('missing investigation_time')
 
     def check_ebrisk(self):
+        # checks specific to ebrisk
         self.ground_motion_fields = self.ground_motion_fields
-        # check specific to ebrisk
         if self.calculation_mode == 'ebrisk':
             if self.ground_motion_fields:
                 print('ground_motion_fields overridden to false',
@@ -2346,7 +2346,9 @@ class OqParam(valid.ParamSet):
         return ini
 
     def __toh5__(self):
-        return hdf5.dumps(vars(self)), {}
+        oqp = hdf5.dumps(vars(self))
+        # assert '"ground_motion_fields": 1' in oqp
+        return oqp, {}
 
     def __fromh5__(self, array, attrs):
         if isinstance(array, numpy.ndarray):
