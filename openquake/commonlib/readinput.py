@@ -1237,6 +1237,23 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
     return sitecol, shakemap
 
 
+def assoc_exposure(exp, haz_sitecol, oqparam, h5):
+    """
+    Associate the assets to the hazard sites
+    """
+    # this is absurdely fast: 10 million assets can be associated in <10s
+    A = len(exp.assets)
+    N = len(haz_sitecol)
+    with Monitor('associating exposure', measuremem=True, h5=h5):
+        region = wkt.loads(oqparam.region) if oqparam.region else None
+        sitecol, discarded = exp.associate(
+            haz_sitecol, oqparam.get_haz_distance(), region)
+        logging.info(
+            'Associated {:_d} assets (of {:_d}) to {:_d} sites'
+            ' (of {:_d})'.format(len(exp.assets), A, len(sitecol), N))
+    return sitecol, discarded
+
+
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     """
     :param oqparam: calculation parameters
@@ -1245,23 +1262,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     :returns: (site collection, asset collection, discarded, exposure)
     """
     if haz_sitecol is None:
+        # read the sites from the sites/site_model/region
         haz_sitecol = get_site_collection(oqparam, h5)
     try:
         exp = haz_sitecol.exposure
     except AttributeError:
         exp = get_exposure(oqparam, h5)
-
-    haz_distance = oqparam.get_haz_distance()
-    # associate the assets to the hazard sites
-    # this is absurdely fast: 10 million assets can be associated in <10s
-    A = len(exp.assets)
-    N = len(haz_sitecol)
-    with Monitor('associating exposure', measuremem=True, h5=h5):
-        region = wkt.loads(oqparam.region) if oqparam.region else None
-        sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
-    logging.info(
-        'Associated {:_d} assets (of {:_d}) to {:_d} sites'
-        ' (of {:_d})'.format(len(exp.assets), A, len(sitecol), N))
+    sitecol, discarded = assoc_exposure(exp, haz_sitecol, oqparam, h5)
 
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
