@@ -398,11 +398,25 @@ class RuptureFilter(object):
 
     def __call__(self, array_df):
         if isinstance(array_df, pandas.DataFrame):
-            # filtering assets computing all the distances the slow way
-            mesh = Mesh(F32(array_df.lon), F32(array_df.lat))
+            # computing all the distances the slow way
+            if hasattr(array_df, 'lon'):
+                # when reading the exposure.csv files
+                mesh = Mesh(F32(array_df.lon), F32(array_df.lat))
+            else:
+                # when reading the exposure.hdf5 file
+                mesh = Mesh(F32(array_df.LONGITUDE), F32(array_df.LATITUDE))
             dists = get_distances(self.rup, mesh, 'rrup')
             return array_df[dists < self.dist]
+        # this is called when reading the site model from eexposure.hdf5
         return filter_site_array_around(array_df, self.rup, self.dist)
+
+    def filter(self, lons, lats):
+        """
+        :returns: (mask, rup-sites distances)
+        """
+        mesh = Mesh(F32(lons), F32(lats))
+        dists = get_distances(self.rup, mesh, 'rrup')
+        return dists < self.dist, dists
 
 
 class SourceFilter(object):

@@ -1085,24 +1085,24 @@ def get_exposure(oqparam, h5=None):
     if 'exposure' not in oq.inputs:
         return
     fnames = oq.inputs['exposure']
+    if oqparam.rupture_xml or oqparam.rupture_dict:
+        rup = get_rupture(oqparam)
+        dist = oqparam.maximum_distance('*')(rup.mag)
+        rupfilter = RuptureFilter(rup, dist)
+    else:
+        rupfilter = None
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             h6 = [x.encode('ascii') for x in sorted(set(
                 hex6(sm['lon'], sm['lat'])))]
-            exposure = asset.Exposure.read_around(fnames[0], h6)
+            exposure = asset.Exposure.read_around(fnames[0], h6, rupfilter)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
                     oq.all_cost_types = loss_types
                     oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
         else:
-            if oqparam.rupture_xml or oqparam.rupture_dict:
-                rup = get_rupture(oqparam)
-                dist = oqparam.maximum_distance('*')(rup.mag)
-                rupfilter = RuptureFilter(rup, dist)
-            else:
-                rupfilter = None
             exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,
                 oq.ignore_missing_costs,
@@ -1237,6 +1237,23 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
     return sitecol, shakemap
 
 
+def assoc_exposure(exp, haz_sitecol, oqparam, h5):
+    """
+    Associate the assets to the hazard sites
+    """
+    # this is absurdely fast: 10 million assets can be associated in <10s
+    A = len(exp.assets)
+    N = len(haz_sitecol)
+    with Monitor('associating exposure', measuremem=True, h5=h5):
+        region = wkt.loads(oqparam.region) if oqparam.region else None
+        sitecol, discarded = exp.associate(
+            haz_sitecol, oqparam.get_haz_distance(), region)
+        logging.info(
+            'Associated {:_d} assets (of {:_d}) to {:_d} sites'
+            ' (of {:_d})'.format(len(exp.assets), A, len(sitecol), N))
+    return sitecol, discarded
+
+
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     """
     :param oqparam: calculation parameters
@@ -1244,32 +1261,15 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     :param inp_types: the input loss types
     :returns: (site collection, asset collection, discarded, exposure)
     """
-    asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
+        # read the sites from the sites/site_model/region
         haz_sitecol = get_site_collection(oqparam, h5)
     try:
         exp = haz_sitecol.exposure
     except AttributeError:
+        # in scenario_risk test_case_6a
         exp = get_exposure(oqparam, h5)
-
-    if oqparam.region_grid_spacing:
-        haz_distance = oqparam.region_grid_spacing * 1.414
-        if haz_distance != asset_hazard_distance:
-            logging.debug('Using asset_hazard_distance=%d km instead of %d km',
-                          haz_distance, asset_hazard_distance)
-    else:
-        haz_distance = asset_hazard_distance
-
-    # associate the assets to the hazard sites
-    # this is absurdely fast: 10 million assets can be associated in <10s
-    A = len(exp.assets)
-    N = len(haz_sitecol)
-    with Monitor('associating exposure', measuremem=True, h5=h5):
-        region = wkt.loads(oqparam.region) if oqparam.region else None
-        sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
-    logging.info(
-        'Associated {:_d} assets (of {:_d}) to {:_d} sites'
-        ' (of {:_d})'.format(len(exp.assets), A, len(sitecol), N))
+    sitecol, discarded = assoc_exposure(exp, haz_sitecol, oqparam, h5)
 
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
