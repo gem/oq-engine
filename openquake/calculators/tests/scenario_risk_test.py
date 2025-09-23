@@ -190,6 +190,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         fname = gettemp(text_table(df, ext='org'))
         self.assertEqualFiles('expected/losses_by_site.org', fname, delta=1E-3)
 
+        # losses_by_location
+        df = extract(self.calc.datastore, 'losses_by_location')
+        fname = gettemp(text_table(df, ext='org'))
+        self.assertEqualFiles('expected/losses_by_location.org',
+                              fname, delta=1E-3)
+        
     def test_collapse_gsim_logic_tree(self):
         self.run_calc(case_master.__file__, 'job.ini',
                       collapse_gsim_logic_tree='bs1')
