@@ -1012,7 +1012,7 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, hexes, rupfilter):
+    def read_around(exposure_hdf5, hexes, rupfilter=None):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
