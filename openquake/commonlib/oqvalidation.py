@@ -1381,6 +1381,7 @@ class OqParam(valid.ParamSet):
                 self.raise_invalid('missing investigation_time')
 
     def check_ebrisk(self):
+        self.ground_motion_fields = self.ground_motion_fields
         # check specific to ebrisk
         if self.calculation_mode == 'ebrisk':
             if self.ground_motion_fields:
