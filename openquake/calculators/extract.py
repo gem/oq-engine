@@ -1108,7 +1108,7 @@ def extract_losses_by_location(dstore, what):
         losses = grp[loss_type][:, 0][lonlats['ordinal']]
         dic[loss_type] = F32(general.fast_agg(indices, losses))
     logging.info('There are {:_d} assets in {:_d} locations'.format(
-        len(lonlats), len(losses)))
+        len(lonlats), len(lons)))
     return pandas.DataFrame(dic)
 
 
