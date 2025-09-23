@@ -1093,9 +1093,10 @@ def extract_losses_by_location(dstore, what):
         # there is only one realization
         grp = dstore.getitem('avg_losses-rlzs')
     dic = {}
+    # this is fast enough, we can do millions of assets in seconds
     tags = ['%.5f,%.5f' % (row['lon'], row['lat'])
             for row in lonlats]
-    uniq, indices = numpy.unique(tags, return_inverse=True)    
+    uniq, indices = numpy.unique(tags, return_inverse=True)
     lons, lats = [], []
     for lonlat in uniq:
         lo, la = lonlat.split(',')
@@ -1106,6 +1107,8 @@ def extract_losses_by_location(dstore, what):
     for loss_type in grp:
         losses = grp[loss_type][:, 0][lonlats['ordinal']]
         dic[loss_type] = F32(general.fast_agg(indices, losses))
+    logging.info('There are {:_d} assets in {:_d} locations'.format(
+        len(lonlats), len(losses)))
     return pandas.DataFrame(dic)
 
 

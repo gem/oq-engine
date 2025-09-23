@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an extractor `losses_by_location`
   * Filtering the assets around the rupture according to the maximum distance
     in scenario calculations
 
