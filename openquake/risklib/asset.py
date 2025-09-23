@@ -570,7 +570,8 @@ class AssetCollection(object):
             if aggby == ['id']:
                 aggids[ag] = self['ordinal']
             else:
-                aggids[ag] = [key2i[ag, to_tuple(rec, aggby)] for rec in self[aggby]]
+                aggids[ag] = [key2i[ag, to_tuple(rec, aggby)]
+                              for rec in self[aggby]]
         return aggids, [decode(vals) for vals in aggkey.values()]
 
     def reduce(self, sitecol):
@@ -937,7 +938,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
 
 
 # used in impact calculations
-def impact_read_assets(h5, start, stop):
+def impact_read_assets(h5, start, stop, rupfilter):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
@@ -961,7 +962,7 @@ def impact_read_assets(h5, start, stop):
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
                            df.OCCUPANTS_PER_ASSET_NIGHT +
                            df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
-    return df
+    return rupfilter(df) if rupfilter else df
 
 
 class Exposure(object):
@@ -1011,21 +1012,21 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, gh3s):
+    def read_around(exposure_hdf5, hexes, rupfilter=None):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
         """
         with hdf5.File(exposure_hdf5) as f:
             exp = f['exposure']
-            sbg = f['assets/slice_by_gh3'][:]
-            slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
+            sbg = f['assets/slice_by_hex6'][:]
+            slices = sbg[numpy.isin(sbg['hex6'], hexes)]
             if len(slices) == 0:
                 raise SiteAssociationError(
                     'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
-                impact_read_assets(f, start, stop)
-                for gh3, start, stop in slices)
+                impact_read_assets(f, start, stop, rupfilter)
+                for _hex6, start, stop in slices)
             tagcol = f['tagcol']
             # revert the tagnames so that taxonomy becomes the first field,
             # ex. sorted_tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
@@ -1043,7 +1044,7 @@ class Exposure(object):
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, tagcol=None, errors=None,
-                 infr_conn_analysis=False, aggregate_by=None):
+                 infr_conn_analysis=False, aggregate_by=None, rupfilter=None):
         """
         :returns: an :class:`Exposure` instance keeping all the assets in
             memory
@@ -1063,7 +1064,7 @@ class Exposure(object):
         exp = None
         dfs = []
         for exposure, df in itertools.starmap(read_exp_df, allargs):
-            dfs.append(df)
+            dfs.append(rupfilter(df) if rupfilter else df)
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)

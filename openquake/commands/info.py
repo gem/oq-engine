@@ -371,7 +371,7 @@ def main(what, report=False):
                 print(logictree.GsimLogicTree(what))
         else:
             print(node.to_str())
-    elif what.endswith('.shp'):
+    elif what.endswith(('.shp', '.gpkg')):
         with fiona.open(what) as f:
             print_features(f)
     elif what.endswith(('.ini', '.zip')):

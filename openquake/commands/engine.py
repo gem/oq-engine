@@ -83,7 +83,6 @@ def main(
         list_risk_calculations=False,
         delete_uncompleted_calculations=False,
         multi=False,
-        reuse_input=False,
         *,
         log_file=None,
         make_html_report=None,
@@ -163,8 +162,6 @@ def main(
         hc_id = None
     if run:
         pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
-        if reuse_input:
-            pars['cachedir'] = datadir
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
@@ -239,7 +236,6 @@ main.list_risk_calculations = dict(
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
 main.multi = 'Run multiple job.inis in parallel'
-main.reuse_input = 'Read the CompositeSourceModel from the cache (if any)'
 
 # options
 main.log_file = dict(

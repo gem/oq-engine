@@ -1066,8 +1066,10 @@ def extract_losses_by_site(dstore, what):
     :returns: a DataFrame (lon, lat, number, structural, ...)
     """
     sitecol = dstore['sitecol']
-    dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
+    sitecol.make_complete()  # tested in test_impact_mode
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
+    ok_sids = sitecol.sids[numpy.unique(array['site_id'])]
+    dic = {'lon': F32(sitecol.lons[ok_sids]), 'lat': F32(sitecol.lats[ok_sids])}
     try:
         grp = dstore.getitem('avg_losses-stats')
     except KeyError:

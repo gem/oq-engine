@@ -20,8 +20,8 @@ import os
 import sys
 import logging
 import operator
+import psutil
 import numpy
-import h5py
 from openquake.baselib import general, parallel, hdf5, config
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
@@ -248,10 +248,12 @@ class PreClassicalCalculator(base.HazardCalculator):
         Gt = sum(len(cm.gsims) for cm in self.cmakers)
         extra = f'<{Gfull}' if Gt < Gfull else ''
         if sites is not None:
+            avail = psutil.virtual_memory().available
             nbytes = 4 * len(self.sitecol) * L * Gt
             # Gt is known before starting the preclassical
-            logging.warning(f'The global pmap would require %s ({Gt=}%s)',
-                            general.humansize(nbytes), extra)
+            logging.warning(
+                f'The global pmap would require %s (of %s) ({Gt=}%s)',
+                general.humansize(nbytes), general.humansize(avail), extra)
 
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
@@ -367,24 +369,13 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         if not hasattr(self, 'csm'):  # used only for post_process
             return
-        cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
-        if os.path.exists(cachepath):
-            realpath = os.path.realpath(cachepath)
-            logging.info('Copying csm from %s', realpath)
-            with h5py.File(realpath, 'r') as cache:  # copy _csm
-                cache.copy(cache['_csm'], self.datastore.hdf5)
-            self.store()  # full_lt, toms
-        else:
-            self.populate_csm()
-            try:
-                self.datastore['_csm'] = self.csm
-            except RuntimeError as exc:
-                # this happens when setrecursionlimit is too low
-                # we can continue anyway, this is not critical
-                logging.error(str(exc), exc_info=True)
-            else:
-                if cachepath:
-                    os.symlink(self.datastore.filename, cachepath)
+        self.populate_csm()
+        try:
+            self.datastore['_csm'] = self.csm
+        except RuntimeError as exc:
+            # this happens when setrecursionlimit is too low
+            # we can continue anyway, this is not critical
+            logging.error(str(exc), exc_info=True)
         return self.csm
 
     def post_execute(self, csm):

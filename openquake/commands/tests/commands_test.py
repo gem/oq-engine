@@ -39,7 +39,7 @@ from openquake.baselib.tests.flake8_test import check_newlines
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
-from openquake.commonlib.readinput import get_params
+from openquake.commonlib.readinput import get_params, jobs_from_inis
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
@@ -97,10 +97,10 @@ class InfoTestCase(unittest.TestCase):
 
     def test_shp(self):
         mosaic_dir = os.path.dirname(mosaic.__file__)
-        path = os.path.join(mosaic_dir, 'ModelBoundaries.shp')
+        path = os.path.join(mosaic_dir, 'ModelBoundaries.gpkg')
         with Print.patch() as p:
             sap.runline(f'openquake.commands info {path}')
-        self.assertIn('GLD', str(p))
+        self.assertIn('EUR', str(p))
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -269,6 +269,16 @@ class RunShowExportTestCase(unittest.TestCase):
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         with Print.patch():
             cls.calc_id = sap.runline(f'openquake.commands run {job_ini} -c 0')
+        cls.job_ini = job_ini
+
+    def test_jobs_from_inis(self):
+        dic = jobs_from_inis([self.job_ini])
+        self.assertGreater(dic['success'][0], 0)  # already computed
+        self.assertEqual(dic['error'], '')
+
+        dic = jobs_from_inis(['/non/existing/job.ini'])
+        self.assertEqual(dic['success'], [])
+        self.assertIn('File not found', dic['error'])
 
     def test_show_calc(self):
         with Print.patch() as p:

@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import time
 import tempfile
 import unittest.mock as mock
 import unittest
@@ -26,7 +25,6 @@ from io import BytesIO
 
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
-from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
@@ -35,7 +33,6 @@ from openquake.qa_tests_data.classical import case_34, case_65
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import (
     case_02 as ebr2, case_caracas)
-from openquake.qa_tests_data import mosaic
 
 
 TMP = tempfile.gettempdir()
@@ -331,8 +328,9 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_zero_number(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 79, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.insurance_losses = False
@@ -350,8 +348,9 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_invalid_asset_id(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 79, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure1]}
@@ -368,8 +367,9 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 69, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.ignore_missing_costs = []
@@ -387,8 +387,9 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
 
     def test_invalid_taxonomy(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 79, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure3]}

@@ -41,18 +41,19 @@ def get_mosaic_df(buffer):
     """
     :returns: a DataFrame with the mosaic geometries used in AELO
     """
-    fname = os.path.join(config.directory.mosaic_dir, 'ModelBoundaries_Year3-4_v2.shp')
-    if not os.path.exists(fname):
-        fname = os.path.join(os.path.dirname(mosaic.__file__),
-                             'ModelBoundaries_Year3-4_v2.shp')
-    df = readinput.read_geometries(fname, 'name', buffer)
+    mosaic_boundaries_file = config.directory.mosaic_boundaries_file
+    if not mosaic_boundaries_file:
+        mosaic_boundaries_file = os.path.join(
+            os.path.dirname(mosaic.__file__), 'ModelBoundaries.gpkg')
+    df = readinput.read_geometries(mosaic_boundaries_file, 'name', buffer)
     return df
 
 
-def get_params_from(inputs, mosaic_dir, exclude=()):
+def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     """
     :param inputs: a dictionary with sites, vs30, siteid, asce_version
     :param mosaic_dir: directory where the mosaic is located
+    :param ini: path of the job ini file (if specified, mosaic_dir will be ignored)
 
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
@@ -67,7 +68,8 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     if models[0] == '???':
         raise ValueError(
             f'Site at lon={lon} lat={lat} is not covered by any model!')
-    ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
+    if ini is None:
+        ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['mosaic_model'] = models[0]
     if 'siteid' in inputs:

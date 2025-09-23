@@ -50,8 +50,9 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites,
-    _find_fact_maxC)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src,
+    plot_governing_mce_asce_7_16, plot_mce_spectra,
+    plot_governing_mce, plot_sites, _find_fact_maxC, import_plt)
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
@@ -102,7 +103,7 @@ AELO_WARNINGS = {
 AELO_NOTES = {
     'only_prob_mce': (
         'The final MCE is derived solely from the Probabilistic MCE,'
-        ' which is below the DLLs. Outputs specific to the deterministic'
+        ' since it is below the DLLs. Outputs specific to the deterministic'
         ' analysis are not included.'
         ' For further information, please refer to the user manual.'),
 }
@@ -814,6 +815,63 @@ def calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
         yield (sid, mag_dst_eps_sig, mce_df)
 
 
+def save_figure_to_dstore(fig, dstore, key):
+    """
+    Save a matplotlib figure to the datastore as a PNG image.
+
+    :param fig: The matplotlib figure object
+    :param dstore: The datastore to write to
+    :param key: The key under which to store the PNG (e.g., 'png/fig1.png')
+    """
+    from PIL import Image
+    bio = io.BytesIO()
+    fig.savefig(bio, format='png', bbox_inches='tight')
+    bio.seek(0)
+    dstore[key] = Image.open(bio)
+
+
+def add_footer_referencing_user_guide(fig):
+    fig.tight_layout(rect=[0, 0.03, 1, 1])
+    fig.text(0.5, 0.015,  # y = 0.015 is the vertical position of the footer
+             'See WebUI User Guide for complete explanation of plot contents.',
+             ha='center', fontsize='small', color='black', alpha=0.85)
+
+
+def display_vs30_in_subplot_title(axes, n_rows, sid_idx, vs30):
+    for row in range(n_rows):
+        axes[row, sid_idx].set_title("$V_{S30}$ = %s m/s" % vs30, fontsize=13)
+
+
+def make_figure_hcurves(plt, sids, dstore, notifications, vs30s):
+    n_rows = 1
+    n_sids = len(sids)
+    fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 6), squeeze=False)
+    for i, sid in enumerate(sids):
+        vs30 = vs30s[i]
+        plot_mean_hcurves_rtgm(dstore, sid, axes=axes[0, i])
+        display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+    add_footer_referencing_user_guide(fig)
+    save_figure_to_dstore(fig, dstore, 'png/hcurves.png')
+    plt.close(fig)
+
+
+def make_figure_disagg_by_src(plt, sids, dstore, vs30s):
+    n_rows = 3  # 3 imts: [PGA, SA(0.2), SA(1.0)]
+    n_sids = len(sids)
+    fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 15), squeeze=False)
+    for i, sid in enumerate(sids):
+        vs30 = vs30s[i]
+        plot_disagg_by_src(
+            dstore, sid, axes=[axes[0, i], axes[1, i], axes[2, i]])
+        display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+    has_data = any(ax.has_data() for row in axes for ax in row)
+    if has_data:
+        add_footer_referencing_user_guide(fig)
+        fig.subplots_adjust(hspace=0.3)  # avoid overlapping titles and xlabels
+        save_figure_to_dstore(fig, dstore, 'png/disagg_by_src-All-IMTs.png')
+    plt.close(fig)
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -858,6 +916,7 @@ def main(dstore, csm):
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
     notifications = np.array(notification_items, dtype=notification_dtype)
+
     
     
     for sid, mag_dst_eps_sig, mce_df in calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
@@ -866,10 +925,9 @@ def main(dstore, csm):
     
     if mce_dfs:
         dstore.create_df('mce', pd.concat(mce_dfs))
-
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
-        
+
    
     ####################
 
@@ -956,7 +1014,7 @@ def main(dstore, csm):
     
     ####################
     
-    # make figures
+
     plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and len(locs) == 1:
         [sids] = locs.values()
@@ -983,12 +1041,4 @@ def main(dstore, csm):
             make_figure_disagg_by_src(plt, sids_to_plot, dstore, vs30s)
     if len(notifications):
         dstore['notifications'] = notifications
-        
-    
-         
-        
-
-   
-    
-    
 

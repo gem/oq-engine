@@ -28,6 +28,7 @@ import numpy
 import pandas
 from scipy.stats import linregress
 from shapely.geometry import Polygon, LineString
+from openquake.baselib import hdf5
 from openquake.commonlib import readinput
 from openquake.commonlib.util import unique_filename
 from openquake.hazardlib.geo.utils import PolygonPlotter
@@ -41,7 +42,9 @@ from openquake.calculators.postproc.plots import (
     plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_3d,
     adjust_limits, auto_limits)
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src,
+    plot_governing_mce_asce_7_16, plot_mce_spectra, plot_governing_mce,
+    plot_sites)
 
 
 def getparams(what):
@@ -753,11 +756,33 @@ def make_figure_tot_curves(extractors, what):
 
 def make_figure_mean_hcurves_rtgm(extractors, what):
     """
-    $ oq plot "mean_hcurves_rtgm?"
+    $ oq plot "mean_hcurves_rtgm?sid=0"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_mean_hcurves_rtgm(dstore)
+    kwargs = parse_qs(what.split('?')[1])
+    [sid] = kwargs.get('sid', ['0'])
+    plt = plot_mean_hcurves_rtgm(dstore, sid=int(sid))
+    return plt
+
+
+def make_figure_governing_mce_asce_7_16(extractors, what):
+    """
+    $ oq plot "governing_mce_asce_7_16?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_governing_mce_asce_7_16(dstore)
+    return plt
+
+
+def make_figure_mce_spectra(extractors, what):
+    """
+    $ oq plot "mce_spectra?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_mce_spectra(dstore)
     return plt
 
 
@@ -773,11 +798,13 @@ def make_figure_governing_mce(extractors, what):
 
 def make_figure_disagg_by_src(extractors, what):
     """
-    $ oq plot "disagg_by_src?"
+    $ oq plot "disagg_by_src?sid=0"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_disagg_by_src(dstore)
+    kwargs = parse_qs(what.split('?')[1])
+    [sid] = kwargs.get('sid', ['0'])
+    plt = plot_disagg_by_src(dstore, sid=int(sid))
     return plt
 
 
@@ -1120,6 +1147,22 @@ def make_figure_sites(extractors, what):
     return plt
 
 
+def make_figure_show_png(extractors, what):
+    """
+    oq plot "show_png?site.png"
+
+    shows an image stored in 'png/IMAGE_NAME'
+    """
+    plt = import_plt()
+    [ex] = extractors
+    dstore = ex.dstore
+    name = what.split('?')[1]
+    img = dstore['png'][name]
+    plt.imshow(img)
+    plt.axis('off')
+    return plt
+
+
 def plot_wkt(wkt_string):
     """
     Plot a WKT string describing a polygon
@@ -1134,6 +1177,33 @@ def plot_wkt(wkt_string):
     _fig, ax = plt.subplots()
     ax.plot(coo[:, 0], coo[:, 1], 'o')
     add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    return plt
+
+
+def plot_h3(hexes):
+    """
+    $ oq plot "H3 811ebffffff 81387fffff"
+
+    plots H3 hexagons given a list of hexes
+    """
+    import h3
+    import shapely
+    plt = import_plt()
+    # normalize the hexes to 15 characters
+    for i, hex in enumerate(hexes):
+        lenh = len(hex)
+        if lenh < 15:
+            hexes[i] = hex + 'f' * (15-lenh)
+        elif lenh > 15:
+            raise ValueError('%s must have <= 15 characters, got %d' %
+                             (hex, lenh))
+    _fig, ax = plt.subplots()
+    for hex in hexes:
+        mp = shapely.MultiPolygon(h3.h3_set_to_multi_polygon([hex]))
+        lat, lon = mp.geoms[0].exterior.xy
+        ax.fill(lon, lat, alpha=0.5, fc="lightblue", ec="blue")
+    add_borders(ax, readinput.read_countries_df, buffer=0.)
+    ax.set_aspect('equal')
     return plt
 
 
@@ -1183,6 +1253,19 @@ def main(what,
         save_to = unique_filename(save_to)
     if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
+        if save_to:
+            plt.savefig(save_to, dpi=300)
+            logging.info(f'Plot saved to {save_to}')
+        else:
+            plt.show()
+        return
+    if what.startswith('H3'):
+        hexes = what[2:].split()
+        if what.endswith('.hdf5'):
+            with hdf5.File(hexes[0]) as h5:
+                hexes = [h.decode('ascii') for h in numpy.unique(
+                    h5['assets/slice_by_hex6']['hex6'])]
+        plt = plot_h3(hexes)
         if save_to:
             plt.savefig(save_to, dpi=300)
             logging.info(f'Plot saved to {save_to}')
