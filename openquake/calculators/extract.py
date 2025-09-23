@@ -1066,7 +1066,8 @@ def extract_losses_by_site(dstore, what):
     :returns: a DataFrame (lon, lat, number, structural, ...)
     """
     sitecol = dstore['sitecol']
-    sitecol.make_complete()  # tested in test_impact_mode
+    if 'complete' in dstore:
+        sitecol.complete = dstore['complete']  # tested in test_impact_mode
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
     ok_sids = sitecol.sids[numpy.unique(array['site_id'])]
     dic = {'lon': F32(sitecol.lons[ok_sids]), 'lat': F32(sitecol.lats[ok_sids])}
@@ -1078,6 +1079,34 @@ def extract_losses_by_site(dstore, what):
     for loss_type in grp:
         losses = grp[loss_type][:, 0]
         dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))
+    return pandas.DataFrame(dic)
+
+
+@extract.add('losses_by_location')
+def extract_losses_by_location(dstore, what):
+    """
+    :returns: a DataFrame (lon, lat, number, structural, ...)
+    """
+    lonlats = dstore['assetcol'][['ordinal', 'lon', 'lat']]
+    try:
+        grp = dstore.getitem('avg_losses-stats')
+    except KeyError:
+        # there is only one realization
+        grp = dstore.getitem('avg_losses-rlzs')
+    dic = {}
+    tags = ['%.5f,%.5f' % (row['lon'], row['lat'])
+            for row in lonlats]
+    uniq, indices = numpy.unique(tags, return_inverse=True)    
+    lons, lats = [], []
+    for lonlat in uniq:
+        lo, la = lonlat.split(',')
+        lons.append(lo)
+        lats.append(la)
+    dic['lon'] = F32(lons)
+    dic['lat'] = F32(lats)
+    for loss_type in grp:
+        losses = grp[loss_type][:, 0][lonlats['ordinal']]
+        dic[loss_type] = F32(general.fast_agg(indices, losses))
     return pandas.DataFrame(dic)
 
 
