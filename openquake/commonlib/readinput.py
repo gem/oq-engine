@@ -1267,6 +1267,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     try:
         exp = haz_sitecol.exposure
     except AttributeError:
+        # in scenario_risk test_case_6a
         exp = get_exposure(oqparam, h5)
     sitecol, discarded = assoc_exposure(exp, haz_sitecol, oqparam, h5)
 
