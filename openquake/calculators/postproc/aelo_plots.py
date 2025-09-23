@@ -216,9 +216,11 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     plt = import_plt()
-    js = dstore['asce07'][site_idx].decode('utf8')
-    dic = json.loads(js)
-    MCEr = [dic['PGA'], dic['Ss'], dic['S1']]
+    asce07 = dstore['asce07']
+    pga = asce07['PGA'][site_idx]
+    ss = asce07['Ss'][site_idx]
+    s1 = asce07['S1'][site_idx]
+    MCEr = [pga, ss, s1]
     T = [from_string(imt).period for imt in imtls]
 
     limit_det = [0.5, 1.5, 0.6]
@@ -234,18 +236,19 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
              linewidth=3)
     plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
-    MCEr_det = [dic['PGA_84th'], dic['Ss_84th'], dic['S1_84th']]
-    if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
-        upperlim = max([rtgm_probmce[1], 1.5])
-        plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
-    else:
-        upperlim = max([rtgm_probmce[1], 1.5, MCEr_det[1]])
-        plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
-                 linewidth=3)
-        plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
-                 label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
-        plt.ylim(
-            [0, numpy.max([rtgm_probmce,  MCEr, MCEr_det, limit_det]) + 0.2])
+    # FIXME: missing 'PGA_84th', 'Ss_84th' and 'S1_84th' in asce07
+    # MCEr_det = [dic['PGA_84th'], dic['Ss_84th'], dic['S1_84th']]
+    # if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
+    #     upperlim = max([rtgm_probmce[1], 1.5])
+    #     plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
+    # else:
+    #     upperlim = max([rtgm_probmce[1], 1.5, MCEr_det[1]])
+    #     plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
+    #              linewidth=3)
+    #     plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
+    #              label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
+    #     plt.ylim(
+    #         [0, numpy.max([rtgm_probmce,  MCEr, MCEr_det, limit_det]) + 0.2])
     plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
                 linewidth=2, facecolors='none', edgecolors='r')
     plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
@@ -259,7 +262,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
 
     # add user guide message
     message = 'See WebUI User Guide for complete explanation of plot contents.'
-    plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85)
+    # plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85)
 
     if update_dstore:
         bio = io.BytesIO()

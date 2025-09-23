@@ -783,7 +783,7 @@ def export_mce(ekey, dstore):
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
     for s, site in enumerate(sitecol):
-        breakpoint()
+        # breakpoint()
         js = dstore[ekey[0]][s].decode('utf8')
         dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')

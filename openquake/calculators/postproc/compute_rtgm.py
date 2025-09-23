@@ -327,7 +327,7 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     sds_indices = [index for index, period in enumerate(periods) if 0.2 <= period <= 5]
 
     # sds is 90% of the maximum from 0.2-5.0s
-    breakpoint()
+    # breakpoint()
     sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
 
     # For sd1, depending on vs30, take periods from 1-2s or 1-5s
@@ -354,7 +354,7 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
 
     return design
 
-            
+
 class MCEGetter:
     """
     :param job_imts: the IMTs run in the job
@@ -367,19 +367,19 @@ class MCEGetter:
         self.ASCE_version = ASCE_version
 
     def get_mce(self, DLLs, rtgm, sid, vs30, low_haz=False):
-        
-    
+
+
         """
         Computes deterministic and probabilistic MCE and prepares the MCE DataFrame.
         The ASCE7 formatting is now separated into another method.
-        
+
         :param DLLs: deterministic lower limits according to ASCE 7-22
         :param rtgm: dataframe with ProbMCE and RiskCoeff
         :param sid: site ID
         :param vs30: shear wave velocity
         :param low_haz: boolean specifying if the hazard is lower than DLLs
-        :returns: dict (imt -> probabilistic MCE), 
-                  dict (imt -> governing MCE), 
+        :returns: dict (imt -> probabilistic MCE),
+                  dict (imt -> governing MCE),
                   dict (imt -> deterministic MCE),
                   pandas DataFrame with MCEs
     """
@@ -387,7 +387,7 @@ class MCEGetter:
         job_imts = self.job_imts
         prob_mce = rtgm.ProbMCE.to_numpy()
         imts = rtgm['IMT']
-    
+
         # Extract risk coefficients
         crs = cr1 = None
         for i, imt in enumerate(imts):
@@ -395,11 +395,11 @@ class MCEGetter:
                 crs = rtgm['RiskCoeff'][i]
             elif imt == 'SA1P0':
                 cr1 = rtgm['RiskCoeff'][i]
-    
+
         det_mce = {}
         mce = {}
         prob_mce_out = {}
-    
+
         for i, imt in enumerate(det_imt):
             if low_haz:
                 det_mce[imt] = np.nan
@@ -409,7 +409,7 @@ class MCEGetter:
                 det_mce[imt] = max(det_imt[imt], DLLs[i])
                 mce[imt] = min(prob_mce[i], det_mce[imt])
             prob_mce_out[imt] = prob_mce[i]
-    
+
         dic_mce = {
             'IMT': job_imts,
             'DLL': DLLs,
@@ -447,17 +447,17 @@ class MCEGetter:
                          mce_df)
             logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
             #asce41_sa, asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid, ASCE_version, vs30)
-    
+
             #logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
             #logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
-    
+
             yield (sid, mag_dst_eps_sig, mce_df)
 
 def compute_mce_governing(dstore, sitecol, locs):
     """
-    Note that for ASCE7-22 and default site class the site is multiplied 3 times 
+    Note that for ASCE7-22 and default site class the site is multiplied 3 times
     with different values of the vs30 and the MCE is computed as the maximum MCE
-    across the sites for each IMT. For all other site class, the same mce computed 
+    across the sites for each IMT. For all other site class, the same mce computed
     before is used.
     """
     # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
@@ -482,7 +482,7 @@ def uhs_1site(dstore, sid):
     periods = [imt.period for imt in oq.imt_periods()]
     df = pd.DataFrame(arr2d, columns=poe_cols)
     df.insert(0, "period", periods)
-    df.insert(0, "sid",sid*len(imts)) 
+    df.insert(0, "sid",sid*len(imts))
     return df
 
 
@@ -495,7 +495,7 @@ def export_uhs(dstore, sitecol, locs):
         uhs_all.append(uhs_site)
 
     df_all = pd.concat(uhs_all, ignore_index=True)
-    
+
     return df_all
 
 
@@ -534,7 +534,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
                 DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
             logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
                          loc.y, mce_df)
-            #a07 = 
+            #a07 =
             #asce41_sa, a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid, ASCE_version, vs30)
             #a07 = hdf5.dumps(a07)
             #a41 = hdf5.dumps(a41)
@@ -550,7 +550,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
 #class ASCE7Calculator:
 
 def get_seismicity_class(mce_site, vs30):
-           
+
         mce = mce_site.SaM
         print(mce_site.period)
         if vs30 == 760:
@@ -580,12 +580,12 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
         Formats the final ASCE 7 dictionary including seismicity classification.
         """
 
-        oq = dstore['oqparam'] 
+        oq = dstore['oqparam']
         ASCE_version = oq.asce_version
-        job_imts = list(oq.imtls)    
+        job_imts = list(oq.imtls)
         sitecol = dstore['sitecol']
 
-        
+
         period_mce = mce_site["period"]
         mce = mce_site.SaM
         Ss_seismicity, S1_seismicity = get_seismicity_class(mce_site, vs30)
@@ -593,7 +593,7 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
 
         if ASCE_version == 'ASCE7-16':
             asce07 = {
-                'PGA': mce_site[mce_site.period==0]['SaM'].iloc[0],  
+                'PGA': mce_site[mce_site.period==0]['SaM'].iloc[0],
                 'Ss': mce_site[mce_site.period==0.2]['SaM'].iloc[0], 'Ss_seismicity': Ss_seismicity,
                 'S1': mce_site[mce_site.period==1.0]['SaM'].iloc[0],  'S1_seismicity': S1_seismicity
             }
@@ -601,7 +601,7 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
             design = calc_sds_and_sd1(period_mce.tolist(), mce.tolist(), vs30)
             if vs30 == 760:
                 asce07 = {
-                    'PGA_M': mce_site[mce_site.period==0]['SaM'].iloc[0], 
+                    'PGA_M': mce_site[mce_site.period==0]['SaM'].iloc[0],
                     'Ss': mce_site[mce_site.period==0.2]['SaM'].iloc[0], 'Sms': design[2], 'Sds': design[0],
                     'Ss_seismicity': Ss_seismicity,
                     'S1': mce_site[mce_site.period==1.0]['SaM'].iloc[0], 'Sm1': design[3], 'Sd1': design[1],
@@ -609,7 +609,7 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
                 }
             else:
                 asce07 = {
-                    'PGA_M': mce_site[mce_site.period==0.0]['SaM'].iloc[0], 
+                    'PGA_M': mce_site[mce_site.period==0.0]['SaM'].iloc[0],
                     'Sms': design[2], 'Sds': design[0],
                     'Ss_seismicity': 'n.a.',
                     'Sm1': design[3], 'Sd1': design[1],
@@ -624,8 +624,8 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
 
 #class ASCE41Calculator:
 
-    
-    
+
+
 def compute(dstore, sa_data_site, vs30, mce, ASCE_DECIMALS):
     ASCE_version = oq.asce_version
     sa_data = get_spectra(dstore, sa_data_site, mce, facts)
@@ -692,7 +692,7 @@ def get_spectra_orig(dstore, sid, custom_id, mce, facts):
         BSE1E_uhs = [f * h for f, h in zip(facts, hmap[:, poe20_50])]
         BSE1E = [min(n, e) for n, e in zip(BSE1N, BSE1E_uhs)]
         uhs_475 = hmap[:, poe10_50]
-    
+
         sa_data = {'custom_site_id': [custom_id] * len(imts),
                    'sid': [sid] * len(imts),
                     'IMT': imts,
@@ -704,7 +704,7 @@ def get_spectra_orig(dstore, sid, custom_id, mce, facts):
                     'uhs_475': uhs_475}
 
         return sa_data
-        
+
 def get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS):
     if asce_version == 'ASCE7-16':
         return asce41_17(asce_sa, ASCE_DECIMALS)
@@ -712,19 +712,16 @@ def get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS):
         return asce41_23(asce_sa, vs30, ASCE_DECIMALS)
 
 def asce41_17(sa_data, ASCE_DECIMALS):
-    imts = sa_data['IMT']
-    sa02 = imts.index('SA(0.2)')
-    sa10 = imts.index('SA(1.0)')
 
     return {
-        'BSE2N_Ss': round(sa_data['BSE2N'][sa02], ASCE_DECIMALS),
-        'BSE2E_Ss': round(sa_data['BSE2E'][sa02], ASCE_DECIMALS),
-        'BSE1N_Ss': round(sa_data['BSE1N'][sa02], ASCE_DECIMALS),
-        'BSE1E_Ss': round(sa_data['BSE1E'][sa02], ASCE_DECIMALS),
-        'BSE2N_S1': round(sa_data['BSE2N'][sa10], ASCE_DECIMALS),
-        'BSE2E_S1': round(sa_data['BSE2E'][sa10], ASCE_DECIMALS),
-        'BSE1N_S1': round(sa_data['BSE1N'][sa10], ASCE_DECIMALS),
-        'BSE1E_S1': round(sa_data['BSE1E'][sa10], ASCE_DECIMALS),
+        "BSE2N_Ss": round(sa_data[sa_data['period'] == 0.2]['BSE2N'], ASCE_DECIMALS),
+        "BSE2E_Ss": round(sa_data[sa_data['period'] == 0.2]["BSE2E"], ASCE_DECIMALS),
+        "BSE1N_Ss": round(sa_data[sa_data['period'] == 0.2]["BSE1N"], ASCE_DECIMALS),
+        "BSE1E_Ss": round(sa_data[sa_data['period'] == 0.2]["BSE1E"], ASCE_DECIMALS),
+        "BSE2N_S1": round(sa_data[sa_data['period'] == 1.0]["BSE2N"], ASCE_DECIMALS),
+        "BSE2E_S1": round(sa_data[sa_data['period'] == 1.0]["BSE2E"], ASCE_DECIMALS),
+        "BSE1N_S1": round(sa_data[sa_data['period'] == 1.0]["BSE1N"], ASCE_DECIMALS),
+        "BSE1E_S1": round(sa_data[sa_data['period'] == 1.0]["BSE1E"], ASCE_DECIMALS),
     }
 
 def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
@@ -765,7 +762,7 @@ def get_zero_hazard_asce41(asce_version):
 def compute_max_sa_asce41(dstore,sitecol,locs):
 
     # replace the maximum per each poe for sites in the default site class
-   
+
     keys_asce41 = ['BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
 
     asce41_df = dstore.read_df('spectra_asce41')
@@ -773,15 +770,15 @@ def compute_max_sa_asce41(dstore,sitecol,locs):
     del asce41_df['IMT']
     out = []
     for sids in locs.values():
-        
+
         csi = sitecol.custom_site_id[sids[0]].split(':')[0]
         asce41df = asce41_df[np.isin(asce41_df.sid, sids)]
         df = asce41df.groupby('period')[keys_asce41].max()#.to_frame()  # ASCE41 by period
         df['custom_site_id'] = csi
         out.append(df)
- 
+
     return pd.concat(out).reset_index()
-            
+
 def calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     """
     :yields: (sid, mag_dst_eps_sig, mce_df)
@@ -811,7 +808,7 @@ def calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
         #logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
         #logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
 
-        
+
         yield (sid, mag_dst_eps_sig, mce_df)
 
 
@@ -917,60 +914,65 @@ def main(dstore, csm):
             rtgm_dfs.append(rtgm_df)
     notifications = np.array(notification_items, dtype=notification_dtype)
 
-    
-    
+
+
     for sid, mag_dst_eps_sig, mce_df in calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
         dstore[f'mag_dst_eps_sig/{sid}'] = mag_dst_eps_sig
         mce_dfs.append(mce_df)
-    
+
     if mce_dfs:
         dstore.create_df('mce', pd.concat(mce_dfs))
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
-   
+
     ####################
 
     # final MCE spectra, results for ASCE7:
     df = compute_mce_governing(dstore, sitecol, locs)
     dstore.create_df('mce_governing', df)
-        
+
 
     # compute ASCE 7 parameters from MCE:
-    
+
     df = compute_mce_governing(dstore, sitecol, locs)
     df.columns = ["period", "SaM", "custom_site_id"]
     dstore.create_df('mce_final', df)
     sitecol = dstore['sitecol']
     custom_ids = df['custom_site_id']
-    
+
     asce07 = {}
     for site_id in custom_ids:
         print(site_id)
         mce_site = df[df['custom_site_id'] == site_id]
-        if np.all(mce_site.SaM == 0) or mce_site['SaM'].isna().all():          
+        if np.all(mce_site.SaM == 0) or mce_site['SaM'].isna().all():
             result = get_zero_hazard_asce07(s, dstore)
         else:
-            ids = [cid.decode("utf-8") if isinstance(cid, bytes) else str(cid)
-            for cid in sitecol["custom_site_id"]]   
+            # ids = [cid.decode("utf-8") if isinstance(cid, bytes) else str(cid)
+            # for cid in sitecol["custom_site_id"]]
+            ids = [
+                cid.decode("utf-8").split(':')[0] if isinstance(cid, bytes)
+                else str(cid).split(':')[0]
+                for cid in sitecol["custom_site_id"]
+            ]
             mask = np.array(ids) == site_id
             Vs30 = sitecol["vs30"][mask][0]
             result = asce07_output_new(site_id, Vs30, dstore, mce_site)
         asce07[sid] = result
     df_asce = pd.DataFrame.from_dict(asce07, orient="index")
-    dstore["asce07"] = df_asce.to_dict() 
+    dstore.create_df('asce07', df_asce)
 
     ####################
 
     # compute ASCE 41:
-    
+
     # 1) get spectra asce41 for each sid and each Vs30
     df_uhs= export_uhs(dstore,sitecol,locs)
     asce41, asce41_sa = {}, {}
     mce_df = dstore.read_df('mce')
     rtgm_df = dstore.read_df('rtgm')
-    sitecol = dstore.read_df('sitecol')    
-    
+    sitecol = dstore.read_df('sitecol')
+
     sa_asce41 = []  # list to collect DataFrames for each site
 
     for sid in sitecol['sids']:
@@ -978,26 +980,26 @@ def main(dstore, csm):
         mce_df_site = mce_df[mce_df['sid'] == sid]['MCE']
         custom_id = sitecol[sitecol['sids'] == sid]['custom_site_id'].values[0]  # get single value
         facts = rtgm_df[rtgm_df['sid'] == sid]['fact']
-    
+
         # Get the spectra for this site
         uhs_asce41 = get_spectra_orig(dstore, sid, custom_id, mce_df_site, facts)
-    
+
         # Convert to DataFrame and reset index
         df_out = pd.DataFrame(uhs_asce41).reset_index(drop=True)
         sa_asce41.append(df_out)
-    
+
         logging.info(f'{df_out=}')  # optional
-    
+
     df_final = pd.concat(sa_asce41, ignore_index=True)
     df_final = df_final.astype({col: "string" for col in df_final.select_dtypes("object").columns})
     df_final = df_final.reset_index(drop=True)
     dstore.create_df("spectra_asce41", df_final)
 
-    
+
     # 2) compute max of asce41 spectra for default site class:
     asce41_spectra = compute_max_sa_asce41(dstore,sitecol,locs)
     asce41_spectra.columns = ['period','BSE2N','BSE2E','BSE1N','BSE1E','uhs_475','custom_site_id']
-    
+
     dstore.create_df('asce41_sa_final', asce41_spectra)
 
     # 3) compute asce41 parameters:
@@ -1006,14 +1008,14 @@ def main(dstore, csm):
     asce_version = oq.asce_version
     for sid in custom_ids:
         asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] ==sid]
-        #if np.all(asce_sa[keys_asce41] == 0) or asce_sa[keys_asce41].isna().all():  
+        #if np.all(asce_sa[keys_asce41] == 0) or asce_sa[keys_asce41].isna().all():
         #    param_asce41 = get_zero_hazard_asce41(asce_version)
-        #else:  
+        #else:
         param_asce41 = get_params(asce_version, Vs30, asce_sa, ASCE_DECIMALS)
     dstore["asce41"] = param_asce41
-    
+
     ####################
-    
+
 
     plot_sites(dstore, update_dstore=True)
     if rtgm_dfs and len(locs) == 1:
@@ -1041,4 +1043,3 @@ def main(dstore, csm):
             make_figure_disagg_by_src(plt, sids_to_plot, dstore, vs30s)
     if len(notifications):
         dstore['notifications'] = notifications
-
