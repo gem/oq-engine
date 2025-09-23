@@ -2298,6 +2298,17 @@ class OqParam(valid.ParamSet):
             return True
         return self.hazard_calculation_id
 
+    def get_haz_distance(self):
+        """
+        :returns: the asset_hazard_distance or region_grid_spacing * 1.414
+        """
+        asset_hazard_distance = max(self.asset_hazard_distance.values())
+        if self.region_grid_spacing:
+            haz_distance = self.region_grid_spacing * 1.414
+        else:
+            haz_distance = asset_hazard_distance
+        return haz_distance
+
     @classmethod
     def docs(cls):
         """

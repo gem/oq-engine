@@ -1244,7 +1244,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     :param inp_types: the input loss types
     :returns: (site collection, asset collection, discarded, exposure)
     """
-    asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam, h5)
     try:
@@ -1252,14 +1251,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     except AttributeError:
         exp = get_exposure(oqparam, h5)
 
-    if oqparam.region_grid_spacing:
-        haz_distance = oqparam.region_grid_spacing * 1.414
-        if haz_distance != asset_hazard_distance:
-            logging.debug('Using asset_hazard_distance=%d km instead of %d km',
-                          haz_distance, asset_hazard_distance)
-    else:
-        haz_distance = asset_hazard_distance
-
+    haz_distance = oqparam.get_haz_distance()
     # associate the assets to the hazard sites
     # this is absurdely fast: 10 million assets can be associated in <10s
     A = len(exp.assets)
