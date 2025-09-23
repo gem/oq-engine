@@ -1085,24 +1085,24 @@ def get_exposure(oqparam, h5=None):
     if 'exposure' not in oq.inputs:
         return
     fnames = oq.inputs['exposure']
+    if oqparam.rupture_xml or oqparam.rupture_dict:
+        rup = get_rupture(oqparam)
+        dist = oqparam.maximum_distance('*')(rup.mag)
+        rupfilter = RuptureFilter(rup, dist)
+    else:
+        rupfilter = None
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
             h6 = [x.encode('ascii') for x in sorted(set(
                 hex6(sm['lon'], sm['lat'])))]
-            exposure = asset.Exposure.read_around(fnames[0], h6)
+            exposure = asset.Exposure.read_around(fnames[0], h6, rupfilter)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
                     oq.all_cost_types = loss_types
                     oq.minimum_asset_loss = {lt: 0 for lt in loss_types}
         else:
-            if oqparam.rupture_xml or oqparam.rupture_dict:
-                rup = get_rupture(oqparam)
-                dist = oqparam.maximum_distance('*')(rup.mag)
-                rupfilter = RuptureFilter(rup, dist)
-            else:
-                rupfilter = None
             exposure = asset.Exposure.read_all(
                 oq.inputs['exposure'], oq.calculation_mode,
                 oq.ignore_missing_costs,

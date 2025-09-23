@@ -938,7 +938,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
 
 
 # used in impact calculations
-def impact_read_assets(h5, start, stop):
+def impact_read_assets(h5, start, stop, rupfilter):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
@@ -962,7 +962,7 @@ def impact_read_assets(h5, start, stop):
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
                            df.OCCUPANTS_PER_ASSET_NIGHT +
                            df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
-    return df
+    return rupfilter(df) if rupfilter else df
 
 
 class Exposure(object):
@@ -1012,7 +1012,7 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, hexes):
+    def read_around(exposure_hdf5, hexes, rupfilter):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
@@ -1025,7 +1025,7 @@ class Exposure(object):
                 raise SiteAssociationError(
                     'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
-                impact_read_assets(f, start, stop)
+                impact_read_assets(f, start, stop, rupfilter)
                 for _hex6, start, stop in slices)
             tagcol = f['tagcol']
             # revert the tagnames so that taxonomy becomes the first field,
