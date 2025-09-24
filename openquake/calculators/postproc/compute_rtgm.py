@@ -1021,7 +1021,10 @@ def main(dstore, csm):
     if rtgm_dfs and len(locs) == 1:
         [sids] = locs.values()
         n_sids = len(sids)
-        vs30s = oq.override_vs30
+        if len(sitecol) == 1:
+            vs30s = [float(sitecol['vs30'])]
+        else:
+            vs30s = list(sitecol.array['vs30'])
         assert n_sids == len(vs30s), (f'The number of sites ({n_sids}) must be equal to'
                                       f' the number of values of vs30 ({len(vs30s)})')
         plt = import_plt()
