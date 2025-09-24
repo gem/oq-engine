@@ -473,7 +473,39 @@ class KiteSurface(BaseSurface):
         icol = int(np.round(mesh.shape[1] / 2))
         return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
                      mesh.depths[irow, icol])
+    
+    def get_middle_point(self):
+        """
+        Return the middle point of a Kite mesh that may contain nans.
 
+        The middle point is the finite point of the mesh that is closest 
+        to the centroid (the algebraic mean) of the non-NaN
+        points, calculated in a Cartesian reference frame (the centroid
+        itself may not be on the mesh for faults with curvature).
+        """
+
+        lon_vec = self.mesh.lons.ravel()
+        lat_vec = self.mesh.lats.ravel()
+        depth_vec = self.mesh.depths.ravel()
+
+        non_nan_idx = (~np.isnan(lon_vec) * ~np.isnan(lat_vec) 
+                       * ~np.isnan(depth_vec))
+        
+        lon_vec = lon_vec[non_nan_idx]
+        lat_vec = lat_vec[non_nan_idx]
+        depth_vec = depth_vec[non_nan_idx]
+
+        cart_pts = geodetic.fast_spherical_to_cartesian(lon_vec, lat_vec, 
+                                                        depth_vec)
+        centroid = cart_pts.mean(axis=0)
+        
+        distances = np.sqrt((centroid[0] - cart_pts[:,0])**2 + 
+                               (centroid[1] - cart_pts[:,1])**2 +
+                               (centroid[2] - cart_pts[:,2])**2
+                               )
+        min_idx = np.argmin(distances)
+        return Point(lon_vec[min_idx], lat_vec[min_idx], depth_vec[min_idx])
+    
     @property
     def surface_projection(self):
         """

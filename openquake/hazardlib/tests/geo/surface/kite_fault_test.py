@@ -374,6 +374,15 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         self.assertAlmostEqual(dip, 47.0967, places=3, msg='Wrong dip value')
 
 
+    def test_get_middle_point(self):
+        middle_point = self.srfc.get_middle_point()
+        # values are manually extracted from mesh based on expectations
+        self.assertAlmostEqual(middle_point.longitude, 10.13466149, places=5)
+        self.assertAlmostEqual(middle_point.latitude, 44.952009, places=5)
+        self.assertAlmostEqual(middle_point.depth, 9.6199765, places=5)
+
+
+
 class KiteSurfaceUCF1Tests(unittest.TestCase):
 
     def setUp(self):
