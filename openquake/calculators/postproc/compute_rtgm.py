@@ -172,6 +172,8 @@ def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
 
+    # FIXME: update docstring params and return values
+
     :param hcurves: array of hazard curves of shape (M, L1)
     :param site: a Site object
     :param oq: OqParam instance
@@ -482,6 +484,8 @@ def uhs_1site(dstore, sid):
     periods = [imt.period for imt in oq.imt_periods()]
     df = pd.DataFrame(arr2d, columns=poe_cols)
     df.insert(0, "period", periods)
+    # FIXME: check if it's ok to use the csi here (otherwise it fails for default site
+    # class)
     csi = dstore['sitecol'].custom_site_id[sid[0]].decode('ascii').split(':')[0]
     df.insert(0, "sid",csi*len(imts))
     return df
