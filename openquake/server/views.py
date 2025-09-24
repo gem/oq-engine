@@ -1713,8 +1713,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             asce07_m = {asce07_key_mapping.get(k, k): v[0] for k, v in asce07.items()}
             # FIXME: keys have changed
             for key, value in asce07_m.items():
-                # if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
-                if key not in ('PGA_M', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
+                if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value
@@ -1743,7 +1742,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     'BSE1N_S1': 'BSE1N_Sx1',
                     'BSE1E_S1': 'BSE1E_Sx1',
                 }
-            asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
+            asce41_m = {asce41_key_mapping.get(k, k): v[()] for k, v in asce41.items()}
             # FIXME: keys have changed
             for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
