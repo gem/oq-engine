@@ -88,6 +88,7 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     params['max_sites_disagg'] = len(lonlats)
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
+    breakpoint()
     params['distance_bin_width'] = '20'
     params['num_epsilon_bins'] = '10'
     params['mag_bin_width'] = '0.1'
