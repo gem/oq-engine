@@ -88,6 +88,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
+    if not 'vs30' in sites_df.keys():
+        sites_df['vs30'] = [False] * len(sites_df)
     for vs30, dvf in sites_df.groupby('vs30'):
         for model, df in dvf.groupby('model'):
             if model in ('???', 'USA', 'GLD'):
