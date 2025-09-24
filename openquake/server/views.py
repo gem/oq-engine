@@ -1742,7 +1742,12 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     'BSE1N_S1': 'BSE1N_Sx1',
                     'BSE1E_S1': 'BSE1E_Sx1',
                 }
-            asce41_m = {asce41_key_mapping.get(k, k): v[()] for k, v in asce41.items()}
+            try:
+                asce41_m = {asce41_key_mapping.get(k, k): v[()][0]
+                            for k, v in asce41.items()}
+            except IndexError:
+                asce41_m = {asce41_key_mapping.get(k, k): v[()]
+                            for k, v in asce41.items()}
             # FIXME: keys have changed
             for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
