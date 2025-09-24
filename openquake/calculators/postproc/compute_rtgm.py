@@ -482,7 +482,8 @@ def uhs_1site(dstore, sid):
     periods = [imt.period for imt in oq.imt_periods()]
     df = pd.DataFrame(arr2d, columns=poe_cols)
     df.insert(0, "period", periods)
-    df.insert(0, "sid",sid*len(imts))
+    csi = dstore['sitecol'].custom_site_id[sid[0]].decode('ascii').split(':')[0]
+    df.insert(0, "sid",csi*len(imts))
     return df
 
 
@@ -1021,10 +1022,7 @@ def main(dstore, csm):
     if rtgm_dfs and len(locs) == 1:
         [sids] = locs.values()
         n_sids = len(sids)
-        if len(sitecol) == 1:
-            vs30s = [float(sitecol['vs30'])]
-        else:
-            vs30s = list(sitecol.array['vs30'])
+        vs30s = list(sitecol['vs30'])
         assert n_sids == len(vs30s), (f'The number of sites ({n_sids}) must be equal to'
                                       f' the number of values of vs30 ({len(vs30s)})')
         plt = import_plt()
