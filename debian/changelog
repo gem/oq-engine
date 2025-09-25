@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a `NameError: Missing liquefaction:LiqProb in gmf_data`
+    when using the TodorovicSilva2022NonParametric model
   * gzipping the avg_losses reducing the disk space by half or so
   * Added an extractor `losses_by_location`
   * Filtering the assets around the rupture according to the maximum distance
