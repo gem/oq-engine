@@ -325,7 +325,7 @@ class ModifiableGMPE(GMPE):
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
 
         if 'ba08_site_term' in self.params or 'bssa14_site_term' in self.params:
-            # These site terms require rake and rjb in the ctx bedrock PGA
+            # Require rake and rjb in the ctx for computing bedrock PGA
             if 'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
                 self.REQUIRES_RUPTURE_PARAMETERS |= {"rake"}
             if 'rjb' not in self.gmpe.REQUIRES_DISTANCES:
