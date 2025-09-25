@@ -25,8 +25,7 @@ import logging
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat, config
-from openquake.hazardlib import (
-    nrml, sourceconverter, InvalidFile, calc, gsim_lt)
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -427,7 +426,7 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
     if sections:
         # save in the temporary file sources and sections
         assert hdf5path, ('You forgot to pass the dstore to '
-                        'get_composite_source_model')
+                          'get_composite_source_model')
         mfsources = []
         for sg in src_groups:
             for src in sg:
