@@ -250,6 +250,9 @@ def corresponds(col, peril, imt):
         return peril == 'groundshaking' and col.endswith(imt)
     elif peril == 'groundshaking':
         return col == imt
+    elif peril == 'liquefaction':
+        # so that TodorovicSilva2022NonParametric works
+        peril = 'liq'
     return peril in col.lower() and col.endswith(imt)
 
 
@@ -446,7 +449,7 @@ class RiskModel(object):
                 gmvs = gmf_df[col].to_numpy()
                 break
         else:
-            raise NameError(f'Missing {peril}:{imt} in gmf_data')
+            raise NameError(f'Missing {peril}_{imt} in gmf_data')
         ffs = self.risk_functions[peril][loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))

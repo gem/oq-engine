@@ -1,0 +1,15 @@
+risk_id,consequence,peril,slight,moderate,extensive,collapse
+Single_span_bridge,non_operational,groundshaking,0,0,1,1
+Multi_span_medium_bridge,non_operational,groundshaking,0,0,1,1
+Multi_span_major_bridge,non_operational,groundshaking,0,0,1,1
+road,non_operational,groundshaking,0,0,1,1
+connection,non_operational,groundshaking,0,0,1,1
+TAZ,non_operational,groundshaking,0,0,1,1
+tunnel,non_operational,groundshaking,0,0,1,1
+Single_span_bridge,non_operational,liquefaction,0,0,1,1
+Multi_span_medium_bridge,non_operational,liquefaction,0,0,1,1
+Multi_span_major_bridge,non_operational,liquefaction,0,0,1,1
+road,non_operational,liquefaction,0,0,1,1
+connection,non_operational,liquefaction,0,0,1,1
+TAZ,non_operational,liquefaction,0,0,1,1
+tunnel,non_operational,liquefaction,0,0,1,1
