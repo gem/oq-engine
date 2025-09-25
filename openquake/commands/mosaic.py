@@ -159,6 +159,10 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
     """
     if not mosaic_dir and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
+    try:
+        import rtgmpy
+    except ImportError:
+        sys.exit('Please install the rtgmpy wheel')
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
         from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs)
