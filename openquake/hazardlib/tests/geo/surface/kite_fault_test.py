@@ -382,7 +382,6 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             self.srfc.mesh.lats.ravel()[middle_idx],
             self.srfc.mesh.depths.ravel()[middle_idx],
             )
-        # assert middle_point == middle_point_correct
         mpc = middle_point_correct
         np.testing.assert_almost_equal(
             np.array([middle_point.x, middle_point.y, middle_point.depth]),
