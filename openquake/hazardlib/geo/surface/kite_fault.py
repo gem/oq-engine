@@ -500,9 +500,9 @@ class KiteSurface(BaseSurface):
         centroid = cart_pts.mean(axis=0)
         
         distances = np.sqrt((centroid[0] - cart_pts[:,0])**2 + 
-                               (centroid[1] - cart_pts[:,1])**2 +
-                               (centroid[2] - cart_pts[:,2])**2
-                               )
+                            (centroid[1] - cart_pts[:,1])**2 +
+                            (centroid[2] - cart_pts[:,2])**2
+                            )
         min_idx = np.argmin(distances)
         return Point(lon_vec[min_idx], lat_vec[min_idx], depth_vec[min_idx])
     
