@@ -242,9 +242,13 @@ def check_duplicates(smdict, strict):
 
 
 def save_read_times(dstore, source_models):
+    """
+    Store how many seconds it took to read each source model file
+    in a table (fname, rtime)
+    """
     dt = [('fname', hdf5.vstr), ('rtime', float)]
-    dstore['source_model_read_times'] = numpy.array([
-        (sm.fname, sm.rtime) for sm in source_models], dt)
+    arr = numpy.array([(sm.fname, sm.rtime) for sm in source_models], dt)
+    dstore.create_dset('source_model_read_times', arr)
 
 
 def get_csm(oq, full_lt, dstore=None):
