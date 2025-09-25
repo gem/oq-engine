@@ -64,8 +64,7 @@ class BSSA14SiteTermTestCase(unittest.TestCase):
         obtaines the same values as the original GMM.
 
         Also check that the BSSA14 ModifiableGMPE class applied to the
-        AtkinsonMacias2009 (EMME2 crustal central model) GMM obtains the
-        expected values.
+        AtkinsonMacias2009 GMM obtains the expected values.
         """
         # Check 1: Application of BSSA14 for reference conditions
         # to the BSSA14 GMM is the same as the original GMM class
@@ -87,12 +86,11 @@ class BSSA14SiteTermTestCase(unittest.TestCase):
         aae(sig[0], sig[1])
 
         # Check 2: Expected values for non-reference condition
-        # using the EMME24 central branch GMM
-        emme24 = valid.gsim('AtkinsonMacias2009')
-        gmpe = valid.modified_gsim(emme24)
+        am09 = valid.gsim('AtkinsonMacias2009')
+        gmpe = valid.modified_gsim(am09)
         # Instantiate from mgmpe class + from regular mgmpe
         mgmpe2 = BSSA14SiteTerm(gmpe_name='AtkinsonMacias2009')
-        mgmpe1 = valid.modified_gsim(emme24, bssa14_site_term={})
+        mgmpe1 = valid.modified_gsim(am09, bssa14_site_term={})
 
         ctx.vs30 = 400.
         cmaker = simple_cmaker(
