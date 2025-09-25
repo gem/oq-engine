@@ -24,8 +24,8 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.const import TRT, IMC
 from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import BSSA14SiteTerm
 
-aae = np.testing.assert_almost_equal
 
+aae = np.testing.assert_almost_equal
 
 exp_gmm_origin = np.array([[ 2.95002695,  2.95002695,  2.95002695,  2.95002695],
        [ 3.48372038,  3.48372038,  3.48372038,  3.48372038],
