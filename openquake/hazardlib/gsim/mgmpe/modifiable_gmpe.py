@@ -331,7 +331,7 @@ class ModifiableGMPE(GMPE):
             if 'rjb' not in self.gmpe.REQUIRES_DISTANCES:
                 self.REQUIRES_DISTANCES |= {"rjb"}
 
-        if (any(site_term in self.params for site_term in SITE_TERMS) and
+        if (any(sm in self.params for sm in SITE_TERMS) and
             'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
             # Make sure is always Vs30 in the ctx
             self.REQUIRES_SITES_PARAMETERS |= {"vs30"}
