@@ -369,6 +369,7 @@ class SourceGroup(collections.abc.Sequence):
                         numpy.frombuffer(buf, numpy.uint8)))
         attrs = dict(
             trt=self.trt,
+            grp_id=self.sources[0].grp_id,
             name=self.name or '',
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,

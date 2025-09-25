@@ -236,15 +236,16 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         logging.info('Building cmakers')
-        trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
-        self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
-        self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
+        all_trt_smrs = sorted({sg.sources[0].trt_smrs for sg in csm.src_groups})
+        self.cmakers = get_cmakers(all_trt_smrs, csm.full_lt, oq)
+        self.datastore.hdf5.save_vlen(
+            'trt_smrs', [U32(ts) for ts in all_trt_smrs])
         sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
 
         L = oq.imtls.size
-        Gfull = self.full_lt.gfull(trt_smrs)
+        Gfull = self.full_lt.gfull(all_trt_smrs)
         Gt = sum(len(cm.gsims) for cm in self.cmakers)
         extra = f'<{Gfull}' if Gt < Gfull else ''
         if sites is not None:

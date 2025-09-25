@@ -54,6 +54,12 @@ source_info_dt = numpy.dtype([
 
 checksum = operator.attrgetter('checksum')
 
+def getGt(src_groups):
+    """
+    The maximum grp_id + 1
+    """
+    return max(sg.sources[0].grp_id for sg in src_groups) + 1
+
 
 def check_unique(ids, msg='', strict=True):
     """
@@ -583,10 +589,12 @@ class CompositeSourceModel:
 
         # initialize the code dictionary
         self.code = {}  # srcid -> code
-        for grp_id, sg in enumerate(self.src_groups):
+        trt_smrs = {sg.sources[0].trt_smrs for sg in self.src_groups}
+        dic = {ts: grp_id for grp_id, ts in enumerate(sorted(trt_smrs))}
+        for sg in self.src_groups:
             assert len(sg)  # sanity check
             for src in sg:
-                src.grp_id = grp_id
+                src.grp_id = dic[src.trt_smrs]
                 if src.code != b'P':
                     source_id = basename(src)
                     self.code[source_id] = src.code
@@ -702,9 +710,9 @@ class CompositeSourceModel:
         :returns: a dictionary grp_id -> MSR string
         """
         acc = general.AccumDict(accum=set())
-        for grp_id, sg in enumerate(self.src_groups):
+        for sg in self.src_groups:
             for src in sg:
-                acc[grp_id].add(msr_name(src))
+                acc[sg.grp_id].add(msr_name(src))
         return {grp_id: ' '.join(sorted(acc[grp_id])) for grp_id in acc}
 
     def get_max_weight(self, oq):  # used in preclassical
@@ -734,7 +742,6 @@ class CompositeSourceModel:
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
-        grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
             for cmaker in cmakers:
                 if self.src_groups[cmaker.grp_id].weight:
@@ -744,7 +751,7 @@ class CompositeSourceModel:
         # cmakers is a dictionary label -> array of cmakers
         with_labels = len(cmakers) > 1
         for idx, label in enumerate(cmakers):
-            for cmaker in cmakers[label][grp_ids]:
+            for cmaker in cmakers[label]:
                 if self.src_groups[cmaker.grp_id].weight == 0:
                     # happens in LogicTreeTestCase::test_case_08 since the
                     # point sources are far away as determined in preclassical
@@ -789,11 +796,11 @@ class CompositeSourceModel:
         return cmaker, tilegetters, blocks, numpy.ceil(splits)
 
     def __toh5__(self):
-        G = len(self.src_groups)
-        arr = numpy.zeros(G + 1, hdf5.vuint8)
-        for grp_id, grp in enumerate(self.src_groups):
-            arr[grp_id] = zpik(grp)
-        arr[G] = zpik(self.source_info)
+        Gt = getGt(self.src_groups)
+        arr = numpy.zeros(Gt + 1, hdf5.vuint8)  # +1 for source_info
+        for grp in self.src_groups:
+            arr[grp.sources[0].grp_id] = zpik(grp)
+        arr[Gt] = zpik(self.source_info)
         size = sum(len(val) for val in arr)
         logging.info(f'Storing {general.humansize(size)} '
                      'of CompositeSourceModel')
