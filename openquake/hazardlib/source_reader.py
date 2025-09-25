@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import zlib
 import os.path
 import pickle
@@ -162,6 +163,7 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
     :param monitor: a Monitor instance
     :returns: a SourceModel instance
     """
+    t0 = time.time()
     [sm] = nrml.read_source_models([fname], converter)
     sm.branch = branch
     for sg in sm.src_groups:
@@ -173,6 +175,7 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
                 else:
                     srcs.extend(calc.filters.split_source(src))
             sg.sources = _sample(srcs, float(sample), applied)
+    sm.rtime = time.time() - t0  # save the read time
     return {fname: sm}
 
 
@@ -238,6 +241,12 @@ def check_duplicates(smdict, strict):
                         general.shortlist(found))
 
 
+def save_read_times(dstore, source_models):
+    dt = [('fname', hdf5.vstr), ('rtime', float)]
+    dstore['source_model_read_times'] = numpy.array([
+        (sm.fname, sm.rtime) for sm in source_models], dt)
+
+
 def get_csm(oq, full_lt, dstore=None):
     """
     Build source models from the logic tree and to store
@@ -278,6 +287,8 @@ def get_csm(oq, full_lt, dstore=None):
                               h5=dstore if dstore else None).reduce()
     parallel.Starmap.shutdown()  # save memory
     smdict = {k: smdict[k] for k in sorted(smdict)}
+    if dstore:
+        save_read_times(dstore, smdict.values())
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
     logging.info('Applying uncertainties')
