@@ -445,9 +445,9 @@ class AssetCollection(object):
         aval = numpy.zeros((len(self), len(loss_types)), F32)  # (A, L)
         for lti, lt in enumerate(loss_types):
             if lt.endswith('_ins'):
-                aval[array['ordinal'], lti] = array['value-' + lt[:-4]]
+                aval[:, lti] = array['value-' + lt[:-4]]
             elif lt in self.fields:
-                aval[array['ordinal'], lti] = array['value-' + lt]
+                aval[:, lti] = array['value-' + lt]
         return aval
 
     def get_value_fields(self):
@@ -488,7 +488,7 @@ class AssetCollection(object):
         for ag, tagnames in enumerate(aggregate_by):
             df = dataf.set_index(tagnames)
             if tagnames == ['id']:
-                df.index = self['ordinal'] + 1
+                df.index = numpy.arange(1, len(self) + 1)
             for key, grp in df.groupby(df.index):
                 if isinstance(key, int):
                     key = key,  # turn it into a 1-value tuple
@@ -568,7 +568,7 @@ class AssetCollection(object):
         key2i = {key: i for i, key in enumerate(aggkey)}
         for ag, aggby in enumerate(aggregate_by):
             if aggby == ['id']:
-                aggids[ag] = self['ordinal']
+                aggids[ag] = numpy.arange(len(self))
             else:
                 aggids[ag] = [key2i[ag, to_tuple(rec, aggby)]
                               for rec in self[aggby]]

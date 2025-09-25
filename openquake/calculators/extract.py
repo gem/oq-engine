@@ -1086,7 +1086,7 @@ def extract_losses_by_location(dstore, what):
     """
     :returns: a DataFrame (lon, lat, number, structural, ...)
     """
-    lonlats = dstore['assetcol'][['ordinal', 'lon', 'lat']]
+    lonlats = dstore['assetcol'][['lon', 'lat']]
     try:
         grp = dstore.getitem('avg_losses-stats')
     except KeyError:
@@ -1105,7 +1105,7 @@ def extract_losses_by_location(dstore, what):
     dic['lon'] = F32(lons)
     dic['lat'] = F32(lats)
     for loss_type in grp:
-        losses = grp[loss_type][:, 0][lonlats['ordinal']]
+        losses = grp[loss_type][:, 0]
         dic[loss_type] = F32(general.fast_agg(indices, losses))
     logging.info('There are {:_d} assets on {:_d} locations'.format(
         len(lonlats), len(lons)))
