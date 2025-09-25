@@ -251,7 +251,9 @@ def corresponds(col, peril, imt):
     elif peril == 'groundshaking':
         return col == imt
     elif peril == 'liquefaction':
-        # so that TodorovicSilva2022NonParametric works
+        # hackish solution so that TodorovicSilva2022NonParametric works
+        # (infractructure test case_3); we rely on a naming convention,
+        # i.e. having the peril in the column name
         peril = 'liq'
     return peril in col.lower() and col.endswith(imt)
 

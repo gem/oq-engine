@@ -69,7 +69,9 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk-parent.csv', aggparent_csv)
 
     def test_case_3(self):
-        # test TodorovichSilva liquefaction runs
+        # test that the TodorovichSilva model runs
+        # TODO: look at the warning covariance is not symmetric
+        # positive-semidefinite
         self.run_calc(case_3.__file__, 'job_scenario.ini')
 
     def test_demand_supply(self):
