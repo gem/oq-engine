@@ -51,9 +51,9 @@ IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
 
-SITE_TERMS = ["_get_cy14_site_term",
-              "_get_ba08_site_term",
-              "_get_bssa14_site_term",
+SITE_TERMS = ["cy14_site_term",
+              "ba08_site_term",
+              "bssa14_site_term",
               "nrcan15_site_term",
               "ceus2020_site_term"]
 
@@ -396,7 +396,7 @@ class ModifiableGMPE(GMPE):
         for spec of input and result values.
         """
         # Set reference Vs30 if required
-        if any(site_model in self.params for site_model in SITE_TERMS):
+        if any(sm in self.params for sm in SITE_TERMS):
             ctx_copy = ctx.copy()
             if 'nrcan15_site_term' in self.params:
                 rock_vs30 = 760.
@@ -408,7 +408,7 @@ class ModifiableGMPE(GMPE):
         else:
             ctx_copy = ctx
         g = globals()
-
+        
         # Compute the original mean and standard deviations
         self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 
