@@ -29,61 +29,29 @@ exp_res = np.array([[[ -4.73116981,  -6.72824192,  -8.69828689, -10.26946305],
         [ -5.14424676,  -6.37286291,  -7.60510263,  -9.56682442],
         [ -5.85932703,  -6.80133893,  -7.56254085,  -9.16291274]],
 
-       [[ -4.73116981,  -6.72824192,  -8.69828689, -10.26946305],
-        [ -5.14424676,  -6.37286291,  -7.60510263,  -9.56682442],
-        [ -5.85932703,  -6.80133893,  -7.56254085,  -9.16291274]],
-
        [[ -4.3697711 ,  -6.77717214,  -9.0440702 , -10.73695159],
         [ -4.87470779,  -6.44046012,  -8.1754259 , -10.12252054],
         [ -5.94409889,  -7.33906319,  -8.07374331, -10.07583937]],
-
-       [[ -4.34746516,  -6.80533449,  -9.06618916, -10.77070559],
-        [ -4.43505174,  -6.42940165,  -8.1754259 , -10.15157854],
-        [ -5.36080654,  -7.32476703,  -8.67690874, -10.11505737]],
 
        [[ -3.81017818,  -5.87054779,  -8.41343283, -10.02677323],
         [ -4.35919525,  -5.71917277,  -7.55847418,  -9.53132562],
         [ -5.44339364,  -6.71746409,  -7.8999625 ,  -9.440573  ]],
 
-       [[ -3.81017818,  -5.87054779,  -8.41343283, -10.02677323],
-        [ -4.35919525,  -5.71917277,  -7.55847418,  -9.53132562],
-        [ -5.44339364,  -6.71746409,  -8.22310968,  -9.76372018]],
-
        [[ -4.51752818,  -6.57789779,  -9.12078283, -10.73412323],
         [ -4.90204525,  -6.26202277,  -8.10132418, -10.07417562],
         [ -5.98624364,  -7.26031409,  -8.76595968, -10.30657018]],
 
-       [[ -3.10282818,  -5.16319779,  -7.70608283,  -9.31942323],
-        [ -3.81634525,  -5.17632277,  -7.01562418,  -8.98847562],
-        [ -4.90054364,  -6.17461409,  -7.68025968,  -9.22087018]],
-
-       [[ -1.54869462,  -3.8245714 ,  -5.293704  ,  -5.84592443],
-        [ -2.33761724,  -3.72056054,  -4.88431736,  -5.81166458],
-        [ -3.55411876,  -4.67077352,  -5.15474589,  -6.27965589]],
-
-       [[ -1.54869462,  -3.8245714 ,  -5.293704  ,  -5.84592443],
-        [ -2.33761724,  -3.72056054,  -4.88431736,  -5.81166458],
-        [ -3.55411876,  -4.67077352,  -5.43751783,  -6.27965589]],
+       [[ -1.56716021,  -3.72607058,  -5.5493227 ,  -5.84592443],
+        [ -2.37352255,  -3.27126282,  -4.42874386,  -5.81166458],
+        [ -3.59156287,  -4.20222018,  -4.59381409,  -6.27965589]],
 
        [[ -3.43253177,  -5.38231865,  -7.7114568 ,  -8.95560286],
         [ -4.4754561 ,  -5.71171233,  -6.19501105,  -8.16294156],
         [ -5.51471534,  -6.71435625,  -7.13731168,  -9.10567033]],
 
-       [[ -3.43253177,  -5.38231865,  -7.7114568 ,  -8.95560286],
-        [ -4.4754561 ,  -5.71171233,  -6.19501105,  -8.16294156],
-        [ -5.51471534,  -6.71435625,  -7.42008363,  -9.10567033]],
-
-       [[ -4.4961401 ,  -6.90354114,  -9.1704392 , -10.86332059],
-        [ -4.63795079,  -6.2103382 ,  -8.0068908 ,  -9.88576354],
-        [ -5.66174089,  -7.06528288,  -8.48453249,  -9.79348137]],
-
        [[ -4.3697711 ,  -6.77717214,  -9.0440702 , -10.73695159],
         [ -4.87470779,  -6.4470952 ,  -8.2436478 , -10.12252054],
         [ -5.94409889,  -7.34764088,  -8.76689049, -10.07583937]],
-
-       [[ -4.2549802 ,  -6.63321606,  -8.87962362, -10.56837484],
-        [ -4.16121733,  -5.82549419,  -7.68603107,  -9.57775013],
-        [ -4.94338881,  -6.57681856,  -8.15619706,  -9.4973414 ]],
 
        [[ -4.1286112 ,  -6.50684706,  -8.75325462, -10.44200584],
         [ -4.39797433,  -6.06225119,  -7.92278807,  -9.81450713],
@@ -154,72 +122,85 @@ exp_res = np.array([[[ -4.73116981,  -6.72824192,  -8.69828689, -10.26946305],
         [ -3.66715672,  -3.97179111,  -4.5627542 ,  -5.1938102 ]]])
 
 # AbrahamsonGulerce2020SInter (all adj vs no adj)
-ag_adj = valid.gsim('[AbrahamsonGulerce2020SInter]\nregion="CAS"\n'
+ag_adj = valid.gsim('[AbrahamsonGulerce2020SInter]\n'
+                    'region="CAS"\n'
                     'usgs_basin_scaling="true"')
-ag_def = valid.gsim('[AbrahamsonGulerce2020SInter]\nregion="CAS"')
 
 # KuehnEtAl2020SInter (all adj vs no adj)
-k20_adj = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"\n'
-                     'm9_basin_term="true"\nusgs_basin_scaling="true"')
-k20_def = valid.gsim('[KuehnEtAl2020SInter]\nregion="CAS"')
+k20_adj = valid.gsim('[KuehnEtAl2020SInter]\n'
+                     'region="CAS"\n'
+                     'm9_basin_term="true"\n' \
+                     'usgs_basin_scaling="true"')
 
 # ParkerEtAl2020SInterB (all adj vs no adj)
-p20_adj = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
+p20_adj = valid.gsim('[ParkerEtAl2020SInterB]\n'
+                     'region="Cascadia"\n'
                      'm9_basin_term="true"\n'
                      'usgs_basin_scaling="true"')
-p20_def = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"')
 
-# ParkerEtAl2020SInterB with epistemic uncertainty scaling factors
-p20_low = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
+# ParkerEtAl2020SInterB with epistemic uncertainty scaling 
+p20_epi = valid.gsim('[ParkerEtAl2020SInterB]\n'
+                     'region="Cascadia"\n'
                      'sigma_mu_epsilon=-1.645')
-p20_high = valid.gsim('[ParkerEtAl2020SInterB]\nregion="Cascadia"\n'
-                     'sigma_mu_epsilon=1.645')
 
-# AtkinsonMacias2009 (m9 cb14 basin terms, ba08 site term)
-a09_adj = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"\n'
-                     'm9_basin_term="true"')
-a09_def = valid.gsim('[AtkinsonMacias2009]\ncb14_basin_term="true"')
+# AtkinsonMacias2009 (m9 and cb14 basin terms and ba08 site term)
+a09_adj = valid.gsim('[AtkinsonMacias2009]\n'
+                     'cb14_basin_term="true"\n'
+                     'm9_basin_term="true"\n'
+                     'ba08_site_term=true')
 
 # ZhaoEtAl2006SInter (m9 and cb14 vs m9)
-z06_adj = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"\n'
+z06_adj = valid.gsim('[ZhaoEtAl2006SInter]\n'
+                     'cb14_basin_term="true"\n'
                      'm9_basin_term="true"')
-z06_def = valid.gsim('[ZhaoEtAl2006SInter]\ncb14_basin_term="true"')
 
 # KuehnEtAl2020SInterSeattle vs KuehnEtAl2020SInterCascadia vs Seattle SInter Adj
-k20_def_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="SEA"')
-k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\nregion="SEA"\n'
+k20_adj_sea_int = valid.gsim('[KuehnEtAl2020SInter]\n'
+                             'region="SEA"\n'
                              'm9_basin_term="true"\n'
                              'usgs_basin_scaling="true"')
 
 # KuehnEtAl2020SSlabSeattle vs KuehnEtAl2020SSlabCascadia vs Seattle SSlab Adj
-k20_def_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="SEA"')
-k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\nregion="SEA"\n'
-                                'm9_basin_term="true"\n'
-                                'usgs_basin_scaling="true"')
+k20_adj_sea_sslab = valid.gsim('[KuehnEtAl2020SSlab]\n'
+                               'region="SEA"\n'
+                               'm9_basin_term="true"\n'
+                               'usgs_basin_scaling="true"')
 
 # NGAWest2 GMMs with/without USGS basin scaling
-ask14_adj = valid.gsim('[AbrahamsonEtAl2014]\nusgs_basin_scaling="true"')
+ask14_adj = valid.gsim('[AbrahamsonEtAl2014]\n'
+                       'usgs_basin_scaling="true"')
 ask14_def = valid.gsim('[AbrahamsonEtAl2014]')
-bssa14_adj = valid.gsim('[BooreEtAl2014]\nregion="CAL"\nusgs_basin_scaling="true"')
+bssa14_adj = valid.gsim('[BooreEtAl2014]\nregion="CAL"\n'
+                        'usgs_basin_scaling="true"')
 bssa14_def = valid.gsim('[BooreEtAl2014]\nregion="CAL"')
-cb14_adj = valid.gsim('[CampbellBozorgnia2014]\nusgs_basin_scaling="true"')    
+cb14_adj = valid.gsim('[CampbellBozorgnia2014]\n'
+                      'usgs_basin_scaling="true"')    
 cb14_def = valid.gsim('[CampbellBozorgnia2014]')   
-cy14_adj = valid.gsim('[ChiouYoungs2014]\nusgs_basin_scaling="true"')
+cy14_adj = valid.gsim('[ChiouYoungs2014]\n'
+                      'usgs_basin_scaling="true"')
 cy14_def = valid.gsim('[ChiouYoungs2014]')
 
 # US NSHMP 2014 GMM with passing of an additional arguments for base GMM
-nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
+nshmp14_ask14_adj = valid.gsim('[NSHMP2014]\n'
+                               'gmpe_name="AbrahamsonEtAl2014"\n'
                                'sgn=0\nusgs_basin_scaling="true"')
 
 # US NSHMP 2014 GMMs with Cybershake basin adjustments
-ask14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="AbrahamsonEtAl2014"\n'
+ask14_cy = valid.gsim('[NSHMP2014]\n'
+                      'gmpe_name="AbrahamsonEtAl2014"\n'
                       'sgn=0\ncybershake_basin_adj="true"')
-bssa14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="BooreEtAl2014"\n'
-                       'sgn=0\ncybershake_basin_adj="true"')
-cb14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="CampbellBozorgnia2014"\n'
-                     'sgn=0\ncybershake_basin_adj="true"')
-cy14_cy = valid.gsim('[NSHMP2014]\ngmpe_name="ChiouYoungs2014"\n'
-                     'sgn=0\ncybershake_basin_adj="true"')
+bssa14_cy = valid.gsim('[NSHMP2014]\n'
+                       'gmpe_name="BooreEtAl2014"\n'
+                       'sgn=0\n'
+                       'cybershake_basin_adj="true"')
+cb14_cy = valid.gsim('[NSHMP2014]\n'
+                     'gmpe_name="CampbellBozorgnia2014"\n'
+                     'sgn=0\n'
+                     'cybershake_basin_adj="true"')
+cy14_cy = valid.gsim('[NSHMP2014]\n'
+                     'gmpe_name="ChiouYoungs2014"\n'
+                     'sgn=0\n'
+                     'cybershake_basin_adj="true"')
 
 # NGAEast GMM with Ramos-Sepulveda et al. (2023) bias adjustment
 ngaeast_bias = valid.gsim('[NGAEastUSGSGMPE]\n'
@@ -242,20 +223,12 @@ ngaeast_both = valid.gsim('[NGAEastUSGSGMPE]\n'
                           'z_sed_scaling="true"')
 
 gmms = [ag_adj,
-        ag_def,
         k20_adj,
-        k20_def,
         p20_adj,
-        p20_def,
-        p20_low,
-        p20_high,
+        p20_epi,
         a09_adj,
-        a09_def,
         z06_adj,
-        z06_def,
-        k20_def_sea_int,
         k20_adj_sea_int,
-        k20_def_sea_sslab,
         k20_adj_sea_sslab,
         ask14_adj,
         ask14_def,
