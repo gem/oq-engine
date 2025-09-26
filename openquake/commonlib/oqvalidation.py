@@ -749,10 +749,10 @@ sites:
   Example: *sites = 10.1 45, 10.2 45*.
 
 site_labels:
-  Specify a list of labels (i.e. strings without spaces) assuming each site
+  Specify a dictionary label_string -> label_index assuming each site
   have a field "label" corresponding to the label index.
-  Example: *site_labels = Cascadia*.
-  Default: []
+  Example: *site_labels = {"Cascadia": 1}*.
+  Default: {}
 
 tile_spec:
   INTERNAL
@@ -1123,7 +1123,7 @@ class OqParam(valid.ParamSet):
     # example: shakemap_uri = {'kind': 'usgs_id', 'id': 'XXX'}
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
-    site_labels = valid.Param(valid.namelist, [])
+    site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)
     tiling = valid.Param(valid.boolean, None)
@@ -2298,6 +2298,17 @@ class OqParam(valid.ParamSet):
             return True
         return self.hazard_calculation_id
 
+    def get_haz_distance(self):
+        """
+        :returns: the asset_hazard_distance or region_grid_spacing * 1.414
+        """
+        asset_hazard_distance = max(self.asset_hazard_distance.values())
+        if self.region_grid_spacing:
+            haz_distance = self.region_grid_spacing * 1.414
+        else:
+            haz_distance = asset_hazard_distance
+        return haz_distance
+
     @classmethod
     def docs(cls):
         """
@@ -2321,7 +2332,8 @@ class OqParam(valid.ParamSet):
         dic.pop('close', None)
         dic.pop('mags_by_trt', None)
         dic.pop('sec_imts', None)
-        for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.split():
+        for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.\
+                split():
             dic.pop(k, None)
 
         if 'secondary_perils' in dic:

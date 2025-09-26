@@ -97,10 +97,10 @@ class InfoTestCase(unittest.TestCase):
 
     def test_shp(self):
         mosaic_dir = os.path.dirname(mosaic.__file__)
-        path = os.path.join(mosaic_dir, 'ModelBoundaries.shp')
+        path = os.path.join(mosaic_dir, 'ModelBoundaries.gpkg')
         with Print.patch() as p:
             sap.runline(f'openquake.commands info {path}')
-        self.assertIn('GLD', str(p))
+        self.assertIn('EUR', str(p))
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')

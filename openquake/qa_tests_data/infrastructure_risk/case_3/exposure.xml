@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
+	<exposureModel id="ex1" category="infrastructure" taxonomySource="">
+		<description>Road Network Demo</description>
+		<conversions>
+			<costTypes>
+			<costType name="structural" type="aggregated" unit="EUR"/>
+			</costTypes>
+		</conversions>
+		<tagNames>type start_node end_node purpose weight parent_id</tagNames>
+		<occupancyPeriods></occupancyPeriods>
+		<assets>
+			nodes_Portugal_updated.csv
+			edges_Portugal.csv
+		</assets>
+	</exposureModel>
+</nrml>

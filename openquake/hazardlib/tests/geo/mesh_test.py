@@ -128,6 +128,11 @@ class MeshSlicingTestCase(unittest.TestCase):
         self.assertTrue((submesh.lats == [0.3, 0.4, 0.5, 0.6]).all())
         self.assertTrue((submesh.depths == [7.3, 7.4, 7.5, 7.6]).all())
 
+        # test get_around
+        submesh = mesh.get_around(1, .1)
+        assert submesh.lons == [1.]
+        assert submesh.lats == [.1]
+
         with self.assertRaises(AssertionError):
             submesh = mesh[0:0]
 

@@ -20,11 +20,12 @@ import os
 import time
 import logging
 import operator
+from collections import Counter
 import pandas
 import numpy
 from openquake.baselib import hdf5, sap, general, performance
 from openquake.baselib.parallel import Starmap
-from openquake.hazardlib.geo.utils import geohash3
+from openquake.hazardlib.geo.utils import hex6
 from openquake.commonlib.datastore import create_job_dstore
 from openquake.risklib.asset import _get_exposure, Exposure
 from openquake.qa_tests_data import mosaic
@@ -53,7 +54,7 @@ FIELDS = {'TAXONOMY', 'COST_NONSTRUCTURAL_USD', 'LONGITUDE',
           'OCCUPANTS_PER_ASSET_TRANSIT', 'TOTAL_AREA_SQM',
           'BUILDINGS', 'COST_STRUCTURAL_USD', 'NAME_1', 'NAME_2',
           'LATITUDE', 'ID_0', 'ID_1', 'ID_2'}
-
+HEX6 = (numpy.bytes_, 6)
 
 class Indexer(object):
     """
@@ -83,8 +84,8 @@ class Indexer(object):
         tags = numpy.concatenate([[b'?'], numpy.array(list(self.dic))])
         indices = self.indices[:self.size]
         name = 'taxonomy' if self.name == 'TAXONOMY' else self.name
-        # NOTE: with errors='ignore' encoding errors in the NAME_2 values due to the
-        # truncation to 32 bytes will be ignored
+        # NOTE: with errors='ignore' encoding errors in the NAME_2 values
+        # due to the truncation to 32 bytes will be ignored
         hdf5.create(
             h5, f'tagcol/{name}', hdf5.vstr, (len(tags),)
         )[:] = [x.decode('utf8', errors='ignore') for x in tags]
@@ -94,18 +95,18 @@ class Indexer(object):
         return f'<Indexer[{self.name}]>'
 
 
-def add_geohash3(array):
+def add_hex6(array):
     """
-    Add field "geohash3" to a structured array
+    Add field "hex6" to a structured array
     """
     if len(array) == 0:
         return ()
     dt = array.dtype
-    dtlist = [('geohash3', U16)] + [(n, dt[n]) for n in dt.names]
+    dtlist = [('hex6', HEX6)] + [(n, dt[n]) for n in dt.names]
     out = numpy.zeros(len(array), dtlist)
     for n in dt.names:
         out[n] = array[n]
-        out['geohash3'] = geohash3(array['LONGITUDE'], array['LATITUDE'])
+        out['hex6'] = hex6(array['LONGITUDE'], array['LATITUDE'])
     return out
 
 
@@ -120,14 +121,15 @@ def fix(arr):
             ID1[i] = country[i] + ID1[i]
 
 
-def exposure_by_geohash(array, monitor):
+def exposure_by_hex6(array, monitor):
     """
-    Yields triples (geohash, array, name2dic)
+    Group the assets by a H3 string with 6 characters.
+    Yields triples (hex6, array, name2dic)
     """
-    array = add_geohash3(array)
+    array = add_hex6(array)
     fix(array)
-    for gh in numpy.unique(array['geohash3']):
-        yield gh, array[array['geohash3'] == gh]
+    for h6 in numpy.unique(array['hex6']):
+        yield h6, array[array['hex6'] == h6]
 
 
 def store_tagcol(dstore, indexer):
@@ -166,7 +168,7 @@ def save_by_country(dstore):
 # in parallel
 def gen_tasks(files, wfp, sample_assets, monitor):
     """
-    Generate tasks of kind exposure_by_geohash for large files
+    Generate tasks of kind exposure_by_hex6 for large files
     """
     for file in files:
         # read CSV in chunks
@@ -212,9 +214,9 @@ def gen_tasks(files, wfp, sample_assets, monitor):
                 else:
                     array[col] = arr
             if i == 0:
-                yield from exposure_by_geohash(array, monitor)
+                yield from exposure_by_hex6(array, monitor)
             else:
-                yield exposure_by_geohash, array
+                yield exposure_by_hex6, array
         print(os.path.basename(file.fname), nrows)
 
 
@@ -222,11 +224,14 @@ def keep_wfp(csvfile):
     return any(col.startswith('WFP_') for col in csvfile.header)
 
 
-def store(exposures_xml, wfp, dstore, sanity_check=True):
+def store(exposures_xml, grm_dir, wfp, dstore, sanity_check=True):
     """
     Store the given exposures in the datastore
     """
     t0 = time.time()
+    if grm_dir:
+        n = store_world_tmap(grm_dir, dstore)
+        logging.info('Stored %d taxonomy mappings', n)
     logging.info('Preallocating tag indices')
     indexer = {tagname: Indexer(tagname) for tagname in TAGS}
     csvfiles = []
@@ -248,8 +253,8 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
     for name, dt in dtlist:
         hdf5.create(dstore.hdf5, f'assets/{name}', dt,
                     compression='gzip' if name in TAGS else None)
-    slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
-    dstore.create_dset('assets/slice_by_gh3', slc_dt)
+    slc_dt = numpy.dtype([('hex6', HEX6), ('start', U32), ('stop', U32)])
+    dstore.create_dset('assets/slice_by_hex6', slc_dt)
     dstore.swmr_on()
     sa = os.environ.get('OQ_SAMPLE_ASSETS')
     smap = Starmap.apply(gen_tasks, (files, wfp, sa),
@@ -259,7 +264,7 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
     num_assets = 0
     name2dic = {b'?': b'?'}
     mon = performance.Monitor('tag indexing', h5=dstore)
-    for gh3, arr in smap:
+    for h6, arr in smap:
         name2dic.update(zip(arr['ID_2'], arr['NAME_2']))
         for name in commonfields:
             if name in TAGS:
@@ -268,8 +273,8 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
             else:
                 hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
-        slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
-        hdf5.extend(dstore['assets/slice_by_gh3'], slc)
+        slc = numpy.array([(h6, num_assets, num_assets + n)], slc_dt)
+        hdf5.extend(dstore['assets/slice_by_hex6'], slc)
         num_assets += n
     Starmap.shutdown()
     store_tagcol(dstore, indexer)
@@ -290,7 +295,7 @@ def store(exposures_xml, wfp, dstore, sanity_check=True):
             assert n == num_assets, (name, n, num_assets)
 
         # check readable
-        exp = Exposure.read_around(dstore.filename, gh3s=[12396])
+        exp = Exposure.read_around(dstore.filename, hexes=[b"836606"])
         assert len(exp.assets), exp
 
 
@@ -337,9 +342,6 @@ def main(exposures_xml, grm_dir='', wfp=False, sanity_check=False):
     """
     log, dstore = create_job_dstore()
     with dstore, log:
-        if grm_dir:
-            n = store_world_tmap(grm_dir, dstore)
-            logging.info('Stored %d taxonomy mappings', n)
         store(exposures_xml, wfp, dstore, sanity_check)
     return dstore.filename
 

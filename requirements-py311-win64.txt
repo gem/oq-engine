@@ -1,6 +1,7 @@
 # Suggested versions for development
 # !! must update pip first! so wheels will be used !!
 #
+https://wheelhouse.openquake.org/v3/windows/py311/h3-3.7.7-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/matplotlib-3.10.1-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/numba-0.61.2-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/numpy-2.2.6-cp311-cp311-win_amd64.whl

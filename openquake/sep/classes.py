@@ -561,24 +561,37 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
         return out
 
 
+# NB: the engine is already parallelizing, so we must disable the
+# parallelization internal to onnxruntime to avoid oversubscription;
+# it is the same reason why in baselib/__init__.py we have a line
+# os.environ['OPENBLAS_NUM_THREADS'] = '1'
+def get_session(model):
+    """
+    :param model: path to a machine learning model
+    :returns: an InferenceSession with threads disabled suitable for the engine
+    """
+    opt = onnxruntime.SessionOptions()
+    opt.inter_op_num_threads = 1
+    opt.intra_op_num_threads = 1
+    return onnxruntime.InferenceSession(
+        model, opt, providers=onnxruntime.get_available_providers())
+
+
 class PicklableInferenceSession:
     def __init__(self, model):
         self.model = model
-        self.inference_session = onnxruntime.InferenceSession(
-            self.model, providers=onnxruntime.get_available_providers()
-        )
+        self.inference_session = None
 
     def run(self, *args):
-        return self.inference_session.run(*args)
+        session = self.inference_session or get_session(self.model)
+        return session.run(*args)
 
     def __getstate__(self):
         return {"model": self.model}
 
     def __setstate__(self, values):
         self.model = values["model"]
-        self.inference_session = onnxruntime.InferenceSession(
-            self.model, providers=onnxruntime.get_available_providers()
-        )
+        self.inference_session = get_session(self.model)
 
 
 class TodorovicSilva2022NonParametric(SecondaryPeril):

@@ -1028,6 +1028,8 @@ def impact_run_with_shakemap(request):
             post[field] = IMPACT_FORM_DEFAULTS[field]
     _rup, rupdic, params, err = impact_validate(
         post, request.user, post['rupture_file'])
+    if err:
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
@@ -1592,9 +1594,10 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
-            governing_mce = 'governing_mce.png' in ds['png']
+            mce = 'mce.png' in ds['png']
+            mce_spectra = 'mce_spectra.png' in ds['png']
         else:
-            hmaps = assets = hcurves = governing_mce = False
+            hmaps = assets = hcurves = mce = mce_spectra = False
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     lon = lat = vs30 = site_name = asce_version_full = calc_aelo_version = None
     if application_mode == 'AELO':
@@ -1618,7 +1621,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
-                       governing_mce=governing_mce,
+                       mce=mce, mce_spectra=mce_spectra,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version_full,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name)
@@ -1681,7 +1684,7 @@ def group_keys_by_value(d):
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce07 = asce41 = site = None
+    asce07 = asce41 = site = governing_mce = None
     asce07_with_units = {}
     asce41_with_units = {}
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -1746,6 +1749,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce41_with_units[key + ' (g)'] = get_disp_val(value)
         if 'png' in ds:
             site = 'site.png' in ds['png']
+            governing_mce = 'governing_mce.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
         if hasattr(vs30_in, '__len__') and len(vs30_in) == 1:
@@ -1763,9 +1767,9 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             notifications = numpy.concatenate(
                 (notifications, preliminary_model_warning))
             sid_to_vs30.update({-1: ''})  # warning about preliminary model
+        sitecol = ds['sitecol']
         if 'notifications' in ds:
             notifications = numpy.concatenate((notifications, ds['notifications']))
-            sitecol = ds['sitecol']
             # NOTE: the variable name 'site' is already used
             sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
         notes = {}
@@ -1778,13 +1782,22 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 warnings[vs30] = notification['description'].decode('utf8')
         notes = group_keys_by_value(notes)
         warnings = group_keys_by_value(warnings)
-        notes_str = '\n'.join([f'For {vs30=}: {msg}' for (vs30, msg) in notes.items()])
-        warnings_str = '\n'.join([f'For {vs30=}: {msg}' if vs30 else msg
-                                  for (vs30, msg) in warnings.items()])
+        if len(sitecol) == 1:
+            # NOTE: specifying the vs30 is not needed if there is only one
+            notes_str = '\n'.join([note for vs30, note in notes.items()])
+            warnings_str = '\n'.join([warning for vs30, warning in warnings.items()])
+        else:
+            notes_str = '\n'.join(
+                [f'For {vs30=}: {msg}' for vs30, msg in notes.items()])
+            # NOTE: vs30 is -1 is a placeholder indicating a non-site-specific warning
+            warnings_str = '\n'.join(
+                [f'For {vs30=}: {msg}' if vs30 != -1 else msg
+                 for vs30, msg in warnings.items()])
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30_in, site_name=site_name, site=site,
+                       governing_mce=governing_mce,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=oqvalidation.ASCE_VERSIONS[asce_version],
                        warnings=warnings_str, notes=notes_str))

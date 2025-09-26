@@ -87,8 +87,23 @@ def main(calc_id: int = -1, site_model=False,
         station_ids = dstore['station_data/site_id'][:]
         station_sites = numpy.isin(complete.sids, station_ids)
         stations = complete[station_sites]
-        p.scatter(stations['lon'], stations['lat'], marker='D', c='brown',
-                  label='stations', s=markersize_site_model)
+        if 'stations_considered' in dstore:  # not available in old jobs
+            kw_params = dict(label='discarded stations', edgecolors='gray',
+                             facecolors='none')
+        else:
+            kw_params = dict(label='all stations', c='brown')
+        # NOTE: we might filter out the stations that were considered, and plot only
+        # the discarded ones, but the output looks similar if we plot all stations
+        # here, then overlap them with plotting the considered ones on top
+        p.scatter(stations['lon'], stations['lat'], marker='D', s=markersize_site_model,
+                  **kw_params)
+        if 'stations_considered' in dstore:
+            # NOTE: overlapping the used ones on top of the full set
+            stations_considered = dstore['stations_considered']
+            if len(stations_considered) > 0:
+                p.scatter(stations_considered['lon'], stations_considered['lat'],
+                          marker='D', c='brown', label='considered stations',
+                          s=markersize_site_model)
     if oq.rupture_xml or oq.rupture_dict:
         use_shakemap = dstore['oqparam'].shakemap_uri
         if use_shakemap:

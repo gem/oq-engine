@@ -24,7 +24,7 @@ import getpass
 import cProfile
 import pandas
 import collections
-from openquake.baselib import config, performance
+from openquake.baselib import config, performance, sap
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
@@ -88,22 +88,26 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
-    for model, df in sites_df.groupby('model'):
-        if model in ('???', 'USA', 'GLD'):
-            continue
-        if exclude_models and model in exclude_models.split(','):
-            continue
-        if only_models and model not in only_models.split(','):
-            continue
-
-        df = df.sort_values(['Longitude', 'Latitude'])
-        ids[model] = df.ID.to_numpy()
-        sites = ','.join('%s %s' % tuple(lonlat)
-                         for lonlat in lonlats[df.index])
-        dic = dict(siteid=model + str(ids[model]), sites=sites)
-        params = get_params_from(dic, mosaic_dir)
-        # del params['postproc_func']
-        allparams.append(params)
+    if not 'vs30' in sites_df.keys():
+        sites_df['vs30'] = [False] * len(sites_df)
+    for vs30, dvf in sites_df.groupby('vs30'):
+        for model, df in dvf.groupby('model'):
+            if model in ('???', 'USA', 'GLD'):
+                continue
+            if exclude_models and model in exclude_models.split(','):
+                continue
+            if only_models and model not in only_models.split(','):
+                continue
+            
+            df = df.sort_values(['Longitude', 'Latitude'])
+            ids[model] = df.ID.to_numpy()
+            sites = ','.join('%s %s' % tuple(lonlat)
+                             for lonlat in lonlats[df.index])
+            dic = dict(siteid=model + str(ids[model]), 
+                       sites=sites, vs30=vs30)
+            params = get_params_from(dic, mosaic_dir)
+            # del params['postproc_func']
+            allparams.append(params)
     print('Considering %d sites (excluding USA, GLD)' %
           (sum(len(ls) for ls in ids.values())))
 
@@ -111,7 +115,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    os.environ['OQ_DISTRIBUTE'] = 'zmq'
+    # os.environ['OQ_DISTRIBUTE'] = 'zmq'  # hanging on server installations??
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     count_errors = 0
@@ -159,6 +163,10 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
     """
     if not mosaic_dir and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
+    try:
+        import rtgmpy
+    except ImportError:
+        sys.exit('Please install the rtgmpy wheel')
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
         from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs)
@@ -345,3 +353,5 @@ impact.number_of_ground_motion_fields = 'Number of ground motion fields'
 
 main = dict(run_site=run_site, impact=impact,
             sample_rups=sample_rups)
+if __name__ == '__main__':
+    sap.run(main)
