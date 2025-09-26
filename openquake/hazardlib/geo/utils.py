@@ -136,19 +136,11 @@ def angular_mean(degrees, weights=None):
     Given an array of angles in degrees, returns its angular mean.
     If weights are passed, assume sum(weights) == 1.
 
-<<<<<<< HEAD
-    >>> float(angular_mean([179, -179]))
-    180.0
-    >>> float(angular_mean([-179, 179]))
-    180.0
-    >>> float(angular_mean([-179, 179], [.75, .25]))
-=======
     >>> print(angular_mean([179, -179]))
     180.0
     >>> print(angular_mean([-179, 179]))
     180.0
     >>> print(angular_mean([-179, 179], [.75, .25]))
->>>>>>> cebfd90b8eaa59cb9ac2ced91b680d85323eb4b7
     -179.4999619199226
     """
     if len(degrees) == 1:
