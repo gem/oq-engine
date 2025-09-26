@@ -588,8 +588,9 @@ def remove(inst):
                 os.remove(service_path)
                 print("removed " + service_name)
         subprocess.check_call(["systemctl", "daemon-reload"])
-    shutil.rmtree(inst.VENV)
-    print("%s has been removed" % inst.VENV)
+    if os.path.exists(inst.VENV):
+        shutil.rmtree(inst.VENV)
+        print("%s has been removed" % inst.VENV)
     if (
         inst is server
         and os.path.exists(server.OQ)

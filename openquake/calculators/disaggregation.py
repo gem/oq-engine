@@ -127,10 +127,11 @@ def check_memory(N, Z, shape8D):
     avail_gb = psutil.virtual_memory().available / 1024**3
     req_gb = numpy.prod(shape8D) * N * Z * 8 / 1024**3
     if avail_gb < req_gb*2:
-        # req_gb*2 because when storing the outputs a lot more memory will be used
-        raise MemoryError('You have %.1f GB available but %.1f GB are required. '
-                          'The solution is to reduce the number of bins' %
-                          (avail_gb, req_gb*2))
+        # req_gb*2 because when storing a lot more memory will be used
+        raise MemoryError(
+            'You have %.1f GB available but %.1f GB are required. '
+            'The solution is to reduce the number of bins' %
+            (avail_gb, req_gb*2))
     logging.info('The AccumDict will require %.1f GB', req_gb)
 
 
@@ -251,6 +252,7 @@ class DisaggregationCalculator(base.HazardCalculator):
             src_mutex_by_grp = {
                 grp_id: {'src_id': disagg.get_ints(df.src_id),
                          'weight': df.mutex_weight.to_numpy(),
+                         'rup_mutex': df.rup_mutex.to_numpy(),
                          'grp_probability': gp[grp_id]}
                 for grp_id, df in gb}
         else:
@@ -278,11 +280,11 @@ class DisaggregationCalculator(base.HazardCalculator):
             weights = self.datastore['weights'][:]
         else:
             weights = None
-        mutex_by_grp = self.datastore['mutex_by_grp'][:]
         for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
-            src_mutex, rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
+            rup_mutex = src_mutex['rup_mutex'].any() if src_mutex else False
+
             # NB: in case_27 src_mutex for grp_id=1 has the form
             # {'src_id': array([1, 2]), 'weight': array([0.625, 0.375])}
             if rup_mutex:
@@ -298,7 +300,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
             # submit single task
             ntasks = len(ctxt) * cmaker.Z / maxsize
-            if ntasks < 1 or src_mutex or rup_mutex:
+            if ntasks < 1 or len(src_mutex) or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
                        self.bin_edges, src_mutex, rwdic)
