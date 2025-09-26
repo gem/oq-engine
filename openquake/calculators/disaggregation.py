@@ -300,7 +300,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
             # submit single task
             ntasks = len(ctxt) * cmaker.Z / maxsize
-            if ntasks < 1 or len(src_mutex) or rup_mutex:
+            if ntasks < 1 or src_mutex or rup_mutex:
                 # do not split (test case_11)
                 submit(smap, self.datastore, ctxt, self.sitecol, cmaker,
                        self.bin_edges, src_mutex, rwdic)
