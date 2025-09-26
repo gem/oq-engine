@@ -259,7 +259,7 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        data = self.calc.datastore['source_groups']
+        data = self.calc.datastore['clargs']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], 4)
         self.assertEqual(data['tiles'], 1)
@@ -281,7 +281,7 @@ class ClassicalTestCase(CalculatorTestCase):
                 'hazard_curve-mean-SA(1.0).csv',
                 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        data = self.calc.datastore['source_groups']
+        data = self.calc.datastore['clargs']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], 4)
         self.assertEqual(data['tiles'], 1)

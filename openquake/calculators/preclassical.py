@@ -168,8 +168,8 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     fac = oq.imtls.size * N * 4 / 1024**3
     max_weight = csm.get_max_weight(oq)
 
-    quartets = [csm._split(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
-                for cmaker in cmakers for sg in csm.src_groups
+    quartets = [csm._split(cmaker, g, sg, sitecol, max_weight, tiling=oq.tiling)
+                for cmaker in cmakers for g, sg in enumerate(csm.src_groups)
                 if sg.grp_id == cmaker.grp_id]
     data = numpy.array(
         [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), splits,

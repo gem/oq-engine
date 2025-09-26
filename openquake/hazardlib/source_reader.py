@@ -743,7 +743,6 @@ class CompositeSourceModel:
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
         for i, sg in enumerate(self.src_groups):
-            sg.ordinal = i
             # cmakers is a dictionary label -> array of cmakers
             with_labels = len(cmakers) > 1
             for idx, label in enumerate(cmakers):
@@ -759,10 +758,10 @@ class CompositeSourceModel:
                     if sites:
                         if with_labels:
                             cmaker.ilabel = idx
-                        yield self._split(
-                            cmaker, sg, sites, max_weight, num_chunks, tiling)
+                        yield self._split(cmaker, i, sg, sites, max_weight,
+                                          num_chunks, tiling)
 
-    def _split(self, cmaker, sg, sitecol, max_weight, num_chunks=1,
+    def _split(self, cmaker, i, sg, sitecol, max_weight, num_chunks=1,
                tiling=False):
         N = len(sitecol)
         oq = cmaker.oq
@@ -772,7 +771,7 @@ class CompositeSourceModel:
         splits = G * mb_per_gsim / max_mb
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
-            blocks = [sg.ordinal]
+            blocks = [i]
             tiles = max(hint, splits)
         else:
             # if hint > max_blocks generate max_blocks and more tiles
