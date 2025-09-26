@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Module :mod:`openquake.hazardlib.mgmpe.ba08_site_term` implements
-:class:`~openquake.hazardlib.mgmpe.ba08_site_term.BA08SiteTerm`
+Module :mod:`openquake.hazardlib.mgmpe.bssa14_site_term` implements
+:class:`~openquake.hazardlib.mgmpe.bss14_site_term.BSSA14SiteTerm`
 """
 
 import copy
@@ -24,44 +24,56 @@ import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-from openquake.hazardlib.gsim.atkinson_boore_2006 import (
-    _get_site_amplification_linear,
-    _get_site_amplification_non_linear,
-    _get_pga_on_rock) 
+from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
+from openquake.hazardlib.gsim.boore_2014 import (
+    _get_pga_on_rock,
+    _get_linear_site_term,
+    _get_nonlinear_site_term)
 
 
-def _get_ba08_site_term(imt, ctx):
+def _get_bssa14_site_term(imt, ctx):
     """
-    Get the site amplification term as applied within the
-    Boore and Atkinson 2008 GMM.
+    Returns the linear and non-linear site amplification terms of
+    the BSSA14 GMM. The basin term is excluded, and we assume the
+    user is using the default parameters (kind=base, region="CAL"
+    and SoF=True).
     """
-    # Get vs30 and some coeffs
-    vs30 = ctx.vs30
-    C_PGA = BooreAtkinson2008.COEFFS[PGA()]
-    C_SR = BooreAtkinson2008.COEFFS_SOIL_RESPONSE[imt]
-        
-    # Compute PGA on rock
-    pga4nl = _get_pga_on_rock(C_PGA, ctx)
+    # Get PGA on rock
+    C_PGA = BooreEtAl2014.COEFFS[PGA()]
+    pga_rock = _get_pga_on_rock(kind="base", 
+                                region="CAL",
+                                sof=True,
+                                C=C_PGA,
+                                ctx=ctx)
 
-    # Get linear
-    linear = _get_site_amplification_linear(vs30, C_SR)
+    # Get coeffs for IMT
+    C_IMT = BooreEtAl2014.COEFFS[imt]
+
+    # Get linear component
+    flin = _get_linear_site_term(C_IMT, ctx.vs30)
     
-    # Get non-linear
-    non_linear = _get_site_amplification_non_linear(vs30, pga4nl, C_SR)
+    # Get non-linear component
+    fnl = _get_nonlinear_site_term(C_IMT, ctx.vs30, pga_rock)
+    
+    return flin + fnl
 
-    return linear + non_linear
 
-
-class BA08SiteTerm(GMPE):
+class BSSA14SiteTerm(GMPE):
     """
     Implements a modified GMPE class that can be used to account for local
     soil conditions in the estimation of ground motion using the site term
-    from :class:`openquake.hazardlib.gsim.boore_atkinson_2008.BooreAtkinson2008`.
+    from :class:`openquake.hazardlib.gsim.boore_2014.BooreEtAl2014`.
 
     The user should be mindful of ensuring the base GMM was derived for an
-    appropriate reference velocity (the BA08 site term was developed for a
+    appropriate reference velocity (the BSSA14 site term was developed for a
     reference of 760 m/s).
+
+    The user should also be mindful that the provided basin term is using the
+    California region (region="CAL"), the "base" kind (as opposed to the
+    "stewart" kind is used) and the SoF is considered (sof=True).
+
+    Lastly, the basin term is not applied here, only the linear and non-linear
+    components.
 
     :param gmpe_name:
         The name of a GMPE class
@@ -79,7 +91,7 @@ class BA08SiteTerm(GMPE):
     def __init__(self, gmpe_name, **kwargs):
         self.gmpe = registry[gmpe_name](**kwargs)
         self.set_parameters()
-        
+
         # Check if GMM has rake in req rup params + add if missing
         if 'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
             self.REQUIRES_RUPTURE_PARAMETERS |= {'rake'}
@@ -92,6 +104,7 @@ class BA08SiteTerm(GMPE):
         if 'rjb' not in self.gmpe.REQUIRES_DISTANCES:
             self.REQUIRES_DISTANCES |= {'rjb'}
 
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -101,10 +114,10 @@ class BA08SiteTerm(GMPE):
         # Make sites with ref bedrock vs30
         rup_rock = copy.copy(ctx)
         rup_rock.vs30 = np.full_like(ctx.vs30, 760.)
-    
+
         # Compute mean on bedrock
         self.gmpe.compute(rup_rock, imts, mean, sig, tau, phi)
         
         # Compute and apply the site term for each IMT
         for m, imt in enumerate(imts):
-            mean[m] += _get_ba08_site_term(imt, ctx)
+            mean[m] += _get_bssa14_site_term(imt, ctx)

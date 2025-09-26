@@ -1,3 +1,6 @@
+  [Christopher Brooks]
+  * Added BSSA14 site term capability to Modifiable GMPE + unit tests
+
   [Richard Styron]
   * Fixed `KiteSurface.get_middle_point` to manage NaNs
 
