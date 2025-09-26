@@ -89,16 +89,6 @@ def zpik(obj):
     return numpy.frombuffer(gz, numpy.uint8)
 
 
-def mutex_by_grp(src_groups):
-    """
-    :returns: a composite array with boolean fields src_mutex, rup_mutex
-    """
-    lst = []
-    for sg in src_groups:
-        lst.append((sg.src_interdep == 'mutex', sg.rup_interdep == 'mutex'))
-    return numpy.array(lst, [('src_mutex', bool), ('rup_mutex', bool)])
-
-
 def create_source_info(csm, h5):
     """
     Creates source_info, trt_smrs, toms
@@ -123,7 +113,6 @@ def create_source_info(csm, h5):
     num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance
     h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
-    h5['mutex_by_grp'] = mutex_by_grp(csm.src_groups)
 
 
 def trt_smrs(src):
