@@ -355,15 +355,15 @@ class Line(object):
         s02eq_s089n
         >>> print(line.flip())
         s089n_s02eq
-        >>> line.get_azimuths()
-        [0.0]
-        >>> line.flip().get_azimuths()
-        [180.0]
+        >>> line.get_azimuths() == [0]
+        True
+        >>> line.flip().get_azimuths() == [180.0]
+        True
         >>> line = Line([Point(1, 0), Point(2, 0)])
-        >>> line.get_azimuths()
-        [90.0]
-        >>> line.flip().get_azimuths()
-        [270.0]
+        >>> line.get_azimuths() == [90.0]
+        True
+        >>> line.flip().get_azimuths() == [270.0]
+        True
         """
         return self.from_coo(np.flip(self.coo, axis=0))
 
