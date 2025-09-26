@@ -398,13 +398,12 @@ class ModifiableGMPE(GMPE):
         # Set reference Vs30 if required
         if any(sm in self.params for sm in SITE_TERMS):
             ctx_copy = ctx.copy()
-            if 'nrcan15_site_term' in self.params:
-                rock_vs30 = 760.
-            elif 'cy14_site_term' in self.params:
+            if 'cy14_site_term' in self.params:
                 rock_vs30 = 1130.
-            elif 'ba08_site_term' or 'bssa14_site_term' in self.params:
+            elif any(key in self.params for key in [
+                'nrcan15_site_term', 'ba08_site_term', 'bssa14_site_term']):
                 rock_vs30 = 760.
-            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
+            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
         else:
             ctx_copy = ctx
         g = globals()
