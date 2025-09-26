@@ -2153,15 +2153,10 @@ class OqParam(valid.ParamSet):
         export_dir={export_dir} must refer to a directory,
         and the user must have the permission to write on it.
         """
-        if not self.export_dir and not self.exports:
-            # don't check if we are not exporting
+        if not self.exports or not self.exports[0]:  # () or ('',)
+            # we are not exporting anything
             return True
-        elif not self.export_dir:
-            self.export_dir = os.path.expanduser('~')  # home directory
-            logging.info('export_dir not specified. Using export_dir=%s'
-                         % self.export_dir)
-            return True
-        elif not os.path.isabs(self.export_dir):
+        if not os.path.isabs(self.export_dir):
             self.export_dir = os.path.normpath(
                 os.path.join(self.input_dir, self.export_dir))
         if not os.path.exists(self.export_dir):
