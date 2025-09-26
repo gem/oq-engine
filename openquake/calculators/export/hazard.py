@@ -821,7 +821,7 @@ def export_trt_gsim(ekey, dstore):
     """
     rows = []
     gsims = dstore['gsims'][:]
-    data = dstore['source_groups'][:][['grp_id', 'trt', 'gsims']]
+    data = dstore['clargs'][:][['grp_id', 'trt', 'gsims']]
     data.sort(order='grp_id')
     g = 0
     for grp_id, trt, G in data:
