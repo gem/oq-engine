@@ -155,7 +155,7 @@ def main(dstore, csm):
     ref_uhs = dstore.sel("hmaps-stats", stat="mean")[:, 0]  # shape NSMP -> NMP
     cmakers = contexts.read_cmakers(dstore)
     G = {cm.grp_id: len(cm.gsims) for cm in cmakers}
-    ctx_by_grp = contexts.read_ctx_by_grp(dstore)
+    ctx_by_grp = contexts.read_ctx_by_sgi(dstore)
     # check_rup_unique(ctx_by_grp)
     totsize = sum(len(ctx) * G[grp_id] for grp_id, ctx in ctx_by_grp.items())
     blocksize = totsize / (oq.concurrent_tasks or 1)

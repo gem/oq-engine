@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_sgi
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 
 PLOT = False
@@ -55,7 +55,7 @@ class MRD01TestCase(unittest.TestCase):
         cls.cmaker = cmaker.restrict(cls.imts)
 
         # Read contexts
-        cls.ctx = read_ctx_by_grp(cls.dstore)[0]
+        cls.ctx = read_ctx_by_sgi(cls.dstore)[0]
 
         # Set the cross correlation model
         cls.crosscorr = BakerJayaram2008()

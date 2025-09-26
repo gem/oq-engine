@@ -27,7 +27,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib import hdf5, writers
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_sgi
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
@@ -132,7 +132,7 @@ class PostProcTestCase(CalculatorTestCase):
         cmaker = read_cmakers(dstore)[0].restrict(imts)
 
         # Read contexts
-        ctx = read_ctx_by_grp(dstore)[0]
+        ctx = read_ctx_by_sgi(dstore)[0]
 
         # Set the cross correlation model
         self.crosscorr = BakerJayaram2008()

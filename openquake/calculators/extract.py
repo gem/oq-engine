@@ -36,7 +36,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, InvalidFile
 from openquake.hazardlib.contexts import (
-    ContextMaker, read_cmakers, read_ctx_by_grp)
+    ContextMaker, read_cmakers, read_ctx_by_sgi)
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
@@ -575,7 +575,7 @@ def extract_mean_by_rup(dstore, what):
     N = len(dstore['sitecol'])
     assert N == 1
     out = []
-    ctx_by_grp = read_ctx_by_grp(dstore)
+    ctx_by_grp = read_ctx_by_sgi(dstore)
     cmakers = read_cmakers(dstore)
     for gid, ctx in ctx_by_grp.items():
         # shape (4, G, M, U) => U

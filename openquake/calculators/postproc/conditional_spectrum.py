@@ -25,7 +25,7 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_sgi
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 
 U16 = numpy.uint16
@@ -98,7 +98,7 @@ def compute_cs(dstore, oq, N, M, P):
 
     # Computing CS
     toms = decode(dstore['toms'][:])
-    ctx_by_grp = read_ctx_by_grp(dstore)
+    ctx_by_grp = read_ctx_by_sgi(dstore)
     dstore.swmr_on()
     smap = parallel.Starmap(get_cs_out, h5=dstore)
     for grp_id, ctx in ctx_by_grp.items():

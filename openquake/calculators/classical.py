@@ -437,7 +437,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Create the rup datasets *before* starting the calculation
         """
-        params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
+        params = {'sgi', 'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
         for label, cmakers in self.cmakers.items():
             for cm in cmakers:
@@ -454,7 +454,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     dt = U32
                 elif param == 'rup_id':
                     dt = I64
-                elif param == 'grp_id':
+                elif param in ('sgi', 'grp_id'):
                     dt = U16
                 else:
                     dt = F32

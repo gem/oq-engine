@@ -30,7 +30,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats, map_array, valid
 from openquake.hazardlib.calc import disagg, mean_rates
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_sgi
 from openquake.commonlib import util
 from openquake.calculators import base, getters
 
@@ -114,8 +114,8 @@ def output_dict(shapedic, disagg_outputs, Z):
 
 def submit(smap, dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic):
     mags = list(numpy.unique(ctxt.mag))
-    logging.debug('Sending %d/%d sites for grp_id=%d, mags=%s',
-                  len(sitecol), len(sitecol.complete), ctxt.grp_id[0],
+    logging.debug('Sending %d/%d sites for sgi=%d, mags=%s',
+                  len(sitecol), len(sitecol.complete), ctxt.sgi[0],
                   shortlist(mags))
     smap.submit((dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic))
 
@@ -247,18 +247,18 @@ class DisaggregationCalculator(base.HazardCalculator):
         logging.info("Reading contexts")
         cmakers = read_cmakers(dstore)
         if 'src_mutex' in dstore:
-            gb = dstore.read_df('src_mutex').groupby('grp_id')
-            gp = dict(dstore['grp_probability'])  # grp_id -> probability
+            gb = dstore.read_df('src_mutex').groupby('sgi')
+            gp = dict(dstore['grp_probability'])  # sgi -> probability
             src_mutex_by_grp = {
-                grp_id: {'src_id': disagg.get_ints(df.src_id),
-                         'weight': df.mutex_weight.to_numpy(),
-                         'rup_mutex': df.rup_mutex.to_numpy(),
-                         'grp_probability': gp[grp_id]}
-                for grp_id, df in gb}
+                sgi: {'src_id': disagg.get_ints(df.src_id),
+                      'weight': df.mutex_weight.to_numpy(),
+                      'rup_mutex': df.rup_mutex.to_numpy(),
+                      'grp_probability': gp[sgi]}
+                for sgi, df in gb}
         else:
             src_mutex_by_grp = {}
-        ctx_by_grp = read_ctx_by_grp(dstore)  # little memory used here
-        totctxs = sum(len(ctx) for ctx in ctx_by_grp.values())
+        ctx_by_sgi = read_ctx_by_sgi(dstore)  # little memory used here
+        totctxs = sum(len(ctx) for ctx in ctx_by_sgi.values())
         logging.info('Read {:_d} contexts'.format(totctxs))
         self.datastore.swmr_on()
         smap = parallel.Starmap(compute_disagg, h5=self.datastore.hdf5)
@@ -270,8 +270,8 @@ class DisaggregationCalculator(base.HazardCalculator):
         # worse performance, but visible only in extra-large calculations!
 
         # compute the total weight of the contexts and the maxsize
-        totweight = sum(cmakers[grp_id].Z * len(ctx)
-                        for grp_id, ctx in ctx_by_grp.items())
+        totweight = sum(cmakers[ctx[0]['grp_id']].Z * len(ctx)
+                        for ctx in ctx_by_sgi.values())
         maxsize = int(numpy.ceil(totweight / (oq.concurrent_tasks or 1)))
         logging.debug(f'{totweight=}, {maxsize=}')
 
@@ -280,9 +280,10 @@ class DisaggregationCalculator(base.HazardCalculator):
             weights = self.datastore['weights'][:]
         else:
             weights = None
-        for grp_id, ctxt in ctx_by_grp.items():
+        for sgi, ctxt in ctx_by_sgi.items():
+            grp_id = ctxt[0]['grp_id']
             cmaker = cmakers[grp_id]
-            src_mutex = src_mutex_by_grp.get(grp_id, {})
+            src_mutex = src_mutex_by_grp.get(sgi, {})
             rup_mutex = src_mutex['rup_mutex'].any() if src_mutex else False
 
             # NB: in case_27 src_mutex for grp_id=1 has the form

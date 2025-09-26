@@ -285,23 +285,23 @@ def get_csm(oq, full_lt, dstore=None):
     csm = _get_csm(full_lt, groups, is_event_based)
     out = []
     probs = []
-    for sg in csm.src_groups:
+    for i, sg in enumerate(csm.src_groups):
         if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
             segments = []
             for src in sg:
                 segments.append(src.source_id.split(':')[1])
-                t = (src.source_id, src.grp_id,
+                t = (src.source_id, i,
                      src.count_ruptures(), src.mutex_weight,
                      sg.rup_interdep == 'mutex')
                 out.append(t)
-            probs.append((src.grp_id, sg.grp_probability))
+            probs.append((i, sg.grp_probability))
             assert len(segments) == len(set(segments)), segments
     if out:
-        dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
+        dtlist = [('src_id', hdf5.vstr), ('sgi', int),
                   ('num_ruptures', int), ('mutex_weight', float),
                   ('rup_mutex', bool)]
         dstore.create_dset('src_mutex', numpy.array(out, dtlist))
-        lst = [('grp_id', int), ('probability', float)]
+        lst = [('sgi', int), ('probability', float)]
         dstore.create_dset('grp_probability', numpy.array(probs, lst))
 
     # split multifault sources if there is a single site
@@ -762,6 +762,7 @@ class CompositeSourceModel:
         cmaker.blocks = len(blocks)
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
+        sg.sgi = i
         return cmaker, tilegetters, blocks, numpy.ceil(splits)
 
     def __toh5__(self):
