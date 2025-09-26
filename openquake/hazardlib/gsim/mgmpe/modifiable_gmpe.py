@@ -400,8 +400,8 @@ class ModifiableGMPE(GMPE):
             ctx_copy = ctx.copy()
             if 'cy14_site_term' in self.params:
                 rock_vs30 = 1130.
-            elif any(key in self.params for key in [
-                'nrcan15_site_term', 'ba08_site_term', 'bssa14_site_term']):
+            elif ('nrcan15_site_term' or 'ba08_site_term'
+                  or 'bssa14_site_term' in self.params):
                 rock_vs30 = 760.
             ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
         else:
