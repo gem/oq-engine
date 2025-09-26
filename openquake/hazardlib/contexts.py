@@ -1908,7 +1908,6 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
         cm = ContextMaker(trts[trti], rlzs_by_gsim, oq)
         cm.trti = trti
         cm.trt_smrs = trt_smrs
-        #cm.grp_id = grp_id
         cmakers.append(cm)
     gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
     for cm, gid in zip(cmakers, gids):
