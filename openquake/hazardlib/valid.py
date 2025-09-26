@@ -998,11 +998,8 @@ def dictionary(value):
     Traceback (most recent call last):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
-<<<<<<< HEAD
-=======
     >>> numpy.array(dictionary('{"ls": logscale(0.01, 2, 5)}')['ls'])
     array([0.01      , 0.03760603, 0.14142136, 0.53182959, 2.        ])
->>>>>>> cebfd90b8eaa59cb9ac2ced91b680d85323eb4b7
     """
     if not value:
         return {}
