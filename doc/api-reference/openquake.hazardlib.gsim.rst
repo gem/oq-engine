@@ -1115,6 +1115,14 @@ raghukanth_iyengar_2007
     :undoc-members:
     :show-inheritance:
 
+ramadan_2023
+-------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.ramadan_2023
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 rietbrock_2013
 ----------------------------------------------
 

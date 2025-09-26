@@ -287,6 +287,65 @@ FAQ about running hazard calculations
 -------------------------------------
 
 *************************************************************************
+How do I generate a stochastic event set from a GEM hazard model?
+*************************************************************************
+
+You need to search on the page
+https://www.globalquakemodel.org/products?type=Dataset the model you
+are interested in. Some GEM models are public and you can just
+download the files, others require a license. For instance you can download
+the old South America Model (SAM), version 2016 for free, as a zip file.
+When you unzip it you will find a directory called `in` containing the
+files gmmLT.xml, ssmLT.xml, ssm.xml and README.md.
+
+To generate the event set (say for 10,000 years) you need to add a
+calculation file in that directory, called conventionally
+`job.ini` and with a structure similar to the following (the parameters
+may be tweaked depending on the model)::
+
+  # job.ini
+  [event_based]
+  description = Generating SES for SAM
+  calculation_mode = event_based
+  number_of_logic_tree_samples = 1000
+  ses_per_logic_tree_path = 10
+  investigation_time = 1
+  
+  reference_vs30_type = measured
+  reference_vs30_value = 800.0
+  reference_depth_to_1pt0km_per_sec = 30.0
+  reference_depth_to_2pt5km_per_sec = 0.57
+  
+  rupture_mesh_spacing = 5
+  complex_fault_mesh_spacing = 15
+  width_of_mfd_bin = 1.0
+  area_source_discretization = 10.0
+  
+  source_model_logic_tree_file = ssmLT.xml
+  gsim_logic_tree_file = gmmLT.xml
+  intensity_measure_types = PGA, SA(0.1)
+  truncation_level = 3
+  maximum_distance = 300.0
+  minimum_magnitude = 5
+  minimum_intensity = 0.05
+  ground_motion_fields = false
+
+The calculation should take 2-3 minutes on a modern laptop and generate ~400,000
+events. Then the event set can be read from the datastore with Python, as
+discussed in the manual (search for the function `get_ebruptures`)
+and one can perform all kinds of analysis. It is also possible to generate
+the associated Ground Motion Fields by specifying a set of sites and
+by setting `ground_motion_fields = true` (see the documentation of
+the event based calculation), but the calculation will be slower
+and performance intensive if you have a grid covering the whole of South America.
+Single site calculations instead can be run easily on a laptop.
+
+See below, in the section about risk calculations, the discussion about the meaning
+of the parameters `number_of_logic_tree_samples`, `ses_per_logic_tree_path` and
+`investigation_time`, from which the total length of the catalogue (in years)
+can be computed with a simple multiplication.
+
+*************************************************************************
 Can I estimate the runtime of a classical calculation without running it?
 *************************************************************************
 

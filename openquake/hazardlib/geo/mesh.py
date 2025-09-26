@@ -616,6 +616,18 @@ class Mesh(object):
         # debug_plot(polygons)
         return proj, polygon
 
+    def get_around(self, lon, lat, digits=5):
+        """
+        :returns: the submesh around lon, lat with the given precision
+        """
+        out = []
+        lons = numpy.round(self.lons, digits)
+        lats = numpy.round(self.lats, digits)
+        for i, (lo, la) in enumerate(zip(lons, lats)):
+            if lo == lon and la == lat:
+                out.append(i)
+        return self[out]
+
     def get_convex_hull(self):
         """
         Get a convex polygon object that contains projections of all the points

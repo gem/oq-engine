@@ -2298,6 +2298,17 @@ class OqParam(valid.ParamSet):
             return True
         return self.hazard_calculation_id
 
+    def get_haz_distance(self):
+        """
+        :returns: the asset_hazard_distance or region_grid_spacing * 1.414
+        """
+        asset_hazard_distance = max(self.asset_hazard_distance.values())
+        if self.region_grid_spacing:
+            haz_distance = self.region_grid_spacing * 1.414
+        else:
+            haz_distance = asset_hazard_distance
+        return haz_distance
+
     @classmethod
     def docs(cls):
         """
@@ -2321,7 +2332,8 @@ class OqParam(valid.ParamSet):
         dic.pop('close', None)
         dic.pop('mags_by_trt', None)
         dic.pop('sec_imts', None)
-        for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.split():
+        for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.\
+                split():
             dic.pop(k, None)
 
         if 'secondary_perils' in dic:

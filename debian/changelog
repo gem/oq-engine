@@ -1,4 +1,18 @@
   [Michele Simionato]
+  * Fixed a `NameError: Missing liquefaction:LiqProb in gmf_data`
+    when using the TodorovicSilva2022NonParametric model
+  * gzipping the avg_losses reducing the disk space by half or so
+  * Added an extractor `losses_by_location`
+  * Filtering the assets around the rupture according to the maximum distance
+    in scenario calculations
+
+  [Claudia Mascandola]
+  * Added a Ramadan et al (2023) gsim
+
+  [Michele Simionato]
+  * Disabled the threads in PicklableInferenceSession, making it possible
+    to use the TodorovicSilva2022NonParametric model in high concurrency
+    situations
   * Made it possible to merge pre_job.ini and job.ini in ShakeMap calculations
   * Internal: changed `Exposure.read_around` to work in terms of h3 hexagons;
     changed the exposure.hdf5 accordingly
