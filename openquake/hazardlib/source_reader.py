@@ -713,8 +713,8 @@ class CompositeSourceModel:
         # cmakers is a dictionary label -> array of cmakers
         with_labels = len(cmakers) > 1
         for idx, label in enumerate(cmakers):
-            for cmaker in cmakers[label][grp_ids]:
-                sg = self.src_groups[cmaker.grp_id]
+            for cmaker, grp_id in zip(cmakers[label][grp_ids], grp_ids):
+                sg = self.src_groups[grp_id]
                 if sg.weight == 0:
                     # happens in LogicTreeTestCase::test_case_08 since the
                     # point sources are far away as determined in preclassical
