@@ -64,10 +64,6 @@ def classical(group, sitecol, cmaker):
     """
     trts = set()
     for src in group:
-        try:
-            src.num_ruptures
-        except:
-            breakpoint()
         if not src.num_ruptures:
             # not be set in hazardlib, but always in the engine
             src.num_ruptures = src.count_ruptures()
