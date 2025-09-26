@@ -742,7 +742,8 @@ class CompositeSourceModel:
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
-        for sg in self.src_groups:
+        for i, sg in enumerate(self.src_groups):
+            sg.ordinal = i
             if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
                 for cmaker in cmakers:
                     if sg.grp_id == cmaker.grp_id and sg.weight:
@@ -777,7 +778,7 @@ class CompositeSourceModel:
         splits = G * mb_per_gsim / max_mb
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
-            blocks = [None]
+            blocks = [sg.ordinal]
             tiles = max(hint, splits)
         else:
             # if hint > max_blocks generate max_blocks and more tiles
@@ -796,11 +797,11 @@ class CompositeSourceModel:
         return cmaker, tilegetters, blocks, numpy.ceil(splits)
 
     def __toh5__(self):
-        Gt = getGt(self.src_groups)
-        arr = numpy.zeros(Gt + 1, hdf5.vuint8)  # +1 for source_info
-        for grp in self.src_groups:
-            arr[grp.sources[0].grp_id] = zpik(grp)
-        arr[Gt] = zpik(self.source_info)
+        n = len(self.src_groups)
+        arr = numpy.zeros(n + 1, hdf5.vuint8)  # +1 for source_info
+        for i, grp in enumerate(self.src_groups):
+            arr[i] = zpik(grp)
+        arr[n] = zpik(self.source_info)
         size = sum(len(val) for val in arr)
         logging.info(f'Storing {general.humansize(size)} '
                      'of CompositeSourceModel')

@@ -153,8 +153,8 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     with dstore:
-        if sources is None:  # read the full group from the datastore
-            arr = dstore.getitem('_csm')[cmaker.grp_id]
+        if isinstance(sources, int):  # read the full group from the datastore
+            arr = dstore.getitem('_csm')[sources]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
 
@@ -547,11 +547,11 @@ class ClassicalCalculator(base.HazardCalculator):
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
         self.source_data = AccumDict(accum=[])
-        sgs, ds = self._pre_execute()
+        cms, ds = self._pre_execute()
         if self.tiling:
-            self._execute_tiling(sgs, ds)
+            self._execute_tiling(ds)
         else:
-            self._execute_regular(sgs, ds)
+            self._execute_regular(cms, ds)
         if self.cfactor[0] == 0:
             if self.N == 1:
                 logging.error('The site is far from all seismic sources'
@@ -574,8 +574,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.disagg_by_src and oq.site_labels:
             assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
-        sgs = self.datastore['source_groups']
-        self.tiling = sgs.attrs['tiling']
+        cms = self.datastore['cmakers']
+        self.tiling = cms.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -589,9 +589,9 @@ class ClassicalCalculator(base.HazardCalculator):
             assert self.N > self.oqparam.max_sites_disagg, self.N
         else:  # regular calculator
             self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        return sgs, ds
+        return cms, ds
 
-    def _execute_regular(self, sgs, ds):
+    def _execute_regular(self, cms, ds):
         allargs = []
         n_out = []
         splits = {}
@@ -612,7 +612,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        gids = get_heavy_gids(sgs, self.cmakers['Default'])
+        gids = get_heavy_gids(cms, self.cmakers['Default'])
         self.rmap = RateMap(self.sitecol.sids, L, gids)
 
         self.datastore.swmr_on()  # must come before the Starmap
@@ -622,7 +622,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = smap.reduce(self.agg_dicts, AccumDict(accum=0.))
         self._post_regular(acc)
 
-    def _execute_tiling(self, sgs, ds):
+    def _execute_tiling(self, ds):
         allargs = []
         n_out = []
         for cmaker, tilegetters, blocks, splits in self.csm.split(

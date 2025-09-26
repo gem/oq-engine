@@ -48,7 +48,6 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.calc import filters
 from openquake.hazardlib.contexts import ContextMaker, PmapMaker
 from openquake.hazardlib.sourceconverter import SourceGroup
 
@@ -65,6 +64,10 @@ def classical(group, sitecol, cmaker):
     """
     trts = set()
     for src in group:
+        try:
+            src.num_ruptures
+        except:
+            breakpoint()
         if not src.num_ruptures:
             # not be set in hazardlib, but always in the engine
             src.num_ruptures = src.count_ruptures()
