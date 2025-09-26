@@ -153,8 +153,8 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     with dstore:
-        if sources is None:  # read the full group from the datastore
-            arr = dstore.getitem('_csm')[cmaker.grp_id]
+        if isinstance(sources, int):  # read the full group from the datastore
+            arr = dstore.getitem('_csm')[sources]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
 
@@ -205,7 +205,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     with dstore:
-        arr = dstore.getitem('_csm')[cmaker.grp_id]
+        arr = dstore.getitem('_csm')[tilegetter.grp_id]
         sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
     result = hazclassical(sources, tilegetter(sitecol, cmaker.ilabel), cmaker)
@@ -601,7 +601,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 for tgetters in block_splitter(tilegetters, nsplits):
                     allargs.append((block, tgetters, cmaker, ds))
                     n_out.append(len(tgetters))
-            splits[cmaker.grp_id] = nsplits
+            try:
+                grp_id = block[0].grp_id
+            except TypeError:  # block is an int
+                grp_id = block
+            splits[grp_id] = nsplits
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         sum(n_out), len(allargs), min(n_out), max(n_out))
@@ -630,6 +634,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 True):
             for block in blocks:
                 for tgetter in tilegetters:
+                    assert isinstance(block, int)
+                    tgetter.grp_id = block
                     allargs.append((tgetter, cmaker, ds))
                 n_out.append(len(tilegetters))
         logging.warning('This is a tiling calculation with '

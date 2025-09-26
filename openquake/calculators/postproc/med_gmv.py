@@ -45,8 +45,8 @@ def main(dstore, csm):
 
     # send one task per source
     allargs = []
-    for cm in cmakers:
-        sg = csm.src_groups[cm.grp_id]
+    for grp_id, cm in enumerate(cmakers):
+        sg = csm.src_groups[grp_id]
         for src_frags in groupby(sg, basename).values():
             allargs.append((src_frags, sitecol, cm))
     dstore.swmr_on()  # must come before the Starmap

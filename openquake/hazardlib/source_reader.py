@@ -710,17 +710,12 @@ class CompositeSourceModel:
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
-        if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
-            for cmaker in cmakers:
-                if self.src_groups[cmaker.grp_id].weight:
-                    yield self._split(
-                        cmaker, sitecol, max_weight, num_chunks, tiling)
-            return
         # cmakers is a dictionary label -> array of cmakers
         with_labels = len(cmakers) > 1
         for idx, label in enumerate(cmakers):
-            for cmaker in cmakers[label][grp_ids]:
-                if self.src_groups[cmaker.grp_id].weight == 0:
+            for cmaker, grp_id in zip(cmakers[label][grp_ids], grp_ids):
+                sg = self.src_groups[grp_id]
+                if sg.weight == 0:
                     # happens in LogicTreeTestCase::test_case_08 since the
                     # point sources are far away as determined in preclassical
                     continue
@@ -731,21 +726,20 @@ class CompositeSourceModel:
                 if sites:
                     if with_labels:
                         cmaker.ilabel = idx
-                    yield self._split(
-                        cmaker, sites, max_weight, num_chunks, tiling)
+                    yield self.split_sg(
+                        cmaker, sg, sites, max_weight, num_chunks, tiling)
 
-    def _split(self, cmaker, sitecol, max_weight, num_chunks=1, tiling=False):
+    def split_sg(self, cmaker, sg, sitecol, max_weight,
+                 num_chunks=1, tiling=False):
         N = len(sitecol)
         oq = cmaker.oq
-        grp_id = cmaker.grp_id
-        sg = self.src_groups[grp_id]
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)
         splits = G * mb_per_gsim / max_mb
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
-            blocks = [None]
+            blocks = [sg.grp_id]
             tiles = max(hint, splits)
         else:
             # if hint > max_blocks generate max_blocks and more tiles
