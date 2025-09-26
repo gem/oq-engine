@@ -170,12 +170,12 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # build source_groups
     quartets = [csm.split_sg(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
-                for cmaker in cmakers for sg in csm.src_groups
-                if sg.grp_id == cmaker.grp_id]
+                for g, cmaker in enumerate(cmakers) for sg in csm.src_groups
+                if sg.grp_id == g]
     data = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), splits,
+        [(grp_id, len(cm.gsims), len(tgets), len(blocks), splits,
           len(cm.gsims) * fac * 1024, cm.weight, cm.codes, cm.trt)
-         for cm, tgets, blocks, splits in quartets],
+         for grp_id, (cm, tgets, blocks, splits) in enumerate(quartets)],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('splits', U16), ('size_mb', F32), ('weight', F32),
          ('codes', '<S8'), ('trt', '<S32')])
