@@ -2,6 +2,7 @@
   * Fixed `KiteSurface.get_middle_point` to manage NaNs
 
   [Michele Simionato]
+  * Doing the check on the `export_dir` only if `--exports` is passed
   * Fixed a `NameError: Missing liquefaction:LiqProb in gmf_data`
     when using the TodorovicSilva2022NonParametric model
   * gzipping the avg_losses reducing the disk space by half or so
