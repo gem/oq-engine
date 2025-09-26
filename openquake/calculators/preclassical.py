@@ -180,7 +180,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
          ('codes', '<S8'), ('trt', '<S32')])
 
     # determine light groups and tiling
-    light, = numpy.where(data['blocks'] == 1)
+    light = data['grp_id'][data['blocks'] == 1]
     req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
     mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
     if len(light):
