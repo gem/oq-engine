@@ -739,7 +739,7 @@ class CompositeSourceModel:
         splits = G * mb_per_gsim / max_mb
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
-            blocks = [None]
+            blocks = [sg.grp_id]
             tiles = max(hint, splits)
         else:
             # if hint > max_blocks generate max_blocks and more tiles
