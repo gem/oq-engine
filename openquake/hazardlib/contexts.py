@@ -1911,9 +1911,9 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
         cm.grp_id = grp_id
         cmakers.append(cm)
     gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
-    for cm in cmakers:
-        cm.gid = gids[cm.grp_id]
-        cm.wei = gweights[cm.gid]
+    for cm, gid in zip(cmakers, gids):
+        cm.gid = gid
+        cm.wei = gweights[gid]
     return numpy.array(cmakers)
 
 

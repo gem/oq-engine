@@ -92,19 +92,20 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def get_heavy_gids(source_groups, cmakers):
+def get_heavy_gids(cms, cmakers):
     """
     :returns: the g-indices associated to the heavy groups
     """
-    if source_groups.attrs['tiling']:
+    if cms.attrs['tiling']:
         return []
-    elif cmakers[0].oq.disagg_by_src:
-        grp_ids = source_groups['grp_id']  # all groups
-    else:
-        grp_ids = source_groups['grp_id'][source_groups['blocks'] > 1]
     gids = []
-    for grp_id in grp_ids:
-        gids.extend(cmakers[grp_id].gid)
+    for cm, blocks in zip(cmakers, cms['blocks']):
+        if cmakers[0].oq.disagg_by_src:
+            # use all gids
+            gids.extend(cm.gid)
+        elif blocks > 1:
+            # use only the gids associates to heavy groups
+            gids.extend(cm.gid)
     return gids
 
 
@@ -574,7 +575,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.disagg_by_src and oq.site_labels:
             assert len(numpy.unique(self.sitecol.ilabel)) == 1, \
                 'disagg_by_src not supported on splittable site collection'
-        cms = self.datastore['cmakers']
+        cms = self.datastore['clargs']
         self.tiling = cms.attrs['tiling']
         if 'sitecol' in self.datastore.parent:
             ds = self.datastore.parent

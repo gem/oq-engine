@@ -744,12 +744,6 @@ class CompositeSourceModel:
         """
         for i, sg in enumerate(self.src_groups):
             sg.ordinal = i
-            if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
-                for cmaker in cmakers:
-                    if sg.grp_id == cmaker.grp_id and sg.weight:
-                        yield self._split(
-                            cmaker, sg, sitecol, max_weight, num_chunks, tiling)
-                return
             # cmakers is a dictionary label -> array of cmakers
             with_labels = len(cmakers) > 1
             for idx, label in enumerate(cmakers):

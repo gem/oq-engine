@@ -168,7 +168,9 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     fac = oq.imtls.size * N * 4 / 1024**3
     max_weight = csm.get_max_weight(oq)
 
-    quartets = csm.split(cmakers, sitecol, max_weight, tiling=oq.tiling)
+    quartets = [csm._split(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
+                for cmaker in cmakers for sg in csm.src_groups
+                if sg.grp_id == cmaker.grp_id]
     data = numpy.array(
         [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), splits,
           len(cm.gsims) * fac * 1024, cm.weight, cm.codes, cm.trt)
@@ -197,7 +199,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         tiling = oq.tiling
 
     # store cmakers
-    dstore.create_dset('cmakers', data,
+    dstore.create_dset('clargs', data,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
