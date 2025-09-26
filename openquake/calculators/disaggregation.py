@@ -283,7 +283,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         for grp_id, ctxt in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
-            rup_mutex = src_mutex['rup_mutex'].any() if len(src_mutex) else 0
+            rup_mutex = src_mutex['rup_mutex'].any() if src_mutex else False
 
             # NB: in case_27 src_mutex for grp_id=1 has the form
             # {'src_id': array([1, 2]), 'weight': array([0.625, 0.375])}
