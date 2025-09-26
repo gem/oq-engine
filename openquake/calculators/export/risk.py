@@ -867,8 +867,9 @@ def export_job_zip(ekey, dstore):
     inputs['taxonomy_mapping'] = dest
     inputs['sites'] = dstore.export_path('sites.csv')
     sitecol = dstore['sitecol']
-    sitecol.make_complete()  # needed for test_impact[1]
-    writer.save(sitecol.array, inputs['sites'])
+    if 'complete' in dstore:
+        sitecol.complete = dstore['complete']  # needed for test_impact[1]
+    writer.save(sitecol.complete.array, inputs['sites'])
     with open(job_ini, 'w') as out:
         out.write(oq.to_ini(**inputs))
     fnames = list(inputs.values()) + [assetcol_csv]
