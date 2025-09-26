@@ -742,35 +742,35 @@ class CompositeSourceModel:
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
-        if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
-            for cmaker in cmakers:
-                if self.src_groups[cmaker.grp_id].weight:
-                    yield self._split(
-                        cmaker, sitecol, max_weight, num_chunks, tiling)
-            return
-        # cmakers is a dictionary label -> array of cmakers
-        with_labels = len(cmakers) > 1
-        for idx, label in enumerate(cmakers):
-            for cmaker in cmakers[label]:
-                if self.src_groups[cmaker.grp_id].weight == 0:
-                    # happens in LogicTreeTestCase::test_case_08 since the
-                    # point sources are far away as determined in preclassical
-                    continue
-                if len(cmakers) > 1:  # has labels
-                    sites = sitecol.filter(sitecol.ilabel == idx)
-                else:
-                    sites = sitecol
-                if sites:
-                    if with_labels:
-                        cmaker.ilabel = idx
-                    yield self._split(
-                        cmaker, sites, max_weight, num_chunks, tiling)
+        for sg in self.src_groups:
+            if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
+                for cmaker in cmakers:
+                    if sg.grp_id == cmaker.grp_id and sg.weight:
+                        yield self._split(
+                            cmaker, sg, sitecol, max_weight, num_chunks, tiling)
+                return
+            # cmakers is a dictionary label -> array of cmakers
+            with_labels = len(cmakers) > 1
+            for idx, label in enumerate(cmakers):
+                for cmaker in cmakers[label]:
+                    if sg.grp_id != cmaker.grp_id or sg.weight == 0:
+                        # happens in LogicTreeTestCase::test_case_08 since the
+                        # point sources are far away in preclassical
+                        continue
+                    if len(cmakers) > 1:  # has labels
+                        sites = sitecol.filter(sitecol.ilabel == idx)
+                    else:
+                        sites = sitecol
+                    if sites:
+                        if with_labels:
+                            cmaker.ilabel = idx
+                        yield self._split(
+                            cmaker, sg, sites, max_weight, num_chunks, tiling)
 
-    def _split(self, cmaker, sitecol, max_weight, num_chunks=1, tiling=False):
+    def _split(self, cmaker, sg, sitecol, max_weight, num_chunks=1,
+               tiling=False):
         N = len(sitecol)
         oq = cmaker.oq
-        grp_id = cmaker.grp_id
-        sg = self.src_groups[grp_id]
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)

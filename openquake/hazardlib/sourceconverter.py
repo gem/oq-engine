@@ -195,6 +195,10 @@ class SourceGroup(collections.abc.Sequence):
                     assert rup.weight is not None
 
     @property
+    def grp_id(self):
+        return self.sources[0].grp_id
+
+    @property
     def tom_name(self):
         """
         :returns: name of the associated temporal occurrence model
