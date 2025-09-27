@@ -156,7 +156,7 @@ def get_num_chunks_sites(dstore):
     """
     :returns: (number of postclassical tasks to generate, number of sites)
 
-    It is 5 times the number of GB required to store the rates.
+    It is 20 times the number of GB required to store the rates.
     """
     N = len(dstore['sitecol/sids'])
     max_chunks = min(dstore['oqparam'].max_sites_disagg, N)
@@ -164,7 +164,7 @@ def get_num_chunks_sites(dstore):
         req_gb = dstore['source_groups'].attrs['req_gb']
     except KeyError:
         return max_chunks, N
-    chunks = max(int(5 * req_gb), max_chunks)
+    chunks = max(int(20 * req_gb), max_chunks)
     return chunks, N
 
 
@@ -369,10 +369,7 @@ class MapGetter(object):
         for sid in self.sids:
             idx = means.sidx[sid]
             rates = self._map[sid]  # shape (L, G)
-            try:
-                means.array[idx] = (rates @ gweights).reshape((M, L1))
-            except:
-                breakpoint()
+            means.array[idx] = (rates @ gweights).reshape((M, L1))
         means.array[:] = to_probs(means.array)
         return means
 

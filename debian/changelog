@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Reduced the size of the global RateMap in case of cluster sources
+    (USA model)
+
   [Christopher Brooks]
   * Added BSSA14 site term capability to Modifiable GMPE + unit tests
 
