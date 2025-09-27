@@ -182,9 +182,10 @@ def map_getters(dstore, full_lt=None, disagg=False):
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
-    if oq.fastmean and not disagg:
+    if oq.fastmean and not disagg:  # in classical
+        # pass gweights
         weights = numpy.concatenate(
-            [cm.wei for cm in read_cmakers(dstore)])
+            [cm.wei for cm in read_cmakers(dstore, array=False)])
         trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
     else:
         attrs = vars(full_lt)
@@ -368,7 +369,10 @@ class MapGetter(object):
         for sid in self.sids:
             idx = means.sidx[sid]
             rates = self._map[sid]  # shape (L, G)
-            means.array[idx] = (rates @ gweights).reshape((M, L1))
+            try:
+                means.array[idx] = (rates @ gweights).reshape((M, L1))
+            except:
+                breakpoint()
         means.array[:] = to_probs(means.array)
         return means
 

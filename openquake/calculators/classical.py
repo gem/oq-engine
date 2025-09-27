@@ -224,7 +224,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
 def fast_mean(pgetter, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
-    :param gweights: an array of G weights
+    :param gweights: an array of Gt weights
     :returns: a dictionary kind -> MapArray
     """
     with monitor('reading rates', measuremem=True):
