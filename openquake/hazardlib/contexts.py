@@ -1907,6 +1907,15 @@ class ContextMakerSequence(collections.abc.Sequence):
                             for inv in self.inverse[grp_ids]])
 
 
+def get_unique_inverse(all_trt_smrs):
+    """
+    :returns: unique tuples trt_smrs and an array of indices
+    """
+    strings = [','.join(map(str, ts)) for ts in all_trt_smrs]
+    unique, inverse = numpy.unique(strings, return_inverse=True)
+    return [tuple(map(int, u.split(','))) for u in unique], inverse
+
+
 def get_cmakers(all_trt_smrs, full_lt, oq):
     """
     :params all_trt_smrs: a list of arrays
@@ -1915,10 +1924,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :returns: list of ContextMakers associated to the given src_groups
     """
     from openquake.hazardlib.site_amplification import AmplFunction
-
-    strings = [','.join(map(str, ts)) for ts in all_trt_smrs]
-    unique, inverse = numpy.unique(strings, return_inverse=True)
-    all_trt_smrs = [tuple(map(int, u.split(','))) for u in unique]
+    all_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplFunction.from_dframe(df)

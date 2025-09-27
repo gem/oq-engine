@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
 from openquake.commonlib.calc import get_proxies
@@ -146,7 +146,7 @@ def get_pmaps_gb(dstore, full_lt=None):
     if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
         trt_smrs = [[0]]
     else:
-        trt_smrs = dstore['trt_smrs'][:]
+        trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
     return max_gb, trt_rlzs
@@ -339,7 +339,7 @@ class MapGetter(object):
                         except KeyError:
                             array = numpy.zeros((self.L, self.G))
                             self._map[sid] = array
-                        array[df.lid, df.gid] = df.rate
+                        array[df.lid, df.gid] += df.rate
         return self._map
 
     def get_hcurve(self, sid):  # used in classical
