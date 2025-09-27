@@ -246,7 +246,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
 
         L = oq.imtls.size
-        Gfull = self.full_lt.gfull(trt_smrs)
+        Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
         Gt = sum(len(cm.gsims) for cm in self.cmakers)
         extra = f'<{Gfull}' if Gt < Gfull else ''
         if sites is not None:
@@ -266,6 +266,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
         multifaults = []
+        cmakers = self.cmakers.to_array()
         for sg in csm.src_groups:
             for src in sg:
                 if src.code == b'F':
@@ -275,7 +276,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
-                self.cmakers[grp_id].set_weight(
+                cmakers[grp_id].set_weight(
                     sg, SourceFilter(sites, oq.maximum_distance))
                 atomic_sources.extend(sg)
             else:
@@ -302,8 +303,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
         before_after = numpy.zeros(2, dtype=int)
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+        cmakers = self.cmakers.to_array()
         for grp_id, srcs in sources_by_key.items():
-            cmaker = self.cmakers[grp_id]
+            cmaker = cmakers[grp_id]
             cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
             pointsources, pointlike, others = [], [], []
             for src in srcs:
@@ -407,7 +409,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         # save 'source_groups'
         if self.sitecol is not None:
             self.req_gb, self.max_weight, self.trt_rlzs = store_tiles(
-                self.datastore, self.csm, self.sitecol, self.cmakers)
+                self.datastore, self.csm, self.sitecol, self.cmakers.to_array())
 
         # save gsims
         toml = []

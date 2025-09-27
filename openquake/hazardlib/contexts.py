@@ -1946,7 +1946,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     for cm, gid in zip(cmakers, gids):
         cm.gid = gid
         cm.wei = gweights[gid]
-    return ContextMakerSequence(cmakers, inverse).to_array()
+    return ContextMakerSequence(cmakers, inverse)
 
 
 def read_cmakers(dstore, full_lt=None):
@@ -1962,7 +1962,7 @@ def read_cmakers(dstore, full_lt=None):
     if not full_lt:
         full_lt = dstore['full_lt'].init()
     cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
-    return cmakers
+    return cmakers.to_array()
 
 
 def read_full_lt_by_label(dstore):

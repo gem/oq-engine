@@ -67,7 +67,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
                  len(sitecol), oq.imtls.size, Gt)
     rmap = MapArray(sitecol.sids, L, Gt).fill(0)
     ctxs = []
-    for group, cmaker in zip(src_groups, cmakers):
+    for group, cmaker in zip(src_groups, cmakers.to_array()):
         dic = classical(group, sitecol, cmaker)
         if len(dic['rup_data']) == 0:  # the group was filtered away
             continue

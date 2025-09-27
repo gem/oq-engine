@@ -466,7 +466,7 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore)
         trt_smrs = self.datastore['trt_smrs'][:]
-        self.cmakers = {label: get_cmakers(trt_smrs, full_lt, oq)
+        self.cmakers = {label: get_cmakers(trt_smrs, full_lt, oq).to_array()
                         for label, full_lt in full_lt_by_label.items()}
         if 'delta_rates' in self.datastore:  # aftershock
             drgetter = getters.DeltaRatesGetter(self.datastore)
