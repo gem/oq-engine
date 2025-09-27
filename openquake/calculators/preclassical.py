@@ -254,7 +254,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             nbytes = 4 * len(self.sitecol) * L * Gt
             # Gt is known before starting the preclassical
             logging.warning(
-                f'The global pmap would require %s (of %s) ({Gt=}%s)',
+                f'The global RateMap would require %s (of %s) ({Gt=}%s)',
                 general.humansize(nbytes), general.humansize(avail), extra)
 
         # do nothing for atomic sources except counting the ruptures
