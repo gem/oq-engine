@@ -185,7 +185,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
     if oq.fastmean and not disagg:
         weights = numpy.concatenate(
             [cm.wei for cm in read_cmakers(dstore)])
-        trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
+        trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
     else:
         attrs = vars(full_lt)
         weights = [full_lt.weights]
