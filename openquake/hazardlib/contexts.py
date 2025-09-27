@@ -1884,6 +1884,29 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
+class ContextMakerSequence(collections.abc.Sequence):
+    """
+    Wrapper over a sequence of ContextMakers
+    """
+    def __init__(self, cmakers, inverse):
+        self.cmakers = cmakers
+        self.inverse = inverse
+
+    def __getitem__(self, idx):
+        return self.cmakers[idx]
+
+    def __len__(self):
+        return len(self.cmakers)
+
+    def enumerate(self):
+        for grp_id, inv in enumerate(self.inverse):
+            yield grp_id, copy.copy(self[inv])
+
+    def to_array(self, grp_ids=slice(None)):
+        return numpy.array([copy.copy(self[inv])
+                            for inv in self.inverse[grp_ids]])
+
+
 def get_cmakers(all_trt_smrs, full_lt, oq):
     """
     :params all_trt_smrs: a list of arrays
@@ -1892,6 +1915,10 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :returns: list of ContextMakers associated to the given src_groups
     """
     from openquake.hazardlib.site_amplification import AmplFunction
+
+    strings = [','.join(map(str, ts)) for ts in all_trt_smrs]
+    unique, inverse = numpy.unique(strings, return_inverse=True)
+    all_trt_smrs = [tuple(map(int, u.split(','))) for u in unique]
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplFunction.from_dframe(df)
@@ -1913,7 +1940,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     for cm, gid in zip(cmakers, gids):
         cm.gid = gid
         cm.wei = gweights[gid]
-    return numpy.array(cmakers)
+    return ContextMakerSequence(cmakers, inverse).to_array()
 
 
 def read_cmakers(dstore, full_lt=None):
