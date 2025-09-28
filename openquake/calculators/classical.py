@@ -103,8 +103,8 @@ def get_heavy_gids(source_groups, cmakers):
     else:
         grp_ids = source_groups['grp_id'][source_groups['blocks'] > 1]
     gids = []
-    for grp_id in grp_ids:
-        gids.extend(cmakers[grp_id].gid)
+    for inv in numpy.unique(cmakers.inverse[grp_ids]):
+        gids.extend(cmakers[inv].gid)
     return gids
 
 
@@ -617,7 +617,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        gids = get_heavy_gids(sgs, self.cmdict['Default'].to_array())
+        gids = get_heavy_gids(sgs, self.cmdict['Default'])
         self.rmap = RateMap(self.sitecol.sids, L, gids)
 
         self.datastore.swmr_on()  # must come before the Starmap
