@@ -438,7 +438,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
-        for label, cmakers in self.cmakers.items():
+        for label, cmakers in self.cmdict.items():
             for cm in cmakers:
                 params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
                 params.update(cm.REQUIRES_DISTANCES)
@@ -466,11 +466,11 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore)
         trt_smrs = self.datastore['trt_smrs'][:]
-        self.cmakers = {label: get_cmakers(trt_smrs, full_lt, oq).to_array()
+        self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq)
                         for label, full_lt in full_lt_by_label.items()}
         if 'delta_rates' in self.datastore:  # aftershock
             drgetter = getters.DeltaRatesGetter(self.datastore)
-            for cmakers in self.cmakers.values():
+            for cmakers in self.cmdict.values():
                 for cmaker in cmakers:
                     cmaker.deltagetter = drgetter
 
@@ -479,7 +479,8 @@ class ClassicalCalculator(base.HazardCalculator):
             # tested in case_43
             self.req_gb, self.max_weight, self.trt_rlzs = \
                 preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol, self.cmakers)
+                    self.datastore, self.csm, self.sitecol,
+                    self.cmdict['Default'].to_array())
 
         self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -506,7 +507,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Log the memory required to receive the largest MapArray,
         assuming all sites are affected (upper limit)
         """
-        num_gs = [len(cm.gsims) for cm in self.cmakers]
+        num_gs = [len(cm.gsims) for cm in self.cmdict['Default']]
         size = max(num_gs) * N * L * 4
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
@@ -596,7 +597,7 @@ class ClassicalCalculator(base.HazardCalculator):
         n_out = []
         splits = {}
         for cmaker, tilegetters, blocks, nsplits in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
+                self.cmdict, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
                 for tgetters in block_splitter(tilegetters, nsplits):
                     allargs.append((block, tgetters, cmaker, ds))
@@ -616,7 +617,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        gids = get_heavy_gids(sgs, self.cmakers['Default'])
+        gids = get_heavy_gids(sgs, self.cmdict['Default'].to_array())
         self.rmap = RateMap(self.sitecol.sids, L, gids)
 
         self.datastore.swmr_on()  # must come before the Starmap
@@ -630,8 +631,8 @@ class ClassicalCalculator(base.HazardCalculator):
         allargs = []
         n_out = []
         for cmaker, tilegetters, blocks, splits in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
-                True):
+                self.cmdict, self.sitecol, self.max_weight,
+                self.num_chunks, True):
             for block in blocks:
                 for tgetter in tilegetters:
                     assert isinstance(block, int)

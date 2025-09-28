@@ -162,8 +162,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         N = 0
     else:
         N = len(sitecol)
-    if isinstance(cmakers, dict):
-        cmakers = cmakers['Default']
     oq = cmakers[0].oq
     fac = oq.imtls.size * N * 4 / 1024**3
     max_weight = csm.get_max_weight(oq)
