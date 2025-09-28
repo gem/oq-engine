@@ -168,8 +168,8 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # build source_groups
     quartets = [csm.split_sg(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
-                for g, cmaker in enumerate(cmakers) for sg in csm.src_groups
-                if sg.grp_id == g]
+                for g, cmaker in enumerate(cmakers.to_array())
+                for sg in csm.src_groups if sg.grp_id == g]
     data = numpy.array(
         [(grp_id, len(cm.gsims), len(tgets), len(blocks), splits,
           len(cm.gsims) * fac * 1024, cm.weight, cm.codes, cm.trt)
@@ -181,7 +181,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     # determine light groups and tiling
     light, = numpy.where(data['blocks'] == 1)
     req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
-    mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
+    mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers.to_array(light))
     if len(light):
         logging.info('mem_gb = %.2f with %d light groups out of %d',
                      mem_gb, len(light), len(data))
@@ -407,7 +407,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         # save 'source_groups'
         if self.sitecol is not None:
             self.req_gb, self.max_weight, self.trt_rlzs = store_tiles(
-                self.datastore, self.csm, self.sitecol, self.cmakers.to_array())
+                self.datastore, self.csm, self.sitecol, self.cmakers)
 
         # save gsims
         toml = []

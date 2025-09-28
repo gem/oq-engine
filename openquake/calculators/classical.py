@@ -480,7 +480,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.req_gb, self.max_weight, self.trt_rlzs = \
                 preclassical.store_tiles(
                     self.datastore, self.csm, self.sitecol,
-                    self.cmdict['Default'].to_array())
+                    self.cmdict['Default'])
 
         self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
