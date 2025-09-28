@@ -38,7 +38,7 @@ def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
 def main(dstore, csm):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    cmakers = read_cmakers(dstore, csm.full_lt)
+    cmakers = read_cmakers(dstore, csm.full_lt).to_array()
     oq.mags_by_trt = {
         trt: python3compat.decode(dset[:])
         for trt, dset in dstore['source_mags'].items()}

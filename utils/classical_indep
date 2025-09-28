@@ -62,7 +62,7 @@ def classical_indep(calc_id: int):
         oq = dstore.parent['oqparam']
         sitecol = dstore.parent['sitecol']
         srcfilter = calc.filters.SourceFilter(sitecol, oq.maximum_distance)
-        cmakers = contexts.read_cmakers(dstore.parent)
+        cmakers = contexts.read_cmakers(dstore.parent).to_array()
         N, L, G = len(sitecol), oq.imtls.size, sum(
             len(cm.gsims) for cm in cmakers)
         logging.info(f'{N=}, {L=}, {G=}, {general.humansize(N*L*G*8)=}')
@@ -112,7 +112,7 @@ def classical_indep(calc_id: int):
         oq = dstore.parent['oqparam']
         sitecol = dstore.parent['sitecol']
         srcfilter = calc.filters.SourceFilter(sitecol, oq.maximum_distance)
-        cmakers = contexts.read_cmakers(dstore.parent)
+        cmakers = contexts.read_cmakers(dstore.parent).to_array()
         dstore.swmr_on()
         smap = parallel.Starmap(classical, h5=dstore)
         csm = dstore['_csm']

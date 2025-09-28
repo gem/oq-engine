@@ -1949,7 +1949,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     return ContextMakerSequence(cmakers, inverse)
 
 
-def read_cmakers(dstore, full_lt=None, array=True):
+def read_cmakers(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
     :param all_trt_smrs: a list of arrays
@@ -1962,7 +1962,7 @@ def read_cmakers(dstore, full_lt=None, array=True):
     if not full_lt:
         full_lt = dstore['full_lt'].init()
     cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
-    return cmakers.to_array() if array else cmakers
+    return cmakers
 
 
 def read_full_lt_by_label(dstore):

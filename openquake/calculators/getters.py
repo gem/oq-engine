@@ -184,8 +184,7 @@ def map_getters(dstore, full_lt=None, disagg=False):
     _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
     if oq.fastmean and not disagg:  # in classical
         # pass gweights
-        weights = numpy.concatenate(
-            [cm.wei for cm in read_cmakers(dstore, array=False)])
+        weights = numpy.concatenate([cm.wei for cm in read_cmakers(dstore)])
         trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
     else:
         attrs = vars(full_lt)

@@ -154,7 +154,7 @@ def main(dstore, csm):
 
     # read the precomputed mean hazard spectrum
     ref_uhs = dstore.sel("hmaps-stats", stat="mean")[:, 0]  # shape NSMP -> NMP
-    cmakers = contexts.read_cmakers(dstore)
+    cmakers = contexts.read_cmakers(dstore).to_array()
     G = {grp_id: len(cm.gsims) for grp_id, cm in enumerate(cmakers)}
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
     # check_rup_unique(ctx_by_grp)
