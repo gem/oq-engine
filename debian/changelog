@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Optimized "building cmakers" and the RateMap in the case of clusters
+    of sources (260x for the latest USA model)
+
   [Christopher Brooks]
   * Added BSSA14 site term capability to Modifiable GMPE + unit tests
 

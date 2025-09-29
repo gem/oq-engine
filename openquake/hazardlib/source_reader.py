@@ -705,21 +705,22 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
-    def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
+    def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
         # cmakers is a dictionary label -> array of cmakers
-        with_labels = len(cmakers) > 1
-        for idx, label in enumerate(cmakers):
-            for cmaker, grp_id in zip(cmakers[label][grp_ids], grp_ids):
+        with_labels = len(cmdict) > 1
+        for idx, label in enumerate(cmdict):
+            cms = cmdict[label].to_array(grp_ids)
+            for cmaker, grp_id in zip(cms, grp_ids):
                 sg = self.src_groups[grp_id]
                 if sg.weight == 0:
                     # happens in LogicTreeTestCase::test_case_08 since the
                     # point sources are far away as determined in preclassical
                     continue
-                if len(cmakers) > 1:  # has labels
+                if len(cmdict) > 1:  # has labels
                     sites = sitecol.filter(sitecol.ilabel == idx)
                 else:
                     sites = sitecol

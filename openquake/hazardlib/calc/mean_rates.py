@@ -67,7 +67,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
                  len(sitecol), oq.imtls.size, Gt)
     rmap = MapArray(sitecol.sids, L, Gt).fill(0)
     ctxs = []
-    for group, cmaker in zip(src_groups, cmakers):
+    for group, cmaker in zip(src_groups, cmakers.to_array()):
         dic = classical(group, sitecol, cmaker)
         if len(dic['rup_data']) == 0:  # the group was filtered away
             continue
@@ -130,7 +130,7 @@ def main(job_ini):
                       if oq.region_grid_spacing else 5)  # Graeme's 5km
         sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
     rmap, _ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
-    gws = numpy.concatenate([cm.wei for cm in cmakers])
+    gws = numpy.concatenate([cm.wei for cm in cmakers.to_array()])
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, _M, L1 = rates.shape
     mrates = numpy.zeros((N, L1), oq.imt_dt())

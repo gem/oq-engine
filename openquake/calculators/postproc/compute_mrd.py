@@ -78,7 +78,7 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
         logging.warning('There are many intensity levels (%d), the '
                         'calculation can be pretty slow', L1 + 1)
     assert N <= oq.max_sites_disagg, 'Too many sites: %d' % N
-    cmakers = contexts.read_cmakers(dstore)
+    cmakers = contexts.read_cmakers(dstore).to_array()
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
     n = sum(len(ctx) for ctx in ctx_by_grp.values())
     logging.info('Read {:_d} contexts'.format(n))
