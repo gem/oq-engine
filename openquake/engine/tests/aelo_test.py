@@ -227,7 +227,7 @@ def test_WAF():
         notifications = calc.datastore['notifications']
         warnings = notifications[notifications['level'] == b'warning']
         assert len(warnings) == 1, f'{list(notifications)=}'
-        assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
+        assert warnings[0]['name'].decode('utf8') == 'low_hazard'
 
         assert 'png/site.png' in calc.datastore
         # check no other plots created
