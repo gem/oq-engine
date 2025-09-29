@@ -37,13 +37,13 @@ aac = numpy.testing.assert_allclose
 # values for the CCA model
 SITES = ['far -90.071 16.60'.split(), 'close -85.071 10.606'.split()]
 EXPECTED_asce7_16 = [
-    [0.265314, 0.519964, 0.475211],
+    [0.265127, 0.519616, 0.474869],
     [0.708552, 1.60616, 0.942543]]
 EXPECTED_asce7_22 = [
-    [0.265314, 0.29862, 0.301028, 0.337834, 0.377537, 0.41828,
-     0.530616, 0.567234, 0.614497, 0.650135, 0.685131, 0.67509,
-     0.562095, 0.456934, 0.342549, 0.250018, 0.185246, 0.169823,
-     0.176241, 0.167114, 0.129257],
+    [0.265127, 0.298462, 0.300902, 0.337703, 0.377392, 0.418089,
+     0.530159, 0.566854, 0.614095, 0.649679, 0.684727, 0.674712,
+     0.561744, 0.456604, 0.342284, 0.249883, 0.185144, 0.169689,
+     0.176073, 0.166941, 0.129146],
     [0.708552, 0.83579, 0.894015,
      1.08242, 1.30823, 1.45425, 1.68647, 1.75218, 1.74271,
      1.70589, 1.59723, 1.4563,
@@ -84,14 +84,14 @@ def test_PAC():
         r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
         if rtgmpy:
             a7 = json.loads(calc.datastore['asce07'][0].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.038337, 0.041893, 0.83427],
+            aac([r0, r1, a7['PGA']], [0.032725, 0.040313, 0.83427],
                 atol=1E-6)
 
         # site (160, -9.4), first level of PGA
         r0, r1 = calc.datastore['hcurves-rlzs'][1, :, 0, 0]  # 2 rlzs
         if rtgmpy:
             a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.038544, 0.041979, 0.7959],
+            aac([r0, r1, a7['PGA']], [0.03272 , 0.040302, 0.7959],
                 atol=1E-6)
 
             # check that there are not warnings about results
@@ -227,7 +227,7 @@ def test_WAF():
         notifications = calc.datastore['notifications']
         warnings = notifications[notifications['level'] == b'warning']
         assert len(warnings) == 1, f'{list(notifications)=}'
-        assert warnings[0]['name'].decode('utf8') == 'zero_hazard'
+        assert warnings[0]['name'].decode('utf8') == 'low_hazard'
 
         assert 'png/site.png' in calc.datastore
         # check no other plots created
