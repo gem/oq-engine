@@ -744,6 +744,11 @@ shift_hypo:
   Example: *shift_hypo = true*.
   Default: false
 
+site_class:
+  ASCE site class used in AELO mode.
+  Example: *site_class = 'A'*.
+  Default: None
+
 sites:
   Used to specify a list of sites.
   Example: *sites = 10.1 45, 10.2 45*.
@@ -903,6 +908,19 @@ VULN_TYPES = COST_TYPES + [
 # mapping version -> corresponding display name
 ASCE_VERSIONS = {'ASCE7-16': 'ASCE 7-16 & 41-17',
                  'ASCE7-22': 'ASCE 7-22 & 41-23'}
+
+SITE_CLASSES = {
+    'A': {'display_name': 'A - Hard Rock', 'vs30': 1500},
+    'B': {'display_name': 'B - Rock', 'vs30': 1080},
+    'BC': {'display_name': 'BC', 'vs30': 760},
+    'C': {'display_name': 'C - Very Dense Soil and Soft Rock', 'vs30': 530},
+    'CD': {'display_name': 'CD', 'vs30': 365},
+    'D': {'display_name': 'D - Stiff Soil', 'vs30': 260},
+    'DE': {'display_name': 'DE', 'vs30': 185},
+    'E': {'display_name': 'E - Soft Clay Soil', 'vs30': 150},
+    'default': {'display_name': 'Default', 'vs30': [260, 365, 530]},
+    'custom': {'display_name': 'Specify Vs30', 'vs30': None},
+}
 
 
 def check_same_levels(imtls):
@@ -1091,9 +1109,11 @@ class OqParam(valid.ParamSet):
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    reference_depth_to_1pt0km_per_sec = valid.Param( # Can be positive float, -999 or nan
+    reference_depth_to_1pt0km_per_sec = valid.Param(
+        # Can be positive float, -999 or nan
         valid.positivefloatorsentinel, numpy.nan)
-    reference_depth_to_2pt5km_per_sec = valid.Param( # Can be positive float, -999 or nan
+    reference_depth_to_2pt5km_per_sec = valid.Param(
+        # Can be positive float, -999 or nan
         valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'inferred')
@@ -1123,6 +1143,7 @@ class OqParam(valid.ParamSet):
     # example: shakemap_uri = {'kind': 'usgs_id', 'id': 'XXX'}
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
+    site_class = valid.Param(valid.Choice(*SITE_CLASSES), None)
     site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)
@@ -1448,7 +1469,7 @@ class OqParam(valid.ParamSet):
                 self.num_epsilon_bins = 1
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 self.raise_invalid('you cannot set rlzs_index and '
-                                  'num_rlzs_disagg at the same time')
+                                   'num_rlzs_disagg at the same time')
 
         # check compute_rtgm will run
         if 'rtgm' in self.postproc_func:
@@ -1614,8 +1635,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: a vector of minimum intensities, one per IMT
         """
-        #if 'scenario' in self.calculation_mode:  # disable min_iml
-        #    return numpy.full(len(self.imtls), 1E-10)
+        # if 'scenario' in self.calculation_mode:  # disable min_iml
+        #     return numpy.full(len(self.imtls), 1E-10)
         mini = self.minimum_intensity
         if mini:
             for imt in self.imtls:
@@ -2218,7 +2239,6 @@ class OqParam(valid.ParamSet):
         if not self.minimum_engine_version:
             return True
         return self.minimum_engine_version <= valid.version(engine_version())
-
 
     def check_aggregate_by(self):
         tagset = asset.tagset(self.aggregate_by)
