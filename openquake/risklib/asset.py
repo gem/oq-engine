@@ -559,7 +559,7 @@ class AssetCollection(object):
         :returns: an AssetCollection aggregated by site_id, taxonomy
         """
         array = numpy.sort(self.array, order=['site_id', 'taxonomy'])
-        idxs = array['site_id'] * TWO32 + array['taxonomy']
+        idxs = I64(array['site_id']) * TWO32 + I64(array['taxonomy'])
         arrays = performance.split_array(array, idxs)
         fields = ['value-' + f for f in self.fields] + self.occfields
         extras = set(self.array.dtype.names) - set(fields) - {'id', 'ordinal'}
