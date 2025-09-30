@@ -298,6 +298,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         [fname] = out[('aggrisk', 'csv')]
         self.assertEqualFiles('expected/aggrisk.csv', fname)
 
+        [fname] = out[('damages-rlzs', 'csv')]
+        self.assertEqualFiles('expected/avg_damages.csv', fname)
+
     def test_case_22(self):
         # losses with liquefaction and landslides
         self.run_calc(case_22.__file__, 'job_h.ini')
