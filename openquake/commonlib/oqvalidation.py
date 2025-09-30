@@ -24,6 +24,7 @@ import json
 import inspect
 import logging
 import pathlib
+import tempfile
 import functools
 import collections
 import numpy
@@ -2159,6 +2160,9 @@ class OqParam(valid.ParamSet):
         export_dir={export_dir} must refer to a directory,
         and the user must have the permission to write on it.
         """
+        if self.export_dir == '/tmp' and sys.platform == 'win32':
+            # magically convert to the Windows tempdir
+            self.export_dir = tempfile.gettempdir()
         if not os.path.isabs(self.export_dir):
             self.export_dir = os.path.normpath(
                 os.path.join(self.input_dir, self.export_dir))
