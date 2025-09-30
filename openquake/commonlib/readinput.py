@@ -1273,6 +1273,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
 
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
+    if oqparam.aggregate_exposure:
+        A = len(assetcol)
+        assetcol = assetcol.agg_by_site()
+        logging.info(f'Aggregated {A} assets -> {len(assetcol)} assets')
+
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
     tax = assetcol.tagcol.taxonomy[u[idx]]

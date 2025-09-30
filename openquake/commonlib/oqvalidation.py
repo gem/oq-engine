@@ -65,6 +65,11 @@ aggregate_by:
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
 
+aggregate_exposure:
+  Used to aggregate the exposure by hazard site and taxonomy.
+  Example: *aggregate_exposure = true*
+  Default: False
+
 aggregate_loss_curves_types:
   Used for event-based risk and damage calculations, to estimate the aggregated
   loss Exceedance Probability (EP) only or to also calculate (if possible) the
@@ -975,6 +980,7 @@ class OqParam(valid.ParamSet):
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloats, ())
     aggregate_by = valid.Param(valid.namelists, [])
+    aggregate_exposure = valid.Param(valid.boolean, False)
     aggregate_loss_curves_types = valid.Param(
         # accepting all comma-separated permutations of 1, 2 or 3 elements
         # of the list ['ep', 'aep' 'oep']

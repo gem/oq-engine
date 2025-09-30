@@ -62,7 +62,9 @@ def main_cmd(usgs_id, rupture_file=None,
              truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42', local_timestamp='',
-             exposure_hdf5=None, station_data_file=None,
+             exposure_hdf5=None,
+             aggregate_exposure=False,
+             station_data_file=None,
              maximum_distance_stations='',
              msr='WC1994', approach='use_shakemap_from_usgs',
              loglevel='warn',
@@ -89,6 +91,8 @@ def main_cmd(usgs_id, rupture_file=None,
     monitor = performance.Monitor()
     _rup, rupdic, oqparams, err = impact_validate(
         post, User(level=userlevel), rupture_file, station_data_file, monitor)
+    if aggregate_exposure:
+        oqparams['aggregate_exposure'] = 'true'
     if err:
         callback(None, oqparams, exc=err)
         return
@@ -123,6 +127,7 @@ main_cmd.ses_seed = 'SES seed'
 main_cmd.local_timestamp = 'Local timestamp of the event (optional)'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
+main_cmd.aggregate_exposure = 'Aggregate the exposure by site, taxonomy'
 main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.msr = 'Magnitude scaling relationship'

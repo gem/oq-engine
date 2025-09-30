@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a flag "aggregate_exposure" (false by default) to aggregate
+    the assets with the same taxonomy on the same hazard site
   * Optimized "building cmakers" and the RateMap in the case of clusters
     of sources (260x for the latest USA model)
 
