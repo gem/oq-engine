@@ -561,22 +561,22 @@ class AssetCollection(object):
         array = numpy.sort(self.array, order=['site_id', 'taxonomy'])
         idxs = array['site_id'] * TWO32 + array['taxonomy']
         arrays = performance.split_array(array, idxs)
-        vfields = self.fields + self.occfields
-        extras = set(self.array.dtype.names) - set(vfields) - {'id'}
-        array = numpy.zeros(len(arrays), self.array.dtype)
+        fields = ['value-' + f for f in self.fields] + self.occfields
+        extras = set(self.array.dtype.names) - set(fields) - {'id', 'ordinal'}
+        newarray = numpy.zeros(len(arrays), self.array.dtype)
         for i, arr in enumerate(arrays):
+            old = arr[0]
             if len(arr) > 1:  # aggregate
-                old = arr[0]
-                new = array[i]
+                new = newarray[i]
                 new['id'] = f'agg{old["site_id"]}'
-                for vf in vfields:
-                    f = 'value-' + vf if vf in self.fields else vf
+                for f in fields:
                     new[f] = arr[f].sum()
                 for extra in extras:
                     new[extra] = old[extra]
             else:  # just copy
-                array[i] = old
-        return self.new(array)
+                newarray[i] = old
+        newarray['ordinal'] = numpy.arange(len(arrays))
+        return self.new(newarray)
 
     def build_aggids(self, aggregate_by):
         """
