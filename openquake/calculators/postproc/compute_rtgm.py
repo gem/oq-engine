@@ -644,13 +644,6 @@ def get_zero_hazard_asce07(dstore,vs30):
     return asce07
     
 #class ASCE41Calculator:
-def compute(dstore, sa_data_site, vs30, mce, ASCE_DECIMALS):
-    ASCE_version = oq.asce_version
-    sa_data = get_spectra(dstore, sa_data_site, mce, facts)
-    asce41_params = get_params(ASCE_version, vs30, sa_data, ASCE_DECIMALS)
-    return sa_data, asce41_params
-
-
 def get_spectra(dstore, sid, custom_id, sa_data_site, mce, facts):
     fact = dict(zip(mce, facts))
     oq = dstore['oqparam']
@@ -744,19 +737,19 @@ def asce41_17(sa_data, ASCE_DECIMALS):
 
 def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
     
-    if (asce_sa['BSE2N'] == 0).all():
+    if (sa_data['BSE2N'] == 0).all():
         design_BSE2N = ['n.a.','n.a.','n.a.','n.a.']
     else:
         design_BSE2N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2N'], Vs30)
-    if (asce_sa['BSE1N'] == 0).all():
+    if (sa_data['BSE1N'] == 0).all():
         design_BSE1N = ['n.a.','n.a.','n.a.','n.a.']
     else:    
         design_BSE1N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1N'], Vs30)
-    if (asce_sa['BSE2E'] == 0).all():
+    if (sa_data['BSE2E'] == 0).all():
         design_BSE2E = ['n.a.','n.a.','n.a.','n.a.']
     else:
         design_BSE2E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2E'], Vs30)
-    if (asce_sa['BSE1E'] == 0).all():
+    if (sa_data['BSE1E'] == 0).all():
         design_BSE1E = ['n.a.','n.a.','n.a.','n.a.']
     else:
         design_BSE1E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1E'], Vs30)
@@ -1015,7 +1008,6 @@ def main(dstore, csm):
         if (asce_sa[keys_asce41] == 0).all().all():
             result = get_zero_hazard_asce41(ASCE_version)
         else: 
-            breakpoint()
             result = get_params(ASCE_version, Vs30, asce_sa, ASCE_DECIMALS)
         asce41[sid] = result
     dstore["asce41"] = asce41
