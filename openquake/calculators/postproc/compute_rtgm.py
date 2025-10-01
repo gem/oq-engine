@@ -326,7 +326,7 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
 
     # For sds, find periods from 0.2-5.0s, inclusive
     sds_indices = [index for index, period in enumerate(periods) if 0.2 <= period <= 5]
-
+   
     # sds is 90% of the maximum from 0.2-5.0s
     sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
 
@@ -511,7 +511,6 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         yield site, rtgm_df, mce_df, notification_name
 
 #class ASCE7Calculator:
-
 def get_seismicity_class(mce_site, vs30):
 
         mce = mce_site.SaM
@@ -743,10 +742,23 @@ def asce41_17(sa_data, ASCE_DECIMALS):
     }
 
 def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
-    design_BSE2N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2N'], Vs30)
-    design_BSE1N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1N'], Vs30)
-    design_BSE2E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2E'], Vs30)
-    design_BSE1E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1E'], Vs30)
+    
+    if (asce_sa['BSE2N'] == 0).all():
+        design_BSE2N = ['n.a.','n.a.','n.a.','n.a.']
+    else:
+        design_BSE2N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2N'], Vs30)
+    if (asce_sa['BSE1N'] == 0).all():
+        design_BSE1N = ['n.a.','n.a.','n.a.','n.a.']
+    else:    
+        design_BSE1N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1N'], Vs30)
+    if (asce_sa['BSE2E'] == 0).all():
+        design_BSE2E = ['n.a.','n.a.','n.a.','n.a.']
+    else:
+        design_BSE2E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2E'], Vs30)
+    if (asce_sa['BSE1E'] == 0).all():
+        design_BSE1E = ['n.a.','n.a.','n.a.','n.a.']
+    else:
+        design_BSE1E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1E'], Vs30)
 
     return {
         'BSE2N_Sxs': round(design_BSE2N[0], ASCE_DECIMALS),
@@ -780,7 +792,7 @@ def get_zero_hazard_asce41(asce_version):
 def compute_max_sa_asce41(dstore,sitecol,locs):
     # replace the maximum per each poe for sites in the default site class
     keys_asce41 = ['BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
-
+    
     asce41_df = dstore.read_df('spectra_asce41')
     asce41_df['period'] = [from_string(x).period for x in asce41_df.IMT]
     del asce41_df['IMT']
@@ -946,14 +958,13 @@ def main(dstore, csm):
     df.columns = ["period", "SaM", "custom_site_id"]
     dstore.create_df('mce_governing', df)
     sitecol = dstore['sitecol']
-    custom_ids = df['custom_site_id']
+    custom_ids = sitecol['custom_site_id']
     asce07 = {}
-    for site_id in custom_ids:
-        mce_site = df[df['custom_site_id'] == site_id]
-        ids = [cid.decode("utf-8") if isinstance(cid, bytes) else str(cid)
-        for cid in sitecol["custom_site_id"]]   
-        mask = np.array(ids) == site_id
-        Vs30 = sitecol["vs30"][mask]
+   
+    for s, site_id in enumerate(custom_ids):
+        csi = site_id.decode('ascii').split(':')[0]
+        mce_site = df[df['custom_site_id'] == csi]
+        Vs30 = sitecol["vs30"][s]
         
         if np.all(mce_site.SaM == 0) or mce_site['SaM'].isna().all():          
             result = get_zero_hazard_asce07(dstore,Vs30)
@@ -995,11 +1006,15 @@ def main(dstore, csm):
     # 3) compute asce41 parameters:
     keys_asce41 = ['BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
     asce41 = {}
+    
     for sid in custom_ids:
+        csi = site_id.decode('ascii').split(':')[0]
+        Vs30 = sitecol["vs30"][s]
         asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] ==sid]
         if (asce_sa[keys_asce41] == 0).all().all():
-            result = get_zero_hazard_asce41(dstore,Vs30)
+            result = get_zero_hazard_asce41(ASCE_version)
         else: 
+            breakpoint()
             result = get_params(ASCE_version, Vs30, asce_sa, ASCE_DECIMALS)
         asce41[sid] = result
     dstore["asce41"] = asce41
