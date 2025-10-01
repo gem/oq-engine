@@ -669,7 +669,7 @@ function capitalizeFirstLetter(val) {
 
             if (window.application_mode === 'AELO') {
                 $.ajax({
-                    url:  "/v1/get_site_classes",
+                    url:  "/v1/aelo_site_classes",
                     method: "GET",
                     dataType: "json",
                     success: function(data) {

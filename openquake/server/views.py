@@ -341,7 +341,7 @@ def get_impact_form_defaults(request):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def get_site_classes(request):
+def aelo_site_classes(request):
     """
     Return a json string with a dictionary of ASCE site classes, with corresponding
     display names and Vs30 values
