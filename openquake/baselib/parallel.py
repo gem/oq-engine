@@ -719,7 +719,7 @@ class Starmap(object):
             cls.pool = multiprocessing.dummy.Pool(num_cores)
 
         if num_cores > tot_cores:
-            logging.warning(f'Overcommit: {num_cores=} but {tot_cores=}')
+            logging.warning(f'{num_cores=} but {tot_cores=}')
 
     @classmethod
     def shutdown(cls):
