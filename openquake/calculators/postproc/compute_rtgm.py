@@ -332,6 +332,7 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
 
     # For sd1, depending on vs30, take periods from 1-2s or 1-5s
     # vs30 in m/s
+    breakpoint()
     if vs30 > 442:
         sd1_indices = [
             index for index, period in enumerate(periods) if 1 <= period <= 2]
