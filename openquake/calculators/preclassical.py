@@ -153,10 +153,11 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         yield {grp_id: splits}
 
 
+# executed at the end of preclassical
 def store_tiles(dstore, csm, sitecol, cmakers):
     """
     Store a `tiles` array if the calculation is large enough.
-    :returns: a triple (max_weight, trt_rlzs, gids)
+    :returns: a triple (req_gb, max_weight, trt_rlzs)
     """
     if sitecol is None:
         N = 0
