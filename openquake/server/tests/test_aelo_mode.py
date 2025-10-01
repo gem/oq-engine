@@ -34,6 +34,8 @@ from django.contrib.auth import get_user_model
 from django.test import Client, override_settings
 from django.conf import settings
 from openquake.baselib import config
+from openquake.calculators.base import get_aelo_version
+from openquake.commonlib.oqvalidation import OqParam, ASCE_VERSIONS
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
 from openquake.server.views import get_disp_val
@@ -127,14 +129,17 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                     self.assertIn('finished correctly', email_content)
                 email_from = settings.EMAIL_HOST_USER
                 email_to = settings.EMAIL_SUPPORT
+                asce_version = params.get(
+                    'asce_version', OqParam.asce_version.default)
                 self.assertIn(f'From: {email_from}', email_content)
                 self.assertIn('To: django-test-user@email.test', email_content)
-                self.assertIn(f'Reply-To: {email_to}',
-                              email_content)
+                self.assertIn(f'Reply-To: {email_to}', email_content)
                 self.assertIn(
-                    f"Input values: lon = {params['lon']},"
-                    f" lat = {params['lat']}, vs30 = {params['vs30']},"
-                    f" siteid = {params['siteid']}", email_content)
+                    f"Site name: {params['siteid']}\n"
+                    f"Latitude: {params['lat']}, Longitude: {params['lon']}\n"
+                    f"Site Class: Vs30 = {params['vs30']}m/s\n"
+                    f"ASCE standard: {ASCE_VERSIONS[asce_version]}\n"
+                    f"AELO version: {get_aelo_version()}\n\n", email_content)
                 if failure_reason:
                     self.assertIn(failure_reason, email_content)
                 else:

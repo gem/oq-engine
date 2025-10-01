@@ -741,7 +741,7 @@ def aelo_callback(
     site_class = inputs['site_class']
     vs30s = inputs['vs30'].split()
     vs30 = vs30s[0] if site_class != 'default' else 'default'
-    if site_class == 'custom':
+    if site_class is None or site_class == 'custom':
         site_class_vs30_str = f'Site Class: Vs30 = {vs30}m/s'
     else:
         site_class_display_name = oqvalidation.SITE_CLASSES[site_class]['display_name']

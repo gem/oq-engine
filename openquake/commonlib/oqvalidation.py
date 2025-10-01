@@ -1143,7 +1143,8 @@ class OqParam(valid.ParamSet):
     # example: shakemap_uri = {'kind': 'usgs_id', 'id': 'XXX'}
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
-    site_class = valid.Param(valid.Choice(*SITE_CLASSES), None)
+    site_class = valid.Param(
+        valid.NoneOr(valid.Choice(*SITE_CLASSES)), None)
     site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)
