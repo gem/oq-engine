@@ -327,6 +327,16 @@ def get_impact_form_defaults(request):
     return JsonResponse(IMPACT_FORM_DEFAULTS)
 
 
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def get_site_classes(request):
+    """
+    Return a json string with a dictionary of ASCE site classes, with corresponding
+    display names and Vs30 values
+    """
+    return JsonResponse(oqvalidation.SITE_CLASSES)
+
+
 def _make_response(error_msg, error_line, valid):
     response_data = dict(error_msg=error_msg,
                          error_line=error_line,
@@ -1607,6 +1617,7 @@ def web_engine(request, **kwargs):
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
         params['asce_versions'] = oqvalidation.ASCE_VERSIONS
+        params['site_classes'] = oqvalidation.SITE_CLASSES
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':

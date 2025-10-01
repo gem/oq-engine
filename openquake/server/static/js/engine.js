@@ -477,19 +477,7 @@ function capitalizeFirstLetter(val) {
             'running': 'Building rupture...'}
     }
 
-    // TODO: remove duplication and reuse the object defined in oqvalidation
-    const SITE_CLASSES = {
-        'A': {'display_name': 'A - Hard Rock', 'vs30': '1500'},
-        'B': {'display_name': 'B - Rock', 'vs30': '1080'},
-        'BC': {'display_name': 'BC', 'vs30': '760'},
-        'C': {'display_name': 'C - Very Dense Soil and Soft Rock', 'vs30': '530'},
-        'CD': {'display_name': 'CD', 'vs30': '365'},
-        'D': {'display_name': 'D - Stiff Soil', 'vs30': '260'},
-        'DE': {'display_name': 'DE', 'vs30': '185'},
-        'E': {'display_name': 'E - Soft Clay Soil', 'vs30': '150'},
-        'default': {'display_name': 'Default', 'vs30': '260 365 530'},
-        'custom': {'display_name': 'Specify Vs30', 'vs30': null},
-    }
+    var site_classes = {}  // populated via a ajax call to the web API
     // NOTE: avoiding to call it DEFAULT_SITE_CLASS to avoid confusion with the 'default' one
     const PRESELECTED_SITE_CLASS = 'BC';
 
@@ -679,6 +667,20 @@ function capitalizeFirstLetter(val) {
                                setTimer();
                            });
 
+            if (window.application_mode === 'AELO') {
+                $.ajax({
+                    url:  "/v1/get_site_classes",
+                    method: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        site_classes = data;
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error loading site classes:", error);
+                    }
+                });
+            }
+
             var vs30_original_placeholder = $('input#vs30').attr('placeholder');
             $('select#site_class').on('change', function() {
                 const site_class = $(this).val();
@@ -693,7 +695,7 @@ function capitalizeFirstLetter(val) {
                         $input_vs30.val('');
                         $input_vs30.attr('placeholder', '');
                     } else {
-                        $input_vs30.val(SITE_CLASSES[site_class]['vs30']);
+                        $input_vs30.val(site_classes[site_class]['vs30']);
                         $input_vs30.attr('placeholder', vs30_original_placeholder);
                     }
                 }
@@ -706,13 +708,13 @@ function capitalizeFirstLetter(val) {
                 $site_class_select.empty();
                 if (asce_version === 'ASCE7-16') {
                     $site_class_select.append($('<option>', {value: PRESELECTED_SITE_CLASS, text: PRESELECTED_SITE_CLASS}));
-                    $input_vs30.val(SITE_CLASSES[PRESELECTED_SITE_CLASS]['vs30']);
+                    $input_vs30.val(site_classes[PRESELECTED_SITE_CLASS]['vs30']);
                 } else if (asce_version === 'ASCE7-22') {
-                    for (const site_class of Object.keys(SITE_CLASSES)) {
+                    for (const site_class of Object.keys(site_classes)) {
                         $site_class_select.append(
                             $("<option>", {
                                 value: site_class,
-                                text: SITE_CLASSES[site_class]['display_name'],
+                                text: site_classes[site_class]['display_name'],
                                 selected: site_class === PRESELECTED_SITE_CLASS
                             })
                         );
@@ -728,7 +730,7 @@ function capitalizeFirstLetter(val) {
                         $input_vs30.val('');
                     } else {
                         const site_class = $site_class_select.val();
-                        $input_vs30.val(SITE_CLASSES[site_class]['vs30']);
+                        $input_vs30.val(site_classes[site_class]['vs30']);
                     }
                 }
             });
@@ -741,7 +743,12 @@ function capitalizeFirstLetter(val) {
                 if (site_class === 'custom') {
                     vs30 = $("input#vs30").val();
                 } else {
-                    vs30 = SITE_CLASSES[site_class]['vs30'];
+                    vs30 = site_classes[site_class]['vs30'];
+                    if (Array.isArray(vs30)) { // the default site class has 3 Vs30 values
+                        vs30 = vs30.join(' ');
+                    } else {
+                        vs30 = vs30.toString();
+                    }
                 }
                 var formData = {
                     lon: $("#lon").val(),
