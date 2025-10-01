@@ -1636,8 +1636,6 @@ class OqParam(valid.ParamSet):
         """
         :returns: a vector of minimum intensities, one per IMT
         """
-        # if 'scenario' in self.calculation_mode:  # disable min_iml
-        #     return numpy.full(len(self.imtls), 1E-10)
         mini = self.minimum_intensity
         if mini:
             for imt in self.imtls:
