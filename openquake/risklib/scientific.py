@@ -255,8 +255,11 @@ class VulnerabilityFunction(object):
         self.covs = F64(self.covs)
         self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
-        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
-        self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
+        # NB: we use fill_value="extrapolate" for compatibility with numpy 1
+        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios,
+                                             fill_value="extrapolate")
+        self._covs_i1d = interpolate.interp1d(self.imls, self.covs,
+                                              fill_value="extrapolate")
 
     def interpolate(self, gmf_df, col):
         """
