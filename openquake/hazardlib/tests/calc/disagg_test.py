@@ -118,7 +118,6 @@ class DisaggregateTestCase(unittest.TestCase):
         cls.cmaker = ContextMaker(cls.trt, {gsim: [0]}, oq)
         cls.bin_edges, _ = disagg.get_edges_shapedic(cls.cmaker.oq, sitecol)
         cls.sources[0].grp_id = 0
-        cls.cmaker.grp_id = 0
         cls.cmaker.poes = [.001]
 
     def test_minimum_distance(self):

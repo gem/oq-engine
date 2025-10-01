@@ -374,6 +374,22 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         self.assertAlmostEqual(dip, 47.0967, places=3, msg='Wrong dip value')
 
 
+    def test_get_middle_point(self):
+        middle_point = self.srfc.get_middle_point()
+        middle_idx = 45
+        middle_point_correct = Point(
+            self.srfc.mesh.lons.ravel()[middle_idx],
+            self.srfc.mesh.lats.ravel()[middle_idx],
+            self.srfc.mesh.depths.ravel()[middle_idx],
+            )
+        mpc = middle_point_correct
+        np.testing.assert_almost_equal(
+            np.array([middle_point.x, middle_point.y, middle_point.depth]),
+            np.array([mpc.x, mpc.y, mpc.depth]),
+            decimal=3
+        )
+
+
 class KiteSurfaceUCF1Tests(unittest.TestCase):
 
     def setUp(self):
@@ -1054,6 +1070,42 @@ class TestSectionsUCF3(unittest.TestCase):
         if PLOTTING:
             title = 'UCF 1680'
             ppp(prfs['1680'][0], srfc, title, ax_equal=True)
+
+
+class TestKiteSurfaceIDL(unittest.TestCase):
+    def setUp(self):
+        lons = [[ np.nan, 179.96, -179.99, -179.94, -179.89],
+                [179.91,  179.96, -179.99, -179.94, -179.89],
+                [179.91,  179.96, -179.99, -179.94, -179.89],
+                [179.91,  179.96, -179.99, -179.94, np.nan],
+                [179.91,  np.nan, -179.99, -179.94, np.nan]]
+        lats = [[np.nan, 0.0, 0.0, 0.0, 0.0],
+                [0.05, 0.05, 0.05, 0.05, 0.05],
+                [0.10, 0.10, 0.10, 0.10, 0.10],
+                [0.15, 0.15, 0.15, 0.15, np.nan],
+                [0.20, np.nan, 0.20, 0.20, np.nan]]
+        deps = [[np.nan, 0.0, 0.0, 0.0, 0.0],
+                [5, 5, 5, 5, 5],
+                [10, 10, 10, 10, 10],
+                [15, 15, 15, 15, np.nan],
+                [20, np.nan, 20, 20, np.nan]]
+        self.lons = np.array(lons)
+        self.lats = np.array(lats)
+        self.deps = np.array(deps)
+
+        self.mesh = Mesh(self.lons, self.lats, self.deps)
+        self.ksfc = KiteSurface(self.mesh)
+
+    def test_get_middle_point(self):
+        middle_point = self.ksfc.get_middle_point()
+        middle_idx = 12
+        middle_point_correct = Point(
+            self.ksfc.mesh.lons.ravel()[middle_idx],
+            self.ksfc.mesh.lats.ravel()[middle_idx],
+            self.ksfc.mesh.depths.ravel()[middle_idx],
+            )
+        assert middle_point == middle_point_correct
+
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
