@@ -782,10 +782,11 @@ def export_mce(ekey, dstore):
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
+    
     for s, site in enumerate(sitecol):
-        # breakpoint()
-        js = dstore[ekey[0]][s].decode('utf8')
-        dic = json.loads(js)
+        custom_id = sitecol.custom_site_id[s].decode('ascii').split(':')[0]
+        group = dstore[ekey[0]][custom_id]  # HDF5 group
+        dic = {k: v[()] for k, v in group.items()}  
         writer = writers.CsvWriter(fmt='%.5f')
         fname = dstore.export_path(ekey[0] + '-' + str(s) + '.csv')
         comment = dstore.metadata.copy()

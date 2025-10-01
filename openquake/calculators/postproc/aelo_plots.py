@@ -217,6 +217,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     imtls = dinfo['imtls']
     plt = import_plt()
     asce07 = dstore['asce07']
+    breakpoint()
     pga = asce07['PGA'][site_idx]
     ss = asce07['Ss'][site_idx]
     s1 = asce07['S1'][site_idx]
@@ -350,7 +351,7 @@ def plot_governing_mce(dstore, update_dstore=False):
     governing_mce_df = dstore.read_df('mce_governing')
     governing_mce_period = governing_mce_df['period']
     # governing_mce_sam = governing_mce_df['SaM']
-    mce = governing_mce_df['MCE']
+    mce = governing_mce_df['SaM']
 
     ax1.plot(governing_mce_period[1:], mce[1:], 'black',
              label='Governing $MCE_r$', linewidth=2, linestyle='-')
