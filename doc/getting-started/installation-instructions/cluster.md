@@ -84,7 +84,7 @@ NFS for example).
 On the master node you will also need space for:
 
 - the **shared_dir** directory (usually located under `/home`): it contains the calculations datastore (`hdf5` files located in the `oqdata` folder)
-- the OpenQuake database (located under `/opt/openquake/venv/oqdata/`): it contains only logs and metadata, the expected size is tens of megabyte
+- the OpenQuake database (located under `/opt/openquake/oqdata/`): it contains only logs and metadata, the expected size is tens of megabyte
 - the temporary folder (`/tmp`). A different temporary folder can be customized via the `openquake.cfg`
 
 On large installations we strongly suggest to create a separate partition for `/home`.
@@ -120,7 +120,7 @@ The following file (on all nodes) should be modified to enable
 oq_distribute = zmq
 
 [dbserver]
-file = /opt/openquake/venv/oqdata/db.sqlite3
+file = /opt/openquake/oqdata/db.sqlite3
 # address of the dbserver
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
