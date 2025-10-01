@@ -51,7 +51,7 @@ def get_mosaic_df(buffer):
 
 def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     """
-    :param inputs: a dictionary with sites, vs30, siteid, asce_version
+    :param inputs: a dictionary with sites, vs30, siteid, asce_version, site_class
     :param mosaic_dir: directory where the mosaic is located
     :param ini: path of the job ini file (if specified, mosaic_dir will be ignored)
 
@@ -108,6 +108,8 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
             '{"PGA": logscale(0.005, 3.00, 25),'
             ' "SA(0.2)": logscale(0.005, 9.00, 25),'
             ' "SA(1.0)": logscale(0.005, 3.00, 25)}')
+    params['site_class'] = inputs.get(
+        'site_class', oqvalidation.OqParam.site_class.default)
     return params
 
 
@@ -123,6 +125,7 @@ def main(lon: valid.longitude,
          vs30: valid.positivefloat,
          siteid: str,
          asce_version: str,
+         site_class: str,
          job_owner_email=None,
          outputs_uri=None,
          jobctx=None,
@@ -133,8 +136,9 @@ def main(lon: valid.longitude,
     and from the command-line in testing mode.
     """
     oqvalidation.OqParam.asce_version.validator(asce_version)
+    oqvalidation.OqParam.site_class.validator(site_class)
     inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
-                  asce_version=asce_version)
+                  asce_version=asce_version, site_class=site_class)
     warnings = []
     if jobctx is None:
         # in  testing mode create a new job context
