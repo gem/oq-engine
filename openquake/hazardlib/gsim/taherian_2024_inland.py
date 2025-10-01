@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Taherian et al. 2024 GMPE - Inland scenarios with embedded scalers
-No external scaler files needed!
 """
 
 import os
@@ -52,7 +51,7 @@ def scale_input(value, scaler_params):
             scaler_params['type']))
 
 
-def calculate_psa_TEA24_inland(Mw, Rjb, Depth, FM):
+def calculate_psa_TEA24_inland(Mw, Rjb, Depth, FM, ort_session):
     """
     Calculate PSA for inland scenarios using TEA24 model with embedded
     scalers.
@@ -62,6 +61,7 @@ def calculate_psa_TEA24_inland(Mw, Rjb, Depth, FM):
     - Rjb: float, distance in km.
     - Depth: float, hypocenter depth in km.
     - FM: int, fault mechanism (0 for Reverse, 1 for Normal).
+    - ort_session: ONNX runtime session (pre-loaded).
 
     Returns:
     - Dictionary with 'periods', 'mean', 'sigma', 'tau', 'phi' values.
@@ -102,13 +102,6 @@ def calculate_psa_TEA24_inland(Mw, Rjb, Depth, FM):
     Rjb_scaled = scale_input(Rjb, SCALER_PARAMS['rjb'])
     Depth_scaled = scale_input(Depth, SCALER_PARAMS['depth'])
 
-    # Load ONNX model
-    base_dir = os.path.dirname(__file__)
-    onnx_model_path = os.path.join(
-        base_dir, "taherian_2024_data", "ANN_Portugal_rock.onnx")
-
-    ort_session = ort.InferenceSession(onnx_model_path)
-
     # Set case = 0 for inland scenarios
     case = np.zeros_like(Mw)
 
@@ -118,7 +111,7 @@ def calculate_psa_TEA24_inland(Mw, Rjb, Depth, FM):
                                   Depth_scaled.flatten(),
                                   FM)).astype(np.float32)
 
-    # Make predictions using ONNX model
+    # Make predictions using pre-loaded ONNX session
     input_name = ort_session.get_inputs()[0].name
     Median_GM = np.exp(ort_session.run(None, {input_name: Input_data})[0])
 
@@ -225,6 +218,14 @@ class Taherian2024Inland(GMPE):
     REQUIRES_DISTANCES = {"rjb"}
     SUPPORTED_SA_PERIODS = (0.01, 4.0)
 
+    def __init__(self, **kwargs):
+        """Initialize and load ONNX model once"""
+        super().__init__(**kwargs)
+        base_dir = os.path.dirname(__file__)
+        onnx_model_path = os.path.join(
+            base_dir, "taherian_2024_data", "ANN_Portugal_rock.onnx")
+        self.ort_session = ort.InferenceSession(onnx_model_path)
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         Vectorized implementation for Taherian 2024 Inland GMPE.
@@ -247,7 +248,8 @@ class Taherian2024Inland(GMPE):
             Mw=Mw,
             Rjb=Rjb,
             Depth=Depth,
-            FM=FM
+            FM=FM,
+            ort_session=self.ort_session
         )
 
         # Convert to natural log
