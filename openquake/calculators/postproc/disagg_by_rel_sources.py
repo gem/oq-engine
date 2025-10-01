@@ -187,7 +187,7 @@ def main(dstore, csm, imts, imls_by_sid):
                       for trt, dset in parent['source_mags'].items()}
     sitecol = parent['sitecol']
     sites = [site for site in sitecol if site.id in imls_by_sid]
-    src_mutex = dstore['mutex_by_grp']['src_mutex']
+    src_mutex = [sg.src_interdep == 'mutex' for sg in csm.src_groups]
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
     smap, rel_ids_by_imt, src2idx, weights = submit_sources(
         dstore, csm, edges, shp, imts, imls_by_sid, oq, sites)

@@ -576,7 +576,7 @@ def extract_mean_by_rup(dstore, what):
     assert N == 1
     out = []
     ctx_by_grp = read_ctx_by_grp(dstore)
-    cmakers = read_cmakers(dstore)
+    cmakers = read_cmakers(dstore).to_array()
     for gid, ctx in ctx_by_grp.items():
         # shape (4, G, M, U) => U
         means = cmakers[gid].get_mean_stds([ctx], split_by_mag=True)[0].mean(
@@ -1078,6 +1078,37 @@ def extract_losses_by_site(dstore, what):
     for loss_type in grp:
         losses = grp[loss_type][:, 0]
         dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))
+    return pandas.DataFrame(dic)
+
+
+@extract.add('losses_by_location')
+def extract_losses_by_location(dstore, what):
+    """
+    :returns: a DataFrame (lon, lat, number, structural, ...)
+    """
+    lonlats = dstore['assetcol'][['ordinal', 'lon', 'lat']]
+    try:
+        grp = dstore.getitem('avg_losses-stats')
+    except KeyError:
+        # there is only one realization
+        grp = dstore.getitem('avg_losses-rlzs')
+    dic = {}
+    # this is fast enough, we can do millions of assets in seconds
+    tags = ['%.5f,%.5f' % (row['lon'], row['lat'])
+            for row in lonlats]
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    lons, lats = [], []
+    for lonlat in uniq:
+        lo, la = lonlat.split(',')
+        lons.append(lo)
+        lats.append(la)
+    dic['lon'] = F32(lons)
+    dic['lat'] = F32(lats)
+    for loss_type in grp:
+        losses = grp[loss_type][:, 0][lonlats['ordinal']]
+        dic[loss_type] = F32(general.fast_agg(indices, losses))
+    logging.info('There are {:_d} assets on {:_d} locations'.format(
+        len(lonlats), len(lons)))
     return pandas.DataFrame(dic)
 
 

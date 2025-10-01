@@ -488,10 +488,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.avg_losses = numpy.zeros((self.A, self.X, R), F32)
         for lt in self.xtypes:
             self.datastore.create_dset(
-                'avg_losses-rlzs/' + lt, F32, (self.A, R))
+                'avg_losses-rlzs/' + lt, F32, (self.A, R), 'gzip')
             if S and R > 1:
                 self.datastore.create_dset(
-                    'avg_losses-stats/' + lt, F32, (self.A, S))
+                    'avg_losses-stats/' + lt, F32, (self.A, S), 'gzip')
 
     def execute(self):
         """

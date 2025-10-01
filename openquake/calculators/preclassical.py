@@ -153,35 +153,36 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         yield {grp_id: splits}
 
 
+# executed at the end of preclassical
 def store_tiles(dstore, csm, sitecol, cmakers):
     """
     Store a `tiles` array if the calculation is large enough.
-    :returns: a triple (max_weight, trt_rlzs, gids)
+    :returns: a triple (req_gb, max_weight, trt_rlzs)
     """
     if sitecol is None:
         N = 0
     else:
         N = len(sitecol)
-    if isinstance(cmakers, dict):
-        cmakers = cmakers['Default']
     oq = cmakers[0].oq
     fac = oq.imtls.size * N * 4 / 1024**3
     max_weight = csm.get_max_weight(oq)
 
     # build source_groups
-    quartets = csm.split(cmakers, sitecol, max_weight, tiling=oq.tiling)
+    triplets = [csm.split_sg(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
+                for g, cmaker in enumerate(cmakers.to_array())
+                for sg in csm.src_groups if sg.grp_id == g]
     data = numpy.array(
-        [(cm.grp_id, len(cm.gsims), len(tgets), len(blocks), splits,
+        [(grp_id, len(cm.gsims), len(tgets), len(blocks),
           len(cm.gsims) * fac * 1024, cm.weight, cm.codes, cm.trt)
-         for cm, tgets, blocks, splits in quartets],
+         for grp_id, (cm, tgets, blocks) in enumerate(triplets)],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
-         ('splits', U16), ('size_mb', F32), ('weight', F32),
-         ('codes', '<S8'), ('trt', '<S32')])
+         ('tot_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
 
     # determine light groups and tiling
-    light, = numpy.where(data['blocks'] == 1)
+    light = cmakers.inverse[data['grp_id'][data['blocks'] == 1]]
     req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
-    mem_gb = req_gb - sum(len(cm.gsims) * fac for cm in cmakers[light])
+    mem_gb = req_gb - sum(len(cmakers[inv].gsims) * fac
+                          for inv in numpy.unique(light))
     if len(light):
         logging.info('mem_gb = %.2f with %d light groups out of %d',
                      mem_gb, len(light), len(data))
@@ -244,7 +245,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning('No sites??')
 
         L = oq.imtls.size
-        Gfull = self.full_lt.gfull(trt_smrs)
+        Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
         Gt = sum(len(cm.gsims) for cm in self.cmakers)
         extra = f'<{Gfull}' if Gt < Gfull else ''
         if sites is not None:
@@ -252,7 +253,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             nbytes = 4 * len(self.sitecol) * L * Gt
             # Gt is known before starting the preclassical
             logging.warning(
-                f'The global pmap would require %s (of %s) ({Gt=}%s)',
+                f'The global RateMap would require %s (of %s) ({Gt=}%s)',
                 general.humansize(nbytes), general.humansize(avail), extra)
 
         # do nothing for atomic sources except counting the ruptures
@@ -264,6 +265,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
         multifaults = []
+        cmakers = self.cmakers.to_array()
         for sg in csm.src_groups:
             for src in sg:
                 if src.code == b'F':
@@ -273,7 +275,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
-                self.cmakers[grp_id].set_weight(
+                cmakers[grp_id].set_weight(
                     sg, SourceFilter(sites, oq.maximum_distance))
                 atomic_sources.extend(sg)
             else:
@@ -300,8 +302,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
         before_after = numpy.zeros(2, dtype=int)
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+        cmakers = self.cmakers.to_array()
         for grp_id, srcs in sources_by_key.items():
-            cmaker = self.cmakers[grp_id]
+            cmaker = cmakers[grp_id]
             cmaker.gsims = list(cmaker.gsims)  # reducing data transfer
             pointsources, pointlike, others = [], [], []
             for src in srcs:

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import time
 import zlib
 import os.path
 import pickle
@@ -24,8 +25,7 @@ import logging
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat, config
-from openquake.hazardlib import (
-    nrml, sourceconverter, InvalidFile, calc, gsim_lt)
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -89,31 +89,6 @@ def zpik(obj):
     return numpy.frombuffer(gz, numpy.uint8)
 
 
-def mutex_by_grp(src_groups):
-    """
-    :returns: a composite array with boolean fields src_mutex, rup_mutex
-    """
-    lst = []
-    for sg in src_groups:
-        lst.append((sg.src_interdep == 'mutex', sg.rup_interdep == 'mutex'))
-    return numpy.array(lst, [('src_mutex', bool), ('rup_mutex', bool)])
-
-
-def build_rup_mutex(src_groups):
-    """
-    :returns: a composite array with fields (grp_id, src_id, rup_id, weight)
-    """
-    lst = []
-    dtlist = [('grp_id', numpy.uint16), ('src_id', numpy.uint32),
-              ('rup_id', numpy.int64), ('weight', numpy.float64)]
-    for sg in src_groups:
-        if sg.rup_interdep == 'mutex':
-            for src in sg:
-                for i, (rup, _) in enumerate(src.data):
-                    lst.append((src.grp_id, src.id, i, rup.weight))
-    return numpy.array(lst, dtlist)
-
-
 def create_source_info(csm, h5):
     """
     Creates source_info, trt_smrs, toms
@@ -138,8 +113,6 @@ def create_source_info(csm, h5):
     num_srcs = len(csm.source_info)
     # avoid hdf5 damned bug by creating source_info in advance
     h5.create_dataset('source_info',  (num_srcs,), source_info_dt)
-    h5['mutex_by_grp'] = mutex_by_grp(csm.src_groups)
-    h5['rup_mutex'] = build_rup_mutex(csm.src_groups)
 
 
 def trt_smrs(src):
@@ -162,6 +135,7 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
     :param monitor: a Monitor instance
     :returns: a SourceModel instance
     """
+    t0 = time.time()
     [sm] = nrml.read_source_models([fname], converter)
     sm.branch = branch
     for sg in sm.src_groups:
@@ -173,6 +147,7 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
                 else:
                     srcs.extend(calc.filters.split_source(src))
             sg.sources = _sample(srcs, float(sample), applied)
+    sm.rtime = time.time() - t0  # save the read time
     return {fname: sm}
 
 
@@ -238,6 +213,16 @@ def check_duplicates(smdict, strict):
                         general.shortlist(found))
 
 
+def save_read_times(dstore, source_models):
+    """
+    Store how many seconds it took to read each source model file
+    in a table (fname, rtime)
+    """
+    dt = [('fname', hdf5.vstr), ('rtime', float)]
+    arr = numpy.array([(sm.fname, sm.rtime) for sm in source_models], dt)
+    dstore.create_dset('source_model_read_times', arr)
+
+
 def get_csm(oq, full_lt, dstore=None):
     """
     Build source models from the logic tree and to store
@@ -278,6 +263,8 @@ def get_csm(oq, full_lt, dstore=None):
                               h5=dstore if dstore else None).reduce()
     parallel.Starmap.shutdown()  # save memory
     smdict = {k: smdict[k] for k in sorted(smdict)}
+    if dstore:
+        save_read_times(dstore, smdict.values())
     check_duplicates(smdict, strict=oq.disagg_by_src)
 
     logging.info('Applying uncertainties')
@@ -298,13 +285,15 @@ def get_csm(oq, full_lt, dstore=None):
             for src in sg:
                 segments.append(src.source_id.split(':')[1])
                 t = (src.source_id, src.grp_id,
-                     src.count_ruptures(), src.mutex_weight)
+                     src.count_ruptures(), src.mutex_weight,
+                     sg.rup_interdep == 'mutex')
                 out.append(t)
             probs.append((src.grp_id, sg.grp_probability))
             assert len(segments) == len(set(segments)), segments
     if out:
         dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
-                  ('num_ruptures', int), ('mutex_weight', float)]
+                  ('num_ruptures', int), ('mutex_weight', float),
+                  ('rup_mutex', bool)]
         dstore.create_dset('src_mutex', numpy.array(out, dtlist))
         lst = [('grp_id', int), ('probability', float)]
         dstore.create_dset('grp_probability', numpy.array(probs, lst))
@@ -412,7 +401,7 @@ def fix_geometry_sections(smdict, src_groups, hdf5path='', site1=None):
     if sections:
         # save in the temporary file sources and sections
         assert hdf5path, ('You forgot to pass the dstore to '
-                        'get_composite_source_model')
+                          'get_composite_source_model')
         mfsources = []
         for sg in src_groups:
             for src in sg:
@@ -716,47 +705,42 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
-    def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
+    def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
-        if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
-            for cmaker in cmakers:
-                if self.src_groups[cmaker.grp_id].weight:
-                    yield self._split(
-                        cmaker, sitecol, max_weight, num_chunks, tiling)
-            return
         # cmakers is a dictionary label -> array of cmakers
-        with_labels = len(cmakers) > 1
-        for idx, label in enumerate(cmakers):
-            for cmaker in cmakers[label][grp_ids]:
-                if self.src_groups[cmaker.grp_id].weight == 0:
+        with_labels = len(cmdict) > 1
+        for idx, label in enumerate(cmdict):
+            cms = cmdict[label].to_array(grp_ids)
+            for cmaker, grp_id in zip(cms, grp_ids):
+                sg = self.src_groups[grp_id]
+                if sg.weight == 0:
                     # happens in LogicTreeTestCase::test_case_08 since the
                     # point sources are far away as determined in preclassical
                     continue
-                if len(cmakers) > 1:  # has labels
+                if len(cmdict) > 1:  # has labels
                     sites = sitecol.filter(sitecol.ilabel == idx)
                 else:
                     sites = sitecol
                 if sites:
                     if with_labels:
                         cmaker.ilabel = idx
-                    yield self._split(
-                        cmaker, sites, max_weight, num_chunks, tiling)
+                    yield self.split_sg(
+                        cmaker, sg, sites, max_weight, num_chunks, tiling)
 
-    def _split(self, cmaker, sitecol, max_weight, num_chunks=1, tiling=False):
+    def split_sg(self, cmaker, sg, sitecol, max_weight,
+                 num_chunks=1, tiling=False):
         N = len(sitecol)
         oq = cmaker.oq
-        grp_id = cmaker.grp_id
-        sg = self.src_groups[grp_id]
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)
         splits = G * mb_per_gsim / max_mb
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
-            blocks = [None]
+            blocks = [sg.grp_id]
             tiles = max(hint, splits)
         else:
             # if hint > max_blocks generate max_blocks and more tiles
@@ -772,7 +756,7 @@ class CompositeSourceModel:
         cmaker.blocks = len(blocks)
         cmaker.weight = sg.weight
         cmaker.atomic = sg.atomic
-        return cmaker, tilegetters, blocks, numpy.ceil(splits)
+        return cmaker, tilegetters, blocks
 
     def __toh5__(self):
         G = len(self.src_groups)

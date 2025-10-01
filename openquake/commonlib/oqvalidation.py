@@ -24,6 +24,7 @@ import json
 import inspect
 import logging
 import pathlib
+import tempfile
 import functools
 import collections
 import numpy
@@ -64,6 +65,11 @@ aggregate_by:
   calculations. Takes in input one or more exposure tags.
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
+
+aggregate_exposure:
+  Used to aggregate the exposure by hazard site and taxonomy.
+  Example: *aggregate_exposure = true*
+  Default: False
 
 aggregate_loss_curves_types:
   Used for event-based risk and damage calculations, to estimate the aggregated
@@ -975,6 +981,7 @@ class OqParam(valid.ParamSet):
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloats, ())
     aggregate_by = valid.Param(valid.namelists, [])
+    aggregate_exposure = valid.Param(valid.boolean, False)
     aggregate_loss_curves_types = valid.Param(
         # accepting all comma-separated permutations of 1, 2 or 3 elements
         # of the list ['ep', 'aep' 'oep']
@@ -2153,15 +2160,16 @@ class OqParam(valid.ParamSet):
         export_dir={export_dir} must refer to a directory,
         and the user must have the permission to write on it.
         """
-        if self.export_dir and not os.path.isabs(self.export_dir):
+        if self.export_dir == '/tmp' and sys.platform == 'win32':
+            # magically convert to the Windows tempdir
+            self.export_dir = tempfile.gettempdir()
+        if not os.path.isabs(self.export_dir):
             self.export_dir = os.path.normpath(
                 os.path.join(self.input_dir, self.export_dir))
-        if not self.export_dir:
-            self.export_dir = os.path.expanduser('~')  # home directory
-            logging.info('export_dir not specified. Using export_dir=%s'
-                         % self.export_dir)
+        if not self.exports or not self.exports[0]:  # () or ('',)
+            # we are not exporting anything
             return True
-        if not os.path.exists(self.export_dir):
+        elif not os.path.exists(self.export_dir):
             try:
                 os.makedirs(self.export_dir)
             except PermissionError:

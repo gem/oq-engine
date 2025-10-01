@@ -711,9 +711,14 @@ def aelo_callback(
     to = [job_owner_email]
     reply_to = settings.EMAIL_SUPPORT
     lon, lat = inputs['sites'].split()
+    vs30s = inputs['vs30'].split()
+    vs30 = vs30s[0] if len(vs30s) == 1 else 'default'
+    asce_version = oqvalidation.ASCE_VERSIONS[inputs['asce_version']]
+    aelo_version = base.get_aelo_version()
     body = (f"Input values: lon = {lon}, lat = {lat},"
-            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']},"
-            f" asce_version = {inputs['asce_version']}\n\n")
+            f" vs30 = {vs30}, siteid = {inputs['siteid']},"
+            f" asce_version = {asce_version},"
+            f" aelo_version = {aelo_version}\n\n")
     if warnings is not None:
         for warning in warnings:
             body += warning + '\n'
@@ -1603,9 +1608,11 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
-        if hasattr(vs30, '__len__') and len(vs30) == 1:
-            # NOTE: in old calculations, vs30_in was a float
-            [vs30] = vs30
+        if hasattr(vs30, '__len__'): # NOTE: in old calculations, vs30_in was a float
+            if len(vs30) == 1:
+                [vs30] = vs30
+            else:
+                vs30 = 'default'
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         try:
             asce_version = ds['oqparam'].asce_version
@@ -1761,9 +1768,11 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             governing_mce = 'governing_mce.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
-        if hasattr(vs30_in, '__len__') and len(vs30_in) == 1:
-            # NOTE: in old calculations, vs30_in was a float
-            [vs30_in] = vs30_in
+        if hasattr(vs30_in, '__len__'): # NOTE: in old calculations, vs30_in was a float
+            if len(vs30_in) == 1:
+                [vs30_in] = vs30_in
+            else:
+                vs30_in = 'default'
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         notifications = numpy.array([], dtype=notification_dtype)
         sid_to_vs30 = {}

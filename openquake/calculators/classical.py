@@ -103,8 +103,8 @@ def get_heavy_gids(source_groups, cmakers):
     else:
         grp_ids = source_groups['grp_id'][source_groups['blocks'] > 1]
     gids = []
-    for grp_id in grp_ids:
-        gids.extend(cmakers[grp_id].gid)
+    for inv in numpy.unique(cmakers.inverse[grp_ids]):
+        gids.extend(cmakers[inv].gid)
     return gids
 
 
@@ -153,8 +153,8 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     with dstore:
-        if sources is None:  # read the full group from the datastore
-            arr = dstore.getitem('_csm')[cmaker.grp_id]
+        if isinstance(sources, int):  # read the full group from the datastore
+            arr = dstore.getitem('_csm')[sources]
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
 
@@ -205,7 +205,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     with dstore:
-        arr = dstore.getitem('_csm')[cmaker.grp_id]
+        arr = dstore.getitem('_csm')[tilegetter.grp_id]
         sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
     result = hazclassical(sources, tilegetter(sitecol, cmaker.ilabel), cmaker)
@@ -224,7 +224,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
 def fast_mean(pgetter, monitor):
     """
     :param pgetter: a :class:`openquake.commonlib.getters.MapGetter`
-    :param gweights: an array of G weights
+    :param gweights: an array of Gt weights
     :returns: a dictionary kind -> MapArray
     """
     with monitor('reading rates', measuremem=True):
@@ -438,7 +438,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
-        for label, cmakers in self.cmakers.items():
+        for label, cmakers in self.cmdict.items():
             for cm in cmakers:
                 params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
                 params.update(cm.REQUIRES_DISTANCES)
@@ -466,11 +466,11 @@ class ClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         full_lt_by_label = read_full_lt_by_label(self.datastore)
         trt_smrs = self.datastore['trt_smrs'][:]
-        self.cmakers = {label: get_cmakers(trt_smrs, full_lt, oq)
+        self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq)
                         for label, full_lt in full_lt_by_label.items()}
         if 'delta_rates' in self.datastore:  # aftershock
             drgetter = getters.DeltaRatesGetter(self.datastore)
-            for cmakers in self.cmakers.values():
+            for cmakers in self.cmdict.values():
                 for cmaker in cmakers:
                     cmaker.deltagetter = drgetter
 
@@ -479,7 +479,8 @@ class ClassicalCalculator(base.HazardCalculator):
             # tested in case_43
             self.req_gb, self.max_weight, self.trt_rlzs = \
                 preclassical.store_tiles(
-                    self.datastore, self.csm, self.sitecol, self.cmakers)
+                    self.datastore, self.csm, self.sitecol,
+                    self.cmdict['Default'])
 
         self.cfactor = numpy.zeros(2)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
@@ -506,7 +507,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Log the memory required to receive the largest MapArray,
         assuming all sites are affected (upper limit)
         """
-        num_gs = [len(cm.gsims) for cm in self.cmakers]
+        num_gs = [len(cm.gsims) for cm in self.cmdict['Default']]
         size = max(num_gs) * N * L * 4
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
@@ -594,25 +595,28 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_regular(self, sgs, ds):
         allargs = []
         n_out = []
-        splits = {}
-        for cmaker, tilegetters, blocks, nsplits in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks):
+        ntiles = {}
+        for cmaker, tilegetters, blocks in self.csm.split(
+                self.cmdict, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
-                for tgetters in block_splitter(tilegetters, nsplits):
-                    allargs.append((block, tgetters, cmaker, ds))
-                    n_out.append(len(tgetters))
-            splits[cmaker.grp_id] = nsplits
+                allargs.append((block, tilegetters, cmaker, ds))
+                n_out.append(len(tilegetters))
+            try:
+                grp_id = block[0].grp_id
+            except TypeError:  # block is an int
+                grp_id = block
+            ntiles[grp_id] = len(tilegetters)
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
-        maxsrc = max(srcs, key=lambda s: s.weight / splits[s.grp_id])
+        maxsrc = max(srcs, key=lambda s: s.weight / ntiles[s.grp_id])
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        gids = get_heavy_gids(sgs, self.cmakers['Default'])
+        gids = get_heavy_gids(sgs, self.cmdict['Default'])
         self.rmap = RateMap(self.sitecol.sids, L, gids)
 
         self.datastore.swmr_on()  # must come before the Starmap
@@ -625,11 +629,13 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_tiling(self, sgs, ds):
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks, splits in self.csm.split(
-                self.cmakers, self.sitecol, self.max_weight, self.num_chunks,
-                True):
+        for cmaker, tilegetters, blocks in self.csm.split(
+                self.cmdict, self.sitecol, self.max_weight,
+                self.num_chunks, True):
             for block in blocks:
                 for tgetter in tilegetters:
+                    assert isinstance(block, int)
+                    tgetter.grp_id = block
                     allargs.append((tgetter, cmaker, ds))
                 n_out.append(len(tilegetters))
         logging.warning('This is a tiling calculation with '

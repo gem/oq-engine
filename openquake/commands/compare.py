@@ -377,7 +377,7 @@ def compare_column_values(array0, array1, what, atol=0, rtol=1E-5):
         return True
     print(f"There are {len(diff_idxs)} different elements "
           f"in the '{what}' column:")
-    print(array0[diff_idxs], array1[diff_idxs])
+    print(array0[diff_idxs], array1[diff_idxs], diff_idxs)
 
 
 def check_column_names(array0, array1, what, calc_id0, calc_id1):

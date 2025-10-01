@@ -1,4 +1,22 @@
   [Michele Simionato]
+  * Changed the Starmap to ensure at least one GB of RAM per thread
+  * Added a flag "aggregate_exposure" (false by default) to aggregate
+    the assets with the same taxonomy on the same hazard site
+  * Optimized "building cmakers" and the RateMap in the case of clusters
+    of sources (260x for the latest USA model)
+
+  [Christopher Brooks]
+  * Added BSSA14 site term capability to Modifiable GMPE + unit tests
+
+  [Richard Styron]
+  * Fixed `KiteSurface.get_middle_point` to manage NaNs
+
+  [Michele Simionato]
+  * Doing the check on the `export_dir` only if `--exports` is passed
+  * Fixed a `NameError: Missing liquefaction:LiqProb in gmf_data`
+    when using the TodorovicSilva2022NonParametric model
+  * gzipping the avg_losses reducing the disk space by half or so
+  * Added an extractor `losses_by_location`
   * Filtering the assets around the rupture according to the maximum distance
     in scenario calculations
 
