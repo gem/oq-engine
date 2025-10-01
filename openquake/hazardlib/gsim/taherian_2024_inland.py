@@ -206,9 +206,11 @@ class Taherian2024Inland(GMPE):
     (Vs30 = 760 m/s).
 
     Reference:
-    Taherian, A., et al. (2024). "ANN-based Ground Motion Model for
-    Western Iberia." [Add full citation when available]
-    """
+            Taherian, A., Silva, V., Kalakonas, P., & Vicente, R. (2024).
+            An earthquake ground‐motion model for Southwest Iberia.
+            Bulletin of the Seismological Society of America, 114(5),
+            2613–2638. https://doi.org/10.1785/0120230250
+        """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
