@@ -200,30 +200,42 @@ def stream_response(fname, content_type, exportname=''):
     return response
 
 
-def get_site_class_str(ds):
+def infer_site_class(vs30):
+    # used for old jobs for which the site class was not saved into the datastore
+    site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES.items()
+                          if v['vs30'] == vs30]
+    if site_class_matches:
+        site_class = site_class_matches[0]
+    else:
+        site_class = 'custom'
+    return site_class
+
+
+def get_site_class_display_name(ds):
     vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
     site_class = ds['oqparam'].site_class
     if site_class is not None:
         if site_class == 'custom':
             vs30 = vs30_in[0]
-            site_class_str = f'Vs30 = {vs30}m/s'
+            site_class_display_name = f'Vs30 = {vs30}m/s'
         else:
-            site_class_str = site_class
+            site_class_display_name = oqvalidation.SITE_CLASSES[
+                site_class]['display_name']
     else:  # old calculations without site_class in the datastore
         if hasattr(vs30_in, '__len__'):
-            # NOTE: in old calculations, vs30_in was a float
             if len(vs30_in) == 1:
                 [vs30_in] = vs30_in
-                site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES.items()
-                                      if v['vs30'] == vs30_in]
-                if site_class_matches:
-                    site_class = site_class_matches[0]
-                else:
-                    site_class = 'custom'
+                site_class = infer_site_class(vs30_in)
             else:
                 site_class = 'default'
-            site_class_str = f'{site_class}'
-    return site_class_str
+        else:  # in old calculations, vs30_in was a float
+            site_class = infer_site_class(vs30_in)
+        if site_class == 'custom':
+            site_class_display_name = f'Vs30 = {vs30_in}m/s'
+        else:
+            site_class_display_name = oqvalidation.SITE_CLASSES[
+                site_class]['display_name']
+    return site_class_display_name
 
 
 @csrf_exempt
@@ -1663,7 +1675,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     lon = lat = site_name = asce_version_full = calc_aelo_version = None
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        site_class_str = get_site_class_str(ds)
+        site_class_display_name = get_site_class_display_name(ds)
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         try:
             asce_version = ds['oqparam'].asce_version
@@ -1682,7 +1694,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        mce=mce, mce_spectra=mce_spectra,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version_full,
-                       lon=lon, lat=lat, site_class=site_class_str, site_name=site_name)
+                       lon=lon, lat=lat, site_class=site_class_display_name, site_name=site_name)
                   )
 
 
@@ -1809,7 +1821,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             site = 'site.png' in ds['png']
             governing_mce = 'governing_mce.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        site_class_str = get_site_class_str(ds)
+        site_class_str = get_site_class_display_name(ds)
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         notifications = numpy.array([], dtype=notification_dtype)
         sid_to_vs30 = {}
