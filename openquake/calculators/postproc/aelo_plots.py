@@ -217,11 +217,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     plt = import_plt()
-    asce07 = json.loads(dstore['asce07'][site_idx])
-    pga = asce07['PGA']
-    ss = asce07['Ss']
-    s1 = asce07['S1']
-    MCEr = [pga, ss, s1]
+    MCEr = dstore.read_df('mce_governing').SaM.to_numpy()
     T = [from_string(imt).period for imt in imtls]
 
     limit_det = [0.5, 1.5, 0.6]
@@ -250,6 +246,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     plt.xlim([-0.02, 1.2])
 
     # add user guide message
+    # FIXME: the message is not being displayed
     message = 'See WebUI User Guide for complete explanation of plot contents.'
     # plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85)
 

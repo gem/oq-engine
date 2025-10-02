@@ -271,6 +271,7 @@ def get_rtgm_notification(site, oq, sa02, sa10, DLLs, ASCE_version,
     else:
         return rtgm_df, None
 
+
 def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     """
     :param prob_mce: Probabilistic Maximum Considered Earthquake (UHGM for PGA)
@@ -374,11 +375,9 @@ class MCEGetter:
         self.ASCE_version = ASCE_version
 
     def get_mce(self, DLLs, rtgm, sid, vs30, low_haz=False):
-
-
         """
-        Computes deterministic and probabilistic MCE and prepares the MCE DataFrame.
-        The ASCE7 formatting is now separated into another method.
+        Computes deterministic and probabilistic MCE and prepares the MCE
+        DataFrame. The ASCE7 formatting is now separated into another method.
 
         :param DLLs: deterministic lower limits according to ASCE 7-22
         :param rtgm: dataframe with ProbMCE and RiskCoeff
@@ -393,15 +392,6 @@ class MCEGetter:
         det_imt = self.det_imt
         job_imts = self.job_imts
         prob_mce = rtgm.ProbMCE.to_numpy()
-        imts = rtgm['IMT']
-
-        # Extract risk coefficients
-        crs = cr1 = None
-        for i, imt in enumerate(imts):
-            if imt == 'SA0P2':
-                crs = rtgm['RiskCoeff'][i]
-            elif imt == 'SA1P0':
-                cr1 = rtgm['RiskCoeff'][i]
 
         det_mce = {}
         mce = {}
@@ -435,7 +425,7 @@ class MCEGetter:
         """
         oq = dstore['oqparam']
         imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
-                       for sid, rtgm_df in rtgm.items()}
+                       for sid, rtgm_df in rtgm.items() if rtgm_df}
         out = postproc.disagg_by_rel_sources.main(
             dstore, csm, job_imts, imls_by_sid)
         sitecol = dstore['sitecol']
@@ -453,19 +443,15 @@ class MCEGetter:
             logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
                          mce_df)
             logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
-            #asce41_sa, asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid, ASCE_version, vs30)
+            yield sid, mag_dst_eps_sig, mce_df
 
-            #logging.info('(%.1f,%.1f) ASCE 7=%s', lon, lat, asce07)
-            #logging.info('(%.1f,%.1f) ASCE 41=%s', lon, lat, asce41)
-
-            yield (sid, mag_dst_eps_sig, mce_df)
 
 def compute_mce_governing(dstore, sitecol, locs):
     """
-    Note that for ASCE7-22 and default site class the site is multiplied 3 times
-    with different values of the vs30 and the MCE is computed as the maximum MCE
-    across the sites for each IMT. For all other site class, the same mce computed
-    before is used.
+    Note that for ASCE7-22 and default site class the site is multiplied
+    3 times with different values of the vs30 and the MCE is computed as
+    the maximum MCE across the sites for each IMT. For all other site class,
+    the same mce computed before is used.
     """
     # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
     mce_df = dstore.read_df('mce')
@@ -500,7 +486,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
         sid = site.id
         vs30 = site.vs30
         loc = site.location
-        if notification_name in ['zero_hazard']:
+        if notification_name in ['zero_hazard', 'low_hazard']:
             mce_df = pd.DataFrame({'IMT': imts,
                                    'ProbMCE': [np.nan]*len(imts),
                                    'DetMCE': [np.nan]*len(imts),
