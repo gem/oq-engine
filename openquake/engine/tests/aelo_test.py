@@ -83,10 +83,9 @@ def test_PAC():
 
         r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
         if rtgmpy:
-            group = calc.datastore['asce07'][0]
-            a7 = {k: v[()] for k, v in group.items()}
-           # a7 = json.loads(calc.datastore['asce07'][0].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.032725, 0.040313, 0.83427],
+            s = calc.datastore['asce07'][0].decode('ascii')
+            asce07 = json.loads(s)
+            aac([r0, r1, asce07['PGA']], [0.032725, 0.040313, 0.83427],
                 atol=1E-6)
 
         # site (160, -9.4), first level of PGA

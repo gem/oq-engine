@@ -756,7 +756,7 @@ def export_rtgm(ekey, dstore):
 
 
 @export.add(('spectra_asce41', 'csv'), ('asce41_sa_final', 'csv'))
-def export_mce(ekey, dstore):
+def export_asce41_spectra(ekey, dstore):
     key = ekey[0]
     df = dstore.read_df(key)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
@@ -764,6 +764,7 @@ def export_mce(ekey, dstore):
     comment = dstore.metadata.copy()
     writer.save(df, fname, comment=comment)
     return [fname]
+
 
 @export.add(('mce', 'csv'), ('mce_governing', 'csv'))
 def export_mce(ekey, dstore):
@@ -779,14 +780,13 @@ def export_mce(ekey, dstore):
     writer.save(df, fname, comment=comment)
     return [fname]
 
+
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     sitecol = dstore['sitecol']
-    
     for s, site in enumerate(sitecol):
-        custom_id = sitecol.custom_site_id[s].decode('ascii').split(':')[0]
-        group = dstore[ekey[0]][custom_id]  # HDF5 group
-        dic = {k: v[()] for k, v in group.items()}  
+        js = dstore[ekey[0]][s].decode('utf8')
+        dic = json.loads(js)
         writer = writers.CsvWriter(fmt='%.5f')
         fname = dstore.export_path(ekey[0] + '-' + str(s) + '.csv')
         comment = dstore.metadata.copy()

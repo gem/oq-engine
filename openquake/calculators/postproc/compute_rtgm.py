@@ -45,7 +45,7 @@ try:
     import rtgmpy
 except ImportError:
     rtgmpy = None
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5, general, python3compat
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
@@ -304,8 +304,10 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
           ('dist', float), ('eps', float), ('sig', float)]
     return det, np.array(mag_dist_eps_sig, dt)
 
+
 def to_array(dic):
-    return np.array([dic[sid] for sid in sorted(dic)])
+    return np.array([hdf5.dumps(dic[sid]) for sid in sorted(dic)])
+
 
 def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     """
@@ -332,7 +334,6 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
 
     # For sd1, depending on vs30, take periods from 1-2s or 1-5s
     # vs30 in m/s
-    breakpoint()
     if vs30 > 442:
         sd1_indices = [
             index for index, period in enumerate(periods) if 1 <= period <= 2]
@@ -511,10 +512,9 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
             mce_df = None
         yield site, rtgm_df, mce_df, notification_name
 
+
 #class ASCE7Calculator:
 def get_seismicity_class(mce_site, vs30):
-
-        mce = mce_site.SaM
         if vs30 == 760:
             sa02 = mce_site[mce_site.period==0.2]['SaM'].iloc[0]
             sa10 = mce_site[mce_site.period==0.2]['SaM'].iloc[0]
@@ -536,6 +536,7 @@ def get_seismicity_class(mce_site, vs30):
             Ss_seismicity = "n.a."
             S1_seismicity = "n.a."
         return Ss_seismicity, S1_seismicity
+
 
 def asce07_output_new(sid, vs30, dstore, mce_site):
     """
@@ -608,7 +609,8 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
 
     for key in asce07:
         if not isinstance(asce07[key], str):
-            asce07[key] = round(asce07[key], ASCE_DECIMALS) if asce07[key] is not np.nan else 'n.a.'
+            asce07[key] = (float(round(asce07[key], ASCE_DECIMALS))
+                           if asce07[key] is not np.nan else 'n.a.')
     logging.info('ASCE 7=%s',  asce07)
     return asce07
 
@@ -952,20 +954,23 @@ def main(dstore, csm):
     df.columns = ["period", "SaM", "custom_site_id"]
     dstore.create_df('mce_governing', df)
     sitecol = dstore['sitecol']
-    custom_ids = sitecol['custom_site_id']
+    custom_ids = python3compat.decode(sitecol['custom_site_id'])
     asce07 = {}
-   
-    for s, site_id in enumerate(custom_ids):
-        csi = site_id.decode('ascii').split(':')[0]
+
+    # TODO: in case of multiple sites on the same location
+    # there will be duplications
+    for s, custom_id in enumerate(custom_ids):
+        csi = custom_id.split(':')[0]
         mce_site = df[df['custom_site_id'] == csi]
         Vs30 = sitecol["vs30"][s]
         
         if np.all(mce_site.SaM == 0) or mce_site['SaM'].isna().all():          
             result = get_zero_hazard_asce07(dstore,Vs30)
         else:
-            result = asce07_output_new(site_id, Vs30, dstore, mce_site)
-        asce07[site_id] = result
-    dstore["asce07"] = asce07
+            result = asce07_output_new(custom_id, Vs30, dstore, mce_site)
+        #result['custom_site_id'] = custom_id
+        asce07[s] = result
+    dstore["asce07"] = to_array(asce07)
 
     ####################
     # compute ASCE 41:
@@ -977,9 +982,11 @@ def main(dstore, csm):
 
     for sid in sitecol['sids']:
         mce_df_site = mce_df[mce_df['sid'] == sid]['MCE']
-        custom_id = sitecol[sitecol['sids'] == sid]['custom_site_id']  # get single value
-            # Get the spectra for this site
-        uhs_asce41 = get_spectra_orig(dstore, sid, custom_id, mce_df_site, facts)
+        custom_id = sitecol[sitecol['sids'] == sid]['custom_site_id']
+        # get single value
+        # Get the spectra for this site
+        uhs_asce41 = get_spectra_orig(
+            dstore, sid, custom_id, mce_df_site, facts)
         
         # Convert to DataFrame and reset index
         df_out = pd.DataFrame(uhs_asce41).reset_index(drop=True)
@@ -988,29 +995,33 @@ def main(dstore, csm):
         logging.info(f'{df_out=}')  # optional
     
     df_final = pd.concat(sa_asce41, ignore_index=True)
-    df_final = df_final.astype({col: "string" for col in df_final.select_dtypes("object").columns})
+    df_final = df_final.astype(
+        {col: "string" for col in df_final.select_dtypes("object").columns})
     df_final = df_final.reset_index(drop=True)
     dstore.create_df("spectra_asce41", df_final)
 
     # 2) compute max of asce41 spectra for default site class:
-    asce41_spectra = compute_max_sa_asce41(dstore,sitecol,locs)
-    asce41_spectra.columns = ['period','BSE2N','BSE2E','BSE1N','BSE1E','uhs_475','custom_site_id']
+    asce41_spectra = compute_max_sa_asce41(dstore, sitecol, locs)
+    asce41_spectra.columns = [
+        'period', 'BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475',
+        'custom_site_id']
     dstore.create_df('asce41_sa_final', asce41_spectra)
 
     # 3) compute asce41 parameters:
-    keys_asce41 = ['BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
+    keys_asce41 = ['BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475']
     asce41 = {}
-    
-    for sid in custom_ids:
-        csi = site_id.decode('ascii').split(':')[0]
+
+    for s, custom_id in enumerate(custom_ids):
+        csi = custom_id.split(':')[0]
         Vs30 = sitecol["vs30"][s]
-        asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] ==sid]
-        if (asce_sa[keys_asce41] == 0).all().all():
-            result = get_zero_hazard_asce41(ASCE_version)
-        else: 
+        asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] == csi]
+        if asce_sa[keys_asce41].sum().any():
             result = get_params(ASCE_version, Vs30, asce_sa, ASCE_DECIMALS)
-        asce41[sid] = result
-    dstore["asce41"] = asce41
+        else:
+            result = get_zero_hazard_asce41(ASCE_version)
+        result['custom_site_id'] = custom_id
+        asce41[s] = result
+    dstore["asce41"] = to_array(asce41)
 
     ####################
     plot_sites(dstore, update_dstore=True)
@@ -1018,8 +1029,9 @@ def main(dstore, csm):
         [sids] = locs.values()
         n_sids = len(sids)
         vs30s = list(sitecol['vs30'])
-        assert n_sids == len(vs30s), (f'The number of sites ({n_sids}) must be equal to'
-                                      f' the number of values of vs30 ({len(vs30s)})')
+        assert n_sids == len(vs30s), (
+            f'The number of sites ({n_sids}) must be equal to'
+            f' the number of values of vs30 ({len(vs30s)})')
         plt = import_plt()
         # Mean Hazard Curves (1 row, n_sids columns)
         mask = np.isin(notifications['name'], ['zero_hazard', 'low_hazard'])
