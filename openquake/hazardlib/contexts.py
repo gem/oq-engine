@@ -543,6 +543,7 @@ class ContextMaker(object):
     ilabel = None
     tom = None
     cluster = None  # set in PmapMaker
+    max_ms_size = 0
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
@@ -679,7 +680,7 @@ class ContextMaker(object):
         # instantiating child monitors, may be called in the workers
         self.pla_mon = monitor('planar contexts', measuremem=False)
         self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
-        self.gmf_mon = monitor('computing mean_std', measuremem=False)
+        self.gmf_mon = monitor('computing mean_std', measuremem=True)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=True)
@@ -1138,6 +1139,7 @@ class ContextMaker(object):
         with self.gmf_mon:
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
+            self.max_ms_size = max(self.max_ms_size, mean_stdt.nbytes)
 
         if len(ctx) < 1000:
             # do not split in slices to make debugging easier

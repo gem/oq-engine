@@ -164,6 +164,7 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
         # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
             result = hazclassical(srcs, sitecol, cmaker)
+            result['max_ms_size'] = cmaker.max_ms_size
             result['rmap'].gid = cmaker.gid
             result['rmap'].wei = cmaker.wei
             yield result
@@ -171,6 +172,7 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
 
     for tileno, tileget in enumerate(tilegetters):
         result = hazclassical(sources, tileget(sitecol, cmaker.ilabel), cmaker)
+        result['max_ms_size'] = cmaker.max_ms_size
         if tileno:
             # source_data has keys src_id, grp_id, nsites, esites, nrupts,
             # weight, ctimes, taskno
@@ -397,6 +399,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if sdata is not None:
             self.source_data += sdata
             self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
+        print('ms_size_mb =', dic.get('max_ms_size')/1024**2)
         self.cfactor += dic.pop('cfactor')
 
         # store rup_data if there are few sites
