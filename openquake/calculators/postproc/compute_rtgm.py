@@ -743,28 +743,31 @@ def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
         design_BSE2N = ['n.a.','n.a.','n.a.','n.a.']
     else:
         design_BSE2N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2N'], Vs30)
+        
     if (sa_data['BSE1N'] == 0).all():
         design_BSE1N = ['n.a.','n.a.','n.a.','n.a.']
     else:    
         design_BSE1N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1N'], Vs30)
+        
     if (sa_data['BSE2E'] == 0).all():
         design_BSE2E = ['n.a.','n.a.','n.a.','n.a.']
     else:
         design_BSE2E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2E'], Vs30)
+        
     if (sa_data['BSE1E'] == 0).all():
         design_BSE1E = ['n.a.','n.a.','n.a.','n.a.']
     else:
         design_BSE1E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1E'], Vs30)
 
     return {
-        'BSE2N_Sxs': round(design_BSE2N[0], ASCE_DECIMALS),
-        'BSE2E_Sxs': round(design_BSE2E[0], ASCE_DECIMALS),
-        'BSE1N_Sxs': round(design_BSE1N[0], ASCE_DECIMALS),
-        'BSE1E_Sxs': round(design_BSE1E[0], ASCE_DECIMALS),
-        'BSE2N_Sx1': round(design_BSE2N[1], ASCE_DECIMALS),
-        'BSE2E_Sx1': round(design_BSE2E[1], ASCE_DECIMALS),
-        'BSE1N_Sx1': round(design_BSE1N[1], ASCE_DECIMALS),
-        'BSE1E_Sx1': round(design_BSE1E[1], ASCE_DECIMALS),
+        'BSE2N_Sxs': design_BSE2N[0],
+        'BSE2E_Sxs': design_BSE2E[0],
+        'BSE1N_Sxs': design_BSE1N[0],
+        'BSE1E_Sxs': design_BSE1E[0],
+        'BSE2N_Sx1': design_BSE2N[1],
+        'BSE2E_Sx1': design_BSE2E[1],
+        'BSE1N_Sx1': design_BSE1N[1],
+        'BSE1E_Sx1': design_BSE1E[1],
     }
 
 def get_zero_hazard_asce41(asce_version):
