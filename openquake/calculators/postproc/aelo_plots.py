@@ -25,7 +25,8 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
-from openquake.calculators.postproc.plots import add_borders, adjust_limits, auto_limits
+from openquake.calculators.postproc.plots import (
+    add_borders, adjust_limits, auto_limits)
 from PIL import Image
 
 ASCE_version = 'ASCE7-22'
@@ -216,10 +217,10 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     plt = import_plt()
-    asce07 = [json.loads(x) for x in dstore['asce07']]
-    pga = asce07['PGA'][site_idx]
-    ss = asce07['Ss'][site_idx]
-    s1 = asce07['S1'][site_idx]
+    asce07 = json.loads(dstore['asce07'][site_idx])
+    pga = asce07['PGA']
+    ss = asce07['Ss']
+    s1 = asce07['S1']
     MCEr = [pga, ss, s1]
     T = [from_string(imt).period for imt in imtls]
 
