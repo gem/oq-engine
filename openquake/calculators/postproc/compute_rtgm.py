@@ -335,12 +335,8 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     periods = list(periods)
     # For sds, find periods from 0.2-5.0s, inclusive
     sds_indices = [index for index, period in enumerate(periods) if 0.2 <= period <= 5]
-    try:
-        
-        # sds is 90% of the maximum from 0.2-5.0s
-        sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
-    except:
-        breakpoint()
+    # sds is 90% of the maximum from 0.2-5.0s
+    sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
 
     # For sd1, depending on vs30, take periods from 1-2s or 1-5s
     # vs30 in m/s
