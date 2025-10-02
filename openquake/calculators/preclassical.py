@@ -273,6 +273,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
+                logging.info('Estimating weight for %s', sg)
                 cmakers[grp_id].set_weight(
                     sg, SourceFilter(sites, oq.maximum_distance))
                 atomic_sources.extend(sg)
