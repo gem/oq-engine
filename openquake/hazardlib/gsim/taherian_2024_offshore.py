@@ -35,9 +35,25 @@ SCALER_PARAMS = {
     }
 }
 
+# Module-level cache for ONNX sessions
+_SESSION_CACHE = {}
+
+
+def get_onnx_session(model_path):
+    """
+    Get or create ONNX session with threading disabled.
+    Each worker process will have its own cached session.
+    """
+    if model_path not in _SESSION_CACHE:
+        opts = ort.SessionOptions()
+        opts.inter_op_num_threads = 1
+        opts.intra_op_num_threads = 1
+        _SESSION_CACHE[model_path] = ort.InferenceSession(model_path, opts)
+    return _SESSION_CACHE[model_path]
+
 
 def scale_input(value, scaler_params):
-    """Apply scaling transformation without using joblib scalers"""
+    """Apply scaling transformation"""
     value = np.atleast_1d(value).reshape(-1, 1)
 
     if scaler_params['type'] == 'StandardScaler':
@@ -51,24 +67,9 @@ def scale_input(value, scaler_params):
             scaler_params['type']))
 
 
-def calculate_psa_TEA24_offshore(Mw, Rjb, Depth, FM, ort_session):
-    """
-    Calculate PSA for offshore scenarios using TEA24 model with embedded
-    scalers.
-
-    Parameters:
-    - Mw: float, earthquake magnitude.
-    - Rjb: float, distance in km.
-    - Depth: float, hypocenter depth in km.
-    - FM: int, fault mechanism (0 for Reverse, 1 for Normal).
-    - ort_session: ONNX runtime session (pre-loaded).
-
-    Returns:
-    - Dictionary with 'periods', 'mean', 'sigma', 'tau', 'phi' values.
-    """
-
-    # Define additional data inside the function
-    additional_data = pd.DataFrame({
+def get_additional_data():
+    """Return DataFrame with sigma, tau, phi values for all IMs"""
+    return pd.DataFrame({
         'between_event': [0.519290669, 0.524470346, 0.529756778,
                           0.529688794, 0.532506304, 0.530049414,
                           0.532964882, 0.53110028, 0.536437409,
@@ -95,30 +96,21 @@ def calculate_psa_TEA24_offshore(Mw, Rjb, Depth, FM, ort_session):
                'f=10', 'f=15', 'f=20', 'f=25', 'f=50', 'PGA', 'PGV']
     })
 
-    IM_list = additional_data['IM'].tolist()
 
-    # Using embedded scalers
-    Mw_scaled = scale_input(Mw, SCALER_PARAMS['mw'])
-    Rjb_scaled = scale_input(Rjb, SCALER_PARAMS['rjb'])
-    Depth_scaled = scale_input(Depth, SCALER_PARAMS['depth'])
-
-    # Set case = 1 for offshore scenarios
-    case = np.ones_like(Mw)
-
-    # Prepare input array for model
+def run_onnx_prediction(ort_session, Mw_scaled, Rjb_scaled,
+                        Depth_scaled, FM, case):
+    """Execute ONNX model and return predictions"""
     Input_data = np.column_stack((case, Mw_scaled.flatten(),
                                   Rjb_scaled.flatten(),
                                   Depth_scaled.flatten(),
                                   FM)).astype(np.float32)
 
-    # Make predictions using pre-loaded ONNX session
     input_name = ort_session.get_inputs()[0].name
-    Median_GM = np.exp(ort_session.run(None, {input_name: Input_data})[0])
+    return np.exp(ort_session.run(None, {input_name: Input_data})[0])
 
-    # Convert predictions to DataFrame
-    Median_GM = pd.DataFrame(Median_GM, columns=IM_list, dtype=float)
 
-    # Map PSA values to periods
+def process_predictions(Median_GM, IM_list, additional_data):
+    """Convert predictions to periods and ground motion arrays"""
     periods = []
     mean_values = []
     sigma_values = []
@@ -133,12 +125,9 @@ def calculate_psa_TEA24_offshore(Mw, Rjb, Depth, FM, ort_session):
         elif col == 'PGV':
             periods.append(-1.0)
 
-        # Apply correct unit conversions
         if col == 'PGV':
-            # PGV: in cm/s
             psa_col = Median_GM[col].values
         else:
-            # PGA and SA: Convert from cm/s² to g
             psa_col = Median_GM[col].values / 981
 
         additional_row = additional_data[additional_data['IM'] == col]
@@ -149,61 +138,96 @@ def calculate_psa_TEA24_offshore(Mw, Rjb, Depth, FM, ort_session):
             tau_values.append(additional_row['between_event'].values[0])
             phi_values.append(additional_row['residual'].values[0])
 
-    # Convert lists to numpy arrays
-    mean = np.array(mean_values).T
-    sigma = np.array(sigma_values)
-    tau = np.array(tau_values)
-    phi = np.array(phi_values)
-
     return {
         'periods': np.array(periods),
-        'mean': mean,
-        'sigma': sigma,
-        'tau': tau,
-        'phi': phi
+        'mean': np.array(mean_values).T,
+        'sigma': np.array(sigma_values),
+        'tau': np.array(tau_values),
+        'phi': np.array(phi_values)
     }
 
 
+def calculate_psa_TEA24_offshore(Mw, Rjb, Depth, FM, ort_session):
+    """Calculate PSA for offshore scenarios"""
+    additional_data = get_additional_data()
+    IM_list = additional_data['IM'].tolist()
+
+    Mw_scaled = scale_input(Mw, SCALER_PARAMS['mw'])
+    Rjb_scaled = scale_input(Rjb, SCALER_PARAMS['rjb'])
+    Depth_scaled = scale_input(Depth, SCALER_PARAMS['depth'])
+
+    case = np.ones_like(Mw)  # offshore = 1
+
+    predictions = run_onnx_prediction(
+        ort_session, Mw_scaled, Rjb_scaled, Depth_scaled, FM, case)
+
+    Median_GM = pd.DataFrame(predictions, columns=IM_list, dtype=float)
+
+    return process_predictions(Median_GM, IM_list, additional_data)
+
+
 def rake_to_fm(rake):
-    """
-    Convert rake angle to fault mechanism based on Aki & Richards (1980).
-
-    Parameters:
-    - rake: float, rake angle in degrees
-
-    Returns:
-    - FM: int, fault mechanism (0 for Reverse, 1 for Normal)
-    """
-    # Normalize rake to [-180, 180] range
+    """Convert rake angle to fault mechanism"""
     rake = rake % 360
     if rake > 180:
         rake -= 360
 
     if 60 <= rake <= 120:
-        return 0  # Reverse
-    elif -120 <= rake <= -60:
-        return 1  # Normal
-    else:
-        # For strike-slip and intermediate mechanisms, default to reverse
         return 0
+    elif -120 <= rake <= -60:
+        return 1
+    else:
+        return 0
+
+
+def create_interpolators(periods_sorted, mean_sorted, sigma_sorted,
+                         tau_sorted, phi_sorted):
+    """Create interpolation functions for all ground motion parameters"""
+    interpolator_mean = interp1d(
+        periods_sorted, mean_sorted,
+        kind='linear', bounds_error=False,
+        fill_value='extrapolate', axis=1
+    )
+    interpolator_sigma = interp1d(
+        periods_sorted, sigma_sorted,
+        kind='linear', bounds_error=False,
+        fill_value='extrapolate'
+    )
+    interpolator_tau = interp1d(
+        periods_sorted, tau_sorted,
+        kind='linear', bounds_error=False,
+        fill_value='extrapolate'
+    )
+    interpolator_phi = interp1d(
+        periods_sorted, phi_sorted,
+        kind='linear', bounds_error=False,
+        fill_value='extrapolate'
+    )
+    return interpolator_mean, interpolator_sigma, interpolator_tau, \
+        interpolator_phi
+
+
+def get_period_from_imt(imt):
+    """Extract period value from IMT object"""
+    if imt.string.startswith('SA'):
+        return imt.period
+    elif imt.string == 'PGA':
+        return 0.01
+    elif imt.string == 'PGV':
+        return -1
+    else:
+        raise ValueError("Unsupported IMT type: {}".format(imt.string))
 
 
 class Taherian2024Offshore(GMPE):
     """
-    Implements the Taherian et al. (2024) Ground Motion Prediction
-    Equation for offshore scenarios in Western Iberia using an Artificial
-    Neural Network.
-
-    This GMPE uses an ANN trained on ground motion data from Portugal
-    and surrounding regions. It predicts ground motion for rock sites
-    (Vs30 = 760 m/s).
+    Taherian et al. (2024) GMPE for offshore scenarios in Western Iberia.
 
     Reference:
-            Taherian, A., Silva, V., Kalakonas, P., & Vicente, R. (2024).
-            An earthquake ground‐motion model for Southwest Iberia.
-            Bulletin of the Seismological Society of America, 114(5),
-            2613–2638. https://doi.org/10.1785/0120230250
-
+    Taherian, A., Silva, V., Kalakonas, P., & Vicente, R. (2024).
+    An earthquake ground-motion model for Southwest Iberia.
+    Bulletin of the Seismological Society of America, 114(5),
+    2613-2638. https://doi.org/10.1785/0120230250
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
@@ -220,43 +244,27 @@ class Taherian2024Offshore(GMPE):
     SUPPORTED_SA_PERIODS = (0.01, 4.0)
 
     def __init__(self, **kwargs):
-        """Initialize and load ONNX model once"""
+        """Initialize with model path only"""
         super().__init__(**kwargs)
         base_dir = os.path.dirname(__file__)
-        onnx_model_path = os.path.join(
+        self.model_path = os.path.join(
             base_dir, "taherian_2024_data", "ANN_Portugal_rock.onnx")
-        self.ort_session = ort.InferenceSession(onnx_model_path)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        """
-        Vectorized implementation for Taherian 2024 Offshore GMPE.
-        """
-        # Extract parameters
-        Depth = ctx.hypo_depth
-        Mw = ctx.mag
-        Rjb = ctx.rjb
-        rake = ctx.rake
+        """Compute ground motion using cached ONNX session"""
+        session = get_onnx_session(self.model_path)
 
-        # Convert rake to fault mechanism
-        FM = np.array([rake_to_fm(r) for r in np.atleast_1d(rake)])
-
-        # Ensure numpy arrays for inputs
-        Mw = np.atleast_1d(Mw)
-        Rjb = np.atleast_1d(Rjb)
-        Depth = np.atleast_1d(Depth)
+        FM = np.array([rake_to_fm(r) for r in np.atleast_1d(ctx.rake)])
+        Mw = np.atleast_1d(ctx.mag)
+        Rjb = np.atleast_1d(ctx.rjb)
+        Depth = np.atleast_1d(ctx.hypo_depth)
 
         psa_data = calculate_psa_TEA24_offshore(
-            Mw=Mw,
-            Rjb=Rjb,
-            Depth=Depth,
-            FM=FM,
-            ort_session=self.ort_session
+            Mw, Rjb, Depth, FM, ort_session=session
         )
 
-        # Convert to natural log
         psa_data['mean'] = np.log(psa_data['mean'])
 
-        # Sort periods and corresponding data for interpolation
         sort_idx = np.argsort(psa_data['periods'])
         periods_sorted = psa_data['periods'][sort_idx]
         mean_sorted = psa_data['mean'][:, sort_idx]
@@ -264,46 +272,16 @@ class Taherian2024Offshore(GMPE):
         tau_sorted = psa_data['tau'][sort_idx]
         phi_sorted = psa_data['phi'][sort_idx]
 
+        interp_mean, interp_sig, interp_tau, interp_phi = \
+            create_interpolators(periods_sorted, mean_sorted,
+                                 sigma_sorted, tau_sorted, phi_sorted)
+
         for m, imt in enumerate(imts):
-            # Determine the period based on IMT
-            if imt.string.startswith('SA'):
-                period = imt.period
-            elif imt.string == 'PGA':
-                period = 0.01
-            elif imt.string == 'PGV':
-                period = -1
-            else:
-                raise ValueError("Unsupported IMT type: {}".format(
-                    imt.string))
-
-            # Create interpolators with SORTED data
-            interpolator_mean = interp1d(
-                periods_sorted, mean_sorted,
-                kind='linear', bounds_error=False,
-                fill_value='extrapolate', axis=1
-            )
-            interpolator_sigma = interp1d(
-                periods_sorted, sigma_sorted,
-                kind='linear', bounds_error=False,
-                fill_value='extrapolate'
-            )
-            interpolator_tau = interp1d(
-                periods_sorted, tau_sorted,
-                kind='linear', bounds_error=False,
-                fill_value='extrapolate'
-            )
-            interpolator_phi = interp1d(
-                periods_sorted, phi_sorted,
-                kind='linear', bounds_error=False,
-                fill_value='extrapolate'
-            )
-
-            # Assign interpolated values
-            mean[m] = interpolator_mean(period)
-            sig[m] = interpolator_sigma(period)
-            tau[m] = interpolator_tau(period)
-            phi[m] = interpolator_phi(period)
+            period = get_period_from_imt(imt)
+            mean[m] = interp_mean(period)
+            sig[m] = interp_sig(period)
+            tau[m] = interp_tau(period)
+            phi[m] = interp_phi(period)
 
 
-# Register the GMPE
 registry["Taherian2024Offshore"] = Taherian2024Offshore
