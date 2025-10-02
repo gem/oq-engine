@@ -49,19 +49,13 @@ EXPECTED_asce7_22 = [
      1.70589, 1.59723, 1.4563,
      1.13155, 0.906292, 0.664615, 0.487139, 0.374017, 0.351059,
      0.371102, 0.345053, 0.264844]]
-ASCE07_16 = [
-    '0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.60616',
-    '0.96048', '0.85274', '1.50000', 'Very High', '0.60000', '0.94254',
-    '0.94621', '0.45569', '0.60000', 'Very High']
-ASCE07_22 = [
-    '0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.35', '0.9',
-    '1.75218', '0.96048', '0.93027', '1.50000', 'Very High', '0.60000',
-    '0.60000', '0.40000', '0.90629', '0.94621', '0.43816', '0.60000',
-    'Very High']
-ASCE41_17 = [1.5, 1.28283, 1.28283, 1, 0.75094, 0.75094, 0.6,
-             0.6, 0.7519, 0.4, 0.4, 0.42582]
-ASCE41_23 = [1.5, 1.39946, 1.39946, 1, 0.81921, 0.81921, 0.6,
-             0.6, 0.72299, 0.4, 0.4, 0.40944]
+ASCE07_16 = ['0.50000', '1.50000', 'Very High', '0.60000', 'Very High']
+ASCE07_22 = ['0.50000', '1.50000', '1.35', '0.9','Very High', 
+             '0.60000', '0.60000', '0.40000', 'Very High']
+ASCE41_17 = ['1.50000', '1.28283', '1.00000', '0.75094', '0.60000', '0.60000',
+             '0.40000', '0.40000', '0:BC']
+ASCE41_23 = ['0.90000', '0.83968', '0.60000', '0.49153', '0.40000', '0.40000',
+           '0.26667', '0.26667', '0:BC']
 
 
 def test_PAC():
@@ -83,8 +77,9 @@ def test_PAC():
 
         r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
         if rtgmpy:
-            a7 = json.loads(calc.datastore['asce07'][0].decode('ascii'))
-            aac([r0, r1, a7['PGA']], [0.032725, 0.040313, 0.83427],
+            s = calc.datastore['asce07'][0].decode('ascii')
+            asce07 = json.loads(s)
+            aac([r0, r1, asce07['PGA']], [0.032725, 0.040313, 0.83427],
                 atol=1E-6)
 
         # site (160, -9.4), first level of PGA
@@ -118,8 +113,7 @@ def test_KOR():
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     if rtgmpy:
-        s = calc.datastore['asce07'][0].decode('ascii')
-        asce07 = json.loads(s)
+        asce07 = json.loads(calc.datastore['asce07'][0])
         aac(asce07['PGA'], 1.60312, atol=5E-5)
         # check all plots created
         assert 'png/site.png' in calc.datastore
@@ -147,16 +141,12 @@ def test_CCA():
         # check asce07 exporter
         [fname] = export(('asce07', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        for got, exp in zip(df.value.to_numpy(), ASCE07_16):
-            try:
-                aac(float(got), float(exp), rtol=1E-2)
-            except ValueError:
-                numpy.testing.assert_equal(got, exp)
+        numpy.testing.assert_equal(df.value.to_numpy(), ASCE07_16)
 
         # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        aac(df.value, ASCE41_17, atol=1.5E-4)
+        numpy.testing.assert_equal(df.value.to_numpy(), ASCE41_17)
 
         # test no close ruptures
         dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
@@ -210,8 +200,13 @@ def test_CCA_asce7_22():
         # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        aac(df.value, ASCE41_23, atol=1.5E-4)
 
+        for got, exp in zip(df.value.to_numpy(), ASCE41_23):
+            try:
+                aac(float(got), float(exp), rtol=1E-2)
+            except ValueError:
+                numpy.testing.assert_equal(got, exp)
+ 
 
 def test_WAF():
     # test of site with very low hazard

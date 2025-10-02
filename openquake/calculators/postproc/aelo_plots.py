@@ -25,7 +25,8 @@ from openquake.commonlib import readinput
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
-from openquake.calculators.postproc.plots import add_borders, adjust_limits, auto_limits
+from openquake.calculators.postproc.plots import (
+    add_borders, adjust_limits, auto_limits)
 from PIL import Image
 
 ASCE_version = 'ASCE7-22'
@@ -216,9 +217,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     plt = import_plt()
-    js = dstore['asce07'][site_idx].decode('utf8')
-    dic = json.loads(js)
-    MCEr = [dic['PGA'], dic['Ss'], dic['S1']]
+    MCEr = dstore.read_df('mce_governing').SaM.to_numpy()
     T = [from_string(imt).period for imt in imtls]
 
     limit_det = [0.5, 1.5, 0.6]
@@ -234,18 +233,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
              linewidth=3)
     plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
-    MCEr_det = [dic['PGA_84th'], dic['Ss_84th'], dic['S1_84th']]
-    if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
-        upperlim = max([rtgm_probmce[1], 1.5])
-        plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
-    else:
-        upperlim = max([rtgm_probmce[1], 1.5, MCEr_det[1]])
-        plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
-                 linewidth=3)
-        plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
-                 label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
-        plt.ylim(
-            [0, numpy.max([rtgm_probmce,  MCEr, MCEr_det, limit_det]) + 0.2])
+
     plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
                 linewidth=2, facecolors='none', edgecolors='r')
     plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
@@ -258,8 +246,9 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     plt.xlim([-0.02, 1.2])
 
     # add user guide message
+    # FIXME: the message is not being displayed
     message = 'See WebUI User Guide for complete explanation of plot contents.'
-    plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85)
+    # plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85)
 
     if update_dstore:
         bio = io.BytesIO()
@@ -346,9 +335,10 @@ def plot_governing_mce(dstore, update_dstore=False):
 
     governing_mce_df = dstore.read_df('mce_governing')
     governing_mce_period = governing_mce_df['period']
-    governing_mce_sam = governing_mce_df['SaM']
+    # governing_mce_sam = governing_mce_df['SaM']
+    mce = governing_mce_df['SaM']
 
-    ax1.plot(governing_mce_period[1:], governing_mce_sam[1:], 'black',
+    ax1.plot(governing_mce_period[1:], mce[1:], 'black',
              label='Governing $MCE_r$', linewidth=2, linestyle='-')
 
     ax1.set_xscale('log')
@@ -362,7 +352,7 @@ def plot_governing_mce(dstore, update_dstore=False):
 
     plt.rcParams.update({'font.size': 15})
 
-    ax2.plot(governing_mce_period[1:], governing_mce_sam[1:], 'black',
+    ax2.plot(governing_mce_period[1:], mce[1:], 'black',
              label='Governing $MCE_r$', linewidth=2, linestyle='-')
     # plt.ylim([0.01, upperlim + 0.2])
     ax2.grid('both')

@@ -1900,11 +1900,10 @@ class ContextMakerSequence(collections.abc.Sequence):
 
     def enumerate(self):
         for grp_id, inv in enumerate(self.inverse):
-            yield grp_id, copy.copy(self[inv])
+            yield grp_id, self[inv]
 
     def to_array(self, grp_ids=slice(None)):
-        return numpy.array([copy.copy(self[inv])
-                            for inv in self.inverse[grp_ids]])
+        return numpy.array([self[inv] for inv in self.inverse[grp_ids]])
 
 
 def get_unique_inverse(all_trt_smrs):

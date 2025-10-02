@@ -168,13 +168,13 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     max_weight = csm.get_max_weight(oq)
 
     # build source_groups
-    triplets = [csm.split_sg(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
+    quartets = [csm.split_sg(cmaker, sg, sitecol, max_weight, tiling=oq.tiling)
                 for g, cmaker in enumerate(cmakers.to_array())
                 for sg in csm.src_groups if sg.grp_id == g]
     data = numpy.array(
         [(grp_id, len(cm.gsims), len(tgets), len(blocks),
-          len(cm.gsims) * fac * 1024, cm.weight, cm.codes, cm.trt)
-         for grp_id, (cm, tgets, blocks) in enumerate(triplets)],
+          len(cm.gsims) * fac * 1024, extra['weight'], extra['codes'], cm.trt)
+         for grp_id, (cm, tgets, blocks, extra) in enumerate(quartets)],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('tot_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
 
@@ -192,9 +192,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     regular = (mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
     if oq.tiling is None:
-        # use tiling with OQ_SAMPLE_SOURCES to avoid slow tasks
-        ss = os.environ.get('OQ_SAMPLE_SOURCES') is not None
-        tiling = ss and N > 10_000 or not regular
+        tiling = not regular
     else:
         tiling = oq.tiling
 
@@ -275,6 +273,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
+                logging.info('Estimating weight for %s', sg)
                 cmakers[grp_id].set_weight(
                     sg, SourceFilter(sites, oq.maximum_distance))
                 atomic_sources.extend(sg)
