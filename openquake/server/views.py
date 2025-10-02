@@ -1673,6 +1673,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             hmaps = assets = hcurves = mce = mce_spectra = False
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     lon = lat = site_name = asce_version_full = calc_aelo_version = None
+    site_class_display_name = None
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         site_class_display_name = get_site_class_display_name(ds)
