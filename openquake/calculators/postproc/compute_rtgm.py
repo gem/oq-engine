@@ -159,6 +159,7 @@ def norm_imt(imt):
     """
     return imt.replace('(', '').replace(')', '').replace('.', 'P')
 
+
 def _get_hazdic(afe, imt, imtls, site):
     hazdic = {
         'site': {'name': 'site',
@@ -167,6 +168,7 @@ def _get_hazdic(afe, imt, imtls, site):
                  'Vs30': site.vs30},
         'hazCurves': {imt: {'iml': imtls, 'afe': afe}}}
     return hazdic
+
 
 def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     """
@@ -231,6 +233,7 @@ def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     rtgm_df = pd.DataFrame(dic)
     return rtgm_df
 
+
 def get_rtgm_notification(site, oq, sa02, sa10, DLLs, ASCE_version,
                           mrs_all, hcurves_all):
     """
@@ -244,8 +247,10 @@ def get_rtgm_notification(site, oq, sa02, sa10, DLLs, ASCE_version,
 
     if mrs.sum() == 0:
         return None, 'zero_hazard'
-    elif mean_rates.max() < MIN_AFE: 
-        return None, 'low_hazard' # in this case all hazard curves for all SA are below 1/2475 for the lower IML
+    elif mean_rates.max() < MIN_AFE:
+        # in this case all hazard curves for all SA are below 1/2475
+        # for the lower IML
+        return None, 'low_hazard'
     try:
         rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
     except ValueError as err:
@@ -800,10 +805,11 @@ def compute_max_sa_asce41(dstore,sitecol,locs):
 
         csi = sitecol.custom_site_id[sids[0]].decode('ascii').split(':')[0]
         asce41df = asce41_df[np.isin(asce41_df.sid, sids)]
-        df = asce41df.groupby('period')[keys_asce41].max()#.to_frame()  # ASCE41 by period
+        df = asce41df.groupby('period')[keys_asce41].max()
         df['custom_site_id'] = csi
         out.append(df)
     return pd.concat(out).reset_index()
+
 
 def calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     """
@@ -863,7 +869,8 @@ def display_vs30_in_subplot_title(axes, n_rows, sid_idx, vs30):
 def make_figure_hcurves(plt, sids, dstore, notifications, vs30s):
     n_rows = 1
     n_sids = len(sids)
-    fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 6), squeeze=False)
+    fig, axes = plt.subplots(
+        n_rows, n_sids, figsize=(7 * n_sids, 6), squeeze=False)
     for i, sid in enumerate(sids):
         vs30 = vs30s[i]
         plot_mean_hcurves_rtgm(dstore, sid, axes=axes[0, i])
@@ -876,7 +883,8 @@ def make_figure_hcurves(plt, sids, dstore, notifications, vs30s):
 def make_figure_disagg_by_src(plt, sids, dstore, vs30s):
     n_rows = 3  # 3 imts: [PGA, SA(0.2), SA(1.0)]
     n_sids = len(sids)
-    fig, axes = plt.subplots(n_rows, n_sids, figsize=(7 * n_sids, 15), squeeze=False)
+    fig, axes = plt.subplots(
+        n_rows, n_sids, figsize=(7 * n_sids, 15), squeeze=False)
     for i, sid in enumerate(sids):
         vs30 = vs30s[i]
         plot_disagg_by_src(
@@ -888,6 +896,103 @@ def make_figure_disagg_by_src(plt, sids, dstore, vs30s):
         fig.subplots_adjust(hspace=0.3)  # avoid overlapping titles and xlabels
         save_figure_to_dstore(fig, dstore, 'png/disagg_by_src-All-IMTs.png')
     plt.close(fig)
+
+
+def make_figure_sites(dstore, oq, locs, sitecol, notifications):
+    [sids] = locs.values()
+    n_sids = len(sids)
+    vs30s = list(sitecol['vs30'])
+    assert n_sids == len(vs30s), (
+        f'The number of sites ({n_sids}) must be equal to'
+        f' the number of values of vs30 ({len(vs30s)})')
+    plt = import_plt()
+    # Mean Hazard Curves (1 row, n_sids columns)
+    mask = np.isin(notifications['name'], ['zero_hazard', 'low_hazard'])
+    sids_to_exclude = notifications['sid'][mask].tolist()
+    sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
+    if sids_to_plot:
+        make_figure_hcurves(plt, sids_to_plot, dstore, notifications, vs30s)
+        # Governing MCE
+        if oq.asce_version == 'ASCE7-16':
+            plot_governing_mce_asce_7_16(dstore, update_dstore=True)
+        elif n_sids == 1:
+            plot_mce_spectra(dstore, update_dstore=True)
+            plot_governing_mce(dstore, update_dstore=True)
+            # in simplified page
+        else:
+            plot_governing_mce(dstore, update_dstore=True)
+        # Disaggregation by Source (3 rows, n_sids columns)
+        make_figure_disagg_by_src(plt, sids_to_plot, dstore, vs30s)
+
+
+def compute_asce07(dstore, mce_df, sitecol, custom_ids):
+    # FIXME: in case of multiple sites on the same location
+    # there will be duplications
+    asce07 = {}
+    for s, custom_id in enumerate(custom_ids):
+        csi = custom_id.split(':')[0]
+        mce_site = mce_df[mce_df['custom_site_id'] == csi]
+        Vs30 = sitecol["vs30"][s]
+        if np.all(mce_site.SaM == 0) or mce_site['SaM'].isna().all():
+            result = get_zero_hazard_asce07(dstore,Vs30)
+        else:
+            result = asce07_output_new(custom_id, Vs30, dstore, mce_site)
+        #result['custom_site_id'] = custom_id
+        asce07[s] = result
+    return asce07
+
+
+def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
+                   ASCE_version):
+     # 1) get spectra asce41 for each sid and each Vs30
+    asce41 = {}
+    if mce_dfs:
+        mce_df = dstore.read_df('mce')
+    sa_asce41 = []  # list to collect DataFrames for each site
+
+    for sid in sitecol['sids']:
+        mce_df_site = mce_df[mce_df['sid'] == sid]['MCE']
+        custom_id = sitecol[sitecol['sids'] == sid]['custom_site_id']
+        # get single value
+        # Get the spectra for this site
+        uhs_asce41 = get_spectra_orig(
+            dstore, sid, custom_id, mce_df_site, facts)
+        
+        # Convert to DataFrame and reset index
+        df_out = pd.DataFrame(uhs_asce41).reset_index(drop=True)
+        sa_asce41.append(df_out)
+        
+        logging.info(f'{df_out=}')  # optional
+    
+    df_final = pd.concat(sa_asce41, ignore_index=True)
+    df_final = df_final.astype(
+        {col: "string" for col in df_final.select_dtypes("object").columns})
+    df_final = df_final.reset_index(drop=True)
+    dstore.create_df("spectra_asce41", df_final)
+
+    # 2) compute max of asce41 spectra for default site class:
+    asce41_spectra = compute_max_sa_asce41(dstore, sitecol, locs)
+    asce41_spectra.columns = [
+        'period', 'BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475',
+        'custom_site_id']
+    dstore.create_df('asce41_sa_final', asce41_spectra)
+
+    # 3) compute asce41 parameters:
+    keys_asce41 = ['BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475']
+    asce41 = {}
+
+    for s, custom_id in enumerate(custom_ids):
+        csi = custom_id.split(':')[0]
+        Vs30 = sitecol["vs30"][s]
+        asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] == csi]
+        if asce_sa[keys_asce41].sum().any():
+            result = get_params(ASCE_version, Vs30, asce_sa, ASCE_DECIMALS)
+        else:
+            result = get_zero_hazard_asce41(ASCE_version)
+        result['custom_site_id'] = custom_id
+        asce41[s] = result
+
+    return asce41
 
 
 def main(dstore, csm):
@@ -940,9 +1045,8 @@ def main(dstore, csm):
             rtgm_dfs.append(rtgm_df)
     notifications = np.array(notification_items, dtype=notification_dtype)
 
-
-
-    for sid, mag_dst_eps_sig, mce_df in calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
+    for sid, mag_dst_eps_sig, mce_df in calc_mce(
+            dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
         dstore[f'mag_dst_eps_sig/{sid}'] = mag_dst_eps_sig
         mce_dfs.append(mce_df)
 
@@ -951,106 +1055,22 @@ def main(dstore, csm):
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
-    ####################
-    # final MCE spectra, results for ASCE7:
+    # final MCE spectra
     df = compute_mce_governing(dstore, sitecol, locs)
     df.columns = ["period", "SaM", "custom_site_id"]
     dstore.create_df('mce_governing', df)
     sitecol = dstore['sitecol']
     custom_ids = python3compat.decode(sitecol['custom_site_id'])
-    asce07 = {}
-
-    # TODO: in case of multiple sites on the same location
-    # there will be duplications
-    for s, custom_id in enumerate(custom_ids):
-        csi = custom_id.split(':')[0]
-        mce_site = df[df['custom_site_id'] == csi]
-        Vs30 = sitecol["vs30"][s]
-        
-        if np.all(mce_site.SaM == 0) or mce_site['SaM'].isna().all():          
-            result = get_zero_hazard_asce07(dstore,Vs30)
-        else:
-            result = asce07_output_new(custom_id, Vs30, dstore, mce_site)
-        #result['custom_site_id'] = custom_id
-        asce07[s] = result
+    
+    asce07 = compute_asce07(dstore, df, sitecol, custom_ids)
     dstore["asce07"] = to_array(asce07)
 
-    ####################
-    # compute ASCE 41:
-     # 1) get spectra asce41 for each sid and each Vs30
-    asce41, asce41_sa = {}, {}
-    if mce_dfs:
-        mce_df = dstore.read_df('mce')
-    sa_asce41 = []  # list to collect DataFrames for each site
-
-    for sid in sitecol['sids']:
-        mce_df_site = mce_df[mce_df['sid'] == sid]['MCE']
-        custom_id = sitecol[sitecol['sids'] == sid]['custom_site_id']
-        # get single value
-        # Get the spectra for this site
-        uhs_asce41 = get_spectra_orig(
-            dstore, sid, custom_id, mce_df_site, facts)
-        
-        # Convert to DataFrame and reset index
-        df_out = pd.DataFrame(uhs_asce41).reset_index(drop=True)
-        sa_asce41.append(df_out)
-        
-        logging.info(f'{df_out=}')  # optional
-    
-    df_final = pd.concat(sa_asce41, ignore_index=True)
-    df_final = df_final.astype(
-        {col: "string" for col in df_final.select_dtypes("object").columns})
-    df_final = df_final.reset_index(drop=True)
-    dstore.create_df("spectra_asce41", df_final)
-
-    # 2) compute max of asce41 spectra for default site class:
-    asce41_spectra = compute_max_sa_asce41(dstore, sitecol, locs)
-    asce41_spectra.columns = [
-        'period', 'BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475',
-        'custom_site_id']
-    dstore.create_df('asce41_sa_final', asce41_spectra)
-
-    # 3) compute asce41 parameters:
-    keys_asce41 = ['BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475']
-    asce41 = {}
-
-    for s, custom_id in enumerate(custom_ids):
-        csi = custom_id.split(':')[0]
-        Vs30 = sitecol["vs30"][s]
-        asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] == csi]
-        if asce_sa[keys_asce41].sum().any():
-            result = get_params(ASCE_version, Vs30, asce_sa, ASCE_DECIMALS)
-        else:
-            result = get_zero_hazard_asce41(ASCE_version)
-        result['custom_site_id'] = custom_id
-        asce41[s] = result
+    asce41 = compute_asce41(dstore, mce_dfs, sitecol, facts, locs,
+                            custom_ids, ASCE_version)
     dstore["asce41"] = to_array(asce41)
-
-    ####################
-    plot_sites(dstore, update_dstore=True)
-    if rtgm_dfs and len(locs) == 1:
-        [sids] = locs.values()
-        n_sids = len(sids)
-        vs30s = list(sitecol['vs30'])
-        assert n_sids == len(vs30s), (
-            f'The number of sites ({n_sids}) must be equal to'
-            f' the number of values of vs30 ({len(vs30s)})')
-        plt = import_plt()
-        # Mean Hazard Curves (1 row, n_sids columns)
-        mask = np.isin(notifications['name'], ['zero_hazard', 'low_hazard'])
-        sids_to_exclude = notifications['sid'][mask].tolist()
-        sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
-        if sids_to_plot:
-            make_figure_hcurves(plt, sids_to_plot, dstore, notifications, vs30s)
-            # Governing MCE
-            if oq.asce_version == 'ASCE7-16':
-                plot_governing_mce_asce_7_16(dstore, update_dstore=True)
-            elif n_sids == 1:
-                plot_mce_spectra(dstore, update_dstore=True)
-                plot_governing_mce(dstore, update_dstore=True) # in simplified page
-            else:
-                plot_governing_mce(dstore, update_dstore=True)
-            # Disaggregation by Source (3 rows, n_sids columns)
-            make_figure_disagg_by_src(plt, sids_to_plot, dstore, vs30s)
     if len(notifications):
         dstore['notifications'] = notifications
+
+    plot_sites(dstore, update_dstore=True)
+    if rtgm_dfs and len(locs) == 1:
+        make_figure_sites(dstore, oq, locs, sitecol, notifications)
