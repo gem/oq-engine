@@ -600,10 +600,24 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
 
     for key in asce07:
         if not isinstance(asce07[key], str):
-            asce07[key] = (float(round(asce07[key], ASCE_DECIMALS))
-                           if asce07[key] is not np.nan else 'n.a.')
+            asce07[key] = smart_round(asce07[key])
     logging.info('ASCE 7=%s',  asce07)
     return asce07
+
+
+def smart_round(number):
+    """
+    Round the ASCE values (if they are floats)
+    """
+    if isinstance(number, pd.Series):
+        return round(float(number), ASCE_DECIMALS)
+    elif isinstance(number, str):
+        return number
+    elif np.isnan(number):
+        return 'n.a.'
+    else:
+        return round(number, ASCE_DECIMALS)
+
 
 def get_zero_hazard_asce07(dstore,vs30):
     oq = dstore['oqparam'] 
@@ -635,7 +649,8 @@ def get_zero_hazard_asce07(dstore,vs30):
             }
 
     return asce07
-    
+
+
 #class ASCE41Calculator:
 def get_spectra(dstore, sid, custom_id, sa_data_site, mce, facts):
     fact = dict(zip(mce, facts))
@@ -709,24 +724,28 @@ def get_spectra_orig(dstore, sid, custom_id, mce, facts):
 
         return sa_data
 
+
 def get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS):
     if asce_version == 'ASCE7-16':
         return asce41_17(asce_sa, ASCE_DECIMALS)
     elif asce_version == 'ASCE7-22':
         return asce41_23(asce_sa, vs30, ASCE_DECIMALS)
 
-def asce41_17(sa_data, ASCE_DECIMALS):
 
+def asce41_17(sa_data, ASCE_DECIMALS):
+    period02 = sa_data[sa_data['period'] == 0.2]
+    period1 = sa_data[sa_data['period'] == 1.0]
     return {
-        "BSE2N_Ss": round(sa_data[sa_data['period'] == 0.2]['BSE2N'], ASCE_DECIMALS),
-        "BSE2E_Ss": round(sa_data[sa_data['period'] == 0.2]["BSE2E"], ASCE_DECIMALS),
-        "BSE1N_Ss": round(sa_data[sa_data['period'] == 0.2]["BSE1N"], ASCE_DECIMALS),
-        "BSE1E_Ss": round(sa_data[sa_data['period'] == 0.2]["BSE1E"], ASCE_DECIMALS),
-        "BSE2N_S1": round(sa_data[sa_data['period'] == 1.0]["BSE2N"], ASCE_DECIMALS),
-        "BSE2E_S1": round(sa_data[sa_data['period'] == 1.0]["BSE2E"], ASCE_DECIMALS),
-        "BSE1N_S1": round(sa_data[sa_data['period'] == 1.0]["BSE1N"], ASCE_DECIMALS),
-        "BSE1E_S1": round(sa_data[sa_data['period'] == 1.0]["BSE1E"], ASCE_DECIMALS),
+        "BSE2N_Ss": smart_round(period02['BSE2N']),
+        "BSE2E_Ss": smart_round(period02["BSE2E"]),
+        "BSE1N_Ss": smart_round(period02["BSE1N"]),
+        "BSE1E_Ss": smart_round(period02["BSE1E"]),
+        "BSE2N_S1": smart_round(period1["BSE2N"]),
+        "BSE2E_S1": smart_round(period1["BSE2E"]),
+        "BSE1N_S1": smart_round(period1["BSE1N"]),
+        "BSE1E_S1": smart_round(period1["BSE1E"]),
     }
+
 
 def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
     
@@ -751,15 +770,16 @@ def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
         design_BSE1E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1E'], Vs30)
 
     return {
-        'BSE2N_Sxs': design_BSE2N[0],
-        'BSE2E_Sxs': design_BSE2E[0],
-        'BSE1N_Sxs': design_BSE1N[0],
-        'BSE1E_Sxs': design_BSE1E[0],
-        'BSE2N_Sx1': design_BSE2N[1],
-        'BSE2E_Sx1': design_BSE2E[1],
-        'BSE1N_Sx1': design_BSE1N[1],
-        'BSE1E_Sx1': design_BSE1E[1],
+        'BSE2N_Sxs': smart_round(design_BSE2N[0]),
+        'BSE2E_Sxs': smart_round(design_BSE2E[0]),
+        'BSE1N_Sxs': smart_round(design_BSE1N[0]),
+        'BSE1E_Sxs': smart_round(design_BSE1E[0]),
+        'BSE2N_Sx1': smart_round(design_BSE2N[1]),
+        'BSE2E_Sx1': smart_round(design_BSE2E[1]),
+        'BSE1N_Sx1': smart_round(design_BSE1N[1]),
+        'BSE1E_Sx1': smart_round(design_BSE1E[1]),
     }
+
 
 def get_zero_hazard_asce41(asce_version):
     na = 'n.a.'
