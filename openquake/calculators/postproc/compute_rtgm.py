@@ -331,12 +331,16 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
         short periods, and sd1 is the
         spectral response acceleration for 1 second.
     """
-
+    ordinates = list(ordinates)
+    periods = list(periods)
     # For sds, find periods from 0.2-5.0s, inclusive
     sds_indices = [index for index, period in enumerate(periods) if 0.2 <= period <= 5]
-   
-    # sds is 90% of the maximum from 0.2-5.0s
-    sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
+    try:
+        
+        # sds is 90% of the maximum from 0.2-5.0s
+        sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
+    except:
+        breakpoint()
 
     # For sd1, depending on vs30, take periods from 1-2s or 1-5s
     # vs30 in m/s
@@ -745,7 +749,6 @@ def asce41_17(sa_data, ASCE_DECIMALS):
         "BSE1N_S1": smart_round(period1["BSE1N"]),
         "BSE1E_S1": smart_round(period1["BSE1E"]),
     }
-
 
 def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
     
