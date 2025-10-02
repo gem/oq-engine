@@ -748,15 +748,13 @@ class CompositeSourceModel:
                 sg, min(hint, oq.max_blocks), lambda s: s.weight))
             tiles = max(hint / oq.max_blocks * splits, splits)
         tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
-        cmaker.tiling = tiling
+        extra = dict(codes=sg.codes,
+                     num_chunks=num_chunks,
+                     blocks=len(blocks),
+                     weight=sg.weight,
+                     atomic=sg.atomic)
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
-        cmaker.codes = sg.codes
-        cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-        cmaker.num_chunks = num_chunks
-        cmaker.blocks = len(blocks)
-        cmaker.weight = sg.weight
-        cmaker.atomic = sg.atomic
-        return cmaker, tilegetters, blocks
+        return cmaker, tilegetters, blocks, extra
 
     def __toh5__(self):
         G = len(self.src_groups)
