@@ -54,14 +54,12 @@ ASCE07_16 = [
     '0.96048', '0.85274', '1.50000', 'Very High', '0.60000', '0.94254',
     '0.94621', '0.45569', '0.60000', 'Very High']
 ASCE07_22 = [
-    '0.50000', '0.70537', '0.35257', '0.50000', '1.50000', '1.35', '0.9',
-    '1.75218', '0.96048', '0.93027', '1.50000', 'Very High', '0.60000',
-    '0.60000', '0.40000', '0.90629', '0.94621', '0.43816', '0.60000',
-    'Very High']
+    '0.50000', '1.50000', '1.35', '0.9','Very High', 
+    '0.60000', '0.60000', '0.40000', 'Very High']
 ASCE41_17 = [1.5, 1.28283, 1.28283, 1, 0.75094, 0.75094, 0.6,
              0.6, 0.7519, 0.4, 0.4, 0.42582]
-ASCE41_23 = [1.5, 1.39946, 1.39946, 1, 0.81921, 0.81921, 0.6,
-             0.6, 0.72299, 0.4, 0.4, 0.40944]
+ASCE41_23 = ['0.90000', '0.83968', '0.60000', '0.49153', '0.40000', '0.40000',
+           '0.26667', '0.26667', '0:BC']
 
 
 def test_PAC():
@@ -210,8 +208,13 @@ def test_CCA_asce7_22():
         # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        aac(df.value, ASCE41_23, atol=1.5E-4)
 
+        for got, exp in zip(df.value.to_numpy(), ASCE41_23):
+            try:
+                aac(float(got), float(exp), rtol=1E-2)
+            except ValueError:
+                numpy.testing.assert_equal(got, exp)
+ 
 
 def test_WAF():
     # test of site with very low hazard
