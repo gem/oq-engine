@@ -826,6 +826,7 @@ def write_source_model(dest, sources_or_groups, name=None,
                     for i, sec in enumerate(sections)]
         gmodel = Node("geometryModel", attrs, nodes=secnodes)
         with open(dest[:-4] + '_sections.xml', 'wb') as f:
+            # tested in multi_fault_test.py
             nrml.write([gmodel], f, '%s')
             out.append(f.name)
     return out
