@@ -770,14 +770,14 @@ def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
         design_BSE1E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1E'], Vs30)
 
     return {
-        'BSE2N_Sxs': smart_round(design_BSE2N[0]),
-        'BSE2E_Sxs': smart_round(design_BSE2E[0]),
-        'BSE1N_Sxs': smart_round(design_BSE1N[0]),
-        'BSE1E_Sxs': smart_round(design_BSE1E[0]),
-        'BSE2N_Sx1': smart_round(design_BSE2N[1]),
-        'BSE2E_Sx1': smart_round(design_BSE2E[1]),
-        'BSE1N_Sx1': smart_round(design_BSE1N[1]),
-        'BSE1E_Sx1': smart_round(design_BSE1E[1]),
+        'BSE2N_Sxs': smart_round(design_BSE2N[2]),
+        'BSE2E_Sxs': smart_round(design_BSE2E[2]),
+        'BSE1N_Sxs': smart_round(design_BSE1N[2]),
+        'BSE1E_Sxs': smart_round(design_BSE1E[2]),
+        'BSE2N_Sx1': smart_round(design_BSE2N[3]),
+        'BSE2E_Sx1': smart_round(design_BSE2E[3]),
+        'BSE1N_Sx1': smart_round(design_BSE1N[3]),
+        'BSE1E_Sx1': smart_round(design_BSE1E[3])
     }
 
 
