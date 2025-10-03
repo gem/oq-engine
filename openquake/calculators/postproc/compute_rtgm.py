@@ -334,7 +334,8 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     ordinates = list(ordinates)
     periods = list(periods)
     # For sds, find periods from 0.2-5.0s, inclusive
-    sds_indices = [index for index, period in enumerate(periods) if 0.2 <= period <= 5]
+    sds_indices = [index for index, period in enumerate(periods)
+                   if 0.2 <= period <= 5]
     # sds is 90% of the maximum from 0.2-5.0s
     sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
 
@@ -610,7 +611,7 @@ def smart_round(number):
     Round the ASCE values (if they are floats)
     """
     if isinstance(number, pd.Series):
-        return round(float(number), ASCE_DECIMALS)
+        return round(float(number.iloc[0]), ASCE_DECIMALS)
     elif isinstance(number, str):
         return number
     elif np.isnan(number):
