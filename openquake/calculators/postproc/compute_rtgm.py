@@ -752,10 +752,10 @@ def get_zero_hazard_asce41(asce_version):
     na = 'n.a.'
     if asce_version == 'ASCE7-16':
         keys = [
-            'BSE2N_Ss', 'BSE2E_Ss', 'Ss_5_50',
-            'BSE1N_Ss', 'BSE1E_Ss', 'Ss_20_50',
-            'BSE2N_S1', 'BSE2E_S1', 'S1_5_50',
-            'BSE1N_S1', 'BSE1E_S1', 'S1_20_50',
+            'BSE2N_Ss', 'BSE2E_Ss', 
+            'BSE1N_Ss', 'BSE1E_Ss', 
+            'BSE2N_S1', 'BSE2E_S1', 
+            'BSE1N_S1', 'BSE1E_S1', 
         ]
     else:
         keys = [
