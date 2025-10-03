@@ -74,6 +74,15 @@ class KiteSurface(BaseSurface):
         self.strike = self.dip = None
         self.width = None
 
+    def to_geom(self):
+        """
+        Converts the profiles into a float32 array
+        """
+        lst = [1, len(self.profiles), len(self.profiles[0])]
+        for line in self.profiles:
+            lst.extend(line.coo.flatten())
+        return np.float32(lst)
+
     def _clean(self):
         """
         Removes from the mesh the rows and columns containing just NaNs
@@ -415,6 +424,17 @@ class KiteSurface(BaseSurface):
         """
         ok = np.isfinite(self.mesh.lons[0, :])
         return np.amin(self.mesh.depths[0, ok])
+
+    @classmethod
+    def from_geom(cls, geom, rupture_mesh_spacing, sec_id):
+        """
+        :returns: KiteSurface described by the given geometry array
+        """
+        shape_y, shape_z = int(geom[1]), int(geom[2])
+        array = geom[3:].astype(np.float64).reshape(3, shape_y, shape_z)
+        return KiteSurface.from_profiles(
+                    array, rupture_mesh_spacing,
+                    rupture_mesh_spacing, sec_id=sec_id)
 
     @classmethod
     def from_profiles(cls, profiles, profile_sd, edge_sd, idl=False,

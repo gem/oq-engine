@@ -148,6 +148,8 @@ def read_source_model(fname, branch, converter, applied, sample, monitor):
                     srcs.extend(calc.filters.split_source(src))
             sg.sources = _sample(srcs, float(sample), applied)
     sm.rtime = time.time() - t0  # save the read time
+    if 'sections' in fname:
+        breakpoint()
     return {fname: sm}
 
 
