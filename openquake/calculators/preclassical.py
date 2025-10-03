@@ -149,7 +149,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     if splits:
         mon = monitor('weighting sources', measuremem=False)
         with mon:
-            cmaker.set_weight(splits, sf, multiplier)
+            cmaker.set_weight(splits, sf)
         yield {grp_id: splits}
 
 
