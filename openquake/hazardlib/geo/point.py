@@ -214,15 +214,15 @@ class Point(object):
 
     def __eq__(self, other):
         """
-        >>> Point(1e-4, 1e-4) == Point(0, 0)
+        >>> bool(Point(1e-4, 1e-4) == Point(0, 0))
         False
-        >>> Point(1e-6, 1e-6) == Point(0, 0)
+        >>> bool(Point(1e-6, 1e-6) == Point(0, 0))
         True
-        >>> Point(0, 0, 1) == Point(0, 0, 0)
+        >>> bool(Point(0, 0, 1) == Point(0, 0, 0))
         False
-        >>> Point(4, 5, 1e-3) == Point(4, 5, 0)
+        >>> bool(Point(4, 5, 1e-3) == Point(4, 5, 0))
         True
-        >>> Point(-180 + 1e-7, 0) == Point(180 - 1e-7, 0)
+        >>> bool(Point(-180 + 1e-7, 0) == Point(180 - 1e-7, 0))
         True
         """
         if other is None:
