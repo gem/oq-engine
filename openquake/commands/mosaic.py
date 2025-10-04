@@ -24,7 +24,7 @@ import getpass
 import cProfile
 import pandas
 import collections
-from openquake.baselib import config, performance, sap
+from openquake.baselib import config, parallel, performance, sap
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
@@ -118,8 +118,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    # os.environ['OQ_DISTRIBUTE'] = 'zmq'  # hanging on server installations??
-    engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
+    cj = min(parallel.num_cores, len(allparams)) // 2 or 1
+    engine.run_jobs(logctxs, concurrent_jobs=cj)
     out = []
     count_errors = 0
     asce = {}
