@@ -76,6 +76,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     starts with the codes `CAN` or `AUS`, i.e. those covered by the mosaic
     models for Canada and Australia.
     """
+    assert os.path.exists('asce'), 'You are not in the mosaic directory!'
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
