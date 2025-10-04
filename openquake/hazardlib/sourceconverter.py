@@ -764,7 +764,7 @@ class SourceConverter(RuptureConverter):
         name = striptag(node.tag)
         if name.endswith('Source'):  # source node
             source_id = node['id']
-            if self.source_id and source_id not in self.source_id:
+            if self.source_id and not source_id.startswith(self.source_id):
                 # if source_id is set in the job.ini, discard all other sources
                 return
             elif self.source_nodes and name not in self.source_nodes:
