@@ -231,7 +231,7 @@ class Input(object):
         hparams.setdefault('width_of_mfd_bin', 1.0),
         hparams.setdefault('area_source_discretization', 10.)
         hparams.setdefault('minimum_magnitude', {'default': 0})
-        hparams.setdefault('source_id', None)
+        hparams.setdefault('source_id', ())
         hparams.setdefault('discard_trts', '')
         hparams.setdefault('floating_x_step', 0)
         hparams.setdefault('floating_y_step', 0)
