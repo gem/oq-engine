@@ -553,9 +553,11 @@ def to_geom_lons_lats(surface):
         points.append(array.flat)
         lons.append(array[0].flat)
         lats.append(array[1].flat)
-    points = numpy.concatenate(points)
+    lons = numpy.concatenate(lons, dtype=F32)
+    lats = numpy.concatenate(lats, dtype=F32)
+    points = numpy.concatenate(points, dtype=F32)
     geom = numpy.concatenate([[len(shapes) // 2], shapes, points], dtype=F32)
-    return geom, F32(lons), F32(lats)
+    return geom, lons, lats
 
 
 def to_arrays(geom):
