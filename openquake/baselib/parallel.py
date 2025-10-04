@@ -688,7 +688,9 @@ if sys.platform == 'linux':
     tot_cores = min(len(psutil.Process().cpu_affinity()), gb_count)
 else:
     tot_cores = min(cpu_count, gb_count)
-num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
+num_cores = int(os.environ.get('OQ_NUM_CORES') or
+                config.distribution.get('num_cores')
+                or tot_cores)
 
 
 class Starmap(object):
