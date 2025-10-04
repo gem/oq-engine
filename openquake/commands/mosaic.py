@@ -90,6 +90,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     print(count_sites_per_model)
     if not 'vs30' in sites_df.keys():
         sites_df['vs30'] = [False] * len(sites_df)
+    models = []
     for vs30, dvf in sites_df.groupby('vs30'):
         for model, df in dvf.groupby('model'):
             if model in ('???', 'USA', 'GLD'):
@@ -108,6 +109,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             params = get_params_from(dic, mosaic_dir)
             # del params['postproc_func']
             allparams.append(params)
+            models.append(model)
     print('Considering %d sites (excluding USA, GLD)' %
           (sum(len(ls) for ls in ids.values())))
 
@@ -119,8 +121,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     count_errors = 0
-    a07s, a41s = [], []
-    for logctx in logctxs:
+    a07s, a41s = {}, {}
+    for model, logctx in zip(models, logctxs):
         job = logs.dbcmd('get_job', logctx.calc_id)
         tb = logs.dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
@@ -128,8 +130,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             count_errors += 1
         dstore = datastore.read(logctx.calc_id)
         try:
-            a07s.extend(views.view('asce:07', dstore))
-            a41s.extend(views.view('asce:41', dstore))
+            a07s[model] = views.view('asce:07', dstore)
+            a41s[model] = views.view('asce:41', dstore)
         except KeyError:
             # AELO results could not be computed due to some error,
             # so the asce data is missing in the datastore
@@ -142,11 +144,14 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     if not a07s or not a41s:
         # serious problem to debug
         breakpoint()
-    for name, table in zip(['asce07', 'asce41'], [a07s, a41s]):
-        fname = os.path.abspath(name + '.org')
-        with open(fname, 'w') as f:
-            print(views.text_table(table, ext='org'), file=f)
-        print(f'Stored {fname}')
+    for name, dic in zip(['asce07', 'asce41'], [a07s, a41s]):
+        if not os.path.exists(name):
+            os.mkdir(name)
+        for model, table in dic.items():
+            fname = os.path.abspath(f'{name}/{model}.org')
+            with open(fname, 'w') as f:
+                print(views.text_table(table, ext='org'), file=f)
+            print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
 
