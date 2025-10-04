@@ -24,7 +24,7 @@ import getpass
 import cProfile
 import pandas
 import collections
-from openquake.baselib import config, performance, sap
+from openquake.baselib import config, parallel, performance, sap
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
@@ -76,6 +76,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     starts with the codes `CAN` or `AUS`, i.e. those covered by the mosaic
     models for Canada and Australia.
     """
+    assert os.path.exists('asce'), 'You are not in the mosaic directory!'
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
@@ -90,6 +91,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     print(count_sites_per_model)
     if not 'vs30' in sites_df.keys():
         sites_df['vs30'] = [False] * len(sites_df)
+    models = []
     for vs30, dvf in sites_df.groupby('vs30'):
         for model, df in dvf.groupby('model'):
             if model in ('???', 'USA', 'GLD'):
@@ -108,6 +110,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             params = get_params_from(dic, mosaic_dir)
             # del params['postproc_func']
             allparams.append(params)
+            models.append(model)
     print('Considering %d sites (excluding USA, GLD)' %
           (sum(len(ls) for ls in ids.values())))
 
@@ -115,12 +118,12 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    # os.environ['OQ_DISTRIBUTE'] = 'zmq'  # hanging on server installations??
-    engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
+    cj = min(parallel.num_cores, len(allparams))
+    engine.run_jobs(logctxs, concurrent_jobs=cj)
     out = []
     count_errors = 0
-    a07s, a41s = [], []
-    for logctx in logctxs:
+    asce = {}
+    for model, logctx in zip(models, logctxs):
         job = logs.dbcmd('get_job', logctx.calc_id)
         tb = logs.dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
@@ -128,8 +131,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             count_errors += 1
         dstore = datastore.read(logctx.calc_id)
         try:
-            a07s.extend(views.view('asce:07', dstore))
-            a41s.extend(views.view('asce:41', dstore))
+            asce[model + '07'] = views.view('asce:07', dstore)
+            asce[model + '41'] = views.view('asce:41', dstore)
         except KeyError:
             # AELO results could not be computed due to some error,
             # so the asce data is missing in the datastore
@@ -139,11 +142,11 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt)
-    if not a07s or not a41s:
+    if not asce:
         # serious problem to debug
         breakpoint()
-    for name, table in zip(['asce07', 'asce41'], [a07s, a41s]):
-        fname = os.path.abspath(name + '.org')
+    for name, table in asce.items():
+        fname = os.path.abspath(f'asce/{name}.org')
         with open(fname, 'w') as f:
             print(views.text_table(table, ext='org'), file=f)
         print(f'Stored {fname}')
