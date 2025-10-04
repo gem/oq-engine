@@ -145,7 +145,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         # serious problem to debug
         breakpoint()
     for name, table in asce.items():
-        fname = os.path.abspath(f'{name}.org')
+        fname = os.path.abspath(f'asce/{name}.org')
         with open(fname, 'w') as f:
             print(views.text_table(table, ext='org'), file=f)
         print(f'Stored {fname}')
