@@ -118,7 +118,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    cj = min(parallel.num_cores, len(allparams)) // 2 or 1
+    cj = min(parallel.num_cores, len(allparams))
     engine.run_jobs(logctxs, concurrent_jobs=cj)
     out = []
     count_errors = 0
