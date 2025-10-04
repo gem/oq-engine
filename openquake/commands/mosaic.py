@@ -121,7 +121,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     count_errors = 0
-    a07s, a41s = {}, {}
+    asce = {}
     for model, logctx in zip(models, logctxs):
         job = logs.dbcmd('get_job', logctx.calc_id)
         tb = logs.dbcmd('get_traceback', logctx.calc_id)
@@ -130,8 +130,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             count_errors += 1
         dstore = datastore.read(logctx.calc_id)
         try:
-            a07s[model] = views.view('asce:07', dstore)
-            a41s[model] = views.view('asce:41', dstore)
+            asce[model + '07'] = views.view('asce:07', dstore)
+            asce[model + '41'] = views.view('asce:41', dstore)
         except KeyError:
             # AELO results could not be computed due to some error,
             # so the asce data is missing in the datastore
@@ -141,17 +141,14 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt)
-    if not a07s or not a41s:
+    if not asce:
         # serious problem to debug
         breakpoint()
-    for name, dic in zip(['asce07', 'asce41'], [a07s, a41s]):
-        if not os.path.exists(name):
-            os.mkdir(name)
-        for model, table in dic.items():
-            fname = os.path.abspath(f'{name}/{model}.org')
-            with open(fname, 'w') as f:
-                print(views.text_table(table, ext='org'), file=f)
-            print(f'Stored {fname}')
+    for name, table in asce.items():
+        fname = os.path.abspath(f'{name}.org')
+        with open(fname, 'w') as f:
+            print(views.text_table(table, ext='org'), file=f)
+        print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
 
