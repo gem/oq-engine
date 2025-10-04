@@ -118,8 +118,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    # os.environ['OQ_DISTRIBUTE'] = 'zmq'  # hanging on server installations??
-    engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
+    cj = min(int(config.distribution.num_cores), len(allparams)) // 2 or 1
+    engine.run_jobs(logctxs, concurrent_jobs=cj)
     out = []
     count_errors = 0
     asce = {}
