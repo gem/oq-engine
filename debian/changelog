@@ -1,9 +1,13 @@
+python3-oq-engine (3.23.3-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Disabled the low level threads in TodorovicSilva2022NonParametric model
 
   [Christopher Brooks, Michele Simionato]
   * Improved error management for missing tools in install.py
   * Backported fix to Parker (2020)
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 06 Oct 2025 09:26:24 +0000
 
 python3-oq-engine (3.23.2-1~xenial01) xenial; urgency=low
 
