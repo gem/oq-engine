@@ -2,6 +2,7 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
+pyproj==3.7.2
 https://wheelhouse.openquake.org/v3/macos/py312/matplotlib-3.10.1-cp312-cp312-macosx_10_13_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/numba-0.61.2-cp312-cp312-macosx_10_14_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/numpy-2.2.6-cp312-cp312-macosx_10_13_x86_64.whl
@@ -14,7 +15,6 @@ https://wheelhouse.openquake.org/v3/macos/py312/h5py-3.13.0-cp312-cp312-macosx_1
 https://wheelhouse.openquake.org/v3/macos/py312/psutil-7.0.0-cp36-abi3-macosx_13_0_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/fiona-1.10.1-cp312-cp312-macosx_13_0_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/gdal-3.10.1-cp312-cp312-macosx_13_0_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py312/pyproj-3.7.0-cp312-cp312-macosx_13_0_x86_64.whl
 #
 https://wheelhouse.openquake.org/v3/macos/py312/charset_normalizer-3.4.0-cp312-cp312-macosx_10_13_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py312/kiwisolver-1.4.7-cp312-cp312-macosx_10_9_x86_64.whl
