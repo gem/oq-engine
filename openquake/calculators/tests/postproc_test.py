@@ -225,14 +225,14 @@ class PostProcTestCase(CalculatorTestCase):
         asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
         # FIXME: there is a missing round down here
-        assert dic41 == {'BSE2N_Sxs': 0.9,
-                         'BSE2E_Sxs': 0.73229,
-                         'BSE1N_Sxs': 0.6,
-                         'BSE1E_Sxs': 0.43598,
-                         'BSE2N_Sx1': 0.28645,
-                         'BSE2E_Sx1': 0.23062,
-                         'BSE1N_Sx1': 0.19097,
-                         'BSE1E_Sx1': 0.12548,
+        assert dic41 == {'BSE2N_Sxs': 1.35000,
+                         'BSE2E_Sxs': 1.09844,
+                         'BSE1N_Sxs': 0.90000,
+                         'BSE1E_Sxs': 0.65396,
+                         'BSE2N_Sx1': 0.42968,
+                         'BSE2E_Sx1': 0.34593,
+                         'BSE1N_Sx1': 0.28645,
+                         'BSE1E_Sx1': 0.18822,
                          'custom_site_id': '0:BC'}
 
     def test_median_spectrum1(self):

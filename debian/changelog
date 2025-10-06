@@ -1,5 +1,6 @@
   [Michele Simionato]
   * Updated the related dependencies to numpy 2+
+  * Extended the source_id-filtering feature to use .startswith
   * Changed the Starmap to ensure at least one GB of RAM per thread
   * Added a flag "aggregate_exposure" (false by default) to aggregate
     the assets with the same taxonomy on the same hazard site

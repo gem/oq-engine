@@ -1633,7 +1633,7 @@ def get_input_files(oqparam):
             fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
         elif key == 'source_model':
-            fnames.add(oqparam.inputs['source_model'])
+            fnames.update(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list
             fnames.update(fname)
             if any(f.endswith(('.xml', '.nrml')) for f in fnames):
