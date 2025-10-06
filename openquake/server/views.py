@@ -1655,48 +1655,43 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
-    avg_gmf = []
-    disagg_by_src = []
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    kwargs = dict(calc_id=calc_id, size_mb=size_mb)
+    pngs = dict(hmaps=False)
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
-            hmaps = any([k.startswith('hmap') for k in ds['png']])
-            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
-            assets = 'assets.png' in ds['png']
-            hcurves = 'hcurves.png' in ds['png']
-            # NOTE: remove "and 'All' in k" to show the individual plots
-            disagg_by_src = [k for k in ds['png']
-                             if k.startswith('disagg_by_src-') and 'All' in k]
-            mce = 'mce.png' in ds['png']
-            mce_spectra = 'mce_spectra.png' in ds['png']
-        else:
-            hmaps = assets = hcurves = mce = mce_spectra = False
-    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    lon = lat = site_name = asce_version_full = calc_aelo_version = None
-    site_class_display_name = None
+            pngs['hmaps'] = any([k.startswith('hmap') for k in ds['png']])
+            if application_mode == 'ARISTOTLE':
+                pngs['avg_gmf'] = [
+                    k for k in ds['png'] if k.startswith('avg_gmf-')]
+                pngs['assets'] = 'assets.png' in ds['png']
+            if application_mode == 'AELO':
+                pngs['hcurves'] = 'hcurves.png' in ds['png']
+                # NOTE: remove "and 'All' in k" to show the individual plots
+                pngs['disagg_by_src'] = [
+                    k for k in ds['png']
+                    if k.startswith('disagg_by_src-') and 'All' in k]
+                pngs['mce'] = 'mce.png' in ds['png']
+                pngs['mce_spectra'] = 'mce_spectra.png' in ds['png']
+    kwargs['pngs'] = pngs
     if application_mode == 'AELO':
-        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        site_class_display_name = get_site_class_display_name(ds)
-        site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
+        # e.g. [[-61.071, 14.686, 0.0]]
+        kwargs['lon'], kwargs['lat'] = ds['oqparam'].sites[0][:2]
+        kwargs['site_class'] = get_site_class_display_name(ds)
+        # e.g. 'AELO for CCA'->'CCA'
+        kwargs['site_name'] = ds['oqparam'].description[9:]
         try:
             asce_version = ds['oqparam'].asce_version
         except AttributeError:
             # for backwards compatibility on old calculations
             asce_version = oqvalidation.OqParam.asce_version.default
+        kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
         try:
-            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+            kwargs['calc_aelo_version'] = ds.get_attr('/', 'aelo_version')
         except KeyError:
-            calc_aelo_version = '1.0.0'
-        asce_version_full = oqvalidation.ASCE_VERSIONS[asce_version]
-    return render(request, "engine/get_outputs.html",
-                  dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
-                       avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
-                       disagg_by_src=disagg_by_src,
-                       mce=mce, mce_spectra=mce_spectra,
-                       calc_aelo_version=calc_aelo_version,
-                       asce_version=asce_version_full,
-                       lon=lon, lat=lat, site_class=site_class_display_name, site_name=site_name)
-                  )
+            kwargs['calc_aelo_version'] = '1.0.0'
+    return render(request, "engine/get_outputs.html", kwargs)
 
 
 def is_model_preliminary(ds):
