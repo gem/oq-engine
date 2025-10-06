@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended the source_id-filtering feature to use .startswith
   * Added a flag "aggregate_exposure" (false by default) to aggregate
     the assets with the same taxonomy on the same hazard site
   * Optimized "building cmakers" and the RateMap in the case of clusters

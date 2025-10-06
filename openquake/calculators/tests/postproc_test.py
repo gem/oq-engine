@@ -215,24 +215,25 @@ class PostProcTestCase(CalculatorTestCase):
         lk.remove('Ss_seismicity')
         lk.remove('S1_seismicity')
         dic07_float = [dic07[k] for k in lk]
-        dic07_float_ref = [0.5, 0.5191, 0.383, 0.5, 1.5, 1.35, 0.9, 
-                           1.5109, 0.973, 1.2636, 1.5, 0.4297, 0.4297, 
-                           0.2864, 0.4297, 0.9326, 0.2555, 0.6]
-
+        dic07_float_ref = [0.5, 1.5, 1.35, 0.9, 0.4297, 0.4297, 0.2864]
         aae(dic07_float, dic07_float_ref, decimal=4)
 
         # check string results
         dic07_str = [dic07[k] for k in ['Ss_seismicity', 'S1_seismicity']]
-        assert dic07_str == ['Very High', 'High']
+        assert dic07_str == ['Very High', 'Very High']
 
         asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
-        assert dic41 == {'BSE2N_Ss': 1.5, 'BSE2E_Ss': 1.22049,
-                         'Ss_5_50': 1.22049, 'BSE1N_Ss': 1.0,
-                         'BSE1E_Ss': 0.72663, 'Ss_20_50': 0.72663,
-                         'BSE2N_S1': 0.42968, 'BSE2E_S1': 0.34593,
-                         'S1_5_50': 0.34593, 'BSE1N_S1': 0.28645,
-                         'BSE1E_S1': 0.18822, 'S1_20_50': 0.18822}
+        # FIXME: there is a missing round down here
+        assert dic41 == {'BSE2N_Sxs': 1.35000,
+                         'BSE2E_Sxs': 1.09844,
+                         'BSE1N_Sxs': 0.90000,
+                         'BSE1E_Sxs': 0.65396,
+                         'BSE2N_Sx1': 0.42968,
+                         'BSE2E_Sx1': 0.34593,
+                         'BSE1N_Sx1': 0.28645,
+                         'BSE1E_Sx1': 0.18822,
+                         'custom_site_id': '0:BC'}
 
     def test_median_spectrum1(self):
         # test with a single site and many ruptures

@@ -146,7 +146,7 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def classical(sources, tilegetters, cmaker, dstore, monitor):
+def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
@@ -158,7 +158,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
 
-    if cmaker.disagg_by_src and not cmaker.atomic:
+    if cmaker.disagg_by_src and not extra['atomic']:
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
         # source 'case' (mutex combination of case:01, case:02)
@@ -186,10 +186,10 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
             rmap = result.pop('rmap').remove_zeros()
         # print(f"{monitor.task_no=} {rmap=}")
 
-        if rmap.size_mb and cmaker.blocks == 1 and not cmaker.disagg_by_src:
+        if rmap.size_mb and extra['blocks'] == 1 and not cmaker.disagg_by_src:
             if config.directory.custom_tmp:
                 rates = rmap.to_array(cmaker.gid)
-                _store(rates, cmaker.num_chunks, None, monitor)
+                _store(rates, extra['num_chunks'], None, monitor)
             else:
                 result['rmap'] = rmap.to_array(cmaker.gid)
         elif rmap.size_mb:
@@ -199,7 +199,7 @@ def classical(sources, tilegetters, cmaker, dstore, monitor):
         yield result
 
 
-def tiling(tilegetter, cmaker, dstore, monitor):
+def tiling(tilegetter, cmaker, num_chunks, dstore, monitor):
     """
     Tiling calculator
     """
@@ -212,7 +212,7 @@ def tiling(tilegetter, cmaker, dstore, monitor):
     rmap = result.pop('rmap').remove_zeros()
     if config.directory.custom_tmp:
         rates = rmap.to_array(cmaker.gid)
-        _store(rates, cmaker.num_chunks, None, monitor)
+        _store(rates, num_chunks, None, monitor)
     else:
         result['rmap'] = rmap.to_array(cmaker.gid)
     return result
@@ -595,25 +595,24 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_regular(self, sgs, ds):
         allargs = []
         n_out = []
-        splits = {}
-        for cmaker, tilegetters, blocks, nsplits in self.csm.split(
+        ntiles = {}
+        for cmaker, tilegetters, blocks, extra in self.csm.split(
                 self.cmdict, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
-                for tgetters in block_splitter(tilegetters, nsplits):
-                    allargs.append((block, tgetters, cmaker, ds))
-                    n_out.append(len(tgetters))
+                allargs.append((block, tilegetters, cmaker, extra, ds))
+                n_out.append(len(tilegetters))
             try:
                 grp_id = block[0].grp_id
             except TypeError:  # block is an int
                 grp_id = block
-            splits[grp_id] = nsplits
+            ntiles[grp_id] = len(tilegetters)
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
-        maxsrc = max(srcs, key=lambda s: s.weight / splits[s.grp_id])
+        maxsrc = max(srcs, key=lambda s: s.weight / ntiles[s.grp_id])
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
@@ -630,14 +629,14 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_tiling(self, sgs, ds):
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks, splits in self.csm.split(
+        for cmaker, tilegetters, blocks, extra in self.csm.split(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, True):
             for block in blocks:
                 for tgetter in tilegetters:
                     assert isinstance(block, int)
                     tgetter.grp_id = block
-                    allargs.append((tgetter, cmaker, ds))
+                    allargs.append((tgetter, cmaker, extra['num_chunks'], ds))
                 n_out.append(len(tilegetters))
         logging.warning('This is a tiling calculation with '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
