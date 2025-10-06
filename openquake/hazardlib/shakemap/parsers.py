@@ -1150,9 +1150,11 @@ def _contents_properties_shakemap(usgs_id, user, get_grid, monitor,
             shakemap_array = get_array_usgs_id("usgs_id", usgs_id, contents)
     else:
         shakemap_array = None
-    shakemap_version = shakemap['properties']['version']
+    # NOTE: shakemap version numbers look like '1'
+    # shakemap ids look like 'urn:usgs-product:us:shakemap:us6000phrk:1735953132990'
+    shakemap_version_number = shakemap['properties']['version']
     utc_date_time = ms_to_utc_date_time(shakemap['updateTime'])
-    shakemap_desc = f'v{shakemap_version}: {utc_date_time}'
+    shakemap_desc = f'v{shakemap_version_number}: {utc_date_time}'
     return contents, properties, shakemap_array, shakemap_desc, err
 
 

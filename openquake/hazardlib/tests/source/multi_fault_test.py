@@ -164,7 +164,7 @@ class MultiFaultTestCase(unittest.TestCase):
         self.assertEqual(str(ctx.exception),
                          "The section index 3 in source '01' is invalid")
 
-    def test_slow(self):
+    def test_performance(self):
         # performance test with a reduced UCERF source
         [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
         sitecol = SiteCollection.from_points([-122, -121], [37, 27])

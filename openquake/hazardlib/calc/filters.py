@@ -22,15 +22,18 @@ import logging
 import operator
 from contextlib import contextmanager
 import numpy
+import pandas
 from scipy.spatial import KDTree, distance
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
 
+F32 = numpy.float32
 U32 = numpy.uint32
 MINMAG = 2.5
 MAXMAG = 10.2  # to avoid breaking PAC
@@ -347,6 +350,75 @@ def close_ruptures(ruptures, sites, dist=800.):
 default = IntegrationDistance({'default': [(MINMAG, 1000), (MAXMAG, 1000)]})
 
 
+def rup_radius(rup):
+    """
+    Maximum distance from the rupture mesh to the hypocenter
+    """
+    hypo = rup.hypocenter
+    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
+    radius = distance.cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
+    return radius
+
+
+def filter_site_array_around(array, rup, dist):
+    """
+    :param array: array with fields 'lon', 'lat'
+    :param rup: a rupture object
+    :param dist: integration distance in km
+    :returns: slice to the rupture
+    """
+    # first raw filtering
+    hypo = rup.hypocenter
+    x, y, z = hypo.x, hypo.y, hypo.z
+    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
+    xyz = spherical_to_cartesian(x, y, z)
+
+    tree = KDTree(xyz_all)
+    # NB: on macOS query_ball returns the indices in a different order
+    # than on linux and windows, hence the need to sort
+    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
+    idxs.sort()
+
+    # then fine filtering
+    r_sites = site.SiteCollection.from_(array[idxs])
+    dists = get_distances(rup, r_sites, 'rrup')
+    ids, = numpy.where(dists < dist)
+    if len(ids) < len(idxs):
+        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
+    return r_sites.array[ids]
+
+
+class RuptureFilter(object):
+    """
+    Filter arrays/dataframes with lon, lat around a rupture
+    """
+    def __init__(self, rup, dist):
+        self.rup = rup
+        self.dist = dist
+
+    def __call__(self, array_df):
+        if isinstance(array_df, pandas.DataFrame):
+            # computing all the distances the slow way
+            if hasattr(array_df, 'lon'):
+                # when reading the exposure.csv files
+                mesh = Mesh(F32(array_df.lon), F32(array_df.lat))
+            else:
+                # when reading the exposure.hdf5 file
+                mesh = Mesh(F32(array_df.LONGITUDE), F32(array_df.LATITUDE))
+            dists = get_distances(self.rup, mesh, 'rrup')
+            return array_df[dists < self.dist]
+        # this is called when reading the site model from eexposure.hdf5
+        return filter_site_array_around(array_df, self.rup, self.dist)
+
+    def filter(self, lons, lats):
+        """
+        :returns: (mask, rup-sites distances)
+        """
+        mesh = Mesh(F32(lons), F32(lats))
+        dists = get_distances(self.rup, mesh, 'rrup')
+        return dists < self.dist, dists
+
+
 class SourceFilter(object):
     """
     Filter objects have a .filter method yielding filtered sources
@@ -354,6 +426,8 @@ class SourceFilter(object):
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
+    multiplier = 1  # not reduce
+
     def __init__(self, sitecol, integration_distance=default):
         self.sitecol = sitecol
         self.integration_distance = integration_distance
@@ -367,7 +441,9 @@ class SourceFilter(object):
         sc = object.__new__(site.SiteCollection)
         sc.array = self.sitecol[idxs]
         sc.complete = self.sitecol.complete
-        return self.__class__(sc, self.integration_distance)
+        new = self.__class__(sc, self.integration_distance)
+        new.multiplier = multiplier
+        return new
 
     def get_enlarged_box(self, src, maxdist=None):
         """

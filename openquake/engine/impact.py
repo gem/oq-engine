@@ -57,12 +57,14 @@ def main_web(allparams, jobctxs,
 
 def main_cmd(usgs_id, rupture_file=None,
              callback=trivial_callback, *,
-             time_event='day',
+             shakemap_version=None, time_event='day',
              maximum_distance='300', mosaic_model=None, trt=None,
              truncation_level='3',
              number_of_ground_motion_fields='10', asset_hazard_distance='15',
              ses_seed='42', local_timestamp='',
-             exposure_hdf5=None, station_data_file=None,
+             exposure_hdf5=None,
+             aggregate_exposure=False,
+             station_data_file=None,
              maximum_distance_stations='',
              msr='WC1994', approach='use_shakemap_from_usgs',
              loglevel='warn',
@@ -82,11 +84,15 @@ def main_cmd(usgs_id, rupture_file=None,
         'rupture_dict', 'rupture_file', 'station_data_file'}
     post = {f: loc.get(f) for f in fields}
     post['usgs_id'] = usgs_id
+    if shakemap_version is not None:
+        post['shakemap_version'] = shakemap_version
     post['msr'] = msr
     post['approach'] = approach
     monitor = performance.Monitor()
     _rup, rupdic, oqparams, err = impact_validate(
         post, User(level=userlevel), rupture_file, station_data_file, monitor)
+    if aggregate_exposure:
+        oqparams['aggregate_exposure'] = 'true'
     if err:
         callback(None, oqparams, exc=err)
         return
@@ -109,6 +115,7 @@ main_cmd.usgs_id = 'ShakeMap ID'  # i.e. us6000m0xl
 main_cmd.rupture_file = 'XML file with the rupture model (optional)'
 main_cmd.rupture_dict = 'Used by the command `oq mosaic impact`'
 main_cmd.callback = ''
+main_cmd.shakemap_version = 'Id of the chosen shakemap version'
 main_cmd.time_event = 'Time of the event (avg, day, night or transit)'
 main_cmd.maximum_distance = 'Maximum distance in km'
 main_cmd.mosaic_model = 'Mosaic model 3-characters code (optional)'
@@ -120,6 +127,7 @@ main_cmd.ses_seed = 'SES seed'
 main_cmd.local_timestamp = 'Local timestamp of the event (optional)'
 main_cmd.exposure_hdf5 = ('File containing the exposure, site model '
                           'and vulnerability functions')
+main_cmd.aggregate_exposure = 'Aggregate the exposure by site, taxonomy'
 main_cmd.station_data_file = 'CSV file with the station data'
 main_cmd.maximum_distance_stations = 'Maximum distance from stations in km'
 main_cmd.msr = 'Magnitude scaling relationship'

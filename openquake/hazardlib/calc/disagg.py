@@ -756,7 +756,7 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
             'weight': [src.mutex_weight for src in grp]}
     else:
         src_mutex = {}
-    for ctx, cmaker in zip(ctxs, cmakers):
+    for ctx, cmaker in zip(ctxs, cmakers.to_array()):
         dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
         drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
         disaggs.append(dis)

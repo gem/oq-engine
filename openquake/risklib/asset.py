@@ -26,7 +26,7 @@ import pandas
 import fiona
 from shapely import geometry, prepare, contains_xy
 
-from openquake.baselib import hdf5, general, config
+from openquake.baselib import hdf5, general, config, performance
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
@@ -36,9 +36,9 @@ U8 = numpy.uint8
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
-U64 = numpy.uint64
+I64 = numpy.int64
 TWO16 = 2 ** 16
-TWO32 = 2 ** 32
+TWO32 = I64(2 ** 32)
 by_taxonomy = operator.attrgetter('taxonomy')
 ae = numpy.testing.assert_equal
 OCC_FIELDS = ('day', 'night', 'transit')
@@ -347,6 +347,15 @@ class AssetCollection(object):
         self.occfields = [f for f in self.array.dtype.names
                           if f.startswith('occupants')]
 
+    def new(self, array):
+        """
+        :returns: an AssetCollection with the same metadata and another array
+        """
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self))
+        new.array = array
+        return new
+
     def update_tagcol(self, aggregate_by):
         """
         Possibly adds tags 'id' and 'site_id'
@@ -545,18 +554,29 @@ class AssetCollection(object):
         df = pandas.concat(dfs)
         return df[df.number > 0]
 
-    # not used yet
     def agg_by_site(self):
         """
-        :returns: an array of aggregated values indexed by site ID
+        :returns: an AssetCollection aggregated by site_id, taxonomy
         """
-        N = self['site_id'].max() + 1
-        vfields = self.fields + self.occfields
-        agg_values = numpy.zeros(N, [(f, F32) for f in vfields])
-        for vf in vfields:
-            arr = self['value-' + vf if vf in self.fields else vf]
-            agg_values[vf] = general.fast_agg(self['site_id'], arr)
-        return agg_values
+        array = numpy.sort(self.array, order=['site_id', 'taxonomy'])
+        idxs = I64(array['site_id']) * TWO32 + I64(array['taxonomy'])
+        arrays = performance.split_array(array, idxs)
+        fields = ['value-' + f for f in self.fields] + self.occfields
+        extras = set(self.array.dtype.names) - set(fields) - {'id', 'ordinal'}
+        newarray = numpy.zeros(len(arrays), self.array.dtype)
+        for i, arr in enumerate(arrays):
+            old = arr[0]
+            if len(arr) > 1:  # aggregate
+                new = newarray[i]
+                new['id'] = f'agg{old["site_id"]}'
+                for f in fields:
+                    new[f] = arr[f].sum()
+                for extra in extras:
+                    new[extra] = old[extra]
+            else:  # just copy
+                newarray[i] = old
+        newarray['ordinal'] = numpy.arange(len(arrays))
+        return self.new(newarray)
 
     def build_aggids(self, aggregate_by):
         """
@@ -570,7 +590,8 @@ class AssetCollection(object):
             if aggby == ['id']:
                 aggids[ag] = self['ordinal']
             else:
-                aggids[ag] = [key2i[ag, to_tuple(rec, aggby)] for rec in self[aggby]]
+                aggids[ag] = [key2i[ag, to_tuple(rec, aggby)]
+                              for rec in self[aggby]]
         return aggids, [decode(vals) for vals in aggkey.values()]
 
     def reduce(self, sitecol):
@@ -937,7 +958,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
 
 
 # used in impact calculations
-def impact_read_assets(h5, start, stop):
+def impact_read_assets(h5, start, stop, rupfilter):
     """
     Builds a DataFrame of assets by reading the global exposure file
     """
@@ -961,7 +982,7 @@ def impact_read_assets(h5, start, stop):
     df['occupants_avg'] = (df.OCCUPANTS_PER_ASSET_DAY +
                            df.OCCUPANTS_PER_ASSET_NIGHT +
                            df.OCCUPANTS_PER_ASSET_TRANSIT) / 3
-    return df
+    return rupfilter(df) if rupfilter else df
 
 
 class Exposure(object):
@@ -1011,21 +1032,21 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read_around(exposure_hdf5, gh3s):
+    def read_around(exposure_hdf5, hexes, rupfilter=None):
         """
         Read the global exposure in HDF5 format and returns the subset
         specified by the given geohashes.
         """
         with hdf5.File(exposure_hdf5) as f:
             exp = f['exposure']
-            sbg = f['assets/slice_by_gh3'][:]
-            slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
+            sbg = f['assets/slice_by_hex6'][:]
+            slices = sbg[numpy.isin(sbg['hex6'], hexes)]
             if len(slices) == 0:
                 raise SiteAssociationError(
                     'There are no assets within the maximum_distance')
             assets_df = pandas.concat(
-                impact_read_assets(f, start, stop)
-                for gh3, start, stop in slices)
+                impact_read_assets(f, start, stop, rupfilter)
+                for _hex6, start, stop in slices)
             tagcol = f['tagcol']
             # revert the tagnames so that taxonomy becomes the first field,
             # ex. sorted_tagnames = ['taxonomy', 'ID_0', 'ID_1', 'OCCUPANCY']
@@ -1043,7 +1064,7 @@ class Exposure(object):
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, tagcol=None, errors=None,
-                 infr_conn_analysis=False, aggregate_by=None):
+                 infr_conn_analysis=False, aggregate_by=None, rupfilter=None):
         """
         :returns: an :class:`Exposure` instance keeping all the assets in
             memory
@@ -1063,7 +1084,7 @@ class Exposure(object):
         exp = None
         dfs = []
         for exposure, df in itertools.starmap(read_exp_df, allargs):
-            dfs.append(df)
+            dfs.append(rupfilter(df) if rupfilter else df)
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)

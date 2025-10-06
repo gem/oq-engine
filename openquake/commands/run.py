@@ -26,7 +26,7 @@ from pandas.errors import SettingWithCopyWarning
 
 from openquake.baselib import performance, general, config
 from openquake.hazardlib import valid
-from openquake.commonlib import logs, datastore, readinput
+from openquake.commonlib import logs, readinput
 from openquake.calculators import base, views
 from openquake.commonlib import dbapi
 from openquake.engine.engine import create_jobs, run_jobs
@@ -36,7 +36,7 @@ calc_path = None  # set only when the flag --slowest is given
 
 
 # called when profiling
-def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
+def _run(job_ini, concurrent_tasks, pdb, loglevel, exports,
          params, user_name, host=None):
     global calc_path
     if 'hazard_calculation_id' in params:
@@ -59,8 +59,6 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
                {'status': 'executing', 'pid': os.getpid()})
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
-        if reuse_input:  # enable caching
-            calc.oqparam.cachedir = datastore.get_datadir()
         calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
 
     logging.info('Total time spent: %s s', monitor.duration)
@@ -71,7 +69,6 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
 
 def main(job_ini,
          pdb=False,
-         reuse_input=False,
          *,
          slowest: int = None,
          hc: int = None,
@@ -113,7 +110,7 @@ def main(job_ini,
         params['concurrent_tasks'] = str(concurrent_tasks)
     if slowest:
         prof = cProfile.Profile()
-        prof.runctx('_run(job_ini[0], None, pdb, reuse_input, loglevel, '
+        prof.runctx('_run(job_ini[0], None, pdb, loglevel, '
                     'exports, params, host)', globals(), locals())
         pstat = calc_path + '.pstat'
         prof.dump_stats(pstat)
@@ -138,7 +135,6 @@ def main(job_ini,
 main.job_ini = dict(help='calculation configuration file '
                     '(or files, space-separated)', nargs='+')
 main.pdb = dict(help='enable post mortem debugging', abbrev='-d')
-main.reuse_input = dict(help='reuse source model and exposure')
 main.slowest = dict(help='profile and show the slowest operations')
 main.hc = dict(help='previous calculation ID')
 main.param = dict(help='override parameters with TOML syntax', nargs='*')

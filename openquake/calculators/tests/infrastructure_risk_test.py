@@ -21,7 +21,7 @@ import shutil
 import numpy
 from openquake.baselib import InvalidFile
 from openquake.qa_tests_data.infrastructure_risk import (
-    case_1, case_2, five_nodes_demsup_directed,
+    case_1, case_2, case_3, five_nodes_demsup_directed,
     five_nodes_demsup_directedunweighted,
     five_nodes_demsup_multidirected,
     demand_supply, directed, eff_loss_random,
@@ -68,6 +68,12 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk.csv', agg_csv)
         self.assertEqualFiles('expected/aggrisk-parent.csv', aggparent_csv)
 
+    def test_case_3(self):
+        # test that the TodorovichSilva model runs
+        # TODO: look at the warning covariance is not symmetric
+        # positive-semidefinite
+        self.run_calc(case_3.__file__, 'job_scenario.ini')
+
     def test_demand_supply(self):
         self.run_calc(demand_supply.__file__, 'job.ini')
         outputs_list = (
@@ -78,49 +84,50 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
 
     def test_directed(self):
         self.run_calc(directed.__file__, 'job.ini')
-        outputs_list = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
-        self._check_csv_outputs(outputs_list, self.calc.datastore, directed)
+        outs = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
+        self._check_csv_outputs(outs, self.calc.datastore, directed)
 
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
-        outputs_list = 'avg_loss event_efl node_el'.split()
+        outs = 'avg_loss event_efl node_el'.split()
 
-        self._check_csv_outputs(outputs_list, self.calc.datastore, eff_loss_random)
+        self._check_csv_outputs(outs, self.calc.datastore, eff_loss_random)
 
     def test_five_nodes_demsup_directed(self):
         self.run_calc(five_nodes_demsup_directed.__file__, 'job.ini')
-        outputs_list = ('avg_loss event_ccl event_efl event_pcl event_wcl node_el'
-                        ' dem_cl').split()
-        self._check_csv_outputs(outputs_list, self.calc.datastore, five_nodes_demsup_directed)
+        outs = ('avg_loss event_ccl event_efl event_pcl event_wcl node_el'
+                ' dem_cl').split()
+        self._check_csv_outputs(outs, self.calc.datastore,
+                                five_nodes_demsup_directed)
 
     def test_five_nodes_demsup_directedunweighted(self):
         self.run_calc(five_nodes_demsup_directedunweighted.__file__, 'job.ini')
-        outputs_list = ('avg_loss event_ccl event_efl event_pcl event_wcl node_el'
-                        ' dem_cl').split()
+        outs = ('avg_loss event_ccl event_efl event_pcl event_wcl '
+                'node_el dem_cl').split()
         self._check_csv_outputs(
-            outputs_list, self.calc.datastore, five_nodes_demsup_directedunweighted)
+            outs, self.calc.datastore, five_nodes_demsup_directedunweighted)
 
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
-        outputs_list = ('avg_loss event_ccl event_efl event_pcl event_wcl node_el'
-                        ' dem_cl').split()
+        outs = ('avg_loss event_ccl event_efl event_pcl event_wcl node_el'
+                ' dem_cl').split()
         self._check_csv_outputs(
-            outputs_list, self.calc.datastore, five_nodes_demsup_multidirected)
+            outs, self.calc.datastore, five_nodes_demsup_multidirected)
 
     def test_multidirected(self):
         self.run_calc(multidirected.__file__, 'job.ini')
-        outputs_list = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
-        self._check_csv_outputs(outputs_list, self.calc.datastore, multidirected)
+        outs = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
+        self._check_csv_outputs(outs, self.calc.datastore, multidirected)
 
     def test_multigraph(self):
         self.run_calc(multigraph.__file__, 'job.ini')
-        outputs_list = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
-        self._check_csv_outputs(outputs_list, self.calc.datastore, multigraph)
+        outs = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
+        self._check_csv_outputs(outs, self.calc.datastore, multigraph)
 
     def test_undirected(self):
         self.run_calc(undirected.__file__, 'job.ini')
-        outputs_list = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
-        self._check_csv_outputs(outputs_list, self.calc.datastore, undirected)
+        outs = 'avg_loss event_efl event_pcl event_wcl node_el taz_cl'.split()
+        self._check_csv_outputs(outs, self.calc.datastore, undirected)
 
     def test_missing_mandatory_column(self):
         with self.assertRaises(InvalidFile) as exc:

@@ -41,18 +41,19 @@ def get_mosaic_df(buffer):
     """
     :returns: a DataFrame with the mosaic geometries used in AELO
     """
-    fname = os.path.join(config.directory.mosaic_dir, 'ModelBoundaries_Year3-4_v2.shp')
-    if not os.path.exists(fname):
-        fname = os.path.join(os.path.dirname(mosaic.__file__),
-                             'ModelBoundaries_Year3-4_v2.shp')
-    df = readinput.read_geometries(fname, 'name', buffer)
+    mosaic_boundaries_file = config.directory.mosaic_boundaries_file
+    if not mosaic_boundaries_file:
+        mosaic_boundaries_file = os.path.join(
+            os.path.dirname(mosaic.__file__), 'ModelBoundaries.gpkg')
+    df = readinput.read_geometries(mosaic_boundaries_file, 'name', buffer)
     return df
 
 
-def get_params_from(inputs, mosaic_dir, exclude=()):
+def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     """
-    :param inputs: a dictionary with sites, vs30, siteid, asce_version
+    :param inputs: a dictionary with sites, vs30, siteid, asce_version, site_class
     :param mosaic_dir: directory where the mosaic is located
+    :param ini: path of the job ini file (if specified, mosaic_dir will be ignored)
 
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
@@ -67,7 +68,8 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     if models[0] == '???':
         raise ValueError(
             f'Site at lon={lon} lat={lat} is not covered by any model!')
-    ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
+    if ini is None:
+        ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['mosaic_model'] = models[0]
     if 'siteid' in inputs:
@@ -75,7 +77,6 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     else:
         # in aelo_test.py
         params['description'] += f' ({lon}, {lat})'
-        params['maximum_distance'] = 'magdist'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['truncation_level'] = '3.'
@@ -85,7 +86,8 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     params['sites'] = inputs['sites']
     params['max_sites_disagg'] = len(lonlats)
     if 'vs30' in inputs:
-        params['override_vs30'] = '%(vs30)s' % inputs
+        if inputs['vs30']:
+            params['override_vs30'] = '%(vs30)s' % inputs
     params['distance_bin_width'] = '20'
     params['num_epsilon_bins'] = '10'
     params['mag_bin_width'] = '0.1'
@@ -101,6 +103,13 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     params['export_dir'] = ''
     params['asce_version'] = inputs.get(
         'asce_version', oqvalidation.OqParam.asce_version.default)
+    if params['asce_version'] == 'ASCE7-16':
+        params['intensity_measure_types_and_levels'] = (
+            '{"PGA": logscale(0.005, 3.00, 25),'
+            ' "SA(0.2)": logscale(0.005, 9.00, 25),'
+            ' "SA(1.0)": logscale(0.005, 3.00, 25)}')
+    params['site_class'] = inputs.get(
+        'site_class', oqvalidation.OqParam.site_class.default)
     return params
 
 
@@ -116,6 +125,7 @@ def main(lon: valid.longitude,
          vs30: valid.positivefloat,
          siteid: str,
          asce_version: str,
+         site_class: str,
          job_owner_email=None,
          outputs_uri=None,
          jobctx=None,
@@ -126,8 +136,9 @@ def main(lon: valid.longitude,
     and from the command-line in testing mode.
     """
     oqvalidation.OqParam.asce_version.validator(asce_version)
+    oqvalidation.OqParam.site_class.validator(site_class)
     inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
-                  asce_version=asce_version)
+                  asce_version=asce_version, site_class=site_class)
     warnings = []
     if jobctx is None:
         # in  testing mode create a new job context

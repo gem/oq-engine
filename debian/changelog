@@ -1,7 +1,47 @@
+  [Michele Simionato]
+  * Extended the source_id-filtering feature to use .startswith
+  * Added a flag "aggregate_exposure" (false by default) to aggregate
+    the assets with the same taxonomy on the same hazard site
+  * Optimized "building cmakers" and the RateMap in the case of clusters
+    of sources (260x for the latest USA model)
+
+  [Christopher Brooks]
+  * Added BSSA14 site term capability to Modifiable GMPE + unit tests
+
+  [Richard Styron]
+  * Fixed `KiteSurface.get_middle_point` to manage NaNs
+
+  [Michele Simionato]
+  * Doing the check on the `export_dir` only if `--exports` is passed
+  * Fixed a `NameError: Missing liquefaction:LiqProb in gmf_data`
+    when using the TodorovicSilva2022NonParametric model
+  * gzipping the avg_losses reducing the disk space by half or so
+  * Added an extractor `losses_by_location`
+  * Filtering the assets around the rupture according to the maximum distance
+    in scenario calculations
+
+  [Claudia Mascandola]
+  * Added a Ramadan et al (2023) gsim
+
+  [Michele Simionato]
+  * Disabled the threads in PicklableInferenceSession, making it possible
+    to use the TodorovicSilva2022NonParametric model in high concurrency
+    situations
+  * Made it possible to merge pre_job.ini and job.ini in ShakeMap calculations
+  * Internal: changed `Exposure.read_around` to work in terms of h3 hexagons;
+    changed the exposure.hdf5 accordingly
+  * Added a private endpoint `/v1/calc/run_ini` to run remote calculations
+  * Added a private endpoint `/v1/calc/jobs_from_inis`
+
   [Myles Turner, Guillermo Aldama-Bustos]
   * Added GMM of Douglas et al. (2024)
 
   [Michele Simionato]
+  * Added a parameter config.dbserver.cache to avoid repeating calculations
+  * Removed the --reuse-input flag, since it was not used (use --hc instead)
+  * Changed install.py to exit if any of the tools is not installed
+  * Fixed small negative damages due to numeric errors
+  * Fixed the MIMETYPE to application/x-zip when needed in the WebUI
   * Removed the parameter `site_effects` since it is useless
   * Changed num_cores to be equal to the pool size when explicit
   * On Windows use as default num_cores

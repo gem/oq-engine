@@ -136,11 +136,11 @@ def angular_mean(degrees, weights=None):
     Given an array of angles in degrees, returns its angular mean.
     If weights are passed, assume sum(weights) == 1.
 
-    >>> angular_mean([179, -179])
+    >>> print(angular_mean([179, -179]))
     180.0
-    >>> angular_mean([-179, 179])
+    >>> print(angular_mean([-179, 179]))
     180.0
-    >>> angular_mean([-179, 179], [.75, .25])
+    >>> print(angular_mean([-179, 179], [.75, .25]))
     -179.4999619199226
     """
     if len(degrees) == 1:
@@ -247,7 +247,6 @@ class _GeographicObjects(object):
         mesh = exp.mesh
         assets_by_site = split_array(exp.assets, exp.assets['site_id'])
         if region:
-            # TODO: use SRTree
             out = []
             for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
                 if not geometry.Point(lon, lat).within(region):
@@ -267,7 +266,10 @@ class _GeographicObjects(object):
         assets_by_sid = collections.defaultdict(list)
         discarded = []
         objs, distances = self.get_closest(mesh.lons, mesh.lats)
-        for obj, distance, assets in zip(objs, distances, assets_by_site):
+        for obj, distance, assets, lon, lat in zip(
+                objs, distances, assets_by_site, mesh.lons, mesh.lats):
+            if round(lon, 3) == 132.473 and round(lat, 3) == 35.143:
+                breakpoint()
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
@@ -914,7 +916,7 @@ def geohash5(coords):
     return b'_'.join(row.tobytes() for row in arr).decode('ascii')
 
 
-# corresponds to blocks of 78 km
+# corresponds to blocks of 78 km; not used anymore
 def geohash3(lons, lats):
     """
     :returns: a geohash of length 3 as a 16 bit integer
@@ -958,10 +960,24 @@ def geolocate_geometries(geometries, geom_df, exclude=()):
     result_codes = numpy.empty(len(geometries), dtype=object)
     filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
     for i, input_geom in enumerate(geometries):
-        intersecting_codes = set()  # to store intersecting codes for current geometry
+        intersecting_codes = set()
+        # to store intersecting codes for current geometry
         for code, df in filtered_geom_df.groupby('code'):
-            target_geoms = df['geom'].values  # geometries associated with this code
-            if any(target_geom.intersects(input_geom) for target_geom in target_geoms):
+            target_geoms = df['geom'].values
+            # geometries associated with this code
+            if any(target.intersects(input_geom) for target in target_geoms):
                 intersecting_codes.add(code)
         result_codes[i] = sorted(intersecting_codes)
     return result_codes
+
+
+# resolution=3 means 12,386 square km (Connecticut)
+def hex6(lons, lats):
+    """
+    :returns: a list of H3 strings of length 6
+
+    >>> hex6(F64([10., 10.]), F64([45., 46.]))
+    ['831ea6', '831f99']
+    """
+    import h3  # import it only when needed
+    return [h3.geo_to_h3(lat, lon, 3)[:6] for lon, lat in zip(lons, lats)]

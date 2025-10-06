@@ -1,6 +1,7 @@
 # Suggested versions for development
 # !! must update pip first! so wheels will be used !!
 #
+https://wheelhouse.openquake.org/v3/windows/py311/h3-3.7.7-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/charset_normalizer-3.3.2-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/pandas-2.0.3-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/pyzmq-26.0.3-cp311-cp311-win_amd64.whl

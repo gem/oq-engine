@@ -1290,7 +1290,7 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, phi))
 
     # tested in test_collapse_small
-    def estimate_weight(self, src, srcfilter, multiplier=1):
+    def estimate_weight(self, src, srcfilter):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
@@ -1311,7 +1311,8 @@ class ContextMaker(object):
         if not ctxs:
             return eps, 0
         lenctx = sum(len(ctx) for ctx in ctxs)
-        esites = lenctx * src.num_ruptures / self.num_rups * multiplier
+        esites = (lenctx * src.num_ruptures /
+                  self.num_rups * srcfilter.multiplier)
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code in b'NX':  # increase weight
@@ -1320,7 +1321,7 @@ class ContextMaker(object):
             weight *= 2
         return max(weight, eps), int(esites)
 
-    def set_weight(self, sources, srcfilter, multiplier=1):
+    def set_weight(self, sources, srcfilter):
         """
         Set the weight attribute on each prefiltered source
         """
@@ -1329,8 +1330,7 @@ class ContextMaker(object):
                 src.weight = EPS
         else:
             for src in sources:
-                src.weight, src.esites = self.estimate_weight(
-                    src, srcfilter, multiplier)
+                src.weight, src.esites = self.estimate_weight(src, srcfilter)
                 # if src.code == b'S':
                 #     print(src, src.dt, src.num_ruptures / self.num_rups)
 
@@ -1884,6 +1884,37 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
     return dict(zip(mags, gmv))
 
 
+class ContextMakerSequence(collections.abc.Sequence):
+    """
+    Wrapper over a sequence of ContextMakers
+    """
+    def __init__(self, cmakers, inverse):
+        self.cmakers = cmakers
+        self.inverse = inverse
+
+    def __getitem__(self, idx):
+        return self.cmakers[idx]
+
+    def __len__(self):
+        return len(self.cmakers)
+
+    def enumerate(self):
+        for grp_id, inv in enumerate(self.inverse):
+            yield grp_id, self[inv]
+
+    def to_array(self, grp_ids=slice(None)):
+        return numpy.array([self[inv] for inv in self.inverse[grp_ids]])
+
+
+def get_unique_inverse(all_trt_smrs):
+    """
+    :returns: unique tuples trt_smrs and an array of indices
+    """
+    strings = [','.join(map(str, ts)) for ts in all_trt_smrs]
+    unique, inverse = numpy.unique(strings, return_inverse=True)
+    return [tuple(map(int, u.split(','))) for u in unique], inverse
+
+
 def get_cmakers(all_trt_smrs, full_lt, oq):
     """
     :params all_trt_smrs: a list of arrays
@@ -1892,6 +1923,7 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
     :returns: list of ContextMakers associated to the given src_groups
     """
     from openquake.hazardlib.site_amplification import AmplFunction
+    all_trt_smrs, inverse = get_unique_inverse(all_trt_smrs)
     if 'amplification' in oq.inputs and oq.amplification_method == 'kernel':
         df = AmplFunction.read_df(oq.inputs['amplification'])
         oq.af = AmplFunction.from_dframe(df)
@@ -1908,13 +1940,12 @@ def get_cmakers(all_trt_smrs, full_lt, oq):
         cm = ContextMaker(trts[trti], rlzs_by_gsim, oq)
         cm.trti = trti
         cm.trt_smrs = trt_smrs
-        cm.grp_id = grp_id
         cmakers.append(cm)
     gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
-    for cm in cmakers:
-        cm.gid = gids[cm.grp_id]
-        cm.wei = gweights[cm.gid]
-    return numpy.array(cmakers)
+    for cm, gid in zip(cmakers, gids):
+        cm.gid = gid
+        cm.wei = gweights[gid]
+    return ContextMakerSequence(cmakers, inverse)
 
 
 def read_cmakers(dstore, full_lt=None):

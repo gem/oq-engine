@@ -805,7 +805,8 @@ def write_source_model(dest, sources_or_groups, name=None,
         for grp_node in nodes:
             for src_node in grp_node:
                 if src_node["id"] in gridded_attrs:
-                    src_node.nodes = [n for n in src_node.nodes if n.tag == 'faults']
+                    src_node.nodes = [
+                        n for n in src_node.nodes if n.tag == 'faults']
         out.append(dest5)
 
     # produce a geometryModel if there are MultiFaultSources
@@ -825,6 +826,7 @@ def write_source_model(dest, sources_or_groups, name=None,
                     for i, sec in enumerate(sections)]
         gmodel = Node("geometryModel", attrs, nodes=secnodes)
         with open(dest[:-4] + '_sections.xml', 'wb') as f:
+            # tested in multi_fault_test.py
             nrml.write([gmodel], f, '%s')
             out.append(f.name)
     return out
