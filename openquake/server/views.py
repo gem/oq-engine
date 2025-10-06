@@ -1769,20 +1769,18 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         except KeyError:
             calc_aelo_version = '1.0.0'
         if 'asce07' in ds:
-            # try:
-            #     asce07_js = ds['asce07'][0].decode('utf8')
-            # except ValueError:
-            #     # NOTE: for backwards compatibility, read scalar
-            #     asce07_js = ds['asce07'][()].decode('utf8')
-            # asce07 = json.loads(asce07_js)
-            asce07 = ds['asce07']
+            try:
+                asce07_js = ds['asce07'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce07_js = ds['asce07'][()].decode('utf8')
+            asce07 = json.loads(asce07_js)
             asce07_key_mapping = {}
             if asce_version != 'ASCE7-16':
                 asce07_key_mapping = {
                     'PGA': 'PGAm',
                 }
-            asce07_m = {asce07_key_mapping.get(k, k): v[0] for k, v in asce07.items()}
-            # FIXME: keys have changed
+            asce07_m = {asce07_key_mapping.get(k, k): v for k, v in asce07.items()}
             for key, value in asce07_m.items():
                 if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
@@ -1794,13 +1792,12 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 else:
                     asce07_with_units[key + ' (g)'] = get_disp_val(value)
         if 'asce41' in ds:
-            # try:
-            #     asce41_js = ds['asce41'][0].decode('utf8')
-            # except ValueError:
-            #     # NOTE: for backwards compatibility, read scalar
-            #     asce41_js = ds['asce41'][()].decode('utf8')
-            # asce41 = json.loads(asce41_js)
-            asce41 = ds['asce41']
+            try:
+                asce41_js = ds['asce41'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce41_js = ds['asce41'][()].decode('utf8')
+            asce41 = json.loads(asce41_js)
             asce41_key_mapping = {}
             if asce_version != 'ASCE7-16':
                 asce41_key_mapping = {
@@ -1813,13 +1810,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     'BSE1N_S1': 'BSE1N_Sx1',
                     'BSE1E_S1': 'BSE1E_Sx1',
                 }
-            try:
-                asce41_m = {asce41_key_mapping.get(k, k): v[()][0]
-                            for k, v in asce41.items()}
-            except IndexError:
-                asce41_m = {asce41_key_mapping.get(k, k): v[()]
-                            for k, v in asce41.items()}
-            # FIXME: keys have changed
+            asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
             for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
                     continue
