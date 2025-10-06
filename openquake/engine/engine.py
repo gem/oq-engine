@@ -295,7 +295,8 @@ def watchdog(calc_id, pid, timeout):
             break
 
 
-def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False):
+def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
+             precalc=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -374,6 +375,13 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
             #with multiprocessing.pool.Pool(concurrent_jobs) as pool:
             #    pool.starmap(run_calc, args)
             parallel.multispawn(run_calc, args, concurrent_jobs)
+        elif concurrent_jobs:
+            nc = 1 + parallel.num_cores // concurrent_jobs
+            logging.warning('Using %d pools of %d cores each',
+                            concurrent_jobs, nc)
+            os.environ['OQ_NUM_CORES'] = str(nc)
+            parallel.multispawn(
+                run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)

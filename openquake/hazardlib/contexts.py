@@ -1290,7 +1290,7 @@ class ContextMaker(object):
                 interp1d(ctx.rrup, phi))
 
     # tested in test_collapse_small
-    def estimate_weight(self, src, srcfilter, multiplier=1):
+    def estimate_weight(self, src, srcfilter):
         """
         :param src: a source object
         :param srcfilter: a SourceFilter instance
@@ -1311,7 +1311,8 @@ class ContextMaker(object):
         if not ctxs:
             return eps, 0
         lenctx = sum(len(ctx) for ctx in ctxs)
-        esites = lenctx * src.num_ruptures / self.num_rups * multiplier
+        esites = (lenctx * src.num_ruptures /
+                  self.num_rups * srcfilter.multiplier)
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code in b'NX':  # increase weight
@@ -1320,7 +1321,7 @@ class ContextMaker(object):
             weight *= 2
         return max(weight, eps), int(esites)
 
-    def set_weight(self, sources, srcfilter, multiplier=1):
+    def set_weight(self, sources, srcfilter):
         """
         Set the weight attribute on each prefiltered source
         """
@@ -1329,8 +1330,7 @@ class ContextMaker(object):
                 src.weight = EPS
         else:
             for src in sources:
-                src.weight, src.esites = self.estimate_weight(
-                    src, srcfilter, multiplier)
+                src.weight, src.esites = self.estimate_weight(src, srcfilter)
                 # if src.code == b'S':
                 #     print(src, src.dt, src.num_ruptures / self.num_rups)
 

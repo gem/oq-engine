@@ -334,7 +334,8 @@ def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     ordinates = list(ordinates)
     periods = list(periods)
     # For sds, find periods from 0.2-5.0s, inclusive
-    sds_indices = [index for index, period in enumerate(periods) if 0.2 <= period <= 5]
+    sds_indices = [index for index, period in enumerate(periods)
+                   if 0.2 <= period <= 5]
     # sds is 90% of the maximum from 0.2-5.0s
     sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
 
@@ -610,7 +611,7 @@ def smart_round(number):
     Round the ASCE values (if they are floats)
     """
     if isinstance(number, pd.Series):
-        return round(float(number), ASCE_DECIMALS)
+        return round(float(number.iloc[0]), ASCE_DECIMALS)
     elif isinstance(number, str):
         return number
     elif np.isnan(number):
@@ -651,78 +652,41 @@ def get_zero_hazard_asce07(dstore,vs30):
     return asce07
 
 
-#class ASCE41Calculator:
-def get_spectra(dstore, sid, custom_id, sa_data_site, mce, facts):
-    fact = dict(zip(mce, facts))
+def get_spectra(dstore, sid, custom_id, mce, facts):
+    hmap = dstore["hmaps-stats"][sid, 0]  # shape (M, P)
     oq = dstore['oqparam']
+    poes = oq.poes
     imts = list(oq.imtls)
     periods = [from_string(imt).period for imt in imts]
-
+    
     if int(oq.investigation_time) == 1:
-        sa_poe5_50 = sa_data_site["poe-0.001025"]
-        sa_poe20_50 = sa_data_site["poe-0.004453"]
-        sa_poe10_50 = sa_data_site["poe-0.002105"]
+        poe5_50 = poes.index(0.001025)
+        poe20_50 = poes.index(0.004453)
+        poe10_50 = poes.index(0.002105)
     elif int(oq.investigation_time) == 50:
-        sa_poe5_50 = sa_data_site["poe-0.05"]
-        sa_poe20_50 = sa_data_site["poe-0.2"]
-        sa_poe10_50 = sa_data_site["poe-0.1"]
+        poe5_50 = poes.index(0.05)
+        poe20_50 = poes.index(0.2)
+        poe10_50 = poes.index(0.1)
 
     BSE2N = mce
     BSE1N = [2 / 3 * val for val in mce]
-    BSE2E_uhs = [f * h for f, h in zip(facts, sa_poe5_50)]
+    BSE2E_uhs = [f * h for f, h in zip(facts, hmap[:, poe5_50])]
     BSE2E = [min(n, e) for n, e in zip(BSE2N, BSE2E_uhs)]
-    BSE1E_uhs = [f * h for f, h in zip(facts, sa_poe20_50)]
+    BSE1E_uhs = [f * h for f, h in zip(facts, hmap[:, poe20_50])]
     BSE1E = [min(n, e) for n, e in zip(BSE1N, BSE1E_uhs)]
-    uhs_475 = sa_poe10_50
-
-    sa_data = {'custom_site_id': custom_id * len(imts),
-                'sid': sid * len(imts),
-                'IMT': imts,
-                'period': periods,
-                'BSE2N': BSE2N,
-                'BSE2E': BSE2E,
-                'BSE1N': BSE1N,
-                'BSE1E': BSE1E,
-                'uhs_475': uhs_475}
-
+    uhs_475 = hmap[:, poe10_50]
+    
+    sa_data = {'custom_site_id': [custom_id] * len(imts),
+               'sid': [sid] * len(imts),
+               'IMT': imts,
+               'period': periods,
+               'BSE2N': BSE2N,
+               'BSE2E': BSE2E,
+               'BSE1N': BSE1N,
+               'BSE1E': BSE1E,
+               'uhs_475': uhs_475}
+    
     return sa_data
-
-def get_spectra_orig(dstore, sid, custom_id, mce, facts):
-        fact = dict(zip(mce, facts))
-        hmap = dstore["hmaps-stats"][sid, 0]  # shape (M, P)
-        oq = dstore['oqparam']
-        poes = oq.poes
-        imts = list(oq.imtls)
-        periods = [from_string(imt).period for imt in imts]
-
-        if int(oq.investigation_time) == 1:
-            poe5_50 = poes.index(0.001025)
-            poe20_50 = poes.index(0.004453)
-            poe10_50 = poes.index(0.002105)
-        elif int(oq.investigation_time) == 50:
-            poe5_50 = poes.index(0.05)
-            poe20_50 = poes.index(0.2)
-            poe10_50 = poes.index(0.1)
-
-        BSE2N = mce
-        BSE1N = [2 / 3 * val for val in mce]
-        BSE2E_uhs = [f * h for f, h in zip(facts, hmap[:, poe5_50])]
-        BSE2E = [min(n, e) for n, e in zip(BSE2N, BSE2E_uhs)]
-        BSE1E_uhs = [f * h for f, h in zip(facts, hmap[:, poe20_50])]
-        BSE1E = [min(n, e) for n, e in zip(BSE1N, BSE1E_uhs)]
-        uhs_475 = hmap[:, poe10_50]
-
-        sa_data = {'custom_site_id': [custom_id] * len(imts),
-                   'sid': [sid] * len(imts),
-                    'IMT': imts,
-                    'period': periods,
-                    'BSE2N': BSE2N,
-                    'BSE2E': BSE2E,
-                    'BSE1N': BSE1N,
-                    'BSE1E': BSE1E,
-                    'uhs_475': uhs_475}
-
-        return sa_data
 
 
 def get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS):
@@ -751,32 +715,36 @@ def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
     if (sa_data['BSE2N'] == 0).all():
         design_BSE2N = ['n.a.','n.a.','n.a.','n.a.']
     else:
-        design_BSE2N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2N'], Vs30)
+        design_BSE2N = calc_sds_and_sd1(
+            sa_data['period'], sa_data['BSE2N'], Vs30)
         
     if (sa_data['BSE1N'] == 0).all():
         design_BSE1N = ['n.a.','n.a.','n.a.','n.a.']
     else:    
-        design_BSE1N = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1N'], Vs30)
+        design_BSE1N = calc_sds_and_sd1(
+            sa_data['period'], sa_data['BSE1N'], Vs30)
         
     if (sa_data['BSE2E'] == 0).all():
         design_BSE2E = ['n.a.','n.a.','n.a.','n.a.']
     else:
-        design_BSE2E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE2E'], Vs30)
+        design_BSE2E = calc_sds_and_sd1(
+            sa_data['period'], sa_data['BSE2E'], Vs30)
         
     if (sa_data['BSE1E'] == 0).all():
         design_BSE1E = ['n.a.','n.a.','n.a.','n.a.']
     else:
-        design_BSE1E = calc_sds_and_sd1(sa_data['period'], sa_data['BSE1E'], Vs30)
+        design_BSE1E = calc_sds_and_sd1(
+            sa_data['period'], sa_data['BSE1E'], Vs30)
 
     return {
-        'BSE2N_Sxs': smart_round(design_BSE2N[0]),
-        'BSE2E_Sxs': smart_round(design_BSE2E[0]),
-        'BSE1N_Sxs': smart_round(design_BSE1N[0]),
-        'BSE1E_Sxs': smart_round(design_BSE1E[0]),
-        'BSE2N_Sx1': smart_round(design_BSE2N[1]),
-        'BSE2E_Sx1': smart_round(design_BSE2E[1]),
-        'BSE1N_Sx1': smart_round(design_BSE1N[1]),
-        'BSE1E_Sx1': smart_round(design_BSE1E[1]),
+        'BSE2N_Sxs': smart_round(design_BSE2N[2]),
+        'BSE2E_Sxs': smart_round(design_BSE2E[2]),
+        'BSE1N_Sxs': smart_round(design_BSE1N[2]),
+        'BSE1E_Sxs': smart_round(design_BSE1E[2]),
+        'BSE2N_Sx1': smart_round(design_BSE2N[3]),
+        'BSE2E_Sx1': smart_round(design_BSE2E[3]),
+        'BSE1N_Sx1': smart_round(design_BSE1N[3]),
+        'BSE1E_Sx1': smart_round(design_BSE1E[3])
     }
 
 
@@ -784,10 +752,10 @@ def get_zero_hazard_asce41(asce_version):
     na = 'n.a.'
     if asce_version == 'ASCE7-16':
         keys = [
-            'BSE2N_Ss', 'BSE2E_Ss', 'Ss_5_50',
-            'BSE1N_Ss', 'BSE1E_Ss', 'Ss_20_50',
-            'BSE2N_S1', 'BSE2E_S1', 'S1_5_50',
-            'BSE1N_S1', 'BSE1E_S1', 'S1_20_50',
+            'BSE2N_Ss', 'BSE2E_Ss', 
+            'BSE1N_Ss', 'BSE1E_Ss', 
+            'BSE2N_S1', 'BSE2E_S1', 
+            'BSE1N_S1', 'BSE1E_S1', 
         ]
     else:
         keys = [
@@ -960,8 +928,7 @@ def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
         custom_id = sitecol[sitecol['sids'] == sid]['custom_site_id']
         # get single value
         # Get the spectra for this site
-        uhs_asce41 = get_spectra_orig(
-            dstore, sid, custom_id, mce_df_site, facts)
+        uhs_asce41 = get_spectra(dstore, sid, custom_id, mce_df_site, facts)
         
         # Convert to DataFrame and reset index
         df_out = pd.DataFrame(uhs_asce41).reset_index(drop=True)
