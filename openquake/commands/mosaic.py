@@ -148,7 +148,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     for name, table in asce.items():
         fname = os.path.abspath(f'asce/{name}.org')
         with open(fname, 'w') as f:
-            print(views.text_table(table, ext='org'), file=f)
+            print(views.text_table(table[1:], table[0], ext='org'), file=f)
         print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
