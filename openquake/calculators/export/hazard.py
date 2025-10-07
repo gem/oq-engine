@@ -174,7 +174,6 @@ def export_aelo_csv(key, dstore):
 
     return [fname]
 
-
 def get_all_imtls(dstore):
     """
     :returns: a DictArray imt->imls if the datastore contains 'all_imtls'
@@ -751,6 +750,17 @@ def export_rtgm(ekey, dstore):
     df = dstore.read_df('rtgm')
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.export_path('rtgm.csv')
+    comment = dstore.metadata.copy()
+    writer.save(df, fname, comment=comment)
+    return [fname]
+
+
+@export.add(('spectra_asce41', 'csv'), ('asce41_sa_final', 'csv'))
+def export_asce41_spectra(ekey, dstore):
+    key = ekey[0]
+    df = dstore.read_df(key)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path(f'{key}.csv')
     comment = dstore.metadata.copy()
     writer.save(df, fname, comment=comment)
     return [fname]

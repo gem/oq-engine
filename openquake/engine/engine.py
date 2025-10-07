@@ -295,7 +295,8 @@ def watchdog(calc_id, pid, timeout):
             break
 
 
-def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False):
+def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
+             precalc=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -313,11 +314,11 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
             raise ValueError('You can use at most %d nodes' %
                              (max_cores // parallel.num_cores))
 
-    if concurrent_jobs is None:
-        # // 8 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 8 or 1
-        if dist in ('slurm', 'zmq'):
-            print(f'{concurrent_jobs=}')
+    if dist in ('slurm', 'zmq'):
+        if concurrent_jobs is None:
+            # // 8 is chosen so that the core occupation in cole is decent
+            concurrent_jobs = parallel.Starmap.CT // 8 or 1
+        print(f'{concurrent_jobs=}')
 
     job_id = jobctxs[0].calc_id
     if precalc:
@@ -374,6 +375,13 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
             #with multiprocessing.pool.Pool(concurrent_jobs) as pool:
             #    pool.starmap(run_calc, args)
             parallel.multispawn(run_calc, args, concurrent_jobs)
+        elif concurrent_jobs:
+            nc = 1 + parallel.num_cores // concurrent_jobs
+            logging.warning('Using %d pools of %d cores each',
+                            concurrent_jobs, nc)
+            os.environ['OQ_NUM_CORES'] = str(nc)
+            parallel.multispawn(
+                run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)

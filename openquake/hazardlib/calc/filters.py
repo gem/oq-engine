@@ -426,6 +426,8 @@ class SourceFilter(object):
     Filter the sources by using `self.sitecol.within_bbox` which is
     based on numpy.
     """
+    multiplier = 1  # not reduce
+
     def __init__(self, sitecol, integration_distance=default):
         self.sitecol = sitecol
         self.integration_distance = integration_distance
@@ -439,7 +441,9 @@ class SourceFilter(object):
         sc = object.__new__(site.SiteCollection)
         sc.array = self.sitecol[idxs]
         sc.complete = self.sitecol.complete
-        return self.__class__(sc, self.integration_distance)
+        new = self.__class__(sc, self.integration_distance)
+        new.multiplier = multiplier
+        return new
 
     def get_enlarged_box(self, src, maxdist=None):
         """

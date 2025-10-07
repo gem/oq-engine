@@ -1273,6 +1273,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
 
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
+    if oqparam.aggregate_exposure:
+        A = len(assetcol)
+        assetcol = assetcol.agg_by_site()
+        logging.info(f'Aggregated {A} assets -> {len(assetcol)} assets')
+
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
     tax = assetcol.tagcol.taxonomy[u[idx]]
@@ -1628,7 +1633,7 @@ def get_input_files(oqparam):
             fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
         elif key == 'source_model':
-            fnames.add(oqparam.inputs['source_model'])
+            fnames.update(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list
             fnames.update(fname)
             if any(f.endswith(('.xml', '.nrml')) for f in fnames):

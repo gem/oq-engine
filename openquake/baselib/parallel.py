@@ -678,18 +678,19 @@ class SharedArray(object):
         self.sm.close()
         self.sm.unlink()
 
-# determine the number of cores to use
+# determine the number of cores to use; for instance on a system with
+# 12 threads and 8 GB of RAM, tot_cores = min(12, 8) = 8
 cpu_count = psutil.cpu_count()
-if sys.platform == 'win32' and cpu_count > 8:
-    # assume hyperthreading is on; use half the threads to save memory
-    tot_cores = cpu_count // 2
-elif sys.platform == 'linux':
+gb_count = int(psutil.virtual_memory().total / 1E9)
+if sys.platform == 'linux':
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
-    tot_cores = len(psutil.Process().cpu_affinity())
+    tot_cores = min(len(psutil.Process().cpu_affinity()), gb_count)
 else:
-    tot_cores = cpu_count
-num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
+    tot_cores = min(cpu_count, gb_count)
+num_cores = int(os.environ.get('OQ_NUM_CORES') or
+                config.distribution.get('num_cores')
+                or tot_cores)
 
 
 class Starmap(object):
@@ -720,7 +721,7 @@ class Starmap(object):
             cls.pool = multiprocessing.dummy.Pool(num_cores)
 
         if num_cores > tot_cores:
-            logging.warning(f'Overcommit: {num_cores=} but {tot_cores=}')
+            logging.warning(f'{num_cores=} but {tot_cores=}')
 
     @classmethod
     def shutdown(cls):

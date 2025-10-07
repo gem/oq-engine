@@ -705,47 +705,42 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
-    def split(self, cmakers, sitecol, max_weight, num_chunks=1, tiling=False):
+    def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
         """
         grp_ids = numpy.argsort([sg.weight for sg in self.src_groups])[::-1]
-        if isinstance(cmakers, numpy.ndarray):  # no labels in preclassical
-            for cmaker in cmakers:
-                if self.src_groups[cmaker.grp_id].weight:
-                    yield self._split(
-                        cmaker, sitecol, max_weight, num_chunks, tiling)
-            return
         # cmakers is a dictionary label -> array of cmakers
-        with_labels = len(cmakers) > 1
-        for idx, label in enumerate(cmakers):
-            for cmaker in cmakers[label][grp_ids]:
-                if self.src_groups[cmaker.grp_id].weight == 0:
+        with_labels = len(cmdict) > 1
+        for idx, label in enumerate(cmdict):
+            cms = cmdict[label].to_array(grp_ids)
+            for cmaker, grp_id in zip(cms, grp_ids):
+                sg = self.src_groups[grp_id]
+                if sg.weight == 0:
                     # happens in LogicTreeTestCase::test_case_08 since the
                     # point sources are far away as determined in preclassical
                     continue
-                if len(cmakers) > 1:  # has labels
+                if len(cmdict) > 1:  # has labels
                     sites = sitecol.filter(sitecol.ilabel == idx)
                 else:
                     sites = sitecol
                 if sites:
                     if with_labels:
                         cmaker.ilabel = idx
-                    yield self._split(
-                        cmaker, sites, max_weight, num_chunks, tiling)
+                    yield self.split_sg(
+                        cmaker, sg, sites, max_weight, num_chunks, tiling)
 
-    def _split(self, cmaker, sitecol, max_weight, num_chunks=1, tiling=False):
+    def split_sg(self, cmaker, sg, sitecol, max_weight,
+                 num_chunks=1, tiling=False):
         N = len(sitecol)
         oq = cmaker.oq
-        grp_id = cmaker.grp_id
-        sg = self.src_groups[grp_id]
         max_mb = float(config.memory.pmap_max_mb)
         mb_per_gsim = oq.imtls.size * N * 4 / 1024**2
         G = len(cmaker.gsims)
         splits = G * mb_per_gsim / max_mb
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
-            blocks = [None]
+            blocks = [sg.grp_id]
             tiles = max(hint, splits)
         else:
             # if hint > max_blocks generate max_blocks and more tiles
@@ -753,15 +748,13 @@ class CompositeSourceModel:
                 sg, min(hint, oq.max_blocks), lambda s: s.weight))
             tiles = max(hint / oq.max_blocks * splits, splits)
         tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
-        cmaker.tiling = tiling
+        extra = dict(codes=sg.codes,
+                     num_chunks=num_chunks,
+                     blocks=len(blocks),
+                     weight=sg.weight,
+                     atomic=sg.atomic)
         cmaker.gsims = list(cmaker.gsims)  # save data transfer
-        cmaker.codes = sg.codes
-        cmaker.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-        cmaker.num_chunks = num_chunks
-        cmaker.blocks = len(blocks)
-        cmaker.weight = sg.weight
-        cmaker.atomic = sg.atomic
-        return cmaker, tilegetters, blocks, numpy.ceil(splits)
+        return cmaker, tilegetters, blocks, extra
 
     def __toh5__(self):
         G = len(self.src_groups)

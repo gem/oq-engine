@@ -576,7 +576,7 @@ def extract_mean_by_rup(dstore, what):
     assert N == 1
     out = []
     ctx_by_grp = read_ctx_by_grp(dstore)
-    cmakers = read_cmakers(dstore)
+    cmakers = read_cmakers(dstore).to_array()
     for gid, ctx in ctx_by_grp.items():
         # shape (4, G, M, U) => U
         means = cmakers[gid].get_mean_stds([ctx], split_by_mag=True)[0].mean(

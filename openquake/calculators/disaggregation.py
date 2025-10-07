@@ -245,7 +245,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         logging.info("Reading contexts")
-        cmakers = read_cmakers(dstore)
+        cmakers = read_cmakers(dstore).to_array()
         if 'src_mutex' in dstore:
             gb = dstore.read_df('src_mutex').groupby('grp_id')
             gp = dict(dstore['grp_probability'])  # grp_id -> probability
