@@ -28,6 +28,7 @@ from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
+from openquake.sep.classes import corresponds
 from openquake.risklib import scientific
 
 U8 = numpy.uint8
@@ -239,23 +240,6 @@ class PerilDict(dict):
             return dict.__getitem__(self, lt)
         else:  # assume lt is a loss_type string
             return dict.__getitem__(self, ('groundshaking', lt))
-
-
-def corresponds(col, peril, imt):
-    """
-    True if the column in gmf_data corresponds to the peril for the given imt
-    """
-    if col.startswith('HazusDeformation'):
-        # TODO: this looks wrong, it should be liquefaction
-        return peril == 'groundshaking' and col.endswith(imt)
-    elif peril == 'groundshaking':
-        return col == imt
-    elif peril == 'liquefaction':
-        # hackish solution so that TodorovicSilva2022NonParametric works
-        # (infractructure test case_3); we rely on a naming convention,
-        # i.e. having the peril in the column name
-        peril = 'liq'
-    return peril in col.lower() and col.endswith(imt)
 
 
 class RiskModel(object):

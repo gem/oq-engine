@@ -1238,5 +1238,30 @@ class Volcanic(SecondaryPeril):
     def compute(self, mag, imt_gmf, sites):
         # doing nothing, since all the work is in the `prepare` method
         return []
+
+
+LIQUEFACTION_MODELS = {cls.__name__ for cls in [
+    HazusLiquefaction, ZhuEtAl2015LiquefactionGeneral,
+    ZhuEtAl2017LiquefactionCoastal, ZhuEtAl2017LiquefactionGeneral,
+    RashidianBaise2020Liquefaction, AllstadtEtAl2022Liquefaction,
+    AkhlagiEtAl2021LiquefactionA, AkhlagiEtAl2021LiquefactionB,
+    Bozzoni2021LiquefactionEurope, TodorovicSilva2022NonParametric,
+    HazusDeformation]}
+
+LANDSLIDE_MODELS = {cls.__name__ for cls in [
+    Jibson2007ALandslides, Jibson2007BLandslides,
+    ChoRathje2022Landslides, FotopoulouPitilakis2015ALandslides,
+    FotopoulouPitilakis2015BLandslides, FotopoulouPitilakis2015CLandslides,
+    FotopoulouPitilakis2015DLandslides, SaygiliRathje2008Landslides,
+    RathjeSaygili2009Landslides, JibsonEtAl2000Landslides,
+    NowickiJessee2018Landslides, AllstadtEtAl2022Landslides]}
         
 
+def corresponds(col, peril, imt):
+    if peril == 'groundshaking':
+        return col == imt
+    name, imt_ = col.split('_')
+    if peril == 'liquefaction':
+        return name in LIQUEFACTION_MODELS and imt == imt_
+    elif peril == 'landslide':
+        return name in LANDSLIDE_MODELS and imt == imt_
