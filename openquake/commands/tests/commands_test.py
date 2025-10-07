@@ -828,6 +828,8 @@ class RunSiteTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mosaic_dir = os.path.dirname(mosaic.__file__)
+        if not os.path.exists('asce'):
+            os.makedirs('asce')
 
     def test_runsite_case1(self):
         # tests when there is a lonlat file without vs30 but its given as
