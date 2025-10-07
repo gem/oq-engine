@@ -120,7 +120,6 @@ The following file (on all nodes) should be modified to enable
 oq_distribute = zmq
 
 [dbserver]
-file = /opt/openquake/oqdata/db.sqlite3
 # address of the dbserver
 # on multi-node cluster it must be the IP or hostname
 # of the master node (on the master node cfg too)
