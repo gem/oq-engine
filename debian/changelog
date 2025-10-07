@@ -13,6 +13,7 @@
   * Added BSSA14 site term capability to Modifiable GMPE + unit tests
 
   [Richard Styron]
+  * Added method `from_moment` to the `TaperedGRMFD` class
   * Fixed `KiteSurface.get_middle_point` to manage NaNs
 
   [Michele Simionato]
