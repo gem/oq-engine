@@ -57,7 +57,6 @@ from openquake.qa_tests_data.scenario import case_25
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server.tests import data as test_data
-from openquake.commands.mosaic import run_site
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 NRML_DIR = os.path.dirname(tests.__file__)
@@ -832,9 +831,10 @@ class RunSiteTestCase(unittest.TestCase):
         vs30 = 430
         asce_version = 'ASCE7-22'
         with Print.patch():
-            sap.runline(f'openquake.commands mosaic run_site {file} '
-                        f'{self.mosaic_dir} -v {vs30} -a {asce_version}')
-        dstore = read(-1)
+            [calc_id] = sap.runline(
+                f'openquake.commands mosaic run_site {file} '
+                f'{self.mosaic_dir} -v {vs30} -a {asce_version}')
+        dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [vs30]
         assert dstore['oqparam'].asce_version == asce_version
 
@@ -843,9 +843,9 @@ class RunSiteTestCase(unittest.TestCase):
         # argument and the default asce version is used
         file = os.path.join(DATADIR, 'site_case1.csv')
         with Print.patch():
-            sap.runline(f'openquake.commands mosaic run_site {file} '
-                        f'{self.mosaic_dir}')
-        dstore = read(-1)
+            [calc_id] = sap.runline(
+                f'openquake.commands mosaic run_site {file} {self.mosaic_dir}')
+        dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [760]
         assert dstore['oqparam'].asce_version == 'ASCE7-16'
 
@@ -854,9 +854,9 @@ class RunSiteTestCase(unittest.TestCase):
         # version is used
         file = os.path.join(DATADIR, 'site_case3.csv')
         with Print.patch():
-            sap.runline(f'openquake.commands mosaic run_site {file} ' 
-                        f'{self.mosaic_dir}')
-        dstore = read(-1)
+            [calc_id] = sap.runline(
+                f'openquake.commands mosaic run_site {file} {self.mosaic_dir}')
+        dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [222]
         assert dstore['oqparam'].asce_version == 'ASCE7-16'
 
@@ -865,10 +865,12 @@ class RunSiteTestCase(unittest.TestCase):
         # class (and therefore asce 7-22) are used
         file = os.path.join(DATADIR, 'site_case4.csv')
         with Print.patch():
-            sap.runline(f'openquake.commands mosaic run_site {file} '
-                        f' {self.mosaic_dir} -a ASCE7-22')
-        dstore = read(-1)
+            [calc_id] = sap.runline(
+                f'openquake.commands mosaic run_site {file} '
+                f' {self.mosaic_dir} -a ASCE7-22')
+        dstore = read(calc_id)
         assert dstore['oqparam'].override_vs30 == [260.0, 365.0, 530.0]
+
 
 def teardown_module():
     parallel.Starmap.shutdown()

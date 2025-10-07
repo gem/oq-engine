@@ -152,6 +152,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
         print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
+    return [log.calc_id for log in logctxs]
 
 
 def run_site(lonlat_or_fname, mosaic_dir=None,
@@ -172,9 +173,8 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
         sys.exit('Please install the rtgmpy wheel')
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
-        from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs,
-                  asce_version, vs30)
-        return
+        return from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs,
+                         asce_version, vs30)
     sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
     params = get_params_from(
         dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir)
@@ -185,6 +185,7 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
         engine_profile(jobctx, slowest or 40)
     else:
         engine.run_jobs([jobctx], concurrent_jobs=concurrent_jobs)
+    return [jobctx.calc_id]
 
 
 run_site.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
