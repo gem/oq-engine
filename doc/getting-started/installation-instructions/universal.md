@@ -186,8 +186,7 @@ $ sudo -H python3.11 install.py server
 
 The installation script will automatically create a user called
 `openquake` and will install the engine in the directory
-`/opt/openquake`.  Calculation data will be stored in
-`/var/lib/openquake/oqdata`.
+`/opt/openquake/venv`. Calculation data will be stored in `$HOME/oqdata`.
 
 *NB*: if you already have an engine installation made with debian or rpm
 packages, before installing the new version you must uninstall the old
