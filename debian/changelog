@@ -1,3 +1,7 @@
+  [Guillermo Aldama-Bustos]
+  * Fixed the unit of measure in the Douglas et al (2024) GMM and updated
+   coefficients for the 3- and 5-branch models to fix an error
+
   [Michele Simionato, Kendra Johnson]
   * Internal: parallelized the AELO mosaic tests and made it possible to pass
     the asce_version and vs30 parameters
