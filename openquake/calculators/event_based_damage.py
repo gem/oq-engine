@@ -248,8 +248,13 @@ class DamageCalculator(EventBasedRiskCalculator):
                     # set no_damage
                     self.dmgcsq[p, :, r, li, 0] = number - ndamaged[:, li]
 
-        assert (self.dmgcsq >= 0).all()  # sanity check
-        self.datastore['damages-rlzs'] = arr = self.crmodel.to_multi_damage(self.dmgcsq)
+        # due numeric errors we can have small negative damages; we fix them
+        small = self.dmgcsq < 0
+        assert (small > -1E-6).all()
+        self.dmgcsq[small] = 0
+
+        self.datastore['damages-rlzs'] = arr = self.crmodel.to_multi_damage(
+            self.dmgcsq)
         s = oq.hazard_stats()
         if s and self.R > 1:
             _statnames, statfuncs = zip(*s.items())

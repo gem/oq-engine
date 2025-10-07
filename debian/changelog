@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Backported the fix for small negative damages (https://github.com/gem/oq-engine/pull/10772)
+  * Fixed the documentation about the installation directories
+
 python3-oq-engine (3.23.3-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
