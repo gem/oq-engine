@@ -9,7 +9,7 @@ import pandas as pd
 import onnxruntime as ort
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib.gsim.base import GMPE, registry
+from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA, PGV
 
@@ -243,9 +243,9 @@ class Taherian2024Inland(GMPE):
     REQUIRES_DISTANCES = {"rjb"}
     SUPPORTED_SA_PERIODS = (0.01, 4.0)
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         """Initialize with model path only"""
-        super().__init__(**kwargs)
+        super().__init__()
         base_dir = os.path.dirname(__file__)
         self.model_path = os.path.join(
             base_dir, "taherian_2024_data", "ANN_Portugal_rock.onnx")
@@ -282,6 +282,3 @@ class Taherian2024Inland(GMPE):
             sig[m] = interp_sig(period)
             tau[m] = interp_tau(period)
             phi[m] = interp_phi(period)
-
-
-registry["Taherian2024Inland"] = Taherian2024Inland
