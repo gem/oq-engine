@@ -39,8 +39,8 @@ def main(calc_id):
         remote = False
         fname = os.path.join(datadir, os.path.basename(calc_id))
         if fname != calc_id:
-            print(f'Moving into {fname}')
-            os.rename(calc_id, fname)
+            print(f'Symlinking into {fname}')
+            os.symlink(calc_id, fname)
         calc_id =  datastore.extract_calc_id_datadir(calc_id)[0]
     else:
         remote = True
