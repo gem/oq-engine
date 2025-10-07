@@ -822,6 +822,8 @@ class RunSiteTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mosaic_dir = os.path.dirname(mosaic.__file__)
+        if not os.path.exists('asce'):
+            os.makedirs('asce')
 
     def test_runsite_case1(self):
         # tests when there is a lonlat file without vs30 but its given as
@@ -852,8 +854,8 @@ class RunSiteTestCase(unittest.TestCase):
         # version is used
         file = os.path.join(DATADIR, 'site_case3.csv')
         with Print.patch():
-            sap.runline(f'openquake.commands mosaic run_site {file} '
-                        'f{self.mosaic_dir}')
+            sap.runline(f'openquake.commands mosaic run_site {file} ' 
+                        f'{self.mosaic_dir}')
         dstore = read(-1)
         assert dstore['oqparam'].override_vs30 == [222]
         assert dstore['oqparam'].asce_version == 'ASCE7-16'
