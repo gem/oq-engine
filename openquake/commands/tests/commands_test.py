@@ -20,6 +20,8 @@ import io
 import os
 import re
 import sys
+from pathlib import Path
+from unittest import skipIf
 import unittest.mock as mock
 from contextlib import redirect_stdout
 import shutil
@@ -28,8 +30,6 @@ import subprocess
 import tempfile
 import unittest
 import numpy
-
-from pathlib import Path
 
 from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp, chdir
@@ -57,6 +57,11 @@ from openquake.qa_tests_data.scenario import case_25
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server.tests import data as test_data
+
+try:
+    import rtgmpy
+except ImportError:
+    rtgmpy = None
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 NRML_DIR = os.path.dirname(tests.__file__)
@@ -818,12 +823,11 @@ class GPKG2NRMLTestCase(unittest.TestCase):
         self._check_output(out_path, expected_path)
 
 
+@skipIf(rtgmpy is None, 'Missing rtgmpy')
 class RunSiteTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mosaic_dir = os.path.dirname(mosaic.__file__)
-        if not os.path.exists('asce'):
-            os.makedirs('asce')
 
     def test_runsite_case1(self):
         # tests when there is a lonlat file without vs30 but its given as
