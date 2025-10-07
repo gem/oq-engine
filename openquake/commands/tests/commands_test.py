@@ -817,6 +817,7 @@ class GPKG2NRMLTestCase(unittest.TestCase):
             self.datadir, 'expected_simple_fault_source_converted_nrml.xml')
         self._check_output(out_path, expected_path)
 
+
 class RunSiteTestCase(unittest.TestCase):
 
     def setUp(self):
