@@ -45,8 +45,8 @@ def _compute_mean(C, mag, dist):
             _compute_term1(C, mag) +
             _compute_term2(C, mag, dist) +
             _compute_term3(C, dist)
-            )
-    return mean
+            ) - np.log(9.80665)
+    return mean 
 
 
 def _compute_term1(C, mag):
