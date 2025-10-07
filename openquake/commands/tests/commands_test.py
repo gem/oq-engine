@@ -57,6 +57,7 @@ from openquake.qa_tests_data.scenario import case_25
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server.tests import data as test_data
+from openquake.commands.mosaic import run_site
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 NRML_DIR = os.path.dirname(tests.__file__)
@@ -817,6 +818,55 @@ class GPKG2NRMLTestCase(unittest.TestCase):
             self.datadir, 'expected_simple_fault_source_converted_nrml.xml')
         self._check_output(out_path, expected_path)
 
+class RunSiteTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.mosaic_dir = os.path.dirname(mosaic.__file__)
+
+    def test_runsite_case1(self):
+        # tests when there is a lonlat file without vs30 but its given as
+        # argument and instead ASCE7-22 is specified
+        file = os.path.join(DATADIR, 'site_case1.csv')
+        vs30 = 430
+        asce_version = 'ASCE7-22'
+        with Print.patch():
+            sap.runline(f'openquake.commands mosaic run_site {file} '
+                        f'{self.mosaic_dir} -v {vs30} -a {asce_version}')
+        dstore = read(-1)
+        assert dstore['oqparam'].override_vs30 == [vs30]
+        assert dstore['oqparam'].asce_version == asce_version
+
+    def test_runsite_case2(self):
+        # tests when there is a lonlat file without vs30 but its NOT given as
+        # argument and the default asce version is used
+        file = os.path.join(DATADIR, 'site_case1.csv')
+        with Print.patch():
+            sap.runline(f'openquake.commands mosaic run_site {file} '
+                        f'{self.mosaic_dir}')
+        dstore = read(-1)
+        assert dstore['oqparam'].override_vs30 == [760]
+        assert dstore['oqparam'].asce_version == 'ASCE7-16'
+
+    def test_runsite_case3(self):
+        # tests when there is a lonlat file with vs30 and the default asce 
+        # version is used
+        file = os.path.join(DATADIR, 'site_case3.csv')
+        with Print.patch():
+            sap.runline(f'openquake.commands mosaic run_site {file} '
+                        'f{self.mosaic_dir}')
+        dstore = read(-1)
+        assert dstore['oqparam'].override_vs30 == [222]
+        assert dstore['oqparam'].asce_version == 'ASCE7-16'
+
+    def test_runsite_case4(self):
+        # tests when there is a lonlat file with vs30 and the default site 
+        # class (and therefore asce 7-22) are used
+        file = os.path.join(DATADIR, 'site_case4.csv')
+        with Print.patch():
+            sap.runline(f'openquake.commands mosaic run_site {file} '
+                        f' {self.mosaic_dir} -a ASCE7-22')
+        dstore = read(-1)
+        assert dstore['oqparam'].override_vs30 == [260.0, 365.0, 530.0]
 
 def teardown_module():
     parallel.Starmap.shutdown()

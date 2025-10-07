@@ -50,7 +50,7 @@ def engine_profile(jobctx, nrows):
 
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
-def from_file(fname, mosaic_dir, concurrent_jobs):
+def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     """
     Run an AELO analysis on the given sites and returns an array with
     the ASCE-41 parameters.
@@ -90,7 +90,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
     if not 'vs30' in sites_df.keys():
-        sites_df['vs30'] = [False] * len(sites_df)
+        sites_df['vs30'] = [vs30] * len(sites_df)
     models = []
     for vs30, dvf in sites_df.groupby('vs30'):
         for model, df in dvf.groupby('model'):
@@ -106,7 +106,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             sites = ','.join('%s %s' % tuple(lonlat)
                              for lonlat in lonlats[df.index])
             dic = dict(siteid=model + str(ids[model]), 
-                       sites=sites, vs30=vs30)
+                       sites=sites, vs30=vs30, asce_version=asce_version)
             params = get_params_from(dic, mosaic_dir)
             # del params['postproc_func']
             allparams.append(params)
@@ -172,11 +172,13 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
         sys.exit('Please install the rtgmpy wheel')
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
-        from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs)
+        from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs,
+                  asce_version, vs30)
         return
     sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
     params = get_params_from(
         dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir)
+    breakpoint()
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
@@ -191,7 +193,7 @@ run_site.mosaic_dir = 'mosaic directory'
 run_site.hc = 'previous calculation ID'
 run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
-run_site.vs30 = 'vs30 value for the calculation'
+run_site.vs30 = 'vs30 value for the calculation; ignored if in lonlat csv file'
 run_site.asce_version = dict(
     help='ASCE version',
     choices=oqvalidation.OqParam.asce_version.validator.choices)
