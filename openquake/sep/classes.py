@@ -90,7 +90,7 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
     The ``compute`` method will return a tuple with ``O`` arrays where ``O``
     is the number of outputs.
     """
-
+    peril = ''  # overriden in subclasses
     outputs = []
 
     @classmethod
@@ -133,6 +133,7 @@ class SecondaryPeril(metaclass=abc.ABCMeta):
 
 
 class HazusLiquefaction(SecondaryPeril):
+    peril = 'liquefaction'
     outputs = ["LiqProb"]
 
     def __init__(self, map_proportion_flag=True):
@@ -159,6 +160,7 @@ class HazusDeformation(SecondaryPeril):
     """
     Computes PGDMax or PGDGeomMean from PGA
     """
+    peril = 'liquefaction'
     outputs = ["PGDMax"]
 
     def __init__(
@@ -203,7 +205,7 @@ class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
     Computes the liquefaction probability from PGA and transforms it
     to binary output via the predefined probability threshold.
     """
-
+    peril = 'liquefaction'
     outputs = ["LiqProb", "LiqOccur"]
 
     def __init__(
@@ -237,7 +239,7 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
     Computes the liquefaction probability from PGV and transforms it
     to binary output via the predefined probability threshold.
     """
-
+    peril = 'liquefaction'
     outputs = ["LiqProb", "LiqOccur", "LSE"]
 
     def __init__(
@@ -282,7 +284,7 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
     Computes the liquefaction probability from PGV and transforms it
     to binary output via the predefined probability threshold.
     """
-
+    peril = 'liquefaction'
     outputs = ["LiqProb", "LiqOccur", "LSE"]
 
     def __init__(
@@ -327,7 +329,7 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
     Computes the liquefaction probability from PGV and PGA and transforms it
     to binary output via the predefined probability threshold.
     """
-
+    peril = 'liquefaction'
     outputs = ["LiqProb", "LiqOccur", "LSE"]
 
     def __init__(
@@ -386,7 +388,7 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
     Computes the liquefaction probability from PGV and PGA and transforms it
     to binary output via the predefined probability threshold.
     """
-
+    peril = 'liquefaction'
     outputs = ["LiqProb", "LiqOccur", "LSE"]
 
     def __init__(
@@ -446,8 +448,8 @@ class AkhlagiEtAl2021LiquefactionA(SecondaryPeril):
     Computes the liquefaction probability from PGV and transforms it
     to binary output via the predefined probability threshold.
     """
-
     experimental = True
+    peril = 'liquefaction'
     outputs = ["LiqProb", "LiqOccur"]
 
     def __init__(
@@ -489,8 +491,8 @@ class AkhlagiEtAl2021LiquefactionB(SecondaryPeril):
     Computes the liquefaction probability from PGV and transforms it
     to binary output via the predefined probability threshold.
     """
-
     experimental = True
+    peril = 'liquefaction'
     outputs = ["LiqProb", "LiqOccur"]
 
     def __init__(
@@ -532,7 +534,7 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
     Computes the liquefaction probability from PGA and transforms it
     to binary output via the predefined probability threshold.
     """
-
+    peril = 'liquefaction'
     outputs = ["LiqProb", "LiqOccur"]
 
     def __init__(
@@ -600,7 +602,7 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
     to probability of belonging to positive class, i.e., liquefaction
     occurrence.
     """
-
+    peril = 'liquefaction'
     outputs = ["LiqOccur", "LiqProb"]
 
     def prepare(self, sites):
@@ -636,7 +638,7 @@ class Jibson2007ALandslides(SecondaryPeril):
     Computes earthquake-induced displacements of landslides
     as function of pga and critical acceleration.
     '''
-
+    peril = 'landslide'
     outputs = ["Disp"]
 
     def __init__(
@@ -682,7 +684,7 @@ class Jibson2007BLandslides(SecondaryPeril):
     It is recommended when magnitude is betweeen 
     5.3 and 7.6.
     '''
-
+    peril = 'landslide'
     outputs = ["Disp"]
 
     def __init__(
@@ -732,7 +734,8 @@ class ChoRathje2022Landslides(SecondaryPeril):
     '''
     Computes earthquake-induced displacements of landslides from
     pgv and considering the slope fundamental period.
-    ''' 
+    '''
+    peril = 'landslide'
     outputs = ["Disp"]
 
     def prepare(self, sites):
@@ -770,6 +773,7 @@ class FotopoulouPitilakis2015ALandslides(SecondaryPeril):
     Computes earthquake-induced displacements of landslides from
     pgv and moment magnitude.
     '''
+    peril = 'landslide'
     outputs = ["Disp"]
 
     def prepare(self, sites):
@@ -804,6 +808,7 @@ class FotopoulouPitilakis2015BLandslides(SecondaryPeril):
     Computes earthquake-induced displacements of landslides from
     pga and moment magnitude.
     '''
+    peril = 'landslide'
     outputs = ["Disp"]
 
     def prepare(self, sites):
@@ -837,6 +842,7 @@ class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
     Computes earthquake-induced displacements from pga (in terms of ratio with
     the landslide critical acceleration) and moment magnitude.
     '''
+    peril = 'landslide'
     outputs = ["Disp"]
 
     def prepare(self, sites):
@@ -863,8 +869,7 @@ class FotopoulouPitilakis2015CLandslides(SecondaryPeril):
                 Disp = fotopoulou_pitilakis_2015_model_c(
                     gmf, mag, sites.crit_accel)
                 out.append(Disp)
-        return out      
-        
+        return out
 
 
 class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
@@ -872,6 +877,7 @@ class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
     Computes earthquake-induced displacements of landslides from pgv and 
     pga
     '''    
+    peril = 'landslide'
     outputs = ["Disp"]
 
     def prepare(self, sites):
@@ -920,7 +926,8 @@ class FotopoulouPitilakis2015DLandslides(SecondaryPeril):
 class SaygiliRathje2008Landslides(SecondaryPeril):
     '''
     Computes earthquake-induced displacements from pga and pgv
-    '''   
+    '''
+    peril = 'landslide'
     outputs = ["Disp"]
 
     def prepare(self, sites):
@@ -965,8 +972,8 @@ class RathjeSaygili2009Landslides(SecondaryPeril):
     '''
     Computes earthquake-induced displacements from pga and moment 
     magnitude
-
-    ''' 
+    '''
+    peril = 'landslide'
     outputs = ["Disp"]
 
     def prepare(self, sites):
@@ -1001,6 +1008,7 @@ class JibsonEtAl2000Landslides(SecondaryPeril):
     Computes earthquake-induced displacements and related probability according
     to Jibson et al. (2000) as function of arias intensity.
     '''
+    peril = 'landslide'
     outputs = ["Disp", "DispProb"]
 
     def prepare(self, sites):
@@ -1035,7 +1043,7 @@ class NowickiJessee2018Landslides(SecondaryPeril):
     """
     Computes the landslide probability from PGV and areal coverage.
     """
-
+    peril = 'landslide'
     outputs = ["LsProb", "LSE"]
 
     def __init__(
@@ -1094,7 +1102,7 @@ class AllstadtEtAl2022Landslides(SecondaryPeril):
     """
     Corrects LSE according to Allstadt et al. (2022).
     """
-
+    peril = 'landslide'
     outputs = ["LsProb", "LSE"]
 
     def __init__(
@@ -1207,6 +1215,7 @@ class Volcanic(SecondaryPeril):
     """
     Import ASH, LAVA, LAHAR, PYRO from CSV files
     """
+    peril = 'volcanic'
     outputs = ["ASH", "LAVA", "LAHAR", "PYRO"]
 
     def prepare(self, sites):
@@ -1240,22 +1249,11 @@ class Volcanic(SecondaryPeril):
         return []
 
 
-LIQUEFACTION_MODELS = {cls.__name__ for cls in [
-    HazusLiquefaction, ZhuEtAl2015LiquefactionGeneral,
-    ZhuEtAl2017LiquefactionCoastal, ZhuEtAl2017LiquefactionGeneral,
-    RashidianBaise2020Liquefaction, AllstadtEtAl2022Liquefaction,
-    AkhlagiEtAl2021LiquefactionA, AkhlagiEtAl2021LiquefactionB,
-    Bozzoni2021LiquefactionEurope, TodorovicSilva2022NonParametric,
-    HazusDeformation]}
+LIQUEFACTION_MODELS = {cls.__name__ for cls in SecondaryPeril.__subclasses__()
+                       if cls.peril == 'liquefaction'}
+LANDSLIDE_MODELS = {cls.__name__ for cls in SecondaryPeril.__subclasses__()
+                    if cls.peril == 'landslide'}
 
-LANDSLIDE_MODELS = {cls.__name__ for cls in [
-    Jibson2007ALandslides, Jibson2007BLandslides,
-    ChoRathje2022Landslides, FotopoulouPitilakis2015ALandslides,
-    FotopoulouPitilakis2015BLandslides, FotopoulouPitilakis2015CLandslides,
-    FotopoulouPitilakis2015DLandslides, SaygiliRathje2008Landslides,
-    RathjeSaygili2009Landslides, JibsonEtAl2000Landslides,
-    NowickiJessee2018Landslides, AllstadtEtAl2022Landslides]}
-        
 
 def corresponds(col, peril, imt):
     """
@@ -1270,3 +1268,5 @@ def corresponds(col, peril, imt):
         return name in LIQUEFACTION_MODELS
     elif peril == 'landslide':
         return name in LANDSLIDE_MODELS
+    else:
+        raise NameError(f'Unknown peril {peril}')

@@ -435,7 +435,7 @@ class RiskModel(object):
                 gmvs = gmf_df[col].to_numpy()
                 break
         else:
-            raise NameError(f'Missing {peril}_{imt} in gmf_data')
+            raise NameError(f'Missing {imt} in gmf_data for {peril}')
         ffs = self.risk_functions[peril][loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))
