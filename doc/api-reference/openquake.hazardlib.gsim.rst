@@ -1261,6 +1261,22 @@ stewart_2016_vh
     :undoc-members:
     :show-inheritance:
 
+taherian_2024_inland
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.taherian_2024_inland
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+taherian_2024_offshore
+
+-----------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.taherian_2024_offshore
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 tavakoli_pezeshk_2005
 -----------------------------------------------------
 

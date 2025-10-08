@@ -1,3 +1,11 @@
+  [Guillermo Aldama-Bustos]
+  * Fixed the unit of measure in the Douglas et al (2024) GMM and updated
+   coefficients for the 3- and 5-branch models to fix an error
+
+  [Michele Simionato, Kendra Johnson]
+  * Internal: parallelized the AELO mosaic tests and made it possible to pass
+    the asce_version and vs30 parameters
+
   [Michele Simionato]
   * Updated the related dependencies to numpy 2+  
   * Changed the Starmap to ensure at least one GB of RAM per thread
@@ -11,6 +19,7 @@
   * Added BSSA14 site term capability to Modifiable GMPE + unit tests
 
   [Richard Styron]
+  * Added method `from_moment` to the `TaperedGRMFD` class
   * Fixed `KiteSurface.get_middle_point` to manage NaNs
 
   [Michele Simionato]

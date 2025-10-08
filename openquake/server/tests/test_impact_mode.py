@@ -237,6 +237,10 @@ class EngineServerTestCase(django.test.TestCase):
                 self.assertGreater(
                     len(results), 0,
                     'The job produced no outputs!')
+        # Check that the Django views to visualize simplified and advanced outputs
+        # pages do not raise any exceptions
+        self.c.get(f'/engine/{job_id}/outputs')
+        self.c.get(f'/engine/{job_id}/outputs_impact')
         # NOTE: the get_json utility decodes the json and returns a dict
         ret = self.get_json('%s/impact' % job_id)
         self.assertEqual(list(ret), ['loss_type_descriptions', 'impact'])
@@ -311,6 +315,47 @@ class EngineServerTestCase(django.test.TestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
+
+    def test_get_impact_form_defaults(self):
+        resp = self.c.get('/v1/get_impact_form_defaults')
+        resp = json.loads(resp.content.decode('utf8'))
+        expected_list = ['usgs_id', 'rupture_from_usgs', 'rupture_file', 'lon',
+                         'lat', 'dep', 'mag', 'aspect_ratio', 'rake',
+                         'local_timestamp', 'time_event', 'dip', 'strike',
+                         'maximum_distance', 'truncation_level',
+                         'number_of_ground_motion_fields', 'asset_hazard_distance',
+                         'ses_seed', 'station_data_file_from_usgs',
+                         'station_data_file', 'maximum_distance_stations',
+                         'msr', 'rupture_was_loaded', 'rupture_file_input',
+                         'station_data_file_input', 'station_data_file_loaded',
+                         'description']
+        self.assertEqual(list(resp), expected_list)
+
+    def test_impact_get_shakemap_versions(self):
+        resp = self.c.post('/v1/impact_get_shakemap_versions',
+                           data={'usgs_id': 'us6000jllz'})
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertIn('shakemap_versions', resp)
+        self.assertIn('usgs_preferred_version', resp)
+        self.assertIsNone(resp['shakemap_versions_issue'])
+
+    def test_impact_get_nodal_planes_and_info(self):
+        resp = self.c.post('/v1/impact_get_nodal_planes_and_info',
+                           data={'usgs_id': 'us6000jllz'})
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertIn('nodal_planes', resp)
+        self.assertIsNone(resp['nodal_planes_issue'])
+        self.assertIn('info', resp)
+
+    def test_impact_get_stations_from_usgs(self):
+        shakemap_version = 'urn:usgs-product:us:shakemap:us6000jllz:1756920117251'
+        resp = self.c.post('/v1/impact_get_stations_from_usgs',
+                           data={'usgs_id': 'us6000jllz',
+                                 'shakemap_version': shakemap_version})
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertIn('station_data_file', resp)
+        self.assertIn('n_stations', resp)
+        self.assertIsNone(resp['station_data_issue'])
 
 
 class ShareJobTestCase(django.test.TestCase):

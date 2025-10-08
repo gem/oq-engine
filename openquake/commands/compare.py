@@ -497,6 +497,7 @@ def compare_asce(dir1: str, dir2: str, atol=1E-3, rtol=1E-3):
     """
     for fname in os.listdir(dir2):
         if fname.endswith('.org'):
+            print(f"Comparing {fname}")
             df1 = read_org_df(os.path.join(dir1, fname))
             df2 = read_org_df(os.path.join(dir2, fname))
             equal = []
@@ -505,7 +506,8 @@ def compare_asce(dir1: str, dir2: str, atol=1E-3, rtol=1E-3):
                                            strip(df2[col].to_numpy()),
                                            col, atol, rtol)
                 equal.append(ok)
-            sys.exit(not all(equal))
+            if not all(equal):
+                sys.exit(1)
 
 
 main = dict(rups=compare_rups,

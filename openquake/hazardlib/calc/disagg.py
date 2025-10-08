@@ -745,7 +745,10 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     edges, s = edges_shapedic
     drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
     source_id = corename(groups[0].sources[0].source_id)
-    rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
+    name = 'calc_rmap on site (%.5f, %.5f)' % (site.location.longitude,
+                                               site.location.latitude)
+    with monitor(name, measuremem=True):
+        rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     ws = reduced_lt.rlzs['weight']
     disaggs = []
     if any(grp.src_interdep == 'mutex' for grp in groups):
