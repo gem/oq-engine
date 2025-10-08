@@ -53,15 +53,14 @@ def to_probs(rates, itime=1):
     return 1. - numpy.exp(- rates * itime)
 
 
-def calc_rmap(src_groups, full_lt, sitecol, oq):
+def calc_rmap(src_groups, sitecol, cmakers):
     """
     :returns: a MapArray of rates with shape (N, L, Gt)
     """
+    oq = cmakers[0].oq
     oq.use_rates = True
     oq.disagg_by_src = False
     L = oq.imtls.size
-    all_trt_smrs = [sg[0].trt_smrs for sg in src_groups]
-    cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
     Gt = sum(len(cm.gsims) for cm in cmakers)
     logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
                  len(sitecol), oq.imtls.size, Gt)
@@ -73,7 +72,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
             continue
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
         rmap += dic['rmap']  # tested in logictree/case_05
-    return rmap, ctxs, cmakers
+    return rmap, ctxs
 
 
 def calc_mean_rates(rmap, gweights, wget, imtls, imts=None):
@@ -107,7 +106,8 @@ def calc_mcurves(src_groups, sitecol, full_lt, oq):
     :returns: an array of shape (N, M, L1)
     """
     assert oq.use_rates
-    rmap, _, cmakers = calc_rmap(src_groups, full_lt, sitecol, oq)
+    cmakers = get_cmakers([sg.trt_smrs for sg in src_groups], full_lt, oq)
+    rmap, _ = calc_rmap(src_groups, sitecol, cmakers)
     gweights = numpy.concatenate([cm.wei for cm in cmakers])
     rates = (rmap.array @ gweights).reshape(len(sitecol), len(oq.imtls), -1)
     return to_probs(rates)
@@ -129,7 +129,10 @@ def main(job_ini):
         assoc_dist = (oq.region_grid_spacing * 1.414
                       if oq.region_grid_spacing else 5)  # Graeme's 5km
         sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
-    rmap, _ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
+    
+    cmakers = get_cmakers([sg.trt_smrs for sg in csm.src_groups],
+                          csm.full_lt, oq)
+    rmap, _ctxs = calc_rmap(csm.src_groups, sitecol, cmakers)
     gws = numpy.concatenate([cm.wei for cm in cmakers.to_array()])
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, _M, L1 = rates.shape

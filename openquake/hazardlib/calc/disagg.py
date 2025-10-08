@@ -42,7 +42,8 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker, Oq, FarAwayRupture
+from openquake.hazardlib.contexts import (
+    ContextMaker, Oq, FarAwayRupture, get_cmakers)
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates, to_probs)
 
@@ -745,9 +746,10 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     edges, s = edges_shapedic
     drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
     source_id = corename(groups[0].sources[0].source_id)
-    rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
+    with monitor('calc rmap', measuremem=True):  # this is the slow piece       
+        cmakers = get_cmakers([g.trt_smrs for g in groups], reduced_lt, oq)
+        rmap, ctxs = calc_rmap(groups, sitecol, cmakers)
     ws = reduced_lt.rlzs['weight']
-    disaggs = []
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
         src_mutex = {
@@ -756,6 +758,7 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
             'weight': [src.mutex_weight for src in grp]}
     else:
         src_mutex = {}
+    disaggs = []
     for ctx, cmaker in zip(ctxs, cmakers.to_array()):
         dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
         drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
