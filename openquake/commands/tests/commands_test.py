@@ -826,9 +826,11 @@ class GPKG2NRMLTestCase(unittest.TestCase):
 @skipIf(rtgmpy is None, 'Missing rtgmpy')
 class RunSiteTestCase(unittest.TestCase):
 
-    def setUp(self):
-        self.mosaic_dir = os.path.dirname(mosaic.__file__)
+    @classmethod
+    def setUpClass(cls):
+        cls.mosaic_dir = os.path.dirname(mosaic.__file__)
         if not os.path.exists('asce'):
+            # create directory in qa_tests_data/mosaic/asce to store the files
             os.makedirs('asce')
 
     def test_runsite_case1(self):

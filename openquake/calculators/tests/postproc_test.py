@@ -26,7 +26,7 @@ try:
 except ImportError:
     rtgmpy = None
 from openquake.baselib.performance import Monitor
-from openquake.baselib import hdf5, writers
+from openquake.baselib import writers
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
@@ -254,6 +254,7 @@ class PostProcTestCase(CalculatorTestCase):
         fnames = export(('median_spectra', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
 
 class SeismicityClassTestCase(unittest.TestCase):
 
