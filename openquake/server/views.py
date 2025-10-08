@@ -200,6 +200,44 @@ def stream_response(fname, content_type, exportname=''):
     return response
 
 
+def infer_site_class(vs30):
+    # used for old jobs for which the site class was not saved into the datastore
+    site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES.items()
+                          if v['vs30'] == vs30]
+    if site_class_matches:
+        site_class = site_class_matches[0]
+    else:
+        site_class = 'custom'
+    return site_class
+
+
+def get_site_class_display_name(ds):
+    vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
+    site_class = ds['oqparam'].site_class
+    if site_class is not None:
+        if site_class == 'custom':
+            vs30 = vs30_in[0]
+            site_class_display_name = f'Vs30 = {vs30}m/s'
+        else:
+            site_class_display_name = oqvalidation.SITE_CLASSES[
+                site_class]['display_name']
+    else:  # old calculations without site_class in the datastore
+        if hasattr(vs30_in, '__len__'):
+            if len(vs30_in) == 1:
+                [vs30_in] = vs30_in
+                site_class = infer_site_class(vs30_in)
+            else:
+                site_class = 'default'
+        else:  # in old calculations, vs30_in was a float
+            site_class = infer_site_class(vs30_in)
+        if site_class == 'custom':
+            site_class_display_name = f'Vs30 = {vs30_in}m/s'
+        else:
+            site_class_display_name = oqvalidation.SITE_CLASSES[
+                site_class]['display_name']
+    return site_class_display_name
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -299,6 +337,16 @@ def get_impact_form_defaults(request):
     and defaults
     """
     return JsonResponse(IMPACT_FORM_DEFAULTS)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def aelo_site_classes(request):
+    """
+    Return a json string with a dictionary of ASCE site classes, with corresponding
+    display names and Vs30 values
+    """
+    return JsonResponse(oqvalidation.SITE_CLASSES)
 
 
 def _make_response(error_msg, error_line, valid):
@@ -710,10 +758,23 @@ def aelo_callback(
     from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
     reply_to = settings.EMAIL_SUPPORT
+    siteid = inputs['siteid']
     lon, lat = inputs['sites'].split()
-    body = (f"Input values: lon = {lon}, lat = {lat},"
-            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']},"
-            f" asce_version = {inputs['asce_version']}\n\n")
+    site_class = inputs['site_class']
+    vs30s = inputs['vs30'].split()
+    vs30 = vs30s[0] if site_class != 'default' else 'default'
+    if site_class is None or site_class == 'custom':
+        site_class_vs30_str = f'Site Class: Vs30 = {vs30}m/s'
+    else:
+        site_class_display_name = oqvalidation.SITE_CLASSES[site_class]['display_name']
+        site_class_vs30_str = f'Site Class: {site_class_display_name}'
+    asce_version = oqvalidation.ASCE_VERSIONS[inputs['asce_version']]
+    aelo_version = base.get_aelo_version()
+    body = (f"Site name: {siteid}\n"
+            f"Latitude: {lat}, Longitude: {lon}\n"
+            f"{site_class_vs30_str}\n"
+            f"ASCE standard: {asce_version}\n"
+            f"AELO version: {aelo_version}\n\n")
     if warnings is not None:
         for warning in warnings:
             body += warning + '\n'
@@ -1049,17 +1110,9 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
-        vs30s_in = sorted(
-            float(val) for val in request.POST.get('vs30').split())
-        vs30s_out = []
-        for vs30 in vs30s_in:
-            vs30s_out.append(validate_vs30(vs30))
-        vs30 = ' '.join(str(val) for val in vs30s_out)
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
-        invalid_inputs.append('vs30')
-    try:
         siteid = request.POST.get('siteid')
+        if not siteid:
+            raise ValueError("can not be empty")
         if len(siteid) > settings.MAX_AELO_SITE_NAME_LEN:
             raise ValueError(
                 "site name can not be longer than %s characters" %
@@ -1074,6 +1127,24 @@ def aelo_validate(request):
     except Exception as exc:
         validation_errs[AELO_FORM_LABELS['asce_version']] = str(exc)
         invalid_inputs.append('asce_version')
+    try:
+        site_class = request.POST.get('site_class')
+        oqvalidation.OqParam.site_class.validator(site_class)
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['site_class']] = str(exc)
+        invalid_inputs.append('site_class')
+    try:
+        vs30s_in = sorted(
+            float(val) for val in request.POST.get('vs30').split())
+        if not vs30s_in:
+            raise ValueError('can not be empty')
+        vs30s_out = []
+        for vs30 in vs30s_in:
+            vs30s_out.append(validate_vs30(vs30))
+        vs30 = ' '.join(str(val) for val in vs30s_out)
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
+        invalid_inputs.append('vs30')
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -1084,7 +1155,7 @@ def aelo_validate(request):
         response_data = {"status": "failed", "error_msg": err_msg,
                          "invalid_inputs": invalid_inputs}
         return JsonResponse(response_data, status=400)
-    return lon, lat, vs30, siteid, asce_version
+    return lon, lat, siteid, asce_version, site_class, vs30
 
 
 @csrf_exempt
@@ -1101,13 +1172,13 @@ def aelo_run(request):
     res = aelo_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    lon, lat, vs30, siteid, asce_version = res
+    lon, lat, siteid, asce_version, site_class, vs30 = res
 
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
-                 asce_version=asce_version),
+            dict(sites='%s %s' % (lon, lat), siteid=siteid,
+                 asce_version=asce_version, site_class=site_class, vs30=vs30),
             config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
@@ -1148,7 +1219,8 @@ def aelo_run(request):
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, asce_version, job_owner_email, outputs_uri_web,
+        lon, lat, vs30, siteid, asce_version, site_class, job_owner_email,
+        outputs_uri_web,
         jobctx, aelo_callback)).start()
     return JsonResponse(response_data, status=200)
 
@@ -1557,6 +1629,7 @@ def web_engine(request, **kwargs):
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
         params['asce_versions'] = oqvalidation.ASCE_VERSIONS
+        params['site_classes'] = oqvalidation.SITE_CLASSES
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
@@ -1599,13 +1672,11 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         else:
             hmaps = assets = hcurves = mce = mce_spectra = False
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    lon = lat = vs30 = site_name = asce_version_full = calc_aelo_version = None
+    lon = lat = site_name = asce_version_full = calc_aelo_version = None
+    site_class_display_name = None
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
-        if hasattr(vs30, '__len__') and len(vs30) == 1:
-            # NOTE: in old calculations, vs30_in was a float
-            [vs30] = vs30
+        site_class_display_name = get_site_class_display_name(ds)
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         try:
             asce_version = ds['oqparam'].asce_version
@@ -1624,7 +1695,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        mce=mce, mce_spectra=mce_spectra,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version_full,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name)
+                       lon=lon, lat=lat, site_class=site_class_display_name, site_name=site_name)
                   )
 
 
@@ -1751,10 +1822,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             site = 'site.png' in ds['png']
             governing_mce = 'governing_mce.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
-        if hasattr(vs30_in, '__len__') and len(vs30_in) == 1:
-            # NOTE: in old calculations, vs30_in was a float
-            [vs30_in] = vs30_in
+        site_class_str = get_site_class_display_name(ds)
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         notifications = numpy.array([], dtype=notification_dtype)
         sid_to_vs30 = {}
@@ -1782,21 +1850,15 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 warnings[vs30] = notification['description'].decode('utf8')
         notes = group_keys_by_value(notes)
         warnings = group_keys_by_value(warnings)
-        if len(sitecol) == 1:
-            # NOTE: specifying the vs30 is not needed if there is only one
-            notes_str = '\n'.join([note for vs30, note in notes.items()])
-            warnings_str = '\n'.join([warning for vs30, warning in warnings.items()])
-        else:
-            notes_str = '\n'.join(
-                [f'For {vs30=}: {msg}' for vs30, msg in notes.items()])
-            # NOTE: vs30 is -1 is a placeholder indicating a non-site-specific warning
-            warnings_str = '\n'.join(
-                [f'For {vs30=}: {msg}' if vs30 != -1 else msg
-                 for vs30, msg in warnings.items()])
+        # NOTE: we decided to avoid specifying which vs30 values are relevant with
+        # respect to the notifications (either for notes and warnings)
+        notes_str = '\n'.join([note for note in notes.values()])
+        warnings_str = '\n'.join([warning for warning in warnings.values()])
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
-                       lon=lon, lat=lat, vs30=vs30_in, site_name=site_name, site=site,
+                       lon=lon, lat=lat, site_class=site_class_str,
+                       site_name=site_name, site=site,
                        governing_mce=governing_mce,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=oqvalidation.ASCE_VERSIONS[asce_version],

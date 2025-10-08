@@ -25,7 +25,7 @@ from openquake.calculators.views import text_table
 
 
 def build_ctxs(cmakers, src_groups, sitecol):
-    for cmaker, sg in zip(cmakers, src_groups):
+    for cmaker, sg in zip(cmakers.to_array(), src_groups):
         srcs = []
         for src in sg:
             srcs.extend(src)

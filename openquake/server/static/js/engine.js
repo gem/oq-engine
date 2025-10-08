@@ -477,6 +477,10 @@ function capitalizeFirstLetter(val) {
             'running': 'Building rupture...'}
     }
 
+    var site_classes = {}  // populated via a ajax call to the web API
+    // NOTE: avoiding to call it DEFAULT_SITE_CLASS to avoid confusion with the 'default' one
+    const PRESELECTED_SITE_CLASS = 'BC';
+
     var impact_form_defaults = {};
 
     function require_usgs_id() {
@@ -663,6 +667,20 @@ function capitalizeFirstLetter(val) {
                                setTimer();
                            });
 
+            if (window.application_mode === 'AELO') {
+                $.ajax({
+                    url:  "/v1/aelo_site_classes",
+                    method: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        site_classes = data;
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error loading site classes:", error);
+                    }
+                });
+            }
+
             var vs30_original_placeholder = $('input#vs30').attr('placeholder');
             $('select#site_class').on('change', function() {
                 const site_class = $(this).val();
@@ -677,7 +695,7 @@ function capitalizeFirstLetter(val) {
                         $input_vs30.val('');
                         $input_vs30.attr('placeholder', '');
                     } else {
-                        $input_vs30.val($(this).val());
+                        $input_vs30.val(site_classes[site_class]['vs30']);
                         $input_vs30.attr('placeholder', vs30_original_placeholder);
                     }
                 }
@@ -689,38 +707,31 @@ function capitalizeFirstLetter(val) {
                 const $input_vs30 = $('input#vs30');
                 $site_class_select.empty();
                 if (asce_version === 'ASCE7-16') {
-                    $site_class_select.append($('<option>', {value: 760, text: 'BC'}));
-                    $input_vs30.val($site_class_select.val());
+                    $site_class_select.append($('<option>', {value: PRESELECTED_SITE_CLASS, text: PRESELECTED_SITE_CLASS}));
+                    $input_vs30.val(site_classes[PRESELECTED_SITE_CLASS]['vs30']);
                 } else if (asce_version === 'ASCE7-22') {
-                    const items = [
-                        {value: 1500, text: 'A - Hard Rock'},
-                        {value: 1080, text: 'B - Rock' },
-                        {value: 760, text: 'BC' },
-                        {value: 530, text: 'C - Very Dense Soil and Soft Rock' },
-                        {value: 365, text: 'CD' },
-                        {value: 260, text: 'D - Stiff Soil' },
-                        {value: 185, text: 'DE ' },
-                        {value: 150, text: 'E - Soft Clay Soil' },
-                        {value: 'default', text: 'Default'},
-                        {value: 'custom', text: 'Specify Vs30'},
-                    ];
-                    const preselected_site_class = 'BC';
-                    items.forEach(item => {
+                    for (const site_class of Object.keys(site_classes)) {
                         $site_class_select.append(
                             $("<option>", {
-                                value: item.value,
-                                text: item.text,
-                                selected: item.text === preselected_site_class
+                                value: site_class,
+                                text: site_classes[site_class]['display_name'],
+                                selected: site_class === PRESELECTED_SITE_CLASS
                             })
                         );
-                    });
+                    }
                 }
-                if ($site_class_select.val() === 'custom') {
+                const site_class = $site_class_select.val();
+                if (site_class === 'custom') {
                     $input_vs30.prop('disabled', false);
                     $input_vs30.val('');
                 } else {
                     $input_vs30.prop('disabled', true);
-                    $input_vs30.val($site_class_select.val());
+                    if (site_class === 'default') {
+                        $input_vs30.val('');
+                    } else {
+                        const site_class = $site_class_select.val();
+                        $input_vs30.val(site_classes[site_class]['vs30']);
+                    }
                 }
             });
 
@@ -729,17 +740,23 @@ function capitalizeFirstLetter(val) {
                 $('#submit_aelo_calc').prop('disabled', true);
                 var site_class = $('select#site_class').val();
                 var vs30;
-                if (site_class === 'default') {
-                    vs30 = '260 365 530';
-                } else {
+                if (site_class === 'custom') {
                     vs30 = $("input#vs30").val();
+                } else {
+                    vs30 = site_classes[site_class]['vs30'];
+                    if (Array.isArray(vs30)) { // the default site class has 3 Vs30 values
+                        vs30 = vs30.join(' ');
+                    } else {
+                        vs30 = vs30.toString();
+                    }
                 }
                 var formData = {
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
-                    vs30: vs30,
                     siteid: $("#siteid").val(),
-                    asce_version: $("#asce_version").val()
+                    asce_version: $("#asce_version").val(),
+                    site_class: site_class,
+                    vs30: vs30
                 };
                 $.ajax({
                     type: "POST",

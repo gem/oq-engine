@@ -126,10 +126,11 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
             relt = FullLogicTree(smlt, gslt)
             Z = relt.get_num_paths()
             assert Z, relt  # sanity check
-            logging.info('(%.1f,%.1f) source %s (%d realizations)',
-                         lon, lat, source_id, Z)
             groups = relt.reduce_groups(csm.src_groups)
             assert groups, 'No groups for %s' % source_id
+            rupts = sum(src.num_ruptures for g in groups for src in g)
+            logging.info('(%.1f,%.1f) source %s (%d rlzs, %d rupts)',
+                         lon, lat, source_id, Z, rupts)
             smap.submit((groups, site, relt, (edges, shp), oq, imldic))
     return smap, rel_ids_by_imt, src2idx, weights
 
@@ -187,7 +188,7 @@ def main(dstore, csm, imts, imls_by_sid):
                       for trt, dset in parent['source_mags'].items()}
     sitecol = parent['sitecol']
     sites = [site for site in sitecol if site.id in imls_by_sid]
-    src_mutex = dstore['mutex_by_grp']['src_mutex']
+    src_mutex = [sg.src_interdep == 'mutex' for sg in csm.src_groups]
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
     smap, rel_ids_by_imt, src2idx, weights = submit_sources(
         dstore, csm, edges, shp, imts, imls_by_sid, oq, sites)

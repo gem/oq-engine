@@ -26,7 +26,7 @@ import pandas
 import fiona
 from shapely import geometry, prepare, contains_xy
 
-from openquake.baselib import hdf5, general, config
+from openquake.baselib import hdf5, general, config, performance
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
@@ -36,9 +36,9 @@ U8 = numpy.uint8
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
-U64 = numpy.uint64
+I64 = numpy.int64
 TWO16 = 2 ** 16
-TWO32 = 2 ** 32
+TWO32 = I64(2 ** 32)
 by_taxonomy = operator.attrgetter('taxonomy')
 ae = numpy.testing.assert_equal
 OCC_FIELDS = ('day', 'night', 'transit')
@@ -347,6 +347,15 @@ class AssetCollection(object):
         self.occfields = [f for f in self.array.dtype.names
                           if f.startswith('occupants')]
 
+    def new(self, array):
+        """
+        :returns: an AssetCollection with the same metadata and another array
+        """
+        new = object.__new__(self.__class__)
+        vars(new).update(vars(self))
+        new.array = array
+        return new
+
     def update_tagcol(self, aggregate_by):
         """
         Possibly adds tags 'id' and 'site_id'
@@ -545,18 +554,29 @@ class AssetCollection(object):
         df = pandas.concat(dfs)
         return df[df.number > 0]
 
-    # not used yet
     def agg_by_site(self):
         """
-        :returns: an array of aggregated values indexed by site ID
+        :returns: an AssetCollection aggregated by site_id, taxonomy
         """
-        N = self['site_id'].max() + 1
-        vfields = self.fields + self.occfields
-        agg_values = numpy.zeros(N, [(f, F32) for f in vfields])
-        for vf in vfields:
-            arr = self['value-' + vf if vf in self.fields else vf]
-            agg_values[vf] = general.fast_agg(self['site_id'], arr)
-        return agg_values
+        array = numpy.sort(self.array, order=['site_id', 'taxonomy'])
+        idxs = I64(array['site_id']) * TWO32 + I64(array['taxonomy'])
+        arrays = performance.split_array(array, idxs)
+        fields = ['value-' + f for f in self.fields] + self.occfields
+        extras = set(self.array.dtype.names) - set(fields) - {'id', 'ordinal'}
+        newarray = numpy.zeros(len(arrays), self.array.dtype)
+        for i, arr in enumerate(arrays):
+            old = arr[0]
+            if len(arr) > 1:  # aggregate
+                new = newarray[i]
+                new['id'] = f'agg{old["site_id"]}'
+                for f in fields:
+                    new[f] = arr[f].sum()
+                for extra in extras:
+                    new[extra] = old[extra]
+            else:  # just copy
+                newarray[i] = old
+        newarray['ordinal'] = numpy.arange(len(arrays))
+        return self.new(newarray)
 
     def build_aggids(self, aggregate_by):
         """

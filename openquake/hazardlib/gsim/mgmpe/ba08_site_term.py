@@ -101,7 +101,7 @@ class BA08SiteTerm(GMPE):
         # Make sites with ref bedrock vs30
         rup_rock = copy.copy(ctx)
         rup_rock.vs30 = np.full_like(ctx.vs30, 760.)
-
+    
         # Compute mean on bedrock
         self.gmpe.compute(rup_rock, imts, mean, sig, tau, phi)
         
