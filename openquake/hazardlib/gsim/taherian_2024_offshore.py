@@ -6,9 +6,9 @@ Taherian et al. 2024 GMPE - Offshore scenarios with embedded scalers
 import os
 import numpy as np
 import pandas as pd
-import onnxruntime as ort
 from scipy.interpolate import interp1d
 
+from openquake.baselib.onnx import PicklableInferenceSession
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA, PGV
@@ -34,22 +34,6 @@ SCALER_PARAMS = {
         'scale': np.array([0.035807897789936545])
     }
 }
-
-# Module-level cache for ONNX sessions
-_SESSION_CACHE = {}
-
-
-def get_onnx_session(model_path):
-    """
-    Get or create ONNX session with threading disabled.
-    Each worker process will have its own cached session.
-    """
-    if model_path not in _SESSION_CACHE:
-        opts = ort.SessionOptions()
-        opts.inter_op_num_threads = 1
-        opts.intra_op_num_threads = 1
-        _SESSION_CACHE[model_path] = ort.InferenceSession(model_path, opts)
-    return _SESSION_CACHE[model_path]
 
 
 def scale_input(value, scaler_params):
@@ -247,24 +231,19 @@ class Taherian2024Offshore(GMPE):
         """Initialize with model path only"""
         super().__init__()
         base_dir = os.path.dirname(__file__)
-        self.model_path = os.path.join(
-            base_dir, "taherian_2024_data", "ANN_Portugal_rock.onnx")
+        self.session = PicklableInferenceSession(os.path.join(
+            base_dir, "taherian_2024_data", "ANN_Portugal_rock.onnx"))
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """Compute ground motion using cached ONNX session"""
-        session = get_onnx_session(self.model_path)
-
         FM = np.array([rake_to_fm(r) for r in np.atleast_1d(ctx.rake)])
         Mw = np.atleast_1d(ctx.mag)
         Rjb = np.atleast_1d(ctx.rjb)
         Depth = np.atleast_1d(ctx.hypo_depth)
 
         psa_data = calculate_psa_TEA24_offshore(
-            Mw, Rjb, Depth, FM, ort_session=session
-        )
-
+            Mw, Rjb, Depth, FM, ort_session=self.session)
         psa_data['mean'] = np.log(psa_data['mean'])
-
         sort_idx = np.argsort(psa_data['periods'])
         periods_sorted = psa_data['periods'][sort_idx]
         mean_sorted = psa_data['mean'][:, sort_idx]
