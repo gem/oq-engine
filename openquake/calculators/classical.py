@@ -28,8 +28,7 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, block_splitter)
+from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -130,7 +129,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 
 #  ########################### task functions ############################ #
-    
+
 def save_rates(g, N, jid, num_chunks, mon):
     """
     Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
@@ -158,6 +157,7 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
 
+    # NB: disagg_by_src does not work with ilabel
     if cmaker.disagg_by_src and not extra['atomic']:
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
@@ -467,7 +467,7 @@ class ClassicalCalculator(base.HazardCalculator):
         full_lt_by_label = read_full_lt_by_label(self.datastore)
         trt_smrs = self.datastore['trt_smrs'][:]
         self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq)
-                        for label, full_lt in full_lt_by_label.items()}
+                       for label, full_lt in full_lt_by_label.items()}
         if 'delta_rates' in self.datastore:  # aftershock
             drgetter = getters.DeltaRatesGetter(self.datastore)
             for cmakers in self.cmdict.values():
@@ -664,7 +664,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield g, self.N, self.rmap.jid, self.num_chunks
 
         if (self.rmap.size_mb > 200 and config.directory.custom_tmp and
-            parallel.oq_distribute() != 'no'):
+                parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
             self.datastore.swmr_on()  # must come before the Starmap
             savemap = parallel.Starmap(save_rates, genargs(),
