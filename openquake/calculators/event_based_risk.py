@@ -383,11 +383,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
         adf = self.assetcol.to_dframe()
-        del adf['id']
         if 'ID_0' not in adf.columns:
             adf['ID_0'] = 0
-        adf = adf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
-        # NB: this is subtle! without the ordering by 'ordinal'
+        adf = adf.sort_values(['ID_0', 'taxonomy', 'id'])
+        del adf['id']
+        # NB: this is subtle! without the ordering by 'id'
         # the asset dataframe will be ordered differently on AMD machines
         # with respect to Intel machines, depending on the machine, thus
         # causing different losses
