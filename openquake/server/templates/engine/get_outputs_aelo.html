@@ -27,13 +27,13 @@
               </div>
             </div>
             <div class="outputs-general-btns-center">
-              {% if site %}
+              {% if pngs.site %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/site.png" class="btn btn-sm">
                   Show site</a>
               </div>
               {% endif %}
-              {% if governing_mce %}
+              {% if pngs.governing_mce %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
                   Show Multi-Period MCEr Spectrum</a>

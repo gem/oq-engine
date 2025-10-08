@@ -1690,9 +1690,11 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         try:
             kwargs['calc_aelo_version'] = ds.get_attr('/', 'aelo_version')
         except KeyError:
+            kwargs['calc_aelo_version'] = '1.0.0'
         kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
         kwargs['notes'], kwargs['warnings'] = get_aelo_notes_and_warnings(ds)
-            kwargs['calc_aelo_version'] = '1.0.0'
+    elif application_mode == 'ARISTOTLE':
+        kwargs['warnings'] = get_aristotle_warnings(ds)
     return render(request, "engine/get_outputs.html", kwargs)
 
 
@@ -1891,6 +1893,13 @@ def determine_precision(weights):
     return max_decimal_places
 
 
+def get_aristotle_warnings(ds):
+    warnings = None
+    if 'warnings' in ds:
+        warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
+    return warnings
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_impact(request, calc_id):
@@ -1903,7 +1912,7 @@ def web_engine_get_outputs_impact(request, calc_id):
     local_timestamp_str = None
     time_job_after_event = None
     time_job_after_event_str = None
-    warnings = None
+    pngs = {}
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         try:
             losses = views.view('aggrisk', ds)
@@ -1922,23 +1931,15 @@ def web_engine_get_outputs_impact(request, calc_id):
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
         if 'png' in ds:
-            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
-            assets = 'assets.png' in ds['png']
-        else:
-            assets = False
-            avg_gmf = []
+            pngs['avg_gmf'] = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            pngs['assets'] = 'assets.png' in ds['png']
         oqparam = ds['oqparam']
         if hasattr(oqparam, 'local_timestamp'):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    if 'warnings' in ds:
-        ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
-        if warnings is None:
-            warnings = ds_warnings
-        else:
-            warnings += '\n' + ds_warnings
+    warnings = get_aristotle_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
     # NOTE: aggrisk_tags is not available as an attribute of the datastore
     try:
@@ -1962,7 +1963,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
                        weights_precision=weights_precision,
-                       avg_gmf=avg_gmf, assets=assets,
+                       pngs=pngs,
                        warnings=warnings, mmi_tags=mmi_tags,
                        aggrisk_tags=aggrisk_tags)
                   )
