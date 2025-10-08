@@ -509,7 +509,7 @@ def process_sites(dstore, csm, DLLs, ASCE_version):
 def get_seismicity_class(mce_site, vs30):
         if vs30 == 760:
             sa02 = mce_site[mce_site.period==0.2]['SaM'].iloc[0]
-            sa10 = mce_site[mce_site.period==0.2]['SaM'].iloc[0]
+            sa10 = mce_site[mce_site.period==1.0]['SaM'].iloc[0]
             Ss_seismicity = (
                 "Low" if sa02 < 0.25 else
                 "Moderate" if sa02 < 0.5 else
