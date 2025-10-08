@@ -20,10 +20,10 @@ import os
 import abc
 import csv
 import logging
-
 import numpy
 from shapely import geometry, wkt
 
+from openquake.baselib.onnx import PicklableInferenceSession
 from openquake.hazardlib import geo, imt, valid, InvalidFile
 from openquake.sep.landslide.static_safety_factor import infinite_slope_fs
 from openquake.sep.landslide.displacement import (
@@ -67,11 +67,6 @@ from openquake.sep.liquefaction.vertical_settlement import (
 )
 from os import path
 import gzip
-
-try:
-    import onnxruntime
-except ImportError:
-    onnxruntime = None
 
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
@@ -561,39 +556,6 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
                 out.append(prob_liq)
                 out.append(out_class)
         return out
-
-
-# NB: the engine is already parallelizing, so we must disable the
-# parallelization internal to onnxruntime to avoid oversubscription;
-# it is the same reason why in baselib/__init__.py we have a line
-# os.environ['OPENBLAS_NUM_THREADS'] = '1'
-def get_session(model):
-    """
-    :param model: path to a machine learning model
-    :returns: an InferenceSession with threads disabled suitable for the engine
-    """
-    opt = onnxruntime.SessionOptions()
-    opt.inter_op_num_threads = 1
-    opt.intra_op_num_threads = 1
-    return onnxruntime.InferenceSession(
-        model, opt, providers=onnxruntime.get_available_providers())
-
-
-class PicklableInferenceSession:
-    def __init__(self, model):
-        self.model = model
-        self.inference_session = None
-
-    def run(self, *args):
-        session = self.inference_session or get_session(self.model)
-        return session.run(*args)
-
-    def __getstate__(self):
-        return {"model": self.model}
-
-    def __setstate__(self, values):
-        self.model = values["model"]
-        self.inference_session = get_session(self.model)
 
 
 class TodorovicSilva2022NonParametric(SecondaryPeril):
