@@ -1258,10 +1258,15 @@ LANDSLIDE_MODELS = {cls.__name__ for cls in [
         
 
 def corresponds(col, peril, imt):
+    """
+    Associate the given IMT to a column in gmf_data
+    """
+    if not col.endswith(imt):
+        return False
     if peril == 'groundshaking':
-        return col == imt
-    name, imt_ = col.split('_')
+        return True
+    name, _ = col.split('_')
     if peril == 'liquefaction':
-        return name in LIQUEFACTION_MODELS and imt == imt_
+        return name in LIQUEFACTION_MODELS
     elif peril == 'landslide':
-        return name in LANDSLIDE_MODELS and imt == imt_
+        return name in LANDSLIDE_MODELS
