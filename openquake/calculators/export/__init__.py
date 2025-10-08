@@ -24,6 +24,8 @@ from openquake.baselib.writers import write_csv
 DISPLAY_NAME = {
     'asce07': 'ASCE 7 Parameters',
     'asce41': 'ASCE 41 Parameters',
+    'asce41_sa_final': 'ASCE41 BSE Spectra',
+    'spectra_asce41': 'ASCE41 Calculations',
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
     'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
