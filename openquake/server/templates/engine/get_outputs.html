@@ -14,6 +14,16 @@
             {% else %}
             <h2>Outputs from calculation {{ calc_id }}</h2>
             {% endif %}
+            {% if warnings %}
+            <div id="warnings-box" class="alert alert-warning" style=>
+                WARNING: {{ warnings }}
+            </div>
+            {% endif %}
+            {% if notes %}
+            <div id="notes-box" class="alert alert-info" style=>
+                NOTE: {{ notes }}
+            </div>
+            {% endif %}
             <div id="my-outputs" class="well"></div>
             <div class="outputs-general-btns-left">
               {% if application_mode == 'AELO' %}

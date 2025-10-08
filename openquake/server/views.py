@@ -1674,6 +1674,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     lon = lat = site_name = asce_version_full = calc_aelo_version = None
     site_class_display_name = None
+    notes_str = warnings_str = ''
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         site_class_display_name = get_site_class_display_name(ds)
@@ -1688,6 +1689,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         except KeyError:
             calc_aelo_version = '1.0.0'
         asce_version_full = oqvalidation.ASCE_VERSIONS[asce_version]
+        notes_str, warnings_str = get_aelo_notes_and_warnings(ds)
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
@@ -1695,7 +1697,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        mce=mce, mce_spectra=mce_spectra,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version_full,
-                       lon=lon, lat=lat, site_class=site_class_display_name, site_name=site_name)
+                       lon=lon, lat=lat, site_class=site_class_display_name,
+                       site_name=site_name, notes=notes_str, warnings=warnings_str)
                   )
 
 
@@ -1749,6 +1752,40 @@ def group_keys_by_value(d):
     return result
 
 
+def get_aelo_notes_and_warnings(ds):
+    notifications = numpy.array([], dtype=notification_dtype)
+    sid_to_vs30 = {}
+    notes = {}
+    warnings = {}
+    if is_model_preliminary(ds):
+        # sid -1 means it is not associated to a specific site
+        preliminary_model_warning = numpy.array([
+            (-1, b'warning', b'preliminary_model',
+                PRELIMINARY_MODEL_WARNING_MSG.encode('utf8'))],
+            dtype=notification_dtype)
+        notifications = numpy.concatenate(
+            (notifications, preliminary_model_warning))
+        sid_to_vs30.update({-1: ''})  # warning about preliminary model
+    if 'notifications' in ds:
+        notifications = numpy.concatenate((notifications, ds['notifications']))
+        sitecol = ds['sitecol']
+        # NOTE: the variable name 'site' is already used
+        sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
+        for notification in notifications:
+            vs30 = sid_to_vs30[notification['sid']]
+            if notification['level'] == b'info':
+                notes[vs30] = notification['description'].decode('utf8')
+            elif notification['level'] == b'warning':
+                warnings[vs30] = notification['description'].decode('utf8')
+        notes = group_keys_by_value(notes)
+        warnings = group_keys_by_value(warnings)
+        # NOTE: we decided to avoid specifying which vs30 values are relevant with
+        # respect to the notifications (either for notes and warnings)
+    notes_str = '\n'.join([note for note in notes.values()])
+    warnings_str = '\n'.join([warning for warning in warnings.values()])
+    return notes_str, warnings_str
+
+
 # this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
@@ -1758,6 +1795,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     asce07 = asce41 = site = governing_mce = None
     asce07_with_units = {}
     asce41_with_units = {}
+    notes_str = warnings_str = ''
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         try:
             asce_version = ds['oqparam'].asce_version
@@ -1824,36 +1862,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         site_class_str = get_site_class_display_name(ds)
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
-        notifications = numpy.array([], dtype=notification_dtype)
-        sid_to_vs30 = {}
-        if is_model_preliminary(ds):
-            # sid -1 means it is not associated to a specific site
-            preliminary_model_warning = numpy.array([
-                (-1, b'warning', b'preliminary_model',
-                 PRELIMINARY_MODEL_WARNING_MSG.encode('utf8'))],
-                dtype=notification_dtype)
-            notifications = numpy.concatenate(
-                (notifications, preliminary_model_warning))
-            sid_to_vs30.update({-1: ''})  # warning about preliminary model
-        sitecol = ds['sitecol']
-        if 'notifications' in ds:
-            notifications = numpy.concatenate((notifications, ds['notifications']))
-            # NOTE: the variable name 'site' is already used
-            sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
-        notes = {}
-        warnings = {}
-        for notification in notifications:
-            vs30 = sid_to_vs30[notification['sid']]
-            if notification['level'] == b'info':
-                notes[vs30] = notification['description'].decode('utf8')
-            elif notification['level'] == b'warning':
-                warnings[vs30] = notification['description'].decode('utf8')
-        notes = group_keys_by_value(notes)
-        warnings = group_keys_by_value(warnings)
-        # NOTE: we decided to avoid specifying which vs30 values are relevant with
-        # respect to the notifications (either for notes and warnings)
-        notes_str = '\n'.join([note for note in notes.values()])
-        warnings_str = '\n'.join([warning for warning in warnings.values()])
+        notes_str, warnings_str = get_aelo_notes_and_warnings(ds)
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
