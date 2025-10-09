@@ -54,12 +54,11 @@ def get_boundaries_file(mosaic_dir):
 
 
 @functools.lru_cache
-def get_mosaic_df(buffer):
+def get_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
     """
     :returns: a DataFrame with the mosaic geometries used in AELO
     """
-    path = get_boundaries_file(config.directory.mosaic_dir or
-                               os.path.dirname(mosaic.__file__))
+    path = get_boundaries_file(mosaic_dir or os.path.dirname(mosaic.__file__))
     logging.info(f'Reading {path}')
     df = readinput.read_geometries(path, 'name', buffer)
     return df
