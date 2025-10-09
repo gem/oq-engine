@@ -19,7 +19,10 @@
 """
 Support for onnxruntime sessions
 """
-import onnxruntime
+try:
+    import onnxruntime
+except ImportError:
+    onnxruntime = None
 
 
 # NB: the engine is already parallelizing, so we must disable the
