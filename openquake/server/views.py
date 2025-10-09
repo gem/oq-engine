@@ -1852,9 +1852,10 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce41_with_units[key] = value
                 else:
                     asce41_with_units[key + ' (g)'] = get_disp_val(value)
+        pngs = {}
         if 'png' in ds:
-            site = 'site.png' in ds['png']
-            governing_mce = 'governing_mce.png' in ds['png']
+            pngs['site'] = 'site.png' in ds['png']
+            pngs['governing_mce'] = 'governing_mce.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         site_class_str = get_site_class_display_name(ds)
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
@@ -1863,8 +1864,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, site_class=site_class_str,
-                       site_name=site_name, site=site,
-                       governing_mce=governing_mce,
+                       site_name=site_name, pngs=pngs,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=oqvalidation.ASCE_VERSIONS[asce_version],
                        warnings=warnings_str, notes=notes_str))
