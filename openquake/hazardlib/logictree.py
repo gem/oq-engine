@@ -41,7 +41,7 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import (
     cached_property, groupby, group_array, AccumDict, BASE183, BASE33489)
-from openquake.hazardlib import nrml, InvalidFile, pmf, valid
+from openquake.hazardlib import nrml, InvalidFile, pmf, valid, contexts
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
@@ -1266,16 +1266,27 @@ class FullLogicTree(object):
 
     def reduce_groups(self, src_groups):
         """
-        Filter the sources and set the tuple .trt_smr
+        Filter the sources with the source_id and set the tuple .trt_smr
         """
         groups = []
         source_id = self.source_model_lt.source_id
+        atomic = 0
         for sg in src_groups:
             ok = self.set_trt_smr(sg, source_id)
             if ok:
                 grp = copy.copy(sg)
                 grp.sources = ok
                 groups.append(grp)
+                atomic += sg.atomic
+        if not atomic:
+            # group the source groups into a single one with the given trt
+            uni, inv = contexts.get_unique_inverse(g.trt_smrs for g in groups)
+            assert len(uni) == 1, 'Not a single group'
+            if len(uni) < len(inv):
+                newgroups = [SourceGroup(sg.trt) for u in uni]
+                for i, g in enumerate(groups):
+                    newgroups[inv[i]].sources.extend(g)
+                return newgroups
         return groups
 
     def gsim_by_trt(self, rlz):
