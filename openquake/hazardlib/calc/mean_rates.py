@@ -125,11 +125,6 @@ def main(job_ini):
     csm = readinput.get_composite_source_model(oq)
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
-    if 'site_model' in oq.inputs:
-        # TODO: see if it can be done in get_site_collection
-        assoc_dist = (oq.region_grid_spacing * 1.414
-                      if oq.region_grid_spacing else 5)  # Graeme's 5km
-        sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
     rmap, _ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
     gws = numpy.concatenate([cm.wei for cm in cmakers])
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
