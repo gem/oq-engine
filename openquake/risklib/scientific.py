@@ -255,8 +255,11 @@ class VulnerabilityFunction(object):
         self.covs = F64(self.covs)
         self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
-        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
-        self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
+        # NB: we use fill_value="extrapolate" for compatibility with numpy 1
+        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios,
+                                             fill_value="extrapolate")
+        self._covs_i1d = interpolate.interp1d(self.imls, self.covs,
+                                              fill_value="extrapolate")
 
     def interpolate(self, gmf_df, col):
         """
@@ -1478,7 +1481,7 @@ def maximum_probable_loss(losses, return_period, eff_time, sorting=True):
     :returns: Maximum Probable Loss at the given return period
 
     >>> losses = [1000., 0., 2000., 1500., 780., 900., 1700., 0., 100., 200.]
-    >>> maximum_probable_loss(losses, 2000, 10_000)
+    >>> float(maximum_probable_loss(losses, 2000, 10_000))
     900.0
     """
     return losses_by_period(losses, [return_period], len(losses), eff_time,
