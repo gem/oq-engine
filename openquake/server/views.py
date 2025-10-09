@@ -1788,7 +1788,7 @@ def get_aelo_notes_and_warnings(ds):
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce07 = asce41 = site = governing_mce = None
+    asce07 = asce41 = None
     asce07_with_units = {}
     asce41_with_units = {}
     notes_str = warnings_str = ''
