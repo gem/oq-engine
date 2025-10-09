@@ -86,7 +86,7 @@ def calc_mean_rates(rmap, gweights, wget, imtls, imts=None):
         imts = imtls
     M = len(imts)
     if len(gweights.shape) == 1:  # fast_mean
-        return (rmap.array @ gweights).reshape(M, L1)
+        return (rmap.array @ gweights).reshape(N, M, L1)
     rates = numpy.zeros((N, M, L1))
     for m, imt in enumerate(imts):
         rates[:, m, :] = rmap.array[:, imtls(imt), :] @ wget(gweights, imt)
@@ -113,6 +113,7 @@ def calc_mcurves(src_groups, sitecol, full_lt, oq):
     return to_probs(rates)
 
 
+# tested in run-demos.sh
 def main(job_ini):
     """
     Compute the mean rates from scratch without source splitting and without
@@ -124,13 +125,8 @@ def main(job_ini):
     csm = readinput.get_composite_source_model(oq)
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
-    if 'site_model' in oq.inputs:
-        # TODO: see if it can be done in get_site_collection
-        assoc_dist = (oq.region_grid_spacing * 1.414
-                      if oq.region_grid_spacing else 5)  # Graeme's 5km
-        sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
     rmap, _ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
-    gws = numpy.concatenate([cm.wei for cm in cmakers.to_array()])
+    gws = numpy.concatenate([cm.wei for cm in cmakers])
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, _M, L1 = rates.shape
     mrates = numpy.zeros((N, L1), oq.imt_dt())
