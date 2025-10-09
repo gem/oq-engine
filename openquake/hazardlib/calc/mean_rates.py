@@ -113,7 +113,7 @@ def calc_mcurves(src_groups, sitecol, full_lt, oq):
     return to_probs(rates)
 
 
-# tested in the demos
+# tested in run-demos.sh
 def main(job_ini):
     """
     Compute the mean rates from scratch without source splitting and without
@@ -123,7 +123,6 @@ def main(job_ini):
     from openquake.calculators.views import text_table
     oq = readinput.get_oqparam(job_ini)
     csm = readinput.get_composite_source_model(oq)
-    oq.mags_by_trt = csm.get_mags_by_trt(oq.maximum_distance)
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
     if 'site_model' in oq.inputs:
