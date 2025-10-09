@@ -1892,6 +1892,10 @@ class ContextMakerSequence(collections.abc.Sequence):
         self.cmakers = cmakers
         self.inverse = inverse
 
+    @property
+    def Gt(self):
+        return sum(len(cm.gsims) for cm in self.cmakers)
+
     def __getitem__(self, idx):
         return self.cmakers[idx]
 

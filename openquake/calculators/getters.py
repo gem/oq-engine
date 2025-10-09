@@ -367,7 +367,7 @@ class MapGetter(object):
         means = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
             idx = means.sidx[sid]
-            rates = self._map[sid]  # shape (L, G)
+            rates = self._map[sid]  # shape (L, Gt)
             means.array[idx] = (rates @ gweights).reshape((M, L1))
         means.array[:] = to_probs(means.array)
         return means

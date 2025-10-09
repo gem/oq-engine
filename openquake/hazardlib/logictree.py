@@ -42,6 +42,8 @@ from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import (
     cached_property, groupby, group_array, AccumDict, BASE183, BASE33489)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid, contexts
+from openquake.hazardlib.source.point import (
+    grid_point_sources, CollapsedPointSource)
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
@@ -1279,14 +1281,23 @@ class FullLogicTree(object):
                 groups.append(grp)
                 atomic += sg.atomic
         if not atomic:
-            # group the source groups into a single one with the given trt
             uni, inv = contexts.get_unique_inverse(g.trt_smrs for g in groups)
-            assert len(uni) == 1, 'Not a single group'
             if len(uni) < len(inv):
-                newgroups = [SourceGroup(sg.trt) for u in uni]
+                # group the source groups into a single one with the given trt
+                # tested in aelo_test KOR for the sources
+                # SSC-AS-005!b_0, SSC-AS-005!b_1
+                assert len(uni) == 1, 'Not a single group'
+                grp = SourceGroup(sg.trt)
                 for i, g in enumerate(groups):
-                    newgroups[inv[i]].sources.extend(g)
-                return newgroups
+                    grp.sources.extend(g)
+                '''
+                from openquake.hazardlib.sourcewriter import tomldump
+                for src in newgroups[0]:
+                    print(tomldump(src))
+                    breakpoint()
+                '''
+                grp.sources = grid_point_sources(grp, 1, keep_ids=True)
+                return [grp]
         return groups
 
     def gsim_by_trt(self, rlz):

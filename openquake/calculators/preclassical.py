@@ -237,7 +237,7 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         L = oq.imtls.size
         Gfull = self.full_lt.gfull([cm.trt_smrs for cm in self.cmakers])
-        Gt = sum(len(cm.gsims) for cm in self.cmakers)
+        Gt = self.cmakers.Gt
         extra = f'<{Gfull}' if Gt < Gfull else ''
         if sites is not None:
             avail = psutil.virtual_memory().available

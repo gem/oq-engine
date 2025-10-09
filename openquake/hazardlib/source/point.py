@@ -482,7 +482,7 @@ class CollapsedPointSource(PointSource):
                    for src in pdata_to_psources(self.pdata))
 
 
-def grid_point_sources(sources, ps_grid_spacing):
+def grid_point_sources(sources, ps_grid_spacing, keep_ids=False):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
@@ -491,9 +491,9 @@ def grid_point_sources(sources, ps_grid_spacing):
     :returns:
         a dict grp_id -> list of non-point sources and collapsed point sources
     """
-    grp_id = sources[0].grp_id
+    trt_smrs = sources[0].trt_smrs
     for src in sources[1:]:
-        assert src.grp_id == grp_id, (src.grp_id, grp_id)
+        assert src.trt_smrs == trt_smrs, (src.trt_smrs, trt_smrs)
     if not ps_grid_spacing:
         return sources
     out = [src for src in sources if not hasattr(src, 'location')]
@@ -513,10 +513,14 @@ def grid_point_sources(sources, ps_grid_spacing):
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
     cnt = 0
+    grp_id = sources[0].grp_id
     for idxs in grid.values():
         if len(idxs) > 1:
             cnt += 1
-            name = 'cps-%03d-%04d' % (grp_id, cnt)
+            if keep_ids:
+                name = ps[idxs][0].source_id
+            else:
+                name = 'cps-%03d-%04d' % (grp_id, cnt)
             cps = CollapsedPointSource(name, ps[idxs])  # slow part
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr

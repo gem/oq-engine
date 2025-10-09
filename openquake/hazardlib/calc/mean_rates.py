@@ -62,7 +62,7 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     L = oq.imtls.size
     all_trt_smrs = [sg[0].trt_smrs for sg in src_groups]
     cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
-    Gt = sum(len(cm.gsims) for cm in cmakers)
+    Gt = cmakers.Gt
     logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
                  len(sitecol), oq.imtls.size, Gt)
     rmap = MapArray(sitecol.sids, L, Gt).fill(0)
