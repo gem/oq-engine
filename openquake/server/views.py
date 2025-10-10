@@ -1145,6 +1145,19 @@ def aelo_validate(request):
     except Exception as exc:
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
+    if site_class != 'custom':
+        valid_vs30 = oqvalidation.SITE_CLASSES[site_class]['vs30']
+        if isinstance(valid_vs30, list):
+            expected_vs30 = ' '.join([str(float(value)) for value in valid_vs30])
+        else:
+            expected_vs30 = str(float(valid_vs30))
+        if vs30 != expected_vs30:
+            # NOTE: this should never happen when using the web form, but it could
+            # happen calling the 'aelo_run' API endpoint programmatically
+            err_msg = (f'For site class {site_class} the expected Vs30 is'
+                       f' {expected_vs30} instead of {vs30}')
+            validation_errs[AELO_FORM_LABELS['vs30']] = err_msg
+            invalid_inputs.append('vs30')
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
