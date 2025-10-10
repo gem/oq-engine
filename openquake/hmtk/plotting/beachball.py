@@ -974,9 +974,9 @@ class MomentTensor(object):
     array([[ 1,  0,  0],
            [ 0,  1, -1],
            [ 0, -1,  0]])
-    >>> b.yz
+    >>> int(b.yz)
     -1
-    >>> a.expo
+    >>> int(a.expo)
     26
     """
 
