@@ -32,7 +32,6 @@ import scipy.stats
 from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.valid import corename
@@ -42,9 +41,9 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker, Oq, FarAwayRupture
-from openquake.hazardlib.calc.mean_rates import (
-    calc_rmap, calc_mean_rates, to_rates, to_probs)
+from openquake.hazardlib.contexts import (
+    ContextMaker, Oq, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.calc.mean_rates import to_rates, to_probs
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -738,8 +737,6 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     source_id = corename(groups[0].sources[0].source_id)
     name = ' on site (%.5f, %.5f)' % (
         site.location.longitude, site.location.latitude)
-    with monitor('calc_rmap' + name, measuremem=True):
-        rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     ws = reduced_lt.rlzs['weight']
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
@@ -750,18 +747,13 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     else:
         src_mutex = {}
     disaggs = []
+    all_trt_smrs = [sg[0].trt_smrs for sg in groups]
+    cmakers = get_cmakers(all_trt_smrs, reduced_lt, oq)
     with monitor('disagg_mag_dist_eps' + name, measuremem=True):
-        if len(cmakers) == 1:
-            # common case, concatenate the ctxs for minor speedup
-            dis = Disaggregator(ctxs, sitecol, cmakers[0], edges)
-            drates4D[:] = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
+        # in logictree_test/case_12
+        for group, cmaker in zip(groups, cmakers.to_array()):
+            dis = Disaggregator(group, sitecol, cmaker, edges)
+            drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
             disaggs.append(dis)
-        else:
-            # in logictree_test/case_12
-            for ctx, cmaker in zip(ctxs, cmakers.to_array()):
-                if len(ctx):
-                    dis = Disaggregator([ctx], sitecol, cmaker, edges)
-                    drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-                    disaggs.append(dis)
     std4D = collect_std(disaggs)
     return site.id, source_id, std4D, drates4D
