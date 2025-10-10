@@ -362,7 +362,7 @@ class Disaggregator(object):
     Internally the attributes .mea and .std are set, with shape (G, M, U),
     for each magnitude bin.
     """
-    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, imts=None):
+    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -371,10 +371,6 @@ class Disaggregator(object):
             self.sitecol = site
             assert len(site) == 1, site
         self.sid = sid = self.sitecol.sids[0]
-        if imts is not None:
-            for imt in imts:
-                assert imt in cmaker.imtls, imt
-            cmaker.imts = [from_string(imt) for imt in imts]
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0],  # mag
@@ -762,7 +758,7 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     disaggs = []
     with monitor('disagg_mag_dist_eps' + name, measuremem=True):
         for ctx, cmaker in zip(ctxs, cmakers.to_array()):
-            dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
+            dis = Disaggregator([ctx], sitecol, cmaker, edges)
             drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
             disaggs.append(dis)
     std4D = collect_std(disaggs)
