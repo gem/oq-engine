@@ -725,19 +725,20 @@ def get_ints(src_ids):
 
 
 def disagg_source(groups, site, reduced_lt, edges_shapedic,
-                  oq, imldic, monitor=Monitor()):
+                  oq, monitor=Monitor()):
     """
-    Compute disaggregation for the given source.
+    Compute disaggregation for the given source. Assume oq.imtls has a
+    single level for each IMT.
 
     :param groups: groups containing a single source ID
     :param site: a Site object
     :param reduced_lt: a FullLogicTree reduced to the source ID
     :param edges_shapedic: pair (bin_edges, shapedic)
     :param oq: OqParam instance
-    :param imldic: dictionary imt->iml
     :param monitor: a Monitor instance
     :returns: sid, src_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
     """
+    imldic = {imt: imls[0] for imt, imls in oq.imtls.items()}
     sitecol = SiteCollection([site])
     sitecol.sids[:] = 0
     if not hasattr(reduced_lt, 'trt_rlzs'):
@@ -764,7 +765,4 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
         drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
         disaggs.append(dis)
     std4D = collect_std(disaggs)
-    gws = reduced_lt.g_weights([cm.trt_smrs for cm in cmakers])
-    rates3D = calc_mean_rates(rmap, gws, reduced_lt.gsim_lt.wget,
-                              oq.imtls, list(imldic))  # (N, M, L1)
-    return site.id, source_id, std4D, drates4D, rates3D[0]
+    return site.id, source_id, std4D, drates4D

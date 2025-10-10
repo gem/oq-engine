@@ -118,6 +118,8 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
                          lon, lat, imt, ' '.join(ids))
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
         imldic = dict(zip(imts, imls))
+        oq.hazard_imtls = general.DictArray(
+            {imt: [iml] for imt, iml in imldic.items()})
         for idx, source_id in enumerate(rel_ids):
             src2idx[sid, source_id] = idx
             smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
@@ -131,7 +133,7 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
             rupts = sum(src.num_ruptures for g in groups for src in g)
             logging.info('(%.1f,%.1f) source %s (%d rlzs, %d rupts)',
                          lon, lat, source_id, Z, rupts)
-            smap.submit((groups, site, relt, (edges, shp), oq, imldic))
+            smap.submit((groups, site, relt, (edges, shp), oq))
     return smap, rel_ids_by_imt, src2idx, weights
 
 
@@ -157,7 +159,7 @@ def collect_results(smap, src2idx, weights, edges, shp,
             source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
         sigma_by_src = hdf5.ArrayWrapper(zstd, dic2)
         out[sid] = (mean_disagg_by_src, sigma_by_src)
-    for sid, srcid, std4D, rates4D, _ in smap:
+    for sid, srcid, std4D, rates4D in smap:
         mean_disagg_by_src, sigma_by_src = out[sid]
         idx = src2idx[sid, srcid]
         mean_disagg_by_src[idx] += rates4D
