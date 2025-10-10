@@ -69,9 +69,12 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers.to_array()):
         dic = classical(group, sitecol, cmaker)
-        if len(dic['rup_data']) == 0:  # the group was filtered away
-            continue
-        ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
+        data = dic['rup_data']
+        if len(data) == 0:  # the group was filtered away
+            # happens in ClassicalTestCase::test_case_06 -
+            ctxs.append([])
+        else:
+            ctxs.append(numpy.concatenate(data).view(numpy.recarray))
         rmap += dic['rmap']  # tested in logictree/case_05
     return rmap, ctxs, cmakers
 
