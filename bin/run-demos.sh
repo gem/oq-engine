@@ -74,6 +74,9 @@ oq engine --list-outputs -1
 # sensitivity to the strike angle
 oq shell $1/risk/ScenarioRisk/sensitivity.py
 
+echo "Testing mean_rates"
+OQ_DISTRIBUTE=no python -m openquake.hazardlib.calc.mean_rates openquake/qa_tests_data/mosaic/KOR/in/job_vs30.ini
+
 echo "Testing csm2rup"
 OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
 

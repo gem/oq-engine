@@ -985,6 +985,7 @@ def get_composite_source_model(oqparam, dstore=None):
         full_lt = get_full_lt(oqparam)  # builds the weights
     csm = source_reader.get_csm(oqparam, full_lt, dstore)
     _check_csm(csm, oqparam, dstore)
+    oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
     return csm
 
 

@@ -69,26 +69,27 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers.to_array()):
         dic = classical(group, sitecol, cmaker)
-        if len(dic['rup_data']) == 0:  # the group was filtered away
-            continue
-        ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
+        data = dic['rup_data']
+        if len(data) == 0:  # the group was filtered away
+            # happens in ClassicalTestCase::test_case_06 -
+            ctxs.append([])
+        else:
+            ctxs.append(numpy.concatenate(data).view(numpy.recarray))
         rmap += dic['rmap']  # tested in logictree/case_05
     return rmap, ctxs, cmakers
 
 
-def calc_mean_rates(rmap, gweights, wget, imtls, imts=None):
+def calc_mean_rates(rmap, gweights, wget, imtls):
     """
     :returns: mean hazard rates as an array of shape (N, M, L1)
     """
     L1 = imtls.size // len(imtls)
     N = len(rmap.array)
-    if imts is None:
-        imts = imtls
-    M = len(imts)
+    M = len(imtls)
     if len(gweights.shape) == 1:  # fast_mean
-        return (rmap.array @ gweights).reshape(M, L1)
+        return (rmap.array @ gweights).reshape(N, M, L1)
     rates = numpy.zeros((N, M, L1))
-    for m, imt in enumerate(imts):
+    for m, imt in enumerate(imtls):
         rates[:, m, :] = rmap.array[:, imtls(imt), :] @ wget(gweights, imt)
     return rates
 
@@ -113,6 +114,7 @@ def calc_mcurves(src_groups, sitecol, full_lt, oq):
     return to_probs(rates)
 
 
+# tested in run-demos.sh
 def main(job_ini):
     """
     Compute the mean rates from scratch without source splitting and without
@@ -124,13 +126,8 @@ def main(job_ini):
     csm = readinput.get_composite_source_model(oq)
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
-    if 'site_model' in oq.inputs:
-        # TODO: see if it can be done in get_site_collection
-        assoc_dist = (oq.region_grid_spacing * 1.414
-                      if oq.region_grid_spacing else 5)  # Graeme's 5km
-        sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
     rmap, _ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
-    gws = numpy.concatenate([cm.wei for cm in cmakers.to_array()])
+    gws = numpy.concatenate([cm.wei for cm in cmakers])
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, _M, L1 = rates.shape
     mrates = numpy.zeros((N, L1), oq.imt_dt())
