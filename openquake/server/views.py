@@ -1145,7 +1145,7 @@ def aelo_validate(request):
     except Exception as exc:
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
-    if site_class != 'custom':
+    if site_class is not None and site_class != 'custom':
         valid_vs30 = oqvalidation.SITE_CLASSES[site_class]['vs30']
         if isinstance(valid_vs30, list):
             expected_vs30 = ' '.join([str(float(value)) for value in valid_vs30])
