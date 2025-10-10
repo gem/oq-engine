@@ -1166,8 +1166,8 @@ def aelo_run(request):
     Run an AELO calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid,
-        asce_version
+        a `django.http.HttpRequest` object containing lon, lat, siteid, asce_version,
+        site_class, vs30
     """
     res = aelo_validate(request)
     if isinstance(res, HttpResponse):  # error
