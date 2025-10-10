@@ -751,12 +751,17 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
         src_mutex = {}
     disaggs = []
     with monitor('disagg_mag_dist_eps' + name, measuremem=True):
-        for ctx, cmaker in zip(ctxs, cmakers.to_array()):
-            if len(ctx):
-                dis = Disaggregator([ctx], sitecol, cmaker, edges)
-                rates = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-                drates4D += rates
-                # print(rates.sum(axis=(0, 1, 2)))  # by IMT
-                disaggs.append(dis)
+        if len(cmakers) == 1:
+            # common case, concatenate the ctxs for minor speedup
+            dis = Disaggregator(ctxs, sitecol, cmakers[0], edges)
+            drates4D[:] = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
+            disaggs.append(dis)
+        else:
+            # in logictree_test/case_12
+            for ctx, cmaker in zip(ctxs, cmakers.to_array()):
+                if len(ctx):
+                    dis = Disaggregator([ctx], sitecol, cmaker, edges)
+                    drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
+                    disaggs.append(dis)
     std4D = collect_std(disaggs)
     return site.id, source_id, std4D, drates4D
