@@ -34,7 +34,7 @@ def main(calc_id: int):
     params['intensity_measure_types_and_levels'] = str(imtls)
 
     # run the postprocessing part of the calculation sequentially
-    run_calc(params, hazard_calculation_id=calc_id, concurrent_tasks=0)
+    run_calc(params, hazard_calculation_id=calc_id)
 
 
 if __name__ == '__main__':

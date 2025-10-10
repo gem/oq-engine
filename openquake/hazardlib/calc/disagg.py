@@ -713,8 +713,7 @@ def get_ints(src_ids):
     return numpy.uint32(out)
 
 
-def disagg_source(groups, site, reduced_lt, edges_shapedic,
-                  oq, monitor=Monitor()):
+def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
     """
     Compute disaggregation for the given source. Assume oq.imtls has a
     single level for each IMT.
@@ -727,16 +726,12 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     :param monitor: a Monitor instance
     :returns: sid, src_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
     """
-    imldic = {imt: imls[0] for imt, imls in oq.imtls.items()}
     sitecol = SiteCollection([site])
     sitecol.sids[:] = 0
     if not hasattr(reduced_lt, 'trt_rlzs'):
         reduced_lt.init()
     edges, s = edges_shapedic
-    drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
     source_id = corename(groups[0].sources[0].source_id)
-    name = ' on site (%.5f, %.5f)' % (
-        site.location.longitude, site.location.latitude)
     ws = reduced_lt.rlzs['weight']
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
@@ -746,14 +741,16 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
             'weight': [src.mutex_weight for src in grp]}
     else:
         src_mutex = {}
-    disaggs = []
     all_trt_smrs = [sg[0].trt_smrs for sg in groups]
     cmakers = get_cmakers(all_trt_smrs, reduced_lt, oq)
-    with monitor('disagg_mag_dist_eps' + name, measuremem=True):
-        # in logictree_test/case_12
-        for group, cmaker in zip(groups, cmakers.to_array()):
-            dis = Disaggregator(group, sitecol, cmaker, edges)
-            drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-            disaggs.append(dis)
-    std4D = collect_std(disaggs)
-    return site.id, source_id, std4D, drates4D
+    for group, cmaker in zip(groups, cmakers.to_array()):
+        dis = Disaggregator(group, sitecol, cmaker, edges)
+        dis.source_id = source_id
+        dis.site_id = site.id
+        yield dis, src_mutex, ws
+
+
+def disagg_source(dis, src_mutex, ws, monitor):
+    imldic = {imt: imls[0] for imt, imls in dis.cmaker.oq.imtls.items()}
+    rates4D = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
+    return rates4D, dis

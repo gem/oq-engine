@@ -132,7 +132,9 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
             rupts = sum(src.num_ruptures for g in groups for src in g)
             logging.info('(%.1f,%.1f) source %s (%d rlzs, %d rupts)',
                          lon, lat, source_id, Z, rupts)
-            smap.submit((groups, site, relt, (edges, shp), oq))
+            for args in disagg.gen_disagg_source(
+                    groups, site, relt, (edges, shp), oq):
+                smap.submit(args)
     return smap, rel_ids_by_imt, src2idx, weights
 
 
@@ -158,11 +160,16 @@ def collect_results(smap, src2idx, weights, edges, shp,
             source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
         sigma_by_src = hdf5.ArrayWrapper(zstd, dic2)
         out[sid] = (mean_disagg_by_src, sigma_by_src)
-    for sid, srcid, std4D, rates4D in smap:
+    disaggs = general.AccumDict(accum=[])
+    for rates4D, dis in smap:
+        disaggs[dis.source_id, dis.site_id].append((rates4D, dis))
+    for (source_id, site_id), pairs in disaggs.items():
+        std4D = disagg.collect_std([pair[1] for pair in pairs])
+        idx = src2idx[site_id, dis.source_id]
         mean_disagg_by_src, sigma_by_src = out[sid]
-        idx = src2idx[sid, srcid]
-        mean_disagg_by_src[idx] += rates4D
-        sigma_by_src[idx] += std4D @ weights[sid, srcid]
+        for pair in pairs:
+            mean_disagg_by_src[idx] += pair[0]
+        sigma_by_src[idx] += std4D @ weights[site_id, source_id]
         # the dot product change the shape from (Ma, D, M, G) -> (Ma, D, M)
     return out
 
