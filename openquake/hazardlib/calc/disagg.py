@@ -437,6 +437,8 @@ class Disaggregator(object):
             self.weights = [w for s, w in zip(self.src_mutex['src_id'],
                                               self.src_mutex['weight'])
                             if s in src_ids]
+            return sum(self.weights)
+        return 1.
 
     def _disagg6D(self, imldic, g):
         # returns a 6D matrix of shape (D, Lo, La, E, M, P)
@@ -486,13 +488,9 @@ class Disaggregator(object):
         """
         for magi in range(self.Ma):
             try:
-                self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
+                mw = self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
             except FarAwayRupture:
                 continue
-            if src_mutex:  # mutex weights
-                mw = sum(self.weights)
-            else:
-                mw = 1.
             res = {'trti': self.cmaker.trti,
                    'magi': self.magi,
                    'sid': self.sid}
@@ -524,13 +522,9 @@ class Disaggregator(object):
         out = numpy.zeros((self.Ma, self.D, self.E, M))  # rates
         for magi in range(self.Ma):
             try:
-                self.init(magi, src_mutex)
+                mw = self.init(magi, src_mutex)  # mutex weight or 1
             except FarAwayRupture:
                 continue
-            if src_mutex:  # mutex weights
-                mw = sum(self.weights)
-            else:
-                mw = 1.
             for rlz, g in self.g_by_rlz.items():
                 mat5 = self._disagg6D(imtls, g)[..., 0]  # p = 0
                 # summing on lon, lat and producing a (D, E, M) array
