@@ -29,6 +29,8 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 from openquake.hazardlib.tests import assert_pickleable
 
+DATA = os.path.join(os.path.dirname(__file__), '..', 'calc', 'data')
+
 
 def make_non_parametric_source():
     surf1 = PlanarSurface(
@@ -102,7 +104,7 @@ class NankaiTest(unittest.TestCase):
     def test_bounding_box(self):
         """ Test calculation of bounding box for gridded source """
         path = os.path.join(os.path.dirname(__file__), '..', 'calc')
-        fname = os.path.join(path, 'nankai.xml')
+        fname = os.path.join(DATA, 'nankai', 'nankai.xml')
         sc = SourceConverter(investigation_time=50., rupture_mesh_spacing=2.)
         groups = nrml.to_python(fname, sc)
         src = groups[0][0]
