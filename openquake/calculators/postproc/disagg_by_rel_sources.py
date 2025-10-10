@@ -118,8 +118,7 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
                          lon, lat, imt, ' '.join(ids))
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
         imldic = dict(zip(imts, imls))
-        oq.hazard_imtls = general.DictArray(
-            {imt: [iml] for imt, iml in imldic.items()})
+        oq.hazard_imtls = {imt: [iml] for imt, iml in imldic.items()}
         for idx, source_id in enumerate(rel_ids):
             src2idx[sid, source_id] = idx
             smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
