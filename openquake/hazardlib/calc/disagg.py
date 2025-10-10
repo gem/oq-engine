@@ -362,7 +362,7 @@ class Disaggregator(object):
     Internally the attributes .mea and .std are set, with shape (G, M, U),
     for each magnitude bin.
     """
-    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, imts=None):
+    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -371,10 +371,6 @@ class Disaggregator(object):
             self.sitecol = site
             assert len(site) == 1, site
         self.sid = sid = self.sitecol.sids[0]
-        if imts is not None:
-            for imt in imts:
-                assert imt in cmaker.imtls, imt
-            cmaker.imts = [from_string(imt) for imt in imts]
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0],  # mag
@@ -725,19 +721,20 @@ def get_ints(src_ids):
 
 
 def disagg_source(groups, site, reduced_lt, edges_shapedic,
-                  oq, imldic, monitor=Monitor()):
+                  oq, monitor=Monitor()):
     """
-    Compute disaggregation for the given source.
+    Compute disaggregation for the given source. Assume oq.imtls has a
+    single level for each IMT.
 
     :param groups: groups containing a single source ID
     :param site: a Site object
     :param reduced_lt: a FullLogicTree reduced to the source ID
     :param edges_shapedic: pair (bin_edges, shapedic)
     :param oq: OqParam instance
-    :param imldic: dictionary imt->iml
     :param monitor: a Monitor instance
     :returns: sid, src_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
     """
+    imldic = {imt: imls[0] for imt, imls in oq.imtls.items()}
     sitecol = SiteCollection([site])
     sitecol.sids[:] = 0
     if not hasattr(reduced_lt, 'trt_rlzs'):
@@ -745,12 +742,11 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     edges, s = edges_shapedic
     drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
     source_id = corename(groups[0].sources[0].source_id)
-    name = 'calc_rmap on site (%.5f, %.5f)' % (site.location.longitude,
-                                               site.location.latitude)
-    with monitor(name, measuremem=True):
+    name = ' on site (%.5f, %.5f)' % (
+        site.location.longitude, site.location.latitude)
+    with monitor('calc_rmap' + name, measuremem=True):
         rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     ws = reduced_lt.rlzs['weight']
-    disaggs = []
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
         src_mutex = {
@@ -759,12 +755,11 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
             'weight': [src.mutex_weight for src in grp]}
     else:
         src_mutex = {}
-    for ctx, cmaker in zip(ctxs, cmakers.to_array()):
-        dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
-        drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-        disaggs.append(dis)
+    disaggs = []
+    with monitor('disagg_mag_dist_eps' + name, measuremem=True):
+        for ctx, cmaker in zip(ctxs, cmakers.to_array()):
+            dis = Disaggregator([ctx], sitecol, cmaker, edges)
+            drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
+            disaggs.append(dis)
     std4D = collect_std(disaggs)
-    gws = reduced_lt.g_weights([cm.trt_smrs for cm in cmakers])
-    rates3D = calc_mean_rates(rmap, gws, reduced_lt.gsim_lt.wget,
-                              oq.imtls, list(imldic))  # (N, M, L1)
-    return site.id, source_id, std4D, drates4D, rates3D[0]
+    return site.id, source_id, std4D, drates4D
