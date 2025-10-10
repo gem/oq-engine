@@ -746,12 +746,11 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     edges, s = edges_shapedic
     drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
     source_id = corename(groups[0].sources[0].source_id)
-    name = 'calc_rmap on site (%.5f, %.5f)' % (site.location.longitude,
-                                               site.location.latitude)
-    with monitor(name, measuremem=True):
+    name = ' on site (%.5f, %.5f)' % (
+        site.location.longitude, site.location.latitude)
+    with monitor('calc_rmap' + name, measuremem=True):
         rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     ws = reduced_lt.rlzs['weight']
-    disaggs = []
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
         src_mutex = {
@@ -760,9 +759,11 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
             'weight': [src.mutex_weight for src in grp]}
     else:
         src_mutex = {}
-    for ctx, cmaker in zip(ctxs, cmakers.to_array()):
-        dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
-        drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-        disaggs.append(dis)
+    disaggs = []
+    with monitor('disagg_mag_dist_eps' + name, measuremem=True):
+        for ctx, cmaker in zip(ctxs, cmakers.to_array()):
+            dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
+            drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
+            disaggs.append(dis)
     std4D = collect_std(disaggs)
     return site.id, source_id, std4D, drates4D
