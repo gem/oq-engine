@@ -675,11 +675,9 @@ def collect_std(disaggs):
     :returns: an array of shape (Ma, D, M', G)
     """
     assert len(disaggs)
-    gsims = set()
-    for dis in disaggs:
-        gsims.update(dis.cmaker.gsims)
-    gidx = {gsim: g for g, gsim in enumerate(sorted(gsims))}
-    G, M = len(gidx), len(dis.cmaker.imts)
+    cmaker = disaggs[0].cmaker  # all the same gsims and imts
+    gidx = {gsim: g for g, gsim in enumerate(cmaker.gsims)}
+    G, M = len(gidx), len(cmaker.imts)
     out = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
     cnt = collections.Counter()  # (magi, dsti)
     for dis in disaggs:
