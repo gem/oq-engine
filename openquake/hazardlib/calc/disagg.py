@@ -367,6 +367,7 @@ class Disaggregator(object):
             self.sitecol = site
             assert len(site) == 1, site
         self.sid = sid = self.sitecol.sids[0]
+
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0],  # mag
@@ -389,8 +390,10 @@ class Disaggregator(object):
         if isinstance(srcs_or_ctxs[0], numpy.ndarray):
             # passed contexts, see logictree_test/case_05
             # consider only the contexts affecting the site
+            self.source_id = 'some_source'
             ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
         else:  # passed sources, used only in test_disaggregator
+            self.source_id = corename(srcs_or_ctxs[0].source_id)
             ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
         if sum(len(c) for c in ctxs) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
@@ -531,7 +534,11 @@ class Disaggregator(object):
         return to_rates(out) if src_mutex else out
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {humansize(self.fullctx.nbytes)} >'
+        source_id = self.source_id
+        site_id = self.site_id
+        rep = (f'<{self.__class__.__name__} {source_id=} {site_id=} '
+               f'{humansize(self.fullctx.nbytes)} >')
+        return rep
 
 
 # this is used in the hazardlib tests, not in the engine
@@ -729,12 +736,10 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     """
     imldic = {imt: imls[0] for imt, imls in oq.imtls.items()}
     sitecol = SiteCollection([site])
-    sitecol.sids[:] = 0
     if not hasattr(reduced_lt, 'trt_rlzs'):
         reduced_lt.init()
     edges, s = edges_shapedic
     drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
-    source_id = corename(groups[0].sources[0].source_id)
     name = ' on site (%.5f, %.5f)' % (
         site.location.longitude, site.location.latitude)
     ws = reduced_lt.rlzs['weight']
@@ -756,4 +761,4 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
             drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
             disaggs.append(dis)
     std4D = collect_std(disaggs)
-    return site.id, source_id, std4D, drates4D
+    return site.id, dis.source_id, std4D, drates4D
