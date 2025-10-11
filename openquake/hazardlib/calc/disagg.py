@@ -672,20 +672,16 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def collect_std(disaggs):
+def collect_std(disaggs, G, M):
     """
     :returns: an array of shape (Ma, D, M', G)
     """
     assert len(disaggs)
-    cmaker = disaggs[0].cmaker  # all the same gsims and imts
-    gidx = {gsim: g for g, gsim in enumerate(cmaker.gsims)}
-    G, M = len(gidx), len(cmaker.imts)
     out = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
     cnt = collections.Counter()  # (magi, dsti)
     for dis in disaggs:
         for magi in dis.std:
-            for gsim, std in zip(dis.cmaker.gsims, dis.std[magi]):
-                g = gidx[gsim]  # std has shape (M, U)
+            for g, std in enumerate(dis.std[magi]):
                 for dsti, val in zip(dis.dist_idx[magi], std.T):
                     if (magi, dsti) in out:
                         out[magi, dsti][g] += val  # shape M
@@ -758,5 +754,5 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
             dis = Disaggregator(group, sitecol, cmaker, edges)
             drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
             disaggs.append(dis)
-    std4D = collect_std(disaggs)
+    std4D = collect_std(disaggs, len(cmakers[0].gsims), len(imldic))
     return site.id, dis.source_id, std4D, drates4D
