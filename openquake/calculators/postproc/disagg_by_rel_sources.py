@@ -120,10 +120,10 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
         imldic = dict(zip(imts, imls))
         oq.hazard_imtls = {imt: [iml] for imt, iml in imldic.items()}
         for idx, source_id in enumerate(rel_ids):
-            src2idx[sid, source_id] = idx
+            src2idx[source_id, sid] = idx
             smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
             gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-            weights[sid, source_id] = [rlz.weight[-1] for rlz in gslt]
+            weights[source_id, sid] = [rlz.weight[-1] for rlz in gslt]
             relt = FullLogicTree(smlt, gslt)
             Z = relt.get_num_paths()
             assert Z, relt  # sanity check
@@ -132,7 +132,9 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
             rupts = sum(src.num_ruptures for g in groups for src in g)
             logging.info('(%.1f,%.1f) source %s (%d rlzs, %d rupts)',
                          lon, lat, source_id, Z, rupts)
-            smap.submit((groups, site, relt, (edges, shp), oq))
+            for args in disagg.gen_disagg_source(
+                    groups, site, relt, (edges, shp), oq):
+                smap.submit(args)
     return smap, rel_ids_by_imt, src2idx, weights
 
 
@@ -143,26 +145,33 @@ def collect_results(smap, src2idx, weights, edges, shp,
     """
     out = {}
     mags, dists, _lons, _lats, eps, _trts = edges
+    mag, dist, ep = middle(mags), middle(dists), middle(eps)
     for sid in sorted(rel_ids_by_imt):
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
-        Ns, M1 = len(rel_ids), len(imts)
-        zrates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
-        zstd = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
+        Ns, M = len(rel_ids), len(imts)
+        zrates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M))
+        zstd = numpy.zeros((Ns, shp['mag'], shp['dist'], M))
         dic = dict(
             shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
-            source_id=rel_ids, mag=middle(mags), dist=middle(dists),
-            eps=middle(eps), imt=imts, iml=imls_by_imt[sid])
+            source_id=rel_ids, mag=mag, dist=dist,
+            eps=ep, imt=imts, iml=imls_by_imt[sid])
         mean_disagg_by_src = hdf5.ArrayWrapper(zrates, dic)
         dic2 = dict(
             shape_descr=['source_id', 'mag', 'dist', 'imt'],
-            source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
+            source_id=rel_ids, imt=imts, mag=mag, dist=dist)
         sigma_by_src = hdf5.ArrayWrapper(zstd, dic2)
         out[sid] = (mean_disagg_by_src, sigma_by_src)
-    for sid, srcid, std4D, rates4D in smap:
+    disaggs = general.AccumDict(accum=[])
+    for dic in smap:
+        disaggs[dic['source_id'], dic['sid']].append(dic)
+    for (source_id, sid), dics in disaggs.items():
+        idx = src2idx[source_id, sid]
         mean_disagg_by_src, sigma_by_src = out[sid]
-        idx = src2idx[sid, srcid]
-        mean_disagg_by_src[idx] += rates4D
-        sigma_by_src[idx] += std4D @ weights[sid, srcid]
+        for dic in dics:
+            mean_disagg_by_src[idx] += dic['rates4D']
+        G = len(weights[source_id, sid])  # gsim weights
+        std4D = disagg.collect_std(dics, shp['mag'], shp['dist'], M, G)
+        sigma_by_src[idx] += std4D @ weights[source_id, sid]
         # the dot product change the shape from (Ma, D, M, G) -> (Ma, D, M)
     return out
 
