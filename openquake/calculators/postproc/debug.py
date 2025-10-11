@@ -33,7 +33,6 @@ def main(calc_id: int):
     params = readinput.get_params(job_ini)
     params['intensity_measure_types_and_levels'] = str(imtls)
 
-    # run the postprocessing part of the calculation sequentially
     run_calc(params, hazard_calculation_id=calc_id)
 
 

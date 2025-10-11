@@ -162,7 +162,7 @@ def collect_results(smap, src2idx, weights, edges, shp,
         out[sid] = (mean_disagg_by_src, sigma_by_src)
     disaggs = general.AccumDict(accum=[])
     for rates4D, dis in smap:
-        disaggs[dis.source_id, dis.site_id].append((rates4D, dis))
+        disaggs[dis.source_id, dis.sid].append((rates4D, dis))
     for (source_id, site_id), pairs in disaggs.items():
         std4D = disagg.collect_std([pair[1] for pair in pairs])
         idx = src2idx[site_id, dis.source_id]

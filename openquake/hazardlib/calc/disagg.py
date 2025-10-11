@@ -389,8 +389,10 @@ class Disaggregator(object):
         if isinstance(srcs_or_ctxs[0], numpy.ndarray):
             # passed contexts, see logictree_test/case_05
             # consider only the contexts affecting the site
+            self.source_id = 'some_source'
             ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
         else:  # passed sources, used only in test_disaggregator
+            self.source_id = corename(srcs_or_ctxs[0].source_id)
             ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
         if sum(len(c) for c in ctxs) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
@@ -531,7 +533,10 @@ class Disaggregator(object):
         return to_rates(out) if src_mutex else out
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {humansize(self.fullctx.nbytes)} >'
+        source_id, sid = self.source_id, self.sid
+        rep = (f'<{self.__class__.__name__} {source_id=} {sid=} '
+               f'{humansize(self.fullctx.nbytes)} >')
+        return rep
 
 
 # this is used in the hazardlib tests, not in the engine
@@ -727,11 +732,9 @@ def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
     :returns: sid, src_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
     """
     sitecol = SiteCollection([site])
-    sitecol.sids[:] = 0
     if not hasattr(reduced_lt, 'trt_rlzs'):
         reduced_lt.init()
     edges, s = edges_shapedic
-    source_id = corename(groups[0].sources[0].source_id)
     ws = reduced_lt.rlzs['weight']
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
@@ -745,8 +748,6 @@ def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
     cmakers = get_cmakers(all_trt_smrs, reduced_lt, oq)
     for group, cmaker in zip(groups, cmakers.to_array()):
         dis = Disaggregator(group, sitecol, cmaker, edges)
-        dis.source_id = source_id
-        dis.site_id = site.id
         yield dis, src_mutex, ws
 
 
