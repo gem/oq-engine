@@ -672,24 +672,25 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def collect_std(disaggs, G, M):
+def collect_std(disaggs, Ma, D, M, G):
     """
-    :returns: an array of shape (Ma, D, M', G)
+    :param disaggs: dictionaries with keys sid, source_id, dist_idx, std
+    :returns: an array of shape (Ma, D, M, G)
     """
     assert len(disaggs)
-    out = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
+    acc = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
     cnt = collections.Counter()  # (magi, dsti)
     for dis in disaggs:
-        for magi in dis.std:
-            for g, std in enumerate(dis.std[magi]):
-                for dsti, val in zip(dis.dist_idx[magi], std.T):
-                    if (magi, dsti) in out:
-                        out[magi, dsti][g] += val  # shape M
+        for magi in dis['std']:
+            for g, std in enumerate(dis['std'][magi]):
+                for dsti, val in zip(dis['dist_idx'][magi], std.T):
+                    if (magi, dsti) in acc:
+                        acc[magi, dsti][g] += val  # shape M
                     else:
-                        out[magi, dsti][g] = val.copy()
+                        acc[magi, dsti][g] = val.copy()
                     cnt[magi, dsti] += 1 / G
-    sig = numpy.zeros((dis.Ma, dis.D, M, G))
-    for (magi, dsti), v in out.items():
+    sig = numpy.zeros((Ma, D, M, G))
+    for (magi, dsti), v in acc.items():
         sig[magi, dsti] = v.T / cnt[magi, dsti]
 
     # the sigmas are artificially zero for not covered (magi, disti) bins
@@ -753,6 +754,8 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
         for group, cmaker in zip(groups, cmakers.to_array()):
             dis = Disaggregator(group, sitecol, cmaker, edges)
             drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-            disaggs.append(dis)
-    std4D = collect_std(disaggs, len(cmakers[0].gsims), len(imldic))
+            disaggs.append(dict(sid=dis.sid, source_id=dis.source_id,
+                                dist_idx=dis.dist_idx, std=dis.std))
+    std4D = collect_std(disaggs, dis.Ma, dis.D,
+                        len(imldic), len(cmakers[0].gsims))
     return site.id, dis.source_id, std4D, drates4D
