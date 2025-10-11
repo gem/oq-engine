@@ -367,6 +367,7 @@ class Disaggregator(object):
             self.sitecol = site
             assert len(site) == 1, site
         self.sid = sid = self.sitecol.sids[0]
+
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0],  # mag
@@ -670,28 +671,25 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def collect_std(disaggs):
+def collect_std(disaggs, Ma, D, M, G):
     """
-    :returns: an array of shape (Ma, D, M', G)
+    :param disaggs: dictionaries with keys sid, source_id, dist_idx, std
+    :returns: an array of shape (Ma, D, M, G)
     """
     assert len(disaggs)
-    cmaker = disaggs[0].cmaker  # all the same gsims and imts
-    gidx = {gsim: g for g, gsim in enumerate(cmaker.gsims)}
-    G, M = len(gidx), len(cmaker.imts)
-    out = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
+    acc = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
     cnt = collections.Counter()  # (magi, dsti)
     for dis in disaggs:
-        for magi in dis.std:
-            for gsim, std in zip(dis.cmaker.gsims, dis.std[magi]):
-                g = gidx[gsim]  # std has shape (M, U)
-                for dsti, val in zip(dis.dist_idx[magi], std.T):
-                    if (magi, dsti) in out:
-                        out[magi, dsti][g] += val  # shape M
+        for magi in dis['std']:
+            for g, std in enumerate(dis['std'][magi]):
+                for dsti, val in zip(dis['dist_idx'][magi], std.T):
+                    if (magi, dsti) in acc:
+                        acc[magi, dsti][g] += val  # shape M
                     else:
-                        out[magi, dsti][g] = val.copy()
+                        acc[magi, dsti][g] = val.copy()
                     cnt[magi, dsti] += 1 / G
-    sig = numpy.zeros((dis.Ma, dis.D, M, G))
-    for (magi, dsti), v in out.items():
+    sig = numpy.zeros((Ma, D, M, G))
+    for (magi, dsti), v in acc.items():
         sig[magi, dsti] = v.T / cnt[magi, dsti]
 
     # the sigmas are artificially zero for not covered (magi, disti) bins
@@ -752,4 +750,5 @@ def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
 def disagg_source(dis, src_mutex, ws, monitor):
     imldic = {imt: imls[0] for imt, imls in dis.cmaker.oq.imtls.items()}
     rates4D = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-    return rates4D, dis
+    return dict(source_id=dis.source_id, sid=dis.sid,
+                rates4D=rates4D, std=dis.std, dist_idx=dis.dist_idx)
