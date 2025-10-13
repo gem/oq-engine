@@ -485,8 +485,8 @@ def _build_dparam(src, sitecol, cmaker):
         for param in dparams:
             out[sec.idx, param] = get_dparam(sec, sitecol, param)
     # use multi_fault_test to debug this
-    # from openquake.baselib.general import getsizeof
-    # print(getsizeof(out))
+    from openquake.baselib.general import getsizeof
+    print(src, sitecol, getsizeof(out) / 1024**2)
     return out
 
 
@@ -1505,8 +1505,9 @@ class PmapMaker(object):
         # the dparam cache, we split the sites in tiles
         tiles = [sites]
         if src.code == b'F' and (
-                len(src.get_unique_idxs()) * src.nsites > 1_000_000):
-            tiles = sites.split_in_tiles(len(sites) // 1000)
+            len(src.get_unique_idxs()) * len(sites) > 1_000_000):
+                tiles = sites.split_in_tiles(len(sites) // 1000)
+                print('Producing %d tiles' % len(tiles))
         for tile in tiles:
             for ctx in self.cmaker.get_ctx_iter(src, tile):
                 if self.cmaker.deltagetter:
