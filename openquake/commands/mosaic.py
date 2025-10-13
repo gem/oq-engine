@@ -119,6 +119,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
     cj = min(parallel.num_cores, len(allparams)) // 4 or 1
+    os.environ['OQ_DISTRIBUTE'] = 'zmq'
     engine.run_jobs(logctxs, concurrent_jobs=cj)
     out = []
     count_errors = 0
