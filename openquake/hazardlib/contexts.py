@@ -1502,14 +1502,14 @@ class PmapMaker(object):
         if sites is None:
             return
         # to avoid running OOM in multifault sources when building
-        # the dparam cache, we split the sites in tiles of 5000 sites max
+        # the dparam cache, we split the sites in tiles
         if src.code == b'F' and len(sites) > 5000:
-            tiles = sites.split_max(5000)
+            tiles = sites.split_in_tiles(len(sites) // 5000)
             print(src, 'ntiles =', len(tiles))
         else:
             tiles = [sites]
         for tile in tiles:
-            for ctx in self.cmaker.get_ctx_iter(src, sites):
+            for ctx in self.cmaker.get_ctx_iter(src, tile):
                 if self.cmaker.deltagetter:
                     # adjust occurrence rates in case of aftershocks
                     with self.cmaker.delta_mon:
