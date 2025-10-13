@@ -1501,18 +1501,26 @@ class PmapMaker(object):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
-        for ctx in self.cmaker.get_ctx_iter(src, sites):
-            if self.cmaker.deltagetter:
-                # adjust occurrence rates in case of aftershocks
-                with self.cmaker.delta_mon:
-                    delta = self.cmaker.deltagetter(src.id)
-                    ctx.occurrence_rate += delta[ctx.rup_id]
-            if self.fewsites:  # keep rupdata in memory (before collapse)
-                if self.src_mutex:
-                    # needed for Disaggregator.init
-                    ctx.src_id = valid.fragmentno(src)
-                self.rupdata.append(ctx)
-            yield ctx
+        # to avoid running OOM in multifault sources when building
+        # the dparam cache, we split the sites in tiles of 5000 sites max
+        if src.code == b'F' and len(sites) > 5000:
+            tiles = sites.split_max(5000)
+            print(src, 'ntiles =', len(tiles))
+        else:
+            tiles = [sites]
+        for tile in tiles:
+            for ctx in self.cmaker.get_ctx_iter(src, sites):
+                if self.cmaker.deltagetter:
+                    # adjust occurrence rates in case of aftershocks
+                    with self.cmaker.delta_mon:
+                        delta = self.cmaker.deltagetter(src.id)
+                        ctx.occurrence_rate += delta[ctx.rup_id]
+                if self.fewsites:  # keep rupdata in memory (before collapse)
+                    if self.src_mutex:
+                        # needed for Disaggregator.init
+                        ctx.src_id = valid.fragmentno(src)
+                    self.rupdata.append(ctx)
+                yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
