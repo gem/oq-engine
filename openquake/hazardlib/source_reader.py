@@ -45,7 +45,7 @@ source_info_dt = numpy.dtype([
     ('grp_id', numpy.uint16),          # 1
     ('code', (numpy.bytes_, 1)),       # 2
     ('calc_time', numpy.float32),      # 3
-    ('num_sites', numpy.uint32),       # 4
+    ('num_sites', numpy.uint64),       # 4
     ('num_ruptures', numpy.uint32),    # 5
     ('weight', numpy.float32),         # 6
     ('mutex_weight', numpy.float64),   # 7
@@ -722,6 +722,8 @@ class CompositeSourceModel:
                     continue
                 if len(cmdict) > 1:  # has labels
                     sites = sitecol.filter(sitecol.ilabel == idx)
+                    if sites is not None:
+                        logging.info(f'{len(sites)=} for {label=}, {sg}')
                 else:
                     sites = sitecol
                 if sites:

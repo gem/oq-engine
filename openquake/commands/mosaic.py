@@ -85,7 +85,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
-    mosaic_df = get_mosaic_df(buffer=0.0)
+    mosaic_df = get_mosaic_df(0.0, mosaic_dir)
     sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
@@ -118,7 +118,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    cj = min(parallel.num_cores, len(allparams)) // 2 or 1
+    cj = min(parallel.num_cores, len(allparams)) // 4 or 1
     engine.run_jobs(logctxs, concurrent_jobs=cj)
     out = []
     count_errors = 0

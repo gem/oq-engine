@@ -36,24 +36,44 @@ PRELIMINARY_MODEL_WARNING_MSG = (
     ' is under review and will be updated' ' during Year 3.')
 
 
+def get_boundaries_file(mosaic_dir, other_dir):
+    """
+    Search the passed mosaic_dir and then qa_tests_data/mosaic
+    for ModelBoundaries.gpkg|shp
+    """
+    fname = config.directory.mosaic_boundaries_file
+    if fname:
+        assert os.path.exists(fname), fname
+        return fname
+    for mdir in (mosaic_dir, other_dir):
+        fname = os.path.join(mdir, 'ModelBoundaries.gpkg')
+        if os.path.exists(fname):
+            return fname
+        fname = os.path.join(mdir, 'ModelBoundaries.shp')
+        if os.path.exists(fname):
+            return fname
+    raise FileNotFoundError('ModelBoundaries')
+
+
 @functools.lru_cache
-def get_mosaic_df(buffer):
+def get_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
     """
     :returns: a DataFrame with the mosaic geometries used in AELO
     """
-    mosaic_boundaries_file = config.directory.mosaic_boundaries_file
-    if not mosaic_boundaries_file:
-        mosaic_boundaries_file = os.path.join(
-            os.path.dirname(mosaic.__file__), 'ModelBoundaries.gpkg')
-    df = readinput.read_geometries(mosaic_boundaries_file, 'name', buffer)
+    path = get_boundaries_file(mosaic_dir, os.path.dirname(mosaic.__file__))
+    logging.info(f'Reading {path}')
+    df = readinput.read_geometries(path, 'name', buffer)
     return df
 
 
 def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     """
-    :param inputs: a dictionary with sites, vs30, siteid, asce_version, site_class
-    :param mosaic_dir: directory where the mosaic is located
-    :param ini: path of the job ini file (if specified, mosaic_dir will be ignored)
+    :param inputs:
+        a dictionary with sites, vs30, siteid, asce_version, site_class
+    :param mosaic_dir:
+        directory where the mosaic is located
+    :param ini:
+        path of the job ini file (if specified, mosaic_dir will be ignored)
 
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
