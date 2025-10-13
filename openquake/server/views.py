@@ -122,7 +122,7 @@ AELO_FORM_PLACEHOLDERS = {
     'asce_version': 'ASCE standards',
 }
 
-HIDDEN_OUTPUTS = ['assetcol', 'job']
+HIDDEN_OUTPUTS = ['exposure', 'job']
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -1336,6 +1336,8 @@ def calc_results(request, calc_id):
             outtypes = [ot for ot in output_types[rtype] if ot != 'txt']
         except KeyError:
             continue  # non-exportable outputs should not be shown
+        if not outtypes:  # happens for 'exposure', since it is hidden
+            continue
         path = f'v1/calc/result/{result.id}'
         url = urljoin(base_url, path)
         # NOTE: in case of multiple available export types, we provide only the url to
