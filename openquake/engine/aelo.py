@@ -36,20 +36,22 @@ PRELIMINARY_MODEL_WARNING_MSG = (
     ' is under review and will be updated' ' during Year 3.')
 
 
-def get_boundaries_file(mosaic_dir):
+def get_boundaries_file(mosaic_dir, other_dir):
     """
-    Search the mosaic_dir for ModelBoundaries.gpkg|shp
+    Search the passed mosaic_dir and then qa_tests_data/mosaic
+    for ModelBoundaries.gpkg|shp
     """
     fname = config.directory.mosaic_boundaries_file
     if fname:
         assert os.path.exists(fname), fname
         return fname
-    fname = os.path.join(mosaic_dir, 'ModelBoundaries.gpkg')
-    if os.path.exists(fname):
-        return fname
-    fname = os.path.join(mosaic_dir, 'ModelBoundaries.shp')
-    if os.path.exists(fname):
-        return fname
+    for mdir in (mosaic_dir, other_dir):
+        fname = os.path.join(mdir, 'ModelBoundaries.gpkg')
+        if os.path.exists(fname):
+            return fname
+        fname = os.path.join(mdir, 'ModelBoundaries.shp')
+        if os.path.exists(fname):
+            return fname
     raise FileNotFoundError('ModelBoundaries')
 
 
@@ -58,7 +60,7 @@ def get_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
     """
     :returns: a DataFrame with the mosaic geometries used in AELO
     """
-    path = get_boundaries_file(mosaic_dir or os.path.dirname(mosaic.__file__))
+    path = get_boundaries_file(mosaic_dir, os.path.dirname(mosaic.__file__))
     logging.info(f'Reading {path}')
     df = readinput.read_geometries(path, 'name', buffer)
     return df

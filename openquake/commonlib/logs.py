@@ -49,6 +49,11 @@ def get_tag(job_ini):
     return ''
 
 
+def on_workers(action):
+    master = w.WorkerMaster(-1)  # current job
+    return getattr(master, action[8:])()  # workers_(stop|kill)
+
+
 def dbcmd(action, *args):
     """
     A dispatcher to the database server.
@@ -62,11 +67,13 @@ def dbcmd(action, *args):
         if type(arg) not in SIMPLE_TYPES:
             raise TypeError(f'{arg} is not a simple type')
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    if dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
-        # access the database directly
+    if (action.startswith('workers_') and config.zworkers.host_cores
+          == '127.0.0.1 -1'):  # local zmq
+        return on_workers(action)
+    elif dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
+        # no server mode, access the database directly
         if action.startswith('workers_'):
-            master = w.WorkerMaster(-1)  # current job
-            return getattr(master, action[8:])()  # workers_(stop|kill)
+            return on_workers(action)
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)

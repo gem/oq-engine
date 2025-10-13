@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Improved the parallelization of disagg_source in AELO calculations
+  * Fixed the OverflowError: Python integer out of bounds for uint32
+    happening for extra-large calculations when saving source_info
+
   [Guillermo Aldama-Bustos]
   * Fixed the unit of measure in the Douglas et al (2024) GMM and updated
    coefficients for the 3- and 5-branch models to fix an error

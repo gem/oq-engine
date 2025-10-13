@@ -32,7 +32,6 @@ import scipy.stats
 from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.valid import corename
@@ -42,9 +41,9 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker, Oq, FarAwayRupture
-from openquake.hazardlib.calc.mean_rates import (
-    calc_rmap, calc_mean_rates, to_rates, to_probs)
+from openquake.hazardlib.contexts import (
+    ContextMaker, Oq, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.calc.mean_rates import to_rates, to_probs
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -189,7 +188,7 @@ def get_eps4(eps_edges, truncation_level):
 
 
 # NB: this function is the crucial bit for performance!
-def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar, gp,
+def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, eps4, epsstar, gp,
                   infer_occur_rates, mon1, mon2, mon3):
     # ctx: a recarray of size U for a single site and magnitude bin
     # mea: array of shape (G, M, U)
@@ -197,16 +196,13 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar, gp,
     # cmaker: a ContextMaker instance
     # g: a gsim index
     # iml2: an array of shape (M, P) of logarithmic intensities
-    # eps_bands: an array of E elements obtained from the E+1 eps_edges
-    # bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
+    # eps4: a quartet min_eps, max_eps, eps_bands, cum_bands
     # epsstar: a boolean. When True, disaggregation contains eps* results
     # gp: group_probability relevant for mutex sources, otherwise 1
     # returns a 7D-array of shape (D, Lo, La, E, M, P, Z)
 
     with mon1:
-        eps_edges = tuple(bin_edges[-1])  # last edge
-        min_eps, max_eps, eps_bands, cum_bands = get_eps4(
-            eps_edges, cmaker.truncation_level)
+        min_eps, max_eps, eps_bands, cum_bands = eps4
         U, E = len(ctx), len(eps_bands)
         M, P = iml2.shape
         phi_b = cmaker.phi_b
@@ -225,7 +221,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar, gp,
             lvls = (iml - mea[g, m]) / std[g, m]
             # Find the index in the epsilons-bins vector where lvls (which are
             # epsilons) should be included
-            idxs = numpy.searchsorted(eps_edges, lvls)
+            idxs = numpy.searchsorted(bin_edges[-1], lvls)
             # Split the epsilons into parts (one for each bin larger than lvls)
             if epsstar:
                 ok = (lvls >= min_eps) & (lvls < max_eps)
@@ -362,7 +358,7 @@ class Disaggregator(object):
     Internally the attributes .mea and .std are set, with shape (G, M, U),
     for each magnitude bin.
     """
-    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, imts=None):
+    def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges):
         if isinstance(site, Site):
             if not hasattr(site, 'id'):
                 site.id = 0
@@ -371,10 +367,7 @@ class Disaggregator(object):
             self.sitecol = site
             assert len(site) == 1, site
         self.sid = sid = self.sitecol.sids[0]
-        if imts is not None:
-            for imt in imts:
-                assert imt in cmaker.imtls, imt
-            cmaker.imts = [from_string(imt) for imt in imts]
+
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0],  # mag
@@ -384,6 +377,8 @@ class Disaggregator(object):
                           bin_edges[4])  # eps
         for i, name in enumerate(['Ma', 'D', 'Lo', 'La', 'E']):
             setattr(self, name, len(self.bin_edges[i]) - 1)
+
+        self.eps4 = get_eps4(tuple(self.bin_edges[4]), cmaker.truncation_level)
         self.dist_idx = {}  # magi -> dist_idx
         self.mea, self.std = {}, {}  # magi -> array[G, M, U]
 
@@ -392,17 +387,7 @@ class Disaggregator(object):
             for rlz in rlzs:
                 self.g_by_rlz[rlz] = g
 
-        if isinstance(srcs_or_ctxs[0], numpy.ndarray):
-            # passed contexts, see logictree_test/case_05
-            # consider only the contexts affecting the site
-            ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
-        else:  # passed sources, used only in test_disaggregator
-            ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
-        if sum(len(c) for c in ctxs) == 0:
-            raise FarAwayRupture('No ruptures affecting site #%d' % sid)
-
-        ctx = numpy.concatenate(ctxs).view(numpy.recarray)
-        self.fullctx = ctx
+        self.srcs_or_ctxs = srcs_or_ctxs
 
     def init(self, magi, src_mutex,
              mon0=Monitor('disagg mean_stds'),
@@ -416,7 +401,19 @@ class Disaggregator(object):
         self.mon3 = mon3
         if not hasattr(self, 'ctx_by_magi'):
             # the first time build the magnitude bins
-            self.ctx_by_magi = split_by_magbin(self.fullctx, self.bin_edges[0])
+            if isinstance(self.srcs_or_ctxs[0], numpy.ndarray):
+                # passed contexts, see logictree_test/case_05
+                # consider only the contexts affecting the site
+                self.source_id = 'some_source'
+                ctxs = [ctx[ctx.sids == self.sid] for ctx in self.srcs_or_ctxs]
+            else:  # passed sources, used only in test_disaggregator
+                self.source_id = corename(self.srcs_or_ctxs[0].source_id)
+                ctxs = self.cmaker.from_srcs(self.srcs_or_ctxs, self.sitecol)
+            if sum(len(c) for c in ctxs) == 0:
+                raise FarAwayRupture(
+                    'No ruptures affecting site #%d' % self.sid)
+            ctx = numpy.concatenate(ctxs).view(numpy.recarray)
+            self.ctx_by_magi = split_by_magbin(ctx, self.bin_edges[0])
         try:
             self.ctx = self.ctx_by_magi[magi]
         except KeyError:
@@ -441,6 +438,8 @@ class Disaggregator(object):
             self.weights = [w for s, w in zip(self.src_mutex['src_id'],
                                               self.src_mutex['weight'])
                             if s in src_ids]
+            return sum(self.weights)
+        return 1.
 
     def _disagg6D(self, imldic, g):
         # returns a 6D matrix of shape (D, Lo, La, E, M, P)
@@ -455,7 +454,8 @@ class Disaggregator(object):
         gp = self.src_mutex.get('grp_probability', 1.)
         if not self.src_mutex:
             poes = _disaggregate(self.ctx, mea, std, self.cmaker,
-                                 g, imlog2, self.bin_edges, self.epsstar, gp,
+                                 g, imlog2, self.bin_edges, self.eps4,
+                                 self.epsstar, gp,
                                  self.cmaker.oq.infer_occur_rates,
                                  self.mon1, self.mon2, self.mon3)
             return to_rates(poes)
@@ -467,7 +467,7 @@ class Disaggregator(object):
             mea = self.mea[self.magi][:, :, s1:s2]  # shape (G, M, U)
             std = self.std[self.magi][:, :, s1:s2]  # shape (G, M, U)
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
-                                self.bin_edges, self.epsstar, gp,
+                                self.bin_edges, self.eps4, self.epsstar, gp,
                                 self.cmaker.oq.infer_occur_rates,
                                 self.mon1, self.mon2, self.mon3)
             mats.append(mat)
@@ -490,13 +490,9 @@ class Disaggregator(object):
         """
         for magi in range(self.Ma):
             try:
-                self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
+                mw = self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
             except FarAwayRupture:
                 continue
-            if src_mutex:  # mutex weights
-                mw = sum(self.weights)
-            else:
-                mw = 1.
             res = {'trti': self.cmaker.trti,
                    'magi': self.magi,
                    'sid': self.sid}
@@ -528,13 +524,9 @@ class Disaggregator(object):
         out = numpy.zeros((self.Ma, self.D, self.E, M))  # rates
         for magi in range(self.Ma):
             try:
-                self.init(magi, src_mutex)
+                mw = self.init(magi, src_mutex)  # mutex weight or 1
             except FarAwayRupture:
                 continue
-            if src_mutex:  # mutex weights
-                mw = sum(self.weights)
-            else:
-                mw = 1.
             for rlz, g in self.g_by_rlz.items():
                 mat5 = self._disagg6D(imtls, g)[..., 0]  # p = 0
                 # summing on lon, lat and producing a (D, E, M) array
@@ -542,7 +534,10 @@ class Disaggregator(object):
         return to_rates(out) if src_mutex else out
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {humansize(self.fullctx.nbytes)} >'
+        source_id, sid = self.source_id, self.sid
+        rep = (f'<{self.__class__.__name__} {source_id=} {sid=} '
+               f'{humansize(self.fullctx.nbytes)} >')
+        return rep
 
 
 # this is used in the hazardlib tests, not in the engine
@@ -676,30 +671,25 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def collect_std(disaggs):
+def collect_std(disaggs, Ma, D, M, G):
     """
-    :returns: an array of shape (Ma, D, M', G)
+    :param disaggs: dictionaries with keys sid, source_id, dist_idx, std
+    :returns: an array of shape (Ma, D, M, G)
     """
     assert len(disaggs)
-    gsims = set()
-    for dis in disaggs:
-        gsims.update(dis.cmaker.gsims)
-    gidx = {gsim: g for g, gsim in enumerate(sorted(gsims))}
-    G, M = len(gidx), len(dis.cmaker.imts)
-    out = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
+    acc = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
     cnt = collections.Counter()  # (magi, dsti)
     for dis in disaggs:
-        for magi in dis.std:
-            for gsim, std in zip(dis.cmaker.gsims, dis.std[magi]):
-                g = gidx[gsim]  # std has shape (M, U)
-                for dsti, val in zip(dis.dist_idx[magi], std.T):
-                    if (magi, dsti) in out:
-                        out[magi, dsti][g] += val  # shape M
+        for magi in dis['std']:
+            for g, std in enumerate(dis['std'][magi]):
+                for dsti, val in zip(dis['dist_idx'][magi], std.T):
+                    if (magi, dsti) in acc:
+                        acc[magi, dsti][g] += val  # shape M
                     else:
-                        out[magi, dsti][g] = val.copy()
+                        acc[magi, dsti][g] = val.copy()
                     cnt[magi, dsti] += 1 / G
-    sig = numpy.zeros((dis.Ma, dis.D, M, G))
-    for (magi, dsti), v in out.items():
+    sig = numpy.zeros((Ma, D, M, G))
+    for (magi, dsti), v in acc.items():
         sig[magi, dsti] = v.T / cnt[magi, dsti]
 
     # the sigmas are artificially zero for not covered (magi, disti) bins
@@ -724,33 +714,24 @@ def get_ints(src_ids):
     return numpy.uint32(out)
 
 
-def disagg_source(groups, site, reduced_lt, edges_shapedic,
-                  oq, imldic, monitor=Monitor()):
+def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
     """
-    Compute disaggregation for the given source.
+    Compute disaggregation for the given source. Assume oq.imtls has a
+    single level for each IMT.
 
     :param groups: groups containing a single source ID
     :param site: a Site object
     :param reduced_lt: a FullLogicTree reduced to the source ID
     :param edges_shapedic: pair (bin_edges, shapedic)
     :param oq: OqParam instance
-    :param imldic: dictionary imt->iml
     :param monitor: a Monitor instance
     :returns: sid, src_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
     """
     sitecol = SiteCollection([site])
-    sitecol.sids[:] = 0
     if not hasattr(reduced_lt, 'trt_rlzs'):
         reduced_lt.init()
     edges, s = edges_shapedic
-    drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
-    source_id = corename(groups[0].sources[0].source_id)
-    name = 'calc_rmap on site (%.5f, %.5f)' % (site.location.longitude,
-                                               site.location.latitude)
-    with monitor(name, measuremem=True):
-        rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     ws = reduced_lt.rlzs['weight']
-    disaggs = []
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
         src_mutex = {
@@ -759,12 +740,15 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
             'weight': [src.mutex_weight for src in grp]}
     else:
         src_mutex = {}
-    for ctx, cmaker in zip(ctxs, cmakers.to_array()):
-        dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
-        drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-        disaggs.append(dis)
-    std4D = collect_std(disaggs)
-    gws = reduced_lt.g_weights([cm.trt_smrs for cm in cmakers])
-    rates3D = calc_mean_rates(rmap, gws, reduced_lt.gsim_lt.wget,
-                              oq.imtls, list(imldic))  # (N, M, L1)
-    return site.id, source_id, std4D, drates4D, rates3D[0]
+    all_trt_smrs = [sg[0].trt_smrs for sg in groups]
+    cmakers = get_cmakers(all_trt_smrs, reduced_lt, oq)
+    for group, cmaker in zip(groups, cmakers.to_array()):
+        dis = Disaggregator(group, sitecol, cmaker, edges)
+        yield dis, src_mutex, ws
+
+
+def disagg_source(dis, src_mutex, ws, monitor):
+    imldic = {imt: imls[0] for imt, imls in dis.cmaker.oq.imtls.items()}
+    rates4D = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
+    return dict(source_id=dis.source_id, sid=dis.sid,
+                rates4D=rates4D, std=dis.std, dist_idx=dis.dist_idx)
