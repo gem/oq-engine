@@ -2,6 +2,10 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/linux/py313/gdal-3.10.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py313/pyproj-3.7.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py313/fiona-1.10.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py313/pyogrio-0.11.1-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 numba==0.61.2
 numpy==2.2.6
 shapely==2.1.0
@@ -11,6 +15,7 @@ pandas==2.2.3
 pyzmq==26.2.0
 onnxruntime==1.21.1
 #pp
+https://wheelhouse.openquake.org/v3/py/geopandas-1.1.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pycparser-2.22-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.7.2-py3-none-any.whl
