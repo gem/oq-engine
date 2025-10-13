@@ -720,10 +720,11 @@ class SiteCollection(object):
         tiles = []
         for tileno in range(hint):
             ok = self.sids % hint == tileno
-            sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.complete.array[self.sids[ok]]
-            sc.complete = self.complete
-            tiles.append(sc)
+            if ok.any():
+                sc = SiteCollection.__new__(SiteCollection)
+                sc.array = self.complete.array[self.sids[ok]]
+                sc.complete = self.complete
+                tiles.append(sc)
         return tiles
 
     def split_by_gh3(self):
