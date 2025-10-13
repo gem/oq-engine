@@ -1292,8 +1292,13 @@ def save_pik(job, dirname):
     return pathpik
 
 
-def get_public_outputs(oes):
-    return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
+def get_allowed_outputs(oes, user):
+    # HIDDEN_OUTPUTS are visible only to users whose level is at least level 2 or
+    # who belong to a group called show_<OUTPUT>
+    return [e for o, e in oes
+            if o not in HIDDEN_OUTPUTS
+            or user.groups.filter(name=f'show_{o}').exists()
+            or user.level >= 2]
 
 
 @require_http_methods(['GET'])
@@ -1323,7 +1328,7 @@ def calc_results(request, calc_id):
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
     output_types = groupby(export, lambda oe: oe[0],
-                           get_public_outputs)
+                           lambda oes: get_allowed_outputs(oes, request.user))
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
@@ -1398,7 +1403,11 @@ def calc_result(request, result_id):
     try:
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        if ds_key in HIDDEN_OUTPUTS:
+        # HIDDEN_OUTPUTS are visible only to users whose level is at least level 2 or
+        # who belong to a group called show_<OUTPUT>
+        if (ds_key in HIDDEN_OUTPUTS
+                and not request.user.groups.filter(name=f'show_{ds_key}').exists()
+                and not request.user.level >= 2):
             return HttpResponseForbidden()
         if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
@@ -1697,7 +1706,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        mce=mce, mce_spectra=mce_spectra,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version_full,
-                       lon=lon, lat=lat, site_class=site_class_display_name, site_name=site_name)
+                       lon=lon, lat=lat, site_class=site_class_display_name,
+                       site_name=site_name)
                   )
 
 
