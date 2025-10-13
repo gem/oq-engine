@@ -719,8 +719,9 @@ class SiteCollection(object):
             hint = len(self)
         tiles = []
         for tileno in range(hint):
+            ok = self.sids % hint == tileno
             sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.complete.array[self.sids % hint == tileno]
+            sc.array = self.complete.array[self.sids[ok]]
             sc.complete = self.complete
             tiles.append(sc)
         return tiles
