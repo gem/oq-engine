@@ -314,12 +314,6 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
             raise ValueError('You can use at most %d nodes' %
                              (max_cores // parallel.num_cores))
 
-    if dist in ('slurm', 'zmq'):
-        if concurrent_jobs is None:
-            # // 8 is chosen so that the core occupation in cole is decent
-            concurrent_jobs = parallel.Starmap.CT // 8 or 1
-        print(f'{concurrent_jobs=}')
-
     job_id = jobctxs[0].calc_id
     if precalc:
         # assume the first job is a precalculation from which the other starts

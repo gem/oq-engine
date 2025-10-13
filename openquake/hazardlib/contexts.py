@@ -1319,6 +1319,8 @@ class ContextMaker(object):
             weight *= 5.
         elif src.code == b'S':  # needed for SAM
             weight *= 2
+        if len(srcfilter.sitecol) < 100 and src.code in b'NXSC':  # few sites
+            weight *= 10  # make fault sources much heavier
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter):

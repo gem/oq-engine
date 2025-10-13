@@ -387,19 +387,7 @@ class Disaggregator(object):
             for rlz in rlzs:
                 self.g_by_rlz[rlz] = g
 
-        if isinstance(srcs_or_ctxs[0], numpy.ndarray):
-            # passed contexts, see logictree_test/case_05
-            # consider only the contexts affecting the site
-            self.source_id = 'some_source'
-            ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
-        else:  # passed sources, used only in test_disaggregator
-            self.source_id = corename(srcs_or_ctxs[0].source_id)
-            ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
-        if sum(len(c) for c in ctxs) == 0:
-            raise FarAwayRupture('No ruptures affecting site #%d' % sid)
-
-        ctx = numpy.concatenate(ctxs).view(numpy.recarray)
-        self.fullctx = ctx
+        self.srcs_or_ctxs = srcs_or_ctxs
 
     def init(self, magi, src_mutex,
              mon0=Monitor('disagg mean_stds'),
@@ -413,7 +401,19 @@ class Disaggregator(object):
         self.mon3 = mon3
         if not hasattr(self, 'ctx_by_magi'):
             # the first time build the magnitude bins
-            self.ctx_by_magi = split_by_magbin(self.fullctx, self.bin_edges[0])
+            if isinstance(self.srcs_or_ctxs[0], numpy.ndarray):
+                # passed contexts, see logictree_test/case_05
+                # consider only the contexts affecting the site
+                self.source_id = 'some_source'
+                ctxs = [ctx[ctx.sids == self.sid] for ctx in self.srcs_or_ctxs]
+            else:  # passed sources, used only in test_disaggregator
+                self.source_id = corename(self.srcs_or_ctxs[0].source_id)
+                ctxs = self.cmaker.from_srcs(self.srcs_or_ctxs, self.sitecol)
+            if sum(len(c) for c in ctxs) == 0:
+                raise FarAwayRupture(
+                    'No ruptures affecting site #%d' % self.sid)
+            ctx = numpy.concatenate(ctxs).view(numpy.recarray)
+            self.ctx_by_magi = split_by_magbin(ctx, self.bin_edges[0])
         try:
             self.ctx = self.ctx_by_magi[magi]
         except KeyError:
