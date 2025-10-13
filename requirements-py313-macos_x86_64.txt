@@ -2,6 +2,11 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/macos/py313/gdal-3.10.3-cp313-cp313-macosx_13_0_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py313/pyproj-3.7.2-cp313-cp313-macosx_13_0_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py313/fiona-1.10.1-cp313-cp313-macosx_13_0_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py313/pyogrio-0.11.1-cp313-cp313-macosx_13_0_x86_64.whl
+#
 numba==0.61.2
 numpy==2.2.6
 shapely==2.1.0
