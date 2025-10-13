@@ -221,7 +221,7 @@ and such feature because it was too dangerous: sometimes celery was
 up and running but incorrectly reported down because too slow to
 respond, due to an heavy load. Now if celery appears to not respond
 a warning is printed and that user has to see if celery is really dead
-and in that case she can kill the computation manually.
+and in that case the user can kill the computation manually.
 
 6. We removed the epsilon sampling feature from the scenario_risk and
 event_based_risk calculators: it was a performance hack introducing a

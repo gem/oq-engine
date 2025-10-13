@@ -22,7 +22,6 @@ Module exports :class:`ChaoEtAl2020SInter`
                :class:`ChaoEtAl2020Asc`
 """
 import math
-
 import numpy as np
 
 from openquake.baselib.general import CallableDict
@@ -123,18 +122,28 @@ def _fvs30(geology, C, ctx):
                     C['c27'] if geology else C['c28'])
 
 
-def _fz1pt0(C, ctx):
+def _get_z1pt0_ref(vs30):
+    """
+    Get reference z1pt0 in metres
+    """ 
+    return np.exp(-4.08 / 2 * np.log((
+        vs30 ** 2 + 355.4 ** 2) / (1750 ** 2 + 355.4 ** 2)))
+
+
+def _get_basin_term(C, ctx, region=None):
     """
     z1pt0 factor.
     """
-    result = np.zeros_like(ctx.z1pt0)
-    idx = ctx.z1pt0 >= 0
+    z1pt0 = ctx.z1pt0.copy()
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == -999
+    z1pt0_ref = _get_z1pt0_ref(ctx.vs30)
+    z1pt0[mask] = z1pt0_ref[mask]
+    result = np.zeros_like(z1pt0)
+    idx = z1pt0 >= 0
     if sum(idx) == 0:
         return result
-
-    z1pt0_ref = np.exp(-4.08 / 2 * np.log((ctx.vs30 ** 2 + 355.4 ** 2)
-                                          / (1750 ** 2 + 355.4 ** 2)))
-    result[idx] = np.log(ctx.z1pt0[idx] / z1pt0_ref) * C['c25']
+    result[idx] = np.log(z1pt0[idx] / z1pt0_ref) * C['c25']
     return result
 
 
@@ -178,13 +187,7 @@ class ChaoEtAl2020SInter(GMPE):
 
     REQUIRES_ATTRIBUTES = {'manila', 'aftershocks', 'geology'}
 
-    def __init__(self, manila=False, aftershocks=False, geology=True,
-                 **kwargs):
-        """
-        Aditional parameters.
-        """
-        super().__init__(manila=manila, aftershocks=aftershocks,
-                         geology=geology, **kwargs)
+    def __init__(self, manila=False, aftershocks=False, geology=True):
         # Manila or Ryukyu subduction zone
         self.manila = manila
         # aftershocks or mainshocks
@@ -223,7 +226,7 @@ class ChaoEtAl2020SInter(GMPE):
             sa1180 = np.exp(med + math.log(1180/s['vs30_ref']) * C['c24'])
             med += _fc(C, imt, ctx.vs30, sa1180)
             med += np.log(ctx.vs30 / s['vs30_ref']) * C['c24']
-            med += _fz1pt0(C, ctx)
+            med += _get_basin_term(C, ctx)
 
             sig[m], tau[m], phi[m] = get_stddevs(self.SBCR, C, ctx.mag)
 

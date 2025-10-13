@@ -62,20 +62,15 @@ def sample_raster_at_points(
     x_rast = np.int_(np.round((lon_pts - gt[0]) / gt[1]))
     y_rast = np.int_(np.round((lat_pts - gt[3]) / gt[5]))
 
-    def sample_raster(raster, row, col):
-        if (0 <= row < raster.shape[0]) and (0 <= col < raster.shape[1]):
-            return raster[row, col]
-        else:
-            return out_of_bounds_val
+    N, M = raster_data.shape
+    interp_vals = []
+    for i, col in enumerate(x_rast):
+        row = y_rast[i]
+        interp_vals.append(
+            raster_data[row, col] if 0 <= row < N and 0 <= col < M
+            else out_of_bounds_val)
 
-    interp_vals = np.array(
-        [
-            sample_raster(raster_data, y_rast[i], xr)
-            for i, xr in enumerate(x_rast)
-        ]
-    )
-
-    return interp_vals
+    return np.array(interp_vals)
 
 
 def make_2d_array_strides(arr, window_radius, linear=True):
@@ -180,7 +175,7 @@ def rolling_raster_operation(
         if write:
             raise ValueError("Must specify raster outfile")
         else:
-            outfile_handler, outfile = tempfile.mkstemp(suffix=".tiff")
+            _outfile_handler, outfile = tempfile.mkstemp(suffix=".tiff")
 
     ds = gdal.Open(in_raster)
 

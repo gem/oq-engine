@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2023 GEM Foundation
+# Copyright (C) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 import os
 import getpass
 import operator
-from datetime import datetime
+from datetime import datetime, timezone
 
 from openquake.baselib import general
 from openquake.hazardlib import valid
@@ -28,6 +28,7 @@ from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
 from openquake.calculators.export import DISPLAY_NAME
 
+UTC = timezone.utc
 JOB_TYPE = '''CASE
 WHEN calculation_mode LIKE '%risk'
 OR calculation_mode LIKE '%bcr'
@@ -293,7 +294,7 @@ def finish(db, job_id, status):
         a string such as 'successful' or 'failed'
     """
     db('UPDATE job SET ?D WHERE id=?x',
-       dict(is_running=False, status=status, stop_time=datetime.utcnow()),
+       dict(is_running=False, status=status, stop_time=datetime.now(UTC)),
        job_id)
 
 
@@ -304,11 +305,12 @@ def del_calc(db, job_id, user, delete_file=True, force=False):
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
     :param job_id: job ID, can be an integer or a string
     :param user: username
-    :param delete_file: also delete the HDF5 file
+    :param delete_file: also delete the HDF5 file(s)
     :param force: delete even if there are dependent calculations
     :returns: a dict with key "success" and value indicating
         the job id of the calculation or of its ancestor, or key "error"
-        and value describing what went wrong
+        and value describing what went wrong, and a list of paths of files
+        to be removed
     """
     job_id = int(job_id)
     dependent = db(
@@ -336,21 +338,23 @@ def del_calc(db, job_id, user, delete_file=True, force=False):
         return {"error": 'Cannot delete calculation %d:'
                 ' ID does not exist' % job_id}
 
-    deleted = db("UPDATE job SET status='deleted' WHERE id=?x AND "
-                 "user_name=?x", job_id, user).rowcount
+    deleted = db("DELETE FROM job WHERE id=?x AND user_name=?x",
+                 job_id, user).rowcount
     if not deleted:
         return {"error": 'Cannot delete calculation %d: it belongs to '
                 '%s and you are %s' % (job_id, owner, user)}
 
-    fname = path + ".hdf5"
+    fnames = [f'{path}.hdf5', f'{path}_tmp.hdf5']
     # A calculation could fail before it produces a hdf5, or somebody
     # may have canceled the file, so it could not exist
-    if delete_file and os.path.isfile(fname):
-        try:
-            os.remove(fname)
-        except OSError as exc:  # permission error
-            return {"error": 'Could not remove %s: %s' % (fname, exc)}
-    return {"success": str(job_id), "hdf5path": fname}
+    if delete_file:
+        for fname in fnames:
+            if os.path.isfile(fname):
+                try:
+                    os.remove(fname)
+                except OSError as exc:  # permission error
+                    return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    return {"success": str(job_id), "hdf5paths": fnames}
 
 
 def log(db, job_id, timestamp, level, process, message):
@@ -474,12 +478,16 @@ def calc_info(db, calc_id):
     :returns: dictionary of info about the given calculation
     """
     job = db('SELECT * FROM job WHERE id=?x', calc_id, one=True)
+    fields_to_exclude = ['ds_calc_dir', 'pid']
+    fields_to_stringify = ['start_time', 'stop_time']
     response_data = {}
-    response_data['user_name'] = job.user_name
-    response_data['status'] = job.status
-    response_data['start_time'] = str(job.start_time)
-    response_data['stop_time'] = str(job.stop_time)
-    response_data['is_running'] = job.is_running
+    for field in job._fields:
+        if field in fields_to_exclude or field.startswith('_'):
+            continue
+        val = getattr(job, field)
+        if field in fields_to_stringify:
+            val = str(val)
+        response_data[field] = val
     return response_data
 
 
@@ -529,13 +537,13 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s '
-              "AND status != 'deleted' ORDER BY id DESC LIMIT %d"
+    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s AND status != '
+              "'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
               % (users_filter, time_filter, limit), filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
              job.hazard_calculation_id, job.size_mb, job.host,
-             job.start_time)
+             job.start_time, job.relevant)
             for job in jobs]
 
 
@@ -551,6 +559,38 @@ def update_job(db, job_id, dic):
         a dictionary of valid field/values for the job table
     """
     db('UPDATE job SET ?D WHERE id=?x', dic, job_id)
+
+
+def share_job(db, job_id, share):
+    """
+    Make the job visible to all users by setting its status to 'shared'.
+
+    :param db:
+        a :class:`openquake.commonlib.dbapi.Db` instance
+    :param job_id:
+        a job ID
+    :param share: if False, revert the status to 'complete'
+    """
+    new_status = 'shared' if share else 'complete'
+    initial_status = db('SELECT status FROM job WHERE id=?x', job_id)[0].status
+    if new_status == initial_status:
+        return {'success': f'Calculation {job_id} was already {initial_status}'}
+    if initial_status not in ('complete', 'shared'):
+        if share:
+            err_msg = (f'Can not share calculation {job_id} from'
+                       f' status "{initial_status}"')
+        else:
+            err_msg = (f'Can not force the status of calculation {job_id}'
+                       f' from "{initial_status}" to "complete"')
+        return {'error': err_msg}
+    shared = db('UPDATE job SET ?D WHERE id=?x',
+                {'status': new_status}, job_id).rowcount
+    if not shared:
+        return {'error':
+                f'Can not change the status of calculation {job_id}'
+                f' from "{initial_status}" to "{new_status}"'}
+    return {'success': f'The status of calculation {job_id} was changed'
+                       f' from "{initial_status}" to "{new_status}"'}
 
 
 def update_parent_child(db, parent_child):
@@ -609,7 +649,7 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
+    log = db("SELECT * FROM log WHERE job_id=?x AND level='ERROR'",
              job_id)
     if not log:
         return []
@@ -714,8 +754,16 @@ def add_checksum(db, job_id, value):
         job ID
     :param value:
         value of the checksum (32 bit integer)
+    :returns:
+        The unique job_id with that checksum or None
     """
-    return db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value).lastrowid
+    try:
+        jid = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',
+                 value, scalar=True)
+    except NotFound:
+        db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value)
+    else:
+        return jid
 
 
 def update_job_checksum(db, job_id, checksum):
@@ -727,8 +775,8 @@ def update_job_checksum(db, job_id, checksum):
     :param checksum:
         the checksum (32 bit integer)
     """
-    db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
-       job_id, checksum)
+    return db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
+              job_id, checksum).lastrowid
 
 
 def get_checksum_from_job(db, job_id):

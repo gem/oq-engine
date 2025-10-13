@@ -21,6 +21,7 @@ Module exports :class:`BaylessAbrahamson2018`
 """
 import os
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import EAS
@@ -28,9 +29,13 @@ from openquake.hazardlib.imt import EAS
 BA_COEFFS = os.path.join(os.path.dirname(__file__),
                          "bayless_abrahamson_2018.csv")
 
+METRES_PER_KM = 1000.
+
 
 def _magnitude_scaling(C, ctx):
-    """ Compute the magnitude scaling term """
+    """
+    Compute the magnitude scaling term
+    """
     t1 = C['c1']
     t2 = C['c2'] * (ctx.mag - 6.)
     tmp = np.log(1.0 + np.exp(C['cn']*(C['cM']-ctx.mag)))
@@ -39,7 +44,9 @@ def _magnitude_scaling(C, ctx):
 
 
 def _path_scaling(C, ctx):
-    """ Compute path scaling term """
+    """
+    Compute path scaling term
+    """
     tmp = np.maximum(ctx.mag-C['chm'], 0.)
     t1 = C['c4'] * np.log(ctx.rrup + C['c5'] * np.cosh(C['c6'] * tmp))
     tmp = (ctx.rrup**2 + 50.**2)**0.5
@@ -49,7 +56,9 @@ def _path_scaling(C, ctx):
 
 
 def _normal_fault_effect(C, ctx):
-    """ Compute the correction coefficient for the normal faulting """
+    """
+    Compute the correction coefficient for the normal faulting
+    """
     idx = (ctx.rake > -150) & (ctx.rake < -30)
     fnm = np.zeros_like(ctx.rake)
     fnm[idx] = 1.0
@@ -57,7 +66,9 @@ def _normal_fault_effect(C, ctx):
 
 
 def _ztor_scaling(C, ctx):
-    """ Compute top of rupture term """
+    """
+    Compute top of rupture term
+    """
     return C['c9'] * np.minimum(ctx.ztor, 20.)
 
 
@@ -79,15 +90,18 @@ def _get_ln_ir_outcrop(self, ctx):
 
 
 def _linear_site_response(C, ctx):
-    """ Compute the site response term """
-
+    """
+    Compute the site response term
+    """
     tmp = np.minimum(ctx.vs30, 1000.)
     fsl = C['c8'] * np.log(tmp / 1000.)
     return fsl
 
 
-def _soil_depth_scaling(C, ctx):
-    """ Compute the soil depth scaling term """
+def _get_basin_term(C, ctx, region=None):
+    """
+    Compute the soil depth scaling term
+    """
     # Set the c11 coefficient - See eq.13b at page 2093
     c11 = np.ones_like(ctx.vs30) * C['c11a']
     c11[(ctx.vs30 <= 300) & (ctx.vs30 > 200)] = C['c11b']
@@ -95,11 +109,16 @@ def _soil_depth_scaling(C, ctx):
     c11[(ctx.vs30 > 500)] = C['c11d']
     # Compute the Z1ref parameter
     tmp = (ctx.vs30**4 + 610**4) / (1360**4 + 610**4)
-    z1ref = 1/1000. * np.exp(-7.67/4*np.log(tmp))
+    z1ref = np.exp(-7.67/4*np.log(tmp)) # in metres
+    # Get z1pt0 (already in metres)
+    z1pt0 = ctx.z1pt0.copy()
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == -999
+    z1pt0[mask] = z1ref[mask]
     # Return the fz1 parameter. The z1pt0 is converted from m (standard in OQ)
     # to km as indicated in the paper
-    tmp = np.minimum(ctx.z1pt0/1000, np.ones_like(ctx.z1pt0)*2.0) + 0.01
-    return c11 * np.log(tmp / (z1ref + 0.01))
+    tmp = np.minimum(z1pt0/METRES_PER_KM, np.ones_like(z1pt0)*2.0) + 0.01
+    return c11 * np.log(tmp / (z1ref/METRES_PER_KM + 0.01))
 
 
 def _get_stddevs(C, ctx):
@@ -190,7 +209,7 @@ def _get_mean_linear(C, ctx):
             _linear_site_response(C, ctx) +
             _ztor_scaling(C, ctx) +
             _normal_fault_effect(C, ctx) +
-            _soil_depth_scaling(C, ctx))
+            _get_basin_term(C, ctx))
     return mean
 
 

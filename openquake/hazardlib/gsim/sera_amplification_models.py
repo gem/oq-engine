@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -249,11 +249,9 @@ class PitilakisEtAl2018(GMPE):
     #: Defined reference velocity is 800 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 800.0
 
-    def __init__(self, gmpe_name, reference_velocity=None, **kwargs):
-        super().__init__(gmpe_name=gmpe_name,
-                         reference_velocity=reference_velocity, **kwargs)
+    def __init__(self, gmpe_name, reference_velocity=None, **extra_args):
         if isinstance(gmpe_name, str):
-            self.gsim = registry[gmpe_name](**kwargs)
+            self.gsim = registry[gmpe_name](**extra_args)
         else:
             # An instantiated class is passed as an argument
             self.gsim = copy.deepcopy(gmpe_name)
@@ -433,6 +431,13 @@ class Eurocode8AmplificationDefault(Eurocode8Amplification):
 REGION_SET = ["USNZ", "JP", "TW", "CH", "WA", "TRGR", "WMT", "NWE"]
 
 
+def _get_basin_term(C, ctx, region=None):
+    """
+    Get basin amplification term.
+    """
+    return C["b2"] * np.log(ctx.z1pt0)
+
+
 def get_site_amplification(C, psarock, ctx, ck):
     """
     Returns the site amplification model define in equation (9)
@@ -440,7 +445,7 @@ def get_site_amplification(C, psarock, ctx, ck):
     vs30_s = np.copy(ctx.vs30)
     vs30_s[vs30_s > 1000.] = 1000.
     fn_lin = (C["b1"] + ck) * np.log(vs30_s / 760.)
-    fn_z = C["b2"] * np.log(ctx.z1pt0)
+    fn_z = _get_basin_term(C, ctx)
     fn_nl = C["b3"] * np.log((psarock + 0.1 * g) / (0.1 * g)) *\
         np.exp(-np.exp(2.0 * np.log(ctx.vs30) - 11.))
     return fn_lin + fn_z + fn_nl
@@ -475,12 +480,19 @@ class SandikkayaDinsever2018(GMPE):
     "A Site Amplification Model for Crustal Earthquakes", Geosciences, 264(8),
     doi:10.3390/geosciences8070264
 
-    Note that the nonlinear amplification model has its own standard deviation,
+    NOTE: The nonlinear amplification model has its own standard deviation,
     which should be applied with the phi0 model of the original GMPE. This
     is not defined for all GMPEs in the literature, nor is the retrieval
     of it consistently applied in OpenQuake. Therefore we allow the user
     to define manually the input phi0 model, and if this is not possible a
     "default" phi0 is taken by reducing the original GMPE's phi by 15 %.
+
+    NOTE: Unknown (-999) z1pt0 values (which can be estimated from an
+    underlying GSIM's vs30 to z1pt0 relationship when computing a basin
+    term) are not permitted in the site model used with this amplification
+    model to avoid inconsistency between the z1pt0 used here inside the
+    ``_get_basin_term`` function and the z1pt0 (potentially) estimated by
+    the underlying GSIM to compute the mean ground-motion on bedrock.
 
     The amplification model is compatible only with GMPEs with separate
     inter- and intra-event standard deviation, otherwise an error is raised.
@@ -568,6 +580,11 @@ class SandikkayaDinsever2018(GMPE):
         """
         Returns the mean and standard deviations
         """
+        # Check no unknown z1pt0 in the site model
+        if any(ctx.z1pt0 == -999):
+            raise ValueError("z1pt0 must be provided for each site in the " \
+            "site model (i.e. no -999 z1pt0 values) used with the " \
+            "SandikkayaDinsever2018 GSIM")
         ctx_r = copy.copy(ctx)
         ctx_r.vs30 = np.full_like(ctx_r.vs30, self.rock_vs30)
         rock = contexts.get_mean_stds(self.gsim, ctx_r, imts)

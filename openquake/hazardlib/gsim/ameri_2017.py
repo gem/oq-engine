@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -242,9 +242,7 @@ class AmeriEtAl2017Rjb(GMPE):
 
     kind = "rjb"
 
-    def __init__(self, norm_stress_drop=0.1, adjustment_factor=1.0, **kwargs):
-        super().__init__(norm_stress_drop=norm_stress_drop,
-                         adjustment_factor=adjustment_factor, **kwargs)
+    def __init__(self, norm_stress_drop=0.1, adjustment_factor=1.0):
         self.norm_stress_drop = norm_stress_drop
         self.adjustment_factor = np.log(adjustment_factor)
 

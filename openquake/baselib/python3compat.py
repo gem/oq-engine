@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -65,7 +65,12 @@ def zip(arg, *args):
     return builtins.zip(arg, *args)
 
 
+# NB: using numpy.round would be advisable, but it would break
+# plenty of tests, including the AELO tests, so it is a no go
 def round(x, d=0):
+    """
+    Python2-compatible round function
+    """
     p = 10 ** d
     return float(math.floor((x * p) + math.copysign(0.5, x))) / p
 
@@ -87,7 +92,7 @@ def raise_(tp, value=None, tb=None):
     raise exc
 
 
-# the following is used in the SMTK
+# the following is used in the SMT module of the OQ-MBTK
 # copied from http://lucumr.pocoo.org/2013/5/21/porting-to-python-3-redux/
 def with_metaclass(meta, *bases):
     """

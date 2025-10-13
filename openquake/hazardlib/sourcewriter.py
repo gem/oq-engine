@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -674,6 +674,10 @@ def build_multi_fault_source_node(multi_fault_source):
                         nodes=nodes)
         rup_nodes.append(rup_node)
 
+    if multi_fault_source.faults:
+        faults = [Node('fault', {'tag': tag, 'indexes': ','.join(indexes)})
+                  for tag, indexes in multi_fault_source.faults.items()]
+        rup_nodes.insert(0, Node('faults', nodes=faults))
     return Node("multiFaultSource",
                 get_source_attributes(multi_fault_source),
                 nodes=rup_nodes)
@@ -727,8 +731,11 @@ def build_source_model(csm):
 
 # ##################### generic source model writer ####################### #
 
-def extract_ddict(src_groups):
+def extract_gridded_attrs(src_groups):
     """
+    Extract the attributes of nonparametric/multifault sources. The
+    attributes are arrays or a list of strings for rupture_idxs.
+
     :returns: a dictionary source_id -> attr -> value
     """
     ddict = {}
@@ -777,30 +784,29 @@ def write_source_model(dest, sources_or_groups, name=None,
     if attrs['investigation_time'] is None:
         del attrs['investigation_time']
     nodes = list(map(obj_to_node, groups))
-    ddict = extract_ddict(groups)
+    gridded_attrs = extract_gridded_attrs(groups)
     out = [dest]
-    if ddict:
+    if gridded_attrs:
+        # for nonparametric and multifault sources save attrs on HDF5 file
+        # NB: this is tested in the oq-mbtk, in rupture_smooth_test
+        dest5 = os.path.splitext(dest)[0] + '.hdf5'
+        with hdf5.File(dest5, 'w') as h:
+            for src_id, dic in gridded_attrs.items():
+                for k, v in dic.items():
+                    key = '%s/%s' % (src_id, k)
+                    dset = h.create_dataset(key, v.shape, v.dtype,
+                                            compression='gzip',
+                                            compression_opts=9)
+                    if key == 'rupture_idxs' and prefix:
+                        dset[:] = [prefix + x for x in v]
+                    else:
+                        dset[:] = v
         # remove duplicate content from nodes
         for grp_node in nodes:
             for src_node in grp_node:
-                if src_node["id"] in ddict:
-                    src_node.nodes = []
-        # save HDF5 file
-        dest5 = os.path.splitext(dest)[0] + '.hdf5'
-        with hdf5.File(dest5, 'w') as h:
-            for src_id, dic in ddict.items():
-                for k, v in dic.items():
-                    key = '%s/%s' % (src_id, k)
-                    if isinstance(v, numpy.ndarray):
-                        h.create_dataset(key, v.shape, v.dtype,
-                                         compression='gzip',
-                                         compression_opts=9)
-                        h[key][:] = v
-                    elif k == 'rupture_idxs' and prefix:
-                        h[key] = [' '.join(prefix + r for r in ridxs.split())
-                                  for ridxs in v]
-                    else:
-                        h[key] = v
+                if src_node["id"] in gridded_attrs:
+                    src_node.nodes = [
+                        n for n in src_node.nodes if n.tag == 'faults']
         out.append(dest5)
 
     # produce a geometryModel if there are MultiFaultSources
@@ -820,6 +826,7 @@ def write_source_model(dest, sources_or_groups, name=None,
                     for i, sec in enumerate(sections)]
         gmodel = Node("geometryModel", attrs, nodes=secnodes)
         with open(dest[:-4] + '_sections.xml', 'wb') as f:
+            # tested in multi_fault_test.py
             nrml.write([gmodel], f, '%s')
             out.append(f.name)
     return out

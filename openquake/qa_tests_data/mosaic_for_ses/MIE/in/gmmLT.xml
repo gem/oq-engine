@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+	<logicTree logicTreeID="">
+		<logicTreeBranchSet branchSetID="bs_00" uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust">
+			<logicTreeBranch branchID="b_00_00">
+				<uncertaintyModel>AkkarCagnan2010</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_01">
+				<uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
+				<uncertaintyWeight>0.35000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_02">
+				<uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
+				<uncertaintyWeight>0.35000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_00_03">
+				<uncertaintyModel>ZhaoEtAl2006Asc</uncertaintyModel>
+				<uncertaintyWeight>0.10000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+		<logicTreeBranchSet branchSetID="bs_01" uncertaintyType="gmpeModel" applyToTectonicRegionType="Stable Shallow Crust">
+			<logicTreeBranch branchID="b_01_04">
+				<uncertaintyModel>AtkinsonBoore2006</uncertaintyModel>
+				<uncertaintyWeight>0.40000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_05">
+				<uncertaintyModel gmpe_name="ToroEtAl2002SHARE">NRCan15SiteTerm</uncertaintyModel>
+				<uncertaintyWeight>0.25000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_01_06">
+				<uncertaintyModel gmpe_name="Campbell2003SHARE">NRCan15SiteTerm</uncertaintyModel>
+				<uncertaintyWeight>0.35000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+		<logicTreeBranchSet branchSetID="bs_02" uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction Interface">
+			<logicTreeBranch branchID="b_02_07">
+				<uncertaintyModel>AtkinsonBoore2003SInter</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_02_08">
+				<uncertaintyModel>LinLee2008SInter</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_02_09">
+				<uncertaintyModel>AbrahamsonEtAl2015SInter</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_02_10">
+				<uncertaintyModel>ZhaoEtAl2006SInter</uncertaintyModel>
+				<uncertaintyWeight>0.40000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+		<logicTreeBranchSet branchSetID="bs_03" uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction Inslab">
+			<logicTreeBranch branchID="b_03_11">
+				<uncertaintyModel>AtkinsonBoore2003SSlab</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_03_12">
+				<uncertaintyModel>LinLee2008SSlab</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_03_13">
+				<uncertaintyModel>AbrahamsonEtAl2015SSlab</uncertaintyModel>
+				<uncertaintyWeight>0.20000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_03_14">
+				<uncertaintyModel>ZhaoEtAl2006SSlab</uncertaintyModel>
+				<uncertaintyWeight>0.40000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+		<logicTreeBranchSet branchSetID="bs_04" uncertaintyType="gmpeModel" applyToTectonicRegionType="Deep Seismicity">
+			<logicTreeBranch branchID="b_04_15">
+				<uncertaintyModel>LinLee2008SSlab</uncertaintyModel>
+				<uncertaintyWeight>0.50000</uncertaintyWeight>
+			</logicTreeBranch>
+			<logicTreeBranch branchID="b_04_16">
+				<uncertaintyModel>AbrahamsonEtAl2015SSlab</uncertaintyModel>
+				<uncertaintyWeight>0.50000</uncertaintyWeight>
+			</logicTreeBranch>
+		</logicTreeBranchSet>
+	</logicTree>
+</nrml>

@@ -1,0 +1,12 @@
+﻿risk_id,consequence,peril,slight,moderate,extensive,complete
+demand,non_operational,groundshaking,0,1,1,1
+pumping_station1,non_operational,groundshaking,0,1,1,1
+pumping_station2,non_operational,groundshaking,0,1,1,1
+well,non_operational,groundshaking,0,1,1,1
+auxillary_node,non_operational,groundshaking,0,1,1,1
+CI_regdia_300,non_operational,groundshaking,0,1,1,1
+CI_regdia_500,non_operational,groundshaking,0,1,1,1
+CI_regdia_100,non_operational,groundshaking,0,1,1,1
+CI_regdia_200,non_operational,groundshaking,0,1,1,1
+CI_regdia_150,non_operational,groundshaking,0,1,1,1
+CI_regdia_250,non_operational,groundshaking,0,1,1,1

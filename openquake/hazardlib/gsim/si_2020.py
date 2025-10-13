@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,9 +21,11 @@ Module exports :class:`SiEtAl2020SInter`
                :class:`SiEtAl2020SSlab`
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
 
 
 def get_base_term(trt, C):
@@ -117,11 +119,18 @@ def get_shallow_site_response_term(C, vs30, pga760):
     return (f_site_lin + f_site_nl) / np.log(10.0)
 
 
-def get_basin_response_term(C, z_value):
+def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term (Eq. 3.10)
     """
-    return C["Cd"] + C["Dd"] * z_value
+    z2pt5 = ctx.z2pt5.copy()
+
+    # No vs30 to z2pt5 relationship for this GMM (see pp. 959) so
+    # use the Campbell and Bozorgnia 2014 vs30 to z2pt5 for Japan
+    mask = z2pt5 == -999
+    z2pt5[mask] = _get_z2pt5_ref(SJ=True, vs30=ctx.vs30[mask])
+
+    return C["Cd"] + C["Dd"] * z2pt5
 
 
 def _get_pga_rock(C, trt, imt, ctx):
@@ -131,7 +140,7 @@ def _get_pga_rock(C, trt, imt, ctx):
     mean = (get_base_term(trt, C) +
             get_magnitude_scaling_term(C, imt, ctx.mag) +
             get_geometric_attenuation_term(C, ctx) +
-            get_basin_response_term(C, ctx.z2pt5) +
+            _get_basin_term(C, ctx) +
             get_depth_scaling_term(C, ctx.hypo_depth) +
             get_anelastic_attenuation_term(C, ctx.rrup))
     return 10.0 ** mean
@@ -146,7 +155,7 @@ def get_mean_values(C, trt, imt, ctx, a760):
                            get_depth_scaling_term(C, ctx.hypo_depth) +
                            get_geometric_attenuation_term(C, ctx) +
                            get_anelastic_attenuation_term(C, ctx.rrup) +
-                           get_basin_response_term(C, ctx.z2pt5) +
+                           _get_basin_term(C, ctx) +
                            get_shallow_site_response_term(C, ctx.vs30, a760))
 
     return mean

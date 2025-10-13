@@ -499,7 +499,7 @@ class MultiSurfaceOld(BaseSurface):
         """
 
         # Establish GC2 length - for use with Ry0
-        rup_gc2t, rup_gc2u = self.get_generalised_coordinates(
+        _rup_gc2t, rup_gc2u = self.get_generalised_coordinates(
             edge_sets[:, 0], edge_sets[:, 1])
         # GC2 length should be the largest positive GC2 value of the edges
         self.gc_length = numpy.max(rup_gc2u)
@@ -523,7 +523,7 @@ class MultiSurfaceOld(BaseSurface):
         u_i_hat = u_i_vec / numpy.linalg.norm(u_i_vec)
         # Vectors from P0 to sites
         rsite = numpy.column_stack([sx - p0x, sy - p0y])
-        return numpy.sum(u_i_hat[:-1] * rsite, axis=1),\
+        return numpy.sum(u_i_hat[:-1] * rsite, axis=1), \
             numpy.sum(t_i_hat[:-1] * rsite, axis=1)
 
     def get_generalised_coordinates(self, lons, lats):

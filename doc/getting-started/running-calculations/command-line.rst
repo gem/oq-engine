@@ -1,5 +1,5 @@
-Running the OpenQuake engine through the Command Line
-=====================================================
+Using the Command Line
+======================
 
 An OpenQuake engine analysis can be launched from the command line of a terminal.
 
@@ -11,7 +11,7 @@ following command::
 The result is the following::
 
 	usage: oq engine [-h] [--log-file LOG_FILE] [--no-distribute] [-y]
-	                 [-c CONFIG_FILE] [--make-html-report YYYY-MM-DD|today] [-u]
+	                 [--make-html-report YYYY-MM-DD|today] [-u]
 	                 [-d] [-w] [--run JOB_INI [JOB_INI ...]]
 	                 [--list-hazard-calculations] [--list-risk-calculations]
 	                 [--delete-calculation CALCULATION_ID]
@@ -37,9 +37,6 @@ The result is the following::
 	                        use in debugging and profiling.
 	  -y, --yes             Automatically answer "yes" when asked to confirm an
 	                        action
-	  -c CONFIG_FILE, --config-file CONFIG_FILE
-	                        Custom openquake.cfg file, to override default
-	                        configurations
 	  --make-html-report YYYY-MM-DD|today, --r YYYY-MM-DD|today
 	                        Build an HTML report of the computation at the given
 	                        date
@@ -73,7 +70,6 @@ The result is the following::
 	                        in order of priority
 	  -l, --log-level {debug, info, warn, error, critical}
 	                        Defaults to "info"
-	  -r, --reuse-input    Read the sources|exposures from the cache (if any)
 	  --param PARAM, -p PARAM
 	                        Override parameters specified with the syntax
 	                        NAME1=VALUE1,NAME2=VALUE2,...

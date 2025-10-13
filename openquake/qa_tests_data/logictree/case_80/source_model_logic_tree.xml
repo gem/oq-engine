@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt1">
+    <logicTreeBranchSet uncertaintyType="sourceModel" branchSetID="bs1">
+      <logicTreeBranch branchID="b1">
+        <uncertaintyModel>source_model.xml</uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    
+    <logicTreeBranchSet uncertaintyType="areaSourceGeometryAbsolute"
+                        branchSetID="bs2">
+      <logicTreeBranch branchID="b21">
+        <uncertaintyModel>
+          <areaGeometry>
+            <gml:Polygon>
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>
+                    -1.0 -1.0 1.0 -1.0 1.0 1.0 -1.0 1.0
+                  </gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+            <upperSeismoDepth>
+              5.0000000E+00
+            </upperSeismoDepth>
+            <lowerSeismoDepth>
+              1.0000000E+01
+            </lowerSeismoDepth>
+          </areaGeometry>
+        </uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+      
+      <logicTreeBranch branchID="b22">
+        <uncertaintyModel>
+          <areaGeometry>
+            <gml:Polygon>
+              <gml:exterior>
+                <gml:LinearRing>
+                  <gml:posList>
+                    -1.5 -1.5 1.5 -1.5 1.5 1.5 -1.5 1.5
+                  </gml:posList>
+                </gml:LinearRing>
+              </gml:exterior>
+            </gml:Polygon>
+            <upperSeismoDepth>
+              5.0000000E+00
+            </upperSeismoDepth>
+            <lowerSeismoDepth>
+              1.0000000E+01
+            </lowerSeismoDepth>
+          </areaGeometry>
+        </uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    
+  </logicTree>
+</nrml>

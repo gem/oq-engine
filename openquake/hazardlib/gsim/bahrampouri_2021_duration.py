@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ Module exports :class:`BahrampouriEtAldm2021`
                :class:`BahrampouriEtAldm2021SInter`
 """
 import numpy as np
+
 from openquake.hazardlib.gsim.base import CoeffsTable, GMPE
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import RSD595, RSD575
@@ -61,18 +62,38 @@ def _get_path_term(C, ctx):
     return fpath
 
 
+def _get_mean_z1pt0(vs30):
+    """
+    Return reference z1pt0 for given vs30 values 
+    """
+    return (np.exp(((-5.23 / 2.) * np.log((
+        vs30 ** 2. + 412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.)))-0.9))
+
+
+def _get_basin_term(C, ctx, region=None):
+    """
+    Get the basin term
+    """
+    z1pt0 = ctx.z1pt0.copy()
+    
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == -999 
+    mean_z1pt0 = _get_mean_z1pt0(ctx.vs30)
+    z1pt0[mask] = mean_z1pt0[mask]
+    delta_z1pt0 = np.round(z1pt0 - mean_z1pt0, 4)
+
+    return C['s2'] * np.minimum(delta_z1pt0, 250.0)
+
+
 def _get_site_term(C, ctx):
     """
     Implementing Eqs. 5, 6 and 12
     """
-    mean_z1pt0 = (np.exp(((-5.23 / 2.) * np.log((ctx.vs30 ** 2. +
-                  412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.)))-0.9))
-    delta_z1pt0 = np.round(ctx.z1pt0 - mean_z1pt0, 4)
-    fsite = []
-    for i, value in enumerate(delta_z1pt0):
-        s = (np.round(C['s1'] * np.log(min(ctx.vs30[i], 600.) / 600.) +
-             C['s2']*min(delta_z1pt0[i], 250.0) + C['s3'], 4))
-        fsite.append(s)
+    fbasin = _get_basin_term(C, ctx)
+
+    fsite = np.round(C['s1'] * np.log(np.clip(ctx.vs30, None, 600.0) / 600.0) +
+                     fbasin + C['s3'], 4)
+
     return fsite
 
 

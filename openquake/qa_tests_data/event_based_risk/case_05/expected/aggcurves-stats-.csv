@@ -1,0 +1,26 @@
+#,,,"generated_by='OpenQuake engine 3.22.0-git36e91b9743', start_date='2024-11-05T09:57:17', checksum=17759650"
+return_period,loss_type,loss,stat
+5,structural,0.0,mean
+5,structural,0.0,quantile-0.15
+5,structural,0.0,quantile-0.85
+10,structural,0.0,mean
+10,structural,0.0,quantile-0.15
+10,structural,0.0,quantile-0.85
+20,structural,0.0,mean
+20,structural,0.0,quantile-0.15
+20,structural,0.0,quantile-0.85
+50,structural,1146.675,mean
+50,structural,70.78240943358205,quantile-0.15
+50,structural,1061.7361710364542,quantile-0.85
+100,structural,2566.0251,mean
+100,structural,1286.6472639899466,quantile-0.15
+100,structural,2465.0217391081196,quantile-0.85
+200,structural,4270.5957,mean
+200,structural,2006.75376334145,quantile-0.15
+200,structural,4091.8716978099824,quantile-0.85
+500,structural,7732.242,mean
+500,structural,3396.9786367508614,quantile-0.15
+500,structural,7389.984846045027,quantile-0.85
+1000,structural,8941.859,mean
+1000,structural,6366.794053258458,quantile-0.15
+1000,structural,8738.565166436158,quantile-0.85

@@ -29,27 +29,16 @@ import io
 import matplotlib.pyplot as plt
 from matplotlib import patches, collections, transforms, path as mplpath
 import numpy as np
-
+from openquake.baselib.general import Param
 
 D2R = np.pi / 180
 R2D = 180 / np.pi
 EPSILON = 0.00001
 
 
-def Beach(
-    fm,
-    linewidth=2,
-    facecolor="b",
-    bgcolor="w",
-    edgecolor="k",
-    alpha=1.0,
-    xy=(0, 0),
-    width=200,
-    size=100,
-    nofill=False,
-    zorder=100,
-    axes=None,
-):
+def Beach(fm, linewidth=2, facecolor="b", bgcolor="w", edgecolor="k",
+          alpha=1.0, xy=(0, 0), width=200, size=100, nofill=False, zorder=100,
+          axes=None):
     """
     Return a beach ball as a collection which can be connected to an
     current matplotlib axes instance (ax.add_collection).
@@ -157,22 +146,9 @@ def Beach(
     return col
 
 
-def Beachball(
-    fm,
-    linewidth=2,
-    facecolor="b",
-    bgcolor="w",
-    edgecolor="k",
-    alpha=1.0,
-    xy=(0, 0),
-    width=200,
-    size=100,
-    nofill=False,
-    zorder=100,
-    outfile=None,
-    format=None,
-    fig=None,
-):
+def Beachball(fm, linewidth=2, facecolor="b", bgcolor="w", edgecolor="k",
+              alpha=1.0, xy=(0, 0), width=200, size=100, nofill=False,
+              zorder=100, outfile=None, format=None, fig=None):
     """
     Draws a beach ball diagram of an earthquake focal mechanism.
 
@@ -287,45 +263,51 @@ def plotMT(
         width = (width, width)
     collect = []
     colors = []
-    res = [value / float(size) for value in width]
-    b = 1
-    big_iso = 0
-    j = 1
-    j2 = 0
-    j3 = 0
-    n = 0
-    azi = np.zeros((3, 2))
-    x = np.zeros(400)
-    y = np.zeros(400)
-    x2 = np.zeros(400)
-    y2 = np.zeros(400)
-    x3 = np.zeros(400)
-    y3 = np.zeros(400)
-    xp1 = np.zeros(800)
-    yp1 = np.zeros(800)
-    xp2 = np.zeros(400)
-    yp2 = np.zeros(400)
+    p = Param(  # 28 parameters!
+        azi=np.zeros((3, 2)),
+        res=[value / float(size) for value in width],
+        a=np.zeros(3),
+        p=np.zeros(3),
+        v=np.zeros(3),
+        b=1,
+        d=2,
+        m=0,
+        big_iso=0,
+        j=1,
+        j2=0,
+        j3=0,
+        n=0,
+        width=width,
+        xy=xy,
+        radius_size=size * 0.5,
+        x0=x0,
+        y0=y0,
+        x=np.zeros(400),
+        y=np.zeros(400),
+        x2=np.zeros(400),
+        y2=np.zeros(400),
+        x3=np.zeros(400),
+        y3=np.zeros(400),
+        xp1=np.zeros(800),
+        yp1=np.zeros(800),
+        xp2=np.zeros(400),
+        yp2=np.zeros(400),
+    )
+    p.a[0] = T.strike
+    p.a[1] = N.strike
+    p.a[2] = P.strike
+    p.p[0] = T.dip
+    p.p[1] = N.dip
+    p.p[2] = P.dip
+    p.v[0] = T.val
+    p.v[1] = N.val
+    p.v[2] = P.val
 
-    a = np.zeros(3)
-    p = np.zeros(3)
-    v = np.zeros(3)
-    a[0] = T.strike
-    a[1] = N.strike
-    a[2] = P.strike
-    p[0] = T.dip
-    p[1] = N.dip
-    p[2] = P.dip
-    v[0] = T.val
-    v[1] = N.val
-    v[2] = P.val
+    vi = (p.v[0] + p.v[1] + p.v[2]) / 3.0
+    for i in range(3):
+        p.v[i] = p.v[i] - vi
 
-    vi = (v[0] + v[1] + v[2]) / 3.0
-    for i in range(0, 3):
-        v[i] = v[i] - vi
-
-    radius_size = size * 0.5
-
-    if np.fabs(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) < EPSILON:
+    if np.fabs(p.v[0] * p.v[0] + p.v[1] * p.v[1] + p.v[2] * p.v[2]) < EPSILON:
         # pure implosion-explosion
         if vi > 0.0:
             cir = patches.Ellipse(xy, width=width[0], height=width[1])
@@ -337,55 +319,171 @@ def plotMT(
             colors.append("w")
         return colors, collect
 
-    if np.fabs(v[0]) >= np.fabs(v[2]):
-        d = 0
-        m = 2
-    else:
-        d = 2
-        m = 0
+    if np.fabs(p.v[0]) >= np.fabs(p.v[2]):
+        p.d = 0
+        p.m = 2
 
     if plot_zerotrace:
         vi = 0.0
 
-    f = -v[1] / float(v[d])
-    iso = vi / float(v[d])
+    f = -p.v[1] / float(p.v[p.d])
+    iso = vi / float(p.v[p.d])
+    return _plot(p, f, iso, collect, colors)
 
-    # Cliff Frohlich, Seismological Research letters,
-    # Vol 7, Number 1, January-February, 1996
-    # Unless the isotropic parameter lies in the range
-    # between -1 and 1 - f there will be no nodes whatsoever
 
-    if iso < -1:
-        cir = patches.Ellipse(xy, width=width[0], height=width[1])
-        collect.append(cir)
-        colors.append("w")
+def _plot1(p, rgb1, colors, collect):
+    for i in range(p.j):
+        p.xp1[i] = p.x[i]
+        p.yp1[i] = p.y[i]
+    if p.azi[0][0] - p.azi[0][1] > np.pi:
+        p.azi[0][0] -= np.pi * 2.0
+    elif p.azi[0][1] - p.azi[0][0] > np.pi:
+        p.azi[0][0] += np.pi * 2.0
+    if p.azi[0][0] < p.azi[0][1]:
+        az = p.azi[0][1] - D2R
+        while az > p.azi[0][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp1[i] = p.x0 + p.radius_size * si
+            p.yp1[i] = p.y0 + p.radius_size * co
+            i += 1
+            az -= D2R
+    else:
+        az = p.azi[0][1] + D2R
+        while az < p.azi[0][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp1[i] = p.x0 + p.radius_size * si
+            p.yp1[i] = p.y0 + p.radius_size * co
+            i += 1
+            az += D2R
+    collect.append(xy2patch(p.xp1[:i], p.yp1[:i], p.res, p.xy))
+    colors.append(rgb1)
+    for i in range(p.j2):
+        p.xp2[i] = p.x2[i]
+        p.yp2[i] = p.y2[i]
+    if p.azi[1][0] - p.azi[1][1] > np.pi:
+        p.azi[1][0] -= np.pi * 2.0
+    elif p.azi[1][1] - p.azi[1][0] > np.pi:
+        p.azi[1][0] += np.pi * 2.0
+    if p.azi[1][0] < p.azi[1][1]:
+        az = p.azi[1][1] - D2R
+        while az > p.azi[1][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp2[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp2[i] = p.y0 + p.radius_size * co
+            az -= D2R
+    else:
+        az = p.azi[1][1] + D2R
+        while az < p.azi[1][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp2[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp2[i] = p.y0 + p.radius_size * co
+            az += D2R
+    collect.append(xy2patch(p.xp2[:i], p.yp2[:i], p.res, p.xy))
+    colors.append(rgb1)
+    return colors, collect
+
+
+def _plot2(p, rgb1, colors, collect):
+    for i in range(p.j3):
+        p.xp1[i] = p.x3[i]
+        p.yp1[i] = p.y3[i]
+    for ii in range(p.j):
+        p.xp1[i] = p.x[ii]
+        i += 1
+        p.yp1[i] = p.y[ii]
+    if p.big_iso:
+        ii = p.j2 - 1
+        while ii >= 0:
+            p.xp1[i] = p.x2[ii]
+            i += 1
+            p.yp1[i] = p.y2[ii]
+            ii -= 1
+        collect.append(xy2patch(p.xp1[:i], p.yp1[:i], p.res, p.xy))
+        colors.append(rgb1)
         return colors, collect
-    elif iso > 1 - f:
-        cir = patches.Ellipse(xy, width=width[0], height=width[1])
-        collect.append(cir)
-        colors.append("b")
-        return colors, collect
 
-    spd = np.sin(p[d] * D2R)
-    cpd = np.cos(p[d] * D2R)
-    spb = np.sin(p[b] * D2R)
-    cpb = np.cos(p[b] * D2R)
-    spm = np.sin(p[m] * D2R)
-    cpm = np.cos(p[m] * D2R)
-    sad = np.sin(a[d] * D2R)
-    cad = np.cos(a[d] * D2R)
-    sab = np.sin(a[b] * D2R)
-    cab = np.cos(a[b] * D2R)
-    sam = np.sin(a[m] * D2R)
-    cam = np.cos(a[m] * D2R)
+    if p.azi[2][0] - p.azi[0][1] > np.pi:
+        p.azi[2][0] -= np.pi * 2.0
+    elif p.azi[0][1] - p.azi[2][0] > np.pi:
+        p.azi[2][0] += np.pi * 2.0
+    if p.azi[2][0] < p.azi[0][1]:
+        az = p.azi[0][1] - D2R
+        while az > p.azi[2][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp1[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp1[i] = p.y0 + p.radius_size * co
+            az -= D2R
+    else:
+        az = p.azi[0][1] + D2R
+        while az < p.azi[2][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp1[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp1[i] = p.y0 + p.radius_size * co
+            az += D2R
+    collect.append(xy2patch(p.xp1[:i], p.yp1[:i], p.res, p.xy))
+    colors.append(rgb1)
 
-    for i in range(0, 360):
+    for i in range(p.j2):
+        p.xp2[i] = p.x2[i]
+        p.yp2[i] = p.y2[i]
+    if p.azi[1][0] - p.azi[1][1] > np.pi:
+        p.azi[1][0] -= np.pi * 2.0
+    elif p.azi[1][1] - p.azi[1][0] > np.pi:
+        p.azi[1][0] += np.pi * 2.0
+    if p.azi[1][0] < p.azi[1][1]:
+        az = p.azi[1][1] - D2R
+        while az > p.azi[1][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp2[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp2[i] = p.y0 + p.radius_size * co
+            az -= D2R
+    else:
+        az = p.azi[1][1] + D2R
+        while az < p.azi[1][0]:
+            si = np.sin(az)
+            co = np.cos(az)
+            p.xp2[i] = p.x0 + p.radius_size * si
+            i += 1
+            p.yp2[i] = p.y0 + p.radius_size * co
+            az += D2R
+    collect.append(xy2patch(p.xp2[:i], p.yp2[:i], p.res, p.xy))
+    colors.append(rgb1)
+    return colors, collect
+
+
+def _update_azi(p, f, iso):
+    b, d, m = p.b, p.d, p.m
+    spd = np.sin(p.p[d] * D2R)
+    cpd = np.cos(p.p[d] * D2R)
+    spb = np.sin(p.p[b] * D2R)
+    cpb = np.cos(p.p[b] * D2R)
+    spm = np.sin(p.p[m] * D2R)
+    cpm = np.cos(p.p[m] * D2R)
+    sad = np.sin(p.a[d] * D2R)
+    cad = np.cos(p.a[d] * D2R)
+    sab = np.sin(p.a[b] * D2R)
+    cab = np.cos(p.a[b] * D2R)
+    sam = np.sin(p.a[m] * D2R)
+    cam = np.cos(p.a[m] * D2R)
+    for i in range(360):
         fir = i * D2R
         s2alphan = (2.0 + 2.0 * iso) / float(
             3.0 + (1.0 - 2.0 * f) * np.cos(2.0 * fir)
         )
         if s2alphan > 1.0:
-            big_iso += 1
+            p.big_iso += 1
         else:
             alphan = np.arcsin(np.sqrt(s2alphan))
             sfi = np.sin(fir)
@@ -420,177 +518,72 @@ def plotMT(
             si = np.sin(az)
             co = np.cos(az)
             if i == 0:
-                azi[i][0] = az
-                x[i] = x0 + radius_size * r * si
-                y[i] = y0 + radius_size * r * co
+                p.azi[i][0] = az
+                p.x[i] = p.x0 + p.radius_size * r * si
+                p.y[i] = p.y0 + p.radius_size * r * co
                 azp = az
             else:
                 if np.fabs(np.fabs(az - azp) - np.pi) < D2R * 10.0:
-                    azi[n][1] = azp
-                    n += 1
-                    azi[n][0] = az
+                    p.azi[p.n][1] = p.azp
+                    p.n += 1
+                    p.azi[p.n][0] = p.az
                 if np.fabs(np.fabs(az - azp) - np.pi * 2.0) < D2R * 2.0:
                     if azp < az:
-                        azi[n][0] += np.pi * 2.0
+                        p.azi[p.n][0] += np.pi * 2.0
                     else:
-                        azi[n][0] -= np.pi * 2.0
-                if n == 0:
-                    x[j] = x0 + radius_size * r * si
-                    y[j] = y0 + radius_size * r * co
-                    j += 1
-                elif n == 1:
-                    x2[j2] = x0 + radius_size * r * si
-                    y2[j2] = y0 + radius_size * r * co
-                    j2 += 1
-                elif n == 2:
-                    x3[j3] = x0 + radius_size * r * si
-                    y3[j3] = y0 + radius_size * r * co
-                    j3 += 1
+                        p.azi[p.n][0] -= np.pi * 2.0
+                if p.n == 0:
+                    p.x[p.j] = p.x0 + p.radius_size * r * si
+                    p.y[p.j] = p.y0 + p.radius_size * r * co
+                    p.j += 1
+                elif p.n == 1:
+                    p.x2[p.j2] = p.x0 + p.radius_size * r * si
+                    p.y2[p.j2] = p.y0 + p.radius_size * r * co
+                    p.j2 += 1
+                elif p.n == 2:
+                    p.x3[p.j3] = p.x0 + p.radius_size * r * si
+                    p.y3[p.j3] = p.y0 + p.radius_size * r * co
+                    p.j3 += 1
                 azp = az
-    azi[n][1] = az
+    p.azi[p.n][1] = az
 
-    if v[1] < 0.0:
+
+def _plot(p, f, iso, collect, colors):
+    # Cliff Frohlich, Seismological Research letters,
+    # Vol 7, Number 1, January-February, 1996
+    # Unless the isotropic parameter lies in the range
+    # between -1 and 1 - f there will be no nodes whatsoever
+    if iso < -1:
+        cir = patches.Ellipse(p.xy, width=p.width[0], height=p.width[1])
+        collect.append(cir)
+        colors.append("w")
+        return colors, collect
+    elif iso > 1 - f:
+        cir = patches.Ellipse(p.xy, width=p.width[0], height=p.width[1])
+        collect.append(cir)
+        colors.append("b")
+        return colors, collect
+
+    _update_azi(p, f, iso)
+
+    if p.v[1] < 0.0:
         rgb1 = "b"
         rgb2 = "w"
     else:
         rgb1 = "w"
         rgb2 = "b"
 
-    cir = patches.Ellipse(xy, width=width[0], height=width[1])
+    cir = patches.Ellipse(p.xy, width=p.width[0], height=p.width[1])
     collect.append(cir)
     colors.append(rgb2)
-    if n == 0:
-        collect.append(xy2patch(x[0:360], y[0:360], res, xy))
+    if p.n == 0:
+        collect.append(xy2patch(p.x[:360], p.y[:360], p.res, p.xy))
         colors.append(rgb1)
         return colors, collect
-    elif n == 1:
-        for i in range(0, j):
-            xp1[i] = x[i]
-            yp1[i] = y[i]
-        if azi[0][0] - azi[0][1] > np.pi:
-            azi[0][0] -= np.pi * 2.0
-        elif azi[0][1] - azi[0][0] > np.pi:
-            azi[0][0] += np.pi * 2.0
-        if azi[0][0] < azi[0][1]:
-            az = azi[0][1] - D2R
-            while az > azi[0][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                xp1[i] = x0 + radius_size * si
-                yp1[i] = y0 + radius_size * co
-                i += 1
-                az -= D2R
-        else:
-            az = azi[0][1] + D2R
-            while az < azi[0][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                xp1[i] = x0 + radius_size * si
-                yp1[i] = y0 + radius_size * co
-                i += 1
-                az += D2R
-        collect.append(xy2patch(xp1[0:i], yp1[0:i], res, xy))
-        colors.append(rgb1)
-        for i in range(0, j2):
-            xp2[i] = x2[i]
-            yp2[i] = y2[i]
-        if azi[1][0] - azi[1][1] > np.pi:
-            azi[1][0] -= np.pi * 2.0
-        elif azi[1][1] - azi[1][0] > np.pi:
-            azi[1][0] += np.pi * 2.0
-        if azi[1][0] < azi[1][1]:
-            az = azi[1][1] - D2R
-            while az > azi[1][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                xp2[i] = x0 + radius_size * si
-                i += 1
-                yp2[i] = y0 + radius_size * co
-                az -= D2R
-        else:
-            az = azi[1][1] + D2R
-            while az < azi[1][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                xp2[i] = x0 + radius_size * si
-                i += 1
-                yp2[i] = y0 + radius_size * co
-                az += D2R
-        collect.append(xy2patch(xp2[0:i], yp2[0:i], res, xy))
-        colors.append(rgb1)
-        return colors, collect
-    elif n == 2:
-        for i in range(0, j3):
-            xp1[i] = x3[i]
-            yp1[i] = y3[i]
-        for ii in range(0, j):
-            xp1[i] = x[ii]
-            i += 1
-            yp1[i] = y[ii]
-        if big_iso:
-            ii = j2 - 1
-            while ii >= 0:
-                xp1[i] = x2[ii]
-                i += 1
-                yp1[i] = y2[ii]
-                ii -= 1
-            collect.append(xy2patch(xp1[0:i], yp1[0:i], res, xy))
-            colors.append(rgb1)
-            return colors, collect
-
-        if azi[2][0] - azi[0][1] > np.pi:
-            azi[2][0] -= np.pi * 2.0
-        elif azi[0][1] - azi[2][0] > np.pi:
-            azi[2][0] += np.pi * 2.0
-        if azi[2][0] < azi[0][1]:
-            az = azi[0][1] - D2R
-            while az > azi[2][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                xp1[i] = x0 + radius_size * si
-                i += 1
-                yp1[i] = y0 + radius_size * co
-                az -= D2R
-        else:
-            az = azi[0][1] + D2R
-            while az < azi[2][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                xp1[i] = x0 + radius_size * si
-                i += 1
-                yp1[i] = y0 + radius_size * co
-                az += D2R
-        collect.append(xy2patch(xp1[0:i], yp1[0:i], res, xy))
-        colors.append(rgb1)
-
-        for i in range(0, j2):
-            xp2[i] = x2[i]
-            yp2[i] = y2[i]
-        if azi[1][0] - azi[1][1] > np.pi:
-            azi[1][0] -= np.pi * 2.0
-        elif azi[1][1] - azi[1][0] > np.pi:
-            azi[1][0] += np.pi * 2.0
-        if azi[1][0] < azi[1][1]:
-            az = azi[1][1] - D2R
-            while az > azi[1][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                xp2[i] = x0 + radius_size * si
-                i += 1
-                yp2[i] = y0 + radius_size * co
-                az -= D2R
-        else:
-            az = azi[1][1] + D2R
-            while az < azi[1][0]:
-                si = np.sin(az)
-                co = np.cos(az)
-                xp2[i] = x0 + radius_size * si
-                i += 1
-                yp2[i] = y0 + radius_size * co
-                az += D2R
-        collect.append(xy2patch(xp2[0:i], yp2[0:i], res, xy))
-        colors.append(rgb1)
-        return colors, collect
+    elif p.n == 1:
+        return _plot1(p, rgb1, colors, collect)
+    elif p.n == 2:
+        return _plot2(p, rgb1, colors, collect)
 
 
 def plotDC(np1, size=200, xy=(0, 0), width=200):
@@ -632,7 +625,7 @@ def plotDC(np1, size=200, xy=(0, 0), width=200):
         D2 = 89.9999
 
     # arange checked for numerical stablility, np.pi is not multiple of 0.1
-    phi = np.arange(0, np.pi, 0.01)
+    phi = np.arange(np.pi, 0.01)
     l1 = np.sqrt(
         np.power(90 - D1, 2)
         / (
@@ -911,7 +904,7 @@ def MT2Axes(mt):
     (D, V) = np.linalg.eigh(mt.mt)
     pl = np.arcsin(-V[0])
     az = np.arctan2(V[2], -V[1])
-    for i in range(0, 3):
+    for i in range(3):
         if pl[i] <= 0:
             pl[i] = -pl[i]
             az[i] += np.pi

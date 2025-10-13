@@ -1,0 +1,63 @@
+name: Nightly Engine tests on User mode
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+  schedule:
+    - cron: "0 4 * * *"
+
+jobs:
+  webUI_and_Calc:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install OQ (Master)
+        run: |
+          set -x
+          curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+          python install.py user --version=master --venv $HOME/gh-venv
+        if: github.event.inputs.git-ref == ''
+      - name: Install OQ (Custom Ref)
+        run: |
+          set -x
+          curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
+          python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv
+        if: github.event.inputs.git-ref != ''
+      - name: Setup debugging session
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      - name: Test WebUI and run https calculation
+        run: |
+          source $HOME/gh-venv/bin/activate
+          set -x
+          oq engine --upgrade-db
+          oq --version
+          # START WEBUI
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+            sleep 5 # wait for 1/10 of the second before check again
+          done
+          echo "Test WebUI with curl "
+          sleep 1
+          # Perform migration after setup local_settings
+          curl --fail -L -I -X GET http://127.0.0.1:8800
+          # Run a calcs using https
+          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+          curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs

@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+    <!--
+
+Date: 2022-04-05
+Geological Survey of Canada Open File 8924
+Sixth generation seismic hazard model of Canada: 
+Final input files used to generate the 2020 National Building Code of Canada seismic hazard values
+
+     -->
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                                applyToTectonicRegionType="Stable Shallow Crust">
+                <logicTreeBranch branchID="b11">
+                    <uncertaintyModel submodel='01'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0757</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0757</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.0682</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.07045</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.07725</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.06505</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.07755</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.08025</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0737</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.06145</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.07095</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.06475</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b12">
+                    <uncertaintyModel submodel='02'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0646</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0646</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.04105</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.0484</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.04865</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.0381</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.0376</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0384</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0407</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.04205</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.04725</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.0499</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b13">
+                    <uncertaintyModel submodel='03'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0551</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0551</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.0389</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.0401</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.0419</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.03425</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.0473</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.039</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.045</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0429</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.04475</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.03985</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b14">
+                    <uncertaintyModel submodel='04'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0243</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0243</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.0391</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.03025</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.035</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.0456</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.0404</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0404</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.04135</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0448</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.0291</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.0336</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b15">
+                    <uncertaintyModel submodel='05'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0277</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0277</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.036</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.03665</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.03925</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.0417</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.04505</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0476</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0394</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0433</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.041</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.03675</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b16">
+                    <uncertaintyModel submodel='06'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0489</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0489</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.0464</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.04115</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.04025</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.02715</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.0233</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0307</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0256</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0313</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.02955</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.043</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b17">
+                    <uncertaintyModel submodel='07'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.03655</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.03655</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.03705</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.03475</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.0253</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.02645</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.0225</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0317</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0171</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.01925</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.01935</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.0345</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b18">
+                    <uncertaintyModel submodel='08'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0349</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0349</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.03835</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.03315</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.0256</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.0377</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.0362</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0335</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0276</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.02205</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.0381</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.0378</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b19">
+                    <uncertaintyModel submodel='09'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0333</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0333</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.0472</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.02855</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.03</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.02725</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.04255</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0284</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.03515</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0353</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.0441</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.0255</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b110">
+                    <uncertaintyModel submodel='10'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0172</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0172</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.03815</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.02625</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.02965</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.0364</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.0235</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0255</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.03915</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.03815</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.03275</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.02715</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b111">
+                    <uncertaintyModel submodel='11'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.03695</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.03695</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.03265</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.04405</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.0501</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.0425</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.0253</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0411</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0427</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.04215</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.03355</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.0412</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b112">
+                    <uncertaintyModel submodel='12'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0264</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0264</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.01685</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.0311</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.0285</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.04305</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.04280</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.03055</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.0397</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0408</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.0299</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.0296</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b113">
+                    <uncertaintyModel submodel='13'>CanadaSHM6_StableCrust_NGAEast</uncertaintyModel>
+                    <uncertaintyWeight>0.0184</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGA">0.0184</uncertaintyWeight>
+                    <uncertaintyWeight imt="PGV">0.0201</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.05)">0.03515</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.1)">0.02855</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.2)">0.0348</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.3)">0.03595</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(0.5)">0.0329</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(1.0)">0.03285</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(2.0)">0.0365</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(5.0)">0.03965</uncertaintyWeight>
+                    <uncertaintyWeight imt="SA(10.0)">0.0364</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b114">
+                    <uncertaintyModel submodel='high'>CanadaSHM6_StableCrust_AA13</uncertaintyModel>
+                    <uncertaintyWeight>0.15</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b115">
+                    <uncertaintyModel submodel='central'>CanadaSHM6_StableCrust_AA13</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b116">
+                    <uncertaintyModel submodel='low'>CanadaSHM6_StableCrust_AA13</uncertaintyModel>
+                    <uncertaintyWeight>0.10</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+         <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                                applyToTectonicRegionType="Active Shallow Crust">           
+
+
+                <logicTreeBranch branchID="b22">
+                    <uncertaintyModel>CanadaSHM6_ActiveCrust_AbrahamsonEtAl2014</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b21">
+                    <uncertaintyModel>CanadaSHM6_ActiveCrust_BooreEtAl2014</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b23">
+                    <uncertaintyModel>CanadaSHM6_ActiveCrust_CampbellBozorgnia2014</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b24">
+                    <uncertaintyModel>CanadaSHM6_ActiveCrust_ChiouYoungs2014</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+
+        <logicTreeBranchingLevel branchingLevelID="bl3">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
+                                applyToTectonicRegionType="Subduction Interface">
+               
+                <logicTreeBranch branchID="b31">
+                    <uncertaintyModel>CanadaSHM6_Interface_AbrahamsonEtAl2015SInter</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+              
+                <logicTreeBranch branchID="b32">
+                    <uncertaintyModel>CanadaSHM6_Interface_AtkinsonMacias2009</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                 
+                <logicTreeBranch branchID="b33">
+                    <uncertaintyModel>CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+ 
+                <logicTreeBranch branchID="b34">
+                    <uncertaintyModel>CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+        
+        
+        <logicTreeBranchingLevel branchingLevelID="bl4">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4"
+                                applyToTectonicRegionType="Subduction IntraSlab30">
+                
+                <logicTreeBranch branchID="b41">
+                    <uncertaintyModel>CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab30</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b42">
+                    <uncertaintyModel>CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia30</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b43">
+                    <uncertaintyModel>CanadaSHM6_InSlab_GarciaEtAl2005SSlab30</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b44">
+                    <uncertaintyModel>CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia30</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                
+             </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+                   
+        <logicTreeBranchingLevel branchingLevelID="bl5">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs5"
+                                applyToTectonicRegionType="Subduction IntraSlab55">
+                
+                <logicTreeBranch branchID="b41">
+                    <uncertaintyModel>CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b42">
+                    <uncertaintyModel>CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+                
+                <logicTreeBranch branchID="b43">
+                    <uncertaintyModel>CanadaSHM6_InSlab_GarciaEtAl2005SSlab55</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b44">
+                    <uncertaintyModel>CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55</uncertaintyModel>
+                    <uncertaintyWeight>0.25</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+ 
+                
+    </logicTree>
+</nrml>

@@ -221,10 +221,7 @@ class SgobbaEtAl2020(GMPE):
     PERIODS = np.array([0, 0.2, 0.50251256281407, 1.0, 2.0])
 
     def __init__(self, event_id=None, directionality=False, cluster=None,
-                 site=False, bedrock=False, **kwargs):
-        super().__init__(event_id=event_id,
-                         directionality=directionality,
-                         cluster=cluster, **kwargs)
+                 site=False, bedrock=False):
         self.event_id = event_id
         self.directionality = directionality
         self.cluster = cluster
@@ -269,7 +266,7 @@ class SgobbaEtAl2020(GMPE):
                 self.be = 0.0
             # Site correction
             points = np.array([ctx.lon, ctx.lat]).T  # shape (N, 2)
-            dsts, idxs = self.kdt.query(points)
+            _dsts, idxs = self.kdt.query(points)
             dat = Data(self.Smodel, self.cluster, self.PERIODS,
                        self.betaS2S, idxs)
             sc = 0

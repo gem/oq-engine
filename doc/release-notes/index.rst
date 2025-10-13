@@ -9,15 +9,17 @@ performance updates, and critical bugfixes compared to the previous
 versions.
 
 The current Long Term Support (LTS) release for users wanting stability,
-is the OpenQuake Engine 3.16.
-
-The latest stable release for users needing the latest features,
-is the OpenQuake Engine 3.18.
+is the OpenQuake Engine 3.23.
 
 
 .. toctree::
    :maxdepth: 1
 
+   whats-new
+   whats-new-3.23
+   whats-new-3.22
+   whats-new-3.21
+   whats-new-3.20
    whats-new-3.19
    whats-new-3.18
    whats-new-3.17

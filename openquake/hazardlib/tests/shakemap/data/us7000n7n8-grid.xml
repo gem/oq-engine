@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="us7000n7n8" shakemap_id="us7000n7n8" shakemap_version="10" code_version="4.1.5" process_timestamp="2024-09-18T22:46:52" shakemap_originator="us" map_status="automatic" shakemap_event_type="ACTUAL">
+<event event_id="us7000n7n8" magnitude="7.0" depth="29.0" lat="52.9308" lon="160.1331" event_timestamp="2024-08-17T19:10:26" event_network="us" event_description="102 km E of Petropavlovsk-Kamchatsky, Kamchatka, RU" intensity_observations="0" seismic_stations="0" point_source="False" />
+<grid_specification lon_min="156.7833" lat_min="50.8333" lon_max="163.5667" lat_max="54.9667" nominal_lon_spacing="0.0083" nominal_lat_spacing="0.0083" nlon="815" nlat="497"/><grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="MMI" units="intensity" />
+<grid_field index="4" name="PGA" units="%g" />
+<grid_field index="5" name="PGV" units="cm/s" />
+<grid_field index="6" name="PSA03" units="%g" />
+<grid_field index="7" name="PSA06" units="%g" />
+<grid_field index="8" name="PSA10" units="%g" />
+<grid_field index="9" name="PSA30" units="%g" />
+<grid_field index="10" name="SVEL" units="m/s" />
+<grid_data>
+156.7833 54.9667 3.4 0.5239 0.9765 1.198 1.096 0.855 0.2628 400.6
+156.7917 54.9667 3.5 0.5619 1.068 1.32 1.226 0.9632 0.2876 334.5
+156.8000 54.9667 3.4 0.5243 0.9732 1.196 1.092 0.8506 0.2617 407
+156.8083 54.9667 3.3 0.485 0.8751 1.07 0.9578 0.7382 0.2349 506.5
+156.8167 54.9667 3.4 0.4945 0.8973 1.1 0.9876 0.763 0.2411 485
+156.8250 54.9667 3.4 0.5276 0.9747 1.202 1.095 0.8515 0.2619 411.1
+156.8333 54.9667 3.4 0.5371 0.9959 1.231 1.125 0.8759 0.2676 395.1
+156.8417 54.9667 3.5 0.5696 1.073 1.335 1.235 0.9674 0.2884 340.1
+156.8500 54.9667 3.4 0.5489 1.02 1.266 1.159 0.9037 0.2739 379.4
+156.8583 54.9667 3.3 0.4978 0.8945 1.102 0.9853 0.7586 0.2399 498.1
+156.8667 54.9667 3.4 0.5009 0.9003 1.111 0.9932 0.7649 0.2415 494.2
+</grid_data>
+</shakemap_grid>

@@ -19,7 +19,7 @@ for fault sources which now is extremely fast. It has several benefits
 in terms of simplicity of the code and better estimation of the task
 computational weight.
 
-Moreover, it is now possible to warn the user upfront, if she uses
+Moreover, it is now possible to warn the user upfront, if is using
 discretization parameters such as the `area_source_discretization`,
 the `rupture_mesh_spacing` and the `complex_fault_mesh_spacing` which
 are too small, thus producing millions of ruptures without need (this is

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="us6000jllz" shakemap_id="us6000jllz" shakemap_version="17" code_version="4.0.2+731.g88a8033" process_timestamp="2023-04-14T18:03:16" shakemap_originator="us" map_status="automatic" shakemap_event_type="ACTUAL">
+<event event_id="us6000jllz" magnitude="7.8" depth="10.0" lat="37.2256" lon="37.0143" event_timestamp="2023-02-06T01:17:34" event_network="us" event_description="25 km ENE of Nurdağı, Gaziantep, TR" intensity_observations="92" seismic_stations="262" point_source="False" />
+<grid_specification lon_min="28.5917" lat_min="29.2167" lon_max="48.0583" lat_max="44.4167" nominal_lon_spacing="0.0333" nominal_lat_spacing="0.0333" nlon="585" nlat="457"/><grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="MMI" units="intensity" />
+<grid_field index="4" name="PGA" units="%g" />
+<grid_field index="5" name="PGV" units="cm/s" />
+<grid_field index="6" name="PSA03" units="%g" />
+<grid_field index="7" name="PSA10" units="%g" />
+<grid_field index="8" name="PSA30" units="%g" />
+<grid_field index="9" name="SVEL" units="m/s" />
+<grid_data>
+28.5917 44.4167 3.6 0.1022 1.37 0.3635 1.451 0.7132 286.4
+28.6250 44.4167 3.5 0.09872 1.208 0.3268 1.205 0.6107 339.3
+28.6583 44.4167 3.6 0.1033 1.372 0.3665 1.453 0.7132 287.8
+28.6917 44.4167 3.5 0.1009 1.235 0.3367 1.242 0.6259 329.8
+28.7250 44.4167 3.5 0.09856 1.172 0.32 1.153 0.5881 359.5
+28.7583 44.4167 3.3 0.083 0.8436 0.2292 0.729 0.401 600
+28.7917 44.4167 3.3 0.08351 0.8455 0.2304 0.7309 0.4017 600
+28.8250 44.4167 3.3 0.08401 0.8475 0.2317 0.7329 0.4024 600
+28.8583 44.4167 3.3 0.08453 0.8495 0.233 0.7348 0.4031 600
+</grid_data>
+</shakemap_grid>

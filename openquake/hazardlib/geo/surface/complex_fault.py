@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,6 @@ Module :mod:`openquake.hazardlib.geo.surface.complex_fault` defines
 import numpy
 import shapely
 
-from openquake.baselib.python3compat import round
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
@@ -31,7 +30,6 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
-
 
 def edge_node(name, points):
     """
@@ -78,20 +76,6 @@ class ComplexFaultSurface(BaseSurface):
         self.mesh = mesh
         assert 1 not in self.mesh.shape, self.mesh.shape
         self.strike = self.dip = None
-        return  # FIXME: temporarily disabled the check below
-        # A common user error is to create a ComplexFaultSourceSurface
-        # from invalid fault data (e.g. mixing the order of
-        # vertexes for top and bottom edges). Therefore, we want to
-        # restrict every complex source to have a projected enclosing
-        # polygon that is not a multipolygon.
-        if isinstance(
-                self.mesh._get_proj_enclosing_polygon()[1],
-                shapely.geometry.multipolygon.MultiPolygon):
-            raise ValueError("Invalid surface. "
-                             "The projected enclosing polygon "
-                             "must be a simple polygon. "
-                             "Check the geometry definition of the "
-                             "fault source")
 
     @property
     def tor(self):
@@ -139,13 +123,14 @@ class ComplexFaultSurface(BaseSurface):
     @classmethod
     def check_aki_richards_convention(cls, edges):
         """
-        Verify that surface (as defined by corner points) conforms with Aki and
+        Verify that surface conforms with Aki and
         Richard convention (i.e. surface dips right of surface strike)
+        Test with 2 adjacent edges to allow for very large, curved surfaces
 
         This method doesn't have to be called by hands before creating the
         surface object, because it is called from :meth:`from_fault_data`.
         """
-        # 1) extract 4 corner points of surface mesh
+        # 1) extract 4 points of surface mesh from adjacent edges 
         # 2) compute cross products between left and right edges and top edge
         # (these define vectors normal to the surface)
         # 3) compute dot products between cross product results and
@@ -153,42 +138,40 @@ class ComplexFaultSurface(BaseSurface):
         # both angles are less then 90 degrees then the surface is correctly
         # defined)
         ul = edges[0].points[0]
-        ur = edges[0].points[-1]
+        u1 = edges[0].points[1]
         bl = edges[-1].points[0]
-        br = edges[-1].points[-1]
+        b1 = edges[-1].points[1]
+        
         ul, ur, bl, br = spherical_to_cartesian(
-            [ul.longitude, ur.longitude, bl.longitude, br.longitude],
-            [ul.latitude, ur.latitude, bl.latitude, br.latitude],
-            [ul.depth, ur.depth, bl.depth, br.depth],
-        )
+            [ul.longitude, u1.longitude, bl.longitude, b1.longitude],
+            [ul.latitude, u1.latitude, bl.latitude, b1.latitude],
+            [ul.depth, b1.depth, bl.depth, b1.depth])
 
         top_edge = ur - ul
         left_edge = bl - ul
         right_edge = br - ur
         left_cross_top = numpy.cross(left_edge, top_edge)
         right_cross_top = numpy.cross(right_edge, top_edge)
+        if (left_cross_top == 0).all() or (right_cross_top == 0).all():
+            return  # avoid division by zero
 
-        left_cross_top /= numpy.sqrt(numpy.dot(left_cross_top, left_cross_top))
-        right_cross_top /= numpy.sqrt(
-            numpy.dot(right_cross_top, right_cross_top)
-        )
-        ul /= numpy.sqrt(numpy.dot(ul, ul))
-        ur /= numpy.sqrt(numpy.dot(ur, ur))
+        left_cross_top /= numpy.sqrt(left_cross_top @ left_cross_top)
+        right_cross_top /= numpy.sqrt(right_cross_top @ right_cross_top)
+
+        ul /= numpy.sqrt(ul @ ul)
+        ur /= numpy.sqrt(ur @ ur)
 
         # rounding to 1st digit, to avoid ValueError raised for floating point
         # imprecision
-        angle_ul = round(
-            numpy.degrees(numpy.arccos(numpy.dot(ul, left_cross_top))), 1
-        )
-        angle_ur = round(
-            numpy.degrees(numpy.arccos(numpy.dot(ur, right_cross_top))), 1
-        )
+        angle_ul = numpy.round(
+            numpy.degrees(numpy.arccos(ul @ left_cross_top)), 1)
+        angle_ur = numpy.round(
+            numpy.degrees(numpy.arccos(ur @ right_cross_top)), 1)
 
         if (angle_ul > 90) or (angle_ur > 90):
             raise ValueError(
-                "Surface does not conform with Aki & Richards convention"
-            )
-
+                "Surface does not conform with Aki & Richards convention")
+            
     @classmethod
     def check_surface_validity(cls, edges):
         """
@@ -283,7 +266,7 @@ class ComplexFaultSurface(BaseSurface):
         cls.check_fault_data(edges, mesh_spacing)
         surface_nodes = [complex_fault_node(edges)]
         mean_length = numpy.mean([edge.get_length() for edge in edges])
-        num_hor_points = int(round(mean_length / mesh_spacing)) + 1
+        num_hor_points = int(numpy.round(mean_length / mesh_spacing)) + 1
         if num_hor_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean length %.1f km' %
@@ -294,7 +277,7 @@ class ComplexFaultSurface(BaseSurface):
 
         vert_edges = [Line(v_edge) for v_edge in zip(*edges)]
         mean_width = numpy.mean([v_edge.get_length() for v_edge in vert_edges])
-        num_vert_points = int(round(mean_width / mesh_spacing)) + 1
+        num_vert_points = int(numpy.round(mean_width / mesh_spacing)) + 1
         if num_vert_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean width %.1f km' %
@@ -308,6 +291,23 @@ class ComplexFaultSurface(BaseSurface):
         self = cls(mesh)
         self.surface_nodes = surface_nodes
         return self
+
+    def check_proj_polygon(self):
+        # called in ComplexFaultSource.iter_ruptures only in preclassical
+        """
+        A common user error is to create a ComplexFaultSourceSurface
+        from invalid fault data (e.g. mixing the order of
+        vertexes for top and bottom edges). Therefore, we want to
+        restrict every complex source to have a projected enclosing
+        polygon that is not a multipolygon.
+        """
+        if isinstance(self.mesh._get_proj_enclosing_polygon()[1],
+                      shapely.geometry.multipolygon.MultiPolygon):
+            raise ValueError("Invalid surface. "
+                             "The projected enclosing polygon "
+                             "must be a simple polygon. "
+                             "Check the geometry definition of the "
+                             "fault source")
 
     @classmethod
     def surface_projection_from_fault_data(cls, edges):

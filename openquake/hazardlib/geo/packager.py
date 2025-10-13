@@ -23,7 +23,9 @@ try:
     import fiona
     from fiona import crs
 except ImportError:
-    fiona = None
+    raise ImportError('The geospatial libraries must be installed using our '
+                      'requirements.txt files (see https://github.com/gem/oq-engine). '
+                      'Only the GEM wheels are tested and guaranteed to work')
 from openquake.baselib.node import Node, scientificformat
 from openquake.hazardlib import nrml
 

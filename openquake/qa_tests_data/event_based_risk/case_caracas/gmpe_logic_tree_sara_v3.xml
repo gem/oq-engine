@@ -49,6 +49,6 @@
         <uncertaintyModel>DrouetBrazil2015withDepth</uncertaintyModel>
         <uncertaintyWeight>0.25</uncertaintyWeight>
       </logicTreeBranch>
-    </logicTreeBranchSe
+    </logicTreeBranchSet>
 </logicTree>
 </nrml>

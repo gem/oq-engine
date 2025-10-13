@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,21 +37,21 @@ def classical_risk(riskinputs, oqparam, monitor):
     """
     crmodel = monitor.read('crmodel')
     result = dict(loss_curves=[], stat_curves=[])
-    weights = [w['default'] for w in oqparam._weights]
-    statnames, stats = zip(*oqparam._stats)
+    weights = oqparam._weights[:, -1]
+    _statnames, stats = zip(*oqparam._stats)
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
         A = len(ri.asset_df)
         L = len(crmodel.lti)
-        R = ri.hazard_getter.num_rlzs
+        R = ri.hazard_getter.R
         loss_curves = numpy.zeros((R, L, A), object)
         avg_losses = numpy.zeros((R, L, A))
         with mon:
             haz = ri.hazard_getter.get_hazard()
         for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
-                hcurve = haz.extract(rlz)
-                out = crmodel.get_output(asset_df, hcurve)
+                hcurve = haz[:, rlz]
+                [out] = crmodel.get_outputs(asset_df, hcurve)
                 for li, loss_type in enumerate(crmodel.loss_types):
                     # loss_curves has shape (A, C)
                     for i, asset in enumerate(asset_df.to_records()):
@@ -92,18 +92,16 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         super().pre_execute()
-        if '_rates' not in self.datastore:  # when building short report
-            return
-        full_lt = self.datastore['full_lt']
-        self.realizations = full_lt.get_realizations()
-        weights = [rlz.weight for rlz in self.realizations]
-        stats = list(oq.hazard_stats().items())
-        oq._stats = stats
-        oq._weights = weights
-        self.riskinputs = self.build_riskinputs()
-        self.A = len(self.assetcol)
-        self.L = len(self.crmodel.loss_types)
-        self.S = len(oq.hazard_stats())
+        parent = self.datastore.parent
+        if '_rates' in self.datastore or '_rates' in parent:
+            full_lt = self.datastore['full_lt'].init()
+            stats = list(oq.hazard_stats().items())
+            oq._stats = stats
+            oq._weights = full_lt.weights
+            self.riskinputs = self.build_riskinputs()
+            self.A = len(self.assetcol)
+            self.L = len(self.crmodel.loss_types)
+            self.S = len(oq.hazard_stats())
 
     def post_execute(self, result):
         """

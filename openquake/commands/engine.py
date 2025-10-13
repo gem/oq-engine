@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,6 @@ import getpass
 import logging
 from openquake.baselib import config
 from openquake.baselib.general import safeprint
-from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
@@ -34,14 +33,16 @@ from openquake.commands.abort import main as abort
 DEFAULT_EXPORTS = 'csv,xml,rst'
 HAZARD_CALCULATION_ARG = "--hazard-calculation-id"
 MISSING_HAZARD_MSG = "Please specify '%s=<id>'" % HAZARD_CALCULATION_ARG
-ZMQ = os.environ.get(
-    'OQ_DISTRIBUTE', config.distribution.oq_distribute) == 'zmq'
 
 
-def get_job_id(job_id, username=None):
-    job = logs.dbcmd('get_job', job_id, username)
+def get_job_id(job_id, username):
+    # limit to the current user only if -1 is passed
+    job = logs.dbcmd('get_job', job_id, username if job_id == -1 else None)
     if not job:
-        sys.exit('Job %s not found' % job_id)
+        if job_id == -1:
+            sys.exit('No jobs for user %s!' % username)
+        else:
+            sys.exit('Job %s not found' % job_id)
     return job.id
 
 
@@ -64,7 +65,9 @@ def del_calculation(job_id, confirmed=False):
             safeprint(err)
         else:
             if 'success' in resp:
-                os.remove(resp['hdf5path'])
+                for hdf5path in resp['hdf5paths']:
+                    if os.path.exists(hdf5path):
+                        os.remove(hdf5path)
                 print('Removed %d' % job.id)
             else:
                 print(resp['error'])
@@ -80,7 +83,6 @@ def main(
         list_risk_calculations=False,
         delete_uncompleted_calculations=False,
         multi=False,
-        reuse_input=False,
         *,
         log_file=None,
         make_html_report=None,
@@ -92,10 +94,10 @@ def main(
         export_output=None,
         export_outputs=None,
         param='',
-        config_file=None,
         exports='',
         log_level='info',
-        sample_sources=False,):
+        sample_sources=False,
+        nodes: int = 1):
     """
     Run a calculation using the traditional command line API
     """
@@ -104,12 +106,6 @@ def main(
     if not run:
         # configure a basic logging
         logging.basicConfig(level=logging.INFO)
-
-    if config_file:
-        config.read(os.path.abspath(os.path.expanduser(config_file)),
-                    limit=int, soft_mem_limit=int, hard_mem_limit=int,
-                    port=int, serialize_jobs=valid.boolean,
-                    strict=valid.boolean, code=exec)
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
@@ -124,11 +120,13 @@ def main(
         os.makedirs(datadir)
 
     fname = os.path.expanduser(config.dbserver.file)
-    if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
+    host = os.environ.get('OQ_DATABASE', config.dbserver.host)
+    if host == '127.0.0.1' and getpass.getuser() != 'openquake':  # no DbServer
         if not os.path.exists(fname):
             upgrade_db = True  # automatically creates the db
             yes = True
-    else:
+    else:  # DbServer yes
+        print(f'Using the DbServer on {host}')
         dbserver.ensure_on()
         # check that we are talking to the right server
         err = dbserver.check_foreign()
@@ -158,27 +156,20 @@ def main(
         sys.exit(outdated)
 
     # hazard or hazard+risk
-    if hazard_calculation_id == -1:
-        # get the latest calculation of the current user
+    if hazard_calculation_id:
         hc_id = get_job_id(hazard_calculation_id, user_name)
-    elif hazard_calculation_id:
-        # make it possible to use calculations made by another user
-        hc_id = get_job_id(hazard_calculation_id)
     else:
         hc_id = None
     if run:
         pars = dict(p.split('=', 1) for p in param.split(',')) if param else {}
-        if reuse_input:
-            pars['cachedir'] = datadir
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        jobs = create_jobs(job_inis, log_level, log_file, user_name,
-                           hc_id, multi)
+        jobs = create_jobs(job_inis, log_level, log_file, user_name, hc_id)
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
-        run_jobs(jobs)
+        run_jobs(jobs, nodes=nodes, sbatch=True, precalc=not multi)
 
     # hazard
     elif list_hazard_calculations:
@@ -198,11 +189,11 @@ def main(
         sys.exit(0)
 
     elif list_outputs is not None:
-        hc_id = get_job_id(list_outputs)
+        hc_id = get_job_id(list_outputs, user_name)
         for line in logs.dbcmd('list_outputs', hc_id):
             safeprint(line)
     elif show_log is not None:
-        hc_id = get_job_id(show_log)
+        hc_id = get_job_id(show_log, user_name)
         for line in logs.dbcmd('get_log', hc_id):
             safeprint(line)
 
@@ -216,7 +207,7 @@ def main(
 
     elif export_outputs is not None:
         job_id, target_dir = export_outputs
-        hc_id = get_job_id(job_id)
+        hc_id = get_job_id(job_id, user_name)
         for line in core.export_outputs(
                 hc_id, os.path.expanduser(target_dir),
                 exports or DEFAULT_EXPORTS):
@@ -245,7 +236,6 @@ main.list_risk_calculations = dict(
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
 main.multi = 'Run multiple job.inis in parallel'
-main.reuse_input = 'Read the CompositeSourceModel from the cache (if any)'
 
 # options
 main.log_file = dict(
@@ -279,11 +269,10 @@ main.export_outputs = dict(
 main.param = dict(
     abbrev='-p', help='Override parameters specified with the syntax '
     'NAME1=VALUE1,NAME2=VALUE2,...')
-main.config_file = ('Custom openquake.cfg file, to override default '
-                    'configurations')
 main.exports = ('Comma-separated string specifing the export formats, '
                 'in order of priority')
 main.log_level = dict(help='Defaults to "info"',
                       choices=['debug', 'info', 'warn', 'error', 'critical'])
 main.sample_sources = dict(abbrev='--ss',
                            help="Sample fraction in the range 0..1")
+main.nodes = 'Number of SLURM nodes (if applicable)'

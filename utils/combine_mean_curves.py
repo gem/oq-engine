@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,7 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import sap, hdf5, datastore
-from openquake.calculators.getters import PmapGetter
+from openquake.calculators.getters import MapGetter
 
 
 def combine_mean_curves(calc_big: int, calc_small: int):
@@ -41,8 +41,8 @@ def combine_mean_curves(calc_big: int, calc_small: int):
         raise RuntimeError('There are no common sites between calculation '
                            '%d and %d' % (calc_big, calc_small))
     sids_small = [site_id_small[lonlat] for lonlat in common]
-    pmap_big = PmapGetter(dstore_big).get_mean()  # USA
-    pmap_small = PmapGetter(dstore_big, sids=sids_small).get_mean()  # Cal
+    pmap_big = MapGetter(dstore_big).get_mean()  # USA
+    pmap_small = MapGetter(dstore_big, sids=sids_small).get_mean()  # Cal
     for lonlat in common:
         pmap_big[site_id_big[lonlat]] |= pmap_small.get(
             site_id_small[lonlat], 0)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,13 +27,12 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
-    _get_centered_z1pt0,
     _get_centered_ztor,
     get_hanging_wall_term,
     get_geometric_spreading,
     get_magnitude_scaling,
     get_directivity,
-    get_basin_depth_term,
+    _get_basin_term,
     get_linear_site_term,
     get_nonlinear_site_term,
 )
@@ -52,8 +51,9 @@ CONSTANTS = {
 
 def _sigmoid1d(x, start, finish, centre, slope):
     """
-    Returns 1D sigmoid function allowing a smooth transition from `start` to `finish`.
-    The transition is centred at `centre` and changes at a rate linked to `slope`
+    Returns 1D sigmoid function allowing a smooth transition from `start` to
+    `finish`. The transition is centred at `centre` and changes at a rate
+    linked to `slope`
     """
     amplitude = finish - start
     y = start + amplitude / (1.0 + np.exp(-(x - centre) / slope))
@@ -101,7 +101,8 @@ def _anelastic_correction(T):
 
 def _anelastic_sigma(T):
     """
-    Standard deviation of the anelastic attenuation coefficient -- a function of period `T`
+    Standard deviation of the anelastic attenuation coefficient -- a function
+    of period `T`
     """
     return _sigmoid1d(np.log(T), 0.00054, 0.0004, np.log(0.9), 0.2)
 
@@ -143,7 +144,8 @@ def _neff_model(T):
     """
         neff_model(T)
 
-    Model for the effective number of observations in NZ data, function of period `T`
+    Model for the effective number of observations in NZ data, function of
+    period `T`
     """
     β0 = 190.34
     β1 = 221.16
@@ -159,9 +161,10 @@ def _neff_model(T):
 def get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
     ρEhEx = 0.4
     epistemic_scale_factor = 0.893
-    # The scale factor of 0.9 is applied based upon the discussion that it accounts for the reduction in epistemic
-    # uncertainty when no perfect correlation is assumed between rupture scenarios. See the note of Peter and
-    # Brendon on slack.
+    # The scale factor of 0.9 is applied based upon the discussion that it
+    # accounts for the reduction in epistemic uncertainty when no perfect
+    # correlation is assumed between rupture scenarios. See the note of Peter
+    # and Brendon on slack.
     MEAN_ADJUSTMENT_TERMS_IF = {
         "Lower": {
             "delta_c1": (
@@ -326,7 +329,7 @@ def get_ln_y_ref(
         get_stress_scaling(
             T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
         )
-        + get_magnitude_scaling(C, ctx.mag)
+        + get_magnitude_scaling(C, ctx.mag, delta_cm=0)
         + get_source_scaling_terms(
             T,
             C,
@@ -343,7 +346,7 @@ def get_ln_y_ref(
         + get_far_field_distance_scaling(
             T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
         )
-        + get_directivity("Stafford2022", C, ctx)
+        + get_directivity(C, ctx)
     )
 
 
@@ -410,6 +413,7 @@ def get_mean_stddevs(
     adjust_cg1,
     C,
     ctx,
+    imt
 ):
     """
     Return mean and standard deviation values.
@@ -421,14 +425,11 @@ def get_mean_stddevs(
     y_ref = np.exp(ln_y_ref)
     # Get the site amplification
     # Get basin depth
-    dz1pt0 = _get_centered_z1pt0("Stafford2022", ctx)
-    # for Z1.0 = 0.0 no deep soil correction is applied
-    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
-    f_z1pt0 = get_basin_depth_term("Stafford2022", C, dz1pt0)
+    f_z1pt0 = _get_basin_term(C, ctx, "Stafford2022", imt)
     # Get linear amplification term
     f_lin = get_linear_site_term("Stafford2022", C, ctx)
     # Get nonlinear amplification term
-    f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
+    f_nl, _f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
@@ -442,7 +443,8 @@ class Stafford2022(GMPE):
     """
     Implements Backbone model developed by Peter Stafford for NZ NSHM revision.
     For more details see Peter Stafford's GNS report.
-    The base model implementation remains the same as for Chiou and Youngs (2014).
+    The base model implementation remains the same as for Chiou and Youngs
+    (2014).
 
     Chiou, B. S.-J. and Youngs, R. R. (2014), "Updated of the Chiou and Youngs
     NGA Model for the Average Horizontal Component of Peak Ground Motion and
@@ -464,10 +466,7 @@ class Stafford2022(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see chapter "Variance model".
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL,
-        const.StdDev.INTER_EVENT,
-        const.StdDev.INTRA_EVENT,
-    }
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
@@ -491,21 +490,11 @@ class Stafford2022(GMPE):
         adjust_chm=True,
         adjust_c7=True,
         adjust_cg1=True,
-        **kwargs,
     ):
         """
-        Aditional parameter for epistemic central,
+        Additional parameter for epistemic central,
         lower and upper bounds.
         """
-        super().__init__(
-            mu_branch=mu_branch,
-            sigma_branch=sigma_branch,
-            adjust_c1=adjust_c1,
-            adjust_chm=adjust_chm,
-            adjust_c7=adjust_c7,
-            adjust_cg1=adjust_cg1,
-            **kwargs,
-        )
         self.mu_branch = mu_branch
         self.sigma_branch = sigma_branch
         self.adjust_c1 = adjust_c1
@@ -521,9 +510,8 @@ class Stafford2022(GMPE):
         """
         for m, imt in enumerate(imts):
             if repr(imt) == "PGV":
-                print(
-                    "Invalid IMT provided. The model does not predict ground motions for PGV."
-                )
+                print("Invalid IMT provided. The model does not predict"
+                      " ground motions for PGV.")
                 sig[m], tau[m], phi[m] = None, None, None
             elif repr(imt) == "PGA":
                 pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
@@ -536,8 +524,10 @@ class Stafford2022(GMPE):
                     self.adjust_cg1,
                     self.COEFFS[SA(0.01)],
                     ctx,
+                    imt
                 )
-                # Peter has used T = 0.01 as the period for PGA because the coefficients (for 0.01s and PGA) are identical.
+                # Peter has used T = 0.01 as the period for PGA because the
+                # coefficients (for 0.01s and PGA) are identical.
                 mean[m] = pga_mean
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
@@ -552,6 +542,7 @@ class Stafford2022(GMPE):
                     self.adjust_cg1,
                     self.COEFFS[imt],
                     ctx,
+                    imt
                 )
                 mean[m] = imt_mean
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi

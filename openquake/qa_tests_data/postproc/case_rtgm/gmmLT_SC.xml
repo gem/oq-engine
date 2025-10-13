@@ -14,11 +14,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <logicTreeBranch
             branchID="Shallow_Default_VLowStress_FastAtt"
             >
-                <uncertaintyModel>
-                    [KothaEtAl2020ESHM20]
-                        sigma_mu_epsilon = 2.85697000
-                        c3_epsilon = 1.73205100
-                </uncertaintyModel>
+                <uncertaintyModel>BooreEtAl2014</uncertaintyModel>
                 <uncertaintyWeight>
                     1.0
                 </uncertaintyWeight>

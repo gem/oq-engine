@@ -1,0 +1,62 @@
+import os
+
+APPLICATION_MODE = <'AELO'|'ARISTOTLE'>
+ALLOWED_HOSTS = (<domain_name_of_the_server>, 'localhost', '127.0.0.1')
+DISABLE_VERSION_WARNING = True
+
+IMPACT_DEFAULT_USGS_ID = ''
+
+# By default it is 'openquake'
+# WEBUI_USER =
+
+# Folder STATIC_ROOT is the full, absolute path to your static files folder.
+# Furthermore, the user WEBUI_USER must own that directory.
+STATIC_ROOT = '/var/www/webui'
+
+# Configure the directory to store the server user access log
+# Furthermore, the user WEBUI_USER must own that directory.
+WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+
+# WEBUI config uncomment and set properly if needed
+# WEBUIURL = 'http://localhost:8800/'
+
+# By default this setting links to the latest engine user manual
+# The following example points to the latest AELO user manual:
+# HELP_URL = 'https://docs.openquake.org/.aelo/latest'
+
+# turn on USE_X_FORWARDED_HOST to expose the webui via a proxy server
+# USE_X_FORWARDED_HOST = True
+# USE_X_FORWARDED_PORT = True
+
+# enable WEBUI_PATHPREFIX to place webui pages below a specific path
+# WEBUI_PATHPREFIX='/path/prefix'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = os.environ.get('EMAIL_PORT', 587)
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', True)
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
+
+# NOTE: the following variable is needed to send pasword reset emails
+#       using the createnormaluser Django command.
+#       It should be the same specified in /etc/nginx/conf.d/webui.conf
+SERVER_NAME = <localhost>
+
+# Set to True if using NGINX or some other reverse proxy
+# Externally visible url and port number is different from Django visible
+# values
+USE_REVERSE_PROXY = <True|False>
+
+# Local time zone for this installation. Choices can be found here:
+# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
+# although not all choices may be available on all operating systems.
+# If running in a Windows environment this must be set to the same as your
+# system time zone. Aelo or Aristotle services are expected to run on linux only.
+# NOTE: the default value in settings.py is 'UTC'
+# TIME_ZONE =
+
+DEBUG = False
+
+SUPPRESS_PERMISSION_DENIED_WARNINGS = True

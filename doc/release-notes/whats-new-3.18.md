@@ -12,7 +12,8 @@ https://github.com/gem/oq-engine/blob/engine-3.18/debian/changelog
 
 A summary is given below.
 
-# Memory and space savings
+Memory and space savings
+------------------------
 
 After years of effort, we finally managed to get a drastic reduction
 in memory consumption in classical calculations. For instance, in
@@ -36,7 +37,8 @@ in disk space occupation in classical calculations. By storing the
 rates as 32 bit floats instead of 64 bit floats we saved 25% of the
 disk space.
 
-# Optimizations in the hazard calculators
+Optimizations in the hazard calculators
+---------------------------------------
 
 Most classical calculations are now faster since the `pointsource_distance`
 approximation is enabled by default, with a value of 100 km.
@@ -62,7 +64,8 @@ We changed the stochastic part of the algorithm generating the GMFs
 to avoid unwanted correlations in the case of full enumeration (see
 https://github.com/gem/oq-engine/issues/9073).
 
-# Work on hazardlib
+Work on hazardlib
+-----------------
 
 Marco Pagani fixed a long standing resampling bug affecting
 the simple fault sources and therefore affecting most hazard models;
@@ -81,7 +84,8 @@ Switzerland.
 Claudio Schill optimized the Kuehn `sigma_mu_adjustment` calculation by
 replacing the multi-step interpolation with a single 2D/3D space interpolation.
 
-# Scenarios with conditioned GMFs
+Scenarios with conditioned GMFs
+-------------------------------
 
 There was a subtantial amount of work on the scenario calculator for
 conditioned GMFs, first introduced as an experimental feature in
@@ -95,7 +99,8 @@ before.  Many bugs have been ironed out and a few consistency checks
 has been added. It much more reliable than in the past, however it
 should still be considered in experimental status.
 
-# New features: AEP/OEP curves, infrastructure risk, liquefaction
+New features: AEP/OEP curves, infrastructure risk, liquefaction
+---------------------------------------------------------------
 
 At user request, we extended the event based risk calculator to
 produce Aggregate Exceedance Probability (AEP) and Occurrence
@@ -123,7 +128,8 @@ Bozzoni2021LiquefactionEurope, TodorovicSilva2022NonParametric.
 The TodorovicSilva2022NonParametric model is based on a machine 
 learning approach and therefore now the engine supports the onnx runtime.
 
-# Bug fixes and better error messages
+Bug fixes and better error messages
+-----------------------------------
 
 Parallelizing engine calculations with pytest, GNU parallel or other
 approaches did not work due to conflicts in the calculation IDs (i.e.
@@ -182,14 +188,16 @@ the size of the produced GMFs in event based calculations.
 A site model can be split in multiple files. There is now a check on
 the headers and an error is raised if the headers are not consistent.
 
-# AELO project
+AELO project
+------------
 
 There was a substantial amount of work on the AELO project. The engine
 is finally able to compute the ASCE-41 and ASCE-7 parameters by using
 code from the USGS (the `rtgmpy` library). The project is still marked
 as experimental and the associated service is not public.
 
-# Deprecations and removals
+Deprecations and removals
+-------------------------
 
 After more than four years since their 
 [deprecation](https://github.com/gem/oq-engine/pull/4524), 
@@ -206,7 +214,8 @@ In the next release we will start supporting Python 3.11.
 
 Mac with an Intel processor are not officially supported anymore.
 
-# Other
+Other
+-----
 
 We improved the universal installer to use the `--trusted-host`
 feature: this is necessary for corporate users forbidding downloads

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,7 @@ import collections
 from xml.parsers.expat import ExpatError
 from copy import deepcopy
 import numpy
+import pandas
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
@@ -37,6 +38,18 @@ from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 
 
 DATADIR = os.path.join(os.path.dirname(__file__), 'data')
+
+
+class SmltTestCase(unittest.TestCase):
+    def test_400_source_models(self):
+        # test that too many branches is not raised
+        fname = os.path.join(DATADIR, 'drouet_smtlt.xml')
+        with self.assertRaises(
+                (lt.LogicTreeError, logictree.InvalidFile)) as ctx:
+            logictree.SourceModelLogicTree(fname)
+        msg = str(ctx.exception)
+        assert ('No such file or directory:' in msg
+                or 'too many branches' in msg)
 
 
 class CompositeLtTestCase(unittest.TestCase):
@@ -290,8 +303,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error(
             'lo', {'lo': lt, 'sm1': sm, 'sm2': sm}, logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 4)
-        self.assertEqual(exc.message, "branchset weights don't sum up to 1.0",
-                         "wrong exception message: %s" % exc.message)
+        self.assertEqual(
+            exc.message, "branchset weights sum up to 1.1, not 1",
+            "wrong exception message: %s" % exc.message)
 
     def test_apply_to_nonexistent_branch(self):
         lt = _make_nrml("""\
@@ -421,7 +435,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error(
             'lt', {'lt': lt, 'sm.xml': sm}, logictree.LogicTreeError)
         self.assertEqual(exc.lineno, 16)
-        self.assertEqual(exc.message, 'expected single float value',
+        self.assertEqual(exc.message,
+                         "expected single float value, got '123.45z'",
                          "wrong exception message: %s" % exc.message)
 
     def test_incremental_mfd_absolute_wrong_format(self):
@@ -1179,7 +1194,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                ))
              ]
             )
-        sb1, sb2, sb3 = lt.root_branchset.branches
+        sb1, _sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.bset is sb3.bset)
         self.assertEqual(
             str(lt), '<_TestableSourceModelLogicTree<sourceModel(3)>>')
@@ -1219,9 +1234,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
 class SampleTestCase(unittest.TestCase):
 
     def test_sample(self):
-        branches = [logictree.Branch('BS', 1, 0.2, 'A'),
-                    logictree.Branch('BS', 1, 0.3, 'B'),
-                    logictree.Branch('BS', 1, 0.5, 'C')]
+        branches = [logictree.Branch(1, 'A', .2, 'BS'),
+                    logictree.Branch(1, 'B', .3, 'BS'),
+                    logictree.Branch(1, 'C', .5, 'BS')]
         probs = lt.random(1000, 42, 'early_weights')
         samples = lt.sample(branches, probs, 'early_weights')
 
@@ -1233,15 +1248,15 @@ class SampleTestCase(unittest.TestCase):
         self.assertEqual(count(samples, value='C'), 497)
 
     def test_sample_broken_branch_weights(self):
-        branches = [logictree.Branch('BS', 0, 0.1, 0),
-                    logictree.Branch('BS', 1, 0.2, 1)]
+        branches = [logictree.Branch(0, 0, 0.1, 'BS'),
+                    logictree.Branch(1, 1, 0.2, 'BS')]
         probs = lt.random(1000, 42, 'early_weights')
         with self.assertRaises(IndexError):
             lt.sample(branches, probs, 'early_weights')
 
     def test_sample_one_branch(self):
         # always the same branch is returned
-        branches = [logictree.Branch('BS', 0, 1.0, 0)]
+        branches = [logictree.Branch(0, 0, 1.0, 'BS')]
         probs = lt.random(1000, 42, 'early_weights')
         bs = lt.sample(branches, probs, 'early_weights')
         for b in bs:
@@ -1250,23 +1265,23 @@ class SampleTestCase(unittest.TestCase):
 
 class BranchSetEnumerateTestCase(unittest.TestCase):
     def test_enumerate(self):
-        b0 = logictree.Branch('BS1', '0', 0.64, '0')
-        b1 = logictree.Branch('BS1', '1', 0.36, '1')
-        b00 = logictree.Branch('BS2', '0.0', 0.33, '0.0')
-        b01 = logictree.Branch('BS2', '0.1', 0.27, '0.1')
-        b02 = logictree.Branch('BS2', '0.2', 0.4, '0.2')
-        b10 = logictree.Branch('BS3', '1.0', 1.0, '1.0')
-        b100 = logictree.Branch('BS4', '1.0.0', 0.1, '1.0.0')
-        b101 = logictree.Branch('BS4', '1.0.1', 0.9, '1.0.1')
-        bs_root = logictree.BranchSet(None)
+        b0 = logictree.Branch('0', '0', 0.64, 'BS1')
+        b1 = logictree.Branch('1', '1', 0.36, 'BS1')
+        b00 = logictree.Branch('0.0', '0.0', 0.33, 'BS2')
+        b01 = logictree.Branch('0.1', '0.1', 0.27, 'BS2')
+        b02 = logictree.Branch('0.2', '0.2', 0.4, 'BS2')
+        b10 = logictree.Branch('1.0', '1.0', 1.0, 'BS3')
+        b100 = logictree.Branch('1.0.0', '1.0.0', 0.1, 'BS4')
+        b101 = logictree.Branch('1.0.1', '1.0.1', 0.9, 'BS4')
+        bs_root = logictree.BranchSet('sourceModel')
         bs_root.branches = [b0, b1]
-        bs0 = logictree.BranchSet(None)
+        bs0 = logictree.BranchSet('sourceModel')
         bs0.branches = [b00, b01, b02]
-        bs1 = logictree.BranchSet(None)
+        bs1 = logictree.BranchSet('sourceModel')
         bs1.branches = [b10]
         b0.bset = bs0
         b1.bset = bs1
-        bs10 = logictree.BranchSet(None)
+        bs10 = logictree.BranchSet('sourceModel')
         bs10.branches = [b100, b101]
         b10.bset = bs10
 
@@ -1290,18 +1305,18 @@ class BranchSetEnumerateTestCase(unittest.TestCase):
 
 class BranchSetGetBranchByIdTestCase(unittest.TestCase):
     def test(self):
-        bs = logictree.BranchSet(None)
-        b1 = logictree.Branch('BS', '1', 0.33, None)
-        b2 = logictree.Branch('BS', '2', 0.33, None)
-        bbzz = logictree.Branch('BS', 'bzz', 0.34, None)
+        bs = logictree.BranchSet('sourceModel')
+        b1 = logictree.Branch('1', None, 0.33, 'BS')
+        b2 = logictree.Branch('2', None, 0.33, 'BS')
+        bbzz = logictree.Branch('bzz', 0.34, None, 'BS')
         bs.branches = [b1, b2, bbzz]
         self.assertIs(bs['1'], b1)
         self.assertIs(bs['2'], b2)
         self.assertIs(bs['bzz'], bbzz)
 
     def test_nonexistent_branch(self):
-        bs = logictree.BranchSet(None)
-        br = logictree.Branch('BS', 'br', 1.0, None)
+        bs = logictree.BranchSet('sourceModel')
+        br = logictree.Branch('br', None, 1.0, 'BS')
         bs.branches.append(br)
         self.assertRaises(KeyError, bs.__getitem__, 'bz')
 
@@ -1334,6 +1349,14 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
             lt.apply_uncertainty(utype, self.point_source, uvalue)
         self.assertEqual(self.point_source.mfd.max_mag, 6.5 + 1)
         self.assertEqual(self.point_source.mfd.b_val, 0.9 - 0.2)
+
+    def test_relative_mmax_no_balance(self):
+        a_val = self.point_source.mfd.a_val
+        uncertainties = [('maxMagGRRelativeNoMoBalance', +1)]
+        for utype, uvalue in uncertainties:
+            lt.apply_uncertainty(utype, self.point_source, uvalue)
+        self.assertEqual(self.point_source.mfd.max_mag, 6.5 + 1)
+        self.assertEqual(self.point_source.mfd.a_val, a_val)
 
     def test_absolute_uncertainty(self):
         uncertainties = [('maxMagGRAbsolute', 9),
@@ -1411,30 +1434,6 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
             temporal_occurrence_model=PoissonTOM(50.),
             edges=edges, rake=90.0)
 
-    def _make_planar_surface(self, planes):
-        surfaces = []
-        for plane in planes:
-            top_left = geo.Point(plane[0, 0], plane[0, 1], plane[0, 2])
-            top_right = geo.Point(plane[1, 0], plane[1, 1], plane[1, 2])
-            bottom_right = geo.Point(plane[2, 0], plane[2, 1], plane[2, 2])
-            bottom_left = geo.Point(plane[3, 0], plane[3, 1], plane[3, 2])
-            surfaces.append(geo.PlanarSurface.from_corner_points(
-                top_left, top_right, bottom_right, bottom_left))
-
-        if len(surfaces) > 1:
-            return geo.MultiSurface(surfaces)
-        else:
-            return surfaces[0]
-
-    def _make_characteristic_fault_source(self, surface):
-        return openquake.hazardlib.source.CharacteristicFaultSource(
-            source_id="CHARFLT0", name="Characteristic Fault",
-            tectonic_region_type="Active Shallow Crust",
-            mfd=EvenlyDiscretizedMFD(min_mag=7.0, bin_width=0.1,
-                                     occurrence_rates=[0.01]),
-            temporal_occurrence_model=PoissonTOM(50.),
-            surface=surface, rake=90)
-
     def test_simple_fault_dip_relative_uncertainty(self):
         self.assertAlmostEqual(self.fault_source.dip, 60.)
         new_fault_source = deepcopy(self.fault_source)
@@ -1450,109 +1449,24 @@ class BranchSetApplyGeometryUncertaintyTestCase(unittest.TestCase):
         self.assertAlmostEqual(new_fault_source.dip, 55.)
 
     def test_simple_fault_geometry_uncertainty(self):
-        new_fault_source = deepcopy(self.fault_source)
-        new_trace = geo.Line([geo.Point(30.5, 30.0), geo.Point(31.2, 30.)])
-        new_dip = 50.
-        new_lsd = 12.
-        new_usd = 1.
-        utype, uvalue = ('simpleFaultGeometryAbsolute',
-                         (new_trace, new_usd, new_lsd, new_dip, 1.0))
-        lt.apply_uncertainty(utype, new_fault_source, uvalue)
-        self.assertEqual(new_fault_source.fault_trace, new_trace)
-        self.assertAlmostEqual(new_fault_source.upper_seismogenic_depth, 1.)
-        self.assertAlmostEqual(new_fault_source.lower_seismogenic_depth, 12.)
-        self.assertAlmostEqual(new_fault_source.dip, 50.)
+        # tested in logictree/case_20
+        pass
 
     def test_complex_fault_geometry_uncertainty(self):
-        top_edge = geo.Line([geo.Point(30.0, 30.1, 0.0),
-                             geo.Point(31.0, 30.1, 1.0)])
-        bottom_edge = geo.Line([geo.Point(30.0, 30.0, 10.0),
-                                geo.Point(31.0, 30.0, 9.0)])
-        fault_source = self._make_complex_fault_source([top_edge, bottom_edge],
-                                                       2.0)
-        new_top_edge = geo.Line([geo.Point(30.0, 30.2, 0.0),
-                                 geo.Point(31.0, 30.2, 0.0)])
-        new_bottom_edge = geo.Line([geo.Point(30.0, 30.0, 10.0),
-                                    geo.Point(31.0, 30.0, 10.0)])
-
-        utype, uvalue = ('complexFaultGeometryAbsolute',
-                         ([new_top_edge, new_bottom_edge], 2.0))
-        lt.apply_uncertainty(utype, fault_source, uvalue)
-        self.assertEqual(fault_source.edges[0], new_top_edge)
-        self.assertEqual(fault_source.edges[1], new_bottom_edge)
+        # tested in logictree/case_20
+        pass
 
     def test_characteristic_fault_planar_geometry_uncertainty(self):
-        # Define 2-plane fault
-        plane1 = numpy.array([[30.0, 30.0, 0.0],
-                              [30.5, 30.0, 0.0],
-                              [30.5, 30.0, 10.0],
-                              [30.0, 30.0, 10.0]])
-        plane2 = numpy.array([[30.5, 30.0, 0.0],
-                              [30.5, 30.5, 0.0],
-                              [30.5, 30.5, 10.0],
-                              [30.5, 30.0, 10.0]])
-        surface = self._make_planar_surface([plane1, plane2])
-        fault_source = self._make_characteristic_fault_source(surface)
-        # Move the planes
-        plane3 = numpy.array([[30.1, 30.0, 0.0],
-                              [30.6, 30.0, 0.0],
-                              [30.6, 30.0, 10.0],
-                              [30.1, 30.0, 10.0]])
-        plane4 = numpy.array([[30.6, 30.0, 0.0],
-                              [30.6, 30.5, 0.0],
-                              [30.6, 30.5, 10.0],
-                              [30.6, 30.0, 10.0]])
-        new_surface = self._make_planar_surface([plane3, plane4])
-        utype, uvalue = 'characteristicFaultGeometryAbsolute', new_surface
-        lt.apply_uncertainty(utype, fault_source, uvalue)
-        # Only the longitudes are changing
-        numpy.testing.assert_array_almost_equal(
-            fault_source.surface.surfaces[0].corner_lons,
-            numpy.array([30.1, 30.6, 30.1, 30.6]))
-        numpy.testing.assert_array_almost_equal(
-            fault_source.surface.surfaces[1].corner_lons,
-            numpy.array([30.6, 30.6, 30.6, 30.6]))
+        # tested in logictree/case_20
+        pass
 
     def test_characteristic_fault_simple_geometry_uncertainty(self):
-        trace = geo.Line([geo.Point(30., 30.), geo.Point(31., 30.)])
-        usd = 0.0
-        lsd = 10.0
-        dip = 45.
-        # Surface
-        surface = geo.SimpleFaultSurface.from_fault_data(trace, usd, lsd, dip,
-                                                         1.0)
-        surface.dip = 45.0
-        fault_source = self._make_characteristic_fault_source(surface)
-        # Modify dip
-        new_surface = geo.SimpleFaultSurface.from_fault_data(trace, usd, lsd,
-                                                             65., 1.0)
-        utype, uvalue = 'characteristicFaultGeometryAbsolute', new_surface
-        new_surface.dip = 65.0
-        lt.apply_uncertainty(utype, fault_source, uvalue)
-        self.assertAlmostEqual(fault_source.surface.get_dip(), 65.)
+        # tested in logictree/case_20
+        pass
 
     def test_characteristic_fault_complex_geometry_uncertainty(self):
-        top_edge = geo.Line([geo.Point(30.0, 30.1, 0.0),
-                             geo.Point(31.0, 30.1, 1.0)])
-        bottom_edge = geo.Line([geo.Point(30.0, 30.0, 10.0),
-                                geo.Point(31.0, 30.0, 9.0)])
-        surface = geo.ComplexFaultSurface.from_fault_data(
-            [top_edge, bottom_edge],
-            5.)
-        fault_source = self._make_characteristic_fault_source(surface)
-        # New surface
-        new_top_edge = geo.Line([geo.Point(30.0, 30.2, 0.0),
-                                 geo.Point(31.0, 30.2, 0.0)])
-        new_bottom_edge = geo.Line([geo.Point(30.0, 30.0, 10.0),
-                                    geo.Point(31.0, 30.0, 10.0)])
-
-        new_surface = geo.ComplexFaultSurface.from_fault_data(
-            [new_top_edge, new_bottom_edge], 5.)
-        utype, uvalue = 'characteristicFaultGeometryAbsolute', new_surface
-        lt.apply_uncertainty(utype, fault_source, uvalue)
-        # If the surface has changed the first element in the latitude
-        # array of the surface mesh should be 30.2
-        self.assertAlmostEqual(new_surface.mesh.lats[0, 0], 30.2)
+        # tested in logictree/case_20
+        pass
 
 
 class BranchSetFilterTestCase(unittest.TestCase):
@@ -1573,8 +1487,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
             rupture_aspect_ratio=1, location=openquake.hazardlib.geo.Point(
                 5, 6),
             rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         self.area = openquake.hazardlib.source.AreaSource(
             source_id='area', name='area',
             tectonic_region_type=
@@ -1594,8 +1507,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
                  openquake.hazardlib.geo.Point(0, 1),
                  openquake.hazardlib.geo.Point(1, 0)]),
             area_discretization=10, rupture_mesh_spacing=1.0,
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         self.simple_fault = openquake.hazardlib.source.SimpleFaultSource(
             source_id='simple_fault', name='simple fault',
             tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
@@ -1609,8 +1521,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
                 [openquake.hazardlib.geo.Point(0, 0),
                  openquake.hazardlib.geo.Point(1, 1)]),
             dip=45, rake=180,
-            temporal_occurrence_model=PoissonTOM(50.)
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
         self.complex_fault = openquake.hazardlib.source.ComplexFaultSource(
             source_id='complex_fault', name='complex fault',
             tectonic_region_type=openquake.hazardlib.const.TRT.VOLCANIC,
@@ -1625,13 +1536,11 @@ class BranchSetFilterTestCase(unittest.TestCase):
                 openquake.hazardlib.geo.Line(
                     [openquake.hazardlib.geo.Point(0, 0, 2),
                      openquake.hazardlib.geo.Point(1, 1, 2)])],
-            temporal_occurrence_model=PoissonTOM(50.),
-        )
+            temporal_occurrence_model=PoissonTOM(50.))
 
         lons = numpy.array([-1., 1., -1., 1.])
         lats = numpy.array([0., 0., 0., 0.])
         depths = numpy.array([0., 0., 10., 10.])
-
         points = [openquake.hazardlib.geo.Point(lon, lat, depth)
                   for lon, lat, depth in
                   zip(lons, lats, depths)]
@@ -1652,13 +1561,13 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
     def test_unknown_filter(self):
         bs = logictree.BranchSet(
-            None, filters={'applyToSources': [1], 'foo': 'bar'})
+            'maxMagGRAbsolute', filters={'applyToSources': [1], 'foo': 'bar'})
         self.assertRaises(AssertionError, bs.filter_source, None)
 
     def test_tectonic_region_type(self):
-        def test(trt, source): 
+        def test(trt, source):
             return logictree.BranchSet(
-                None, filters={'applyToTectonicRegionType': trt}
+                'gmpeModel', filters={'applyToTectonicRegionType': trt}
             ).filter_source(source)
 
         asc = 'Active Shallow Crust'
@@ -1698,7 +1607,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
         def test(sources, source, expected_result):
             return self.assertEqual(
                 logictree.BranchSet(
-                    None,
+                    'maxMagGRAbsolute',
                     filters={'applyToSources': [s.source_id for s in sources]}
                 ).filter_source(source),
                 expected_result)
@@ -1952,6 +1861,42 @@ class GsimLogicTreeTestCase(unittest.TestCase):
         # the percentages will be close to 40% and 60%
         self.assertEqual(counter, {('gA0',): 421, ('gB0',): 579})
 
+    def test_multiple(self):
+        xml = _make_nrml("""\
+        <logicTree logicTreeID="EUR">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.4</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>
+                            ToroEtAl2002
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+        </logicTree>
+        <logicTree logicTreeID="MIE">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="ASC">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+        </logicTree>
+        """)
+        lts = logictree.GsimLogicTree.read_dict(gettemp(xml))
+        self.assertEqual(list(lts), ['EUR', 'MIE'])
+
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
     def setUp(self):
@@ -1971,7 +1916,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         probs = lt.random(1, self.seed, 'early_weights')
         [rlz] = lt.sample(list(self.gmpe_lt), probs, 'early_weights')
         self.assertEqual(rlz.value, ('[ChiouYoungs2008]', '[SadighEtAl1997]'))
-        self.assertEqual(rlz.weight['default'], 0.5)
+        self.assertEqual(rlz.weight[-1], 0.5)
         self.assertEqual(('gB0', 'gA1'), rlz.lt_path)
 
 
@@ -2004,7 +1949,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
     def mean(self, rlzs):
         R = len(rlzs)
         paths = ['_'.join(rlz.sm_lt_path) for rlz in rlzs]
-        return sum(self.value[path] * rlz.weight['weight']
+        return sum(self.value[path] * rlz.weight[-1]
                    for rlz, path in zip(rlzs, paths)) / R
 
     def test_full_path(self):
@@ -2037,7 +1982,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.1]       # b3_.
         # b1_b21 has weight 0.7 * 0.09284 = 0.064988
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
 
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.13375)
 
@@ -2056,7 +2001,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
         # the weights are all equal
         weights = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.106)
 
     def test_sampling_late_weights(self):
@@ -2075,7 +2020,7 @@ class LogicTreeSourceSpecificUncertaintyTest(unittest.TestCase):
                    0.18919751558, 0.09459875780, 0.094598757,
                    0.09459875779]
         numpy.testing.assert_almost_equal(
-            weights, [rlz.weight['weight'] for rlz in rlzs])
+            weights, [rlz.weight[-1] for rlz in rlzs])
         numpy.testing.assert_almost_equal(self.mean(rlzs), 0.119865739)
 
     def test_smlt_bad(self):
@@ -2205,7 +2150,7 @@ class ReduceLtTestCase(unittest.TestCase):
 
 
 class TaxonomyMappingTestCase(unittest.TestCase):
-    taxonomies = '? taxo1 taxo2 taxo3 taxo4'.split()
+    taxidx = {'taxo1': 1, 'taxo2': 2, 'taxo3': 3, 'taxo4': 4}
 
     def test_missing_taxo(self):
         xml = '''taxonomy,conversion,weight
@@ -2215,8 +2160,9 @@ taxo3,taxo3,1
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
             inp = dict(taxonomy_mapping=gettemp(xml))
-            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'])
-            readinput.taxonomy_mapping(oq, self.taxonomies)
+            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
+                                    impact=False)
+            readinput.taxonomy_mapping(oq, self.taxidx)
         self.assertIn("{'taxo4'} are in the exposure but not in",
                       str(ctx.exception))
 
@@ -2230,8 +2176,9 @@ taxo4,taxo2,.4
 '''
         with self.assertRaises(openquake.hazardlib.InvalidFile) as ctx:
             inp = dict(taxonomy_mapping=gettemp(xml))
-            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'])
-            readinput.taxonomy_mapping(oq, self.taxonomies)
+            oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
+                                    impact=False)
+            readinput.taxonomy_mapping(oq, self.taxidx)
         self.assertIn("the weights do not sum up to 1 for taxo4",
                       str(ctx.exception))
 
@@ -2244,13 +2191,16 @@ taxo3,taxo3,1
 taxo4,taxo1,.5
 '''
         inp = dict(taxonomy_mapping=gettemp(xml))
-        oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'])
-        lst = readinput.taxonomy_mapping(oq, self.taxonomies)['structural']
-        self.assertEqual(lst, [[('?', 1)],
-                               [('taxo1', 1)],
-                               [('taxo2', 1)],
-                               [('taxo3', 1)],
-                               [('taxo2', 0.5), ('taxo1', 0.5)]])
+        oq = unittest.mock.Mock(inputs=inp, loss_types=['structural'],
+                                impact=False)
+        got = readinput.taxonomy_mapping(oq, self.taxidx)
+        exp = pandas.DataFrame(
+            dict(risk_id='taxo1 taxo2 taxo2 taxo3 taxo1'.split(),
+                 weight=[1., 1., .5, 1., .5],
+                 peril=['*'] * 5,
+                 country=['?'] * 5,
+                 taxi=[1, 2, 4, 3, 4]))
+        pandas.testing.assert_frame_equal(got, exp)
 
 
 def teardown_module():

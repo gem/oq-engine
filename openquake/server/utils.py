@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,19 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import getpass
 import requests
 import logging
-import django
 
 from time import sleep
 from django.conf import settings
 from django.apps import apps
+from django.contrib.auth import get_user_model
 from openquake.engine import __version__ as oqversion
-
-if settings.LOCKDOWN:
-    django.setup()
-    from django.contrib.auth.models import User
+from openquake.calculators.base import get_aelo_version
 
 
 def is_superuser(request):
@@ -63,6 +61,8 @@ def get_valid_users(request):
     Returns a list of `users` based on groups membership.
     Returns a list made of a single user when it is not member of any group.
     """
+    if settings.LOCKDOWN:
+        User = get_user_model()
     users = [get_user(request)]
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated:
@@ -88,12 +88,17 @@ def get_acl_on(request):
     return acl_on
 
 
-def user_has_permission(request, owner):
+def user_has_permission(request, owner, job_status):
     """
     Returns `True` if user coming from the request has the permission
-    to view a resource, returns `false` otherwise.
+    to view a job-related resource, returns `False` otherwise.
     """
-    return owner in get_valid_users(request) or not get_acl_on(request)
+    if job_status == 'shared':
+        if settings.LOCKDOWN and hasattr(request, 'user'):
+            return request.user.is_authenticated
+        return True
+    else:
+        return owner in get_valid_users(request) or not get_acl_on(request)
 
 
 def oq_server_context_processor(request):
@@ -101,6 +106,10 @@ def oq_server_context_processor(request):
     A custom context processor which allows injection of additional
     context variables.
     """
+
+    # NOTE: defining env variable at runtime, instead of defining it when the
+    # engine imports variable from the server module
+    os.environ['OQ_APPLICATION_MODE'] = settings.APPLICATION_MODE
 
     context = {}
 
@@ -119,8 +128,31 @@ def oq_server_context_processor(request):
     # this context var is also evaluated by the STANDALONE_APPS to identify
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
+    context['disable_version_warning'] = settings.DISABLE_VERSION_WARNING
     context['server_name'] = settings.SERVER_NAME
+    context['external_tools'] = settings.EXTERNAL_TOOLS
+    context['application_mode'] = settings.APPLICATION_MODE
     context['announcements'] = announcements
+    context['help_url'] = settings.HELP_URL
+    if settings.GOOGLE_ANALYTICS_TOKEN is not None:
+        context['google_analytics_token'] = settings.GOOGLE_ANALYTICS_TOKEN
+    if settings.APPLICATION_MODE == 'AELO':
+        context['aelo_version'] = get_aelo_version()
+
+    # setting user_level
+    if settings.LOCKDOWN:
+        try:
+            context['user_level'] = request.user.level
+        except AttributeError:  # e.g. AnonymousUser (not authenticated)
+            context['user_level'] = 0
+    else:
+        # NOTE: when authentication is not required, the user interface
+        # can assume the user to have the maximum level
+        # NOTE: this needs to be the maximum existing user level
+        context['user_level'] = 2
+
+    context['lockdown'] = settings.LOCKDOWN
+
     return context
 
 

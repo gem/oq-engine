@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -38,7 +38,8 @@ class AreaSource(ParametricSeismicSource):
     :class:`~openquake.hazardlib.source.point.PointSource`.
     """
     code = b'A'
-    MODIFICATIONS = set()
+    MODIFICATIONS = {'set_geometry', 'set_lower_seismogenic_depth',
+                     'set_upper_seismogenic_depth'}
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -60,6 +61,27 @@ class AreaSource(ParametricSeismicSource):
         self.polygon = polygon
         self.area_discretization = area_discretization
         self.max_radius = 0
+
+    def modify_set_geometry(self, polygon):
+        """
+        Modifies the current source geometry by replacing the original polygon
+        defining the boundary of the area
+        """
+        self.polygon = polygon
+
+    def modify_set_lower_seismogenic_depth(self, lsd):
+        """
+        Modifies the current source geometry by replacing the original
+        lower seismogenic depth with the passed depth
+        """
+        self.lower_seismogenic_depth = lsd
+
+    def modify_set_upper_seismogenic_depth(self, usd):
+        """
+        Modifies the current source geometry by replacing the original
+        upper seismogenic depth with the passed depth
+        """
+        self.upper_seismogenic_depth = usd
 
     def iter_ruptures(self, **kwargs):
         """

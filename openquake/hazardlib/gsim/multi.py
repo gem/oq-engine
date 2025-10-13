@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -68,10 +68,10 @@ class MultiGMPE(GMPE):
         """
         Instantiate with a dictionary of GMPEs organised by IMT
         """
-        super().__init__(**kwargs)
+        self.kwargs = {}
         for name in uppernames:
             setattr(self, name, set(getattr(self, name)))
-        for imt, gsim_dic in self.kwargs.items():
+        for imt, gsim_dic in kwargs.items():
             [(gsim_name, kw)] = gsim_dic.items()
             self.kwargs[imt] = gsim = registry[gsim_name](**kw)
             name = "SA" if imt.startswith("SA") else imt

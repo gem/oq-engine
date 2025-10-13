@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -74,46 +74,39 @@ class PointSourceCreationTestCase(unittest.TestCase):
         self.assert_failed_creation(
             ValueError,
             'lower seismogenic depth must be below upper seismogenic depth',
-            upper_seismogenic_depth=10, lower_seismogenic_depth=8
-        )
+            upper_seismogenic_depth=10, lower_seismogenic_depth=8)
 
     def test_lower_depth_equal_to_upper_depth(self):
         self.assert_failed_creation(
             ValueError,
             'lower seismogenic depth must be below upper seismogenic depth',
-            upper_seismogenic_depth=10, lower_seismogenic_depth=10
-        )
+            upper_seismogenic_depth=10, lower_seismogenic_depth=10)
 
     def test_upper_depth_inside_topo_range(self):
         self.assert_failed_creation(
             ValueError,
             "Upper seismogenic depth must be greater than the maximum "
             "elevation on Earth's surface (-8.848 km)",
-            upper_seismogenic_depth=-10
-        )
+            upper_seismogenic_depth=-10)
 
     def test_hypocenter_depth_out_of_seismogenic_layer(self):
         self.assert_failed_creation(
             ValueError,
-            'depths of all hypocenters must be in between '
-            'lower and upper seismogenic depths',
+            'depth=8.001 is below lower_seismogenic_depth=8',
             upper_seismogenic_depth=3, lower_seismogenic_depth=8,
-            hypocenter_distribution=PMF([(0.3, 4), (0.7, 8.001)])
-        )
+            hypocenter_distribution=PMF([(0.3, 4), (0.7, 8.001)]))
 
     def test_negative_aspect_ratio(self):
         self.assert_failed_creation(
             ValueError,
             'rupture aspect ratio must be positive',
-            rupture_aspect_ratio=-1
-        )
+            rupture_aspect_ratio=-1)
 
     def test_zero_aspect_ratio(self):
         self.assert_failed_creation(
             ValueError,
             'rupture aspect ratio must be positive',
-            rupture_aspect_ratio=0
-        )
+            rupture_aspect_ratio=0)
 
     def test_successfull_creation(self):
         self.make_point_source()
@@ -360,6 +353,11 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
                 planar_surface_test_data.TEST_7_RUPTURE_8_CORNERS
             )
         }
+        self._check(actual_ruptures, expected_ruptures, point_source)
+
+    def _check(self, actual_ruptures, expected_ruptures, point_source):
+        tom = point_source.temporal_occurrence_model
+        trt = point_source.tectonic_region_type
         for actual_rupture in actual_ruptures:
             expected_occurrence_rate, expected_corners = expected_ruptures[
                 (actual_rupture.mag, actual_rupture.rake,

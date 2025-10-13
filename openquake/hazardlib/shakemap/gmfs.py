@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -98,6 +98,7 @@ def cross_correlation_matrix(imts, corr='yes'):
     return cross_matrix
 
 
+# not used since the ShakeMap does it already
 def amplify_gmfs(imts, vs30s, gmfs):
     """
     Amplify the ground shaking depending on the vs30s
@@ -184,7 +185,7 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     M = len(imts)
     if N * M > cholesky_limit:
         raise ValueError(CORRELATION_MATRIX_TOO_LARGE % (
-            '%d x %d' % (M, N), cholesky_limit))
+            f'{M=} x {N=}', cholesky_limit))
 
     # Cross Correlation
     cross_corr = cross_correlation_matrix(imts, crosscorr)
@@ -203,8 +204,9 @@ def calculate_gmfs_sh(kind, shakemap, imts, Z, mu, spatialcorr,
     # Cholesky Decomposition
     L = cholesky(spatial_cov, cross_corr)  # shape (M * N, M * N)
 
-    # mu has unit (pctg), L has unit ln(pctg)
-    return numpy.exp(L @ Z + numpy.log(mu)) / PCTG
+    sig = numpy.array(stddev).flatten()[:, numpy.newaxis]  # (M,N) -> (M*N, 1)
+    # mu has unit (pctg), L has unit ln(pctg), sig has unit ln(pctg)
+    return numpy.exp(L @ Z + numpy.log(mu) - (sig ** 2 / 2)) / PCTG
 
 
 @calculate_gmfs.add('basic')
@@ -216,11 +218,14 @@ def calculate_gmfs_basic(kind, shakemap, imts, Z, mu):
     :param imts: list of required imts
     :returns: F(Z, mu) to calculate gmfs
     """
-    # create vector with std values
-    sig = numpy.array([shakemap['std'][str(im)] for im in imts]).flatten()
-    # mu has unit (pctg), sig has unit ln(pctg)
+    # create vector with std values of shape (N*M, 1)
+    sig = numpy.array([shakemap['std'][str(im)]
+                      for im in imts]).flatten()
+    sig = sig[:, numpy.newaxis]
+
+    # mu of shape (N*M, E) has unit (pctg), sig has unit ln(pctg)
     # multiply Z and sig column-wise and add mean
-    return numpy.exp((Z.T * sig).T + numpy.log(mu)) / PCTG
+    return numpy.exp((Z * sig) + numpy.log(mu) - (sig ** 2 / 2.)) / PCTG
 
 
 @ calculate_gmfs.add('mmi')
@@ -254,7 +259,7 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     :param num_gmfs: E, amount of gmfs to generate
     :param seed: seed for generating numbers
     :param imts: list of IMT-strings for which gmfs are generated
-    :returns: list of IMT-objects, array of GMFs of shape (R, N, E, M)
+    :returns: list of IMT-objects, array of GMFs of shape (N, E, M)
     """
     # create list of imts
     if imts is None or len(imts) == 0:

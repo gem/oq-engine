@@ -1,0 +1,467 @@
+Event Based Damage and Risk
+---------------------------
+
+.. _event-damage-params:
+
+Event Based Damage
+==================
+
+The parameter ``calculation_mode`` needs to be set to ``event_based_damage`` in order to use this calculator.
+
+Most of the job configuration parameters required for running a stochastic event based damage calculation are the same 
+as those described in the previous sections for the scenario damage calculator and the classical probabilistic damage 
+calculator. The remaining parameters specific to the stochastic event based damage calculator are illustrated through 
+the example below.
+
+**Example 1**
+
+This example illustrates a stochastic event based damage calculation which uses a single configuration file to first 
+compute the Stochastic Event Sets and Ground Motion Fields for the given source model and ground motion model, and then 
+calculate event loss tables, loss exceedance curves and probabilistic loss maps for structural losses, nonstructural 
+losses and occupants, based on the Ground Motion Fields. The job configuration file required for running this stochastic 
+event based damage calculation is shown in the listing below.::
+
+	[general]
+	description = Stochastic event based damage using a single job file
+	calculation_mode = event_based_damage
+	
+	[exposure]
+	exposure_file = exposure_model.xml
+	
+	[site_params]
+	site_model_file = site_model.xml
+	
+	[erf]
+	width_of_mfd_bin = 0.1
+	rupture_mesh_spacing = 2.0
+	area_source_discretization = 10.0
+	
+	[logic_trees]
+	source_model_logic_tree_file = source_model_logic_tree.xml
+	gsim_logic_tree_file = gsim_logic_tree.xml
+	number_of_logic_tree_samples = 0
+	
+	[correlation]
+	ground_motion_correlation_model = JB2009
+	ground_motion_correlation_params = {"vs30_clustering": True}
+	
+	[hazard_calculation]
+	random_seed = 24
+	truncation_level = 3
+	maximum_distance = 200.0
+	investigation_time = 1
+	ses_per_logic_tree_path = 10000
+	
+	[fragility]
+	structural_fragility_file = structural_fragility_model.xml
+	
+	[consequence]
+	consequence_file = {'taxonomy': "consequence_model.csv"}
+	
+	[risk_calculation]
+	master_seed = 42
+	risk_investigation_time = 1
+	return_periods = 5, 10, 25, 50, 100, 250, 500, 1000
+
+Similar to that the procedure described for the Scenario Damage calculator, a Monte Carlo sampling process is also 
+employed in this calculator to take into account the uncertainty in the conditional loss ratio at a particular intensity 
+level. Hence, the parameters ``asset_correlation`` and ``master_seed`` may be defined as previously described for the 
+Scenario Damage calculator in Section :ref:`Scenario Damage Calculator <scenario-damage-params>`. The parameter 
+``risk_investigation_time`` specifies the time period for which the average damage values will be calculated, 
+similar to the Classical Probabilistic Damage calculator. If this parameter is not provided in the risk job 
+configuration file, the time period used is the same as that specifed in the hazard calculation using the parameter 
+“investigation_time”.
+
+The new parameters introduced in this example are described below:
+
+- ``minimum_intensity``: this optional parameter specifies the minimum intensity levels for each of the intensity measure types in the risk model. Ground motion fields where each ground motion value is less than the specified minimum threshold are discarded. This helps speed up calculations and reduce memory consumption by considering only those ground motion fields that are likely to contribute to losses. It is also possible to set the same threshold value for all intensity measure types by simply providing a single value to this parameter. For instance: “minimum_intensity = 0.05” would set the threshold to 0.05 g for all intensity measure types in the risk calculation. If this parameter is not set, the OpenQuake engine extracts the minimum thresholds for each intensity measure type from the vulnerability models provided, picking the lowest intensity value for which a mean loss ratio is provided.
+- ``return_periods``: this parameter specifies the list of return periods (in years) for computing the asset / aggregate damage curves. If this parameter is not set, the OpenQuake engine uses a default set of return periods for computing the loss curves. The default return periods used are from the list: [5, 10, 25, 50, 100, 250, 500, 1000, …], with its upper bound limited by ``(ses_per_logic_tree_path × investigation_time)`` 
+ 
+.. math::
+
+  average\_damages &= sum(event\_damages) \\
+                   &{\div}\ (hazard\_investigation\_time {\times}\ ses\_per\_logic\_tree\_path) \\
+                   &{\times}\ risk\_investigation\_time
+
+The above calculation can be run using the command line::
+
+	oq engine --run job.ini
+
+Computation of the damage curves, and average damages for each individual asset in the *Exposure Model* can be resource 
+intensive, and thus these outputs are not generated by default.
+
+.. _event-risk-params:
+
+Event Based Risk
+================
+
+The parameter ``calculation_mode`` needs to be set to ``event_based_risk`` in order to use this calculator.
+
+Most of the job configuration parameters required for running a stochastic event based risk calculation are the same as 
+those described in the previous sections for the scenario risk calculator and the classical probabilistic risk calculator. 
+The remaining parameters specific to the stochastic event based risk calculator are illustrated through the example below.
+
+**Example 1**
+
+This example illustrates a stochastic event based risk calculation which uses a single configuration file to first 
+compute the Stochastic Event Sets and Ground Motion Fields for the given source model and ground motion model, and then 
+calculate event loss tables, loss exceedance curves and probabilistic loss maps for structural losses, nonstructural 
+losses and occupants, based on the Ground Motion Fields. The job configuration file required for running this stochastic 
+event based risk calculation is shown in the listing below.::
+
+	[general]
+	description = Stochastic event based risk using a single job file
+	calculation_mode = event_based_risk
+	
+	[exposure]
+	exposure_file = exposure_model.xml
+	
+	[site_params]
+	site_model_file = site_model.xml
+	
+	[erf]
+	width_of_mfd_bin = 0.1
+	rupture_mesh_spacing = 2.0
+	area_source_discretization = 10.0
+	
+	[logic_trees]
+	source_model_logic_tree_file = source_model_logic_tree.xml
+	gsim_logic_tree_file = gsim_logic_tree.xml
+	
+	[correlation]
+	ground_motion_correlation_model = JB2009
+	ground_motion_correlation_params = {"vs30_clustering": True}
+	
+	[hazard_calculation]
+	random_seed = 24
+	truncation_level = 3
+	maximum_distance = 200.0
+	investigation_time = 1
+	number_of_logic_tree_samples = 0
+	ses_per_logic_tree_path = 100000
+	minimum_intensity = {"PGA": 0.05, "SA(0.4)": 0.10, "SA(0.8)": 0.12}
+	
+	[vulnerability]
+	structural_vulnerability_file = structural_vulnerability_model.xml
+	nonstructural_vulnerability_file = nonstructural_vulnerability_model.xml
+	
+	[risk_calculation]
+	master_seed = 42
+	risk_investigation_time = 1
+	asset_correlation = 0
+	return_periods = [5, 10, 25, 50, 100, 250, 500, 1000]
+	
+	[risk_outputs]
+	avg_losses = true
+	quantiles = 0.15, 0.50, 0.85
+	conditional_loss_poes = 0.02, 0.10
+
+Similar to that the procedure described for the Scenario Risk calculator, a Monte Carlo sampling process is also 
+employed in this calculator to take into account the uncertainty in the conditional loss ratio at a particular intensity 
+level. Hence, the parameters ``asset_correlation`` and ``master_seed`` may be defined as previously described for the Scenario 
+Risk calculator in Section :ref:`Scenario Risk <scenario-risk-params>`. The parameter ``risk_investigation_time`` specifies the time period 
+for which the event loss tables and loss exceedance curves will be calculated, similar to the Classical Probabilistic 
+Risk calculator. If this parameter is not provided in the risk job configuration file, the time period used is the same 
+as that specifed in the hazard calculation using the parameter “investigation_time”.
+
+The new parameters introduced in this example are described below:
+
+- ``minimum_intensity``: this optional parameter specifies the minimum intensity levels for each of the intensity measure types in the risk model. Ground motion fields where each ground motion value is less than the specified minimum threshold are discarded. This helps speed up calculations and reduce memory consumption by considering only those ground motion fields that are likely to contribute to losses. It is also possible to set the same threshold value for all intensity measure types by simply providing a single value to this parameter. For instance: “minimum_intensity = 0.05” would set the threshold to 0.05 g for all intensity measure types in the risk calculation. If this parameter is not set, the OpenQuake engine extracts the minimum thresholds for each intensity measure type from the vulnerability models provided, picking the lowest intensity value for which a mean loss ratio is provided.
+- ``return_periods``: this parameter specifies the list of return periods (in years) for computing the aggregate loss curve. If this parameter is not set, the OpenQuake engine uses a default set of return periods for computing the loss curves. The default return periods used are from the list: [5, 10, 25, 50, 100, 250, 500, 1000, …], with its upper bound limited by (ses_per_logic_tree_path × investigation_time)
+- ``avg_losses``: this boolean parameter specifies whether the average asset losses over the time period “risk_investigation_time” should be computed. The default value of this parameter is true.
+
+.. math::
+
+  average\_loss &= sum(event\_losses) \\
+                &{\div}\ (hazard\_investigation\_time {\times}\ ses\_per\_logic\_tree\_path) \\
+                &{\times}\ risk\_investigation\_time
+
+The above calculation can be run using the command line::
+
+	user@ubuntu:$ oq engine --run job.ini
+
+Computation of the loss tables, loss curves, and average losses for each individual asset in the *Exposure Model* can be 
+resource intensive, and thus these outputs are not generated by default, unless instructed to by using the parameters 
+described above.
+
+Users may also begin an event based risk calculation by providing a precomputed set of Ground Motion Fields to the 
+OpenQuake engine. The following example describes the procedure for this approach.
+
+**Example 2**
+
+This example illustrates a stochastic event based risk calculation which uses a file listing a precomputed set of Ground 
+Motion Fields. These Ground Motion Fields can be computed using the OpenQuake engine or some other software. The Ground 
+Motion Fields must be provided in the csv format as presented in Section :ref:`Event based PSHA <event-based-psha-params>`. 
+Table 2.2 shows an example of a Ground Motion Fields file in the CSV format.
+
+An additional csv file listing the site ids must also be provided using the parameter ``sites_csv``. See Table 2.5 for 
+an example of the sites csv file, which provides the association between the site ids in the Ground Motion Fields csv 
+file with their latitude and longitude coordinates.
+
+Starting from the input Ground Motion Fields, the OpenQuake engine can calculate event loss tables, loss exceedance 
+curves and probabilistic loss maps for structural losses, nonstructural losses and occupants. The job configuration 
+file required for running this stochastic event based risk calculation starting from a precomputed set of Ground Motion 
+Fields is shown in the listing below.::
+
+	[general]
+	description = Stochastic event based risk using precomputed gmfs
+	calculation_mode = event_based_risk
+	
+	[hazard]
+	sites_csv = sites.csv
+	gmfs_csv = gmfs.csv
+	investigation_time = 50
+	
+	[exposure]
+	exposure_file = exposure_model.xml
+	
+	[vulnerability]
+	structural_vulnerability_file = structural_vulnerability_model.xml
+	
+	[risk_calculation]
+	risk_investigation_time = 1
+	return_periods = [5, 10, 25, 50, 100, 250, 500, 1000]
+	
+	[risk_outputs]
+	avg_losses = true
+	quantiles = 0.15, 0.50, 0.85
+	conditional_loss_poes = 0.02, 0.10
+
+Additional parameters
+=====================
+
+A few additional parameters related to the event based risk calculator that may be useful for controlling specific 
+aspects of the calculation are listed below:
+
+- ``individual_curves``: this boolean parameter is used to specify if the asset loss curves for each *Branch* realization should be saved to the datastore. For the asset loss curves output, by default the engine only saves and exports statistical results, i.e. the mean and quantile asset loss curves. If you want the asset loss curves for each of the individual *Branch* realizations, you must set ``individual_curves=true`` in the job file. Please take care: if you have hundreds of realizations, the data transfer and disk space requirements will be orders of magnitude larger than just returning the mean and quantile asset loss curves, and the calculation might fail. The default value of ``individual_curves`` is ``false``.
+- ``asset_correlation``: if the uncertainty in the loss ratios has been defined within the *Vulnerability Model*, users can specify a coefficient of correlation that will be used in the Monte Carlo sampling process of the loss ratios, between the assets that share the same taxonomy. If the ``asset_correlation`` is set to one, the loss ratio residuals will be perfectly correlated. On the other hand, if this parameter is set to zero, the loss ratios will be sampled independently. If this parameter is not defined, the OpenQuake engine will assume zero correlation in the vulnerability. As of OpenQuake engine v1.8, ``asset_correlation`` applies only to continuous vulnerabilityfunctions using the lognormal or Beta distribution; it does not apply to vulnerabilityfunctions defined using the PMF distribution. Although partial correlation was supported in previous versions of the engine, beginning from OpenQuake engine v2.2, values between zero and one are no longer supported due to performance considerations. The only two values permitted are ``asset_correlation = 0`` and ``asset_correlation = 1``.
+- ``ignore_covs``: this parameter controls the propagation of vulnerability uncertainty to losses. The vulnerability functions using continuous distributions (such as the lognormal distribution or beta distribution) to characterize the uncertainty in the loss ratio conditional on the shaking intensity level, specify the mean loss ratios and the corresponding coefficients of variation for a set of intensity levels. They are used to build the so called *Epsilon* matrix within the engine, which is how loss ratios are sampled from the distribution for each asset. There is clearly a performance penalty associated with the propagation of uncertainty in the vulnerability to losses. The *Epsilon* matrix has to be computed and stored, and then the worker processes have to read it, which involves large quantities of data transfer and memory usage. Setting ``ignore_covs = true`` in the job file will result in the engine using just the mean loss ratio conditioned on the shaking intensity and ignoring the uncertainty. This tradeoff of not propagating the vulnerabilty uncertainty to the loss estimates can lead to a significant boost in performance and tractability. The default value of ``ignore_covs`` is ``false``.
+
+
+***************************
+Using ``collect_rlzs=true``
+***************************
+
+Since version 3.12 the engine recognizes a flag ``collect_rlzs`` in the risk configuration file. When the flag is set 
+to true, then the hazard realizations are collected together when computing the risk results and considered as one.
+
+Setting ``collect_rlzs=true`` is possible only when the weights of the realizations are all equal, otherwise, the engine 
+raises an error. Collecting the realizations makes the calculation of the average losses and loss curves much faster 
+and more memory efficient. It is the recommended way to proceed when you are interested only in mean results. When you 
+have a large exposure and many realizations (say 5 million assets and 1000 realizations, as it is the case for Chile) 
+setting ``collect_rlzs=true`` can make possible a calculation that otherwise would run out of memory.
+
+Note 1: when using sampling, ``collect_rlzs`` is implicitly set to ``True``, so if you want to export the individual 
+results per realization you must set explicitly ``collect_rlzs=false``.
+
+Note 2: ``collect_rlzs`` is not the inverse of the ``individual_rlzs`` flag. The ``collect_rlzs`` flag indicates to the 
+engine that it should pool together the hazard realizations into a single collective bucket that will then be used to 
+approximate the branch-averaged risk metrics directly, without going through the process of first computing the 
+individual branch results and then getting the weighted average results from the branch results. Whereas the 
+``individual_rlzs`` flag indicates to the engine that the user is interested in storing and exporting the hazard (or risk) 
+results for every realization. Setting ``individual_rlzs`` to ``false`` means that the engine will store only the 
+statistics (mean and quantile results) in the datastore.
+
+Note 3: ``collect_rlzs`` is completely ignored in the hazard part of the calculation, i.e. it does not affect at all 
+the computation of the GMFs, only the computation of the risk metrics.
+
+****************************
+Aggregating by multiple tags
+****************************
+
+The engine also supports aggregation by multiple tags. Multiple tags can be indicated as multi-tag and/or various 
+single-tag aggregations:
+
+``aggregate_by = NAME_1, taxonomy``
+
+or
+
+``aggregate_by = NAME_1; taxonomy``
+
+Comma ``,`` separated values will generate keys for all the possible combinations of the indicated tag values, while 
+semicolon ``;`` will generate keys for the single tags.
+
+For instance the second event based risk demo (the file ``job_eb.ini``) has a line
+
+``aggregate_by = NAME_1, taxonomy``
+
+and it is able to aggregate both on geographic region (``NAME_1``) and on ``taxonomy``. There are 25 possible 
+combinations, that you can see with the command oq show agg_keys::
+
+	$ oq show agg_keys
+	| NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
+	+---------+-----------+-------------+----------------------------+
+	| 1       | 1         | Mid-Western | Wood                       |
+	| 1       | 2         | Mid-Western | Adobe                      |
+	| 1       | 3         | Mid-Western | Stone-Masonry              |
+	| 1       | 4         | Mid-Western | Unreinforced-Brick-Masonry |
+	| 1       | 5         | Mid-Western | Concrete                   |
+	| 2       | 1         | Far-Western | Wood                       |
+	| 2       | 2         | Far-Western | Adobe                      |
+	| 2       | 3         | Far-Western | Stone-Masonry              |
+	| 2       | 4         | Far-Western | Unreinforced-Brick-Masonry |
+	| 2       | 5         | Far-Western | Concrete                   |
+	| 3       | 1         | West        | Wood                       |
+	| 3       | 2         | West        | Adobe                      |
+	| 3       | 3         | West        | Stone-Masonry              |
+	| 3       | 4         | West        | Unreinforced-Brick-Masonry |
+	| 3       | 5         | West        | Concrete                   |
+	| 4       | 1         | East        | Wood                       |
+	| 4       | 2         | East        | Adobe                      |
+	| 4       | 3         | East        | Stone-Masonry              |
+	| 4       | 4         | East        | Unreinforced-Brick-Masonry |
+	| 4       | 5         | East        | Concrete                   |
+	| 5       | 1         | Central     | Wood                       |
+	| 5       | 2         | Central     | Adobe                      |
+	| 5       | 3         | Central     | Stone-Masonry              |
+	| 5       | 4         | Central     | Unreinforced-Brick-Masonry |
+	| 5       | 5         | Central     | Concrete                   |
+
+The lines in this table are associated to the generalized *aggregation ID*, ``agg_id`` which is an index going from ``0`` 
+(meaning aggregate assets with NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets with 
+NAME_1=*Central* and taxonomy=*Concrete*); moreover ``agg_id=25`` means full aggregation.
+
+The ``agg_id`` field enters in risk_by_event and in outputs like the aggregate losses; for instance::
+
+	$ oq show agg_losses-rlzs
+	| agg_id | rlz | loss_type     | value       |
+	+--------+-----+---------------+-------------+
+	| 0      | 0   | nonstructural | 2_327_008   |
+	| 0      | 0   | structural    | 937_852     |
+	+--------+-----+---------------+-------------+
+	| ...    + ... + ...           + ...         +
+	+--------+-----+---------------+-------------+
+	| 25     | 1   | nonstructural | 100_199_448 |
+	| 25     | 1   | structural    | 157_885_648 |
+
+The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id`` to the proper combination of tags; ``agg_id=25``, 
+i.e. full aggregation, is replaced with the string ``*total*``.
+
+It is possible to see the ``agg_id`` field with the command ``$ oq show agg_id``.
+
+By knowing the number of events, the number of aggregation keys and the number of loss types, it is possible to give an 
+upper limit to the size of ``risk_by_event``. In the demo there are 1703 events, 26 aggregation keys and 2 loss types, 
+so ``risk_by_event`` contains at most::
+
+	1703 * 26 * 2 = 88,556 rows
+
+This is an upper limit, since some combination can produce zero losses and are not stored, especially if the 
+``minimum_asset_loss`` feature is used. In the case of the demo actually only 20,877 rows are nonzero::
+
+	$ oq show risk_by_event
+	       event_id  agg_id  loss_id           loss      variance
+	...
+	[20877 rows x 5 columns]
+
+It is also possible to perform the aggregation by various single-tag aggregations, using the ``;`` separator instead of 
+``,``. For example, a line like::
+
+	aggregate_by = NAME_1; taxonomy
+
+would produce first the aggregation by geographic region (``NAME_1``), then by ``taxonomy``. In this case, instead of 
+producing 5 x 5 combinations, only 5 + 5 outputs would be obtained.
+
+
+*********************************
+ignore_covs vs ignore_master_seed
+*********************************
+
+The vulnerability functions using continuous distributions (lognormal/beta) to characterize the uncertainty in the loss 
+ratio, specify the mean loss ratios and the corresponding coefficients of variation for a set of intensity levels.
+
+There is clearly a performance/memory penalty associated with the propagation of uncertainty in the vulnerability to 
+losses. You can completely remove it by setting
+
+``ignore_covs = true``
+
+in the *job.ini* file. Then the engine would compute just the mean loss ratios by ignoring the uncertainty i.e. the 
+coefficients of variation. Since engine 3.12 there is a better solution: setting
+
+``ignore_master_seed = true``
+
+in the *job.ini* file. Then the engine will compute the mean loss ratios but also store information about the 
+uncertainty of the results in the asset loss table, in the column “variance”, by using the formulae
+
+.. math::
+
+  variance = {\sum}_{i}{\sigma_{i}}^2\ for\ asset\_correl = 0\\
+  variance = ({\sum}_{i}{\sigma_{i}})^2\ for\ asset\_correl = 1
+
+in terms of the variance of each asset for the event and intensity level in consideration, extracted from the asset 
+loss and the coefficients of variation. People interested in the details should look at the implementation in 
+`gem/oq-engine <https://github.com/gem/oq-engine/blob/master/openquake/risklib/scientific.py>`_.
+
+****************************************
+Additional exceedance probability curves
+****************************************
+
+Starting from engine v3.18, it is possible to export aggregated loss curves that consider only 
+the maximum loss in a year, commonly referred to as Occurrence Exceedance Probability (OEP), 
+and loss curves that consider the sum of losses in a year, commonly referred to as 
+Aggregate Exceedance Probability (AEP).
+
+OEP and AEP curves can be calculated for event-based damage and risk calculations. To do so, the configuration file, 
+``job.ini``, needs to specify the parameter ``aggregate_loss_curves_types`` with required curve types, in addition to the parameters generally indicated for these 
+type of calculations::
+
+	[risk_calculation]
+	aggregate_loss_curves_types = ep, oep, aep
+
+- ``ep``: aggregated loss curves considering each event individually (EP). Currently implemented in the engine.
+- ``oep``: aggregated loss curves that consider only the maximum loss in a year (OEP).
+- ``aep``: aggregated loss curves that consider the sum of losses in a year (AEP).
+
+By default, all event-based damage and risk calculations include the EP curves.
+
+_NOTE:_ When the calculation includes reinsurance treaties, the reinsurance curves (aggregated loss curves for retention, 
+claim, cession per treaty and overspills) are also estimated for OEP and AEP.
+
+*****************************
+Post loss amplification (PLA)
+*****************************
+
+Post-loss amplification (PLA) refers to the phenomenon where the demand for goods and services increases significantly 
+following an earthquake or other catastrophe. This surge in demand typically occurs when the impact exceeds 
+the local capacity to cope with the disaster and increases the costs for reconstruction, repair, and 
+replacement of damaged or destroyed infrastructure and belongings.
+Starting from engine v3.20, it is possible to export aggregated loss curves that include post-loss amplification factors. 
+
+The post-loss amplification (PLA) is typically modelled using an empirical relationship that correlates with 
+the return period of the ground-up economic loss. In OpenQuake, the PLA models only apply to 
+event-based risk or event-based damage calculations that incorporate economic losses 
+(i.e., loss_types structural, nonstructural, and contents, as well as the total_losses if present in the calculation).
+
+To include post-loss amplification in the calculation, the user can specify the parameter ``post_loss_amplification_file`` 
+in the configuration file, providing the name of the file containing the amplification model in CSV format::
+
+	[risk_calculation]
+	post_loss_amplification_file = pla_model.csv
+
+
+The amplification model is a CSV file with two columns ``return_period`` and ``pla_factor`` respectivly, with all values 
+as positive floats. The PLA model will utilize linear interpolation as needed. If the return period associated with the loss 
+falls below the minimum value specified in the PLA model, a pla_factor of 1 will be assigned. 
+Conversely, if the return period associated with the loss exceeds the maximum value specified in the PLA model, 
+the pla_factor corresponding to the maximum return period in the model will be applied.
+
+An example of a PLA input model is presented in the table below.
+
+.. _pla_model.csv:
+.. table:: Example of a post-loss amplification (PLA) input model
+
+    +---------------+------------+
+    | return_period | pla_factor |
+    +===============+============+
+    | 1             | 1          |
+    +---------------+------------+
+    | 5             | 1          |
+    +---------------+------------+
+    | 10            | 1.092      |
+    +---------------+------------+
+    | 50            | 1.1738     |
+    +---------------+------------+
+    | 100           | 1.209      |
+    +---------------+------------+
+    | 500           | 1.2908     |
+    +---------------+------------+
+

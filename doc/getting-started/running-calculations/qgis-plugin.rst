@@ -1,7 +1,7 @@
 .. _qgis-plugin:
 
-Running the OpenQuake engine using the QGIS Plugin
-==================================================
+Using the QGIS Plugin
+=====================
 
 The employment of a methodology and workflow necessary for the evaluation of seismic risk that is integrated and 
 holistic begins with the OpenQuake Integrated Risk Modelling Toolkit (OpenQuake IRMT). The OpenQuake IRMT is QGIS 

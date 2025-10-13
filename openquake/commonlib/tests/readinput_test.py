@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import time
 import tempfile
 import unittest.mock as mock
 import unittest
@@ -26,15 +25,14 @@ from io import BytesIO
 
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
-from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
 from openquake.qa_tests_data.logictree import case_02, case_15, case_21
-from openquake.qa_tests_data.classical import case_34
+from openquake.qa_tests_data.classical import case_34, case_65
 from openquake.qa_tests_data.event_based import case_16
-from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
-from openquake.qa_tests_data import mosaic
+from openquake.qa_tests_data.event_based_risk import (
+    case_02 as ebr2, case_caracas)
 
 
 TMP = tempfile.gettempdir()
@@ -138,7 +136,7 @@ export_dir = %s
 """ % (os.path.basename(sites_csv), TMP))
         oq = readinput.get_oqparam(source)
         with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_mesh(oq)
+            readinput.get_mesh_exp(oq)
         self.assertIn('site_id not sequential from zero', str(ctx.exception))
         os.unlink(sites_csv)
 
@@ -305,25 +303,6 @@ class ExposureTestCase(unittest.TestCase):
   </exposureModel>
 </nrml>''', suffix='.xml')
 
-    exposure4 = general.gettemp('''\
-<?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
-  <exposureModel id="ep" category="buildings">
-    <description>Exposure model for buildings</description>
-    <conversions>
-       <costTypes name="structural" type="aggregated" unit="USD"/>
-    </conversions>
-    <assets>
-      <asset id="a1" taxonomy="RM" number="3000">
-        <location lon="81.2985" lat="29.1098"/>
-        <costs>
-          <cost type="structural" value="1000"/>
-        </costs>
-      </asset>
-    </assets>
-  </exposureModel>
-</nrml>''', suffix='.xml')
-
     def test_get_metadata(self):
         [exp] = asset.Exposure.read_headers([self.exposure])
         self.assertEqual(exp.cost_calculator.cost_types,
@@ -341,6 +320,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
+        oqparam.impact = False
 
         with self.assertRaises(Exception) as ctx:
             readinput.get_exposure(oqparam)
@@ -348,8 +328,9 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_zero_number(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 79, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.insurance_losses = False
@@ -359,6 +340,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
+        oqparam.impact = False
 
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
@@ -366,8 +348,9 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_invalid_asset_id(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 79, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure1]}
@@ -376,6 +359,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.time_event = None
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
+        oqparam.impact = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn(r"Invalid ID 'a 1': the only accepted chars are "
@@ -383,8 +367,9 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 69, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_risk'
         oqparam.all_cost_types = ['structural']
         oqparam.ignore_missing_costs = []
@@ -393,6 +378,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.inputs = {'exposure': [self.exposure2],
                           'structural_vulnerability': None}
         oqparam.aggregate_by = []
+        oqparam.impact = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Got 'aggregate', expected "
@@ -401,8 +387,9 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
 
     def test_invalid_taxonomy(self):
         oqparam = mock.Mock()
+        oqparam.rupture_dict = {'lon': 79, 'lat': 30, 'dep': 10,
+                                'mag': 6, 'rake': 0}
         oqparam.base_path = '/'
-        oqparam.cachedir = ''
         oqparam.calculation_mode = 'scenario_damage'
         oqparam.all_cost_types = ['structural']
         oqparam.inputs = {'exposure': [self.exposure3]}
@@ -412,22 +399,11 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.insurance_losses = False
         oqparam.ignore_missing_costs = []
         oqparam.aggregate_by = []
+        oqparam.impact = False
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("'RM ' contains whitespace chars, line 11",
                       str(ctx.exception))
-
-    def test_missing_cost_types(self):
-        job_ini = general.gettemp('''\
-[general]
-description = Exposure with missing cost_types
-calculation_mode = scenario_risk
-truncation_level = 5
-exposure_file = %s''' % os.path.basename(self.exposure4))
-        oqparam = readinput.get_oqparam(job_ini)
-        with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_sitecol_assetcol(oqparam, exp_types=['structural'])
-        self.assertIn("is missing", str(ctx.exception))
 
     def test_Lon_instead_of_lon(self):
         fname = os.path.join(DATADIR, 'exposure.xml')
@@ -459,7 +435,7 @@ description = Description containing a % sign''')
         self.assertEqual(a1.tags, {'taxonomy': 'S1M_MC'})
 
         # test a call used in the GEM4ALL importer, XML + CSV
-        fname = os.path.join(os.path.dirname(case_2.__file__),
+        fname = os.path.join(os.path.dirname(ebr2.__file__),
                              'exposure.xml')
         for ass in asset.Exposure.read_all([fname]).assets:
             # make sure all the attributes exist
@@ -477,9 +453,9 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_reduce_source_model(self):
         case2 = os.path.dirname(case_02.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
-        found, total = readinput.reduce_source_model(smlt, [], remove=False)
+        found, _total = readinput.reduce_source_model(smlt, [], remove=False)
         self.assertEqual(found, 0)
-        found, total = readinput.reduce_source_model(smlt, {}, remove=False)
+        found, _total = readinput.reduce_source_model(smlt, {}, remove=False)
         self.assertEqual(found, 0)
 
     def test_wrong_trts(self):
@@ -503,7 +479,8 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_extra_large_source(self):
         raise unittest.SkipTest('Removed check on MAX_EXTENT')
         oq = readinput.get_oqparam('job.ini', case_21)
-        with mock.patch('logging.error') as error, datastore.hdf5new() as h5:
+        _, h5 = datastore.create_job_dstore()
+        with h5, mock.patch('logging.error') as error:
             with mock.patch('openquake.hazardlib.geo.utils.MAX_EXTENT', 80):
                 readinput.get_composite_source_model(oq, h5)
                 os.remove(h5.filename)
@@ -520,21 +497,17 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
 class SitecolAssetcolTestCase(unittest.TestCase):
 
-    def setUp(self):
-        # cleanup evil globals
-        readinput.Global.reset()
-
     def test_grid_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
         oq.region_grid_spacing = 15
-        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded, _exp = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 141)  # 10 sites were discarded silently
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)  # no assets were discarded
 
     def test_site_model_exposure(self):
         oq = readinput.get_oqparam('job.ini', case_16)
-        sitecol, assetcol, discarded = readinput.get_sitecol_assetcol(oq)
+        sitecol, assetcol, discarded, _exp = readinput.get_sitecol_assetcol(oq)
         self.assertEqual(len(sitecol), 148)
         self.assertEqual(len(assetcol), 151)
         self.assertEqual(len(discarded), 0)
@@ -547,7 +520,7 @@ class SitecolAssetcolTestCase(unittest.TestCase):
             df = site_amplification.AmplFunction.read_df(
                 oq.inputs['amplification'])
             site_amplification.Amplifier(oq.imtls, df)
-        self.assertIn("Found duplicates for (b'F', 0.2)", str(ctx.exception))
+        self.assertIn("Found duplicates for (b'F',", str(ctx.exception))
 
 
 class LogicTreeTestCase(unittest.TestCase):
@@ -557,30 +530,65 @@ class LogicTreeTestCase(unittest.TestCase):
         lt = readinput.get_logic_tree(oq)
         # (2+1) x 4 = 12 realizations
         paths = [rlz.lt_path for rlz in lt]
-        expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
-                    'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
+        expected = [('SM1', '.', 'gA0', 'gA1'),
+                    ('SM1', '.', 'gA0', 'gB1'),
+                    ('SM1', '.', 'gB0', 'gA1'),
+                    ('SM1', '.', 'gB0', 'gB1'),
+                    ('SM2', 'a3b1', 'gA0', 'gA1'),
+                    ('SM2', 'a3b1', 'gA0', 'gB1'),
+                    ('SM2', 'a3b1', 'gB0', 'gA1'),
+                    ('SM2', 'a3b1', 'gB0', 'gB1'),
+                    ('SM2', 'a3pt2b0pt8', 'gA0', 'gA1'),
+                    ('SM2', 'a3pt2b0pt8', 'gA0', 'gB1'),
+                    ('SM2', 'a3pt2b0pt8', 'gB0', 'gA1'),
+                    ('SM2', 'a3pt2b0pt8', 'gB0', 'gB1')]
         self.assertEqual(paths, expected)
 
 
-class ReadGeometryTestCase(unittest.TestCase):
-    def test(self):
-        t0 = time.time()
-        mosaic_dir = os.path.dirname(mosaic.__file__)
-        geom_df = readinput.read_mosaic_df()
-        self.assertEqual(len(geom_df), 30)
-        sites_df = pandas.read_csv(
-            os.path.join(mosaic_dir, 'famous_ruptures.csv'),
-            usecols=['lat', 'lon'])
-        lonlats = sites_df[['lon', 'lat']].to_numpy()
-        sites_df['code'] = geolocate(lonlats, geom_df)
-        t1 = time.time()
-        self.assertEqual(len(sites_df), 90)
-        print('Associated in %.1f seconds' % (t1-t0), sites_df)
+class ReadRiskTestCase(unittest.TestCase):
+    def test_read_station_data(self):
+        oq = readinput.get_oqparam(os.path.join(DATADIR, 'job.ini'))
+        sitecol = readinput.get_site_collection(oq)
+        with self.assertRaises(InvalidFile) as ctx:
+            readinput.get_station_data(oq, sitecol, duplicates_strategy='error')
+        self.assertIn(
+            "Stations_NIED.csv: has duplicate sites ['GIF001', 'GIF013']",
+            str(ctx.exception))
+        df = readinput.read_df(
+            oq.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+            duplicates_strategy='keep_first')
+        self.assertTrue('GIF001' in df['STATION_ID'].values
+                        and 'GIF013' not in df['STATION_ID'].values)
+        pga_first = df[df['STATION_ID'] == 'GIF001']['PGA_VALUE'].values[0]
+        df = readinput.read_df(
+            oq.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+            duplicates_strategy='keep_last')
+        pga_last = df[df['STATION_ID'] == 'GIF013']['PGA_VALUE'].values[0]
+        self.assertTrue('GIF013' in df['STATION_ID'].values
+                        and 'GIF001' not in df['STATION_ID'].values)
+        df = readinput.read_df(
+            oq.inputs['station_data'], 'LONGITUDE', 'LATITUDE', 'STATION_ID',
+            duplicates_strategy='avg')
+        self.assertTrue('GIF001|GIF013' in df['STATION_ID'].values)
+        pga_avg = df[df['STATION_ID'] == 'GIF001|GIF013']['PGA_VALUE'].values[0]
+        # using the same mean operator used in read_df and expecting the same
+        # approximation
+        data = {'values': [pga_first, pga_last]}
+        df = pandas.DataFrame(data)
+        expected_mean = df['values'].mean()
+        self.assertEqual(pga_avg, expected_mean)
 
-        t0 = time.time()
-        risk_df = readinput.read_countries_df()  # this is slow
-        self.assertEqual(len(risk_df), 218)
-        sites_df['code'] = geolocate(lonlats, risk_df)  # this is fast
-        t1 = time.time()
-        self.assertEqual(len(sites_df), 90)
-        print('Associated in %.1f seconds' % (t1-t0), sites_df)
+
+class ReadSourceModelsTestCase(unittest.TestCase):
+    def test(self):
+        base = os.path.dirname(case_65.__file__)
+        hdf5path = general.gettemp(suffix='.hdf5')
+        fnames = [os.path.join(base, 'ssm.xml'), os.path.join(base, 'sections.xml')]
+        smodels = readinput.read_source_models(fnames, hdf5path, investigation_time=1.)
+        nrups = 0
+        for smodel in smodels:
+            for sg in smodel.src_groups:
+                for src in sg:
+                    for rup in src.iter_ruptures():
+                        nrups += 1
+        self.assertEqual(nrups, 3)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -38,15 +38,15 @@ def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
 def main(dstore, csm):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    cmakers = read_cmakers(dstore, csm)
+    cmakers = read_cmakers(dstore, csm.full_lt).to_array()
     oq.mags_by_trt = {
         trt: python3compat.decode(dset[:])
         for trt, dset in dstore['source_mags'].items()}
 
     # send one task per source
     allargs = []
-    for cm in cmakers:
-        sg = csm.src_groups[cm.grp_id]
+    for grp_id, cm in enumerate(cmakers):
+        sg = csm.src_groups[grp_id]
         for src_frags in groupby(sg, basename).values():
             allargs.append((src_frags, sitecol, cm))
     dstore.swmr_on()  # must come before the Starmap

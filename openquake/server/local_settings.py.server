@@ -1,0 +1,36 @@
+# Enable authentication
+APPLICATION_MODE = 'RESTRICTED'
+# Disable sharing of results across users
+ACL_ON = True
+
+# By default it is 'openquake'
+# WEBUI_USER =
+
+# Folder STATIC_ROOT is the full, absolute path to your static files folder.
+# Furthermore, the user WEBUI_USER must own that directory.
+STATIC_ROOT = '/var/www/webui'
+
+# Configure the directory to store the server user access log
+# Furthermore, the user WEBUI_USER must own that directory.
+WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+
+# WEBUI config uncomment and set properly if needed
+# WEBUIURL = 'http://localhost:8800/'
+
+# turn on USE_X_FORWARDED_HOST to expose the webui via a proxy server
+# USE_X_FORWARDED_HOST = True
+
+# enable WEBUI_PATHPREFIX to place webui pages below a specific path
+# the path must start with ``/`` and ending without it (e.g. ``'/path/prefix'``)
+# WEBUI_PATHPREFIX='/path/prefix'
+
+# Local time zone for this installation. Choices can be found here:
+# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
+# although not all choices may be available on all operating systems.
+# If running in a Windows environment this must be set to the same as your
+# system time zone.
+# TIME_ZONE =
+
+DEBUG = False
+
+SUPPRESS_PERMISSION_DENIED_WARNINGS = True

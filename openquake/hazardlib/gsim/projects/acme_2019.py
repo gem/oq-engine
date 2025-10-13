@@ -34,7 +34,11 @@ from openquake.hazardlib.gsim.nga_east import (get_phi_s2ss_at_quantile,
                                                PHI_SETUP,
                                                PHI_S2SS_MODEL,
                                                TAU_EXECUTION)
-warnings.filterwarnings("ignore", category=np.RankWarning)
+try:
+    RW = np.exceptions.RankWarning  # numpy >= 2
+except AttributeError:  # numpy < 2
+    RW = np.RankWarning
+warnings.filterwarnings("ignore", category=RW)
 PATH = os.path.join(os.path.dirname(__file__), "..", "nga_east_tables")
 
 
@@ -263,7 +267,7 @@ class AlAtikSigmaModel(GMPE):
         kappa value corresponding to a column header in kappa_file
     """
     adapted = True
-    gmpe_table = True  # use split_by_mag
+    gmpe_table = None  # use split_by_mag
 
     # Parameters
     REQUIRES_SITES_PARAMETERS = set()
@@ -277,11 +281,13 @@ class AlAtikSigmaModel(GMPE):
 
     extr = True  # always extrapolate, except when debugging
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.tau_model = kwargs.get('tau_model', 'global')
-        self.phi_model = kwargs.get('phi_model', 'global')
-        self.phi_s2ss_model = kwargs.get('phi_s2ss_model')
+    def __init__(self, gmpe_name, tau_model='global', phi_model='global',
+                 tau_quantile=None, phi_ss_quantile=None,
+                 phi_s2ss_quantile=None, phi_s2ss_model=None,
+                 kappa_file=None, kappa_val=None):
+        self.tau_model = tau_model
+        self.phi_model = phi_model
+        self.phi_s2ss_model = phi_s2ss_model
         self.TAU = None
         self.PHI_SS = None
         self.PHI_S2SS = None
@@ -289,14 +295,14 @@ class AlAtikSigmaModel(GMPE):
             self.ergodic = True
         else:
             self.ergodic = False
-        self.tau_quantile = kwargs.get('tau_quantile')
-        self.phi_ss_quantile = kwargs.get('phi_ss_quantile')
-        self.phi_s2ss_quantile = kwargs.get('phi_s2ss_quantile')
+        self.tau_quantile = tau_quantile
+        self.phi_ss_quantile = phi_ss_quantile
+        self.phi_s2ss_quantile = phi_s2ss_quantile
         _setup_standard_deviations(self)
-        self.kappa_file = kwargs.get('kappa_file')
-        self.kappa_val = kwargs.get('kappa_val')
+        self.kappa_file = kappa_file
+        self.kappa_val = kappa_val
 
-        self.gmpe_name = kwargs['gmpe_name']
+        self.gmpe_name = gmpe_name
         self.gmpe = registry[self.gmpe_name]()
         self.set_parameters()
 

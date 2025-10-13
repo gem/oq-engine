@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -467,7 +467,7 @@ class HypoLocSlipRupture(unittest.TestCase):
                                 self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
                                 self.fault_trace, self.dip,
-                                self.rake, hypo_list, slip_list)
+                                self.rake, [hypo_list, slip_list])
 
         for rup, i in zip(src.iter_ruptures(), range(1000)):
             self.assertAlmostEqual(
@@ -487,8 +487,8 @@ class HypoLocSlipRupture(unittest.TestCase):
                                 self.src_mfd, self.mesh_spacing, self.sarea,
                                 1., self.src_tom, self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
-                                self.fault_trace, dip, self.rake, hypo_list,
-                                slip_list)
+                                self.fault_trace, dip, self.rake,
+                                [hypo_list, slip_list])
         for rup, i in zip(src.iter_ruptures(), range(1000)):
             self.assertAlmostEqual(rup.hypocenter.longitude, LON2[i], delta=0.1)
             self.assertAlmostEqual(rup.hypocenter.latitude, LAT2[i], delta=0.1)
@@ -510,7 +510,7 @@ class HypoLocSlipRupture(unittest.TestCase):
                                 self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
                                 self.fault_trace, self.dip, self.rake,
-                                hypo_list, slip_list)
+                                [hypo_list, slip_list])
 
         lon = [0.0954, 0.2544, 0.1272, 0.2862, 0.159, 0.3279, 0.1908, 0.3696,
                0.2226, 0.4114, 0.2544, 0.4531, 0.2862, 0.4949, 0.3279, 0.5366,
@@ -550,7 +550,7 @@ class HypoLocSlipRupture(unittest.TestCase):
                                 self.upper_seismogenic_depth,
                                 self.lower_seismogenic_depth,
                                 self.fault_trace, self.dip,
-                                self.rake, hypo_list, slip_list)
+                                self.rake, [hypo_list, slip_list])
 
         slip = [90., 0., 90., 0.]
         rate = [0.1, 0.3, 0.15, 0.45]

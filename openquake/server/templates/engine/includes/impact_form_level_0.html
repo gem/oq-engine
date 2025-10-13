@@ -1,0 +1,8 @@
+          <div class="span12">
+            <h2>Earthquake impact assessment</h2>
+            {% if not user.email %}
+            <h3>
+              WARNING: no email address is specified for your user account, therefore email notifications will be disabled
+            </h3>
+            {% endif %}
+          </div>

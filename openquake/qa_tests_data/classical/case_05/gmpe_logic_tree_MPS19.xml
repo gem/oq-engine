@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <logicTree logicTreeID='lt1'>
+    
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                        applyToTectonicRegionType="Active Shallow Crust">
+      <logicTreeBranch branchID="BeA11">
+        <uncertaintyModel>BindiEtAl2011</uncertaintyModel>
+        <uncertaintyWeight>0.45</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="BeA14">
+        <uncertaintyModel>BindiEtAl2014RhypEC8</uncertaintyModel>
+        <uncertaintyWeight>0.32</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="CeA15">
+        <uncertaintyModel>CauzziEtAl2014Eurocode8</uncertaintyModel>
+        <uncertaintyWeight>0.23</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                        applyToTectonicRegionType="Volcanic Shallow">
+      <logicTreeBranch branchID="TL16s">
+        <uncertaintyModel>TusaLanger2016RepiSP87SE</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="FeA10">
+        <uncertaintyModel>FaccioliEtAl2010</uncertaintyModel>
+        <uncertaintyWeight>0.5</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs3"
+                        applyToTectonicRegionType="Volcanic Deep">
+      <logicTreeBranch branchID="TL16d">
+        <uncertaintyModel>TusaLanger2016RepiBA08DE</uncertaintyModel>
+        <uncertaintyWeight>1</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs4"
+                        applyToTectonicRegionType="Subduction Inslab">
+      <logicTreeBranch branchID="AeA15inslab">
+        <uncertaintyModel>AbrahamsonEtAl2015SSlab</uncertaintyModel>
+                  <uncertaintyWeight>0.47</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="SeA13inslab">
+        <uncertaintyModel>SkarlatoudisEtAlSSlab2013</uncertaintyModel>
+        <uncertaintyWeight>0.53</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    
+  </logicTree>
+</nrml>

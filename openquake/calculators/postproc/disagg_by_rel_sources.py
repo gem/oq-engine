@@ -48,13 +48,16 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
             rates = mean_disagg_by_src[s, :, :, :, m]
+            dic['src'].append(src)
+            dic['imt'].append(imt)
             if (rates == 0).all():
+                dic['mag'].append(numpy.nan)
+                dic['dst'].append(numpy.nan)
+                dic['eps'].append(numpy.nan)
                 continue  # no contribution from this imt
             rates_mag = rates.sum((1, 2))
             rates_dst = rates.sum((0, 2))
             rates_eps = rates.sum((0, 1))
-            dic['src'].append(src)
-            dic['imt'].append(imt)
             # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array
             if not src_mutex[grp[src.split('!')[0]]]:  # compute the mean
                 mmag = numpy.average(mag, weights=rates_mag)
@@ -115,19 +118,23 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
                          lon, lat, imt, ' '.join(ids))
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
         imldic = dict(zip(imts, imls))
+        oq.hazard_imtls = {imt: [iml] for imt, iml in imldic.items()}
         for idx, source_id in enumerate(rel_ids):
-            src2idx[sid, source_id] = idx
+            src2idx[source_id, sid] = idx
             smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
             gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-            weights[sid, source_id] = [rlz.weight['weight'] for rlz in gslt]
+            weights[source_id, sid] = [rlz.weight[-1] for rlz in gslt]
             relt = FullLogicTree(smlt, gslt)
             Z = relt.get_num_paths()
             assert Z, relt  # sanity check
-            logging.info('(%.1f,%.1f) source %s (%d realizations)',
-                         lon, lat, source_id, Z)
             groups = relt.reduce_groups(csm.src_groups)
             assert groups, 'No groups for %s' % source_id
-            smap.submit((groups, site, relt, (edges, shp), oq, imldic))
+            rupts = sum(src.num_ruptures for g in groups for src in g)
+            logging.info('(%.1f,%.1f) source %s (%d rlzs, %d rupts)',
+                         lon, lat, source_id, Z, rupts)
+            for args in disagg.gen_disagg_source(
+                    groups, site, relt, (edges, shp), oq):
+                smap.submit(args)
     return smap, rel_ids_by_imt, src2idx, weights
 
 
@@ -137,27 +144,34 @@ def collect_results(smap, src2idx, weights, edges, shp,
     :returns: sid -> (mean_disagg_by_src, sigma_by_src)
     """
     out = {}
-    mags, dists, lons, lats, eps, trts = edges
+    mags, dists, _lons, _lats, eps, _trts = edges
+    mag, dist, ep = middle(mags), middle(dists), middle(eps)
     for sid in sorted(rel_ids_by_imt):
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
-        Ns, M1 = len(rel_ids), len(imts)
-        zrates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
-        zstd = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
+        Ns, M = len(rel_ids), len(imts)
+        zrates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M))
+        zstd = numpy.zeros((Ns, shp['mag'], shp['dist'], M))
         dic = dict(
             shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
-            source_id=rel_ids, mag=middle(mags), dist=middle(dists),
-            eps=middle(eps), imt=imts, iml=imls_by_imt[sid])
+            source_id=rel_ids, mag=mag, dist=dist,
+            eps=ep, imt=imts, iml=imls_by_imt[sid])
         mean_disagg_by_src = hdf5.ArrayWrapper(zrates, dic)
         dic2 = dict(
             shape_descr=['source_id', 'mag', 'dist', 'imt'],
-            source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
+            source_id=rel_ids, imt=imts, mag=mag, dist=dist)
         sigma_by_src = hdf5.ArrayWrapper(zstd, dic2)
         out[sid] = (mean_disagg_by_src, sigma_by_src)
-    for sid, srcid, std4D, rates4D, _ in smap:
+    disaggs = general.AccumDict(accum=[])
+    for dic in smap:
+        disaggs[dic['source_id'], dic['sid']].append(dic)
+    for (source_id, sid), dics in disaggs.items():
+        idx = src2idx[source_id, sid]
         mean_disagg_by_src, sigma_by_src = out[sid]
-        idx = src2idx[sid, srcid]
-        mean_disagg_by_src[idx] += rates4D
-        sigma_by_src[idx] += std4D @ weights[sid, srcid]
+        for dic in dics:
+            mean_disagg_by_src[idx] += dic['rates4D']
+        G = len(weights[source_id, sid])  # gsim weights
+        std4D = disagg.collect_std(dics, shp['mag'], shp['dist'], M, G)
+        sigma_by_src[idx] += std4D @ weights[source_id, sid]
         # the dot product change the shape from (Ma, D, M, G) -> (Ma, D, M)
     return out
 
@@ -184,7 +198,7 @@ def main(dstore, csm, imts, imls_by_sid):
                       for trt, dset in parent['source_mags'].items()}
     sitecol = parent['sitecol']
     sites = [site for site in sitecol if site.id in imls_by_sid]
-    src_mutex = dstore['mutex_by_grp']['src_mutex']
+    src_mutex = [sg.src_interdep == 'mutex' for sg in csm.src_groups]
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
     smap, rel_ids_by_imt, src2idx, weights = submit_sources(
         dstore, csm, edges, shp, imts, imls_by_sid, oq, sites)
@@ -193,11 +207,10 @@ def main(dstore, csm, imts, imls_by_sid):
     dstore.close()
     dstore.open('r+')
     # replace mean_disagg_by_src with mag_dist_eps in the output
-    for i, site in enumerate(sites):
+    for site in sites:
         mean_disagg_by_src, sigma_by_src = out[site.id]
-        if i == 0:  # store only the first site
-            dstore['mean_disagg_by_src'] = mean_disagg_by_src
-            dstore['sigma_by_src'] = sigma_by_src
+        dstore[f'mean_disagg_by_src/{site.id}'] = mean_disagg_by_src
+        dstore[f'sigma_by_src/{site.id}'] = sigma_by_src
         mag_dist_eps = get_mag_dist_eps_df(
             mean_disagg_by_src, src_mutex, dstore['source_info'])
         dfs = []

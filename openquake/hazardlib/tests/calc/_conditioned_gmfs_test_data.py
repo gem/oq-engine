@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2023 GEM Foundation
+# Copyright (C) 2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -46,11 +46,8 @@ MAX_DIST = IntegrationDistance.new('300')
 
 RUP = PointRupture(
     mag=MAG,
-    rake=0,
     tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
     hypocenter=Point(LON, LAT, DEP),
-    strike=0,
-    dip=90,
     occurrence_rate=1,
     temporal_occurrence_model=PoissonTOM(1.0),
     zbot=DEP,

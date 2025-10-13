@@ -1,0 +1,3 @@
+#,,,,,"generated_by='OpenQuake engine 3.21.0-git8677aaa2e3', start_date='2024-06-15T07:28:32', checksum=1976573739, investigation_time=None, risk_investigation_time=None"
+loss_type,no_damage,slight,moderate,extensive,complete
+structural,5.39893E+01,3.55088E+01,3.15826E+01,2.28636E+01,4.80557E+01

@@ -1,0 +1,5 @@
+#,,"generated_by='OpenQuake engine 3.22.0-git36e91b9743', start_date='2024-11-05T09:57:17', checksum=17759650"
+loss_type,loss,stat
+structural,70220.875,mean
+structural,30207.003246491182,quantile-0.15
+structural,67061.88573322882,quantile-0.85

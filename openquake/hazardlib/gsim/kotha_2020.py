@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -433,12 +433,10 @@ class KothaEtAl2020(GMPE):
     REQUIRES_DISTANCES = {'rjb'}
 
     def __init__(self, sigma_mu_epsilon=0.0, c3_epsilon=0.0, ergodic=True,
-                 dl2l=None, c3=None, **kwargs):
+                 dl2l=None, c3=None):
         """
         Instantiate setting the sigma_mu_epsilon and c3 terms
         """
-        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon,
-                         c3_epsilon=c3_epsilon, ergodic=ergodic, **kwargs)
         self.sigma_mu_epsilon = sigma_mu_epsilon
         self.c3_epsilon = c3_epsilon
         self.ergodic = ergodic
@@ -576,19 +574,19 @@ class KothaEtAl2020regional(KothaEtAl2020):
     kind = "regional"
 
     def __init__(self, delta_l2l_epsilon=0.0, delta_c3_epsilon=0.0,
-                 ergodic=True, c3=None, dl2l=None, **kwargs):
+                 ergodic=True, c3=None, dl2l=None):
         """
         Instantiate setting the dl2l and c3 terms.
         """
-        super().__init__(delta_l2l_epsilon=delta_l2l_epsilon,
-                         delta_c3_epsilon=delta_c3_epsilon,
-                         ergodic=ergodic, **kwargs)
+        super().__init__()  # important
         self.delta_l2l_epsilon = delta_l2l_epsilon
         self.delta_c3_epsilon = delta_c3_epsilon
         self.ergodic = ergodic
-        attenuation_file = os.path.join(DATA_FOLDER, 'kotha_attenuation_regions.geojson')
+        attenuation_file = os.path.join(
+            DATA_FOLDER, 'kotha_attenuation_regions.geojson')
         self.att = list(fiona.open(attenuation_file))
-        tectonic_file = os.path.join(DATA_FOLDER, 'kotha_tectonic_regions.geojson')
+        tectonic_file = os.path.join(
+            DATA_FOLDER, 'kotha_tectonic_regions.geojson')
         self.tec = list(fiona.open(tectonic_file))
 
 

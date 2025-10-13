@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,7 @@ def classical_bcr(riskinputs, param, monitor):
     :param monitor:
         :class:`openquake.baselib.performance.Monitor` instance
     """
-    R = riskinputs[0].hazard_getter.num_rlzs
+    R = riskinputs[0].hazard_getter.R
     result = AccumDict(accum=numpy.zeros((R, 3), F32))
     crmodel = monitor.read('crmodel')
     mon = monitor('getting hazard', measuremem=False)
@@ -48,8 +48,8 @@ def classical_bcr(riskinputs, param, monitor):
             haz = ri.hazard_getter.get_hazard()
         for taxo, assets in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
-                hcurve = haz.extract(rlz)
-                out = crmodel.get_output(assets, hcurve)
+                hcurve = haz[:, rlz]
+                [out] = crmodel.get_outputs(assets, hcurve)
                 for asset, (eal_orig, eal_retro, bcr) in zip(
                         assets.to_records(), out['structural']):
                     aval = asset['value-structural']

@@ -261,8 +261,7 @@ class KiteSurface(BaseSurface):
             return distances
 
         # Get the projection
-        proj = geo_utils.OrthographicProjection(
-            *geo_utils.get_spherical_bounding_box(blo, bla))
+        proj = geo_utils.OrthographicProjection.from_(blo, bla)
 
         # Mesh projected coordinates
         mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
@@ -474,6 +473,38 @@ class KiteSurface(BaseSurface):
         icol = int(np.round(mesh.shape[1] / 2))
         return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
                      mesh.depths[irow, icol])
+
+    def get_middle_point(self):
+        """
+        Return the middle point of a Kite mesh that may contain nans.
+
+        The middle point is the finite point of the mesh that is closest
+        to the centroid (the algebraic mean) of the non-NaN
+        points, calculated in a Cartesian reference frame (the centroid
+        itself may not be on the mesh for faults with curvature).
+        """
+
+        lon_vec = self.mesh.lons.ravel()
+        lat_vec = self.mesh.lats.ravel()
+        depth_vec = self.mesh.depths.ravel()
+
+        non_nan_idx = (~np.isnan(lon_vec) * ~np.isnan(lat_vec)
+                       * ~np.isnan(depth_vec))
+
+        lon_vec = lon_vec[non_nan_idx].astype(np.float64)
+        lat_vec = lat_vec[non_nan_idx].astype(np.float64)
+        depth_vec = depth_vec[non_nan_idx].astype(np.float64)
+
+        cart_pts = geodetic.fast_spherical_to_cartesian(
+            lon_vec, lat_vec, depth_vec)
+        centroid = cart_pts.mean(axis=0)
+
+        distances = np.sqrt((centroid[0] - cart_pts[:,0])**2 +
+                            (centroid[1] - cart_pts[:,1])**2 +
+                            (centroid[2] - cart_pts[:,2])**2
+                            )
+        min_idx = np.argmin(distances)
+        return Point(lon_vec[min_idx], lat_vec[min_idx], depth_vec[min_idx])
 
     @property
     def surface_projection(self):
@@ -770,8 +801,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
         raise ValueError('Not enough profiles. Decrease the spacing')
 
     # Convert from profiles to edges
-    msh = msh.swapaxes(0, 1)
-    msh = fix_mesh(msh)
+    msh = fix_mesh(msh.transpose(1, 0, 2))
 
     # Sort the edges composing the mesh using their average depth
     _edges_sort_by_mean_depth(msh)
@@ -1109,7 +1139,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
         _check_sampling(edg, proj)
 
     # INFO: this is used only for debugging purposes
-    # ax = _dbg_plot(new_edges, profs, npr, ref_idx)
+    #ax = _dbg_plot(new_edges, profs, npr, ref_idx)
 
     return npr
 
@@ -1159,13 +1189,16 @@ def _check_sampling(edg, proj):
 
     # Check the sampled edges
     for idx in idxs:
-        xp, yp = proj(edg[idx[0]:idx[1], 0], edg[idx[0]:idx[1], 1])
+        edg = edg[idx[0]:idx[1]].T
+        if edg.shape[1] == 0:
+            continue
+        xp, yp = proj(edg[0], edg[1])
         dsts = (np.diff(xp)**2 + np.diff(yp)**2 +
-                np.diff(edg[idx[0]:idx[1], 2])**2)
-        try:
-            np.testing.assert_allclose(dsts, np.mean(dsts), rtol=4e-2)
-        except:
-            breakpoint()
+                np.diff(edg[2])**2)
+        dsts = np.array([dsts[0]] + dsts.tolist())
+        dsts = dsts[~np.isnan(edg[2])]
+
+        np.testing.assert_allclose(dsts, dsts[0], rtol=2e-2)
 
 
 def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,

@@ -1,3 +1,0 @@
-#,,,,,,,,,"generated_by='OpenQuake engine 3.11.0-gite54a474a1c', start_date='2021-02-17T11:00:43', checksum=2245145303, investigation_time=50.0, ses_per_logic_tree_path=3"
-rup_id,multiplicity,mag,centroid_lon,centroid_lat,centroid_depth,trt,strike,dip,rake
-0,1,5.850000E+00,-1.220000E+02,3.720000E+01,6.000000E+00,Active Shallow Crust,2.700311E+02,4.499927E+01,9.000000E+01

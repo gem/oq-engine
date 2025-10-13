@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,10 +22,12 @@ from openquake.baselib.writers import write_csv
 
 
 DISPLAY_NAME = {
-    'asce07': 'ASCE 7-16 Parameters',
-    'asce41': 'ASCE 41-17 Parameters',
+    'asce07': 'ASCE 7 Parameters',
+    'asce41': 'ASCE 41 Parameters',
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
+    'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
+    'exposure': 'Exposure',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
@@ -40,6 +42,7 @@ DISPLAY_NAME = {
     'loss_curves-stats': 'Asset Loss Curves Statistics',
     'loss_maps-rlzs': 'Asset Loss Maps',
     'loss_maps-stats': 'Asset Loss Maps Statistics',
+    'aggexp_tags': 'Aggregated Exposure Values',
     'aggrisk': 'Aggregate Risk',
     'aggrisk-stats': 'Aggregate Risk Statistics',
     'agg_risk': 'Total Risk',
@@ -49,11 +52,17 @@ DISPLAY_NAME = {
     'bcr-rlzs': 'Benefit Cost Ratios',
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
+    'mce': 'MCE calculations',
+    'mce_governing': 'ASCE7: MCEr SRAs',
+    'median_spectra': 'Median Spectra per Site and PoE',
+    'median_spectrum_disagg': 'Median Spectrum Disaggregation',
+    'mmi_tags': 'Exposure grouped by Admin1 and MMI',
     'reinsurance-avg_policy': 'Average Reinsurance By Policy',
     'reinsurance-avg_portfolio': 'Average Reinsurance',
     'reinsurance-risk_by_event': 'Reinsurance By Event',
     'reinsurance-aggcurves': 'Aggregated Reinsurance Curves',
     'ruptures': 'Earthquake Ruptures',
+    'site_model': 'Site Model',
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
@@ -72,6 +81,35 @@ DISPLAY_NAME = {
     'infra-event_pcl': 'Partial Connectivity Loss By Event',
     'infra-event_wcl': 'Weighted Connectivity Loss By Event',
     'infra-event_efl': 'Efficiency Loss by Event',
+}
+
+
+AGGRISK_FIELD_DESCRIPTION = {
+    'contents': 'Contents loss (USD)',
+    'nonstructural': 'Nonstructural loss (USD)',
+    'structural': 'Structural loss (USD)',
+    'occupants': 'Fatalities',
+    'area': 'Floor area lost (m2)',
+    'number': 'Buildings beyond repair',
+    'residents': 'Rendered homeless',
+    'injured': 'Number of injured people',
+    'affectedpop': ('Number of people living in buildings '
+                    'with moderate or higher damage'),
+}
+
+EXPOSURE_FIELD_DESCRIPTION = {
+    'number': 'Buildings',
+    'contents': 'Contents value (USD)',
+    'nonstructural': 'Nonstructural value (USD)',
+    'structural': 'Structural value (USD)',
+    'residents': 'Residents',
+    'area': 'Floor area (m2)',
+    'occupants_day': 'Occupants day',
+    'occupants_night': 'Occupants night',
+    'occupants_transit': 'Occupants transit hours',
+    'occupants_avg': 'Average number of occupants',
+    'mmi': ('Macroseismic intensity (MMI) to which the given group'
+            ' of assets is subjected'),
 }
 
 

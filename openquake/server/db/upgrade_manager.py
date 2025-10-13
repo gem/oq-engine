@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2023 GEM Foundation
+# Copyright (C) 2016-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,7 @@ import urllib.request
 import logging
 import importlib
 import sqlite3
+from openquake.commonlib.dbapi import db
 
 
 class DuplicatedVersion(RuntimeError):
@@ -330,16 +331,18 @@ class UpgradeManager(object):
         return upgrader
 
 
-def upgrade_db(conn, pkg_name='openquake.server.db.schema.upgrades',
+def upgrade_db(conn=None, pkg_name='openquake.server.db.schema.upgrades',
                skip_versions=()):
     """
     Upgrade a database by running several scripts in a single transaction.
 
-    :param conn: a DB API 2 connection
+    :param conn: a DB API 2 connection (if None use dbapi.db.conn)
     :param str pkg_name: the name of the package with the upgrade scripts
     :param list skip_versions: the versions to skip
     :returns: the version numbers of the new scripts applied the database
     """
+    if conn is None:
+        conn = db.conn
     upgrader = UpgradeManager.instance(conn, pkg_name)
     t0 = time.time()
     # run the upgrade scripts

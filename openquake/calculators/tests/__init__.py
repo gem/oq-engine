@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,7 @@ import numpy
 from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.baselib import general, parallel, writers
-from openquake.commonlib import datastore, readinput, oqvalidation, logs
+from openquake.commonlib import datastore, readinput, logs
 
 OUTPUTS = os.path.join(os.path.dirname(__file__), 'outputs')
 OQ_CALC_OUTPUTS = os.environ.get('OQ_CALC_OUTPUTS')
@@ -40,9 +40,9 @@ class DifferentFiles(Exception):
     pass
 
 
-def strip_calc_id(fname):
+def strip_calc_id(fname, suffix=''):
     name = os.path.basename(fname)
-    return re.sub(r'_\d+', '', name)
+    return re.sub(r'_\d+', suffix, name)
 
 
 def ignore_gsd_fields(header, lines):
@@ -123,7 +123,7 @@ class CalculatorTestCase(unittest.TestCase):
         cls.duration = general.AccumDict()
         if OQ_CALC_OUTPUTS:
             writers.write_csv = write_csv
-        os.environ['OQ_DATABASE'] = 'local'
+        os.environ['OQ_DATABASE'] = '127.0.0.1'
         parallel.Starmap.maxtasksperchild = None
 
     def get_calc(self, testfile, job_ini, **kw):
@@ -133,11 +133,10 @@ class CalculatorTestCase(unittest.TestCase):
         self.testdir = os.path.dirname(testfile) if os.path.isfile(testfile) \
             else testfile
         params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
-        oq = oqvalidation.OqParam(**params)
-        oq._input_files = readinput.get_input_files(oq)
-        oq.validate()
-        log = logs.init('job', params)
-        return base.calculators(oq, log.calc_id)
+        log = logs.init(params)
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.test_mode = True
+        return calc
 
     def run_calc(self, testfile, job_ini, **kw):
         """

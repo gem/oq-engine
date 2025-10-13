@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -200,7 +200,7 @@ def scientificformat(value, fmt='%13.9E', sep=' ', sep2=':'):
     if isinstance(value, numpy.bool_):
         return '1' if value else '0'
     elif isinstance(value, bytes):
-        return value.decode('utf8')
+        return value.decode('utf8', 'ignore')
     elif isinstance(value, str):
         return value
     elif hasattr(value, '__len__'):
@@ -264,7 +264,9 @@ class StreamingXMLWriter(object):
         return tag
 
     def _write(self, text):
-        """Write text by respecting the current indentlevel"""
+        """
+        Write text by respecting the current indentlevel
+        """
         spaces = ' ' * (self.indent * self.indentlevel)
         t = spaces + text.strip() + '\n'
         if hasattr(t, 'encode'):
@@ -272,13 +274,17 @@ class StreamingXMLWriter(object):
         self.stream.write(t)  # expected bytes
 
     def emptyElement(self, name, attrs):
-        """Add an empty element (may have attributes)"""
+        """
+        Add an empty element (may have attributes)
+        """
         attr = ' '.join('%s=%s' % (n, quoteattr(scientificformat(v)))
                         for n, v in sorted(attrs.items()))
         self._write('<%s %s/>' % (name, attr))
 
     def start_tag(self, name, attrs=None):
-        """Open an XML tag"""
+        """
+        Open an XML tag
+        """
         if not attrs:
             self._write('<%s>' % name)
         else:
@@ -290,12 +296,16 @@ class StreamingXMLWriter(object):
         self.indentlevel += 1
 
     def end_tag(self, name):
-        """Close an XML tag"""
+        """
+        Close an XML tag
+        """
         self.indentlevel -= 1
         self._write('</%s>' % name)
 
     def serialize(self, node):
-        """Serialize a node object (typically an ElementTree object)"""
+        """
+        Serialize a node object (typically an ElementTree object)
+        """
         if isinstance(node.tag, types.FunctionType):
             # this looks like a bug of ElementTree: comments are stored as
             # functions!?? see https://hg.python.org/sandbox/python2.7/file/tip/Lib/xml/etree/ElementTree.py#l458
@@ -324,7 +334,7 @@ class StreamingXMLWriter(object):
                     obj = list(itertools.chain(*obj))
                 txt = escape(scientificformat(obj).strip())
             else:
-                txt = escape(scientificformat(node.text).strip())
+                txt = scientificformat(node.text).strip()
             if txt:
                 self._write(txt)
         for subnode in node:
@@ -332,14 +342,17 @@ class StreamingXMLWriter(object):
         self.end_tag(tag)
 
     def __enter__(self):
-        """Write the XML declaration"""
+        """
+        Write the XML declaration
+        """
         self._write('<?xml version="1.0" encoding="%s"?>\n' %
                     self.encoding)
         return self
 
     def __exit__(self, etype, exc, tb):
-        """Close the XML document"""
-        pass
+        """
+        Close the XML document
+        """
 
 
 class SourceLineParser(ElementTree.XMLParser):
@@ -458,7 +471,7 @@ class Node(object):
     def __init__(self, fulltag, attrib=None, text=None,
                  nodes=None, lineno=None):
         """
-        :param str tag: the Node name
+        :param str fulltag: the Node name
         :param dict attrib: the Node attributes
         :param str text: the Node text (default None)
         :param nodes: an iterable of subnodes (default empty list)
@@ -910,7 +923,7 @@ class ValidatingXmlParser(object):
 
     def _start_element(self, longname, attrs):
         try:
-            xmlns, name = longname.split('}')
+            _xmlns, name = longname.split('}')
         except ValueError:  # no namespace in the longname
             name = tag = longname
         else:  # fix the tag with an opening brace

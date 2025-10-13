@@ -1,0 +1,4 @@
+risk_id,consequence,peril,LS1,LS2
+RC,losses,groundshaking,4.000000E-02,1.600000E-01
+RM,losses,groundshaking,4.000000E-02,1.600000E-01
+W,losses,groundshaking,4.000000E-02,1.600000E-01

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -47,30 +47,12 @@ import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
-from openquake.hazardlib.probability_map import (
-    ProbabilityMap, ProbabilityCurve
-)
+from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import ContextMaker, PmapMaker
-from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.tom import PoissonTOM, FatedTOM
 
 
-def _cluster(sids, imtls, tom, gsims, pmap):
-    """
-    Computes the probability map in case of a cluster group
-    """
-    for nocc in range(0, 50):
-        ocr = tom.occurrence_rate
-        prob_n_occ = tom.get_probability_n_occurrences(ocr, nocc)
-        if nocc == 0:
-            pmapclu = pmap.new(numpy.full(pmap.shape, prob_n_occ))
-        else:
-            pmapclu.array += (1.-pmap.array)**nocc * prob_n_occ
-    return ~pmapclu
-
-
-def classical(group, sitecol, cmaker, pmap=None):
+def classical(group, sitecol, cmaker):
     """
     Compute the hazard curves for a set of sources belonging to the same
     tectonic region type for all the GSIMs associated to that TRT.
@@ -80,42 +62,16 @@ def classical(group, sitecol, cmaker, pmap=None):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    not_passed_pmap = pmap is None
-    src_filter = SourceFilter(sitecol, cmaker.maximum_distance)
-    cluster = getattr(group, 'cluster', None)
-    rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
     trts = set()
     for src in group:
         if not src.num_ruptures:
-            # src.num_ruptures may not be set, so it is set here
+            # not be set in hazardlib, but always in the engine
             src.num_ruptures = src.count_ruptures()
-        # set the proper TOM in case of a cluster
-        if cluster:
-            src.temporal_occurrence_model = FatedTOM(time_span=1)
         trts.add(src.tectonic_region_type)
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
         assert trt == cmaker.trt, (trt, cmaker.trt)
-    cmaker.tom = getattr(group, 'temporal_occurrence_model', None)
-    if cmaker.tom is None:
-        time_span = cmaker.investigation_time  # None for nonparametric
-        cmaker.tom = PoissonTOM(time_span) if time_span else None
-    if cluster:
-        cmaker.tom = FatedTOM(time_span=1)
-    if not_passed_pmap:
-        pmap = ProbabilityMap(
-            sitecol.sids, cmaker.imtls.size, len(cmaker.gsims))
-        pmap.fill(rup_indep)
-
-    dic = PmapMaker(cmaker, src_filter, group).make(pmap)
-    if getattr(group, 'src_interdep', None) != 'mutex' and rup_indep:
-        pmap.array[:] = 1. - pmap.array
-    if cluster:
-        pmap.array[:] = _cluster(sitecol.sids, cmaker.imtls,
-                                 group.temporal_occurrence_model,
-                                 cmaker.gsims, pmap).array
-    if not_passed_pmap:
-        dic['pmap'] = pmap
+    dic = PmapMaker(cmaker, sitecol, group).make()
     return dic
 
 
@@ -176,11 +132,11 @@ def calc_hazard_curves(
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
     param = dict(imtls=imtls, truncation_level=truncation_level, reqv=reqv,
                  cluster=grp.cluster, shift_hypo=shift_hypo,
-                 investigation_time=span)
+                 investigation_time=span, af=None)
     # Processing groups with homogeneous tectonic region
     mon = Monitor()
     sitecol = getattr(srcfilter, 'sitecol', srcfilter)
-    pmap = ProbabilityMap(sitecol.sids, imtls.size, 1).fill(0)
+    pmap = MapArray(sitecol.sids, imtls.size, 1).fill(0)
     for group in groups:
         trt = group.trt
         if sitecol is not srcfilter:
@@ -193,7 +149,8 @@ def calc_hazard_curves(
                 classical, (group.sources, sitecol, cmaker),
                 weight=operator.attrgetter('weight'))
         for dic in it:
-            pmap.array[:] = 1. - (1.-pmap.array) * (1. - dic['pmap'].array)
+            rmap = dic['rmap']
+            pmap.array[:] = 1. - (1.-pmap.array) * numpy.exp(-rmap.array)
     return pmap.convert(imtls, len(sitecol.complete))
 
 
@@ -205,17 +162,11 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     :param gsims: a list of GSIM objects
     :param oqparam: an object with attributes .maximum_distance, .imtls
     :param monitor: a Monitor instance (optional)
-    :returns: a ProbabilityCurve object
+    :returns: an array of shape (L, G)
     """
     assert len(site1) == 1, site1
     trt = src.tectonic_region_type
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
-    srcfilter = SourceFilter(site1, oqparam.maximum_distance)
-    pmap = ProbabilityMap(site1.sids, oqparam.imtls.size, 1).fill(1)
-    PmapMaker(cmaker, srcfilter, [src]).make(pmap)
-    pmap.array[:] = 1. - pmap.array
-    if not pmap:  # filtered away
-        zero = numpy.zeros((oqparam.imtls.size, len(gsims)))
-        return ProbabilityCurve(zero)
-    return ProbabilityCurve(pmap.array[0])
+    rmap = PmapMaker(cmaker, site1, [src]).make()['rmap']
+    return 1. - numpy.exp(-rmap.array[0])

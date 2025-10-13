@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,12 +15,14 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import sys
 import pprint
 import logging
 from openquake.commonlib import logs, datastore
 from openquake.calculators.extract import WebExtractor
-from openquake.engine import engine
+from openquake.calculators.base import expose_outputs
 
 
 def main(calc_id):
@@ -30,10 +32,15 @@ def main(calc_id):
     NB: calc_id can be a local pathname to a datastore not already
     present in the database: in that case it is imported in the db.
     """
+    datadir = datastore.get_datadir()
     try:
         calc_id = int(calc_id)
     except ValueError:  # assume calc_id is a pathname
         remote = False
+        fname = os.path.join(datadir, os.path.basename(calc_id))
+        if fname != calc_id:
+            print(f'Moving into {fname}')
+            os.rename(calc_id, fname)
         calc_id =  datastore.extract_calc_id_datadir(calc_id)[0]
     else:
         remote = True
@@ -41,7 +48,6 @@ def main(calc_id):
     if job is not None:
         sys.exit('There is already a job #%d in the local db' % calc_id)
     if remote:
-        datadir = datastore.get_datadir()
         webex = WebExtractor(calc_id)
         hc_id = webex.oqparam.hazard_calculation_id
         if hc_id:
@@ -51,8 +57,8 @@ def main(calc_id):
         webex.close()
     with datastore.read(calc_id) as dstore:
         pprint.pprint(dstore.get_attrs('/'))
-        engine.expose_outputs(dstore, status='complete')
+        expose_outputs(dstore, status='complete')
     logging.info('Imported calculation %s successfully', calc_id)
 
 
-main.calc_id = 'calculation ID or pathname'
+main.calc_id = 'calculation ID or pathname ~/oqdata/calc_XXX.hdf5'

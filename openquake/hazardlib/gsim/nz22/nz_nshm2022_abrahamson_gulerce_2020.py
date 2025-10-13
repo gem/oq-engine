@@ -92,11 +92,11 @@ def get_acceleration_on_reference_rock_ba(
 
 
 def get_mean_acceleration_ba(
-    C, trt, region, ctx, pga1000, apply_adjustment, imt
+    C, trt, region, ctx, pga1000, imt, apply_adjustment
 ):
     return get_mean_acceleration(
-        C, trt, region, ctx, pga1000, apply_adjustment
-    ) + get_backarc_term(trt, imt, ctx)
+        C, trt, region, ctx, pga1000, imt, apply_adjustment,
+        ) + get_backarc_term(trt, imt, ctx)
 
 
 class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
@@ -106,15 +106,12 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
         ergodic=True,
         apply_usa_adjustment=False,
         sigma_mu_epsilon=0.0,
-        **kwargs,
     ):
         super().__init__(
             region=region,
             ergodic=ergodic,
             apply_usa_adjustment=apply_usa_adjustment,
-            sigma_mu_epsilon=sigma_mu_epsilon,
-            **kwargs,
-        )
+            sigma_mu_epsilon=sigma_mu_epsilon)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -137,8 +134,8 @@ class NZNSHM2022_AbrahamsonGulerce2020SInter(AbrahamsonGulerce2020SInter):
                 self.region,
                 ctx,
                 pga1000,
-                self.apply_usa_adjustment,
                 imt,
+                self.apply_usa_adjustment
             )
             if self.sigma_mu_epsilon:
                 # Apply an epistmic adjustment factor

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,7 +27,8 @@ import numpy
 from openquake.baselib import hdf5, general, InvalidFile
 from openquake.hazardlib import (
     geo, site, nrml, sourceconverter, gsim_lt, logictree, contexts, valid)
-from openquake.hazardlib.source.rupture import EBRupture, get_ruptures, get_ebr
+from openquake.hazardlib.source.rupture import (
+    EBRupture, get_ruptures_aw, get_ebr)
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.source_reader import get_csm
 
@@ -101,7 +102,7 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         return ebrs
 
     assert fname.endswith('.csv'), fname
-    aw = get_ruptures(fname)
+    aw = get_ruptures_aw(fname)
     ebrs = []
     for i, rec in enumerate(aw.array):
         ebr = get_ebr(rec, aw.geoms[i], aw.trts[rec['trt_smr']])
@@ -155,14 +156,22 @@ def get_smlt(hparams, sourceID=''):
     :returns:
         :class:`openquake.hazardlib.logictree.SourceModelLogicTree` object
     """
-    args = (hparams['inputs']['source_model_logic_tree'],
-            hparams.get('random_seed', 42),
-            hparams.get('number_of_logic_tree_samples', 0),
+    if 'source_model_logic_tree' in hparams['inputs']:
+        args = (hparams['inputs']['source_model_logic_tree'],
+                hparams.get('random_seed', 42),
+                hparams.get('number_of_logic_tree_samples', 0),
+                hparams.get('sampling_method', 'early_weights'),
+                False,
+                hparams.get('smlt_branch', ''),
+                sourceID)
+        smlt = logictree.SourceModelLogicTree(*args)
+    elif 'source_model' in hparams['inputs']:
+        smlt = logictree.SourceModelLogicTree.trivial(
+            hparams['inputs']['source_model'][0],
             hparams.get('sampling_method', 'early_weights'),
-            False,
-            hparams.get('smlt_branch', ''),
             sourceID)
-    smlt = logictree.SourceModelLogicTree(*args)
+    else:
+        raise RuntimeError('Missing source_model_logic_tree and source_model')
     if 'discard_trts' in hparams:
         discard_trts = {s.strip() for s in hparams['discard_trts'].split(',')}
         # smlt.tectonic_region_types comes from applyToTectonicRegionType
@@ -181,13 +190,8 @@ def get_flt(hparams, branchID=''):
     """
     inputs = hparams['inputs']
     if 'source_model_logic_tree' not in hparams['inputs']:
-        smlt = logictree.SourceModelLogicTree.fake()
-        if 'source_model' in inputs:
-            smpath = inputs['source_model']
-            smlt.basepath = os.path.dirname(smpath)
-            smlt.collect_source_model_data('b0', smpath)  # populate trts
-        else:  # rupture model
-            smlt.tectonic_region_types = ['*']
+        smlt = logictree.SourceModelLogicTree.trivial(
+            inputs.get('source_model', '_fake.xml'))
     else:
         smlt = get_smlt(hparams, branchID)
     if 'gsim' in hparams:
@@ -195,7 +199,8 @@ def get_flt(hparams, branchID=''):
     else:
         gslt = gsim_lt.GsimLogicTree(
             inputs['gsim_logic_tree'], smlt.tectonic_region_types)
-    return logictree.FullLogicTree(smlt, gslt)
+    flt = logictree.FullLogicTree(smlt, gslt)
+    return flt
 
 
 class Input(object):
@@ -226,7 +231,7 @@ class Input(object):
         hparams.setdefault('width_of_mfd_bin', 1.0),
         hparams.setdefault('area_source_discretization', 10.)
         hparams.setdefault('minimum_magnitude', {'default': 0})
-        hparams.setdefault('source_id', None)
+        hparams.setdefault('source_id', ())
         hparams.setdefault('discard_trts', '')
         hparams.setdefault('floating_x_step', 0)
         hparams.setdefault('floating_y_step', 0)
@@ -315,8 +320,8 @@ class Input(object):
                 for ebr in grp:
                     ebr.n_occ = ngmfs * num_rlzs
                     ebr.trt_smrs = (ebr.trt_smr,)
-
-        return groups, contexts.get_cmakers(groups, self.full_lt, self.oq)
+        trt_smrs = [group[0].trt_smrs for group in groups]
+        return groups, contexts.get_cmakers(trt_smrs, self.full_lt, self.oq)
 
     @property
     def cmaker(self):

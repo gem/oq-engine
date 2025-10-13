@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,6 +24,31 @@ import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+
+
+def _get_z1_ref(vs30):
+    """
+    Return z1pt0 ref (in metres) as defined within equation 0
+    of the EQ spectra article. 
+    """
+    return np.exp(28.5 - (3.82/8) * np.log(vs30**8 + 378.7**8))
+
+
+def _get_basin_term(C, ctx, region=None):
+    """
+    Return the basin term describing effects of deep sediment sites and shallow
+    sediment sites through z1pt0 
+    """
+    z1pt0 = ctx.z1pt0.copy()
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == -999
+    z1pt0[mask] = _get_z1_ref(ctx.vs30[mask])
+    # Equation 3.10
+    deep_soil = C['phi5'] * (1.0 - 1.0 / np.cosh(C['phi6'] * (
+        z1pt0 - C['phi7']).clip(0, np.inf)))
+    # Equation 3.11
+    shallow_soil = C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
+    return deep_soil + shallow_soil
 
 
 def _get_ln_y_ref(ctx, C):
@@ -84,9 +109,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
     Implements eq. 13b.
     """
     # we do not support estimating of basin depth and instead
-    # rely on it being available (since we require it).
-    z1pt0 = ctx.z1pt0
-
+    # rely on it being available (since we require it)
     # we consider random variables being zero since we want
     # to find the exact mean value.
     eta = epsilon = 0
@@ -98,10 +121,7 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
         + C['phi2'] * (exp1 - exp2)
         * np.log((np.exp(ln_y_ref) + C['phi4']) / C['phi4'])
         # third line
-        + C['phi5']
-        * (1.0 - 1.0 / np.cosh(
-            C['phi6'] * (z1pt0 - C['phi7']).clip(0, np.inf)))
-        + C['phi8'] / np.cosh(0.15 * (z1pt0 - 15).clip(0, np.inf))
+        + _get_basin_term(C, ctx)
         # fourth line
         + eta + epsilon
     )

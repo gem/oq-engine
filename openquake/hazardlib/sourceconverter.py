@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -195,6 +195,20 @@ class SourceGroup(collections.abc.Sequence):
                     assert rup.weight is not None
 
     @property
+    def grp_id(self):
+        """
+        The grp_id of the underlying sources
+        """
+        return self.sources[0].grp_id
+
+    @property
+    def trt_smrs(self):
+        """
+        The trt_smrs of the underlying sources
+        """
+        return self.sources[0].trt_smrs
+
+    @property
     def tom_name(self):
         """
         :returns: name of the associated temporal occurrence model
@@ -218,6 +232,16 @@ class SourceGroup(collections.abc.Sequence):
         :returns: total weight of the underlying sources
         """
         return sum(src.weight for src in self)
+
+    @property
+    def codes(self):
+        """
+        The codes of the underlying sources as a byte string
+        """
+        codes = set()
+        for src in self.sources:
+            codes.add(src.code)
+        return b''.join(sorted(codes))
 
     def _check_init_variables(self, src_list, name,
                               src_interdep, rup_interdep):
@@ -318,6 +342,13 @@ class SourceGroup(collections.abc.Sequence):
             return '[PoissonTOM]\ntime_span=%s' % time_span
         dic = {tom.__class__.__name__: vars(tom)}
         return toml.dumps(dic)
+
+    def is_poissonian(self):
+        """
+        :returns: True if all the sources in the group are poissonian
+        """
+        tom = getattr(self.sources[0], 'temporal_occurrence_model', None)
+        return tom.__class__.__name__ == 'PoissonTOM'
 
     def __repr__(self):
         return '<%s %s, %d source(s), weight=%d>' % (
@@ -425,7 +456,9 @@ def convert_nonParametricSeismicSource(fname, node, rup_spacing=5.0):
     if fname:
         path = os.path.splitext(fname)[0] + '.hdf5'
         hdf5_fname = path if os.path.exists(path) else None
-        if hdf5_fname and node.text is None:
+        if hdf5_fname is None and node.text is None:
+            raise OSError(f'Could not find {path}')
+        elif node.text is None:
             # gridded source, read the rupture data from the HDF5 file
             with hdf5.File(hdf5_fname, 'r') as h:
                 dic = {k: d[:] for k, d in h[node['id']].items()}
@@ -700,7 +733,7 @@ class SourceConverter(RuptureConverter):
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 source_id=None, discard_trts=(),
+                 source_id=(), discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
                  source_nodes=(),
                  infer_occur_rates=False):
@@ -711,7 +744,7 @@ class SourceConverter(RuptureConverter):
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
-        self.source_id = source_id
+        self.source_id = tuple(source_id)
         self.discard_trts = discard_trts
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
@@ -720,7 +753,7 @@ class SourceConverter(RuptureConverter):
 
     def convert_node(self, node):
         """
-        Convert the given source node into a hazardlib source, depending
+        Convert the given node into a hazardlib source or group, depending
         on the node tag.
 
         :param node: a node representing a source or a SourceGroup
@@ -731,7 +764,7 @@ class SourceConverter(RuptureConverter):
         name = striptag(node.tag)
         if name.endswith('Source'):  # source node
             source_id = node['id']
-            if self.source_id and source_id not in self.source_id:
+            if self.source_id and not source_id.startswith(self.source_id):
                 # if source_id is set in the job.ini, discard all other sources
                 return
             elif self.source_nodes and name not in self.source_nodes:
@@ -888,12 +921,13 @@ class SourceConverter(RuptureConverter):
         :param node: a node with tag areaGeometry
         :returns: a :class:`openquake.hazardlib.source.AreaSource` instance
         """
-        geom = node.areaGeometry
-        coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
-        polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
-        msr = ~node.magScaleRel
-        area_discretization = geom.attrib.get(
-            'discretization', self.area_source_discretization)
+        with context(self.fname, node):
+            geom = node.areaGeometry
+            coords = split_coords_2d(~geom.Polygon.exterior.LinearRing.posList)
+            polygon = geo.Polygon([geo.Point(*xy) for xy in coords])
+            msr = ~node.magScaleRel
+            area_discretization = geom.attrib.get(
+                'discretization', self.area_source_discretization)
         if area_discretization is None:
             raise ValueError(
                 'The source %r has no `discretization` parameter and the job.'
@@ -986,21 +1020,13 @@ class SourceConverter(RuptureConverter):
             except AttributeError:
                 slip_list = ()
             simple = source.SimpleFaultSource(
-                source_id=node['id'],
-                name=node['name'],
-                tectonic_region_type=node.attrib.get('tectonicRegion'),
-                mfd=mfd,
-                rupture_mesh_spacing=self.rupture_mesh_spacing,
-                magnitude_scaling_relationship=msr,
-                rupture_aspect_ratio=~node.ruptAspectRatio,
-                upper_seismogenic_depth=~geom.upperSeismoDepth,
-                lower_seismogenic_depth=~geom.lowerSeismoDepth,
-                fault_trace=fault_trace,
-                dip=~geom.dip,
-                rake=~node.rake,
-                temporal_occurrence_model=self.get_tom(node),
-                hypo_list=hypo_list,
-                slip_list=slip_list)
+                node['id'], node['name'],
+                node.attrib.get('tectonicRegion'),
+                mfd, self.rupture_mesh_spacing,
+                msr, ~node.ruptAspectRatio, self.get_tom(node),
+                ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+                fault_trace, ~geom.dip, ~node.rake,
+                [hypo_list, slip_list])
         return simple
 
     def convert_kiteFaultSource(self, node):
@@ -1045,22 +1071,16 @@ class SourceConverter(RuptureConverter):
                     profiles_sampling=None
                     )
             else:
+                param = source.base.SourceParam(
+                    node['id'], node['name'],
+                    node.attrib.get('tectonicRegion'),
+                    mfd, self.rupture_mesh_spacing,
+                    msr, ~node.ruptAspectRatio, self.get_tom(node))
                 outsrc = source.KiteFaultSource.as_simple_fault(
-                    source_id=node['id'],
-                    name=node['name'],
-                    tectonic_region_type=node.attrib.get('tectonicRegion'),
-                    mfd=mfd,
-                    rupture_mesh_spacing=self.rupture_mesh_spacing,
-                    magnitude_scaling_relationship=msr,
-                    rupture_aspect_ratio=~node.ruptAspectRatio,
-                    upper_seismogenic_depth=~geom.upperSeismoDepth,
-                    lower_seismogenic_depth=~geom.lowerSeismoDepth,
-                    fault_trace=fault_trace,
-                    dip=~geom.dip,
-                    rake=~node.rake,
-                    temporal_occurrence_model=self.get_tom(node),
-                    floating_x_step=xstep,
-                    floating_y_step=ystep)
+                    param,
+                    ~geom.upperSeismoDepth, ~geom.lowerSeismoDepth,
+                    fault_trace, ~geom.dip, ~node.rake,
+                    xstep, ystep)
         return outsrc
 
     def convert_complexFaultSource(self, node):
@@ -1138,19 +1158,28 @@ class SourceConverter(RuptureConverter):
         trt = node.get('tectonicRegion')
         path = os.path.splitext(self.fname)[0] + '.hdf5'
         hdf5_fname = path if os.path.exists(path) else None
-        if hdf5_fname and node.text is None:
+
+        # the first (sub)node called <faults> is optional
+        try:
+            faults = {f['tag']: f['indexes'] for f in node.faults}
+            nodes = node.nodes[1:]  # the other nodes contain the ruptures
+        except AttributeError:
+            faults = {}
+            nodes = node.nodes  # all the nodes contain ruptures
+
+        if hdf5_fname is None and not nodes:
+            raise OSError(f'Could not find {path}')
+        elif not nodes:
             # read the rupture data from the HDF5 file
             with hdf5.File(hdf5_fname, 'r') as h:
                 dic = {k: d[:] for k, d in h[node['id']].items()}
             with context(self.fname, node):
                 idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
                 mags = rounded_unique(dic['mag'], idxs)
-                for idx in idxs:
-                    assert U32(idx).max() < TWO16, idx
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt, idxs,
                                    dic['probs_occur'],
-                                   mags, dic['rake'],
+                                   mags, dic['rake'], faults,
                                    self.investigation_time,
                                    self.infer_occur_rates)
             return mfs
@@ -1159,7 +1188,7 @@ class SourceConverter(RuptureConverter):
         rakes = []
         idxs = []
         num_probs = None
-        for i, rupnode in enumerate(node):
+        for i, rupnode in enumerate(nodes):
             with context(self.fname, rupnode):
                 prb = valid.probabilities(rupnode['probs_occur'])
                 if num_probs is None:  # first time
@@ -1174,13 +1203,13 @@ class SourceConverter(RuptureConverter):
                 probs.append(prb)
                 mags.append(~rupnode.magnitude)
                 rakes.append(~rupnode.rake)
-                indexes = rupnode.sectionIndexes['indexes']
-                idxs.append(tuple(indexes.split(',')))
+                idxs.append(rupnode.sectionIndexes['indexes'])
         with context(self.fname, node):
             mags = rounded_unique(mags, idxs)
+            assert len(mags)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes,
+        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes, faults,
                                self.investigation_time,
                                self.infer_occur_rates)
         return mfs
@@ -1517,6 +1546,8 @@ class RowConverter(SourceConverter):
         elif kind == 'planarSurface':
             geom = '3D MultiPolygon'
             coords = [_planar(surface) for surface in node.surface]
+        else:
+            raise NotImplementedError(kind)
         return Row(
             node['id'],
             node['name'],

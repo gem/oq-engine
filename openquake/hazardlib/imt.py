@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,6 +23,7 @@ types.
 import re
 import collections
 import numpy
+from openquake.baselib.general import DictArray
 
 FREQUENCY_PATTERN = '^(EAS|FAS|DRVT|AvgSA)\\((\\d+\\.*\\d*)\\)'
 
@@ -55,8 +56,26 @@ def imt2tup(string):
             raise ValueError('Missing period in SA')
         # no parenthesis, PGA is considered the same as PGA()
         return (s,)
-    period = float(rest[0][:-1])
-    return ('SA(%s)' % period, period)
+
+    if len(rest[0][:-1].split(',')) == 1:
+        period = float(rest[0][:-1])
+    elif len(rest[0][:-1].split(',')) == 2:
+        period = float(rest[0][:-1].split(',')[0])
+        strength_ratio = float(rest[0][:-1].split(',')[1])
+    else:
+        raise NameError('IMT attributes not recognizable: %s' % rest[0][:-1])
+    if name.startswith("Sa_avg2") or name.startswith("SA_avg2"):
+        return ('Sa_avg2(%s)' % period, period)
+    elif name.startswith("Sa_avg3") or name.startswith("SA_avg3"):
+        return ('Sa_avg3(%s)' % period, period)
+    elif name.startswith("SA") or name.startswith("Sa"):
+        return ('SA(%s)' % period, period)
+    elif name.startswith("FIV3"):
+        return ('FIV3(%s)' % period, period)
+    elif name.startswith("SDi"):
+        return ('SDi(%s,%s)' % (period, strength_ratio), period, strength_ratio)
+    else:
+        raise NameError('IMT class name not recognizable: %s' % name)
 
 
 def from_string(imt, _damping=5.0):
@@ -77,6 +96,9 @@ def from_string(imt, _damping=5.0):
         elif m.group(1) == 'AvgSA':
             im = AvgSA(float(m.group(2)))
         return im
+    elif re.match(r'^SDi\((\d+\.?\d*),(\d+\.?\d*)\)$', imt):
+        m = re.match(r'^SDi\((\d+\.?\d*),(\d+\.?\d*)\)$', imt)
+        return SDi(float(m.group(1)), float(m.group(2)))
     elif re.match(r'[ \+\d\.]+', imt):  # passed float interpreted as period
         return SA(float(imt))
     return IMT(*imt2tup(imt))
@@ -94,14 +116,24 @@ def sort_by_imt(imtls):
     return {imt: imtls[imt] for imt in imts}
 
 
+def dictarray(imtls):
+    """
+    :returns: a DictArray sorted by IMT
+    """
+    return DictArray(sort_by_imt(imtls))
+
+
 def repr(self):
     if self.period and self.damping != 5.0:
+        if self.string.startswith('SDi'):
+            return 'SDi(%s, %s, %s)' % (self.period, self.strength_ratio,
+                                        self.damping)
         return 'SA(%s, %s)' % (self.period, self.damping)
     return self.string
 
 
-IMT = collections.namedtuple('IMT', 'string period damping')
-IMT.__new__.__defaults__ = (0., 5.0)
+IMT = collections.namedtuple('IMT', 'string period damping strength_ratio')
+IMT.__new__.__defaults__ = (0., 5.0, None)
 IMT.__lt__ = lambda self, other: self[1] < other[1]
 IMT.__gt__ = lambda self, other: self[1] > other[1]
 IMT.__le__ = lambda self, other: self[1] <= other[1]
@@ -164,6 +196,40 @@ def SA(period, damping=5.0):
     """
     period = float(period)
     return IMT('SA(%s)' % period, period, damping)
+
+
+def FIV3(period, damping=5.0):
+    """
+    Filtered incremental velocity, as defined in: Dávalos, H. and Miranda,
+    E. (2019) ‘Filtered incremental velocity: A novel approach in
+    intensity measures for seismic collapse estimation’, Earthquake
+    Engineering and Structural Dynamics, 48(12), pp. 1384–1405. Available
+    at: https://doi.org/10.1002/eqe.3205. Units are ``cm/s``.
+    """
+    period = float(period)
+    return IMT('FIV3(%s)' % period, period, damping)
+
+
+def Sa_avg2(period, damping=5.0):
+    period = float(period)
+    return IMT('Sa_avg2(%s)' % period, period, damping)
+
+
+def Sa_avg3(period, damping=5.0):
+    period = float(period)
+    return IMT('Sa_avg3(%s)' % period, period, damping)
+
+
+def SDi(period, strength_ratio, damping=5.0):
+    """
+    Inelastic spectral displacement, defined as the maximum displacement
+    of a damped, single-degree-of-freedom inelastic oscillator. Units
+    are ``cm``.
+    """
+    period = float(period)
+    strength_ratio = float(strength_ratio)
+    return IMT('SDi(%s,%s)' % (period, strength_ratio), period, damping,
+               strength_ratio)
 
 
 def AvgSA(period=None, damping=5.0):
@@ -240,6 +306,13 @@ def JMA():
     """
     return IMT('JMA')
 
+# secondary IMTs
+sec_imts = '''ASH LAVA LAHAR PYRO
+Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb
+'''.split()
+for sec in sec_imts:
+    assert '_' not in sec, sec
+
 
 # Volcanic IMTs
 
@@ -250,7 +323,28 @@ def ASH():
     return IMT('ASH')
 
 
-# secondary perils
+def LAVA():
+    """
+    Lava Intensity
+    """
+    return IMT('LAVA')
+
+
+def LAHAR():
+    """
+    Lahar Intensity
+    """
+    return IMT('LAHAR')
+
+
+def PYRO():
+    """
+    Pyroclastic Flow Intensity
+    """
+    return IMT('PYRO')
+
+
+# Liquefaction IMTs
 
 def Disp():
     """
@@ -263,7 +357,7 @@ def DispProb():
     """
     Displacement probability
     """
-    return IMT('RSD595')
+    return IMT('DispProb')
 
 
 def LiqProb():
@@ -272,15 +366,17 @@ def LiqProb():
     """
     return IMT('LiqProb')
 
+
 def LiqOccur():
     """
     Liquefaction occurrence class
     """
     return IMT('LiqOccur')
 
+
 def LSE():
     """
-    Liquefaction spatial extent as percentage of a pixel area.
+    Liquefaction or Landslide spatial extent.
     """
     return IMT('LSE')
 
@@ -291,12 +387,13 @@ def PGDMax(vert_settlement, lat_spread):
     """
     return numpy.maximum(vert_settlement, lat_spread)
 
-    
+
 def LSD():
     """
-    Liquefaction-induced lateral spread displacements measured in units of ``m``.
+    Liquefaction-induced lateral spread displacements measured in units of
+    ``m``.
     """
-    return IMT('LSD')   
+    return IMT('LSD')
 
 
 def PGDGeomMean(vert_settlement, lat_spread):
@@ -304,3 +401,10 @@ def PGDGeomMean(vert_settlement, lat_spread):
     Geometric mean between vert_settlement and lat_spread
     """
     return numpy.sqrt(vert_settlement * lat_spread)
+
+
+def LsProb():
+    """
+    Probability of landsliding.
+    """
+    return IMT('LsProb')

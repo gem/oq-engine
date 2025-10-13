@@ -1,7 +1,8 @@
 {% extends "engine/base.html" %}
+{% load servertags %}
 
   {% block nav-items %}
-                {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
+                {% if application_mode != 'AELO' and application_mode != 'ARISTOTLE' and application_mode != 'READ_ONLY' %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"
                         enctype="multipart/form-data"
@@ -24,27 +25,11 @@
           <div id="new-release-box" class="alert alert-warning">
           </div>
           {% if application_mode == 'AELO' %}
-          <div class="span12">
-            <h2>Run an AELO calculation</h2>
-            {% if not user.email %}
-            <h3>
-              WARNING: no email address is speficied for your user account, therefore email notifications will be disabled
-            </h3>
-            {% endif %}
-            <form id="aelo_run_form" method="post">
-              {% csrf_token %}
-              <!-- <label for"lat">Latitude:</label> -->
-              <input class="aelo-input" type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/>
-              <!-- <label for"lon">Longitude:</label> -->
-              <input class="aelo-input" type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/>
-              <!-- <label for"vs30">Vs30:</label> -->
-              <input class="aelo-input" type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}" readonly />
-              <!-- <label for"siteid">Site ID:</label> -->
-              <input class="aelo-input" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/>
-              <button id="submit_aelo_calc" type="submit" class="btn">Submit</button>
-              <!-- <input type="submit"> -->
-            </form>
-          </div>
+          {% include './includes/aelo_form.html' %}
+          {% elif application_mode == 'ARISTOTLE' %}
+          {% with './includes/impact_form_level_'|addstr:user_level|add:'.html' as template_path %}
+          {% include template_path %}
+          {% endwith %}
           {% endif %}
           <div class="span12">
             <h2>List of calculations{% if server_name %} from {{ server_name }}{% endif %}</h2>
@@ -72,15 +57,15 @@
       </thead>
       <tbody>
         <% _.each(calculations, function(calc) { %>
-        <% if (calc.get('status') == 'deleted') { return 0; } %>
-        <tr class="<%= (calc.get('status') == 'created' || calc.get('is_running') == true) ? 'warning' : (calc.get('status') == 'complete' ? 'success' : 'error') %>">
+        <% if (calc.get('status') == 'deleted' || calc.get('relevant') == 0) { return 0; } %>
+        <tr class="<%= (calc.get('status') == 'created' || calc.get('is_running') == true) ? 'warning' : (calc.get('status') == 'complete' || calc.get('status') == 'shared' ? 'success' : 'error') %>">
           <td><%= calc.get('id') || 'New' %></td>
           <td><%= calc.get('owner') %></td>
           <td><%= calc.get('calculation_mode') %></td>
           <td><%= calc.get('description') %></td>
           <td><%= calc.get('start_time') %></td>
           <td>
-            <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('is_running') == true) { %>
+            <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('status') == 'shared' || calc.get('is_running') == true) { %>
               <%= calc.get('status') %>
             <% } else { %>
               failed<br>( <%= calc.get('status') %> )
@@ -90,31 +75,21 @@
             <% if (calc.get('status') != 'created') { %>
               <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log calc-list-btn" style="margin: 2px 0 2px 0;">Console</a>
               <% if (calc.get('is_running') == false) { %>
-                {% if application_mode != 'READ_ONLY' %}
-                <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger calc-list-btn" style="margin: 2px 0 2px 0;">Remove</a>
-                <!-- confirm_modal -->
-                <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
-                <div id="confirmDialog<%= calc.get('id') %>" class="modal hide" data-keyboard="true" tabindex="-1">
-                <div class="modal-dialog">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <h4 class="modal-title">Remove calculation</h4>
-                    </div>
-                    <div class="modal-body" style="font-size: 12px;">
-                        <pre style="font-size: 12px;" class="modal-body-pre">Are you sure to remove calculation:<br><b>(<%= calc.get('id') %>) <%= calc.get('description') %></b> ?</pre>
-                    </div>
-                    <div class="modal-footer">
-                      <button type="button" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-show-remove">Yes</button>
-                      <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-default btn-hide-no">No</button>
-                    </div>
-                  </div>
-                </div>
-                </div>
-                <!-- end confirm_modal -->
+                {% if application_mode != 'READ_ONLY' and user_level > 0 %}
+                <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn btn-remove" style="margin: 2px 0 2px 0;">Remove</a>
                 {% endif %}
+                <% if (calc.get('status') == 'complete' || calc.get('status') == 'shared') { %>
+
+                {% if application_mode != 'READ_ONLY' and user_level >= 2 and lockdown %}
                 <% if (calc.get('status') == 'complete') { %>
-                  <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
-                  {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
+                  <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-info calc-list-btn btn-share" style="margin: 2px 0 2px 0;">Share</a>
+                <% } else if (calc.get('status') == 'shared') { %>
+                  <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-info calc-list-btn btn-unshare" style="margin: 2px 0 2px 0;">Unshare</a>
+                <% } %>
+                {% endif %}
+
+                <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% elif  application_mode == 'ARISTOTLE' %}outputs_impact{% else %}outputs{% endif %}" class="btn btn-sm calc-list-btn" style="margin: 2px 0 2px 0">Outputs</a>
+                  {% if application_mode != 'AELO' and application_mode != 'ARISTOTLE' and application_mode != 'READ_ONLY' and user_level > 0 %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"
                     method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
@@ -129,27 +104,8 @@
                   <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback calc-list-btn" style="margin: 2px 0 2px 0;">Traceback</a>
                 <% } %>
               <% } else if (calc.get('abortable')) { %>
-              {% if application_mode != 'READ_ONLY' %}
-              <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger calc-list-btn" style="margin: 2px 0 2px 0;">Abort</a>
-              <!-- confirm_modal -->
-              <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
-              <div id="confirmDialog<%= calc.get('id') %>" class="modal hide" data-keyboard="true" tabindex="-1">
-              <div class="modal-dialog">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h4 class="modal-title">Abort calculation</h4>
-                  </div>
-                  <div class="modal-body" style="font-size: 12px;">
-                      <pre style="font-size: 12px;" class="modal-body-pre">Are you sure to abort calculation:<br><b>(<%= calc.get('id') %>) <%= calc.get('description') %></b> ?</pre>
-                  </div>
-                  <div class="modal-footer">
-                    <button type="button" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-show-abort">Yes</button>
-                    <button type="button" data-calc-id="<%= calc.get('id') %>" class="btn btn-default btn-hide-no">No</button>
-                  </div>
-                </div>
-              </div>
-              </div>
-              <!-- end confirm_modal -->
+              {% if application_mode != 'READ_ONLY' and user_level > 0 %}
+              <a href="#" data-calc-id="<%= calc.get('id') %>" data-calc-desc="<%= calc.get('description') %>" class="btn btn-sm btn-danger calc-list-btn btn-abort" style="margin: 2px 0 2px 0;">Abort</a>
               {% endif %}
             <% } %>
           <% } %>
@@ -159,10 +115,29 @@
       </tbody>
     </table>
   </script>
-
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="modal hide" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title">Confirm Action</h4>
+        </div>
+        <div class="modal-body">
+          <pre style="font-size: 12px;" class="modal-body-pre">Default message</pre>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary btn-confirm">Yes</button>
+          <button type="button" class="btn btn-secondary btn-cancel" onclick="closeModal()">No</button>
+        </div>
+      </div>
+    </div>
+  </div>
   {% endblock templates %}
 
   {% block extra_script %}
   {{ block.super }}
+  <script>
+    window.application_mode = "{{ application_mode|escapejs }}";
+  </script>
   <script type="text/javascript" src="{{ STATIC_URL }}js/engine.js"></script>
   {% endblock extra_script %}

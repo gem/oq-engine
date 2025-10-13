@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,20 +16,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import io
 import os
 import sys
 import json
 import time
-import numpy
 
 import django
 from openquake.baselib.general import gettemp
-
-
-def loadnpz(lines):
-    bio = io.BytesIO(b''.join(ln for ln in lines))
-    return numpy.load(bio)
+from openquake.commonlib.readinput import loadnpz
 
 
 class EngineServerTestCase(django.test.TestCase):
@@ -79,4 +73,9 @@ class EngineServerTestCase(django.test.TestCase):
             time.sleep(1)
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
+                if os.environ.get('OQ_APPLICATION_MODE') in ('AELO',
+                                                             'ARISTOTLE'):
+                    # NOTE: some more time is needed in order to wait for the
+                    # callback to finish and produce the email notification
+                    time.sleep(1)
                 return

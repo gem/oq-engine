@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+
+  <exposureModel category="buildings" id="exposure" taxonomySource="GEM taxonomy">
+    <description>exposure model</description>
+
+    <conversions>
+      <costTypes>
+        <costType name="structural" type="aggregated" unit="USD"/>
+        <costType name="nonstructural" type="aggregated" unit="USD"/>
+        <costType name="contents" type="aggregated" unit="USD"/>
+      </costTypes>
+    </conversions>
+
+  <exposureFields>
+    <field oq="id" input="ASSET_ID" />
+    <field oq="lon" input="LONGITUDE" />
+    <field oq="lat" input="LATITUDE" />
+    <field oq="taxonomy" input="TAXONOMY" />
+    <field oq="number" input="BUILDINGS" />
+    <field oq="area" input="TOTAL_AREA_SQM" />
+    <field oq="structural" input="COST_STRUCTURAL_USD" />
+    <field oq="nonstructural" input="COST_NONSTRUCTURAL_USD" />
+    <field oq="contents" input="COST_CONTENTS_USD" />
+    <field oq="day" input="OCCUPANTS_PER_ASSET_DAY" />
+    <field oq="night" input="OCCUPANTS_PER_ASSET_NIGHT" />
+    <field oq="transit" input="OCCUPANTS_PER_ASSET_TRANSIT" />
+    <field oq="residents" input="OCCUPANTS_PER_ASSET" />
+  </exposureFields>
+
+    <occupancyPeriods>day night transit</occupancyPeriods>
+
+    <tagNames>OCCUPANCY ID_0 ID_1 ID_3 NAME_0 NAME_1 NAME_3</tagNames>
+    <assets>assets.csv</assets>
+  </exposureModel>
+
+</nrml>

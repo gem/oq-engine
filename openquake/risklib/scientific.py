@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,7 +30,7 @@ import numpy
 import pandas
 from numpy.testing import assert_equal
 from scipy import interpolate, stats
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general
 
 F64 = numpy.float64
 F32 = numpy.float32
@@ -40,9 +40,12 @@ U16 = numpy.uint16
 U8 = numpy.uint8
 
 TWO32 = 2 ** 32
-KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep', 'losses', 'collapsed',
+KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep',
+                      'pla_loss', 'pla_loss_aep', 'pla_loss_oep',
+                      'losses', 'collapsed',
                       'injured', 'fatalities', 'homeless', 'non_operational']
 
+PERILTYPE = numpy.array(['groundshaking', 'liquefaction', 'landslide'])
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -68,6 +71,7 @@ structural_ins+nonstructural_ins+business_interruption_ins
 structural_ins+contents_ins+business_interruption_ins
 nonstructural_ins+contents_ins+business_interruption_ins
 structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+affectedpop injured
 '''.split())
 
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
@@ -89,7 +93,13 @@ def _reduce(nested_dic):
 
 
 def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    """
+    :param iterable: a sequence of N values (s0, s1, ...)
+    :returns: N-1 pairs (s0, s1), (s1, s2), (s2, s3), ...
+
+    >>> list(pairwise('ABC'))
+    [('A', 'B'), ('B', 'C')]
+    """
     a, b = itertools.tee(iterable)
     # b ahead one step; if b is empty do not raise StopIteration
     next(b, None)
@@ -142,7 +152,8 @@ class Sampler(object):
         means = df['mean'].to_numpy()
         covs = df['cov'].to_numpy()
         eids = df['eid'].to_numpy()
-        return self.rng.lognormal(eids, means, covs)
+        losses = self.rng.lognormal(eids, means, covs)
+        return losses
 
     def sampleBT(self, df):
         means = df['mean'].to_numpy()
@@ -244,8 +255,11 @@ class VulnerabilityFunction(object):
         self.covs = F64(self.covs)
         self.mean_loss_ratios = F64(self.mean_loss_ratios)
         self._stddevs = self.covs * self.mean_loss_ratios
-        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios)
-        self._covs_i1d = interpolate.interp1d(self.imls, self.covs)
+        # NB: we use fill_value="extrapolate" for compatibility with numpy 1
+        self._mlr_i1d = interpolate.interp1d(self.imls, self.mean_loss_ratios,
+                                             fill_value="extrapolate")
+        self._covs_i1d = interpolate.interp1d(self.imls, self.covs,
+                                              fill_value="extrapolate")
 
     def interpolate(self, gmf_df, col):
         """
@@ -611,14 +625,6 @@ class FragilityFunctionDiscrete(object):
         self._interp = None
         self.no_damage_limit = no_damage_limit
 
-    @property
-    def interp(self):
-        if self._interp is not None:
-            return self._interp
-        self._interp = interpolate.interp1d(self.imls, self.poes,
-                                            bounds_error=False)
-        return self._interp
-
     def __call__(self, imls):
         """
         Compute the Probability of Exceedance (PoE) for the given
@@ -629,7 +635,7 @@ class FragilityFunctionDiscrete(object):
         if imls.sum() == 0.0:
             return numpy.zeros_like(imls)
         imls[imls > highest_iml] = highest_iml
-        result = self.interp(imls)
+        result = numpy.interp(imls, self.imls, self.poes)
         if self.no_damage_limit:
             result[imls < self.no_damage_limit] = 0
         return result
@@ -668,7 +674,7 @@ class FragilityFunctionList(list):
         """For compatibility with vulnerability functions"""
         return fine_graining(self.imls, steps)
 
-    def build(self, limit_states, discretization, steps_per_interval):
+    def build(self, limit_states, discretization=20, steps_per_interval=1):
         """
         :param limit_states: a sequence of limit states
         :param discretization: continouos fragility discretization parameter
@@ -1005,12 +1011,12 @@ def classical_damage(
     afoes = annual_frequency_of_exceedence(poes, investigation_time)
     afoos = pairwise_diff(
         pairwise_mean([afoes[0]] + list(afoes) + [afoes[-1]]))
-    poes_per_damage_state = []
+    poes_per_dmgstate = []
     for ff in fragility_functions:
         fx = afoos @ ff(imls)
-        poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
-        poes_per_damage_state.append(poe_per_damage_state)
-    poos = pairwise_diff([1] + poes_per_damage_state + [0])
+        poe_per_dmgstate = 1. - numpy.exp(-fx * risk_investigation_time)
+        poes_per_dmgstate.append(poe_per_dmgstate)
+    poos = pairwise_diff([1] + poes_per_dmgstate + [0])
     return poos
 
 #
@@ -1189,7 +1195,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         lims = j.insurance_limit.to_numpy() * values
         ids_of_invalid_assets = aids[deds > lims]
         if len(ids_of_invalid_assets):
-            invalid_assets = set(ids_of_invalid_assets)
+            invalid_assets = set(map(int, ids_of_invalid_assets))
             raise ValueError(
                 f"Please check deductible values. Values larger than the"
                 f" insurance limit were found for asset(s) {invalid_assets}.")
@@ -1263,16 +1269,61 @@ def bcr(eal_original, eal_retrofitted, interest_rate,
             (interest_rate * retrofitting_cost))
 
 
+def pla_factor(df):
+    """
+    Post-Loss-Amplification factor interpolator.
+    To be instantiated with a DataFrame with columns
+    return_period and pla_factor.
+    """
+    factors = df.pla_factor.to_numpy()  # ordered from 1 to maxvalue
+    return interpolate.interp1d(df.return_period.to_numpy(),
+                                factors,
+                                bounds_error=False,
+                                fill_value=(1., factors[-1]))
+
+
 # ####################### statistics #################################### #
 
 def pairwise_mean(values):
-    "Averages between a value and the next value in a sequence"
+    """
+    Averages between a value and the next value in a sequence
+    """
     return numpy.array([numpy.mean(pair) for pair in pairwise(values)])
 
 
-def pairwise_diff(values):
-    "Differences between a value and the next value in a sequence"
-    return numpy.array([x - y for x, y in pairwise(values)])
+def pairwise_diff(values, addlast=False):
+    """
+    Differences between a value and the next value in a sequence.
+    If addlast is set the last value is added to the difference,
+    i.e. N values are returned instead of N-1.
+    """
+    diff = [x - y for x, y in pairwise(values)]
+    if addlast:
+        diff.append(values[-1])
+    return numpy.array(diff)
+
+
+def dds_to_poes(dmg_dists):
+    """
+    Convert an array of damage distributions into an array of PoEs
+
+    >>> dds_to_poes([[.7, .2, .1], [0., 0., 1.0]])
+    array([[1. , 0.3, 0.1],
+           [1. , 1. , 1. ]])
+    """
+    arr = numpy.fliplr(numpy.fliplr(dmg_dists).cumsum(axis=1))
+    return arr
+
+
+def compose_dds(dmg_dists):
+    """
+    Compose an array of N damage distributions:
+
+    >>> compose_dds([[.6, .2, .1, .1], [.5, .3 ,.1, .1]])
+    array([0.3 , 0.34, 0.17, 0.19])
+    """
+    poes_per_dmgstate = general.pprod(dds_to_poes(dmg_dists), axis=0)
+    return pairwise_diff(poes_per_dmgstate, addlast=True)
 
 
 def mean_std(fractions):
@@ -1425,26 +1476,61 @@ def return_periods(eff_time, num_losses):
     return U32(periods)
 
 
-def maximum_probable_loss(losses, return_period, eff_time, sorting_idxs=None):
+def maximum_probable_loss(losses, return_period, eff_time, sorting=True):
     """
     :returns: Maximum Probable Loss at the given return period
 
     >>> losses = [1000., 0., 2000., 1500., 780., 900., 1700., 0., 100., 200.]
-    >>> maximum_probable_loss(losses, 2000, 10_000)
+    >>> float(maximum_probable_loss(losses, 2000, 10_000))
     900.0
     """
     return losses_by_period(losses, [return_period], len(losses), eff_time,
-                            sorting_idxs)[0]
+                            sorting)['curve'][0]
 
 
-def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
-                     sorting_idxs=None):
+def fix_losses(orig_losses, num_events, eff_time=0, sorting=True):
     """
-    :param losses: simulated losses
-    :param return_periods: return periods of interest
-    :param num_events: the number of events (>= number of losses)
-    :param eff_time: investigation_time * ses_per_logic_tree_path
-    :returns: interpolated losses for the return periods, possibly with NaN
+    Possibly add zeros and sort the passed losses.
+
+    :param orig_losses: an array of size num_losses
+    :param num_events: an integer >= num_losses
+    :returns: three arrays of size num_events
+    """
+    if sorting:
+        sorting_idxs = numpy.argsort(orig_losses)
+    else:
+        sorting_idxs = slice(None)
+    sorted_losses = orig_losses[sorting_idxs]
+
+    # add zeros on the left if there are less losses than events.
+    num_losses = len(sorted_losses)
+    if num_events > num_losses:
+        losses = numpy.zeros(num_events, sorted_losses.dtype)
+        losses[num_events - num_losses:num_events] = sorted_losses
+    elif num_losses == num_events:
+        losses = sorted_losses
+    elif num_events < num_losses:
+        raise ValueError('More losses (%d) than events (%d) ??' %
+                         (num_losses, num_events))
+    eperiods = eff_time / numpy.arange(num_events, 0., -1)
+    return losses, sorting_idxs, eperiods
+
+
+def losses_by_period(losses, return_periods, num_events, eff_time=None,
+                     sorting=True, name='curve', pla_factor=None):
+    # NB: sorting = False is used in test_claim
+    """
+    :param losses:
+        simulated losses as an array, list or DataFrame column
+    :param return_periods:
+        return periods of interest
+    :param num_events:
+        the number of events (>= number of losses)
+    :param eff_time:
+        investigation_time * ses_per_logic_tree_path
+    :returns:
+         a dictionary with the interpolated losses for the return periods,
+         possibly with NaNs and possibly also a post-loss-amplified curve
 
     NB: the return periods must be ordered integers >= 1. The interpolated
     losses are defined inside the interval min_time < time < eff_time
@@ -1456,38 +1542,34 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
 
     >>> losses = [3, 2, 3.5, 4, 3, 23, 11, 2, 1, 4, 5, 7, 8, 9, 13]
     >>> losses_by_period(losses, [1, 2, 5, 10, 20, 50, 100], 20)
-    array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])
+    {'curve': array([ 0. ,  0. ,  0. ,  3.5,  8. , 13. , 23. ])}
     """
     P = len(return_periods)
     assert len(losses)
     if isinstance(losses, list):
         losses = numpy.array(losses)
-    num_losses = len(losses)
-    if num_events is None:
-        num_events = num_losses
-    elif num_events < num_losses:
-        num_events = num_losses
+    elif hasattr(losses, 'to_numpy'):  # DataFrame
+        losses = losses.to_numpy()
     if eff_time is None:
         eff_time = return_periods[-1]
-    if sorting_idxs is None:
-        losses = numpy.sort(losses)
-    else:
-        losses = losses[sorting_idxs]
-    # num_losses < num_events: just add zeros
-    num_zeros = num_events - num_losses
-    if num_zeros:
-        newlosses = numpy.zeros(num_events, losses.dtype)
-        newlosses[num_events - num_losses:num_events] = losses
-        losses = newlosses
-    periods = eff_time / numpy.arange(num_events, 0., -1)
-    num_left = sum(1 for rp in return_periods if rp < periods[0])
-    num_right = sum(1 for rp in return_periods if rp > periods[-1])
-    rperiods = [rp for rp in return_periods if periods[0] <= rp <= periods[-1]]
+    losses, _sorting_idxs, eperiods = fix_losses(
+        losses, num_events, eff_time, sorting)
+    num_left = sum(1 for rp in return_periods if rp < eperiods[0])
+    num_right = sum(1 for rp in return_periods if rp > eperiods[-1])
+    rperiods = [rp for rp in return_periods
+                if eperiods[0] <= rp <= eperiods[-1]]
+    logr, loge = numpy.log(rperiods), numpy.log(eperiods)
     curve = numpy.zeros(len(return_periods), losses.dtype)
-    logr, logp = numpy.log(rperiods), numpy.log(periods)
-    curve[num_left:P - num_right] = numpy.interp(logr, logp, losses)
+    curve[num_left:P - num_right] = numpy.interp(logr, loge, losses)
     curve[P - num_right:] = numpy.nan
-    return curve
+    res = {name: curve}
+    if pla_factor:
+        pla = numpy.zeros(len(return_periods), losses.dtype)
+        pla[num_left:P - num_right] = numpy.interp(
+            logr, loge, losses * pla_factor(eperiods))
+        pla[P - num_right:] = numpy.nan
+        res['pla_' + name] = pla
+    return res
 
 
 class LossCurvesMapsBuilder(object):
@@ -1502,42 +1584,49 @@ class LossCurvesMapsBuilder(object):
     :param eff_time: ses_per_logic_tree_path * hazard investigation time
     """
     def __init__(self, conditional_loss_poes, return_periods, loss_dt,
-                 weights, num_events, eff_time, risk_investigation_time):
+                 weights, eff_time, risk_investigation_time, pla_factor=None):
+        if return_periods[-1] > eff_time:
+            raise ValueError(
+                'The return_period %s is longer than the eff_time per rlz'
+                ' [%s years]' % (return_periods[-1], eff_time))
         self.conditional_loss_poes = conditional_loss_poes
         self.return_periods = return_periods
         self.loss_dt = loss_dt
         self.weights = weights
-        self.num_events = num_events
         self.eff_time = eff_time
         if return_periods.sum() == 0:
             self.poes = 1
         else:
             self.poes = 1. - numpy.exp(
                 - risk_investigation_time / return_periods)
+        self.pla_factor = pla_factor
 
     # used in post_risk, for normal loss curves and reinsurance curves
-    def build_curve(self, years, col, losses, agg_types, loss_type, rlzi=0):
+    def build_curve(self, years, col, losses, agg_types, loss_type, ne):
         """
         Compute the requested curves
         (AEP and OEP curves only if years is not None)
         """
         # NB: agg_types can be the string "ep, aep, oep"
         periods = self.return_periods
-        ne = self.num_events[rlzi]
         dic = {}
         agg_types_list = agg_types.split(', ')
         if 'ep' in agg_types_list:
-            dic[col] = losses_by_period(losses, periods, ne, self.eff_time)
+            res = losses_by_period(losses, periods, ne, self.eff_time,
+                                   name=col, pla_factor=self.pla_factor)
+            dic.update(res)
         if len(years):
             gby = pandas.DataFrame(
                 dict(year=years, loss=losses)).groupby('year')
             # see specs in https://github.com/gem/oq-engine/issues/8971
             if 'aep' in agg_types_list:
-                dic[col + '_aep'] = losses_by_period(
-                    gby.loss.sum(), periods, ne, self.eff_time)
+                dic.update(losses_by_period(
+                    gby.loss.sum(), periods, ne, self.eff_time,
+                    name=col + '_aep', pla_factor=self.pla_factor))
             if 'oep' in agg_types_list:
-                dic[col + '_oep'] = losses_by_period(
-                    gby.loss.max(), periods, ne, self.eff_time)
+                dic.update(losses_by_period(
+                    gby.loss.max(), periods, ne, self.eff_time,
+                    name=col + '_oep', pla_factor=self.pla_factor))
         return dic
 
 
@@ -1560,65 +1649,108 @@ class RiskComputer(dict):
     :param crm: a CompositeRiskModel
     :param asset_df: a DataFrame of assets with the same taxonomy
     """
-    def __init__(self, crm, asset_df):
-        [taxidx] = asset_df.taxonomy.unique()
-        self.asset_df = asset_df
-        self.imtls = crm.imtls
-        self.alias = {
-            imt: 'gmv_%d' % i for i, imt in enumerate(crm.primary_imtls)}
-        self.calculation_mode = crm.oqparam.calculation_mode
+    def __init__(self, crm, taxidx, country_str='?'):
+        oq = crm.oqparam
+        self.D = len(crm.damage_states)
+        self.P = len(crm.perils)
+        self.calculation_mode = oq.calculation_mode
         self.loss_types = crm.loss_types
-        self.minimum_asset_loss = crm.oqparam.minimum_asset_loss  # lt->float
-        self.wdic = {}
-        for lt in self.minimum_asset_loss:
-            for riskid, weight in crm.tmap[lt][taxidx]:
-                self[riskid, lt] = crm._riskmodels[riskid]
-                self.wdic[riskid, lt] = weight
+        self.minimum_asset_loss = oq.minimum_asset_loss  # lt->float
+        self.wdic = {}  # (riskid, peril) -> weight
+        tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
+        for country, peril, riskid, weight in zip(
+                tm.country, tm.peril, tm.risk_id, tm.weight):
+            if country == '?' or country_str in country:
+                self[riskid] = crm._riskmodels[riskid]
+                if peril == '*':
+                    for per in crm.perils:
+                        self.wdic[riskid, per] = weight
+                else:
+                    self.wdic[riskid, peril] = weight
 
-    def output(self, haz, sec_losses=(), rndgen=None):
+    def output(self, asset_df, haz, sec_losses=(), rndgen=None):
         """
         Compute averages by using the taxonomy mapping
 
-        :param haz: a DataFrame of GMFs or a ProbabilityCurve
+        :param asset_df: assets on the same site with the same taxonomy
+        :param haz: a DataFrame of GMFs or an array of PoEs
         :param sec_losses: a list of functions updating the loss dict
         :param rndgen: None or MultiEventRNG instance
-        :returns: loss dict {extended_loss_type: loss_output}
+        :yields: dictionaries {loss_type: loss_output}
         """
-        dic = collections.defaultdict(list)  # lt -> outs
-        weights = collections.defaultdict(list)  # lt -> weights
-        event = hasattr(haz, 'eid')  # else classical (haz.array)
-        for riskid, lt in self:
-            rm = self[riskid, lt]
-            if len(rm.imt_by_lt) == 1:
-                # NB: if `check_risk_ids` raise an error then
-                # this code branch will never run
-                [(lt, imt)] = rm.imt_by_lt.items()
-            else:
-                imt = rm.imt_by_lt[lt]
-            col = self.alias.get(imt, imt)
-            if event:
-                out = rm(lt, self.asset_df, haz, col, rndgen)
-            else:  # classical
-                out = rm(lt, self.asset_df, haz.array[self.imtls(imt), 0])
-            weights[lt].append(self.wdic[riskid, lt])
-            dic[lt].append(out)
-        out = {}
-        for lt in self.minimum_asset_loss:
-            outs = dic[lt]
-            if len(outs) == 0:  # can happen for nonstructural_ins
-                continue
-            elif len(outs) > 1 and hasattr(outs[0], 'loss'):
-                # computing the average dataframe for event_based_risk/case_8
-                out[lt] = _agg(outs, weights[lt])
-            elif len(outs) > 1:
-                # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                out[lt] = numpy.average(outs, weights=weights[lt], axis=0)
-            else:
-                out[lt] = outs[0]
-        if event:
-            for update_losses in sec_losses:
-                update_losses(self.asset_df, out)
-        return out
+        dic = collections.defaultdict(list)  # peril, lt -> outs
+        weights = collections.defaultdict(list)  # peril, lt -> weights
+        perils = {'groundshaking'}
+        for riskid, rm in self.items():
+            for (peril, lt), res in rm(asset_df, haz, rndgen).items():
+                # res is an array of fractions of shape (A, E, D)
+                weights[peril, lt].append(self.wdic[riskid, peril])
+                dic[peril, lt].append(res)
+                perils.add(peril)
+        for peril in sorted(perils):
+            out = {}
+            for lt in self.minimum_asset_loss:
+                outs = dic[peril, lt]
+                if len(outs) == 0:  # can happen for nonstructural_ins
+                    continue
+                elif len(outs) > 1 and hasattr(outs[0], 'loss'):
+                    # computing the average dataframe for event_based_risk/case_8
+                    out[lt] = _agg(outs, weights[peril, lt])
+                elif len(outs) > 1:
+                    # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
+                    out[lt] = numpy.average(outs, weights=weights[peril, lt], axis=0)
+                else:
+                    out[lt] = outs[0]
+            if hasattr(haz, 'eid'):  # event based
+                for update_losses in sec_losses:
+                    update_losses(asset_df, out)
+            yield out
+
+    def get_dd5(self, adf, gmf_df, rng=None, C=0, crm=None):
+        """
+        :param adf:
+            DataFrame of assets on the given site with the same taxonomy
+        :param gmf_df:
+            GMFs on the given site for E events
+        :param rng:
+            MultiEvent random generator or None
+        :param C:
+            Number of consequences
+        :returns:
+            damage distribution of shape (P, A, E, L, D+C)
+        """
+        A = len(adf)
+        E = len(gmf_df)
+        L = len(self.loss_types)
+        D = self.D
+        assets = adf.to_records()
+        if rng is None:
+            number = assets['value-number']
+        else:
+            number = assets['value-number'] = U32(assets['value-number'])
+        dd5 = numpy.zeros((self.P, A, E, L, D + C), F32)
+        outs = self.output(adf, gmf_df)  # dicts loss_type -> array
+        for p, out in enumerate(outs):
+            for li, lt in enumerate(self.loss_types):
+                fractions = out[lt]  # shape (A, E, Dc)
+                if rng is None:
+                    for a in range(A):
+                        dd5[p, a, :, li, :D] = fractions[a] * number[a]
+                else:
+                    # this is a performance distaster; for instance
+                    # the Messina test in oq-risk-tests becomes 12x
+                    # slower even if it has only 25_736 assets
+                    dd5[p, :, :, li, :D] = rng.discrete_dmg_dist(
+                        gmf_df.eid, fractions, number)
+
+        if crm:
+            csqs = crm.get_consequences()
+            df = crm.tmap_df[crm.tmap_df.taxi == assets[0]['taxonomy']]
+            csq = crm.compute_csq(assets, dd5[:, :, :, :, :D], df, crm.oqparam)
+            csqidx = {dc: i for i, dc in enumerate(csqs, D)}
+            for (cons, li), values in csq.items():
+                dd5[:, :, :, li, csqidx[cons]] = values  # (P, A, E)
+        return dd5
 
     def todict(self):
         """
@@ -1626,21 +1758,19 @@ class RiskComputer(dict):
         """
         rfdic = {}
         for rm in self.values():
-            for lt, rf in rm.risk_functions.items():
-                dic = ast.literal_eval(hdf5.obj_to_json(rf))
-                if getattr(rf, 'retro', False):
-                    retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
-                    dic['openquake.risklib.scientific.VulnerabilityFunction'][
-                        'retro'] = retro
-                rfdic['%s#%s' % (rf.id, lt)] = dic
-        df = self.asset_df
-        dic = dict(asset_df={col: df[col].tolist() for col in df.columns},
-                   risk_functions=rfdic,
-                   wdic={'%s#%s' % k: v for k, v in self.wdic.items()},
-                   alias=self.alias,
-                   loss_types=self.loss_types,
-                   minimum_asset_loss=self.minimum_asset_loss,
-                   calculation_mode=self.calculation_mode)
+            for peril, rfdict in rm.risk_functions.items():
+                for lt, rf in rfdict.items():
+                    dic = ast.literal_eval(hdf5.obj_to_json(rf))
+                    if getattr(rf, 'retro', False):
+                        retro = ast.literal_eval(hdf5.obj_to_json(rf.retro))
+                        dic['openquake.risklib.scientific.'
+                            'VulnerabilityFunction']['retro'] = retro
+                    rfdic['%s#%s#%s' % (rf.peril, lt, rf.id)] = dic
+        dic = dict(risk_functions=rfdic, calculation_mode=self.calculation_mode)
+        if any(mal for mal in self.minimum_asset_loss.values()):
+            dic['minimum_asset_loss'] = self.minimum_asset_loss
+        if any(self.wdic[k] != 1 for k in self.wdic):
+            dic['wdic'] = {'%s#%s' % k: v for k, v in self.wdic.items()},
         return dic
 
     def pprint(self):
@@ -1650,26 +1780,30 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
+
+def consequence(consequence, assets, coeff, loss_type, time_event):
     """
     :param consequence: kind of consequence
-    :param coeffs: coefficients per damage state
-    :param asset: asset record
-    :param dmgdist: an array of probabilies of shape (E, D - 1)
-    :param loss_type: loss type string
-    :returns: array of shape E
+    :param assets: asset array (shape A)
+    :param coeff: composite array of coefficients of shape (A, E)
+    :param time_event: time event string
+    :returns: array of shape (A, E)
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    if consequence.startswith(('loss', 'losses')):
-        return dmgdist @ coeffs * asset['value-' + loss_type]
+    if consequence.startswith('losses'):
+        res = (assets['value-' + loss_type].reshape(-1, 1) *
+               coeff) / assets['value-number'].reshape(-1, 1)
+        return res
     elif consequence in ['collapsed', 'non_operational']:
-        return dmgdist @ coeffs * asset['value-number']
+        return coeff
     elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
-        return dmgdist @ coeffs * asset[f'occupants_{time_event}']
+        values = assets[f'occupants_{time_event}'] / assets['value-number']
+        return values.reshape(-1, 1) * coeff
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['value-residents']
+        values = assets['value-residents'] / assets['value-number']
+        return values.reshape(-1, 1) * coeff
     else:
         raise NotImplementedError(consequence)
 
@@ -1682,6 +1816,10 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
+    if xltype == 'affectedpop':
+        return aval['residents']
+    elif xltype == 'injured':  # like fatalities
+        return aval[f'occupants_{time_event}']
     if consequence in ['collapsed', 'non_operational']:
         return aval['number']
     elif consequence in ['injured', 'fatalities']:
@@ -1689,38 +1827,17 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
         return aval[f'occupants_{time_event}']
     elif consequence == 'homeless':
         return aval['residents']
-    elif consequence.startswith(('loss', 'losses')):
+    elif 'loss' in consequence:
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type
             return sum(aval[lt] for lt in xltype.split('+'))
-        return aval[xltype]
+        try:
+            return aval[xltype]
+        except ValueError:  # liquefaction, landslide
+            return 0
     else:
         raise NotImplementedError(consequence)
-
-
-# ########################### u64_to_eal ################################# #
-
-def u64_to_eal(u64):
-    """
-    Convert an unit64 into a triple (eid, aid, lid)
-
-    >>> u64_to_eal(42949673216001)
-    (10000, 1000, 1)
-    """
-    eid, x = divmod(u64, TWO32)
-    aid, lid = divmod(x, 256)
-    return eid, aid, lid
-
-
-def eal_to_u64(eid, aid, lid):
-    """
-    Convert a triple (eid, aid, lid) into an uint64:
-
-    >>> eal_to_u64(10000, 1000, 1)
-    42949673216001
-    """
-    return U64(eid * TWO32) + U64(aid * 256) + U64(lid)
 
 
 if __name__ == '__main__':

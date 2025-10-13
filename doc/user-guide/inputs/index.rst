@@ -18,26 +18,26 @@ calculators.
    :maxdepth: 1
    :caption: Hazard Inputs:
 
-   seismic-source-model
-   rupture-model
-   ground-motion-models
-   logic-trees
-   site-model
+   seismic-source-model-inputs
+   rupture-model-inputs
+   ground-motion-models-inputs
+   logic-trees-inputs
+   site-model-inputs
 
 .. toctree::
    :maxdepth: 1
    :caption: Risk Inputs:
 
-   exposure-models
-   taxonomy-mapping
-   fragility-models
-   consequence-models
-   vulnerability-models
-   reinsurance
-   infrastructure
+   exposure-models-inputs
+   taxonomy-mapping-inputs
+   fragility-models-inputs
+   consequence-models-inputs
+   vulnerability-models-inputs
+   reinsurance-inputs
+   infrastructure-inputs
 
 .. toctree::
    :maxdepth: 1
    :caption: Secondary Peril Inputs:
 
-   liquefaction
+   secondary-perils-inputs

@@ -75,6 +75,7 @@ jobs:
           zip -q -r /tmp/demos.zip demos/
           OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip
+          # OQ_DISTRIBUTE=slurm oq run demos/hazard/AreaSourceClassicalPSHA/job.ini
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
           if [ -z "$GITHUB_INPUT_REF" ]

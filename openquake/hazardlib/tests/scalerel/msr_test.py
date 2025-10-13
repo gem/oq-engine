@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -61,6 +61,14 @@ class BaseMSRTestCase(unittest.TestCase):
 
     def _test_get_median_mag(self, area, rake, expected_value, places=7):
         self.assertAlmostEqual(self.msr.get_median_mag(area, rake),
+                               expected_value, places=places)
+
+    def _test_get_median_length(self, mag, expected_value, places=7):
+        self.assertAlmostEqual(self.msr.get_median_length(mag),
+                               expected_value, places=places)
+
+    def _test_get_median_width(self, mag, expected_value, places=7):
+        self.assertAlmostEqual(self.msr.get_median_width(mag),
                                expected_value, places=places)
 
 

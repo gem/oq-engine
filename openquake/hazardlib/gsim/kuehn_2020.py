@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
                :class:`KuehnEtAl2020SInterNewZealand`,
                :class:`KuehnEtAl2020SInterSouthAmerica`,
                :class:`KuehnEtAl2020SInterTaiwan`,
+               :class:`KuehnEtAl2020SInterCascadiaSeattleBasin`,
                :class:`KuehnEtAl2020SSlab`,
                :class:`KuehnEtAl2020SSlabAlaska`,
                :class:`KuehnEtAl2020SSlabCascadia`
@@ -32,7 +33,8 @@ Module exports :class:`KuehnEtAl2020SInter`,
                :class:`KuehnEtAl2020SSlabJapan`,
                :class:`KuehnEtAl2020SSlabNewZealand`,
                :class:`KuehnEtAl2020SSlabSouthAmerica`,
-               :class:`KuehnEtAl2020SSlabTaiwan`
+               :class:`KuehnEtAl2020SSlabTaiwan`,
+               :class:`KuehnEtAl2020SSlabCascadiaSeattleBasin`,
 """
 import numpy as np
 import os
@@ -42,6 +44,8 @@ from scipy.interpolate import RegularGridInterpolator
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z2pt5_usgs_basin_scaling
 
 
 # Path to the within-model epistemic adjustment tables
@@ -50,10 +54,14 @@ BASE_PATH = os.path.join(os.path.dirname(__file__), "kuehn_2020_tables")
 # Path to the model coefficients
 KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020_coeffs.csv")
 
-# Regions: Global (GLO), Alaska (ALU), Cascadia (CAS),
+# Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (SEA) 
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),
 #          New Zealand (NZL), South America (SAM), Taiwan (TWN)
-SUPPORTED_REGIONS = ["GLO", "USA-AK", "CAS", "CAM", "JPN", "NZL", "SAM", "TWN"]
+SUPPORTED_REGIONS = ["GLO",
+                     "USA-AK", "CAS", "SEA", 
+                     "CAM", "JPN", "NZL", "SAM", "TWN"]
+
+BASIN_REGIONS = ["CAS", "JPN", "NZL", "TWN", "SEA"]
 
 # Define inputs according to 3-letter codes
 REGION_TERMS_IF = {
@@ -129,7 +137,18 @@ REGION_TERMS_IF = {
         "mb": 7.1,
         "file_unc": "kuehn2020_uncertainty_if_Taiwan.hdf5",
         },
+    # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
+    "SEA": {
+        "c1": "c_1_if_reg_Ca",
+        "c6": "c_6_2_reg_Ca",
+        "c7": "c_7_reg_Ca",
+        "theta_11": "theta_11_Sea",
+        "mb": 8.0,
+        "file_unc": "kuehn2020_uncertainty_if_Cascadia.hdf5",
+        },
 }
+
+METRES_PER_KM = 1000.
 
 
 # Regional terms for the in-slab events
@@ -206,6 +225,15 @@ REGION_TERMS_SLAB = {
         "mb": 7.7,
         "file_unc": "kuehn2020_uncertainty_slab_Taiwan.hdf5",
         },
+    # Seattle (same as Cascadia but we use theta_c11_Sea for basin term)
+    "SEA": {
+        "c1": "c_1_slab_reg_Ca",
+        "c6": "c_6_2_reg_Ca",
+        "c7": "c_7_reg_Ca",
+        "theta_11": "theta_11_Sea",
+        "mb": 7.2,
+        "file_unc": "kuehn2020_uncertainty_slab_Cascadia.hdf5",
+        },
 }
 
 
@@ -249,7 +277,7 @@ Z_MODEL = {
         "c_z_2": 2.302585092994046,
         "c_z_3": 6.1104992125,
         "c_z_4": 0.43671101999999995,
-    }
+        }
 }
 
 
@@ -400,33 +428,116 @@ def _get_ln_z_ref(CZ, vs30):
     return ln_z_ref
 
 
-def get_basin_response_term(C, region, vs30, z_value):
+def _infer_z(z_values, vs30, CZ, region):
+    """
+    Infer either z1pt0 or z2pt5 as required for given region. The
+    relationship is controlled by region-dependent coefficients in
+    the CZ variable.
+    """
+    mask_z = z_values == -999 # None-measured values     
+    if region in ("JPN", "CAS"):
+        z_values[mask_z] = np.exp(
+            _get_ln_z_ref(CZ, vs30[mask_z])) # Predictions in metres
+        z_values[~mask_z] *= METRES_PER_KM # Get ctx values in metres
+    else:
+        # Metres in both ctx.z1pt0 and from k20's vs30 to z1pt0
+        z_values[mask_z] = np.exp(_get_ln_z_ref(CZ, vs30[mask_z])) 
+
+    return z_values
+
+
+def _apply_m9(period, brt, z_values):
+    """
+    Apply m9 basin term to deep sediment depth (z2pt5 >= 6km) sites
+    """
+    if period >= 1.9:
+        brt[z_values >= 6.0] = np.log(2.0)
+    return brt
+
+
+def _get_basin_term(C, ctx, region, imt, usgs_bs=False,
+                    m9_basin_term=False):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
 
     :param numpy.ndarray z_value:
-        Basin depth term (Z2.5 for JPN and CAS, Z1.0 for NZL and TWN)
+        Basin depth term (Z2.5 for JPN, CAS and SEA, Z1.0 for NZL and TWN)
     """
-    # Basin term only defined for the four regions: Cascadia, Japan,
-    # New Zealand and Taiwan
-    assert region in ("CAS", "JPN", "NZL", "TWN")
-    # Get c11, c12 and Z-model (same for both interface and inslab events)
-    c11 = C[REGION_TERMS_IF[region]["c11"]]
-    c12 = C[REGION_TERMS_IF[region]["c12"]]
-    CZ = Z_MODEL[region]
+    # Basin term defined Cascadia, Japan, New Zealand, Taiwan, Seattle
+    assert region in BASIN_REGIONS
 
-    brt = np.zeros_like(z_value)
-    mask = z_value > 0.0
-    if not np.any(mask):
-        # No basin amplification to be applied
-        return 0.0
-    brt[mask] = c11 + c12 * (np.log(z_value[mask]) -
-                             _get_ln_z_ref(CZ, vs30[mask]))
-    return brt
+    # If z2pt5 region retrieve ref depth values, infer any missing
+    # z2pt5 in sites and retrieve usgs basin scaling factor if req
+    if region in ("CAS", "SEA", "JPN"):
+        z2pt5 = ctx.z2pt5.copy() 
+        if region == "JPN":
+            CZ_INFER = Z_MODEL["JPN"]
+        else:
+            # No Seattle-specific model so use CAS for SEA too
+            CZ_INFER = Z_MODEL["CAS"]
+        # Get z2pt5 (and infer -999 values in sites) then into metres
+        z_values = _infer_z(z2pt5, ctx.vs30, CZ_INFER, region)
+        # Get USGS basin scaling if required (checks during init ensure
+        # can only be applied to the z2pt5-using CAS or SEA regions)
+        if usgs_bs:
+            assert region != "JPN" # Sanity check
+            usgs_baf = _get_z2pt5_usgs_basin_scaling(
+                z_values / METRES_PER_KM, imt.period) # back to km here
+
+    # If region is Seattle retrieve theta_11 as basin term (this coeff
+    # is imt-dependent but are the same for interface and inslab)
+    if region == "SEA":
+        theta_11 = C[REGION_TERMS_IF[region]["theta_11"]]
+        brt_sea = np.full_like(ctx.vs30, theta_11)
+        # Apply m9 basin term where appropriate now have
+        # got (potentially inferred) z2pt5 for each site
+        if m9_basin_term and imt != PGV:
+            brt_sea = _apply_m9(
+                imt.period, brt_sea, z_values / METRES_PER_KM) # back to km
+        if usgs_bs:
+            brt_sea *= usgs_baf # Apply usgs baf if required
+        return brt_sea
+
+    # None-Seattle region basin terms
+    else:
+        # Get c11, c12 and Z-model (same for interface and inslab events)
+        c11 = C[REGION_TERMS_IF[region]["c11"]]
+        c12 = C[REGION_TERMS_IF[region]["c12"]]
+        CZ = Z_MODEL[region]
+
+        vs30 = ctx.vs30
+        if region in ("TWN", "NZL"):
+            z1pt0 = ctx.z1pt0.copy()
+            z_values = _infer_z(z1pt0, ctx.vs30, CZ, region) # Infer z1pt0
+        elif region not in ("CAS", "JPN"):  # Already retrieved (potentially
+            z_values = np.zeros(vs30.shape) # inferred) z2pt5 values above
+            
+        brt = np.zeros_like(z_values)
+        mask = z_values > 0.0
+        if not mask.any():
+            # No basin amplification to be applied
+            return 0.0
+        brt[mask] = c11 + c12 * (
+            np.log(z_values[mask]) - _get_ln_z_ref(CZ, vs30[mask]))
+
+        # For KuehnEtAl2020 in US 2023 NSHM java code either the M9 basin term
+        # OR the GMM basin term is applied (i.e. it is not additive to GMM basin
+        # term here as seen in the code - line 457 to 499 of KuehnEtAl_2020.java)
+        if m9_basin_term and imt != PGV:
+            assert region in ("CAS") # Only remaining z2pt5 region (SEA handled above)
+            brt = _apply_m9(imt.period, brt, z_values / METRES_PER_KM)
+
+        # Apply USGS basin scaling if required
+        if usgs_bs:
+            brt *= usgs_baf
+
+        return brt
 
 
-def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
+def get_mean_values(C, region, imt, trt, m_b, ctx, a1100,
+                    m9_basin_term=False, usgs_bs=False,
+                    pre_basin=False):
     """
     Returns the mean ground values for a specific IMT
 
@@ -434,38 +545,30 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
         Magnitude scaling breakpoint
     """
     if a1100 is None:
-        # Refers to the reference rock case - so Vs30 is 1100 and no a1100
-        # is defined
+        # Refers to the reference rock case - so Vs30 is 1100
         vs30 = 1100.0 * np.ones(ctx.vs30.shape)
         a1100 = np.zeros(vs30.shape)
-        z_values = np.zeros(vs30.shape)
     else:
         vs30 = ctx.vs30.copy()
-        if region in ("JPN", "CAS"):
-            z_values = ctx.z2pt5 * 1000.0
-        elif region in ("NZL", "TWN"):
-            z_values = ctx.z1pt0.copy()
-        else:
-            z_values = np.zeros(vs30.shape)
+
     # Get the mean ground motions
     mean = (get_base_term(C, trt, region) +
             get_magnitude_scaling_term(C, trt, m_b, ctx.mag) +
             get_geometric_attenuation_term(C, trt, ctx.mag, ctx.rrup) +
             get_anelastic_attenuation_term(C, trt, region, ctx.rrup) +
             get_depth_term(C, trt, ctx.ztor) +
-            get_shallow_site_response_term(C, region, vs30, a1100))
+            get_shallow_site_response_term(C, region, vs30, a1100)) 
 
     # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
     # is included
-    if region in ("CAS", "JPN"):
-        # For Cascadia and Japan Z2.5 is used as the basin parameter (in m
-        # rather than km)
-        mean += get_basin_response_term(C, region, vs30, z_values)
-    elif region in ("NZL", "TWN"):
-        # For New Zealand and Taiwan Z1.0 (m) is used as the basin parameter
-        mean += get_basin_response_term(C, region, vs30, z_values)
-    else:
-        pass
+    if a1100.any() and region in BASIN_REGIONS and pre_basin is False:
+
+        # Get GMM's own basin term
+        fb = _get_basin_term(C, ctx, region, imt, usgs_bs, m9_basin_term)
+
+        # Now add the basin term to pre-basin amp mean
+        mean += fb
+
     return mean
 
 
@@ -563,7 +666,7 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
     if imt.string in "PGA PGV":
         # Linear interpolation
         interp = RegularGridInterpolator(
-            (model_m, model_r), sigma_mu_model, bounds_error=True,)
+            (model_m, model_r), sigma_mu_model, bounds_error=False, fill_value=None)
         sigma_mu = interp(np.stack((mag, rrup), axis=1))
     else:
         model_t = model["periods"]
@@ -571,18 +674,22 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
         # Extend for extreme periods as needed
         if np.any(imt.period > model["periods"][-1]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]), axis=2)
-            model_t = np.concatenate((model_t, [imt.period.max()]), axis=0)
+                (sigma_mu_model, sigma_mu_model[:, :, -1][:, :, np.newaxis]),
+                axis=2)
+            model_t = np.concatenate((model_t, [imt.period]), axis=0)
         if np.any(imt.period < model["periods"][0]):
             sigma_mu_model = np.concatenate(
-                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model), axis=2)
-            model_t = np.concatenate(([imt.period.min()], model_t), axis=0)
+                (sigma_mu_model[:, :, 0][:, :, np.newaxis], sigma_mu_model),
+                axis=2)
+            model_t = np.concatenate(([imt.period], model_t), axis=0)
 
         # Linear interpolation
         interp = RegularGridInterpolator(
-            (model_m, model_r, np.log(model_t)), sigma_mu_model, bounds_error=True,)
+            (model_m, model_r, np.log(model_t)), sigma_mu_model,
+            bounds_error=False, fill_value=None)
         sigma_mu = interp(
-            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)), axis=1))
+            np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)),
+                     axis=1))
 
     return sigma_mu
 
@@ -599,7 +706,7 @@ class KuehnEtAl2020SInter(GMPE):
 
     The GMM define a "global" model as well as a set of region-specific
     coefficients (and in some cases methods). The coefficients are defined for
-    seven specific subduction regions (with their region codes):
+    eight specific subduction regions (with their region codes):
 
     - Alaska (USA-AK)
     - Cascadia (CAS)
@@ -608,6 +715,7 @@ class KuehnEtAl2020SInter(GMPE):
     - New Zealand (NZL)
     - South America (SAM)
     - Taiwan (TWN)
+    - Seattle (SEA)
 
     In the original model defined by the authors, three of the regions
     (JPN, CAM, SAM) define a forearc/backarc dependent anelastic attenuation
@@ -616,14 +724,19 @@ class KuehnEtAl2020SInter(GMPE):
     supported by the OQ-engine, so on the author's guidance a fixed anelastic
     attenuation term is used in these regions
 
-    For four of the regions (JPN, CAS, NZL, TWN) a basin response term is
-    defined. In these cases either Z2.5 (JPN, CAS) or Z1.0 (NZL, TWN) must be
-    specified.
+    For four of the regions (JPN, CAS, NZL, TWN) a basin response term
+    requiring Z2.5 or Z1.0 is defined. In these cases either Z2.5 (JPN, CAS)
+    or Z1.0 (NZL, TWN) must be specified.
 
     Two forms of configurable epistemic uncertainty adjustments are supported:
 
     m_b: The magnitude scaling breakpoint. This term is defined for each region
          and tectonic region type, but this can also be over-ridden by the user
+
+    :param bool m9_basin_term: Apply the M9 basin adjustment
+
+    :param bool usgs_basin_scaling: Scaling factor to be applied to basin term
+                                    based on USGS basin model
 
     sigma_mu_epsilon: Within-model epistemic uncertainty (sigma_mu) is
                       described in Chapter 6 of the report by the authors. This
@@ -655,19 +768,23 @@ class KuehnEtAl2020SInter(GMPE):
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameters are Vs30
-    REQUIRES_SITES_PARAMETERS = {'vs30', }
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     #: Required rupture parameters are magnitude and depth-to-top-of-rupture
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor'}
 
     #: Required distance measure is Rrup
-    REQUIRES_DISTANCES = {'rrup', }
+    REQUIRES_DISTANCES = {'rrup'}
 
     #: Defined for a reference velocity of 1100 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, **kwargs):
-        super().__init__(**kwargs)
+    # Other required params
+    REQUIRES_ATTRIBUTES = {'region', 'm_b', 'm9_basin_term',
+                           'usgs_basin_scaling', 'sigma_mu_epsilon'}
+
+    def __init__(self, region="GLO", m_b=None, m9_basin_term=None,
+                 usgs_basin_scaling=False, sigma_mu_epsilon=0.0):
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
@@ -675,21 +792,29 @@ class KuehnEtAl2020SInter(GMPE):
         self.region = region
 
         # For some regions a basin depth term is defined
-        if self.region in ("CAS", "JPN"):
-            # If region is CAS or JPN then the GMPE needs Z2.5
-            self.REQUIRES_SITES_PARAMETERS = \
-                 self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
+        if self.region in ("CAS", "JPN", "SEA"):
+            # If region is CAS, JPN or SEA then the GMPE needs Z2.5
+            self.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
         elif self.region in ("NZL", "TWN"):
             # If region is NZL or TWN then the GMPE needs Z1.0
             self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
-        else:
-            pass
-
+            
+        self.m9_basin_term = m9_basin_term
+        self.usgs_basin_scaling = usgs_basin_scaling
+        # USGS basin scaling and M9 basin term is only
+        # applied when the region param is set to Cascadia.
+        if self.usgs_basin_scaling or self.m9_basin_term:
+            if self.region not in ["CAS", "SEA"]:
+                raise ValueError('To apply the USGS basin scaling or the M9 '
+                                 'basin adjustment to KuehnEtAl2020 the '
+                                 'Cascadia region or the Seattle Basin '
+                                 'region must be specified.')
+        
         self.m_b = m_b
         # epsilon for epistemic uncertainty
         self.sigma_mu_epsilon = sigma_mu_epsilon
         if self.sigma_mu_epsilon:
-            self.gmpe_table = True  # enable split by mag
+            self.gmpe_table = None  # enable split by mag
             self.sigma_mu_model = _retrieve_sigma_mu_data(
                 self.DEFINED_FOR_TECTONIC_REGION_TYPE, self.region)
         else:
@@ -713,16 +838,20 @@ class KuehnEtAl2020SInter(GMPE):
         C_PGA = self.COEFFS[PGA()]
 
         # Get PGA on rock
-        pga1100 = np.exp(get_mean_values(
-            C_PGA, self.region, trt, m_b, ctx, None))
+        pga1100 = np.exp(get_mean_values(C_PGA, self.region, PGA, trt,
+                                         m_b, ctx, a1100=None,
+                                         m9_basin_term=self.m9_basin_term,
+                                         usgs_bs=self.usgs_basin_scaling))
         # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
         # ensure that SA ( T ) does not fall below PGA on soil
         pga_soil = None
         for imt in imts:
             if ("PGA" in imt.string) or (("SA" in imt.string) and
                                          (imt.period <= 0.1)):
-                pga_soil = get_mean_values(C_PGA, self.region, trt, m_b,
-                                           ctx, pga1100)
+                pga_soil = get_mean_values(C_PGA, self.region, imt,
+                                           trt, m_b, ctx, pga1100,
+                                           m9_basin_term=self.m9_basin_term,
+                                           usgs_bs=self.usgs_basin_scaling)
                 break
 
         for m, imt in enumerate(imts):
@@ -735,14 +864,18 @@ class KuehnEtAl2020SInter(GMPE):
                 mean[m] = pga_soil
             elif "SA" in imt.string and imt.period <= 0.1:
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
-                mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, pga1100)
+                mean[m] = get_mean_values(C, self.region, imt,
+                                          trt, m_break, ctx, pga1100,
+                                          m9_basin_term=self.m9_basin_term,
+                                          usgs_bs=self.usgs_basin_scaling)
                 idx = mean[m] < pga_soil
                 mean[m][idx] = pga_soil[idx]
             else:
                 # For PGV and Sa (T > 0.1 s)
-                mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, pga1100)
+                mean[m] = get_mean_values(C, self.region, imt,
+                                          trt, m_break, ctx, pga1100,
+                                          m9_basin_term=self.m9_basin_term,
+                                          usgs_bs=self.usgs_basin_scaling)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
                 sigma_mu_adjust = get_sigma_mu_adjustment(
@@ -786,9 +919,14 @@ REGION_ALIASES = {
     "NZL": "NewZealand",
     "SAM": "SouthAmerica",
     "TWN": "Taiwan",
+    "SEA": "CascadiaSeattleBasin",
 }
 
 
 for region in SUPPORTED_REGIONS[1:]:
-    add_alias("KuehnEtAl2021SInter" + REGION_ALIASES[region],
+    add_alias("KuehnEtAl2020SInter" + REGION_ALIASES[region],
               KuehnEtAl2020SInter, region=region)
+
+for region in SUPPORTED_REGIONS[1:]:
+    add_alias("KuehnEtAl2020SSlab" + REGION_ALIASES[region],
+              KuehnEtAl2020SSlab, region=region)

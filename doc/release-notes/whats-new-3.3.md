@@ -665,7 +665,7 @@ filesystem and to configure the `shared_dir` parameter in the file
 `openquake.cfg`. Without that, classical calculations will fail during
 the calculation of statistics and event based calculations will fail
 during the computations of GMFs, with some kind of "File not found"
-error. The documentation is [here](cluster).
+error.
 
 5. Docker support has been improved and now works properly on a
 multi-node, multi-host deployment. We now also have a mechanism to

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -176,7 +176,7 @@ def line_get_tu(ui, ti, sl, weights):
     u_upp = ui[0] * weights[0]
     for i in range(1, len(sl)):
         delta = np.sum(sl[:i])
-        u_upp += ((ui[i] + delta) * weights[i])
+        u_upp += (ui[i] + delta) * weights[i]
     u_upp = (u_upp / weight_sum.T).T
     return t_upp, u_upp
 
@@ -209,10 +209,12 @@ def get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that):
     return ui, ti
 
 
+# has effect on case_65 with multifaultsources and rx0 distance
+# affects the performance of ~/oq-risk-tests/test/disaggregation/NZ
 @compile('(f8[:,:],f8[:,:],f8[:])')
 def get_ti_weights(ui, ti, segments_len):
     """
-    Compute the weights
+    :returns: (weights, idx_on_trace)
     """
     S1, S2 = ui.shape
     weights = np.zeros_like(ui)
@@ -220,32 +222,34 @@ def get_ti_weights(ui, ti, segments_len):
     term1 = np.zeros_like(ui)
     term2 = np.zeros_like(ui)
     idx_on_trace = np.zeros(S2, dtype=np.bool_)
-
     for i in range(S1):
+        ti_ = ti[i]
+        ui_ = ui[i]
+        terma_ = terma[i]
+        term1_ = term1[i]
+        term2_ = term2[i]
+        ws = weights[i]
+        seglen = segments_len[i]
 
         # More general case
-        cond0 = np.abs(ti[i, :]) >= TOLERANCE
+        cond0 = np.abs(ti_) >= TOLERANCE
         if cond0.any():
-            terma[i, cond0] = segments_len[i] - ui[i, cond0]
-            term1[i, cond0] = np.arctan(terma[i, cond0] / ti[i, cond0])
-            term2[i, cond0] = np.arctan(-ui[i, cond0] / ti[i, cond0])
-            weights[i, cond0] = ((term1[i, cond0] - term2[i, cond0]) /
-                                 ti[i, cond0])
+            terma_[cond0] = seglen - ui_[cond0]
+            term1_[cond0] = np.arctan(terma_[cond0] / ti_[cond0])
+            term2_[cond0] = np.arctan(-ui_[cond0] / ti_[cond0])
+            ws[cond0] = (term1_[cond0] - term2_[cond0]) / ti_[cond0]
 
         # Case for sites on the extension of one segment
-        cond1 = np.abs(ti[i, :]) < TOLERANCE
-        cond2 = np.logical_or(ui[i, :] < (0. - TOLERANCE),
-                              ui[i, :] > (segments_len[i] + TOLERANCE))
+        cond1 = np.abs(ti_) < TOLERANCE
+        cond2 = np.logical_or(ui_ < 0. - TOLERANCE, ui_ > seglen + TOLERANCE)
         iii = np.logical_and(cond1, cond2)
         if len(iii):
-            weights[i, iii] = (1. / (ui[i, iii] - segments_len[i])
-                               - 1. / ui[i, iii])
+            ws[iii] = 1. / (ui_[iii] - seglen) - 1. / ui_[iii]
 
         # Case for sites on one segment
-        cond3 = np.logical_and(ui[i, :] >= (0. - TOLERANCE),
-                               ui[i, :] <= (segments_len[i] + TOLERANCE))
+        cond3 = np.logical_and(ui_ >= - TOLERANCE, ui_ <= seglen + TOLERANCE)
         jjj = np.logical_and(cond1, cond3)
-        weights[i, jjj] = 1 / (-0.01 - segments_len[i]) + 1 / 0.01
+        ws[jjj] = 1 / (-0.01 - seglen) + 1 / 0.01
         idx_on_trace[jjj] = 1.0
 
     return weights, idx_on_trace
@@ -297,7 +301,7 @@ class Line(object):
 
     def init(self, coo):
         self.coo = coo
-        self.proj = utils.OrthographicProjection.from_lons_lats(
+        self.proj = utils.OrthographicProjection.from_(
             self.coo[:, 0], self.coo[:, 1])
         if len(coo) == 2:  # segment
             p0, p1 = self.points

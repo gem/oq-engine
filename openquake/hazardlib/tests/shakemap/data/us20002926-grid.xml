@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="us20002926" shakemap_id="us20002926" shakemap_version="1" code_version="4.0.2+335.gcbad862" process_timestamp="2020-06-03T05:37:03" shakemap_originator="atlas" map_status="automatic" shakemap_event_type="ACTUAL">
+<event event_id="us20002926" magnitude="7.8" depth="8.2" lat="28.2305" lon="84.7314" event_timestamp="2015-04-25T06:11:25" event_network="us" event_description="36km E of Khudi, Nepal" intensity_observations="435" seismic_stations="27" point_source="False" />
+<grid_specification lon_min="80.8500" lat_min="23.9833" lon_max="90.1333" lat_max="31.9500" nominal_lon_spacing="0.0167" nominal_lat_spacing="0.0167" nlon="558" nlat="479"/><grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="MMI" units="intensity" />
+<grid_field index="4" name="PGA" units="%g" />
+<grid_field index="5" name="PGV" units="cm/s" />
+<grid_field index="6" name="PSA03" units="%g" />
+<grid_field index="7" name="PSA10" units="%g" />
+<grid_field index="8" name="PSA30" units="%g" />
+<grid_field index="9" name="SVEL" units="m/s" />
+<grid_data>
+80.8500 31.9500 3.1 0.3604 0.5737 0.4633 0.7183 0.3315 496.4
+80.8667 31.9500 3.1 0.3837 0.6377 0.5102 0.8105 0.3688 392.8
+80.8833 31.9500 3.2 0.4071 0.7325 0.5812 0.9395 0.4162 339.7
+80.9000 31.9500 3.1 0.3861 0.6364 0.512 0.8069 0.3664 407.8
+80.9167 31.9500 3.1 0.3882 0.8673 0.6086 1.123 0.4832 292.2
+80.9333 31.9500 3.2 0.4079 0.9415 0.6564 1.233 0.5252 243.8
+80.9500 31.9500 3.2 0.402 0.9111 0.6391 1.186 0.5064 268.2
+80.9667 31.9500 3.2 0.4078 0.929 0.652 1.212 0.5156 260.2
+80.9833 31.9500 3.2 0.4278 0.7697 0.6169 0.9888 0.4325 332.6
+81.0000 31.9500 3.2 0.4089 0.9211 0.6505 1.198 0.5088 274.3
+</grid_data>
+</shakemap_grid>

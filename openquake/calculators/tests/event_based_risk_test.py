@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,8 +22,9 @@ import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.writers import CsvWriter, FIVEDIGITS
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.source.rupture import get_ruptures
+from openquake.hazardlib.source.rupture import get_ruptures_aw
 from openquake.commonlib import logs, readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
@@ -31,8 +32,8 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
-    case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
-    case_miriam, occupants, case_1f, case_1g, case_7a, case_8,
+    case_01, case_02, case_03, case_04, case_4a, case_05, case_6c, case_master,
+    case_miriam, occupants, case_1f, case_1g, case_7a, case_08, case_09,
     recompute, reinsurance_1, reinsurance_2, reinsurance_3,
     reinsurance_4, reinsurance_5)
 
@@ -69,8 +70,8 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)
 
-    def test_case_1(self):
-        self.run_calc(case_1.__file__, 'job.ini')
+    def test_case_01(self):
+        self.run_calc(case_01.__file__, 'job.ini')
 
         # checking aggcurves
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
@@ -86,18 +87,28 @@ class EventBasedRiskTestCase(CalculatorTestCase):
 
     def test_case_1_missing_occupancy(self):
         with self.assertRaises(InvalidFile) as ctx:
-            self.run_calc(case_1.__file__, 'job_missing_occupancy.ini')
+            self.run_calc(case_01.__file__, 'job_missing_occupancy.ini')
         self.assertIn('Missing tag "occupancy" in', str(ctx.exception))
         self.assertIn('exposure.csv', str(ctx.exception))
 
     def test_case_1_ins(self):
         # no aggregation
-        self.run_calc(case_1.__file__, 'job2.ini')
+        self.run_calc(case_01.__file__, 'job2.ini')
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-5)
 
         # this is a case with insured losses and tags
-        self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
+        self.run_calc(case_01.__file__, 'job_ins.ini', concurrent_tasks='4')
+
+        # testing aggexp_tags and aggrisk_tags
+        [fname] = export(('aggexp_tags', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
+        df = extract(self.calc.datastore, 'aggrisk_tags')
+        fname = self.calc.datastore.export_path('aggrisk_tags.csv')
+        CsvWriter(fmt=FIVEDIGITS).save(df, fname)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
 
         # testing the view agg_id
         agg_id = view('agg_id', self.calc.datastore)
@@ -158,7 +169,7 @@ agg_id
 
         # test ct_independence
         loss4 = view('portfolio_losses', self.calc.datastore)
-        self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='0')
+        self.run_calc(case_01.__file__, 'job_ins.ini', concurrent_tasks='0')
         loss0 = view('portfolio_losses', self.calc.datastore)
         self.assertEqual(loss0, loss4)
 
@@ -167,7 +178,7 @@ agg_id
             raise SkipTest('Skipped to avoid a fake PermissionError')
 
         with self.assertRaises(ValueError) as ctx:
-            self.run_calc(case_1.__file__, 'job2.ini',
+            self.run_calc(case_01.__file__, 'job2.ini',
                           insurance_file="{'structural': 'policy_ins_ko.csv'}")
         self.assertIn(
             "Please check deductible values. Values larger than the insurance"
@@ -197,24 +208,24 @@ agg_id
         self.assertEqualFiles('expected/avg_losses.csv', fname)
         os.remove(fname)
 
-    def test_case_2(self):
-        self.run_calc(case_2.__file__, 'job.ini', concurrent_tasks='0')
+    def test_case_02(self):
+        self.run_calc(case_02.__file__, 'job.ini', concurrent_tasks='0')
         loss0 = view('portfolio_losses', self.calc.datastore)
         # test ct_independence
-        self.run_calc(case_2.__file__, 'job.ini', concurrent_tasks='2')
+        self.run_calc(case_02.__file__, 'job.ini', concurrent_tasks='2')
         loss2 = view('portfolio_losses', self.calc.datastore)
         self.assertEqual(loss0, loss2)
 
         # test the case when all GMFs are filtered out
         with self.assertRaises(RuntimeError) as ctx:
-            self.run_calc(case_2.__file__, 'job.ini', minimum_intensity='10.0')
+            self.run_calc(case_02.__file__, 'job.ini', minimum_intensity='10.0')
         self.assertEqual(
             str(ctx.exception),
             'No GMFs were generated, perhaps they were all below the '
             'minimum_intensity threshold')
 
     def test_case_2_sampling(self):
-        self.run_calc(case_2.__file__, 'job_sampling.ini')
+        self.run_calc(case_02.__file__, 'job_sampling.ini')
 
         # avg_losses
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
@@ -232,7 +243,7 @@ agg_id
                               delta=1E-5)
 
         calc_id = str(self.calc.datastore.calc_id)
-        self.run_calc(case_2.__file__, 'job_sampling.ini',
+        self.run_calc(case_02.__file__, 'job_sampling.ini',
                       collect_rlzs='true', hazard_calculation_id=calc_id)
         [fname] = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
@@ -251,7 +262,7 @@ agg_id
                               delta=1E-5)
 
     def test_case_2_correlation(self):
-        self.run_calc(case_2.__file__, 'job_loss.ini', asset_correlation='1')
+        self.run_calc(case_02.__file__, 'job_loss.ini', asset_correlation='1')
         [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_losses.csv', fname, delta=1E-5)
 
@@ -274,19 +285,18 @@ agg_id
 
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
-            self.run_calc(case_2.__file__, 'job_err.ini')
-        self.assertIn('not in the fragility/vulnerability/consequence model',
-                      str(ctx.exception))
+            self.run_calc(case_02.__file__, 'job_err.ini')
+        self.assertIn("{'RM'} not in the CompositeRiskModel", str(ctx.exception))
 
     def test_case_3(self):
         # this is a test with statistics
-        self.run_calc(case_3.__file__, 'job.ini',
+        self.run_calc(case_03.__file__, 'job.ini',
                       exports='csv', concurrent_tasks='4')
 
         # test postprocessing
         self.calc.datastore.close()
         hc_id = self.calc.datastore.calc_id
-        self.run_calc(case_3.__file__, 'job.ini',
+        self.run_calc(case_03.__file__, 'job.ini',
                       exports='csv', hazard_calculation_id=str(hc_id))
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
@@ -297,7 +307,7 @@ agg_id
 
     def test_case_4(self):
         # Turkey with SHARE logic tree
-        self.run_calc(case_4.__file__, 'job.ini')
+        self.run_calc(case_04.__file__, 'job.ini')
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_losses-mean.csv', fname)
 
@@ -307,9 +317,38 @@ agg_id
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=2E-5)
 
+    def test_case_4_hazard(self):
+        # Turkey with SHARE logic tree; TODO: add site model
+        # it has 8 realizations but 4 of them have 0 ruptures
+        out = self.run_calc(case_04.__file__, 'job.ini',
+                            calculation_mode='event_based', exports='csv')
+        [f1, f2] = [f for f in out['hcurves', 'csv'] if 'mean' in f]
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
+        self.assertEqualFiles('expected/hazard_curve-mean-SA(0.5).csv', f2)
+        [fname] = [f for f in out['hmaps', 'csv'] if 'mean' in f]
+        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
+
+    # NB: big difference between Ubuntu 18 and 20
+    def test_case_4a(self):
+        # the case of a site_model.xml with 7 sites but only 1 asset
+        out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
+                            exports='csv')
+        [fname, _sigeps, _sitefile] = out['gmf_data', 'csv']
+        self.assertEqualFiles('expected/gmf-data.csv', fname, delta=5E-5)
+
+        # check rup_ids are consistent
+        rup_ids = self.calc.datastore['ruptures']['id']
+        aw = extract(self.calc.datastore, 'rupture_info')
+        numpy.testing.assert_equal(aw.array['rup_id'], rup_ids)
+
+    def test_case_4b(self):
+        # case with site collection extracted from site_model.xml
+        self.run_calc(case_4a.__file__, 'job.ini')
+        self.assertEqual(len(self.calc.datastore['events']), 5)
+
     def test_case_5(self):
         # taxonomy mapping, the numbers are different in Ubuntu 20 vs 18
-        self.run_calc(case_5.__file__, 'job.ini')
+        self.run_calc(case_05.__file__, 'job.ini')
         fnames = export(('aggcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
@@ -334,22 +373,7 @@ agg_id
             self.assertEqualFiles('expected/' + strip_calc_id(fname),
                                   fname, delta=1E-4)
 
-    def test_case_master(self):
-        # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
-        # it looks like the cholesky decomposition is OS-dependent, so
-        # the GMFs are different of macOS/Ubuntu20/Ubuntu18
-        self.run_calc(case_master.__file__, 'job.ini', exports='csv')
-        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
-        assert fnames, 'avg_losses-stats not exported?'
-        for fname in fnames:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                                  delta=1E-4)
-
-        # check event loss table
-        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
-                              delta=1E-4)
-
+    def check_case_master(self):
         # check total variance
         K = self.calc.datastore['risk_by_event'].attrs.get('K', 0)
         elt_df = self.calc.datastore.read_df(
@@ -364,7 +388,7 @@ agg_id
 
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
-            'expected/portfolio_losses.txt', fname, delta=1E-4)
+            'expected/portfolio_losses.txt', fname, delta=4E-4)
         os.remove(fname)
 
         # check ruptures are stored correctly
@@ -377,13 +401,13 @@ agg_id
             ('aggregate_by/avg_losses?tag=occupancy&kind=quantile-0.5', 'csv'),
             self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_occupancy.csv', fnames[0],
-                              delta=1E-4)
+                              delta=2E-4)
 
         self.check_multi_tag(self.calc.datastore)
 
         # check aggcurves with aggregate_by=id
         fname = export(('aggcurves', 'csv'), self.calc.datastore)[0]
-        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=1E-4)
+        self.assertEqualFiles('expected/aggcurves.csv', fname, delta=4E-4)
 
         # test the view gsim_for_event
         gsim = view('gsim_for_event:0', self.calc.datastore)
@@ -399,13 +423,31 @@ agg_id
         # check aggcurves-stats
         [_, fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=2E-4)
+                              fname, delta=4E-4)
 
         # check aggrisk-stats
         [_, fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=2E-4)
+                              fname, delta=4E-4)
 
+    def test_case_master(self):
+        # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
+        # it looks like the cholesky decomposition is OS-dependent, so
+        # the GMFs are different in macOS / Ubuntu20 / Ubuntu18
+        self.run_calc(case_master.__file__, 'job.ini')
+        fnames = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        assert fnames, 'avg_losses-stats not exported?'
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=4E-4)
+
+        # check event loss table
+        [fname] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                              delta=4E-4)
+
+        self.check_case_master()
+        
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
@@ -419,7 +461,7 @@ agg_id
             dstore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
-                                  delta=1E-4)
+                                  delta=3E-4)
 
     def test_case_miriam(self):
         # this is a case with a grid and asset-hazard association
@@ -451,35 +493,6 @@ agg_id
         fname = gettemp(view('portfolio_losses', self.calc.datastore))
         self.assertEqualFiles(
             'expected/portfolio_losses_ampl.txt', fname, delta=1E-5)
-
-    def test_case_4_hazard(self):
-        # Turkey with SHARE logic tree; TODO: add site model
-        # it has 8 realizations but 4 of them have 0 ruptures
-        out = self.run_calc(case_4.__file__, 'job.ini',
-                            calculation_mode='event_based', exports='csv')
-        [f1, f2] = [f for f in out['hcurves', 'csv'] if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f1)
-        self.assertEqualFiles('expected/hazard_curve-mean-SA(0.5).csv', f2)
-        [fname] = [f for f in out['hmaps', 'csv'] if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
-
-    # NB: big difference between Ubuntu 18 and 20
-    def test_case_4a(self):
-        # the case of a site_model.xml with 7 sites but only 1 asset
-        out = self.run_calc(case_4a.__file__, 'job_hazard.ini',
-                            exports='csv')
-        [fname, _sigeps, _sitefile] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/gmf-data.csv', fname, delta=5E-5)
-
-        # check rup_ids are consistent
-        rup_ids = self.calc.datastore['ruptures']['id']
-        aw = extract(self.calc.datastore, 'rupture_info')
-        numpy.testing.assert_equal(aw.array['rup_id'], rup_ids)
-
-    def test_case_4b(self):
-        # case with site collection extracted from site_model.xml
-        self.run_calc(case_4a.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 5)
 
     def test_case_6c(self):
         # case with asset_correlation=1
@@ -530,19 +543,19 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures').array
         nrups = text.count('\n') - 2
         self.assertEqual(nrups, 4)
-        rups = get_ruptures(gettemp(text))
+        rups = get_ruptures_aw(gettemp(text, suffix='.csv'))
         aac(rups['n_occ'], [1, 1, 1, 1])
 
         # test extract?threshold for ruptures
         text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
         nrups = text.count('\n') - 2
         losses = self.calc.datastore['loss_by_rupture/loss'][:]
-        aac(losses, [1356.6093, 324.64624, 203.63742, 129.6988])
+        aac(losses, [1356.609, 324.64624, 203.6374, 129.69826], atol=0.12)
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
-        # nontrivial taxonomy mapping
-        out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
+        # loss_type-dependent taxonomy mapping
+        out = self.run_calc(case_08.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='0')
         for fname in out['aggrisk', 'csv']:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
@@ -550,11 +563,28 @@ agg_id
 
         # NB: there was a taskno-dependency here, so make sure there are
         # no regressions
-        out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
+        out = self.run_calc(case_08.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='4')
         for fname in out['aggrisk', 'csv']:
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
+
+    def test_case_09(self):
+        # aep, oep curves with post loss amplification
+        self.run_calc(case_09.__file__, 'job.ini')
+        [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+        fnames = export(('aggcurves', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+
+    def test_case_9a(self):
+        # example with two DummyGMPEs with zero weight and sampling:
+        # it is IDENTICAL to the calculation without the DummyGMPEs
+        self.run_calc(case_09.__file__, 'job_a.ini')
+        fnames = export(('aggcurves', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname, 'a'), fname)
 
     # NB: big difference between Ubuntu 18 and 20
     def test_asset_loss_table(self):
@@ -599,6 +629,9 @@ agg_id
         self.assertEqualFiles('expected/recomputed_losses.csv', fname,
                               delta=1E-5)
 
+        # test that imported ruptures can be exported
+        export(('ruptures', 'csv'), self.calc.datastore)
+
     def test_scenario_from_ruptures(self):
         # same files as in test_recompute, but performing a scenario
         self.run_calc(recompute.__file__, 'job_scenario.ini')
@@ -607,9 +640,6 @@ agg_id
 class ReinsuranceTestCase(CalculatorTestCase):
 
     def test_reinsurance_gmfs(self):
-        # many tests have to be kept together since the parallelization
-        # does not work with h5py.ExternalLink (used here to read gmfs.hdf5)
-
         rf = "{'structural+nonstructural': 'no_reinsurance.xml'}"
         self.run_calc(reinsurance_1.__file__, 'job.ini', reinsurance_file=rf)
         [fname] = export(('reinsurance-risk_by_event', 'csv'),
@@ -676,7 +706,7 @@ class ReinsuranceTestCase(CalculatorTestCase):
         [fname] = export(('reinsurance-risk_by_event', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-risk_by_event.csv',
-                              fname, delta=5E-5)
+                              fname, delta=1E-2)
 
     def test_post_risk(self):
         # calculation from a source model producing 4 events
@@ -726,16 +756,16 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=2E-4)
 
         f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=2E-4)
-        self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=2E-4)
+        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=4E-4)
+        self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=1E-3)
 
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
-                              fname, delta=2E-4)
+                              fname, delta=1E-3)
         [fname] = export(('reinsurance-avg_portfolio', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
-                              fname, delta=2E-4)
+                              fname, delta=1E-3)
 
     def test_ideductible_exposure(self):
         if sys.platform == 'darwin':

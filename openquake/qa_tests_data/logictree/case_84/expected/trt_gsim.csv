@@ -1,0 +1,4 @@
+#,,"generated_by='OpenQuake engine 3.23.0-git5f45f2f7a3', start_date='2025-01-21T10:39:44', checksum=481398460"
+grp_id,trt,gsim
+0,Active Shallow Crust,[BooreAtkinson2008]
+1,Active Shallow Crust,[BooreAtkinson2008]

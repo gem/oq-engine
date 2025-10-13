@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,6 +30,7 @@ import socket
 import random
 import atexit
 import zipfile
+import logging
 import builtins
 import operator
 import warnings
@@ -39,24 +40,30 @@ import itertools
 import subprocess
 import collections
 import multiprocessing
+from importlib.metadata import version, PackageNotFoundError
 from contextlib import contextmanager
-from collections.abc import Mapping, Container, MutableSequence
+from collections.abc import Mapping, Container, Sequence, MutableSequence
 import numpy
 import pandas
 from decorator import decorator
-from openquake.baselib import __version__
+from openquake.baselib import __version__, config
 from openquake.baselib.python3compat import decode
 
 U8 = numpy.uint8
 U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+TWO32 = U64(2 ** 32)
 BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
            "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
            "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
            "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
-
+BASE33489 = []  # built in 0.003 seconds
+for a, b in itertools.product(BASE183, BASE183):
+    BASE33489.append(a + b)
 mp = multiprocessing.get_context('spawn')
 
 
@@ -219,6 +226,21 @@ class WeightedSequence(MutableSequence):
         return '<%s %s, weight=%s>' % (self.__class__.__name__,
                                        self._seq, self.weight)
 
+def find_among(strings, sortedvalues, value):
+    """
+    >>> find_among('ABCD', [.1, .2, .3], .0)
+    'A'
+    >>> find_among('ABCD', [.1, .2, .3], .19)
+    'B'
+    >>> find_among('ABCD', [.1, .2, .3], .3)
+    'C'
+    >>> find_among('ABCD', [.1, .2, .3], .4)
+    'D'
+    """
+    assert len(strings) == len(sortedvalues) + 1, (
+        len(strings), len(sortedvalues))
+    return strings[numpy.searchsorted(sortedvalues, value)]
+
 
 def distinct(keys):
     """
@@ -233,19 +255,11 @@ def distinct(keys):
     return outlist
 
 
-def ceil(a, b):
+def ceil(x):
     """
-    Divide a / b and return the biggest integer close to the quotient.
-
-    :param a:
-        a number
-    :param b:
-        a positive number
-    :returns:
-        the biggest integer close to the quotient
+    Converts the result of math.ceil into an integer
     """
-    assert b > 0, b
-    return int(math.ceil(float(a) / b))
+    return int(math.ceil(x))
 
 
 def block_splitter(items, max_weight, weight=lambda item: 1, key=nokey,
@@ -356,10 +370,14 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
 
      >>> items = 'ABCDE'
      >>> list(split_in_blocks(items, 3))
-     [<WeightedSequence ['A', 'B'], weight=2>, <WeightedSequence ['C', 'D'], weight=2>, <WeightedSequence ['E'], weight=1>]
-
+     [<WeightedSequence ['A'], weight=1>, <WeightedSequence ['B'], weight=1>, <WeightedSequence ['C'], weight=1>, <WeightedSequence ['D'], weight=1>, <WeightedSequence ['E'], weight=1>]
     """
-    if isinstance(sequence, int):
+    if isinstance(sequence, pandas.DataFrame):
+        num_elements = len(sequence)
+        out = numpy.array_split(
+            sequence, num_elements if num_elements < hint else hint)
+        return out
+    elif isinstance(sequence, int):
         return split_in_slices(sequence, hint)
     elif hint in (0, 1) and key is nokey:  # do not split
         return [sequence]
@@ -372,7 +390,7 @@ def split_in_blocks(sequence, hint, weight=lambda item: 1, key=nokey):
     assert hint > 0, hint
     assert len(items) > 0, len(items)
     total_weight = float(sum(weight(item) for item in items))
-    return block_splitter(items, math.ceil(total_weight / hint), weight, key)
+    return block_splitter(items, total_weight / hint, weight, key)
 
 
 def assert_close(a, b, rtol=1e-07, atol=0, context=None):
@@ -431,12 +449,14 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     :param bool remove:
         True by default, meaning the file will be automatically removed
         at the exit of the program
-    :returns: a string with the path to the temporary file
+    :returns:
+        a string with the path to the temporary file
     """
     if dir is not None:
         if not os.path.exists(dir):
             os.makedirs(dir)
-    fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
+    fh, path = tempfile.mkstemp(dir=dir or config.directory.custom_tmp or None,
+                                prefix=prefix, suffix=suffix)
     if remove:
         _tmp_paths.append(path)
     with os.fdopen(fh, "wb") as fh:
@@ -458,6 +478,19 @@ def removetmp():
                 os.remove(path)
             except PermissionError:
                 pass
+
+
+def check_extension(fnames):
+    """
+    Make sure all file names have the same extension
+    """
+    if not fnames:
+        return
+    _, extension = os.path.splitext(fnames[0])
+    for fname in fnames[1:]:
+        _, ext = os.path.splitext(fname)
+        if ext != extension:
+            raise NameError(f'{fname} does not end with {ext}')
 
 
 def engine_version():
@@ -486,6 +519,72 @@ def engine_version():
             # may not work properly
 
     return __version__ + gh
+
+
+def extract_dependencies(lines):
+    for line in lines:
+        longname = line.split('/')[-1]  # i.e. urllib3-2.1.0-py3-none-any.whl
+        try:
+            pkg, version, _other = longname.split('-', 2)
+        except ValueError:  # for instance a comment
+            continue
+        if pkg in ('fonttools', 'protobuf', 'pyreadline3', 'python_dateutil',
+                   'python_pam', 'django_cors_headers',
+                   'django_cookie_consent'):
+            # not importable
+            continue
+        if pkg in ('alpha_shapes', 'django_pam', 'pbr', 'iniconfig',
+                   'importlib_metadata', 'zipp'):
+            # missing __version__
+            continue
+        elif pkg == 'pyzmq':
+            pkg = 'zmq'
+        elif pkg == 'Pillow':
+            pkg = 'PIL'
+        elif pkg == 'GDAL':
+            pkg = 'osgeo.gdal'
+        elif pkg == 'Django':
+            pkg = 'django'
+        elif pkg == 'pyshp':
+            pkg = 'shapefile'
+        elif pkg == 'django_appconf':
+            pkg = 'appconf'
+        yield pkg, version
+
+
+def check_dependencies():
+    """
+    Print a warning if we forgot to update the dependencies.
+    Works only for development installations.
+    """
+    import openquake
+    if 'site-packages' in openquake.__path__[0]:
+        return  # do nothing for non-devel installations
+    pyver = '%d%d' % (sys.version_info[0], sys.version_info[1])
+    system = sys.platform
+    if system == 'linux':
+        system = 'linux64'
+    elif system == 'win32':
+        system = 'win64'
+    elif system == 'darwin':
+        system = 'macos_arm64'
+    else:
+        # unsupported OS, do not check dependencies
+        return
+    reqfile = 'requirements-py%s-%s.txt' % (pyver, system)
+    repodir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    with open(os.path.join(repodir, reqfile)) as f:
+        lines = f.readlines()
+    for pkg, expected in extract_dependencies(lines):
+        try:
+            installed_version = version(pkg)
+        except PackageNotFoundError:
+            # handling cases such as "No package metadata was found for zmq"
+            # (in other cases, e.g. timezonefinder, __version__ is not defined)
+            installed_version = __import__(pkg).__version__
+        if installed_version != expected:
+            logging.warning('%s is at version %s but the requirements say %s' %
+                            (pkg, installed_version, expected))
 
 
 def run_in_process(code, *args):
@@ -536,12 +635,15 @@ def import_all(module_or_package):
             # the current working directory is not a subpackage
             continue
         for f in files:
-            if f.endswith('.py'):
+            if f.endswith('.py') and not f.startswith('__init__'):
                 # convert PKGPATH/subpackage/module.py -> subpackage.module
                 # works at any level of nesting
                 modname = (module_or_package + cwd[n:].replace(os.sep, '.') +
                            '.' + os.path.basename(f[:-3]))
-                importlib.import_module(modname)
+                try:
+                    importlib.import_module(modname)
+                except ModuleNotFoundError:
+                    raise ModuleNotFoundError(modname)
     return set(sys.modules) - already_imported
 
 
@@ -945,7 +1047,7 @@ def groupby_bin(values, nbins, key=None, minval=None, maxval=None):
     """
     >>> values = numpy.arange(10)
     >>> for group in groupby_bin(values, 3):
-    ...     print(group)
+    ...     print([int(x) for x in group])
     [0, 1, 2]
     [3, 4, 5]
     [6, 7, 8, 9]
@@ -1085,6 +1187,17 @@ def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     return res
 
 
+def idxs_by_tag(tags):
+    """
+    >>> idxs_by_tag([2, 1, 1, 2])
+    {2: array([0, 3], dtype=uint32), 1: array([1, 2], dtype=uint32)}
+    """
+    dic = AccumDict(accum=[])
+    for i, tag in enumerate(tags):
+        dic[tag].append(i)
+    return {tag: numpy.uint32(dic[tag]) for tag in dic}
+
+
 def count(groupiter):
     return sum(1 for row in groupiter)
 
@@ -1113,11 +1226,11 @@ def not_equal(array_or_none1, array_or_none2):
     >>> a1 = numpy.array([1])
     >>> a2 = numpy.array([2])
     >>> a3 = numpy.array([2, 3])
-    >>> not_equal(a1, a2)
+    >>> bool(not_equal(a1, a2))
     True
-    >>> not_equal(a1, a3)
+    >>> bool(not_equal(a1, a3))
     True
-    >>> not_equal(a1, None)
+    >>> bool(not_equal(a1, None))
     True
     """
     if array_or_none1 is None and array_or_none2 is None:
@@ -1209,12 +1322,10 @@ def random_filter(objects, reduction_factor, seed=42):
         return objects
     rnd = random.Random(seed)
     if isinstance(objects, pandas.DataFrame):
-        name = objects.index.name
-        df = objects.reset_index()
         df = pandas.DataFrame({
-            col: random_filter(df[col], reduction_factor, seed)
-            for col in df.columns})
-        return df.set_index(name)
+            col: random_filter(objects[col], reduction_factor, seed)
+            for col in objects.columns})
+        return df
     out = []
     for obj in objects:
         if rnd.random() <= reduction_factor:
@@ -1248,13 +1359,13 @@ def random_histogram(counts, nbins_or_binweights, seed):
     bins and a faster algorithm will be used. Otherwise pass the weights.
     Here are a few examples:
 
-    >>> list(random_histogram(1, 2, seed=42))
+    >>> [int(x) for x in random_histogram(1, 2, seed=42)]
     [0, 1]
-    >>> list(random_histogram(100, 5, seed=42))
+    >>> [int(x) for x in random_histogram(100, 5, seed=42)]
     [22, 17, 21, 26, 14]
-    >>> list(random_histogram(10000, 5, seed=42))
+    >>> [int(x) for x in random_histogram(10000, 5, seed=42)]
     [2034, 2000, 2014, 1998, 1954]
-    >>> list(random_histogram(1000, [.3, .3, .4], seed=42))
+    >>> [int(x) for x in random_histogram(1000, [.3, .3, .4], seed=42)]
     [308, 295, 397]
     """
     rng = numpy.random.default_rng(seed)
@@ -1412,6 +1523,8 @@ def getsizeof(o, ids=None):
 
     if hasattr(o, 'nbytes'):
         return o.nbytes
+    elif hasattr(o, 'array'):
+        return o.array.nbytes
 
     nbytes = sys.getsizeof(o)
     ids.add(id(o))
@@ -1494,8 +1607,9 @@ def get_nbytes_msg(sizedict, size=8):
     :param sizedict: mapping name -> num_dimensions
     :returns: (size of the array in bytes, descriptive message)
 
-    >>> get_nbytes_msg(dict(nsites=2, nbins=5))
-    (80, '(nsites=2) * (nbins=5) * 8 bytes = 80 B')
+    >>> nbytes, msg = get_nbytes_msg(dict(nsites=2, nbins=5))
+    >>> assert nbytes == 80
+    >>> assert msg == '(nsites=2) * (nbins=5) * 8 bytes = 80 B'
     """
     nbytes = numpy.prod(list(sizedict.values())) * size
     prod = ' * '.join('({}={:_d})'.format(k, int(v))
@@ -1529,6 +1643,30 @@ def agg_probs(*probs):
     return 1. - acc
 
 
+class Param:
+    """
+    Container class for a set of parameters with defaults
+
+    >>> p = Param(a=1, b=2)
+    >>> p.a = 3
+    >>> p.a, p.b
+    (3, 2)
+    >>> p.c = 4
+    Traceback (most recent call last):
+      ...
+    AttributeError: Unknown parameter c
+    """
+    def __init__(self, **defaults):
+        for k, v in defaults.items():
+            self.__dict__[k] = v
+
+    def __setattr__(self, name, value):
+        if name in self.__dict__:
+            object.__setattr__(self, name, value)
+        else:
+            raise AttributeError('Unknown parameter %s' % name)
+
+
 class RecordBuilder(object):
     """
     Builder for numpy records or arrays.
@@ -1536,8 +1674,7 @@ class RecordBuilder(object):
     >>> rb = RecordBuilder(a=numpy.int64(0), b=1., c="2")
     >>> rb.dtype
     dtype([('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
-    >>> rb()
-    (0, 1., b'2')
+    >>> assert tuple(rb()) == (0, 1, b'2')
     """
     def __init__(self, **defaults):
         self.names = []
@@ -1604,7 +1741,8 @@ def sqrscale(x_min, x_max, n):
     return x_min + (delta * numpy.arange(n))**2
 
 
-# NB: there is something like this in contextlib in Python 3.11
+# NB: this is present in contextlib in Python 3.11, but
+# we still support Python 3.9, so it cannot be removed yet
 @contextmanager
 def chdir(path):
     """
@@ -1632,7 +1770,58 @@ def smart_concat(arrays):
     dt = arrays[0][common].dtype
     return numpy.concatenate([arr[common] for arr in arrays], dtype=dt)
 
-    
+
+def around(vec, value, delta):
+    """
+    :param vec: a numpy vector or pandas column
+    :param value: a float value
+    :param delta: a positive float
+    :returns: array of booleans for the range [value-delta, value+delta]
+    """
+    return (vec <= value + delta) & (vec >= value - delta)
+
+
+def sum_records(array):
+    """
+    :returns: the sums of the composite array
+    """
+    res = numpy.zeros(1, array.dtype)
+    for name in array.dtype.names:
+        res[name] = array[name].sum(axis=0)
+    return res
+
+
+def compose_arrays(**kwarrays):
+    """
+    Compose multiple 1D and 2D arrays into a single composite array.
+    For instance
+
+    >>> mag = numpy.array([5.5, 5.6])
+    >>> mea = numpy.array([[-4.5, -4.6], [-4.45, -4.55]])
+    >>> compose_arrays(mag=mag, mea=mea)
+    array([(5.5, -4.5 , -4.6 ), (5.6, -4.45, -4.55)],
+          dtype=[('mag', '<f8'), ('mea0', '<f8'), ('mea1', '<f8')])
+    """
+    dic = {}
+    dtlist = []
+    nrows = set()
+    for key, array in kwarrays.items():
+        shape = array.shape
+        nrows.add(shape[0])
+        if len(shape) >= 2:
+            for k in range(shape[1]):
+                dic[f'{key}{k}'] = array[:, k]
+                dtlist.append((f'{key}{k}', (array.dtype, shape[2:])))
+        else:
+            dic[key] = array
+            dtlist.append((key, array.dtype))
+    [R] = nrows  # all arrays must have the same number of rows
+    array = numpy.empty(R, dtlist)
+    for key, _ in dtlist:
+        array[key] = dic[key]
+    return array
+
+
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
@@ -1643,7 +1832,6 @@ def smart_concat(arrays):
 # size a lot (say one order of magnitude).
 # Therefore by losing a bit of speed (say 3%) you can convert a failing
 # calculation into a successful one.
-
 
 def compress(obj):
     """
@@ -1658,3 +1846,58 @@ def decompress(cbytes):
     gunzip compressed bytes into a Python object
     """
     return pickle.loads(zlib.decompress(cbytes))
+
+# ########################### dumpa/loada ############################## #
+
+# the functions below as useful to avoid data transfer, to be used as
+
+# smap.share(arr=dumpa(big_object))
+
+# and then in the workers
+
+# with monitor.shared['arr'] as arr:
+#      big_object = loada(arr)
+
+
+def dumpa(obj):
+    """
+    Dump a Python object as an array of uint8:
+
+    >>> dumpa(23)
+    array([128,   5,  75,  23,  46], dtype=uint8)
+    """
+    buf = memoryview(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
+    return numpy.ndarray(len(buf), dtype=numpy.uint8, buffer=buf)
+
+
+def loada(arr):
+    """
+    Convert an array of uint8 into a Python object:
+
+    >>> loada(numpy.array([128, 5, 75, 23, 46], numpy.uint8))
+    23
+    """
+    return pickle.loads(bytes(arr))
+
+
+class Deduplicate(Sequence):
+    """
+    Deduplicate lists containing duplicated objects
+    """
+    def __init__(self, objects, check_one=False):
+        pickles = [pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
+                   for obj in objects]
+        uni, self.inv = numpy.unique(pickles, return_inverse=True)
+        self.uni = [pickle.loads(pik) for pik in uni]
+        if check_one:
+            assert len(self.uni) == 1, self.uni
+
+    def __getitem__(self, i):
+        return self.uni[self.inv[i]]
+
+    def __repr__(self):
+        name = self[0].__class__.__name__
+        return '<Deduplicated %s %d/%d>' % (name, len(self.uni), len(self.inv))
+
+    def __len__(self):
+        return len(self.inv)

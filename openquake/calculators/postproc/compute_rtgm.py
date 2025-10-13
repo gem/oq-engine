@@ -36,6 +36,7 @@ Useful abbreviations:
 - PGA: PGA for Maximum Component
 """
 import io
+import sys
 import logging
 import numpy as np
 import pandas as pd
@@ -44,21 +45,18 @@ try:
     import rtgmpy
 except ImportError:
     rtgmpy = None
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, general, python3compat
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce,
-    _find_fact_maxC)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src,
+    plot_governing_mce_asce_7_16, plot_mce_spectra,
+    plot_governing_mce, plot_sites, _find_fact_maxC, import_plt)
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
-PGA0,0.50,0.57,0.66,0.73,0.74,0.69,0.61,0.55
+SA(0.0),0.50,0.57,0.66,0.73,0.74,0.69,0.61,0.55
 SA(0.01),0.50,0.57,0.66,0.73,0.75,0.70,0.62,0.55
 SA(0.02),0.52,0.58,0.68,0.74,0.75,0.70,0.62,0.55
 SA(0.03),0.60,0.66,0.75,0.79,0.78,0.70,0.62,0.55
@@ -81,20 +79,78 @@ SA(5.0),0.10,0.11,0.13,0.19,0.26,0.36,0.49,0.61
 SA(7.5),0.063,0.068,0.080,0.11,0.15,0.19,0.26,0.31
 SA(10.0),0.042,0.045,0.052,0.069,0.089,0.11,0.14,0.17
 PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
-'''), index_col='imt')
+'''))
 
-# hard-coded for year 1
-# NOTE: consider lower thresholds of IMLs and impact on plots in Year 3
-# TODO: interpolate for vs30 != 760 and for different periods
-# NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
-# three imts, that are mandatory in this context. For the plot of governing
-# MCE we read imts from the imtls
-IMTS = ['PGA', 'SA(0.2)', 'SA(1.0)']
-D = DLL_df.BC.loc  # site class BC for vs30=760m/s
-DLLs = [D[imt] for imt in IMTS]
-assert DLLs == [0.5, 1.5, 0.6]
 MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
+
+AELO_WARNINGS = {
+    'zero_hazard': (
+        'Zero hazard: there are no ruptures close to the site.'
+        ' ASCE 7 and ASCE 41 parameters cannot be computed.'
+        ' For further information, please refer to the user manual.'),
+    'low_hazard': (
+        'Very low hazard: ASCE 7 and ASCE 41'
+        ' parameters cannot be computed.'
+        ' For further information, please refer to the user manual.'),
+    'below_min': (
+        'The ASCE 7 and/or ASCE 41 parameter values at the site are very low.'
+        ' User may need to increase the values to user-specified minimums'
+        ' (e.g., Ss=0.11g and S1=0.04g).'
+        ' For further information, please refer to the user manual.'),
+}
+
+AELO_NOTES = {
+    'only_prob_mce': (
+        'The final MCE is derived solely from the Probabilistic MCE,'
+        ' since it is below the DLLs. Outputs specific to the deterministic'
+        ' analysis are not included.'
+        ' For further information, please refer to the user manual.'),
+}
+
+notification_dtype = np.dtype([
+    ('sid', np.int32),
+    ('level', hdf5.vstr),
+    ('name', hdf5.vstr),
+    ('description', hdf5.vstr)
+])
+
+
+def get_DLLs(job_imts, vs30):
+
+    if vs30 >= 1500:
+        soil_class_asce = 'A'
+    elif vs30 > 914:
+        soil_class_asce = 'B'
+    elif vs30 > 640:
+        soil_class_asce = 'BC'
+    elif vs30 > 442:
+        soil_class_asce = 'C'
+    elif vs30 > 305:
+        soil_class_asce = 'CD'
+    elif vs30 > 213:
+        soil_class_asce = 'D'
+    elif vs30 > 152:
+        soil_class_asce = 'DE'
+    else:
+        soil_class_asce = 'E'
+
+    D = DLL_df[soil_class_asce]
+    imt_table = DLL_df.imt
+
+    T_table = np.array([from_string(imt).period for imt in DLL_df.imt])
+    T_job = [from_string(imt).period for imt in job_imts]
+    DLLs = []
+
+    for imt, t in zip(job_imts, T_job):
+        if imt in imt_table.values:
+            DLLs.append(D[imt_table == imt].values[0])
+        else:  # interpolate for any IMT not included in the table
+            up = np.where(T_table > t)[0][0]
+            low = np.where(T_table < t)[0][-2]
+            dll = np.interp(t, [T_table[low], T_table[up]], [D[low], D[up]])
+            DLLs.append(dll)
+    return DLLs
 
 
 def norm_imt(imt):
@@ -104,32 +160,43 @@ def norm_imt(imt):
     return imt.replace('(', '').replace(')', '').replace('.', 'P')
 
 
-def calc_rtgm_df(hcurves, site, site_idx, oq):
+def _get_hazdic(afe, imt, imtls, site):
+    hazdic = {
+        'site': {'name': 'site',
+                 'lon': site.location.x,
+                 'lat': site.location.y,
+                 'Vs30': site.vs30},
+        'hazCurves': {imt: {'iml': imtls, 'afe': afe}}}
+    return hazdic
+
+
+def calc_rtgm_df(hcurves, site, site_idx, oq, ASCE_version):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
+
+    # FIXME: update docstring params and return values
 
     :param hcurves: array of hazard curves of shape (M, L1)
     :param site: a Site object
     :param oq: OqParam instance
-
     :returns: pandas dataframe with RTGM and related parameters
     :returns: numpy array of conversion factors to max component
     """
-    M = len(IMTS)
+    job_imts = list(oq.imtls)
+    M = len(job_imts)
+    DLLs = get_DLLs(job_imts, site.vs30)
     riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M),
         np.zeros(M), np.zeros(M))
     imtls = oq.imtls
     imts, facts = [], []
-    for m, imt in enumerate(IMTS):
+    for m, imt in enumerate(job_imts):
         afe = to_rates(hcurves[m], oq.investigation_time, minrate=1E-12)
-
         IMT = norm_imt(imt)
         imts.append(IMT)
         T = from_string(imt).period
-        fact = _find_fact_maxC(T, 'ASCE7-16')
+        fact = 1 if imt == "PGA" else _find_fact_maxC(T, ASCE_version)
         facts.append(fact)
-
         if afe[0] < MIN_AFE:
             UHGM[m] = 0
             RTGM_max[m] = 0
@@ -154,7 +221,7 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
             else:
                 RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
                 MCE[m] = RTGM_max[m]
-    facts[0] = 1. # for PGA the Prob MCE is already geometric mean
+    facts[0] = 1.  # for PGA the Prob MCE is already geometric mean
     dic = {'IMT': imts,
            'UHGM_2475yr-GM': UHGM,
            'RTGM': RTGM_max,
@@ -163,19 +230,46 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
            'DLL': DLLs,
            'fact': np.array(facts),
            'sid': [site_idx]*len(imts)}
-
     rtgm_df = pd.DataFrame(dic)
     return rtgm_df
 
 
-def _get_hazdic(afe, imt, imtls, site):
-    hazdic = {
-        'site': {'name': 'site',
-                 'lon': site.location.x,
-                 'lat': site.location.y,
-                 'Vs30': site.vs30},
-        'hazCurves': {imt: {'iml': imtls, 'afe': afe}}}
-    return hazdic
+def get_rtgm_notification(site, oq, sa02, sa10, DLLs, ASCE_version,
+                          mrs_all, hcurves_all):
+    """
+    :returns: (rtgm_df, notification_name)
+    """
+    sid = site.id
+    mrs = mrs_all[sid]
+    hcurves = hcurves_all[sid, 0]  # shape ML1
+    mean_rates = to_rates(hcurves)
+    loc = site.location
+
+    if mrs.sum() == 0:
+        return None, 'zero_hazard'
+    elif mean_rates.max() < MIN_AFE:
+        # in this case all hazard curves for all SA are below 1/2475
+        # for the lower IML
+        return None, 'low_hazard'
+    try:
+        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq, ASCE_version)
+    except ValueError as err:
+        # happens for site (24.96, 60.16) in EUR, the curve is too low
+        if 'below the interpolation range' in str(err):
+            return None, 'low_hazard'
+        else:
+            print(f'on site({loc.x}, {loc.y}): {err}', file=sys.stderr)
+            raise
+    logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
+
+    if (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
+            (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
+        return rtgm_df, 'below_min' 
+    elif (rtgm_df.ProbMCE < DLLs[site.id]).all():
+        # do not disagg by rel sources
+        return rtgm_df, 'only_prob_mce'
+    else:
+        return rtgm_df, None
 
 
 def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
@@ -192,273 +286,685 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     mag_dist_eps_sig = []
     for src, imt, mag, dist, eps in mag_dist_eps:
         m = imtidx[imt]
-        sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
-        rgi = RegularGridInterpolator(
-            (sigma_by_src.mag, sigma_by_src.dist), sig)
-        sigma = rgi((np.round(mag, 3), np.round(dist, 3)))
-        srcs.append(src)
-        imts.append(imt)
-        dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
-        mag_dist_eps_sig.append((imt, src, mag, dist, eps, sigma))
+        if np.isnan(mag):
+            srcs.append(src)
+            imts.append(imt)
+            dets.append(np.nan)
+            mag_dist_eps_sig.append((imt, src, mag, dist, eps, np.nan))
+        else:
+            sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
+            rgi = RegularGridInterpolator(
+                (sigma_by_src.mag, sigma_by_src.dist), sig)
+            sigma = rgi((np.round(mag, 3), np.round(dist, 3)))
+            srcs.append(src)
+            imts.append(imt)
+            dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
+            mag_dist_eps_sig.append((imt, src, mag, dist, eps, sigma))
     df = pd.DataFrame(dict(imt=imts, source_id=srcs, det=dets))
-    det = df.groupby('imt').det.max()
+    det = {}
+    for imt in df.imt.values:
+        df_sub = df[df.imt == imt]
+        val = max(df_sub.det)
+        det[imt] = val
     dt = [('imt', hdf5.vstr), ('source_id', hdf5.vstr), ('mag', float),
           ('dist', float), ('eps', float), ('sig', float)]
-    return det.to_dict(), np.array(mag_dist_eps_sig, dt)
+    return det, np.array(mag_dist_eps_sig, dt)
 
 
-def get_zero_hazard_asce07():
-    na = 'n.a.'
-    asce07 = {
-             'PGA': 0,
-             'PGA_2_50': 0,
-             'PGA_84th': na,
-             'PGA_det': na,
-
-             'Ss': na,
-             'Ss_RT': na,
-             'CRs': na,
-             'Ss_84th': na,
-             'Ss_det': na,
-             'Ss_seismicity': 'Low',
-
-             'S1': na,
-             'S1_RT': na,
-             'CR1': na,
-             'S1_84th': na,
-             'S1_det': na,
-             'S1_seismicity': 'Low',
-             }
-    return asce07
+def to_array(dic):
+    return np.array([hdf5.dumps(dic[sid]) for sid in sorted(dic)])
 
 
-def get_zero_hazard_asce41():
-    na = 'n.a.'
-    asce41 = {'BSE2N_Ss': na,
-              'BSE2E_Ss': na,
-              'Ss_5_50': na,
-              'BSE1N_Ss': na,
-              'BSE1E_Ss': na,
-              'Ss_20_50': na,
-              'BSE2N_S1': na,
-              'BSE2E_S1': na,
-              'S1_5_50': na,
-              'BSE1N_S1': na,
-              'BSE1E_S1': na,
-              'S1_20_50': na,
-              }
-    return asce41
-
-
-def get_mce_asce07(det_imt, DLLs, rtgm, low_haz=False):
+def calc_sds_and_sd1(periods: list, ordinates: list, vs30: float) -> tuple:
     """
-    :param prob_mce: Probabilistic Maximum Considered Earthquake (UHGM for PGA)
+    Calculates sds and sd1 from multiperiod response spectrum according
+    to section 21.4 in ASCE7-22
+
+    Args:
+        periods: A list of periods for the multiperiod response spectrum.
+        ordinates: A list of ordinates (accelerations) for the multiperiod
+        response spectrum multiplied by 2/3 as shown in eq. 21.3-1 in ASCE7-22
+        vs30: A float representing the vs30 in m/s
+
+    Returns:
+        A tuple (sds, sd1) where sds is the spectral response acceleration for
+        short periods, and sd1 is the
+        spectral response acceleration for 1 second.
+    """
+    ordinates = list(ordinates)
+    periods = list(periods)
+    # For sds, find periods from 0.2-5.0s, inclusive
+    sds_indices = [index for index, period in enumerate(periods)
+                   if 0.2 <= period <= 5]
+    # sds is 90% of the maximum from 0.2-5.0s
+    sds = 90 / 100 * max([ordinates[i] * 2/3 for i in sds_indices])
+
+    # For sd1, depending on vs30, take periods from 1-2s or 1-5s
+    # vs30 in m/s
+    if vs30 > 442:
+        sd1_indices = [
+            index for index, period in enumerate(periods) if 1 <= period <= 2]
+    else:
+        sd1_indices = [
+            index for index, period in enumerate(periods) if 1 <= period <= 5]
+
+    sd1_periods = [periods[i] for i in sd1_indices]
+    sd1_ordinates = [ordinates[i] * 2/3 for i in sd1_indices]
+
+    # sd1 is 90% of the maximum of T * Sa across the period range,
+    # but not less than 100% of the value of Sa at 1.0s
+    maxp = max(period * sd1_ordinates[i]
+               for i, period in enumerate(sd1_periods))
+    sd1 = max(90 / 100 * maxp, 100 / 100 * sd1_ordinates[0])
+    sms = 1.5 * sds
+    sm1 = 1.5 * sd1
+
+    design = [sds, sd1, sms, sm1]
+
+    return design
+
+
+class MCEGetter:
+    """
+    :param job_imts: the IMTs run in the job
     :param det_imt: deterministic ground motion for each IMT
-    :param DLLs: deterministic lower limits according to ASCE 7-16
-    :param rtgm: dataframe
-    :param low_haz: boolean specifying if the hazard is lower than DLLs
-    :returns: a dictionary imt -> probabilistic MCE
-    :returns: a dictionary imt -> governing MCE
-    :returns: a dictionary imt -> deterministic MCE
-    :returns: a dictionary all ASCE 7-16 parameters
+    :param ASCE_version: ASCE version string
     """
-    prob_mce = rtgm.ProbMCE.to_numpy()
-    imts = rtgm['IMT']
-    for i, imt in enumerate(imts):
-        if imt == 'SA0P2':
-            crs = rtgm['RiskCoeff'][i]
-        elif imt == 'SA1P0':
-            cr1 = rtgm['RiskCoeff'][i]
+    def __init__(self, job_imts, det_imt, ASCE_version):
+        self.job_imts = job_imts
+        self.det_imt = det_imt
+        self.ASCE_version = ASCE_version
 
-    det_mce = {}
-    mce = {}  # imt -> MCE
-    prob_mce_out = {}
-    for i, imt in enumerate(det_imt):
-        if low_haz:
-            det_mce[imt] = None
-            det_imt[imt] = None
-            mce[imt] = prob_mce[i]
-        else:
-            det_mce[imt] = max(det_imt[imt], DLLs[i])
-            mce[imt] = min(prob_mce[i], det_mce[imt])
-        prob_mce_out[imt] = prob_mce[i]
+    def get_mce(self, DLLs, rtgm, sid, vs30, low_haz=False):
+        """
+        Computes deterministic and probabilistic MCE and prepares the MCE
+        DataFrame. The ASCE7 formatting is now separated into another method.
 
-    if mce['SA(0.2)'] < 0.25:
-        Ss_seismicity = "Low"
-    elif mce['SA(0.2)'] < 0.5:
-        Ss_seismicity = "Moderate"
-    elif mce['SA(0.2)'] < 1:
-        Ss_seismicity = "Moderately High"
-    elif mce['SA(0.2)'] < 1.5:
-        Ss_seismicity = "High"
-    else:
-        Ss_seismicity = "Very High"
-
-    if mce['SA(1.0)'] < 0.1:
-        S1_seismicity = "Low"
-    elif mce['SA(1.0)'] < 0.2:
-        S1_seismicity = "Moderate"
-    elif mce['SA(1.0)'] < 0.4:
-        S1_seismicity = "Moderately High"
-    elif mce['SA(1.0)'] < 0.6:
-        S1_seismicity = "High"
-    else:
-        S1_seismicity = "Very High"
-
-    asce07 = {
-             'PGA': mce['PGA'],
-             'PGA_2_50': prob_mce_out['PGA'],
-             'PGA_84th': det_imt['PGA'],
-             'PGA_det': det_mce['PGA'],
-
-             'Ss': mce['SA(0.2)'],
-             'Ss_RT': prob_mce_out['SA(0.2)'],
-             'CRs': crs,
-             'Ss_84th': det_imt['SA(0.2)'],
-             'Ss_det': det_mce['SA(0.2)'],
-             'Ss_seismicity': Ss_seismicity,
-
-             'S1': mce['SA(1.0)'],
-             'S1_RT': prob_mce_out['SA(1.0)'],
-             'CR1': cr1,
-             'S1_84th': det_imt['SA(1.0)'],
-             'S1_det': det_mce['SA(1.0)'],
-             'S1_seismicity': S1_seismicity,
-             }
-    for key in asce07:
-        if not isinstance(asce07[key], str):
-            asce07[key] = (
-                round(asce07[key], ASCE_DECIMALS) if asce07[key] is not None
-                else 'n.a.')
-
-    return prob_mce_out, mce, det_mce, asce07
-
-
-def get_asce41(dstore, mce, facts, sid):
+        :param DLLs: deterministic lower limits according to ASCE 7-22
+        :param rtgm: dataframe with ProbMCE and RiskCoeff
+        :param sid: site ID
+        :param vs30: shear wave velocity
+        :param low_haz: boolean specifying if the hazard is lower than DLLs
+        :returns: dict (imt -> probabilistic MCE),
+                  dict (imt -> governing MCE),
+                  dict (imt -> deterministic MCE),
+                  pandas DataFrame with MCEs
     """
-    :param dstore: the datastore
-    :param mce: governing MCE
-    :param facts: conversion factors to max component
-    :returns: a dictionary with the ASCE-41 parameters
+        det_imt = self.det_imt
+        job_imts = self.job_imts
+        prob_mce = rtgm.ProbMCE.to_numpy()
+
+        det_mce = {}
+        mce = {}
+        prob_mce_out = {}
+
+        for i, imt in enumerate(det_imt):
+            if low_haz:
+                det_mce[imt] = np.nan
+                det_imt[imt] = np.nan
+                mce[imt] = prob_mce[i]
+            else:
+                det_mce[imt] = max(det_imt[imt], DLLs[i])
+                mce[imt] = min(prob_mce[i], det_mce[imt])
+            prob_mce_out[imt] = prob_mce[i]
+
+        dic_mce = {
+            'IMT': job_imts,
+            'DLL': DLLs,
+            'ProbMCE': prob_mce,
+            'DetMCE': det_mce.values(),
+            'MCE': mce.values(),
+            'sid': [sid] * len(job_imts)
+        }
+        mce_df = pd.DataFrame(dic_mce)
+
+        return prob_mce_out, mce, mce_df
+
+    def calc_mce(dstore, csm, job_imts, DLLs, rtgm):
+        """
+        :yields: (sid, mag_dst_eps_sig, mce_df)
+        """
+        oq = dstore['oqparam']
+        imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
+                       for sid, rtgm_df in rtgm.items() if rtgm_df}
+        out = postproc.disagg_by_rel_sources.main(
+            dstore, csm, job_imts, imls_by_sid)
+        sitecol = dstore['sitecol']
+        for sid, (mag_dist_eps, sigma_by_src) in out.items():
+            lon = sitecol.lons[sid]
+            lat = sitecol.lats[sid]
+            vs30 = sitecol.vs30[sid]
+            rtgm_df = rtgm[sid]
+            det_imt, mag_dst_eps_sig = get_deterministic(
+                rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
+            logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
+            mg = MCEGetter(job_imts, det_imt, oq.asce_version)
+            _prob_mce_out, mce, mce_df = mg.get_mce(
+                DLLs[sid], rtgm_df, sid, vs30)
+            logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
+                         mce_df)
+            logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
+            yield sid, mag_dst_eps_sig, mce_df
+
+
+def compute_mce_governing(dstore, sitecol, locs):
     """
-    fact = dict(zip(mce, facts))
-    hmap = dstore["hmaps-stats"][sid, 0]  # mean hazard, shape (M, P)
+    Note that for ASCE7-22 and default site class the site is multiplied
+    3 times with different values of the vs30 and the MCE is computed as
+    the maximum MCE across the sites for each IMT. For all other site class,
+    the same mce computed before is used.
+    """
+    # fields IMT, DLL, ProbMCE, DetMCE, MCE, sid
+    mce_df = dstore.read_df('mce')
+    mce_df['period'] = [from_string(x).period for x in mce_df.IMT]
+    del mce_df['IMT']
+    out = []
+    for sids in locs.values():
+        csi = sitecol.custom_site_id[sids[0]].decode('ascii').split(':')[0]
+        mcedf = mce_df[np.isin(mce_df.sid, sids)]
+        df = mcedf.groupby('period').MCE.max().to_frame()  # MCE by period
+        df['custom_site_id'] = csi
+        out.append(df)
+    return pd.concat(out).reset_index()
+
+
+def process_sites(dstore, csm, DLLs, ASCE_version):
+    """
+    :yields: (site, rtgm_df, notification_name)
+    """
     oq = dstore['oqparam']
-    poes = oq.poes
     imts = list(oq.imtls)
     sa02 = imts.index('SA(0.2)')
     sa10 = imts.index('SA(1.0)')
+    stats = list(oq.hazard_stats())
+    assert stats[0] == 'mean', stats[0]
+    hcurves_all = dstore['hcurves-stats'][:]
+    mrs_all = dstore['mean_rates_by_src'][:]
+    mg = MCEGetter(imts, {imt: '' for imt in imts}, ASCE_version)
+    for site in dstore['sitecol']:
+        rtgm_df, notification_name = get_rtgm_notification(
+            site, oq, sa02, sa10, DLLs, ASCE_version, mrs_all, hcurves_all)
+        sid = site.id
+        vs30 = site.vs30
+        loc = site.location
+        if notification_name in ['zero_hazard', 'low_hazard']:
+            mce_df = pd.DataFrame({'IMT': imts,
+                                   'ProbMCE': [np.nan]*len(imts),
+                                   'DetMCE': [np.nan]*len(imts),
+                                   'MCE': [np.nan]*len(imts),
+                                   'sid': [sid]*len(imts)})
+            logging.info('(%.1f,%.1f) Computed MCE: Zero hazard\n%s', loc.x,
+                         loc.y, mce_df)
+        elif notification_name in ['below_min', 'only_prob_mce']:
+            _prob_mce_out, mce, mce_df = mg.get_mce(
+                DLLs[sid], rtgm_df, sid, vs30, low_haz=True)
+            logging.info('(%.1f,%.1f) Computed MCE: Only Prob\n%s', loc.x,
+                         loc.y, mce_df)
+        else:
+            mce_df = None
+        yield site, rtgm_df, mce_df, notification_name
+
+
+#class ASCE7Calculator:
+def get_seismicity_class(mce_site, vs30):
+        if vs30 == 760:
+            sa02 = mce_site[mce_site.period==0.2]['SaM'].iloc[0]
+            sa10 = mce_site[mce_site.period==1.0]['SaM'].iloc[0]
+            Ss_seismicity = (
+                "Low" if sa02 < 0.25 else
+                "Moderate" if sa02 < 0.5 else
+                "Moderately High" if sa02 < 1.0 else
+                "High" if sa02 < 1.5 else
+                "Very High"
+            )
+            S1_seismicity = (
+                "Low" if sa10 < 0.1 else
+                "Moderate" if sa10 < 0.2 else
+                "Moderately High" if sa10 < 0.4 else
+                "High" if sa10 < 0.6 else
+                "Very High"
+            )
+        else:
+            Ss_seismicity = "n.a."
+            S1_seismicity = "n.a."
+        return Ss_seismicity, S1_seismicity
+
+
+def asce07_output_new(sid, vs30, dstore, mce_site):
+    """
+    Formats the final ASCE 7 dictionary including seismicity classification.
+    """
+
+    oq = dstore['oqparam']
+    ASCE_version = oq.asce_version
+    job_imts = list(oq.imtls)
+    sitecol = dstore['sitecol']
+    period_mce = mce_site["period"]
+    mce = mce_site.SaM
+    Ss_seismicity, S1_seismicity = get_seismicity_class(mce_site, vs30)
+        
+    if mce_site[mce_site.period==0]['SaM'].iloc[0] < min(oq.imtls['PGA']):
+        pga_out = '<' + str(min(oq.imtls['PGA']))
+    else:
+        pga_out = mce_site[mce_site.period==0]['SaM'].iloc[0]
+            
+    if mce_site[mce_site.period==0.2]['SaM'].iloc[0] < min(oq.imtls['SA(0.2)']):
+        sa02_out = '<' + str(min(oq.imtls['SA(0.2)']))
+    else:
+        sa02_out = mce_site[mce_site.period==0.2]['SaM'].iloc[0]
+            
+    if mce_site[mce_site.period==1.0]['SaM'].iloc[0] < min(oq.imtls['SA(1.0)']):
+        sa1_out = '<' + str(min(oq.imtls['SA(1.0)']))
+    else:
+        sa1_out = mce_site[mce_site.period==1.0]['SaM'].iloc[0]
+            
+    if ASCE_version == 'ASCE7-16':
+
+        asce07 = {
+            'PGA': pga_out,
+            'Ss': sa02_out, 'Ss_seismicity': Ss_seismicity,
+            'S1': sa1_out,  'S1_seismicity': S1_seismicity
+        }
+    else:
+        design = calc_sds_and_sd1(period_mce.tolist(), mce.tolist(), vs30)
+
+        if design[2] < min(oq.imtls['SA(0.2)']):
+            sms_out =  '<' + str(min(oq.imtls['SA(0.2)']))
+            sds_out =  '<' + str(min(oq.imtls['SA(0.2)']))
+        else:
+            sms_out =  design[2]
+            sds_out = design[0]
+
+        if design[3] < min(oq.imtls['SA(0.2)']):
+            sm1_out =  '<' + str(min(oq.imtls['SA(1.0)']))
+            sd1_out =  '<' + str(min(oq.imtls['SA(1.0)']))
+        else:
+            sm1_out =  design[3]
+            sd1_out = design[1]
+                
+        if vs30 == 760:
+            asce07 = {
+                'PGA_M': pga_out,
+                'Ss': sa02_out, 'Sms': sms_out, 'Sds': sds_out,
+                'Ss_seismicity': Ss_seismicity,
+                'S1': sa1_out, 'Sm1': sm1_out, 'Sd1': sd1_out,
+                'S1_seismicity': S1_seismicity
+            }
+        else:
+            asce07 = {
+                'PGA_M': pga_out,
+                'Sms': sms_out, 'Sds': sds_out,
+                'Ss_seismicity': 'n.a.',
+                'Sm1': sm1_out, 'Sd1': sd1_out,
+                'S1_seismicity': 'n.a.'
+            }
+
+    for key in asce07:
+        if not isinstance(asce07[key], str):
+            asce07[key] = smart_round(asce07[key])
+    logging.info('ASCE 7=%s',  asce07)
+    return asce07
+
+
+def smart_round(number):
+    """
+    Round the ASCE values (if they are floats)
+    """
+    if isinstance(number, pd.Series):
+        return round(float(number.iloc[0]), ASCE_DECIMALS)
+    elif isinstance(number, str):
+        return number
+    elif np.isnan(number):
+        return 'n.a.'
+    else:
+        return round(number, ASCE_DECIMALS)
+
+
+def get_zero_hazard_asce07(dstore,vs30):
+    oq = dstore['oqparam'] 
+    ASCE_version = oq.asce_version
+    na = 'n.a.'
+
+    if ASCE_version == 'ASCE7-16':
+            asce07 = {
+                'PGA': na,  
+                'Ss': na, 'Ss_seismicity': 'Low',
+                'S1': na,  'S1_seismicity': 'Low'
+            }
+    else:
+        if vs30 == 760:
+            asce07 = {
+                'PGA_M': na, 
+                'Ss': na, 'Sms': na, 'Sds': na,
+                'Ss_seismicity': 'Low',
+                'S1': na, 'Sm1': na, 'Sd1': na,
+                'S1_seismicity': 'Low'
+            }
+        else:
+            asce07 = {
+                'PGA_M':na, 
+                'Sms': na, 'Sds': na,
+                'Ss_seismicity': na,
+                'Sm1': na, 'Sd1': na,
+                'S1_seismicity': na
+            }
+
+    return asce07
+
+
+def get_spectra(dstore, sid, custom_id, mce, facts):
+    hmap = dstore["hmaps-stats"][sid, 0]  # shape (M, P)
+    oq = dstore['oqparam']
+    poes = oq.poes
+    imts = list(oq.imtls)
+    periods = [from_string(imt).period for imt in imts]
+    
     if int(oq.investigation_time) == 1:
         poe5_50 = poes.index(0.001025)
         poe20_50 = poes.index(0.004453)
+        poe10_50 = poes.index(0.002105)
     elif int(oq.investigation_time) == 50:
         poe5_50 = poes.index(0.05)
         poe20_50 = poes.index(0.2)
+        poe10_50 = poes.index(0.1)
 
-    BSE2N_Ss = mce['SA(0.2)']
-    Ss_5_50 = hmap[sa02, poe5_50] * fact['SA(0.2)']
-    BSE2E_Ss = min(Ss_5_50, BSE2N_Ss)
-    BSE1N_Ss = 2/3 * BSE2N_Ss
-    Ss_20_50 = hmap[sa02, poe20_50] * fact['SA(0.2)']
-    BSE1E_Ss = min(Ss_20_50, BSE1N_Ss)
-
-    BSE2N_S1 = mce['SA(1.0)']
-    S1_5_50 = hmap[sa10, poe5_50] * fact['SA(1.0)']
-    BSE2E_S1 = min(S1_5_50, BSE2N_S1)
-    BSE1N_S1 = 2/3 * BSE2N_S1
-    S1_20_50 = hmap[sa10, poe20_50] * fact['SA(1.0)']
-    BSE1E_S1 = min(S1_20_50, BSE1N_S1)
-    asce41 = {'BSE2N_Ss': BSE2N_Ss,
-              'BSE2E_Ss': BSE2E_Ss,
-              'Ss_5_50': Ss_5_50,
-              'BSE1N_Ss': BSE1N_Ss,
-              'BSE1E_Ss': BSE1E_Ss,
-              'Ss_20_50': Ss_20_50,
-              'BSE2N_S1': BSE2N_S1,
-              'BSE2E_S1': BSE2E_S1,
-              'S1_5_50': S1_5_50,
-              'BSE1N_S1': BSE1N_S1,
-              'BSE1E_S1': BSE1E_S1,
-              'S1_20_50': S1_20_50,
-              }
-    for key in asce41:
-        asce41[key] = round(asce41[key], ASCE_DECIMALS)
-    return asce41
+    BSE2N = mce
+    BSE1N = [2 / 3 * val for val in mce]
+    BSE2E_uhs = [f * h for f, h in zip(facts, hmap[:, poe5_50])]
+    BSE2E = [min(n, e) for n, e in zip(BSE2N, BSE2E_uhs)]
+    BSE1E_uhs = [f * h for f, h in zip(facts, hmap[:, poe20_50])]
+    BSE1E = [min(n, e) for n, e in zip(BSE1N, BSE1E_uhs)]
+    uhs_475 = hmap[:, poe10_50]
+    
+    sa_data = {'custom_site_id': [custom_id] * len(imts),
+               'sid': [sid] * len(imts),
+               'IMT': imts,
+               'period': periods,
+               'BSE2N': BSE2N,
+               'BSE2E': BSE2E,
+               'BSE1N': BSE1N,
+               'BSE1E': BSE1E,
+               'uhs_475': uhs_475}
+    
+    return sa_data
 
 
-def process_sites(dstore, csm):
+def get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS):
+    if asce_version == 'ASCE7-16':
+        return asce41_17(asce_sa, ASCE_DECIMALS)
+    elif asce_version == 'ASCE7-22':
+        return asce41_23(asce_sa, vs30, ASCE_DECIMALS)
+
+
+def asce41_17(sa_data, ASCE_DECIMALS):
+    period02 = sa_data[sa_data['period'] == 0.2]
+    period1 = sa_data[sa_data['period'] == 1.0]
+    return {
+        "BSE2N_Ss": smart_round(period02['BSE2N']),
+        "BSE2E_Ss": smart_round(period02["BSE2E"]),
+        "BSE1N_Ss": smart_round(period02["BSE1N"]),
+        "BSE1E_Ss": smart_round(period02["BSE1E"]),
+        "BSE2N_S1": smart_round(period1["BSE2N"]),
+        "BSE2E_S1": smart_round(period1["BSE2E"]),
+        "BSE1N_S1": smart_round(period1["BSE1N"]),
+        "BSE1E_S1": smart_round(period1["BSE1E"]),
+    }
+
+def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
+    
+    if (sa_data['BSE2N'] == 0).all():
+        design_BSE2N = ['n.a.','n.a.','n.a.','n.a.']
+    else:
+        design_BSE2N = calc_sds_and_sd1(
+            sa_data['period'], sa_data['BSE2N'], Vs30)
+        
+    if (sa_data['BSE1N'] == 0).all():
+        design_BSE1N = ['n.a.','n.a.','n.a.','n.a.']
+    else:    
+        design_BSE1N = calc_sds_and_sd1(
+            sa_data['period'], sa_data['BSE1N'], Vs30)
+        
+    if (sa_data['BSE2E'] == 0).all():
+        design_BSE2E = ['n.a.','n.a.','n.a.','n.a.']
+    else:
+        design_BSE2E = calc_sds_and_sd1(
+            sa_data['period'], sa_data['BSE2E'], Vs30)
+        
+    if (sa_data['BSE1E'] == 0).all():
+        design_BSE1E = ['n.a.','n.a.','n.a.','n.a.']
+    else:
+        design_BSE1E = calc_sds_and_sd1(
+            sa_data['period'], sa_data['BSE1E'], Vs30)
+
+    return {
+        'BSE2N_Sxs': smart_round(design_BSE2N[2]),
+        'BSE2E_Sxs': smart_round(design_BSE2E[2]),
+        'BSE1N_Sxs': smart_round(design_BSE1N[2]),
+        'BSE1E_Sxs': smart_round(design_BSE1E[2]),
+        'BSE2N_Sx1': smart_round(design_BSE2N[3]),
+        'BSE2E_Sx1': smart_round(design_BSE2E[3]),
+        'BSE1N_Sx1': smart_round(design_BSE1N[3]),
+        'BSE1E_Sx1': smart_round(design_BSE1E[3])
+    }
+
+
+def get_zero_hazard_asce41(asce_version):
+    na = 'n.a.'
+    if asce_version == 'ASCE7-16':
+        keys = [
+            'BSE2N_Ss', 'BSE2E_Ss', 
+            'BSE1N_Ss', 'BSE1E_Ss', 
+            'BSE2N_S1', 'BSE2E_S1', 
+            'BSE1N_S1', 'BSE1E_S1', 
+        ]
+    else:
+        keys = [
+            'BSE2N_Sxs', 'BSE2E_Sxs',
+            'BSE1N_Sxs', 'BSE1E_Sxs',
+            'BSE2N_Sx1', 'BSE2E_Sx1',
+            'BSE1N_Sx1', 'BSE1E_Sx1'
+        ]
+    return {key: na for key in keys}
+
+def compute_max_sa_asce41(dstore,sitecol,locs):
+    # replace the maximum per each poe for sites in the default site class
+    keys_asce41 = ['BSE2N','BSE2E','BSE1N','BSE1E','uhs_475']
+    
+    asce41_df = dstore.read_df('spectra_asce41')
+    asce41_df['period'] = [from_string(x).period for x in asce41_df.IMT]
+    del asce41_df['IMT']
+    out = []
+    for sids in locs.values():
+
+        csi = sitecol.custom_site_id[sids[0]].decode('ascii').split(':')[0]
+        asce41df = asce41_df[np.isin(asce41_df.sid, sids)]
+        df = asce41df.groupby('period')[keys_asce41].max()
+        df['custom_site_id'] = csi
+        out.append(df)
+    return pd.concat(out).reset_index()
+
+
+def calc_mce(dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
     """
-    :yields: (site, rtgm_df, warning)
+    :yields: (sid, mag_dst_eps_sig, mce_df)
     """
-    for site in dstore['sitecol']:
-        sid = site.id
-        mrs = dstore['mean_rates_by_src'][sid]
-        mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
-
-        oq = dstore['oqparam']
-        stats = list(oq.hazard_stats())
-        assert stats[0] == 'mean', stats[0]
-        hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
-        site = list(dstore['sitecol'])[sid]
-        loc = site.location
-        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq)
-        logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
-
-        if mrs.sum() == 0:
-            warning = ('Zero hazard: there are no ruptures close to the site. '
-                       'ASCE 7-16 and ASCE 41-17 parameters cannot be computed.'
-                       ' See User Guide.')
-            yield site, None, warning
-
-        elif mean_rates.max() < MIN_AFE:
-            warning = ('Very low hazard: ASCE 7-16 and ASCE 41-17'
-                       ' parameters cannot be computed. See User Guide.')
-            yield site, None, warning
-
-        elif (rtgm_df.ProbMCE.to_numpy()[1] < 0.11) or \
-                (rtgm_df.ProbMCE.to_numpy()[2] < 0.04):
-            warning = ('The MCE at the site is very low. Users may need to '
-                       ' increase the ASCE 7-16 and ASCE 41-17 parameter values'
-                       ' to user-specified minimums (e.g., Ss=0.11g and '
-                       ' S1=0.04g). See User Guide.')
-            yield site, rtgm_df, warning
-
-        elif (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
-            yield site, rtgm_df, 'Only probabilistic MCE'
-
-        else:
-            yield site, rtgm_df, ''
-
-
-
-def calc_asce(dstore, csm, rtgm):
-    """
-    :yields: (sid, asce07, asce41)
-    """
-    imls_by_sid = {}
-    for sid, rtgm_df in rtgm.items():
-        imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
-    out = postproc.disagg_by_rel_sources.main(dstore, csm, IMTS, imls_by_sid)
+    oq = dstore['oqparam']
+    imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
+                   for sid, rtgm_df in rtgm.items()}
+    out = postproc.disagg_by_rel_sources.main(
+        dstore, csm, job_imts, imls_by_sid)
     sitecol = dstore['sitecol']
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
         lon = sitecol.lons[sid]
         lat = sitecol.lats[sid]
+        vs30 = sitecol.vs30[sid]
         rtgm_df = rtgm[sid]
         det_imt, mag_dst_eps_sig = get_deterministic(
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
-        prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
-            det_imt, DLLs, rtgm_df)
+        mg = MCEGetter(job_imts, det_imt, oq.asce_version)
+        _prob_mce_out, mce, mce_df = mg.get_mce(
+            DLLs[sid], rtgm_df, sid, vs30)
+        logging.info('(%.1f,%.1f) Computed MCE: high hazard\n%s', lon, lat,
+                     mce_df)
         logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
-        logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
-        asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-        logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
-        logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
-        yield sid, mag_dst_eps_sig, asce07, asce41
+
+        yield (sid, mag_dst_eps_sig, mce_df)
 
 
-def to_array(dic):
-    return np.array([dic[sid] for sid in sorted(dic)])
+def save_figure_to_dstore(fig, dstore, key):
+    """
+    Save a matplotlib figure to the datastore as a PNG image.
+
+    :param fig: The matplotlib figure object
+    :param dstore: The datastore to write to
+    :param key: The key under which to store the PNG (e.g., 'png/fig1.png')
+    """
+    from PIL import Image
+    bio = io.BytesIO()
+    fig.savefig(bio, format='png', bbox_inches='tight')
+    bio.seek(0)
+    dstore[key] = Image.open(bio)
+
+
+def add_footer_referencing_user_guide(fig):
+    fig.tight_layout(rect=[0, 0.03, 1, 1])
+    fig.text(0.5, 0.015,  # y = 0.015 is the vertical position of the footer
+             'See WebUI User Guide for complete explanation of plot contents.',
+             ha='center', fontsize='small', color='black', alpha=0.85)
+
+
+def display_vs30_in_subplot_title(axes, n_rows, sid_idx, vs30):
+    for row in range(n_rows):
+        axes[row, sid_idx].set_title("$V_{S30}$ = %s m/s" % vs30, fontsize=13)
+
+
+def make_figure_hcurves(plt, sids, dstore, notifications, vs30s):
+    n_rows = 1
+    n_sids = len(sids)
+    fig, axes = plt.subplots(
+        n_rows, n_sids, figsize=(7 * n_sids, 6), squeeze=False)
+    for i, sid in enumerate(sids):
+        vs30 = vs30s[i]
+        plot_mean_hcurves_rtgm(dstore, sid, axes=axes[0, i])
+        display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+    add_footer_referencing_user_guide(fig)
+    save_figure_to_dstore(fig, dstore, 'png/hcurves.png')
+    plt.close(fig)
+
+
+def make_figure_disagg_by_src(plt, sids, dstore, vs30s):
+    n_rows = 3  # 3 imts: [PGA, SA(0.2), SA(1.0)]
+    n_sids = len(sids)
+    fig, axes = plt.subplots(
+        n_rows, n_sids, figsize=(7 * n_sids, 15), squeeze=False)
+    for i, sid in enumerate(sids):
+        vs30 = vs30s[i]
+        plot_disagg_by_src(
+            dstore, sid, axes=[axes[0, i], axes[1, i], axes[2, i]])
+        display_vs30_in_subplot_title(axes, n_rows, i, vs30)
+    has_data = any(ax.has_data() for row in axes for ax in row)
+    if has_data:
+        add_footer_referencing_user_guide(fig)
+        fig.subplots_adjust(hspace=0.3)  # avoid overlapping titles and xlabels
+        save_figure_to_dstore(fig, dstore, 'png/disagg_by_src-All-IMTs.png')
+    plt.close(fig)
+
+
+def make_figure_sites(dstore, oq, locs, sitecol, notifications):
+    [sids] = locs.values()
+    n_sids = len(sids)
+    vs30s = list(sitecol['vs30'])
+    assert n_sids == len(vs30s), (
+        f'The number of sites ({n_sids}) must be equal to'
+        f' the number of values of vs30 ({len(vs30s)})')
+    plt = import_plt()
+    # Mean Hazard Curves (1 row, n_sids columns)
+    mask = np.isin(notifications['name'], ['zero_hazard', 'low_hazard'])
+    sids_to_exclude = notifications['sid'][mask].tolist()
+    sids_to_plot = [sid for sid in sids if sid not in sids_to_exclude]
+    if sids_to_plot:
+        make_figure_hcurves(plt, sids_to_plot, dstore, notifications, vs30s)
+        # Governing MCE
+        if oq.asce_version == 'ASCE7-16':
+            plot_governing_mce_asce_7_16(dstore, update_dstore=True)
+        elif n_sids == 1:
+            plot_mce_spectra(dstore, update_dstore=True)
+            plot_governing_mce(dstore, update_dstore=True)
+            # in simplified page
+        else:
+            plot_governing_mce(dstore, update_dstore=True)
+        # Disaggregation by Source (3 rows, n_sids columns)
+        make_figure_disagg_by_src(plt, sids_to_plot, dstore, vs30s)
+
+
+def compute_asce07(dstore, mce_df, sitecol, custom_ids):
+    # FIXME: in case of multiple sites on the same location
+    # there will be duplications
+    asce07 = {}
+    for s, custom_id in enumerate(custom_ids):
+        csi = custom_id.split(':')[0]
+        mce_site = mce_df[mce_df['custom_site_id'] == csi]
+        Vs30 = sitecol["vs30"][s]
+        if np.all(mce_site.SaM == 0) or mce_site['SaM'].isna().all():
+            result = get_zero_hazard_asce07(dstore,Vs30)
+        else:
+            result = asce07_output_new(custom_id, Vs30, dstore, mce_site)
+        #result['custom_site_id'] = custom_id
+        asce07[s] = result
+    return asce07
+
+
+def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
+                   ASCE_version):
+     # 1) get spectra asce41 for each sid and each Vs30
+    asce41 = {}
+    if mce_dfs:
+        mce_df = dstore.read_df('mce')
+    sa_asce41 = []  # list to collect DataFrames for each site
+
+    for sid in sitecol['sids']:
+        mce_df_site = mce_df[mce_df['sid'] == sid]['MCE']
+        custom_id = sitecol[sitecol['sids'] == sid]['custom_site_id']
+        # get single value
+        # Get the spectra for this site
+        uhs_asce41 = get_spectra(dstore, sid, custom_id, mce_df_site, facts)
+        
+        # Convert to DataFrame and reset index
+        df_out = pd.DataFrame(uhs_asce41).reset_index(drop=True)
+        sa_asce41.append(df_out)
+        
+        logging.info(f'{df_out=}')  # optional
+    
+    df_final = pd.concat(sa_asce41, ignore_index=True)
+    df_final = df_final.astype(
+        {col: "string" for col in df_final.select_dtypes("object").columns})
+    df_final = df_final.reset_index(drop=True)
+    dstore.create_df("spectra_asce41", df_final)
+
+    # 2) compute max of asce41 spectra for default site class:
+    asce41_spectra = compute_max_sa_asce41(dstore, sitecol, locs)
+    asce41_spectra.columns = [
+        'period', 'BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475',
+        'custom_site_id']
+    dstore.create_df('asce41_sa_final', asce41_spectra)
+
+    # 3) compute asce41 parameters:
+    keys_asce41 = ['BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475']
+    asce41 = {}
+
+    for s, custom_id in enumerate(custom_ids):
+        csi = custom_id.split(':')[0]
+        Vs30 = sitecol["vs30"][s]
+        asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] == csi]
+        if asce_sa[keys_asce41].sum().any():
+            result = get_params(ASCE_version, Vs30, asce_sa, ASCE_DECIMALS)
+        else:
+            result = get_zero_hazard_asce41(ASCE_version)
+        result['custom_site_id'] = custom_id
+        asce41[s] = result
+
+    return asce41
 
 
 def main(dstore, csm):
@@ -466,57 +972,77 @@ def main(dstore, csm):
     :param dstore: datastore with the classical calculation
     :param csm: a CompositeSourceModel instance
     """
+    oq = dstore['oqparam']
+    ASCE_version = oq.asce_version
+    job_imts = list(oq.imtls)
+    facts = []
+    for m, imt in enumerate(job_imts):
+        T = from_string(imt).period
+        fact = 1 if imt == "PGA" else _find_fact_maxC(T, ASCE_version)
+        facts.append(fact)
+    sitecol = dstore['sitecol']
+    DLLs = {site.id: get_DLLs(job_imts, site.vs30) for site in sitecol}
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    N = len(dstore['sitecol'])
-    asce07 = {}
-    asce41 = {}
-    warnings = {}
+    notification_items = []
     rtgm_dfs = []
+    mce_dfs = []
     rtgm = {}
-    for site, rtgm_df, warning in process_sites(dstore, csm):
+    locs = general.AccumDict(accum=[])  # lon, lat -> sids
+    for site, rtgm_df, mce_df, notification_name in process_sites(
+            dstore, csm, DLLs, ASCE_version):
         sid = site.id
         loc = site.location
-        if warning.startswith(('Zero hazard', 'Very low hazard')):
-            asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
-            asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
-        elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
-            dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
-            prob_mce_out, mce, det_mce, a07 = get_mce_asce07(
-                dummy_det, DLLs, rtgm_df, low_haz=True)
-            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-            asce07[sid] = hdf5.dumps(a07)
-            asce41[sid] = hdf5.dumps(a41)
-        else:  # High hazard
+        locs[loc.x, loc.y].append(sid)
+        if mce_df is None:  # high hazard site requiring calc_mce
             rtgm[sid] = rtgm_df
-        warnings[sid] = warning
-        if warning:
-            logging.warning('(%.1f,%.1f) ' + warning, loc.x, loc.y)
+        else:  # low hazard
+            mce_dfs.append(mce_df)
+        if notification_name:
+            if notification_name in AELO_WARNINGS:
+                level = 'warning'
+                description = AELO_WARNINGS[notification_name]
+                logging.warning('(%.1f,%.1f) ' + description, loc.x, loc.y)
+            elif notification_name in AELO_NOTES:
+                level = 'info'
+                description = AELO_NOTES[notification_name]
+                logging.info('(%.1f,%.1f) ' + description, loc.x, loc.y)
+            else:
+                raise NotImplementedError(
+                    f'Unexpected notification name: {notification_name}')
+            notification_items.append(
+                (sid, level, notification_name, description))
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
-    for sid, mdes, a07, a41 in calc_asce(dstore, csm, rtgm):
-        asce07[sid] = hdf5.dumps(a07)
-        asce41[sid] = hdf5.dumps(a41)
-        dstore[f'mag_dst_eps_sig/{sid}'] = mdes
+    notifications = np.array(notification_items, dtype=notification_dtype)
 
-    dstore['asce07'] = to_array(asce07)
-    dstore['asce41'] = to_array(asce41)
+    for sid, mag_dst_eps_sig, mce_df in calc_mce(
+            dstore, csm, job_imts, DLLs, rtgm, ASCE_version):
+        dstore[f'mag_dst_eps_sig/{sid}'] = mag_dst_eps_sig
+        mce_dfs.append(mce_df)
 
+    if mce_dfs:
+        dstore.create_df('mce', pd.concat(mce_dfs))
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
-    if rtgm_dfs and N == 1:# and not warnings[sid]:
-        sid = 0
-        if not warnings[sid].startswith(('Zero hazard', 'Very low hazard')):
-            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-            plot_governing_mce(dstore, sid, update_dstore=True)
-            if not warnings[sid]:
-                plot_disagg_by_src(dstore, sid, update_dstore=True)
+    # final MCE spectra
+    df = compute_mce_governing(dstore, sitecol, locs)
+    df.columns = ["period", "SaM", "custom_site_id"]
+    dstore.create_df('mce_governing', df)
+    sitecol = dstore['sitecol']
+    custom_ids = python3compat.decode(sitecol['custom_site_id'])
+    
+    asce07 = compute_asce07(dstore, df, sitecol, custom_ids)
+    dstore["asce07"] = to_array(asce07)
 
-    # if warnings are meaningful, and/or there are 2+ sites add them to the ds
-    if len(warnings) == 1:
-        if not warnings[0].startswith('Only probabilistic MCE'):
-            dstore['warnings'] = to_array(warnings)
-    else:
-        dstore['warnings'] = to_array(warnings)
+    asce41 = compute_asce41(dstore, mce_dfs, sitecol, facts, locs,
+                            custom_ids, ASCE_version)
+    dstore["asce41"] = to_array(asce41)
+    if len(notifications):
+        dstore['notifications'] = notifications
+
+    plot_sites(dstore, update_dstore=True)
+    if rtgm_dfs and len(locs) == 1:
+        make_figure_sites(dstore, oq, locs, sitecol, notifications)

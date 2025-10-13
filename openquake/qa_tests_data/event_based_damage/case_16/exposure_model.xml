@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+
+<exposureModel id="exp1" category="buildings">
+  <description>Multiple assets example</description>
+  <conversions>
+    <costTypes>
+      <costType name="structural" type="per_asset" unit="USD" />
+      <costType name="nonstructural" type="per_asset" unit="USD" />
+      <costType name="contents" type="per_asset" unit="USD" />
+    </costTypes>
+  </conversions>
+  <tagNames>state county tract city zip</tagNames>
+  
+  <assets>
+    assets.csv
+  </assets>
+</exposureModel>
+
+</nrml>

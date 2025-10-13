@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,8 @@ from openquake.hazardlib.source.complex_fault import (ComplexFaultSource,
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 from openquake.hazardlib.scalerel.peer import PeerMSR
-from openquake.hazardlib.mfd import EvenlyDiscretizedMFD
+from openquake.hazardlib.scalerel.strasser2010 import StrasserInterface
+from openquake.hazardlib.mfd import EvenlyDiscretizedMFD, ArbitraryMFD
 from openquake.hazardlib.tom import PoissonTOM
 
 from openquake.hazardlib.tests.source import simple_fault_test
@@ -121,6 +122,25 @@ class ComplexFaultSourceIterRupturesTestCase(
                                    test_data.TEST1_MESH_SPACING,
                                    test_data.TEST1_EDGES)
         self._test_ruptures(test_data.TEST1_RUPTURES, source)
+
+    def test_1bis(self):
+        source = self._make_source(
+            test_data.TEST1_MFD,
+            test_data.TEST1_RUPTURE_ASPECT_RATIO,
+            test_data.TEST1_MESH_SPACING,
+            test_data.TEST1_EDGES
+        )
+        source.magnitude_scaling_relationship = StrasserInterface()
+        source.mfd = ArbitraryMFD(
+            magnitudes=[7.0, 8.0],
+            occurrence_rates=[0.1, 0.01]
+        )
+        for r in source._iter_ruptures(
+            eps_low=-2,
+            eps_upp=2,
+            num_bins=10,
+        ):
+            pass
 
     def test_2(self):
         # Complex fault source equivalent to Simple fault source defined by

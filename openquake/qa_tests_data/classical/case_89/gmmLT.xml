@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="SINTERLT"
+    >
+        <logicTreeBranchingLevel
+        branchingLevelID="SI"
+        >
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Active Shallow Crust"
+            branchSetID="1"
+            uncertaintyType="gmpeModel"
+            >
+                <logicTreeBranch branchID="ASK14">
+                    <uncertaintyModel>
+                        AbrahamsonEtAl2014
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.25
+                    </uncertaintyWeight>            
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="BSSA14">
+                    <uncertaintyModel>
+                        [BooreEtAl2014]
+                        region = "CAL"
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.25
+                    </uncertaintyWeight>            
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="CB14">
+                    <uncertaintyModel>
+                        CampbellBozorgnia2014
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.25
+                    </uncertaintyWeight>            
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="CY14">
+                    <uncertaintyModel>
+                        ChiouYoungs2014
+                    </uncertaintyModel>
+                    <uncertaintyWeight>
+                        0.25
+                    </uncertaintyWeight>            
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+
+        </logicTreeBranchingLevel>
+    
+    </logicTree>
+</nrml>

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2019-2023 GEM Foundation
+# Copyright (C) 2019-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -34,7 +34,7 @@ done
 
 if [ "$LOCKDOWN" = "True" ]; then
     echo "LOCKDOWN = True" > $HOME/local_settings.py
-    oq webui migrate
+    python3 -m openquake.server.manage migrate
     if [ -n "$OQ_ADMIN_LOGIN" ]; then
         echo "from django.contrib.auth.models import User; User.objects.create_superuser('${OQ_ADMIN_LOGIN}', '${OQ_ADMIN_EMAIL}', '${OQ_ADMIN_PASSWORD}')" | oq shell 2>&1 >/dev/null
     else

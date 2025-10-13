@@ -1,10 +1,711 @@
+  [Michele Simionato]
+  * Improved the parallelization of disagg_source in AELO calculations
+  * Fixed the OverflowError: Python integer out of bounds for uint32
+    happening for extra-large calculations when saving source_info
+
+  [Guillermo Aldama-Bustos]
+  * Fixed the unit of measure in the Douglas et al (2024) GMM and updated
+   coefficients for the 3- and 5-branch models to fix an error
+
+  [Michele Simionato, Kendra Johnson]
+  * Internal: parallelized the AELO mosaic tests and made it possible to pass
+    the asce_version and vs30 parameters
+
+  [Michele Simionato]
+  * Extended the source_id-filtering feature to use .startswith
+  * Added a flag "aggregate_exposure" (false by default) to aggregate
+    the assets with the same taxonomy on the same hazard site
+  * Optimized "building cmakers" and the RateMap in the case of clusters
+    of sources (260x for the latest USA model)
+
+  [Christopher Brooks]
+  * Added BSSA14 site term capability to Modifiable GMPE + unit tests
+
+  [Richard Styron]
+  * Added method `from_moment` to the `TaperedGRMFD` class
+  * Fixed `KiteSurface.get_middle_point` to manage NaNs
+
+  [Michele Simionato]
+  * Doing the check on the `export_dir` only if `--exports` is passed
+  * Fixed a `NameError: Missing liquefaction:LiqProb in gmf_data`
+    when using the TodorovicSilva2022NonParametric model
+  * gzipping the avg_losses reducing the disk space by half or so
+  * Added an extractor `losses_by_location`
+  * Filtering the assets around the rupture according to the maximum distance
+    in scenario calculations
+
+  [Claudia Mascandola]
+  * Added a Ramadan et al (2023) gsim
+
+  [Michele Simionato]
+  * Disabled the threads in PicklableInferenceSession, making it possible
+    to use the TodorovicSilva2022NonParametric model in high concurrency
+    situations
+  * Made it possible to merge pre_job.ini and job.ini in ShakeMap calculations
+  * Internal: changed `Exposure.read_around` to work in terms of h3 hexagons;
+    changed the exposure.hdf5 accordingly
+  * Added a private endpoint `/v1/calc/run_ini` to run remote calculations
+  * Added a private endpoint `/v1/calc/jobs_from_inis`
+
+  [Myles Turner, Guillermo Aldama-Bustos]
+  * Added GMM of Douglas et al. (2024)
+
+  [Michele Simionato]
+  * Added a parameter config.dbserver.cache to avoid repeating calculations
+  * Removed the --reuse-input flag, since it was not used (use --hc instead)
+  * Changed install.py to exit if any of the tools is not installed
+  * Fixed small negative damages due to numeric errors
+  * Fixed the MIMETYPE to application/x-zip when needed in the WebUI
+  * Removed the parameter `site_effects` since it is useless
+  * Changed num_cores to be equal to the pool size when explicit
+  * On Windows use as default num_cores
+    num_threads/2 if num_threads > 8 else num_threads
+  * Extended the aggregation by `site_id` to multiple tags
+  * Fixed an extract bug in disagg-traditional with realizations
+  * Fixed a bug with the quantiles in event_based_damage
+  * Improved loggin the progress in event based risk
+  * Reduced slow tasks in the USA model
+  * Added output `mce_default` in AELO calculations
+  * Extended `oq export_mean_disagg_by_src` to multiple sites
+  * Extended `oq export_mag_dst_eps_sig` to multiple sites
+  * Extended aggexp_tags and aggrisk_tags to multi-tags
+
+  [Paolo Tormene]
+  * The OQ-Impact workflow option 'Use finite rupture from the USGS' was
+    replaced by two options 'Use ShakeMap fault rupture from the USGS'
+    and 'Use finite-fault model from the USGS', making it possible to convert
+    a wider set of ruptures from the USGS data
+  * A sanity check was added to make sure that the hypocenter is inside the
+    surface of the rupture. Otherwise, it is relocated to the middle point of
+    the surface and a warning indicates the original and translated
+    coordinates.
+
+  [Christopher Brooks]
+  * Fixed bug in ParkerEtAl2020 epistemic uncertainty scaling factors.
+
+  [Michele Simionato]
+  * Fixed indentation errors in nearly all secondary peril classes
+  * Reduced the data transfer in avg_losses (20x for Philippines),
+    thus solving an out-of-memory error; also improved the performance
+    (25% for Philippines) and reduced the memory occupation on the workers
+  * Print a warning if there are vs30 values distant more than 10% from
+    DEFINED_FOR_REFERENCE_VELOCITY
+
+  [Anirudh Rao]
+  * Fixed a bug when generating the aggregate curves for `affectedpop` and
+    `injured` loss types, due to missing units
+
+  [Michele Simionato]
+  * Extended `override_vs30` to multiple values
+  * Forbidden GMF correlation with more then `max_sites_correl=1000`
+  * Made `minimum_intensity` and `minimum_magnitude` mandatory with event based
+    calculations with many sites
+
+  [Paolo Tormene]
+  * When a job is deleted, also the corresponding calc_CALCID_tmp.hdf5 file is
+    removed, if present
+
+  [Astha Poudel, Catarina Costa]
+  * Modified infrastructure risk to avoid calculating efficiency loss for
+    large networks
+
+  [Paolo Tormene]
+  * AELO: the management of warnings was made more robust
+
+  [Michele Simionato]
+  * OQImpact: reading the sites around the rupture and not around the hypocenter
+  * Raised an error if the ShakeMap does not contain SA(0.6) when required
+  * Fixed the multi-peril implementation (imt_by_lt)
+  * Raised an error for risk IMTs not covered by the secondary IMTs
+  * Optimized build_global_exposure
+
+  [Michele Simionato, Paolo Tormene]
+  * OQ-Impact: fixed aggregation by ID_2, which was using indices instead
+    of strings
+
+  [Marco Pagani]
+  * Storing also `tau` in the mean spectrum calculator
+
+  [Christopher Brooks]
+  * Added ability to specify z1pt0 and z2pt5 as -999 within site model
+    to inform (basin term considering) GMMs to use their own vs30 to
+    z1pt0 or z2pt5 relationship to estimate these site parameters, in
+    effect preventing additional adjustment to GMM basin terms based
+    on unknown site information. QA tests (classical case_89) + unit
+    tests (`utils_infer_basin_params_test.py`) added
+  * Added validation checks for core site params (lon, lat, vs30, z1pt0
+    and z2pt5) when building the site collection within a calculation
+
+  [Paolo Tormene]
+  * In the API endpoint listing the outputs for a job, the first available
+    export_type is specified in each output url
+
+  [Michele Simionato]
+  * Added a new uncertainty `abMaxMagAbsolute` to the logic tree
+  * Internal: refactored lt.Branch, lt.BranchSet and lt.CompositeLogicTree
+  * Avoided out of memory in calculations starting from the global SES
+
+  [Lana Todorovic]
+  * Updated units of slope (in m/m) in site model.
+
+  [Michele Simionato]
+  * Improved the validation of area source polygons
+  * Internal: added method `CompositeLogicTree.apply_all`
+  * Fixed downloading of uncertainty.xml in OQImpact calculations
+
+  [Michele Simionato, Paolo Tormene]
+  * Added a route /v1/calc/XXX/job_zip and a button to download the archive
+    from the WebUI, visible only in OQImpact for level 2 users
+  * Fixed an error in `oq plot examples`
+
+  [Baran Güryuva, Christopher Brooks]
+  * Implemented the EMME24 backbone GMC for crustal
+    earthquakes (emme24.py)
+
+  [Marco Pagani, Michele Simionato]
+  * Added uncertainties for area geometry and seismogenic depths
+
+  [Michele Simionato]
+  * Added a check on duplicate branches in the source model logic tree
+  * Internal: added methods `CompositeLogicTree.to_node` and
+    `CompositeLogicTree.to_nrml`
+
+  [Paolo Tormene, Michele Simionato]
+  * Added extractor for 'damages-stats'
+
+  [Kendra Johnson]
+  * Updated the mosaic geometries for AELO year 4
+
   [Matteo Nastasi]
-  * Add helper to check consistency between debian/changelog and CONTRIBUTORS.txt
+  * Allow free mapping between standlone apps and their url path prefix
+    (regardless of their name)
+
+  [Claudia Mascandola]
+  * Added GMPEs of ambraseys_1996 and sabetta_pugliese_1996
+
+  [Graeme Weatherill, Michele Simionato]
+  * Implemented the MacedoEtAl2019SInter and MacedoEtAl2019SSlab conditional
+    GMMs
+
+  [Anirudh Rao]
+  * In the stations parser, make sure to skip all "vertical" ('z' or 'Z') or
+    "up" ('u' or 'U') components when extracting the max horizontal component
+
+  [Manuela Villani]
+  * Implementation of ASCE design parameters Sd, Sm in the AELO engine
+
+  [Paolo Tormene]
+  * Added to oq-impact the possibility to upload a rupture in csv format
+  * Added to oq-impact the possibility to choose between different ShakeMap
+    versions for the given USGS identifier
+  * Added to oq-impact the possibility to edit the preset job description
+
+  [Michele Simionato]
+  * Internal: added utility `get_ruptures(file_csv)`
+  * Optimized memory consumption in conditioned GMFs calculations
+
+  [Anirudh Rao]
+  * Sort observed imtls and imts and ensure all of the target imts go
+    into the context maker for the target sites in the conditioned gmfs
+    calculator - helps in debugging mode to prevent accidental
+    reordering of the imts
+
+ [Michele Simionato]
+  * Managed better the low hazard case in AELO calculations
+  * Optimized get_taxidx, thus making reading the USA exposure 10x faster
+  * Internal: restored the view portfolio_damage
+  * Too many post_classical tasks were generated with an artificially large
+    parameter `max_sites_disagg`
+  * Internal: added a flag --wfp to the script `utils/build_global_exposure`
+
+  [Paolo Tormene]
+  * Added `oq plot "sites?"` and added to the AELO advanced outputs page a
+    button to visualize the site of interest
+
+  [Michele Simionato]
+  * Implemented `gsim_aliases` as thunks
+  * Forced the consequence files to contain risk IDs and removed
+    utils/fix_consequences, now useless
+  * OQImpact: now aggregating by ID_2 and not ID_1
+  * Removed the --config-file option from the oq engine command
+  * Fixed numeric error in high intensity hazard curves produced by
+    multifault source by using 64 bit PoEs
+  * Removed the dependency from pyshp
+  * Improved the task distribution
+  * Exposed the output `avg_gmf`
+  * Internal: enhanced `build_global_exposure` to work at admin level 2
+  * Do not store the `backarc` parameter when not needed
+  * Fixed call to `v1/calc/list` breaking the DbServer
+  * Extended the exposure reader to accept .csv.gz files
+  * Fixed `oq info calculators` that was still displaying the obsolete and now
+    removed ucerf calculators
+  * Fixed `oq show rlz:` when the gsim logic tree was not properly reduced
+  * Internal: turned multi_fault.BLOCKSIZE into a configurable parameter
+    `config.memory.max_multi_fault_ruptures`
+  * Added command `oq info apply_uncertainty`
+  * Added an extractor `losses_by_site`
+  * Improved `oq info sources` and `oq show relevant_sources:<IMT>`
+  * Internal: accepted `source_model_file` in place of
+    `source_model_logic_tree_file`
+  * Extended `source_model.serialise_to_nrml` to accept a `mesh_spacing`
+    parameter
+
+  [Marco Pagani]
+  * Added a module to the modifiable GMPE computing site response according
+    to Stewart et al. (2020) and Hashash et al. (2020).
+  * Added a model for AUS23 that replaces the fixed Vs30 ones currently in
+    the engine
+
+  [Marco Pagani, Valeria Cascone]
+  * Added an get_width and get_length methods to Strasser et al. (2010) MSR
+  * Added methods get_length and get_width to the Thingbaijam et al. scaling
+    relationship
+  * Fixed a bug in the Thingbaijam et al. (2017) MSR
+
+  [Michele Simionato]
+  * Added an input `mmi_shapes_file` for use in OQ Impact and then
+    a JSON output /v1/calc/:ID/mmi_tags
+
+  [Christopher Brooks]
+  * Added Boore and Atkinson (2008) site term to the ModifiableGMPE
+    capabilities and as an input arg for the Atkinson and Macias (2009)
+    GMM as required for the US 2023 model + added unit tests.
+
+  [Michele Simionato]
+  * Extended `avg_gmf` to the secondary perils
+
+  [Kendra Johnson, Michele Simionato]
+  * Implemented splitting of multifault sources into faults when using
+    disagg_by_src=true and use_rates=true
+
+  [Mara Mita, Catarina Costa]
+  * Added new landslide models and replaced NewmarkDisplacement,
+    GrantEtAl2016RockSlopeFailure, NowickiJessee2018Landslides
+
+  [Michele Simionato]
+  * Extended the output loss types to `affectedpop` and `injured`
+  * Fixed `oq plot?hcurves`: the disaggregation PoEs were plotted in linear
+    scale and not in logarithmic scale
+  * Internal: introduced parameter `config.memory.gmf_data_rows`
+
+  [Marco Pagani, Michele Simionato]
+  * Fixed ArtetaEtAl2021SlabVs30 by adding backarc to the site parameters
+
+  [Manuela Villani, Michele Simionato]
+  * Extended the global_ses script to override several input parameters;
+    extended `oq show_attrs` to work with any HDF5 file
+
+  [Christopher Brooks]
+  * Fixed modified_gsim (valid.py) to work with more complex
+    GMMs (e.g. NGAEast GMPE Tables) + added a unit test
+
+python3-oq-engine (3.23.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed contexts.py: we were incorrectly discarding ruptures with magnitude equal
+    to the minimum magnitude
+  * Hiding spurious "divide by zero" warnings generated by shapely in
+    get_joyner_boore_distance
+
+  [Fatemeh Alishahiha]
+  * Added GMM Campbell-Bozorgnia (2003)
+
+  [Christopher Brooks]
+  * Another small bug fix for NZ 2022 inslab variants of the Kuehn et
+    al. (2020) GMM - the sigma_mu_model and sigma_mu_epsilon params
+    were sometimes missing from GSIM object + added a sensitivity test
+
+  [Marco Pagani, Michele Simionato]
+  * Added an `occurrence_rate` column in median_spectrum_disagg and fixed
+    the exporter to order the ruptures by ID
+
+  [Michele Simionato]
+  * Fixed a bug in classical_damage with sampling reported by Evi Riga
+  * Added utils/fix_consequences to fix consequence.csv files
+    containing risk_ids rather than taxonomies, now invalid
+  * Implemented quantiles in scenario_risk, visible in aggrisk_tags
+  * Added checks on the consequence functions across taxonomies and perils
+  * Fixed the taxonomy field in consequences.csv to be the exposure
+    taxonomy and not a fragility function ID
+  * Internal: renamed aristotle -> impact
+  * Changed the sourcewriter to save the rupture_idxs as compressed datasets,
+    thus reducing the size of some models a lot (i.e. from 400M to 17M)
+
+  [Christopher Brooks]
+  * Small bug fix for NZ 2022 inslab variants of the Kuehn et al. (2020)
+    and Parker et al. (2020) GMMs - backarc param was not always in the
+    req. site params but is needed given included in NZ 2022 site model
+
+  [Savvinos Aristeidou]
+  * Added new ANN-based GMM in the gsim library, named `aristeidou_2024`
+  * Added new IMs, that is the FIV3, Sa_avg2, and Sa_avg3
+
+  [Michele Simionato]
+  * Extended rupture_dict to the `msr` and `aspect_ratio` parameters
+  * Fixed the instantiation of file-dependent GMPEs from the datastore
+  * Optimized slow tasks both in the preclassical and the classical phase
+  * Reading the site model in calculations with ruptures.hdf5 and making
+    `minimum_intensity` mandatory
+  * Added parameter `minimum_engine_version`
+
+  [Paolo Tormene, Michele Simionato]
+  * Storing the reduced asset collection and fixing a bug when exporting
+    the average losses
+
+  [Richard Styron, Michele Simionato]
+  * Extended the preclassical calculator to work in absence of a site collection
+
+  [Michele Simionato]
+  * Added a new output "Aggregated Exposure Values" (`aggexp_tags`) and a new extractor
+    `aggrisk_tags`;
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 17 Feb 2025 10:13:32 +0000
+
+python3-oq-engine (3.22.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed HDF5 bug when storing the avg_losses, visible on MacOS with a large
+    number of assets (say over a million). Fixed the same bug for damages too.
+
+  [Christopher Brooks]
+  * Added ability to specify period-dependent bias adjustment for USGS
+    classes of NGAEast GMMs (US 2023 NSHMP). Unit tests also added.
+  * Added ability to specify Chapman and Guo (2021) Coastal Plains site
+    amplification adjustment for USGS classes of NGAEast GMMs (US 2023
+    NSHMP). Unit tests also added.
+  * Added sediment depth site param (z_sed) to sites module as required
+    for Chapman and Guo (2021) Coastal Plains site amp. adjustment. QA
+    is provided through unit tests and qa_tests_data/classical/case_87.
+
+  [Michele Simionato]
+  * Removed the deprecated function `openquake.commonlib.datastore.hdf5new`
+    and changed `build_dstore_log` into `create_job_dstore`;
+  * Extended the ShakeMap parser to read the intensities associated to SA(0.6)
+  * Fixed a bug while exporting realizations.csv for scenario calculations
+  * Added `webapi.calc_timeout` configuration parameter
+  * Reduced `conditioned_gmfs_gb` to 8 GB by default
+  * Parallelized `get_mean_covs` when conditioning the GMFs
+
+  [Christopher Brooks]
+  * Added Seattle Basin classes of Kuehn et al. (2020) NGASUB GMM (uses
+    Cascadia coeffs except for basin term).
+  * Added USGS basin scaling and CyberShake adjustments to the NGAWest2
+    GMMs + ability to pass base gsim arguments within the NSHMP2014 gsim class.
+
+  [Michele Simionato]
+  * Saving the rupture geometries as 32 bit floats to save memory
+  * Internal: added a command `oq filter_around lon lat csvfile`
+  * Added a command `oq plot ebruptures?min_mag=XXX`
+  * Added a script `utils/build_global_ses`
+  * Removed the ability to read GMFs generated with engine <= 3.11
+  * Fixed the filtering of the site collection in event_based with --hc
+  * Internal: writeability check for datadir and scratch_dir (if any)
+
+  [Christopher Brooks]
+  * Added instantiation-level arguments for contextually applying
+    the M9 basin term, the CB14 basin term and the USGS basin scaling
+    model to the AbrahamsonGulerce2020, KuehnEtAl2020, ParkerEtAl2020,
+    ZhaoEtAl2006 and AtkinsonMacias2009 GMMs as required for the 2023
+    US NSHM model's subduction interface GMC. Unit tests are also
+    provided for these GMM adjustments
+
+  [Michele Simionato]
+  * Internal: forcing the signature (C, ctx, region, ...) for _get_basin_term
+    in hazardlib
+  * Extended `gmfs_file` to multiple .hdf5 files, assuming they correspond to
+    disjoint sites and events
+
+  [Paolo Tormene]
+  * Added a `duplicates_strategy` argument to `read_df` and changed the
+    approach used while reading station data, to calculate the average values
+    of stations having the same coordinates instead of raising an error
+
+  [Christopher Brooks]
+  * Added epistemic uncertainty scaling capabilities to
+    the Parker et al. (2020) NGASUB GMM.
+  * Added M9 basin term and associated tests to ModifiableGMPE
+  * Added CB14 basin term and associated tests to ModifiableGMPE
+
+  [Michele Simionato]
+  * Added parameter `with_betw_ratio`
+  * Added command `oq info peril`
+  * Extended consequences to perils
+  * Replaced taxonomy mapping by loss type with taxonomy mapping by peril
+  * Internal: changed the ordering in the composite risk model from
+    (loss_type, riskid) -> (riskid, loss_type)
+  * Added an exporter for trt_gsim
+  * Internal: added utility function readinput.read_source_models
+
+  [Manuela Villani]
+  * Improved the "Governing MCE" plot
+
+  [Michele Simionato]
+  * Raised an error in case of non-invertible hazard curves, affecting
+    disaggregation and site-specific hazard spectrum calculations
+  * Changed the ruptures.csv exporter to also export the source IDs
+  * Added support for consequence=losses for liquefaction and landslides
+  * Added a check for missing secondary perils
+  * Added loss types liquefaction and landslide
+  * Removed support for XML consequences, after 3 years of deprecation
+  * Fixed the stored calculation_mode in `oq sensitivity_analysis`
+  * Added command `oq info loss_types`
+
+  [Paolo Tormene]
+  * Added the possibility to export the asset collection via command line,
+    keeping it private from the webui
+
+  [Michele Simionato]
+  * Fixed median_spectrum with multiple sites
+  * Extended Aristotle calculation to manage multiple countries at once
+  * Extended taxonomy_mapping.csv with a loss_type field
+  * Modernized the regionalization of Chiou Youngs (2014)
+  * Modernized the regionalization of Campbell Bozorgnia (2014)
+  * Internal: made it possible to override CoeffsTable
+  * Added a memory check in disaggregation calculations
+  * Made `scientific_format` resilient against encoding errors
+
+  [Ilaria Oliveti]
+  * Fixed the GMPE Tusa-Langer-Azzaro (2019) table of coefficients, the
+    IMTs were incorrectly using Hz instead of seconds
+
+  [Michele Simionato]
+  * Fixed the `assert(losses)` error in the view delta_loss in the case of few events
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 16 Jan 2025 15:15:22 +0000
+
+python3-oq-engine (3.21.0-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene]
+  * Added commands `oq plot "rupture?"` and `oq plot "rupture_3d?"`
+
+  [Michele Simionato]
+  * Extended `oq reset` to also remove the `custom_tmp` directory, if any
+  * Added classes CampbellBozorgnia2019, CampbellBozorgnia2019HighQ, CampbellBozorgnia2019LowQ
+  * Reduced the size of the large CSV files in hazardlib and added a check
+    to forbid files larger than 600k
+  * Added a check on the signatures of `get_std_dev_mag` and `get_median_area`
+    and fixed the signature of `StrasserIntraslab.get_std_dev_mag`
+
+  [Enrico Abcede, Francis Bernales]
+  * Implemented Campbell and Bozorgnia (2019) IA and CAV to campbell_bozorgnia_2014
+
+  [Michele Simionato]
+  * Fixed scenario_risk from GMFs when the intensity measure types were
+    incorrectly identified
+
+  [Marco Pagani, Michele Simionato]
+  * Added a median spectrum post-processor
+
+  [Michele Simionato]
+  * Added a parameter `mea_tau_phi` in the job.ini to save mean, tau and phi
+    for each rupture, site, gsim and imt in a GMF calculation
+  * Internal: changed `oq run` to automatically generate the db when possible
+  * Added a check on missing risk files
+  * Reduced the space used by the CollapsedPointSources (2.7x)
+  * Fixed the site model association procedure to work in conditioned
+    scenario calculations
+  * Used `oq engine --run` to submit asynchronous jobs to SLURM and
+    `oq run` to submit interactive jobs
+
+  [Christopher Brooks]
+  * Added the Japan region versions of the NGAWest2 relations used to obtain
+    z1pt0 and z2pt5 from vs30 in prepare sites command
+
+  [Michele Simionato]
+  * Fixed `oq reduce_sm` for calculations with nonparametric sources
+  * Fixed logging the classical time with --sample-sources
+  * Improved the progress log in classical calculations
+
+  [Kendra Johnson]
+  * Fixed an error `invalid literal for int() with base 10` affecting
+    event based calculations using mutex sources and a nontrivial logic tree
+
+  [Michele Simionato]
+  * Optimized the --sample-sources feature
+  * Honored the custom_tmp in classical calculations and saved data transfer
+    by using TileGetters, then parallelized the saving of the rates
+
+  [Lana Todorovic]
+  * Implemented Nowicki Jessee et al. (2018) landslide geospatial model that
+    computes the areal coverage by landslide occurrence.
+
+  [Paolo Tormene]
+  * Updated extractor for gmf_data for a single event id (used by the IRMT
+    QGIS plugin), including data for secondary perils
+
+  [Michele Simionato]
+  * Refined the tiling calculator (partial tiling, task weighting, saving memory)
+  * Optimized "computing pnes" in classical calculations (3x in the common case)
+    and fully switched to 32 bit rates, thus saving memory and improving performance
+
+  [Nicolas Schmid]
+  * Fixed a regression in the ShakeMap to_gmfs code, a forgotten sigma^2/2 term
+
+  [Marco Pagani]
+  * Fixed aliases for Kuehn2020 GMPEs (signalled by Eric Thompson)
+
+  [Michele Simionato]
+  * Internal: splitting in groups with homogeneous temporal occurrence model
+  * Optimized the calculation of mean and stdevs in event based calculations, with
+    a speedup of 13x for the EUR model
+
+  [Chris di Caprio]
+  * Allowed extrapolation in the Kuehn (2020) GMPEs to solve numeric issues
+
+  [Michele Simionato]
+  * Fixed an encoding error when exporting the realizations
+  * Fixed a bug with multifault sources raising a cryptic error
+    "object has no attribute msparams"
+  * Fixed a critical memory bug causing over 80 GB per core to be needed for
+    event based calculations with ~6 million sites
+  * Made `minimum_intensity` mandatory in event based calculations
+  * Reduced the memory consumption in event_based calculations: now even calculations
+    with 5 million sites can be run with ~2 GB per core
+  * Reduced the memory occupation in `gen_poes`
+  * Using half the memory in postclassical by using 32 bit arrays
+  * Using half the memory on Windows by using half the threads by default
+  * Fixed a bug in conditional spectrum calculations with a non-contributing TRT
+
+  [Savvinos Aristeidou]
+  * Added new GMM in the gsim library, named `aristeidou_2023`
+  * Added new IM, that is the inelastic spectral displacement, SDi,
+    which takes as input one additional parameter (i.e., strength ratio, R)
+
+  [Fatemeh Alishahiha]
+  * Added a new gsim module named `zafarani_2018`
+  * Added a new gsim module named `ambraseys_2005`
+
+  [Kyle Smith]
+  * Added a new gsim file sandikkaya_akkar_2017.py to implement the
+    Arias Intensity and Cumulative Absolute Velocity ground motion
+    models from Sandikkaya and Akkar (2017)
+
+  [Michele Simionato]
+  * Making sure that the tiles contains at least 100 sites in classical tiling
+    calculations
+  * Rewritten the SLURM algorithm to work around the submission limit
+  * Added uniqueness check for the station coordinates
+  * Internal: removed parameter [dbserver]listen in openquake.cfg
+  * Added command `oq submit n job_ini` for usage in supercomputers
+  * Reimplemented the sensitivity analysis in a supercomputer-friendly way
+  * Fixed export realizations which was truncating the branch_path
+  * Extended logic tree filtering via `smlt_branch`
+  * Worked on disaggregation by multifault source
+
+  [Michele Simionato, Christopher Brooks]
+  * Internal: added a function for filtering sites around a rupture
+
+  [Michele Simionato]
+  * Internal: added method GsimLogicTree.to_node
+  * Internal: added commands `oq compare oqparam` and `oq plot_sites csvfiles`
+  * Fixed exporting the ruptures when imported from a CSV
+  * Fixed the issue of small negative eigenvalues in conditioned GMFs
+    calculations by adding a correlation_cutoff
+  * Internal: extended `Starmap.apply` to split DataFrames
+  * Fixed the avg_gmf exporter in presence of a filtered site collection
+
+  [Lana Todorovic]
+  * Improved secondary perils documentation
+
+  [Michele Simionato]
+  * Fixed the ordering of the realizations to depend on the source model
+    branch path also in the case of full enumeration: this is crucial to
+    get consistent results with the two approaches
+  * Saved data transfer in the context makers in classical calculations
+  * Internal: added utility `oq info geohash:<lon>,<lat>`
+  * Changed the scenario calculators to discard the sites far away from
+    the rupture, with the effect of generating different GMFs
+  * Cached `get_realizations` and optimized the memory occupation; now
+    302_990_625 realizations (i.e. EUR) require only 90 GB
+
+  [Anna Rood]
+  * Updates to the AELO workflow: added additional spectral periods ranging
+    from 0.02 to 10 s and added option to use ASCE7-22. NB: minor changes in
+    the results of year 1 are expected
+
+  [Michele Simionato]
+  * Changed the GMF-based calculators to always set a `custom_site_id`
+  * Internal: added variable OQ_SITE_DEBUG
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 01 Oct 2024 15:20:20 +0000
+
+python3-oq-engine (3.20.1-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene, Antonio Ettorre, Armando Scarpati]
+  * Improved installation documentation
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 07 Jun 2024 09:13:03 +0000
+
+python3-oq-engine (3.20.0-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene, Michele Simionato]
+  * Internal: added commands `oq compare assetcol` and `oq compare sitecol`
+
+  [Michele Simionato]
+  * Added another check for missing gsim in scenario calculations
+  * Using custom `hcurves` and `uhs` exporters in AELO mode
+
+  [Fatemeh Alishahiha]
+  * Added a new gsim library named `ghasemi_2009` developed for Iran.
+
+  [Marco Pagani]
+  * Added a new epistemic uncertainty for modelling relative uncertainty on
+    MMax
+
+  [Michele Simionato]
+  * Added a check to forbid `individual_rlzs=true` and `collect_rlzs=true`
+  * Fixed a bug in `oq extract "ruptures?rup_id=XXX`
+  * Raising an early error if the user forgets to specify a site_model_file
+    when needed (i.e. for parameters region and xvf)
+
+  [Marco Pagani, Christopher Brooks]
+  * Refactored Chiou and Youngs (2014) GMM to be adjustable using methodology
+    of the Boore et al (2022) paper
+
+  [Michele Simionato]
+  * Discarded the stations (if any) from the avg_gmf plot
+  * Added an early check for homeless consequences
+  * Improved the check for missing site parameters
+  * Internal: fixed the serialization of logic trees using
+    simpleFaultGeometryAbsolute, complexFaultGeometryAbsolute or
+    characteristicFaultGeometryAbsolute
+  * Added a check when importing hazard_curves.csv files: the values must be
+    probabilities
+  * Internal: functions must be shorter than 100 lines and have less than
+    16 arguments to enter in the engine codebase
+  * Fixed scenarios with CanadaSHM6 GMPEs and ModifiableGMPE
+  * Fixed `avg_losses-stats` exporter in the case of a single realization
+  * Managed duplicated multi fault sources in event based for the New
+    Zealand model
+  * Forbidden characters .:; in the branchID
+
+  [Michal Kolaj]
+  * Fixed a couple bugs in the Canadians GMPEs (can_shm6_inslab) causing wrong
+    means
+
+  [Michele Simionato, Paolo Tormene]
+  * Extended the engine and the WebUI to accept a rupture_file
+    in the contexts of the Aristotle project
+  * Extended the engine and the WebUI to run scenario_risk calculations
+    from USGS ruptures in the contexts of the Aristotle project
+
+  [Michele Simionato]
+  * Raised a clear error for GMF-conditioned calculations with too many sites
+  * Rounding lon, lat with numpy in oqparam.sites
+  * Reduced by half the data transfer in classical by using 32 bit rates
+  * Fixed a bug in `oq zip` which was missing the exposure.csv files
+  * Introduced a parameter `config.memory.avg_losses_max`
+  * Changed `import_gmfs_hdf5` to not use ExternalLinks
+  * Added `oq show usgs_rupture:<usgs_id>` printing the rupture parameters
+
+  [Matteo Nastasi]
+  * Add helper to check consistency between debian/changelog and
+    CONTRIBUTORS.txt
 
   [Michele Simionato]
   * Added an optional flag `config.distribution.compress` to reduce the
     data transfer by compressing pickles larger than 1 MB
-  * Optimized reading rates in postclassical
+  * Optimized postclassical both for regular and tiling calculations
   * Saving disk space in classical calculations (~4x) by gzipping the rates
   * Removed Python version checks in install.py
 
@@ -3018,7 +3719,7 @@ python3-oq-engine (3.1.0-1~xenial01) xenial; urgency=low
   [Daniele Viganò]
   * `celery-status` script converted into `oq celery status` command
   * Removed Django < 1.10 backward compatibility
-  * Updated Python dependices (numpy 1.14, scipy 1.0.1,
+  * Updated Python dependencies (numpy 1.14, scipy 1.0.1,
     Django 1.10+, Celery 4+)
 
   [Michele Simionato]

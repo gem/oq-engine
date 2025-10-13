@@ -26,26 +26,19 @@ Module exports :class:`NZNSHM2022_KuehnEtAl2020SInter`
 """
 
 import numpy as np
-
 from scipy.interpolate import interp1d
 
-from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.kuehn_2020 import (
     _get_ln_z_ref,
-    get_base_term,
-    get_magnitude_scaling_term,
-    get_geometric_attenuation_term,
-    get_anelastic_attenuation_term,
-    get_depth_term,
-    get_shallow_site_response_term,
+    _infer_z,
+    get_mean_values,
     get_sigma_mu_adjustment,
     KuehnEtAl2020SInter,
     CONSTS,
     REGION_TERMS_IF,
     REGION_TERMS_SLAB,
-    SUPPORTED_REGIONS,
     Z_MODEL,
 )
 from openquake.hazardlib.gsim.nz22.const import (
@@ -57,8 +50,10 @@ from openquake.hazardlib.gsim.nz22.const import (
     theta8s,
 )
 
+BASIN_REGIONS = ["CAS", "JPN", "NZL", "TWN"]
 
-def get_basin_response_term(C, region, vs30, z_value):
+
+def get_basin_term(C, ctx, region):
     """
     Returns the basin response term, based on the region and the depth
     to a given velocity layer
@@ -66,30 +61,38 @@ def get_basin_response_term(C, region, vs30, z_value):
     :param numpy.ndarray z_value:
         Basin depth term (Z2.5 for JPN and CAS, Z1.0 for NZL and TWN)
     """
-    # Basin term only defined for the four regions: Cascadia, Japan,
-    # New Zealand and Taiwan
-    assert region in ("CAS", "JPN", "NZL", "TWN")
-    # Get c11, c12 and Z-model (same for both interface and inslab events)
+    # Basin term for Cascadia, Japan, New Zealand and Taiwan
+    assert region in BASIN_REGIONS
+
+    # Get c11, c12 and Z-model (same for interface and inslab events)
     c11 = C[REGION_TERMS_IF[region]["c11"]]
     c12 = C[REGION_TERMS_IF[region]["c12"]]
     CZ = Z_MODEL[region]
 
-    brt = np.zeros_like(z_value)
-    mask = z_value > 0.0
+    if region in ("JPN", "CAS"):
+        z_values = ctx.z2pt5.copy()
+    elif region == "TWN":
+        z_values = ctx.z1pt0.copy()
+    else:
+        z_values = np.zeros_like(ctx.vs30)
+
+    # Use GMM's vs30 to basin param for none-measured values
+    # (conversion of z2pt5 to metres also performed here)
+    z_values = _infer_z(z_values, ctx.vs30, CZ, region)
+
+    brt = np.zeros_like(z_values)
+    mask = z_values > 0.0
+    vs30 = ctx.vs30[mask]
     if not np.any(mask):
         # No basin amplification to be applied
         return 0.0
-    if (
-        region == "NZL"
-    ):  # Personal communication with Nico. We need to use the NZ
+    ln_z_ref = _get_ln_z_ref(CZ, vs30)
+    if region == "NZL":
+        # Personal communication with Nico. We need to use the NZ
         # specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
-        brt[mask] = c11 + c12 * (
-            _get_ln_z_ref(CZ, vs30[mask]) - _get_ln_z_ref(CZ, vs30[mask])
-        )
+        brt[mask] = c11 + c12 * (ln_z_ref - ln_z_ref)
     else:
-        brt[mask] = c11 + c12 * (
-            np.log(z_value[mask]) - _get_ln_z_ref(CZ, vs30[mask])
-        )
+        brt[mask] = c11 + c12 * (np.log(z_values[mask]) - ln_z_ref)
     return brt
 
 
@@ -165,62 +168,22 @@ def get_nonlinear_stddevs(C, C_PGA, imt, vs30, pga1100):
     return sigma, tau, phi
 
 
-def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
-    """
-    Returns the mean ground values for a specific IMT
-
-    :param float m_b:
-        Magnitude scaling breakpoint
-    """
-    if a1100 is None:
-        # Refers to the reference rock case - so Vs30 is 1100 and no a1100
-        # is defined
-        vs30 = 1100.0 * np.ones(ctx.vs30.shape)
-        a1100 = np.zeros(vs30.shape)
-        z_values = np.zeros(vs30.shape)
-    else:
-        vs30 = ctx.vs30.copy()
-        if region in ("JPN", "CAS"):
-            z_values = ctx.z2pt5 * 1000.0
-        elif region in ("TWN"):
-            z_values = ctx.z1pt0.copy()
-        else:
-            z_values = np.zeros(vs30.shape)
-    # Get the mean ground motions
-    mean = (
-        get_base_term(C, trt, region)
-        + get_magnitude_scaling_term(C, trt, m_b, ctx.mag)
-        + get_geometric_attenuation_term(C, trt, ctx.mag, ctx.rrup)
-        + get_anelastic_attenuation_term(C, trt, region, ctx.rrup)
-        + get_depth_term(C, trt, ctx.ztor)
-        + get_shallow_site_response_term(C, region, vs30, a1100)
-    )
-
-    # For Cascadia, Japan, New Zealand and Taiwan a basin depth term
-    # is included
-    if region in ("CAS", "JPN"):
-        # For Cascadia and Japan Z2.5 is used as the basin parameter (in m
-        # rather than km)
-        mean += get_basin_response_term(C, region, vs30, z_values)
-    elif region in ("NZL", "TWN"):
-        # For New Zealand and Taiwan Z1.0 (m) is used as the basin parameter
-        mean += get_basin_response_term(C, region, vs30, z_values)
-    else:
-        pass
-    return mean
-
-
 def get_backarc_term(trt, imt, ctx):
-    """The backarc correction factors to be applied with the ground motion prediction. In the NZ context, it is applied to only subduction intraslab events.
-    It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al. (2016) Earthquake Spectra.
-    The correction is applied only for backarc sites as function of distance."""
+    """
+    The backarc correction factors to be applied with the ground motion prediction.
+    In the NZ context, it is applied to only subduction intraslab events.
+    It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al.
+    (2016) Earthquake Spectra.
+    The correction is applied only for backarc sites as function of distance.
+    """
     period = imt.period
 
     w_epi_factor = 1.008
 
     theta7_itp = interp1d(np.log(periods[1:]), theta7s[1:])
     theta8_itp = interp1d(np.log(periods[1:]), theta8s[1:])
-    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0 for periods < 0.
+    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0
+    # for periods < 0.
     if period < 0:
         theta7 = 0.0
         theta8 = 0.0
@@ -253,22 +216,15 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         m_b=None,
         sigma_mu_epsilon=0.0,
         modified_sigma=False,
-        **kwargs,
     ):
-        super().__init__(
-            region=region,
-            m_b=m_b,
-            sigma_mu_epsilon=sigma_mu_epsilon,
-            modified_sigma=modified_sigma,
-            **kwargs,
-        )
+        super().__init__(region=region, m_b=m_b, sigma_mu_epsilon=sigma_mu_epsilon)
         self.modified_sigma = modified_sigma
 
         # reset override of REQUIRES_SITES_PARAMETERS done by super
         if self.region in ("NZL"):
-            self.REQUIRES_SITES_PARAMETERS = (
+            self.REQUIRES_SITES_PARAMETERS = \
                 self.__class__.REQUIRES_SITES_PARAMETERS
-            )
+            
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -290,47 +246,52 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
         C_PGA = self.COEFFS[PGA()]
 
         # Get PGA on rock
-        pga1100 = np.exp(
-            get_mean_values(C_PGA, self.region, trt, m_b, ctx, None)
-            + get_backarc_term(trt, PGA(), ctx)
-        )
-        # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
-        # ensure that SA ( T ) does not fall below PGA on soil
+        a1100 = None
+        pga1100 = get_mean_values(C_PGA, self.region, 0., trt, m_b,
+                                  ctx, a1100, pre_basin=True)
+        if self.region in BASIN_REGIONS:
+            pga1100 += get_basin_term(C_PGA, ctx, self.region)
+        pga1100 += get_backarc_term(trt, PGA(), ctx)
+        pga1100 = np.exp(pga1100)
+        # For PGA and SA (T <= 0.1) we need to define PGA on soil to
+        # ensure that SA (T) does not fall below PGA on soil
         pga_soil = None
         for imt in imts:
-            if ("PGA" in imt.string) or (
-                ("SA" in imt.string) and (imt.period <= 0.1)
-            ):
+            if ("PGA" in imt.string) or ("SA" in imt.string) and (imt.period <= 0.1):
                 pga_soil = get_mean_values(
-                    C_PGA, self.region, trt, m_b, ctx, pga1100
-                ) + get_backarc_term(trt, PGA(), ctx)
+                    C_PGA, self.region, 0., trt, m_b, ctx, pga1100, pre_basin=True)
+                if pga1100.any() and self.region in BASIN_REGIONS:
+                    pga_soil += get_basin_term(C_PGA, ctx, self.region)
+                pga_soil += get_backarc_term(trt, PGA(), ctx)
                 break
 
         for m, imt in enumerate(imts):
             # Get coefficients for imt
             C = self.COEFFS[imt]
-            m_break = (
-                m_b + C["dm_b"]
-                if (
-                    trt == const.TRT.SUBDUCTION_INTERFACE
-                    and self.region in ("JPN", "SAM")
-                )
-                else m_b
-            )
+            if (trt == const.TRT.SUBDUCTION_INTERFACE and
+                self.region in ("JPN", "SAM")):
+                m_break = m_b + C["dm_b"]
+            else:
+                m_break = m_b
             if imt.string == "PGA":
                 mean[m] = pga_soil
             elif "SA" in imt.string and imt.period <= 0.1:
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
-                mean[m] = get_mean_values(
-                    C, self.region, trt, m_break, ctx, pga1100
-                ) + get_backarc_term(trt, imt, ctx)
+                mean[m] = get_mean_values(C, self.region, imt.period, trt,
+                                          m_break, ctx, pga1100, pre_basin=True)
+                if pga1100.any() and self.region in BASIN_REGIONS:
+                    mean[m] += get_basin_term(C, ctx, self.region)
+                mean[m] += get_backarc_term(trt, imt, ctx)
                 idx = mean[m] < pga_soil
                 mean[m][idx] = pga_soil[idx]
             else:
                 # For PGV and Sa (T > 0.1 s)
-                mean[m] = get_mean_values(
-                    C, self.region, trt, m_break, ctx, pga1100
-                ) + get_backarc_term(trt, imt, ctx)
+                mean[m] = get_mean_values(C, self.region, imt.period, trt, m_break,
+                                          ctx, pga1100, pre_basin=True)
+                if pga1100.any() and self.region in BASIN_REGIONS:
+                    mean[m] += get_basin_term(C, ctx, self.region)
+                mean[m] += get_backarc_term(trt, imt, ctx)
+
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
                 sigma_mu_adjust = get_sigma_mu_adjustment(
@@ -340,8 +301,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
             # Get standard deviations
             if self.modified_sigma:
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(
-                    C, C_PGA, imt, ctx.vs30, pga1100
-                )
+                    C, C_PGA, imt, ctx.vs30, pga1100)
             else:
                 tau[m] = C["tau"]
                 phi[m] = C["phi"]
@@ -349,28 +309,11 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
 
 
 class NZNSHM2022_KuehnEtAl2020SSlab(NZNSHM2022_KuehnEtAl2020SInter):
-    """ """
-
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
+    # Need vs30 + backarc also for inslab
+    REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
 
-# For the aliases use the verbose form of the region name
-REGION_ALIASES = {
-    "GLO": "",
-    "USA-AK": "Alaska",
-    "CAS": "Cascadia",
-    "CAM": "CentralAmericaMexico",
-    "JPN": "Japan",
-    "NZL": "NewZealand",
-    "SAM": "SouthAmerica",
-    "TWN": "Taiwan",
-}
-
-
-for region in SUPPORTED_REGIONS[1:]:
-    add_alias(
-        "KuehnEtAl2021SInter" + REGION_ALIASES[region],
-        KuehnEtAl2020SInter,
-        region=region,
-    )
+    # Other required params
+    REQUIRES_ATTRIBUTES = {'region', 'm_b', 'sigma_mu_model', 'sigma_mu_epsilon'}

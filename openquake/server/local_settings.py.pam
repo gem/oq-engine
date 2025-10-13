@@ -5,9 +5,9 @@
 from openquake.server.settings import INSTALLED_APPS, AUTHENTICATION_BACKENDS
 
 # Enable authentication
-LOCKDOWN = True
-# Disable sharing of results across users
-ACL_ON = True
+APPLICATION_MODE = 'RESTRICTED'
+# Disable sharing of results across users (default True)
+# ACL_ON = True
 
 INSTALLED_APPS += (
     'django_pam',
@@ -17,8 +17,16 @@ AUTHENTICATION_BACKENDS += (
     'django_pam.auth.backends.PAMBackend',
 )
 
-#Static Folder
-STATIC_ROOT = ''
+# By default it is 'openquake'
+# WEBUI_USER =
+
+# Folder STATIC_ROOT is the full, absolute path to your static files folder.
+# Furthermore, the user WEBUI_USER must own that directory.
+STATIC_ROOT = '/var/www/webui'
+
+# Configure the directory to store the server user access log
+# Furthermore, the user WEBUI_USER must own that directory.
+WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 
 # WEBUI config uncomment and set properly if needed
 # WEBUIURL = 'http://localhost:8800/'
@@ -29,11 +37,14 @@ STATIC_ROOT = ''
 # enable WEBUI_PATHPREFIX to place webui pages below a specific path
 # WEBUI_PATHPREFIX='/path/prefix'
 
-WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
-
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-# TIME_ZONE = 
+# TIME_ZONE =
+
+# This is reasonable in an internal installation, otherwise set it to False
+DEBUG = True
+
+SUPPRESS_PERMISSION_DENIED_WARNINGS = True

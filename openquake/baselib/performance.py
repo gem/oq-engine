@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,6 +21,7 @@ import time
 import pstats
 import pickle
 import signal
+import logging
 import getpass
 import tempfile
 import operator
@@ -33,10 +34,7 @@ from decorator import decorator
 import psutil
 import numpy
 import pandas
-try:
-    import numba
-except ImportError:
-    numba = None
+import numba
 
 from openquake.baselib.general import humansize, fast_agg
 from openquake.baselib import hdf5
@@ -70,6 +68,15 @@ def perf_stat():
     time.sleep(0.5)
     yield
     p.send_signal(signal.SIGINT)
+
+
+def print_stats(pr, fname):
+    """
+    Print the stats of a Profile instance
+    """
+    with open(fname, 'w') as f:
+        ps = pstats.Stats(pr, stream=f).sort_stats(pstats.SortKey.CUMULATIVE)
+        ps.print_stats()
 
 
 def get_pstats(pstatfile, n):
@@ -169,6 +176,14 @@ def memory_rss(pid):
         return 0
 
 
+def memory_gb(pids=()):
+    """
+    :params pids: a list or PIDs running on the same machine
+    :returns: the total memory allocated by the current process and all the PIDs
+    """
+    return sum(map(memory_rss, [os.getpid()] + list(pids))) / 1024**3
+
+
 # this is not thread-safe
 class Monitor(object):
     """
@@ -202,7 +217,7 @@ class Monitor(object):
     inject = None
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
-                 h5=None, version=None):
+                 h5=None, version=None, dbserver_host='127.0.0.1'):
         self.operation = operation
         self.measuremem = measuremem
         self.inner_loop = inner_loop
@@ -216,11 +231,7 @@ class Monitor(object):
         self.address = None
         self.username = getpass.getuser()
         self.task_no = -1  # overridden in parallel
-
-    @property
-    def calc_dir(self):
-        """Calculation directory $HOME/oqdata/calc_XXX"""
-        return self.filename.rsplit('.', 1)[0]
+        self.dbserver_host = dbserver_host
 
     @property
     def mem(self):
@@ -247,13 +258,7 @@ class Monitor(object):
         """
         return datetime.fromtimestamp(self._start_time)
 
-    def get_data(self):
-        """
-        :returns:
-            an array of dtype perf_dt, with the information
-            of the monitor (operation, time_sec, memory_mb, counts);
-            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
-        """
+    def _get_data(self):
         data = []
         if self.counts:
             time_sec = self.duration
@@ -261,6 +266,31 @@ class Monitor(object):
             data.append((self.operation, time_sec, memory_mb, self.counts,
                          self.task_no))
         return numpy.array(data, perf_dt)
+
+    def get_data(self):
+        """
+        :returns:
+            an array of dtype perf_dt, with the information
+            of the monitor (operation, time_sec, memory_mb, counts);
+            the lenght of the array can be 0 (for counts=0) or 1 (otherwise).
+        """
+        if not self.children:
+            data = self._get_data()
+        else:
+            lst = [self._get_data()]
+            for child in self.children:
+                lst.append(child.get_data())
+                child.reset()
+            data = numpy.concatenate(lst, dtype=perf_dt)
+        return data
+
+    def log_data(self):
+        data = self.get_data()[['operation', 'time_sec']]
+        data.sort(order='time_sec')
+        if len(data):
+            for row in data:
+                op = row['operation'].decode('utf8')
+                logging.info(f"{op} = {round(row['time_sec'], 3)} seconds")
 
     def __enter__(self):
         self.exc = None  # exception
@@ -307,19 +337,11 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
-        if not self.children:
-            data = self.get_data()
-        else:
-            lst = [self.get_data()]
-            for child in self.children:
-                lst.append(child.get_data())
-                child.reset()
-            data = numpy.concatenate(lst, dtype=perf_dt)
-        if len(data) == 0:  # no information
-            return
-        hdf5.extend(h5['performance_data'], data)
-        h5['performance_data'].flush()  # notify the reader
-        self.reset()
+        data = self.get_data()
+        if len(data):
+            hdf5.extend(h5['performance_data'], data)
+            h5['performance_data'].flush()  # notify the reader
+            self.reset()
 
     # TODO: rename this as spawn; see what will break
     def __call__(self, operation='no operation', **kw):
@@ -374,6 +396,11 @@ class Monitor(object):
                 return dset[slc]
             return pickle.loads(dset[()])
 
+    def read_pdcolumns(self, key):
+        tmp = self.filename[:-5] + '_tmp.hdf5'
+        with hdf5.File(tmp, 'r') as f:
+            return f[key].attrs['__pdcolumns__']
+
     def iter(self, genobj, atstop=lambda: None):
         """
         :param genobj: a generator object
@@ -423,31 +450,19 @@ def vectorize_arg(idx):
 
 
 # numba helpers
-if numba:
-    # NB: without cache=True the tests would take hours!!
+# NB: without cache=True the tests would take hours!!
 
-    def jittable(func):
-        """Calls numba.njit with a cache"""
-        jitfunc = numba.njit(func, error_model='numpy', cache=True)
-        jitfunc.jittable = True
-        return jitfunc
+def jittable(func):
+    """Calls numba.njit with a cache"""
+    jitfunc = numba.njit(func, error_model='numpy', cache=True)
+    jitfunc.jittable = True
+    return jitfunc
 
-    def compile(sigstr):
-        """
-        Compile a function Ahead-Of-Time using the given signature string
-        """
-        return numba.njit(sigstr, error_model='numpy', cache=True)
-
-else:
-
-    def jittable(func):
-        """Do nothing decorator, used if numba is missing"""
-        func.jittable = True
-        return func
-
-    def compile(sigstr):
-        """Do nothing decorator, used if numba is missing"""
-        return lambda func: func
+def compile(sigstr):
+    """
+    Compile a function Ahead-Of-Time using the given signature string
+    """
+    return numba.njit(sigstr, error_model='numpy', cache=True)
 
 
 # used when reading _rates/sid

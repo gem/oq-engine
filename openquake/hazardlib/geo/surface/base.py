@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,11 +20,15 @@
 Module :mod:`openquake.hazardlib.geo.surface.base` implements
 :class:`BaseSurface` and :class:`BaseSurface`.
 """
+import abc
 import numpy
 import math
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import geodetic, utils, Point, Line,\
     RectangularMesh
+
+TWO16 = 2**16
+F32 = numpy.float32
 
 
 def _get_finite_mesh(mesh):
@@ -136,7 +140,7 @@ def _get_p1_p2(clsname, top_edge, i):
     return p1, p2
 
     
-class BaseSurface:
+class BaseSurface(metaclass=abc.ABCMeta):
     """
     Base class for a surface in 3D-space.
     """
@@ -326,6 +330,10 @@ class BaseSurface:
         top_edge = self.mesh[0:1]
         return top_edge.get_middle_point()
 
+    @abc.abstractmethod
+    def get_width(self):
+        pass
+
     def get_area(self):
         """
         Compute area as the sum of the mesh cells area values.
@@ -497,3 +505,73 @@ class BaseSurface:
         mesh_closest = self.get_closest_points(mesh)
         return geodetic.azimuth(mesh.lons, mesh.lats, mesh_closest.lons,
                                 mesh_closest.lats)
+
+
+def surface_to_arrays(surface):
+    """
+    :param surface: a (Multi)Surface object or a list of simple surfaces
+    :returns: a list of S arrays of shape (3, Sy, Sz)
+    """
+    if hasattr(surface, 'surfaces'):  # multiplanar surfaces
+        surfaces = surface.surfaces
+    elif isinstance(surface, list):
+        surfaces = surface
+    else:  # single surface
+        mesh = surface.mesh
+        if len(mesh.lons.shape) == 1:  # 1D mesh
+            shp = (3, 1) + mesh.lons.shape
+        else:  # 2D mesh
+            shp = (3,) + mesh.lons.shape
+        return [mesh.array.reshape(shp)]
+    lst = []
+    for surf in surfaces:
+        arr = surf.mesh.array
+        if len(arr.shape) == 2:  # PlanarSurface
+            arr = arr.reshape(3, 1, 4)
+        lst.append(arr)
+    return lst
+
+
+def to_geom_lons_lats(surface):
+    """
+    Convert a (multi)surface into a float32 array
+  
+    :returns: geom, lons, lats
+    """
+    arrays = surface_to_arrays(surface)
+    points = []
+    shapes = []
+    lons = []
+    lats = []
+    for array in arrays:
+        s0, s1, s2 = array.shape
+        assert s0 == 3, s0
+        assert s1 < TWO16, 'Too many lines'
+        assert s2 < TWO16, 'The rupture mesh spacing is too small'
+        shapes.append(s1)
+        shapes.append(s2)
+        points.append(array.flat)
+        lons.append(array[0].flat)
+        lats.append(array[1].flat)
+    lons = numpy.concatenate(lons, dtype=F32)
+    lats = numpy.concatenate(lats, dtype=F32)
+    points = numpy.concatenate(points, dtype=F32)
+    geom = numpy.concatenate([[len(shapes) // 2], shapes, points], dtype=F32)
+    return geom, lons, lats
+
+
+def to_arrays(geom):
+    """
+    :param geom: an array [num_surfaces, shape_y, shape_z ..., coords]
+    :returns: a list of num_surfaces arrays with shape (3, shape_y, shape_z)
+    """
+    arrays = []
+    num_surfaces = int(geom[0])
+    start = num_surfaces * 2 + 1
+    for i in range(1, 2 * num_surfaces, 2):
+        s1, s2 = int(geom[i]), int(geom[i + 1])
+        size = s1 * s2 * 3
+        array = geom[start:start + size].reshape(3, s1, s2)
+        arrays.append(array)
+        start += size
+    return arrays

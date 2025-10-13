@@ -1,0 +1,47 @@
+{% extends "engine/base.html" %}
+{% load servertags %}
+<title>{% block title %}OpenQuake engine: {{ table_name }} from calculation {{ calc_id }}{% endblock %}</title>
+{% block main %}
+{{ block.super }}
+  <div class="content-wrap">
+    <div class="container">
+      <div class="row">
+        <div id="oq-body-wrapper">
+          <div class="span12">
+            <h2>{{ table_name }}</h2>
+            <table id="extracted_html_table">
+              <thead>
+                <tr>
+                  {% for header in table_header %}
+                  <th>{{ header|safe }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in table_contents %}
+                <tr>
+                  {% for item in row %}
+                    {% if forloop.first %}
+                      {# assuming ID is the first column, otherwise it requires more work to avoid humanizing it by name #}
+                      <td>{{ item|stringformat:"s"|linebreaksbr }}</td>
+                    {% else %}
+                      <td>
+                        {% if item|stringformat:"s"|floatformat %}
+                          {{ item|humanize_number }}
+                        {% else %}
+                          {{ item|stringformat:"s"|linebreaksbr }}
+                        {% endif %}
+                      </td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock main %}

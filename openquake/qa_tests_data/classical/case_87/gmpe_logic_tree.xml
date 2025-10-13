@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+
+    <logicTree logicTreeID="test_coastal_plains_site_amp_in_oq_calc">
+
+            <logicTreeBranchSet
+            applyToTectonicRegionType="Stable Shallow Crust"
+            branchSetID="CEUS_Coastal_Plains"
+            uncertaintyType="gmpeModel">
+                <logicTreeBranch branchID="f-usgs17_coastal">
+                        <uncertaintyModel>
+                        [NGAEastUSGSGMPE]
+                            gmpe_table = 'nga_east_usgs_17.hdf5'
+                            coastal_plains_site_amp = true
+                            z_sed_scaling = true
+                        </uncertaintyModel>
+                            <uncertaintyWeight>1.0</uncertaintyWeight>
+                </logicTreeBranch>
+        </logicTreeBranchSet>
+
+    </logicTree>
+</nrml>

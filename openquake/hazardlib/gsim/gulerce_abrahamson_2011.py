@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -210,8 +210,7 @@ class GulerceAbrahamson2011(GMPE):
     #: using https://apps.automeris.io/wpd/ . Only SA is covered.
     non_verified = True
 
-    def __init__(self, gmpe_name, **kwargs):
-        super().__init__(gmpe_name=gmpe_name, **kwargs)
+    def __init__(self, gmpe_name):
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
 

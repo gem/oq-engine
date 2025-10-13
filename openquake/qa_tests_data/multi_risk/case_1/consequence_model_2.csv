@@ -1,0 +1,5 @@
+risk_id,consequence,peril,moderate,collapse
+Heavy_roof,losses,groundshaking,1.500000E-01,4.000000E-01
+Moderate_roof,losses,groundshaking,7.500000E-02,2.000000E-01
+Slab_roof,losses,groundshaking,1.500000E-01,4.000000E-01
+Weak_roof,losses,groundshaking,5.000000E-02,1.500000E-01

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2023 GEM Foundation
+# Copyright (C) 2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -198,9 +198,7 @@ class HassaniAtkinson2018(GMPE):
     #: Required distance measures is Rrup
     REQUIRES_DISTANCES = {'rrup'}
 
-    def __init__(self, d_sigma, kappa0, gamma_fle=None, **kwargs):
-        super().__init__(d_sigma=d_sigma, kappa0=kappa0, gamma_fle=gamma_fle,
-                         **kwargs)
+    def __init__(self, d_sigma, kappa0, gamma_fle=None):
         self.d_sigma = d_sigma
         self.kappa0 = kappa0
 

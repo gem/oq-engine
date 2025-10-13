@@ -17,8 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import toml
 import numpy as np
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
+from openquake.hazardlib.imt import SA
 
 
 class TestGetCoefficient(unittest.TestCase):
@@ -44,6 +46,31 @@ class TestGetCoefficient(unittest.TestCase):
             EAS(0.5) 0.4 0.5 0.6
                            """)
         self.ctab_eas = ctab
+
+    def test_to_dict(self):
+        ddic = self.ctab.to_dict()
+        self.assertEqual(toml.dumps(ddic), '''\
+[PGA]
+a1 = 0.1
+a2 = 0.2
+a3 = 0.3
+
+["SA(0.01)"]
+a1 = 0.4
+a2 = 0.5
+a3 = 0.6
+
+["SA(0.05)"]
+a1 = 0.7
+a2 = 0.8
+a3 = 0.9
+''')
+        self.ctab.fromdict(ddic)
+
+    def test_update_coeff(self):
+        self.ctab |= CoeffsTable.fromtoml('["SA(0.01)"]\na1 = 0.11')
+        coeffs = self.ctab[SA(0.01)]
+        np.testing.assert_array_equal(list(coeffs), [0.11, 0.5, 0.6])
 
     def test_get_coeffs(self):
         pof, cff = self.ctab.get_coeffs(['a1', 'a2'])

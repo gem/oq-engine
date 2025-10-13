@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2023 GEM Foundation
+# Copyright (C) 2017-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -123,8 +123,11 @@ if sys.platform in 'win32 darwin':
     config.multi_user = False
 else:  # linux
     import pwd
-    install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
+    try:
+        install_user = pwd.getpwuid(os.stat(__file__).st_uid).pw_name
+    except KeyError:  # on the IUSS cluster
+        install_user = None
     config.multi_user = install_user in ('root', 'openquake')
 
-# the version is managed by packager.sh with a sed
-__version__ = '3.20.0'
+# the version is managed by the universal installer
+__version__ = '3.24.0'

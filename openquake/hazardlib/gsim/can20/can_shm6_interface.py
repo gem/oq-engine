@@ -54,7 +54,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
     """
     MAX_SA = 10.
     MIN_SA = 0.05
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -247,7 +247,7 @@ def _site_term_am09(ctx, imt):
     BSSA14 = CanadaSHM6_ActiveCrust_BooreEtAl2014()
     C = BSSA14.COEFFS[imt]
     F = CanadaSHM6_ASC._get_site_scaling_ba14(
-        "", "", C, np.exp(pga760), ctx, imt.period, ctx.rjb)
+        "", "", C, np.exp(pga760), ctx, imt, ctx.rjb)
     return F
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,9 +30,7 @@ import toml
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
-from openquake.baselib.performance import compile
 from openquake.hazardlib import const
-from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, full_context, simple_cmaker)
@@ -48,6 +46,7 @@ ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
                            'REQUIRES_SITES_PARAMETERS',
                            'REQUIRES_RUPTURE_PARAMETERS']
 
+F32 = numpy.float32
 F64 = numpy.float64
 registry = {}  # GSIM name -> GSIM class
 gsim_aliases = {}  # GSIM alias -> TOML representation
@@ -58,7 +57,7 @@ def add_alias(name, cls, **kw):
     Add a GSIM alias to both gsim_aliases and the registry.
     """
     gsim_aliases[name] = toml.dumps({cls.__name__: kw})
-    registry[name] = cls
+    registry[name] = lambda: cls(**kw)
 
 
 class NotVerifiedWarning(UserWarning):
@@ -79,29 +78,6 @@ class AdaptedWarning(UserWarning):
     Raised for GMPEs that are intended for experimental use or maybe subject
     to changes in future version.
     """
-
-
-# this is the critical function for the performance of the classical calculator
-# the performance is dominated by the CPU cache, i.e. large arrays are slow
-# the only way to speedup is to reduce the maximum_distance, then the array
-# will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then truncnorm_sf will be called less times
-@compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
-def _set_poes(mean_std, loglevels, phi_b, out):
-    L1 = loglevels.size // len(loglevels)
-    for m, levels in enumerate(loglevels):
-        mL1 = m * L1
-        mea, std = mean_std[:, m]  # shape N
-        for lvl, iml in enumerate(levels):
-            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
-
-
-def _get_poes(mean_std, loglevels, phi_b):
-    # returns a matrix of shape (N, L)
-    N = mean_std.shape[2]  # shape (2, M, N)
-    out = numpy.zeros((loglevels.size, N))  # shape (L, N)
-    _set_poes(mean_std, loglevels, phi_b, out)
-    return out.T
 
 
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
@@ -150,6 +126,18 @@ class MetaGSIM(abc.ABCMeta):
                                          (missing, name))
         cls = super().__new__(meta, name, bases, dic)
         return cls
+
+    def __call__(cls, **kwargs):
+        mixture_model = kwargs.pop('mixture_model', None)
+        self = type.__call__(cls, **kwargs)
+        if not hasattr(self, 'kwargs'):
+            self.kwargs = kwargs
+        if hasattr(self, 'gmpe_table'):
+            # used in NGAEast to set the full pathname
+            self.kwargs['gmpe_table'] = self.gmpe_table
+        if mixture_model is not None:
+            self.mixture_model = mixture_model
+        return self
 
 
 @functools.total_ordering
@@ -278,7 +266,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         return tuple(sorted(tot))
 
     def __init__(self, **kwargs):
-        self.kwargs = kwargs
         cls = self.__class__
         if cls.superseded_by:
             msg = '%s is deprecated - use %s instead' % (
@@ -454,51 +441,25 @@ class GMPE(GroundShakingIntensityModel):
         """
         raise NotImplementedError
 
-    def set_poes(self, mean_std, cmaker, ctx, out):
-        """
-        Calculate and return probabilities of exceedance (PoEs) of one or more
-        intensity measure levels (IMLs) of one intensity measure type (IMT)
-        for one or more pairs "site -- rupture".
 
-        :param mean_std:
-            An array of shape (2, M, N) with mean and standard deviations
-            for the sites and intensity measure types
-        :param cmaker:
-            A ContextMaker instance, used only in nhsm_2014
-        :param ctx:
-            A recarray used only in  avg_poe_gmpe
-        :param out:
-            An array of PoEs of shape (N, L) to be filled
-        :raises ValueError:
-            If truncation level is not ``None`` and neither non-negative
-            float number, and if ``imts`` dictionary contain wrong or
-            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
-        """
-        loglevels = cmaker.loglevels.array
-        phi_b = cmaker.phi_b
-        M, L1 = loglevels.shape
-        if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
-            adj = cmaker.adj[self][cmaker.slc]
-            outs = []
-            weights, signs = zip(*self.weights_signs)
-            for s in signs:
-                ms = numpy.array(mean_std)  # make a copy
-                for m in range(len(loglevels)):
-                    ms[0, m] += s * adj
-                outs.append(_get_poes(ms, loglevels, phi_b))
-            out[:] = numpy.average(outs, weights=weights, axis=0)
-        elif hasattr(self, "mixture_model"):
-            for f, w in zip(self.mixture_model["factors"],
-                            self.mixture_model["weights"]):
-                mean_stdi = numpy.array(mean_std)  # a copy
-                mean_stdi[1] *= f  # multiply stddev by factor
-                out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
-        else:  # regular case
-            _set_poes(mean_std, loglevels, phi_b, out.T)
-        imtweight = getattr(self, 'weight', None)  # ImtWeight or None
-        for m, imt in enumerate(cmaker.imtls):
-            mL1 = m * L1
-            if imtweight and imtweight.dic.get(imt) == 0:
-                # set by the engine when parsing the gsim logictree
-                # when 0 ignore the contribution: see _build_branches
-                out[:, mL1:mL1 + L1] = 0
+class DummyGMPE(GMPE):
+    """
+    A fake GMPE doing nothing, to be used with zero-weight branches of
+    the logic tree.
+    """
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {}
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.HORIZONTAL
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+    REQUIRES_SITES_PARAMETERS = set()
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
+    REQUIRES_DISTANCES = {'rrup'}
+
+    def __init__(self, ordinal=0):
+        self.ordinal = ordinal
+
+    def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
+        sig[:] = .005
+        tau[:] = .003
+        phi[:] = .004

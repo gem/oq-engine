@@ -3,7 +3,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -115,7 +115,8 @@ class TestSourceModel(unittest.TestCase):
         parser = nrmlSourceModelParser(MODEL_PATH)
         source_model = parser.read_file(2.0)
         # Write to file
-        source_model.serialise_to_nrml(TEST_PATH, 10, True)
+        source_model.serialise_to_nrml(
+            TEST_PATH, complex_mesh_spacing=10, use_defaults=True)
         # Load file back
         parser = nrmlSourceModelParser(TEST_PATH)
         source_model_test = parser.read_file(2.0)

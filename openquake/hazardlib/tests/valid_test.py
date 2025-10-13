@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -99,6 +99,23 @@ class ValidationTestCase(unittest.TestCase):
             valid.positivefloat('-1')
         self.assertEqual(valid.positivefloat('1.1'), 1.1)
 
+    def test_positivefloats(self):
+        self.assertEqual(valid.positivefloats('1 2'), [1, 2])
+        with self.assertRaises(ValueError):
+            valid.positivefloat('-1 -2.5')
+
+    def test_positivefloatorsentinel(self):
+        self.assertEqual(valid.positivefloatorsentinel('-999'), -999)
+        self.assertEqual(valid.positivefloatorsentinel('2.5'), 2.5)
+        with self.assertRaises(ValueError):
+            valid.positivefloatorsentinel('-1')
+            valid.positivefloatorsentinel('0.0')
+
+    def test_positivefloatsorsentinels(self):
+        self.assertEqual(valid.positivefloatsorsentinels('-999 2.5'), [-999, 2.5])
+        with self.assertRaises(ValueError):
+            valid.positivefloatsorsentinels('-1 0.')
+
     def test_probability(self):
         self.assertEqual(valid.probability('1'), 1.0)
         self.assertEqual(valid.probability('.5'), 0.5)
@@ -109,10 +126,12 @@ class ValidationTestCase(unittest.TestCase):
             valid.probability('-0.1')
 
     def test_IMTstr(self):
-        self.assertEqual(imt.from_string('SA(1)'), ('SA(1.0)', 1, 5))
-        self.assertEqual(imt.from_string('SA(1.)'), ('SA(1.0)', 1, 5))
-        self.assertEqual(imt.from_string('SA(0.5)'), ('SA(0.5)', 0.5, 5))
-        self.assertEqual(imt.from_string('PGV'), ('PGV', 0., 5))
+        self.assertEqual(imt.from_string('SA(1)'), ('SA(1.0)', 1, 5, None))
+        self.assertEqual(imt.from_string('SA(1.)'), ('SA(1.0)', 1, 5, None))
+        self.assertEqual(imt.from_string('SA(0.5)'), ('SA(0.5)', 0.5, 5, None))
+        self.assertEqual(imt.from_string('PGV'), ('PGV', 0., 5, None))
+        self.assertEqual(imt.from_string('SDi(1.,2.)'),
+                         ('SDi(1.0,2.0)', 1, 5, 2))
         with self.assertRaises(KeyError):
             imt.from_string('S(1)')
 
@@ -156,3 +175,30 @@ class ValidationTestCase(unittest.TestCase):
             self.assertEqual(repr(gsim), '<FakeGsim(0.1)>')
         finally:
             del registry['FakeGsim']
+
+    def test_modifiable_gmpe(self):
+        gsim = valid.gsim('Lin2011foot')
+        gmpe = valid.modified_gsim(
+            gsim, add_between_within_stds={'with_betw_ratio':1.5})
+        valid.gsim(gmpe._toml)  # make sure the generated _toml is valid
+
+    def test_modifiable_gmpe_complex(self):
+        # Make an NGAEast GMPE and apply modifiable GMPE to it
+        text = "[NBCC2015_AA13]\nREQUIRES_DISTANCES=['RJB']\n"
+        text += "DEFINED_FOR_TECTONIC_REGION_TYPE='Active Crust Fault'\n"
+        text += "gmpe_table='WcrustFRjb_low_clC.hdf5'"
+        gsim = valid.gsim(text)
+        gmpe = valid.modified_gsim(
+            gsim, add_between_within_stds={'with_betw_ratio':1.5})
+        valid.gsim(gmpe._toml)  # make sure the generated _toml is valid
+
+    def test_gsim_alias(self):
+        # fixes https://github.com/gem/oq-engine/issues/10489
+        ag20_alaska = valid.gsim("AbrahamsonGulerce2020SInterAlaska")
+        self.assertEqual(ag20_alaska.region, 'USA-AK')
+        self.assertEqual(ag20_alaska._toml,
+                         '[AbrahamsonGulerce2020SInter]\nregion = "USA-AK"')
+        ag20_alaska = valid.gsim("[AbrahamsonGulerce2020SInterAlaska]")
+        self.assertEqual(ag20_alaska.region, 'USA-AK')
+        self.assertEqual(ag20_alaska._toml,
+                         '[AbrahamsonGulerce2020SInterAlaska]')

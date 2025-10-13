@@ -1,7 +1,7 @@
 import unittest
 import numpy
 from openquake.hazardlib.stats import (
-    mean_curve, quantile_curve, std_curve)
+    mean_curve, quantile_curve, std_curve, weighted_quantiles)
 
 aaae = numpy.testing.assert_array_almost_equal
 
@@ -116,3 +116,14 @@ class QuantileCurveTestCase(unittest.TestCase):
         actual_curve = quantile_curve(quantile, curves, weights)
 
         numpy.testing.assert_allclose(expected_curve, actual_curve)
+
+    def test_weighted_quantiles(self):
+        data1 = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+        weig1 = [.01] * 9
+        data2 = [20, 25, 30, 40, 50, 60, 70, 71, 72]
+        weig2 = [.40] * 9
+        data3 = [40, 43, 43, 40, 50, 51, 52, 54, 60]
+        weig3 = [.59] * 9
+        qs = weighted_quantiles([.05, .95], data1 + data2 + data3,
+                                weig1 + weig2 + weig3)
+        numpy.testing.assert_allclose(qs, [20.375, 70.925])

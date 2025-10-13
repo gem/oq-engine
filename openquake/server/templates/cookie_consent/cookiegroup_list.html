@@ -1,0 +1,33 @@
+{% extends "engine/base.html" %}
+
+{% block main %}
+<style type="text/css">
+  .cookie-content {
+    margin: 80px 0 0 80px;
+  }
+  input[type="submit"] {
+    color: #fff;
+    background-color: #007BFF;
+    border-color: #007BFF;
+    margin-bottom: 10px;
+  }
+  input[type="submit"]:hover,
+  input[type="submit"]:focus {
+    color: #fff;
+    background-color: #0069D9;
+    border-color: #0062CC;
+  } (ed
+</style>
+<div class="cookie-content">
+  <h1>Cookies</h1>
+
+  <p>
+    This is a list of the categories of cookies used in our website and why we use them.
+  </p>
+
+  {% for cookie_group in object_list  %}
+    {% include "cookie_consent/_cookie_group.html" %}
+  {% endfor %}
+</div>
+
+{% endblock %}

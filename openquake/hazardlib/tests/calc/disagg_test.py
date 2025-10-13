@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -55,10 +55,10 @@ class BuildDisaggDataTestCase(unittest.TestCase):
         dist_bin_width = 100.
         coord_bin_width = 100.
         # Compute the disaggregation matrix
-        edges, mtx = disagg.disaggregation(sources, site, imt, iml,
-                                           gsim_by_trt, truncation_level,
-                                           n_epsilons, mag_bin_width,
-                                           dist_bin_width, coord_bin_width)
+        _edges, mtx = disagg.disaggregation(sources, site, imt, iml,
+                                            gsim_by_trt, truncation_level,
+                                            n_epsilons, mag_bin_width,
+                                            dist_bin_width, coord_bin_width)
         by_mag = valid.mag_pmf(mtx[:, :, :, :, :, 0])
         self.assertEqual(by_mag.shape, (31,))
 
@@ -101,23 +101,23 @@ class DisaggregateTestCase(unittest.TestCase):
         cls.gsims = {cls.trt: gsim}
         mags = cls.sources[0].get_mags()
         maxdist = filters.IntegrationDistance.new('200.')
-        oq = unittest.mock.Mock(truncation_level=cls.truncation_level,
-                                investigation_time=50.,
-                                imtls={'PGA': [cls.iml]},
-                                rlz_index=[0, 1],
-                                poes=[None],
-                                num_epsilon_bins=3,
-                                mag_bin_width=.075,
-                                distance_bin_width=10,
-                                coordinate_bin_width=100,
-                                maximum_distance=maxdist,
-                                mags_by_trt={cls.trt: mags},
-                                disagg_bin_edges={})
+        oq = dict(truncation_level=cls.truncation_level,
+                  investigation_time=50.,
+                  imtls={'PGA': [cls.iml]},
+                  rlz_index=[0, 1],
+                  poes=[None],
+                  epsilon_star=False,
+                  num_epsilon_bins=3,
+                  mag_bin_width=.075,
+                  distance_bin_width=10,
+                  coordinate_bin_width=100,
+                  maximum_distance=maxdist,
+                  mags_by_trt={cls.trt: mags},
+                  disagg_bin_edges={})
         sitecol = SiteCollection([cls.site])
-        cls.bin_edges, _ = disagg.get_edges_shapedic(oq, sitecol)
         cls.cmaker = ContextMaker(cls.trt, {gsim: [0]}, oq)
+        cls.bin_edges, _ = disagg.get_edges_shapedic(cls.cmaker.oq, sitecol)
         cls.sources[0].grp_id = 0
-        cls.cmaker.grp_id = 0
         cls.cmaker.poes = [.001]
 
     def test_minimum_distance(self):
@@ -162,7 +162,7 @@ class DisaggregateTestCase(unittest.TestCase):
         aaae = numpy.testing.assert_array_almost_equal
         aaae(matrix.sum(), 6.14179818e-11)
 
-        
+
 class PMFExtractorsTestCase(unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -266,18 +266,3 @@ class PMFExtractorsTestCase(unittest.TestCase):
             (pmf1 + pmf2) / 2, [1, 1])
         numpy.testing.assert_allclose(
             valid.mag_pmf(mean), [0.99999944, 0.99999999])
-
-
-@pytest.mark.parametrize('job_ini', ['job_sampling.ini', 'job.ini'])
-def test_single_source(job_ini):
-    job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
-    inp = read_input(job_ini)
-    oq = inp.oq
-    [site] = inp.sitecol
-    edges_shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
-    sid, srcid, std4D, rates4D, rates2D = disagg.disagg_source(
-        inp.groups, site, inp.full_lt, edges_shapedic, oq, {'PGA': .1})
-    # rates4D has shape (Ma, D, E, M), rates2D shape (M, L1)
-    print(srcid)
-    print(rates4D.sum(axis=(1, 2)))
-    print(rates2D)

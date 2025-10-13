@@ -1,5 +1,5 @@
 name: MacOS Intel install and test
-'on':
+"on":
   workflow_dispatch:
     inputs:
       git-ref:
@@ -12,15 +12,15 @@ name: MacOS Intel install and test
     branches: [macos_test]
 
 jobs:
-
   install_and_test:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-13]
-        python-version: ["3.11"]
+        python-version: ["3.11", "3.12"]
     steps:
-    # This Checkout use git-ref keyword from dispatch
+      # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
         uses: actions/checkout@v4
         if: github.event.inputs.git-ref == ''
@@ -32,26 +32,57 @@ jobs:
       - name: Set up Python3
         uses: actions/setup-python@v5
         with:
-          python-version:  ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
       - name: Run Installation of oq-engine in devel mode
-        env: 
+        env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
           #
           echo "branch to test: ${BRANCH}"
-          if [[ "$BRANCH" != "" ]] 
+          if [[ "$BRANCH" != "" ]]
           then
             python install.py devel --version ${BRANCH}
           else
-            python install.py devel 
+            python install.py devel
           fi
           source ~/openquake/bin/activate
           pip3 install pytest pyshp flake8
           oq --version  # makes numba compile, so dbserver start becomes quicker
           oq dbserver start
           sleep 10
+
+      - name: Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          cd ~/work/oq-engine/oq-engine/openquake
+          pytest baselib/tests/pyproj_wheel_test.py
+          pytest hazardlib/tests/pyproj_wheel_test.py
+
+      - name: Run test to start OQ-WebUI in public mode to test installation
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          # Starting the webui here is not needed by test_public_mode,
+          # but here we also want to check that the webui starts without errors
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+           sleep 5 # wait for 5 seconds before check again
+          done
+          echo "Test webui and tools Web pages"
+          sleep 5
+          echo "curl -I --fail -G http://127.0.0.1:8800/engine"
+          curl -I --fail -G http://127.0.0.1:8800/engine
+          sleep 5
+          echo "curl.exe -X HEAD -I --fail http://127.0.0.1:8800/ipt/"
+          curl -X HEAD -I --fail http://127.0.0.1:8800/ipt/
+          sleep 5
+          echo "curl.exe -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/"
+          curl -X HEAD -I --fail http://127.0.0.1:8800/taxonomy/
 
       - name: Run demos to test installation
         run: |
@@ -83,6 +114,7 @@ jobs:
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
         if: always()
         run: |
+          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
           source ~/openquake/bin/activate
           cd ~/work/oq-engine/oq-engine/openquake
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
@@ -92,22 +124,13 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           cd ~/work/oq-engine/oq-engine
-          # -v 2 also logs the test names
-          OQ_APPLICATION_MODE=public ./openquake/server/manage.py test -v 2 tests.test_public_mode
+          pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          OQ_APPLICATION_MODE=PUBLIC pytest -v openquake/server/tests/test_public_mode.py
 
       - name: Run tests for the engine server in read-only mode to test installation
         if: always()
         run: |
           source ~/openquake/bin/activate
           cd ~/work/oq-engine/oq-engine
-          # -v 2 also logs the test names
-          OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
-
-      # NOTE: we shouldn't need to install the engine in AELO mode on mac
-      # - name: Run tests for the engine server in aelo mode to test installation
-      #   if: always()
-      #   run: |
-      #     source ~/openquake/bin/activate
-      #     cd ~/work/oq-engine/oq-engine
-      #     -v 2 also logs the test names
-      #     OQ_APPLICATION_MODE=aelo OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
+          pip3 install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          OQ_APPLICATION_MODE=READ_ONLY pytest -v openquake/server/tests/test_read_only_mode.py

@@ -59,7 +59,7 @@ def combine_mrds(acc, g_weights):
     g = next(iter(acc))  # first key
     out = numpy.zeros(acc[g].shape)  # shape (L1, L1, N)
     for g in acc:
-        out += acc[g] * g_weights[g]['weight']
+        out += acc[g] * g_weights[g]
     return out
 
 
@@ -72,14 +72,13 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
     """
     crosscorr = getattr(cc, cross_correlation)()
     oq = dstore['oqparam']
-    full_lt = dstore['full_lt'].init()
     N = len(dstore['sitecol'])
     L1 = oq.imtls.size // len(oq.imtls) - 1
     if L1 > 24:
         logging.warning('There are many intensity levels (%d), the '
                         'calculation can be pretty slow', L1 + 1)
     assert N <= oq.max_sites_disagg, 'Too many sites: %d' % N
-    cmakers = contexts.read_cmakers(dstore)
+    cmakers = contexts.read_cmakers(dstore).to_array()
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
     n = sum(len(ctx) for ctx in ctx_by_grp.values())
     logging.info('Read {:_d} contexts'.format(n))
@@ -91,5 +90,5 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
                      meabins, sigbins, method))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
-    trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-    mrd[:] = combine_mrds(acc, full_lt.g_weights(trt_rlzs))
+    gweights = numpy.concatenate([cm.wei for cm in cmakers])
+    mrd[:] = combine_mrds(acc, gweights)

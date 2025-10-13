@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -75,6 +75,6 @@ class NodalPlane(object):
         Check if ``rake`` is in range ``(-180, 180]``
         and raise ``ValueError`` otherwise.
         """
-        if not (rake == 'undefined' or -180 < rake < 180.000001):
+        if not (rake == 'undefined' or -180 < rake < 180.000008):
             # some tolerance for numeric errors
             raise ValueError('rake %g is out of range (-180, 180]' % rake)

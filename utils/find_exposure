@@ -1,0 +1,43 @@
+#!/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2023, GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+from openquake.baselib import sap, general
+from openquake.risklib.asset import Exposure
+
+def main(dir):
+    """
+    Find the Exposure_COUNTRY.xml files in order of size
+    """
+    fnames = []
+    for cwd, dirs, files in os.walk(dir):
+        for f in files:
+            if f.startswith('Exposure_') and f.endswith('.xml'):
+                fnames.append(os.path.join(cwd, f))
+    headers = Exposure.read_headers(fnames)
+    data = [(sum(os.path.getsize(df) for df in h.datafiles), h.fname)
+            for h in headers]
+    for size, name in sorted(data):
+        print(name, general.humansize(size))
+
+main.dir = 'Directory containing the exposure files'
+
+
+if __name__ == '__main__':
+    sap.run(main)

@@ -31,11 +31,11 @@ ORIG, MODI = 0, 1  # original vs modified GMPE
 class ModifiableGMPETest(unittest.TestCase):
 
     def test_AlAtik2015Sigma(self):
+        gmpe = valid.gsim('YenierAtkinson2015BSSA')
         params1 = {"tau_model": "global", "ergodic": False}
         params2 = {"tau_model": "cena", "ergodic": True}
         params3 = {}
-        gsims = [ModifiableGMPE(gmpe={'YenierAtkinson2015BSSA': {}},
-                                sigma_model_alatik2015=params)
+        gsims = [valid.modified_gsim(gmpe, sigma_model_alatik2015=params)
                  for params in [params1, params2, params3]]
         cmaker = simple_cmaker(gsims, ['PGA'])
         ctx = cmaker.new_ctx(4)
@@ -45,7 +45,7 @@ class ModifiableGMPETest(unittest.TestCase):
         ctx.occurrence_rate = .001
         ctx.vs30 = 760.
         ctx.rrup = np.array([1., 10., 30., 70.])
-        mea, sig, tau, phi = cmaker.get_mean_stds([ctx])  # (G,M,N)
+        _mea, _sig, tau, phi = cmaker.get_mean_stds([ctx])  # (G,M,N)
 
         # Expected results hand computed
         aae(phi[0], 0.41623333)
@@ -56,10 +56,11 @@ class ModifiableGMPETest(unittest.TestCase):
         aae(tau[2], 0.36855)
 
         # now test with_betw_ratio
-        cmaker.gsims[0] = ModifiableGMPE(
+        gsims[0] = ModifiableGMPE(
             gmpe={'Campbell2003': {}},
             add_between_within_stds={'with_betw_ratio': 0.6})
-        mea, sig, tau, phi = cmaker.get_mean_stds([ctx])  # (G,M,N)
+        cmaker = simple_cmaker(gsims, ['PGA'])
+        _mea, _sig, tau, phi = cmaker.get_mean_stds([ctx])  # (G,M,N)
         aae(tau[0], 0.44075136)
         aae(phi[0], 0.26445082)
 
@@ -70,9 +71,9 @@ class ModifiableGMPETest(unittest.TestCase):
 
     def test_AkkarEtAlRjb2014(self):
         # check mean and stds
-        gsims = [ModifiableGMPE(gmpe={'AkkarEtAlRjb2014': {}},
-                                set_between_epsilon={'epsilon_tau': 0.5}),
-                 valid.gsim('AkkarEtAlRjb2014')]
+        gmm = valid.gsim('AkkarEtAlRjb2014')
+        gsims = [valid.modified_gsim(
+            gmm, set_between_epsilon={'epsilon_tau': 0.5}), gmm]
         cmaker = simple_cmaker(gsims, ['PGA'])
         ctx = cmaker.new_ctx(4)
         ctx.mag = 6.
@@ -102,9 +103,9 @@ class ModifiableGMPETest(unittest.TestCase):
         self.assertAlmostEqual(output_coeffs["XYZ"][SA(3.0)]["XYZ"], 3.0)
 
     def get_mean_stds(self, **kw):
-        gmpe_name = 'AkkarEtAlRjb2014'
-        gmm1 = ModifiableGMPE(gmpe={gmpe_name: {}})
-        gmm2 = ModifiableGMPE(gmpe={gmpe_name: {}}, **kw)
+        gmm = valid.gsim('AkkarEtAlRjb2014')
+        gmm1 = valid.modified_gsim(gmm)
+        gmm2 = valid.modified_gsim(gmm, **kw)
         cmaker = simple_cmaker([gmm1, gmm2], ['PGA', 'SA(0.2)'])
         ctx = cmaker.new_ctx(4)
         ctx.mag = 6.
@@ -113,55 +114,66 @@ class ModifiableGMPETest(unittest.TestCase):
         ctx. vs30 = 760.
         ctx.rrup = np.array([1., 10., 30., 70.])
         ctx.rjb = np.array([1., 10., 30., 70.])
-        return cmaker.get_mean_stds([ctx])  
+        return cmaker.get_mean_stds([ctx])
 
     def test(self):
 
         # check the scaling of the median ground motion - IMT-independent
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_scale_median_scalar={'scaling_factor': 1.2})
         aae(np.exp(mea[MODI]) / np.exp(mea[ORIG]), 1.2)
 
         # Check the scaling of the median ground motion - IMT-dependent
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_scale_median_vector={
                 'scaling_factor': {"PGA": 0.9, "SA(0.2)": 1.1}})
         for m, s in enumerate([0.9, 1.1]):
             aae(np.exp(mea[MODI, m]) / np.exp(mea[ORIG, m]), s)
-        
+
         # Check the scaling of the total stddev - scalar
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_scale_total_sigma_scalar={'scaling_factor': 1.2})
         aae(sig[MODI] / sig[ORIG], 1.2)
-        
+
         # Check the scaling of the total stddev - vector
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_scale_total_sigma_vector={
                 'scaling_factor': {"PGA": 0.9, "SA(0.2)": 1.1}})
         for m, s in enumerate([0.9, 1.1]):
             aae(sig[MODI, m] / sig[ORIG, m], s)
-        
+
         # Check the assignment of total sigma to a fixed value
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_fixed_total_sigma={"total_sigma": {"PGA": 0.6,
                                                    "SA(0.2)": 0.75}})
         for m, s in enumerate([0.6, 0.75]):
             aae(sig[MODI, m], s)
 
         # Check adding/removing a delta std to the total std
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             add_delta_std_to_total_std={"delta": -0.20})
 
         aae(sig[ORIG, 0], 0.712105)
         aae(sig[MODI, 0], 0.68344277)
 
         # Check set total std as between plus phi SS
-        mea, sig, tau, phi = self.get_mean_stds(
+        mea, sig, _tau, phi = self.get_mean_stds(
             set_total_std_as_tau_plus_delta={"delta": 0.45})
-        
+
         aae(phi[ORIG, 0], 0.6201)
         aae(sig[MODI, 0], 0.5701491121)
 
+    def test_avg_gmpe_mgmpe(self):
+        # Test instantiation of a ModifiableGMPE when spec in AvgGMPE
+        gmm_toml =\
+        """
+        [AvgGMPE]
+        b1.ModifiableGMPE.gmpe.AtkinsonBoore2006Modified2011 = {}
+        b1.ModifiableGMPE.add_between_within_stds.with_betw_ratio = 1.7
+        b1.ModifiableGMPE.weight = 0.6
+        b2.PezeshkEtAl2011NEHRPBC.weight = 0.4
+        """
+        valid.gsim(gmm_toml) # Instantiate using valid.gsim from a toml
 
 class ModifiableGMPETestSwissAmpl(unittest.TestCase):
     """
@@ -183,12 +195,11 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
                           'BaumontEtAl2018High2210IAVGDC30n7',
                           'FaccioliCauzzi2006']:
 
-            gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
-                                 apply_swiss_amplification={})
             gmpe = valid.gsim(gmpe_name)
+            gmm = valid.modified_gsim(gmpe, apply_swiss_amplification={})
             cmaker = simple_cmaker([gmm, gmpe], ['MMI'])
             ctx = self.get_ctx(cmaker)
-            mea, sig, tau, phi = cmaker.get_mean_stds([ctx])
+            mea, _sig, _tau, phi = cmaker.get_mean_stds([ctx])
             exp_mean = mea[1] + np.array([-1.00, 1.50, 0, -1.99])
 
             # Check the computed mean + amplification
@@ -198,12 +209,11 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
                           'EdwardsFah2013Foreland60Bars',
                           'ChiouYoungs2008SWISS01']:
 
-            gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
-                                 apply_swiss_amplification_sa={})
             gmpe = valid.gsim(gmpe_name)
+            gmm = valid.modified_gsim(gmpe,apply_swiss_amplification_sa={})
             cmaker = simple_cmaker([gmm, gmpe], ['SA(0.3)'])
             ctx = self.get_ctx(cmaker)
-            mea, sig, tau, phi = cmaker.get_mean_stds([ctx])
+            mea, _sig, _tau, phi = cmaker.get_mean_stds([ctx])
             exp_mean = mea[1] + np.array([-0.2, 0.4, 0.6, 0])
             exp_stdev = np.sqrt(np.array([0.3, 0.4, 0.5, 0.2])**2 +
                                 np.array([0.2, 0.1, 0.3, 0.4])**2)

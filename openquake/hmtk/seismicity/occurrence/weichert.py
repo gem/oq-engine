@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -71,14 +71,14 @@ class Weichert(SeismicityOccurrence):
 
     def calculate(self, catalogue, config, completeness=None):
         """Calculates b value and rate for mag ref"""
-        bval, sigma_b, rate, sigma_rate, aval, sigma_a = self._calculate(
+        bval, sigma_b, rate, sigma_rate, _aval, _sigma_a = self._calculate(
             catalogue, config, completeness
         )
         return bval, sigma_b, rate, sigma_rate
 
     def calc(self, catalogue, config, completeness=None):
         """Calculates GR params"""
-        bval, sigma_b, rate, sigma_rate, aval, sigma_a = self._calculate(
+        bval, sigma_b, _rate, _sigma_rate, aval, sigma_a = self._calculate(
             catalogue, config, completeness
         )
         return bval, sigma_b, aval, sigma_a

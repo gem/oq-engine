@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,23 +19,28 @@
 import os
 import re
 import ast
+import sys
 import json
 import inspect
 import logging
+import pathlib
+import tempfile
 import functools
 import collections
-import multiprocessing
 import numpy
+import pandas
 import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
-from openquake.baselib.general import DictArray, AccumDict, cached_property
-from openquake.hazardlib.imt import from_string, sort_by_imt
+from openquake.baselib.parallel import Starmap
+from openquake.baselib.general import (
+    DictArray, AccumDict, cached_property, engine_version)
+from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
-from openquake.commonlib import logictree
+from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.risklib import asset, scientific
 from openquake.risklib.riskmodels import get_risk_files
 
@@ -61,6 +66,11 @@ aggregate_by:
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
 
+aggregate_exposure:
+  Used to aggregate the exposure by hazard site and taxonomy.
+  Example: *aggregate_exposure = true*
+  Default: False
+
 aggregate_loss_curves_types:
   Used for event-based risk and damage calculations, to estimate the aggregated
   loss Exceedance Probability (EP) only or to also calculate (if possible) the
@@ -81,6 +91,11 @@ amplification_method:
   Example: *amplification_method = kernel*.
   Default: "convolution"
 
+asce_version:
+  ASCE version used in AELO mode.
+  Example: *asce_version = asce7-22*.
+  Default: "asce7-16"
+
 area_source_discretization:
   Discretization parameters (in km) for area sources.
   Example: *area_source_discretization = 10*.
@@ -99,7 +114,8 @@ asset_correlation:
 
 asset_hazard_distance:
   In km, used in risk calculations to print a warning when there are assets
-  too distant from the hazard sites.
+  too distant from the hazard sites. In multi_risk calculations can be a
+  dictionary: asset_hazard_distance = {'ASH': 50, 'LAVA': 10, ...}
   Example: *asset_hazard_distance = 5*.
   Default: 15
 
@@ -124,9 +140,6 @@ avg_losses:
 base_path:
   INTERNAL
 
-cachedir:
-  INTERNAL
-
 cache_distances:
   Useful in UCERF calculations.
   Example: *cache_distances = true*.
@@ -149,6 +162,12 @@ collect_rlzs:
   it is true for sampling and false for full enumeration.
   Example: *collect_rlzs=true*.
   Default: None
+
+correlation_cutoff:
+  Used in conditioned GMF calculation to avoid small negative eigenvalues
+  wreaking havoc with the numerics
+  Example: *correlation_cutoff = 1E-11*
+  Default: 1E-12
 
 compare_with_classical:
   Used in event based calculation to perform also a classical calculation,
@@ -190,6 +209,11 @@ coordinate_bin_width:
   Used in disaggregation calculations.
   Example: *coordinate_bin_width = 1.0*.
   Default: 100 degrees, meaning don't disaggregate by lon, lat
+
+countries:
+  Used to restrict the exposure to a single country in Aristotle mode.
+  Example: *countries = ITA*.
+  Default: ()
 
 cross_correlation:
   When used in Conditional Spectrum calculation is the name of a cross
@@ -242,9 +266,6 @@ distance_bin_width:
   In km, used in disaggregation calculations to specify the distance bins.
   Example: *distance_bin_width = 20*.
   Default: no default
-
-ebrisk_maxsize:
-  INTERNAL
 
 epsilon_star:
   A boolean controlling the typology of disaggregation output to be provided.
@@ -331,12 +352,6 @@ hazard_calculation_id:
   Example: *hazard_calculation_id = 42*.
   Default: None
 
-hazard_curves:
-   Used to disable the calculation of hazard curves when there are
-   too many realizations.
-   Example: *hazard_curves = false*
-   Default: True
-
 hazard_curves_from_gmfs:
   Used in scenario/event based calculations. If set, generates hazard curves
   from the ground motion fields.
@@ -385,8 +400,6 @@ individual_rlzs:
 
 individual_curves:
   Legacy name for `individual_rlzs`, it should not be used.
-  Example: *individual_curves = true*.
-  Default: False
 
 infer_occur_rates:
    If set infer the occurrence rates from the first probs_occur in
@@ -423,10 +436,20 @@ investigation_time:
   Example: *investigation_time = 50*.
   Default: no default
 
+job_id:
+   ID of a job in the database
+   Example: *job_id = 42*.
+   Default: 0 (meaning create a new job)
+
 limit_states:
    Limit states used in damage calculations.
    Example: *limit_states = moderate, complete*
    Default: no default
+
+local_timestamp:
+  Timestamp that includes both the date, time and the time zone information
+  Example: 2023-02-06 04:17:34+03:00
+  Default: None
 
 lrem_steps_per_interval:
   Used in the vulnerability functions.
@@ -450,18 +473,11 @@ max:
   Example: *max = true*.
   Default: False
 
-max_aggregations:
-  Maximum number of aggregation keys.
-  Example: *max_aggregations = 200_000*
-  Default: 100_000
+max_blocks:
+  INTERNAL. Used in classical calculations
 
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
-
-max_gmvs_chunk:
-  Maximum number of rows of the gmf_data table per task.
-  Example: *max_gmvs_chunk = 200_000*
-  Default: 100_000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -471,7 +487,12 @@ max_potential_gmfs:
 max_potential_paths:
   Restrict the maximum number of realizations.
   Example: *max_potential_paths = 200*.
-  Default: 15000
+  Default: 15_000
+
+max_sites_correl:
+  Maximum number of sites for GMF-correlation.
+  Example: *max_sites_correl = 2000*
+  Default: 1200
 
 max_sites_disagg:
   Maximum number of sites for which to store rupture information.
@@ -510,6 +531,11 @@ minimum_distance:
    If set, distances below the minimum are rounded up.
    Example: *minimum_distance = 5*
    Default: 0
+
+minimum_engine_version:
+   If set, raise an error if the engine version is below the minimum
+   Example: *minimum_engine_version = 3.22*
+   Default: None
 
 minimum_intensity:
   If set, ground motion values below the *minimum_intensity* are
@@ -559,10 +585,8 @@ number_of_logic_tree_samples:
 
 oversampling:
   When equal to "forbid" raise an error if tot_samples > num_paths in classical
-  calculations; when equal to "tolerate" do not raise the error (the default);
-  when equal to "reduce_rlzs" reduce the realizations to the unique paths with
-  weights num_samples/tot_samples
-  Example: *oversampling = reduce_rlzs*
+  calculations; when equal to "tolerate" do not raise the error (the default).
+  Example: *oversampling = forbid*
   Default: tolerate
 
 poes:
@@ -608,12 +632,6 @@ random_seed:
   Seed used in the sampling of the logic tree.
   Example: *random_seed = 1234*.
   Default: 42
-
-reference_backarc:
-  Used when there is no site model to specify a global backarc parameter,
-  used in some GMPEs. Can be True or False
-  Example: *reference_backarc = true*.
-  Default: False
 
 reference_depth_to_1pt0km_per_sec:
   Used when there is no site model to specify a global z1pt0 parameter,
@@ -689,19 +707,18 @@ sampling_method:
   Example: *sampling_method = early_latin*.
   Default: 'early_weights'
 
+mea_tau_phi:
+  Save the mean and standard deviations computed by the GMPEs
+  Example: *mea_tau_phi = true*
+  Default: False
+
 sec_peril_params:
   INTERNAL
 
 secondary_perils:
-  INTERNAL
-
-secondary_simulations:
-  INTERNAL
-
-sensitivity_analysis:
-  Dictionary describing a sensitivity analysis.
-  Example: *sensitivity_analysis = {'maximum_distance': [200, 300]}*.
-  Default: empty dictionary
+  List of supported secondary perils.
+  Example: *secondary_perils = HazusLiquefaction, HazusDeformation*
+  Default: empty list
 
 ses_per_logic_tree_path:
   Set the number of stochastic event sets per logic tree realization in
@@ -713,11 +730,6 @@ ses_seed:
   Seed governing the generation of the ground motion field.
   Example: *ses_seed = 123*.
   Default: 42
-
-rupture_usgs_id:
-  Used in Aristotle calculations to download a rupture from the USGS site
-  Example: *rupture_usgs_id = usp000fjta*.
-  Default: no default
 
 shakemap_id:
   Used in ShakeMap calculations to download a ShakeMap from the USGS site
@@ -738,19 +750,28 @@ shift_hypo:
   Example: *shift_hypo = true*.
   Default: false
 
-site_effects:
-  Used in ShakeMap calculations to turn on GMF amplification based
-  on the vs30 values in the ShakeMap (site_effects='shakemap') or in the
-  site collection (site_effects='sitecol').
-  Example: *site_effects = 'shakemap'*.
-  Default: 'no'
+site_class:
+  ASCE site class used in AELO mode.
+  Example: *site_class = 'A'*.
+  Default: None
 
 sites:
   Used to specify a list of sites.
   Example: *sites = 10.1 45, 10.2 45*.
 
-sites_slice:
+site_labels:
+  Specify a dictionary label_string -> label_index assuming each site
+  have a field "label" corresponding to the label index.
+  Example: *site_labels = {"Cascadia": 1}*.
+  Default: {}
+
+tile_spec:
   INTERNAL
+
+tiling:
+  Used to force the tiling or non-tiling strategy in classical calculations
+  Example: *tiling = true*.
+  Default: None, meaning the engine will decide what to do
 
 smlt_branch:
    Used to restrict the source model logic tree to a specific branch
@@ -780,6 +801,9 @@ specific_assets:
 split_sources:
   INTERNAL
 
+split_by_gsim:
+  INTERNAL
+
 outs_per_task:
   How many outputs per task to generate (honored in some calculators)
   Example: *outs_per_task = 3*
@@ -795,9 +819,14 @@ steps_per_interval:
   Example: *steps_per_interval = 4*.
   Default: 1
 
+tectonic_region_type:
+   Used to specify a tectonic region type.
+   Example: *tectonic_region_type = Active Shallow Crust*.
+   Default: '*'
+
 time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
-  Valid choices are "day", "night", "transit".
+  Valid choices are "avg", "day", "night", "transit".
   Example: *time_event = day*.
   Default: "avg"
 
@@ -805,7 +834,7 @@ time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=1000*
-  Default: 1200
+  Default: 600
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -838,6 +867,12 @@ vs30_tolerance:
 width_of_mfd_bin:
   Used to specify the width of the Magnitude Frequency Distribution.
   Example: *width_of_mfd_bin = 0.2*.
+  Default: None
+
+with_betw_ratio:
+  Specify the between ratio for GSIMs with only the Total StdDev.
+  This is necessary in conditioned GMFs calculations.
+  Example: *with_betw_ratio = 1.7*
   Default: None
 """ % __version__
 
@@ -873,6 +908,25 @@ COST_TYPES = [
 ALL_COST_TYPES = [
     '+'.join(s) for l_idx in range(len(COST_TYPES))
     for s in itertools.combinations(COST_TYPES, l_idx + 1)]
+VULN_TYPES = COST_TYPES + [
+    'number', 'area', 'occupants', 'residents', 'affectedpop', 'injured']
+
+# mapping version -> corresponding display name
+ASCE_VERSIONS = {'ASCE7-16': 'ASCE 7-16 & 41-17',
+                 'ASCE7-22': 'ASCE 7-22 & 41-23'}
+
+SITE_CLASSES = {
+    'A': {'display_name': 'A - Hard Rock', 'vs30': 1500},
+    'B': {'display_name': 'B - Rock', 'vs30': 1080},
+    'BC': {'display_name': 'BC', 'vs30': 760},
+    'C': {'display_name': 'C - Very Dense Soil and Soft Rock', 'vs30': 530},
+    'CD': {'display_name': 'CD', 'vs30': 365},
+    'D': {'display_name': 'D - Stiff Soil', 'vs30': 260},
+    'DE': {'display_name': 'DE', 'vs30': 185},
+    'E': {'display_name': 'E - Soft Clay Soil', 'vs30': 150},
+    'default': {'display_name': 'Default', 'vs30': [260, 365, 530]},
+    'custom': {'display_name': 'Specify Vs30', 'vs30': None},
+}
 
 
 def check_same_levels(imtls):
@@ -899,9 +953,18 @@ def check_same_levels(imtls):
     return periods, imls
 
 
+def check_increasing(dframe, *columns):
+    """
+    Make sure the passed columns of the dataframe exists and correspond
+    to increasing numbers
+    """
+    for col in columns:
+        arr = dframe[col].to_numpy()
+        assert (numpy.diff(arr) >= 0).all(), arr
+
+
 class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
-
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
@@ -909,25 +972,24 @@ class OqParam(valid.ParamSet):
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
-        'reqv_ignore_sources', 'amplification', 'station_data',
-        'nonstructural_vulnerability',
+        'reqv_ignore_sources', 'amplification', 'station_data', 'mmi',
         'nonstructural_fragility',
         'nonstructural_consequence',
-        'structural_vulnerability',
         'structural_fragility',
         'structural_consequence',
-        'contents_vulnerability',
         'contents_fragility',
         'contents_consequence',
-        'business_interruption_vulnerability',
         'business_interruption_fragility',
         'business_interruption_consequence',
         'structural_vulnerability_retrofitted',
-        'occupants_vulnerability',
-        'residents_vulnerability',
-        'area_vulnerability',
-        'number_vulnerability',
-    }
+        'groundshaking_fragility',
+        'groundshaking_vulnerability',
+        'liquefaction_fragility',
+        'liquefaction_vulnerability',
+        'landslide_fragility',
+        'landslide_vulnerability',
+        'post_loss_amplification',
+    } | {vtype + '_vulnerability' for vtype in VULN_TYPES}
     # old name => new name
     ALIASES = {'individual_curves': 'individual_rlzs',
                'quantile_hazard_curves': 'quantiles',
@@ -935,8 +997,9 @@ class OqParam(valid.ParamSet):
                'max_hazard_curves': 'max'}
 
     hazard_imtls = {}
-    override_vs30 = valid.Param(valid.positivefloat, None)
+    override_vs30 = valid.Param(valid.positivefloats, ())
     aggregate_by = valid.Param(valid.namelists, [])
+    aggregate_exposure = valid.Param(valid.boolean, False)
     aggregate_loss_curves_types = valid.Param(
         # accepting all comma-separated permutations of 1, 2 or 3 elements
         # of the list ['ep', 'aep' 'oep']
@@ -949,6 +1012,8 @@ class OqParam(valid.ParamSet):
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
+    asce_version = valid.Param(
+        valid.Choice(*ASCE_VERSIONS.keys()), 'ASCE7-16')
     minimum_asset_loss = valid.Param(valid.floatdict, {'default': 0})
     area_source_discretization = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
@@ -963,13 +1028,13 @@ class OqParam(valid.ParamSet):
     collect_rlzs = valid.Param(valid.boolean, None)
     coordinate_bin_width = valid.Param(valid.positivefloat, 100.)
     compare_with_classical = valid.Param(valid.boolean, False)
-    concurrent_tasks = valid.Param(
-        valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
+    concurrent_tasks = valid.Param(valid.positiveint, Starmap.CT)
     conditional_loss_poes = valid.Param(valid.probabilities, [])
     continuous_fragility_discretization = valid.Param(valid.positiveint, 20)
+    countries = valid.Param(valid.namelist, ())
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
-    cachedir = valid.Param(valid.utf8, '')
+    correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
@@ -995,7 +1060,6 @@ class OqParam(valid.ParamSet):
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
     hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
-    hazard_curves = valid.Param(valid.boolean, True)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
@@ -1013,7 +1077,9 @@ class OqParam(valid.ParamSet):
         valid.intensity_measure_types_and_levels, None)
     interest_rate = valid.Param(valid.positivefloat)
     investigation_time = valid.Param(valid.positivefloat, None)
+    job_id = valid.Param(valid.positiveint, 0)
     limit_states = valid.Param(valid.namelist, [])
+    local_timestamp = valid.Param(valid.local_timestamp, None)
     lrem_steps_per_interval = valid.Param(valid.positiveint, 0)
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
@@ -1021,16 +1087,17 @@ class OqParam(valid.ParamSet):
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_aggregations = valid.Param(valid.positivefloat, 1E5)
+    max_blocks = valid.Param(valid.positiveint, 100)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000)  # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
+    max_sites_correl = valid.Param(valid.positiveint, 1200)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     mosaic_model = valid.Param(valid.three_letters, '')
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
+    minimum_engine_version = valid.Param(valid.version, None)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
     minimum_magnitude = valid.Param(valid.floatdict, {'default': 0})  # by TRT
     modal_damage_state = valid.Param(valid.boolean, False)
@@ -1039,7 +1106,7 @@ class OqParam(valid.ParamSet):
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
     num_rlzs_disagg = valid.Param(valid.positiveint, 0)
     oversampling = valid.Param(
-        valid.Choice('forbid', 'tolerate', 'reduce-rlzs'), 'tolerate')
+        valid.Choice('forbid', 'tolerate'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
@@ -1050,14 +1117,15 @@ class OqParam(valid.ParamSet):
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
     reference_depth_to_1pt0km_per_sec = valid.Param(
-        valid.positivefloat, numpy.nan)
+        # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan)
     reference_depth_to_2pt5km_per_sec = valid.Param(
-        valid.positivefloat, numpy.nan)
+        # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'inferred')
     reference_vs30_value = valid.Param(
         valid.positivefloat, numpy.nan)
-    reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
     reqv_ignore_sources = valid.Param(valid.namelist, [])
@@ -1072,21 +1140,22 @@ class OqParam(valid.ParamSet):
     sampling_method = valid.Param(
         valid.Choice('early_weights', 'late_weights',
                      'early_latin', 'late_latin'), 'early_weights')
-    secondary_perils = valid.Param(valid.namelist, [])
-    sec_peril_params = valid.Param(valid.dictionary, {})
-    secondary_simulations = valid.Param(valid.dictionary, {})
-    sensitivity_analysis = valid.Param(valid.dictionary, {})
+    mea_tau_phi = valid.Param(valid.boolean, False)
+    secondary_perils = valid.Param(valid.secondary_perils, [])
+    sec_peril_params = valid.Param(valid.list_of_dict, [])
     ses_per_logic_tree_path = valid.Param(
         valid.compose(valid.nonzero, valid.positiveint), 1)
     ses_seed = valid.Param(valid.positiveint, 42)
-    rupture_usgs_id = valid.Param(valid.nice_string, None)
     shakemap_id = valid.Param(valid.nice_string, None)
+    # example: shakemap_uri = {'kind': 'usgs_id', 'id': 'XXX'}
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
-    site_effects = valid.Param(
-        valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
+    site_class = valid.Param(
+        valid.NoneOr(valid.Choice(*SITE_CLASSES)), None)
+    site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
-    sites_slice = valid.Param(valid.simple_slice, None)
+    tile_spec = valid.Param(valid.tile_spec, None)
+    tiling = valid.Param(valid.boolean, None)
     smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
@@ -1094,17 +1163,19 @@ class OqParam(valid.ParamSet):
     spatial_correlation = valid.Param(valid.Choice('yes', 'no', 'full'), 'yes')
     specific_assets = valid.Param(valid.namelist, [])
     split_sources = valid.Param(valid.boolean, True)
+    split_by_gsim = valid.Param(valid.positiveint, 0)
     outs_per_task = valid.Param(valid.positiveint, 4)
-    ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    time_event = valid.Param(str, 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 1200)
-    # NB: time_per_task > 1200 breaks oq1 (OOM on the master) for Canada EBR
+    tectonic_region_type = valid.Param(valid.utf8, '*')
+    time_event = valid.Param(
+        valid.Choice('avg', 'day', 'night', 'transit'), 'avg')
+    time_per_task = valid.Param(valid.positivefloat, 600)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(int, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
+    with_betw_ratio = valid.Param(valid.positivefloat, None)
 
     @property
     def no_pointsource_distance(self):
@@ -1171,18 +1242,20 @@ class OqParam(valid.ParamSet):
     def __init__(self, **names_vals):
         if '_log' in names_vals:  # called from engine
             del names_vals['_log']
-
         self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
+        hc0 = ('hazard_calculation_id' in names_vals and
+               names_vals['hazard_calculation_id'] == 0)
+        if hc0:
+            self.hazard_calculation_id = 0  # fake calculation_id
         if 'job_ini' not in self.inputs:
             self.inputs['job_ini'] = '<in-memory>'
-        job_ini = self.inputs['job_ini']
         if 'calculation_mode' not in names_vals:
-            raise InvalidFile('Missing calculation_mode in %s' % job_ini)
+            self.raise_invalid('Missing calculation_mode')
         if 'region_constraint' in names_vals:
             if 'region' in names_vals:
-                raise InvalidFile('You cannot have both region and '
-                                  'region_constraint in %s' % job_ini)
+                self.raise_invalid('You cannot have both region and '
+                                   'region_constraint')
             logging.warning(
                 'region_constraint is obsolete, use region instead')
             self.region = valid.wkt_polygon(
@@ -1193,16 +1266,18 @@ class OqParam(valid.ParamSet):
                             'intensity_measure_types_and_levels is set')
         if 'iml_disagg' in names_vals:
             # normalize things like SA(0.10) -> SA(0.1)
-            self.iml_disagg = {str(from_string(imt)): [iml]
+            self.iml_disagg = {str(from_string(imt)): [float(iml)]
                                for imt, iml in self.iml_disagg.items()}
             self.hazard_imtls = self.iml_disagg
             if 'intensity_measure_types_and_levels' in names_vals:
-                raise InvalidFile(
+                self.raise_invalid(
                     'Please remove the intensity_measure_types_and_levels '
-                    'from %s: they will be inferred from the iml_disagg '
-                    'dictionary' % job_ini)
+                    ': they will be inferred from the iml_disagg '
+                    'dictionary')
         elif 'intensity_measure_types_and_levels' in names_vals:
-            self.hazard_imtls = self.intensity_measure_types_and_levels
+            self.hazard_imtls = {
+                k: [float(x) for x in v] for k, v in
+                self.intensity_measure_types_and_levels.items()}
             delattr(self, 'intensity_measure_types_and_levels')
             lens = set(map(len, self.hazard_imtls.values()))
             if len(lens) > 1:
@@ -1235,22 +1310,59 @@ class OqParam(valid.ParamSet):
             # can be missing in post-calculations
             self.maximum_distance.cut(self.minimum_magnitude)
 
+        self.check_hazard()
+        self.check_gsim_lt()
+        self.set_loss_types()
+        self.check_risk()
+        self.check_ebrisk()
+
+    def raise_invalid(self, msg):
+        """
+        Raise an InvalidFile error
+        """
+        raise InvalidFile('%s: %s' % (self.inputs['job_ini'], msg))
+
+    def check_gsim_lt(self):
+        # check the gsim_logic_tree and set req_site_params
+        self.req_site_params = set()
+        if self.inputs.get('gsim_logic_tree'):
+            if self.gsim != '[FromFile]':
+                self.raise_invalid('if `gsim_logic_tree_file` is set, there'
+                                   ' must be no `gsim` key')
+            path = os.path.join(
+                self.base_path, self.inputs['gsim_logic_tree'])
+            gsim_lt = GsimLogicTree(path, ['*'])
+            # check the GSIMs
+            self._trts = set()
+            discard = {trt.strip() for trt in self.discard_trts.split(',')}
+            for trt, gsims in gsim_lt.values.items():
+                if trt not in discard:
+                    self.check_gsims(gsims)
+                    self._trts.add(trt)
+        elif self.gsim:
+            self.check_gsims([valid.gsim(self.gsim, self.base_path)])
+        else:
+            self.raise_invalid('Missing gsim or gsim_logic_tree_file')
+        if 'amplification' in self.inputs:
+            self.req_site_params.add('ampcode')
+        self.req_site_params = sorted(self.req_site_params)
+
+    def check_risk(self):
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
-        if self.risk_files:
-            # checks for risk_files
+        if (self.job_type == 'risk' and not
+                self.shakemap_uri and not self.impact):
+            # check the risk_files
             hc = self.hazard_calculation_id
             if 'damage' in self.calculation_mode and not hc:
                 ok = any('fragility' in key for key in self._risk_files)
                 if not ok:
-                    raise InvalidFile('Missing fragility files in %s' %
-                                      self.inputs['job_ini'])
+                    self.raise_invalid('Missing fragility files')
             elif ('risk' in self.calculation_mode and
-                  self.calculation_mode != 'multi_risk' and not hc):
+                  'multi_peril' not in self.inputs and not hc):
                 ok = any('vulnerability' in key for key in self._risk_files)
                 if not ok:
-                    raise InvalidFile('Missing vulnerability files in %s' %
-                                      self.inputs['job_ini'])
+                    self.raise_invalid('missing vulnerability files')
 
         if self.hazard_precomputed() and self.job_type == 'risk':
             self.check_missing('site_model', 'debug')
@@ -1260,13 +1372,12 @@ class OqParam(valid.ParamSet):
         if self.job_type == 'risk':
             self.check_aggregate_by()
         if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
-                and 'multi_peril' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
-                and not self.hazard_calculation_id):
-            if not hasattr(self, 'truncation_level'):
-                raise InvalidFile("Missing truncation_level in %s" %
-                                  self.inputs['job_ini'])
+                and self.hazard_calculation_id is None):
+            if 'multi_peril' not in self.inputs and not hasattr(
+                    self, 'truncation_level'):
+                self.raise_invalid("Missing truncation_level")
 
         if 'reinsurance' in self.inputs:
             self.check_reinsurance()
@@ -1276,22 +1387,6 @@ class OqParam(valid.ParamSet):
                 self.calculation_mode.startswith('scenario')):
             raise ValueError('%s: there cannot be investigation_time in %s'
                              % (self.inputs['job_ini'], self.calculation_mode))
-
-        # check the gsim_logic_tree
-        if self.inputs.get('gsim_logic_tree'):
-            if self.gsim != '[FromFile]':
-                raise InvalidFile('%s: if `gsim_logic_tree_file` is set, there'
-                                  ' must be no `gsim` key' % job_ini)
-            path = os.path.join(
-                self.base_path, self.inputs['gsim_logic_tree'])
-            gsim_lt = logictree.GsimLogicTree(path, ['*'])
-
-            # check the IMTs vs the GSIMs
-            self._trts = set(gsim_lt.values)
-            for gsims in gsim_lt.values.values():
-                self.check_gsims(gsims)
-        elif self.gsim:
-            self.check_gsims([valid.gsim(self.gsim, self.base_path)])
 
         # check inputs
         unknown = set(self.inputs) - self.KNOWN_INPUTS
@@ -1304,66 +1399,52 @@ class OqParam(valid.ParamSet):
             self.poes = 1 - numpy.exp(
                 - self.investigation_time / numpy.array(self.return_periods))
 
-        # checks for disaggregation
-        if self.calculation_mode == 'disaggregation':
-            if not self.poes_disagg and self.poes:
-                self.poes_disagg = self.poes
-            elif not self.poes and self.poes_disagg:
-                self.poes = self.poes_disagg
-            elif self.poes != self.poes_disagg:
-                raise InvalidFile(
-                    'poes_disagg != poes: %s!=%s in %s' %
-                    (self.poes_disagg, self.poes, self.inputs['job_ini']))
-            if not self.poes_disagg and not self.iml_disagg:
-                raise InvalidFile('poes_disagg or iml_disagg must be set '
-                                  'in %(job_ini)s' % self.inputs)
-            elif self.poes_disagg and self.iml_disagg:
-                raise InvalidFile(
-                    '%s: iml_disagg and poes_disagg cannot be set '
-                    'at the same time' % job_ini)
-            if not self.disagg_bin_edges:
-                for k in ('mag_bin_width', 'distance_bin_width',
-                          'coordinate_bin_width', 'num_epsilon_bins'):
-                    if k not in vars(self):
-                        raise InvalidFile(
-                            '%s must be set in %s' % (k, job_ini))
-            if self.disagg_outputs and not any(
-                    'Eps' in out for out in self.disagg_outputs):
-                self.num_epsilon_bins = 1
-            if self.rlz_index is not None and self.num_rlzs_disagg != 1:
-                raise InvalidFile('%s: you cannot set rlzs_index and '
-                                  'num_rlzs_disagg at the same time' % job_ini)
-
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
             if self.conditional_loss_poes:
-                raise InvalidFile(
-                    '%s: conditional_loss_poes are not defined '
-                    'for classical_damage calculations' % job_ini)
-            if not self.investigation_time and not self.hazard_calculation_id:
-                raise InvalidFile('%s: missing investigation_time' % job_ini)
+                self.raise_invalid(
+                    'conditional_loss_poes are not defined '
+                    'for classical_damage calculations')
+            if (not self.investigation_time and
+                    self.hazard_calculation_id is None):
+                self.raise_invalid('missing investigation_time')
 
+    def check_ebrisk(self):
+        # check specific to ebrisk
+        if self.calculation_mode == 'ebrisk':
+            if self.ground_motion_fields:
+                print('ground_motion_fields overridden to false',
+                      file=sys.stderr)
+                self.ground_motion_fields = False
+            if self.hazard_curves_from_gmfs:
+                self.raise_invalid(
+                    'hazard_curves_from_gmfs=true is invalid in ebrisk')
+
+    def check_hazard(self):
         # check for GMFs from file
-        if (self.inputs.get('gmfs', '').endswith('.csv')
+        if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
                 and 'site_model' not in self.inputs and self.sites is None):
-            raise InvalidFile('%s: You forgot to specify a site_model'
-                              % job_ini)
-        elif self.inputs.get('gmfs', '').endswith('.xml'):
-            raise InvalidFile('%s: GMFs in XML are not supported anymore'
-                              % job_ini)
+            self.raise_invalid('You forgot to specify a site_model')
+
+        elif self.inputs.get('gmfs', [''])[0].endswith('.xml'):
+            self.raise_invalid('GMFs in XML are not supported anymore')
+
+        elif self.number_of_logic_tree_samples >= TWO16:
+            self.raise_invalid('number_of_logic_tree_samples too big: %d' %
+                               self.number_of_logic_tree_samples)
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
+            if self.ruptures_hdf5 and not self.minimum_intensity:
+                self.raise_invalid('missing minimum_intensity')
+
             if self.ps_grid_spacing:
                 logging.warning('ps_grid_spacing is ignored in event_based '
-                                'calculations"')
+                                'calculations')
 
             if self.ses_per_logic_tree_path >= TWO32:
-                raise ValueError('ses_per_logic_tree_path too big: %d' %
-                                 self.ses_per_logic_tree_path)
-            if self.number_of_logic_tree_samples >= TWO16:
-                raise ValueError('number_of_logic_tree_samples too big: %d' %
-                                 self.number_of_logic_tree_samples)
+                self.raise_invalid('ses_per_logic_tree_path too big: %d' %
+                                   self.ses_per_logic_tree_path)
 
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
@@ -1371,39 +1452,88 @@ class OqParam(valid.ParamSet):
                                           'disaggregation']):
             check_same_levels(self.imtls)
 
-    def validate(self):
+        # checks for disaggregation
+        if self.calculation_mode == 'disaggregation':
+            if not self.poes_disagg and self.poes:
+                self.poes_disagg = self.poes
+            elif not self.poes and self.poes_disagg:
+                self.poes = self.poes_disagg
+            elif self.poes != self.poes_disagg:
+                self.raise_invalid(
+                    'poes_disagg != poes: %s!=%s' %
+                    (self.poes_disagg, self.poes))
+            if not self.poes_disagg and not self.iml_disagg:
+                self.raise_invalid('poes_disagg or iml_disagg must be set')
+            elif self.poes_disagg and self.iml_disagg:
+                self.raise_invalid(
+                    'iml_disagg and poes_disagg cannot be set at the same time')
+            if not self.disagg_bin_edges:
+                for k in ('mag_bin_width', 'distance_bin_width',
+                          'coordinate_bin_width', 'num_epsilon_bins'):
+                    if k not in vars(self):
+                        self.raise_invalid('%s must be set' % k)
+            if self.disagg_outputs and not any(
+                    'Eps' in out for out in self.disagg_outputs):
+                self.num_epsilon_bins = 1
+            if self.rlz_index is not None and self.num_rlzs_disagg != 1:
+                self.raise_invalid('you cannot set rlzs_index and '
+                                   'num_rlzs_disagg at the same time')
+
+        # check compute_rtgm will run
+        if 'rtgm' in self.postproc_func:
+            if 'PGA' and "SA(0.2)" and 'SA(1.0)' not in self.imtls:
+                self.raise_invalid('the IMTs PGA, SA(0.2), and SA(1.0)'
+                                   ' are required to use compute_rtgm')
+
+    def set_loss_types(self):
         """
-        Set self.loss_types
+        Set .all_cost_types and .total_losses from the parent calculation,
+        if any
         """
         from openquake.commonlib import datastore  # avoid circular import
         if self.hazard_calculation_id:
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
+            if not self.total_losses:
+                self.total_losses = self._parent.total_losses
         else:
             self._parent = None
         # set all_cost_types
-        # rt has the form 'vulnerability/structural', 'fragility/...', ...
-        costtypes = set(rt.rsplit('/')[1] for rt in self.risk_files)
+        # rt has the form 'groundshaking/vulnerability/structural', ...
+        costtypes = set(rt.split('/')[2] for rt in self.risk_files)
         if not costtypes and self.hazard_calculation_id:
             try:
                 self._risk_files = rfs = get_risk_files(self._parent.inputs)
-                costtypes = set(rt.rsplit('/')[1] for rt in rfs)
+                costtypes = set(rt.split('/')[2] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
-        self.all_cost_types = sorted(costtypes)  # including occupants
-
+        # all_cost_types includes occupants and exclude perils
+        self.all_cost_types = sorted(costtypes - set(scientific.PERILTYPE))
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
             ln: calc.filters.getdefault(self.minimum_asset_loss, ln)
             for ln in self.loss_types}
 
+    def validate(self):
+        """
+        Perform some checks
+        """
         super().validate()
         self.check_source_model()
+        if 'post_loss_amplification' in self.inputs:
+            df = pandas.read_csv(self.inputs['post_loss_amplification'])
+            check_increasing(df, 'return_period', 'pla_factor')
+            if self.avg_losses:
+                self.raise_invalid(
+                    "you must set avg_losses=false with post_loss_amplification")
 
     def check_gsims(self, gsims):
         """
         :param gsims: a sequence of GSIM instances
         """
+        for gsim in gsims:
+            self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
+
         has_sites = self.sites is not None or 'site_model' in self.inputs
         if not has_sites:
             return
@@ -1413,6 +1543,14 @@ class OqParam(valid.ParamSet):
             im = from_string(imt)
             if imt.startswith("SA"):
                 imts.add("SA")
+            elif imt.startswith("Sa_avg2"):
+                imts.add("Sa_avg2")
+            elif imt.startswith("Sa_avg3"):
+                imts.add("Sa_avg3")
+            elif imt.startswith("FIV3"):
+                imts.add("FIV3")
+            elif imt.startswith("SDi"):
+                imts.add("SDi")
             elif imt.startswith("EAS"):
                 imts.add("EAS")
             elif imt.startswith("FAS"):
@@ -1423,6 +1561,7 @@ class OqParam(valid.ParamSet):
                 imts.add("AvgSA")
             else:
                 imts.add(im.string)
+
         for gsim in gsims:
             if (hasattr(gsim, 'weight') or
                     self.calculation_mode == 'aftershock'):
@@ -1531,12 +1670,17 @@ class OqParam(valid.ParamSet):
         """
         return self.imtls.size // len(self.imtls)
 
+    # called in CompositeRiskModel.init
     def set_risk_imts(self, risklist):
         """
         :param risklist:
-            a list of risk functions with attributes .id, .loss_type, .kind
+            a list of risk functions with attributes
+            .id, .peril, .loss_type, .kind
+        :returns:
+            a list of ordered unique perils
 
-        Set the attribute risk_imtls.
+        Set the attribute .risk_imtls as a side effect, with the imts extracted
+        from the risk functions, i.e. without secondary peril prefixes.
         """
         risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
@@ -1557,35 +1701,54 @@ class OqParam(valid.ParamSet):
                              (imt, min(imls), max(imls)))
         suggested[-1] += '}'
         self.risk_imtls = {imt: [min(ls)] for imt, ls in risk_imtls.items()}
+
         if self.uniform_hazard_spectra:
             self.check_uniform_hazard_spectra()
         if not self.hazard_imtls:
             if (self.calculation_mode.startswith('classical') or
                     self.hazard_curves_from_gmfs):
-                raise InvalidFile('%s: %s' % (
-                    self.inputs['job_ini'], 'You must provide the '
+                self.raise_invalid(
+                    'You must provide the '
                     'intensity measure levels explicitly. Suggestion:' +
-                    '\n  '.join(suggested)))
+                    '\n  '.join(suggested))
         if (len(self.imtls) == 0 and 'event_based' in self.calculation_mode and
                 'gmfs' not in self.inputs and not self.hazard_calculation_id
                 and self.ground_motion_fields):
             raise ValueError('Please define intensity_measure_types in %s' %
                              self.inputs['job_ini'])
 
+        # check secondary imts
+        for imt in self.get_primary_imtls():
+            if any(sec_imt.endswith(imt) for sec_imt in sec_imts):
+                self.raise_invalid('you forgot to set secondary_perils =')
+
+        seco_imts = {sec_imt.split('_')[1] for sec_imt in self.sec_imts}
+        risk_imts = set(self.risk_imtls)
+        for imt in risk_imts - seco_imts:
+            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI')):
+                pass  # ground shaking IMT
+            else:
+                raise ValueError(f'The risk functions contain {imt} which is '
+                                 f'not in the secondary IMTs {seco_imts}')
+
+        risk_perils = sorted(set(getattr(rf, 'peril', 'groundshaking')
+                                 for rf in risklist))
+        return risk_perils
+
     def get_primary_imtls(self):
         """
         :returns: IMTs and levels which are not secondary
         """
-        sec_imts = set(self.sec_imts)
         return {imt: imls for imt, imls in self.imtls.items()
-                if imt not in sec_imts}
+                if '_' not in imt and imt not in sec_imts}
 
     def hmap_dt(self):  # used for CSV export
         """
         :returns: a composite dtype (imt, poe)
         """
+        imts = list(self.imtls) + self.sec_imts
         return numpy.dtype([('%s-%s' % (imt, poe), F32)
-                            for imt in self.imtls for poe in self.poes])
+                            for imt in imts for poe in self.poes])
 
     def uhs_dt(self):  # used for CSV and NPZ export
         """
@@ -1620,6 +1783,13 @@ class OqParam(valid.ParamSet):
         return {lt: i for i, lt in enumerate(self.ext_loss_types)}
 
     @property
+    def L(self):
+        """
+        :returns: the number of loss types
+        """
+        return len(self.loss_types)
+
+    @property
     def loss_types(self):
         """
         :returns: list of loss types (empty for hazard)
@@ -1643,6 +1813,19 @@ class OqParam(valid.ParamSet):
             itypes = [lt + '_ins' for lt in self.inputs['insurance']]
             etypes = self.loss_types + itypes
         return etypes
+
+    @property
+    def total_loss_types(self):
+        """
+        :returns: a dictionary loss_type -> index
+        """
+        if self.total_losses:
+            total = self.total_losses.split('+')
+        elif len(self.loss_types) == 1:
+            total = self.loss_types
+        else:
+            self.raise_invalid('please specify total_losses')
+        return {lt: li for li, lt in enumerate(self.loss_types) if lt in total}
 
     def loss_dt(self, dtype=F64):
         """
@@ -1670,29 +1853,22 @@ class OqParam(valid.ParamSet):
         :returns: a composite data type for the GMFs
         """
         lst = [('sid', U32), ('eid', U32)]
-        for m, imt in enumerate(self.get_primary_imtls()):
-            lst.append((f'gmv_{m}', F32))
-        for out in self.sec_imts:
-            lst.append((out, F32))
+        for imt in self.all_imts():
+            lst.append((imt, F32))
         return numpy.dtype(lst)
 
     def all_imts(self):
         """
-        :returns: gmv_0, ... gmv_M, sec_imt...
+        :returns: imt..., sec_imt...
         """
-        lst = []
-        for m, imt in enumerate(self.get_primary_imtls()):
-            lst.append(f'gmv_{m}')
-        for out in self.sec_imts:
-            lst.append(out)
-        return lst
+        return list(self.get_primary_imtls()) + self.sec_imts
 
     def get_sec_perils(self):
         """
         :returns: a list of secondary perils
         """
-        return SecondaryPeril.instantiate(self.secondary_perils,
-                                          self.sec_peril_params)
+        return SecondaryPeril.instantiate(
+            self.secondary_perils, self.sec_peril_params, self)
 
     @cached_property
     def sec_imts(self):
@@ -1701,7 +1877,8 @@ class OqParam(valid.ParamSet):
         """
         outs = []
         for sp in self.get_sec_perils():
-            outs.extend(sp.outputs)
+            for out in sp.outputs:
+                outs.append(f'{sp.__class__.__name__}_{out}')
         return outs
 
     def no_imls(self):
@@ -1734,6 +1911,50 @@ class OqParam(valid.ParamSet):
         except AttributeError:
             return None
         return cls()
+
+    @property
+    def rupture_xml(self):
+        return ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.xml'))
+
+    @property
+    def ruptures_hdf5(self):
+        if ('rupture_model' in self.inputs and
+                self.inputs['rupture_model'].endswith('.hdf5')):
+            return self.inputs['rupture_model']
+
+    @property
+    def impact(self):
+        """
+        Return True if we are in OQImpact mode, i.e. there is an HDF5
+        exposure with a known structure
+        """
+        exposures = self.inputs.get('exposure', [])
+        yes = exposures and exposures[0].endswith('.hdf5')
+        if yes:
+            if not self.quantiles:
+                self.quantiles = [0.05, 0.50, 0.95]
+            if not self.aggregate_by:
+                # self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
+                self.aggregate_by = [['ID_2']]
+        return yes
+
+    @property
+    def aelo(self):
+        """
+        Return True if we are in AELO mode, i.e. if
+        postproc_func == 'compute_rtgm.main'
+        """
+        return self.postproc_func == 'compute_rtgm.main'
+
+    @property
+    def fastmean(self):
+        """
+        Return True if it is possible to use the fast mean algorithm
+        """
+        return (not self.individual_rlzs and self.soil_intensities is None
+                and list(self.hazard_stats()) == ['mean'] and self.use_rates
+                and not self.site_labels)
 
     def get_kinds(self, kind, R):
         """
@@ -1800,6 +2021,12 @@ class OqParam(valid.ParamSet):
             return self.ps_grid_spacing == 0
         return True
 
+    def is_valid_concurrent_tasks(self):
+        """
+        At most you can use 30_000 tasks
+        """
+        return self.concurrent_tasks <= 30_000
+
     def is_valid_shakemap(self):
         """
         hazard_calculation_id must be set if shakemap_id is set
@@ -1818,8 +2045,8 @@ class OqParam(valid.ParamSet):
                     'Error in shakemap_uri: Expected parameters %s, '
                     'valid parameters %s, got %s' %
                     (params, all_params, list(self.shakemap_uri)))
-        return self.hazard_calculation_id if (
-            self.shakemap_id or self.shakemap_uri) else True
+            return True
+        return self.hazard_calculation_id if self.shakemap_id else True
 
     def is_valid_truncation_level(self):
         """
@@ -1876,17 +2103,18 @@ class OqParam(valid.ParamSet):
         """
         if 'gsim_logic_tree' not in self.inputs:
             return True  # disable the check
-        gsim_lt = self.inputs['gsim_logic_tree']
+        gsim_lt = self.inputs['gsim_logic_tree']  # set self._trts
         trts = set(self.maximum_distance)
-        unknown = ', '.join(trts - self._trts - {'default'})
+        unknown = ', '.join(trts - self._trts - set(self.minimum_magnitude)
+                            - {'default'})
         if unknown:
             self.error = ('setting the maximum_distance for %s which is '
                           'not in %s' % (unknown, gsim_lt))
             return False
         for trt, val in self.maximum_distance.items():
             if trt not in self._trts and trt != 'default':
-                self.error = 'tectonic region %r not in %s' % (trt, gsim_lt)
-                return False
+                # not a problem, the associated maxdist will simply be ignored
+                logging.warning('tectonic region %r not in %s', trt, gsim_lt)
         if 'default' not in trts and trts < self._trts:
             missing = ', '.join(self._trts - trts)
             self.error = 'missing distance for %s and no default' % missing
@@ -1952,15 +2180,16 @@ class OqParam(valid.ParamSet):
         export_dir={export_dir} must refer to a directory,
         and the user must have the permission to write on it.
         """
-        if self.export_dir and not os.path.isabs(self.export_dir):
+        if self.export_dir == '/tmp' and sys.platform == 'win32':
+            # magically convert to the Windows tempdir
+            self.export_dir = tempfile.gettempdir()
+        if not os.path.isabs(self.export_dir):
             self.export_dir = os.path.normpath(
                 os.path.join(self.input_dir, self.export_dir))
-        if not self.export_dir:
-            self.export_dir = os.path.expanduser('~')  # home directory
-            logging.info('export_dir not specified. Using export_dir=%s'
-                         % self.export_dir)
+        if not self.exports or not self.exports[0]:  # () or ('',)
+            # we are not exporting anything
             return True
-        if not os.path.exists(self.export_dir):
+        elif not os.path.exists(self.export_dir):
             try:
                 os.makedirs(self.export_dir)
             except PermissionError:
@@ -1987,10 +2216,14 @@ class OqParam(valid.ParamSet):
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
         if self.job_type == 'hazard':
             return True
+
+        # there are more checks for risk calculations
+        if self.collect_rlzs and self.individual_rlzs:
+            self.raise_invalid("you cannot have individual_rlzs=true with "
+                               "collect_rlzs=true")
         if self.calculation_mode == 'event_based_damage':
-            ini = self.inputs['job_ini']
             if not self.investigation_time:
-                raise InvalidFile('Missing investigation_time in %s' % ini)
+                self.raise_invalid('Missing investigation_time')
             return True
         elif self.collect_rlzs is False:
             return True
@@ -2001,29 +2234,35 @@ class OqParam(valid.ParamSet):
                                  '=%d' % n)
         hstats = list(self.hazard_stats())
         if hstats and hstats != ['mean']:
-            msg = '%s: quantiles are not supported with collect_rlzs=true'
-            raise InvalidFile(msg % self.inputs['job_ini'])
+            self.raise_invalid(
+                'quantiles are not supported with collect_rlzs=true')
         if self.number_of_logic_tree_samples == 0:
             raise ValueError('collect_rlzs=true is inconsistent with '
                              'full enumeration')
         return self.sampling_method == 'early_weights'
 
+    def is_valid_version(self):
+        """
+        The engine version must be >= {minimum_engine_version}
+        """
+        if not self.minimum_engine_version:
+            return True
+        return self.minimum_engine_version <= valid.version(engine_version())
+
     def check_aggregate_by(self):
         tagset = asset.tagset(self.aggregate_by)
         if 'id' in tagset and len(tagset) > 1:
             raise ValueError('aggregate_by = id must contain a single tag')
-        elif 'site_id' in tagset and len(tagset) > 1:
-            raise ValueError(
-                'aggregate_by = site_id must contain a single tag')
+        elif 'site_id' in tagset and self.avg_losses:
+            logging.warning('avg_losses with site_id in aggregate_by')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
-                err_msg = ('The field `aggregate_by = policy` in the %s file'
-                           ' is required for reinsurance calculations.'
-                           % self.inputs['job_ini'])
+                err_msg = ('The field `aggregate_by = policy`'
+                           ' is required for reinsurance calculations.')
                 if self.aggregate_by:
                     err_msg += (' Got `aggregate_by = %s` instead.'
                                 % self.aggregate_by)
-                raise InvalidFile(err_msg)
+                self.raise_invalid(err_msg)
         return True
 
     def check_reinsurance(self):
@@ -2032,14 +2271,12 @@ class OqParam(valid.ParamSet):
         try:
             [lt] = dic
         except ValueError:
-            raise InvalidFile('%s: too many loss types in reinsurance %s'
-                              % (self.inputs['job_ini'], list(dic)))
+            self.raise_invalid(
+                'too many loss types in reinsurance %s' % list(dic))
         if lt not in scientific.LOSSID:
-            raise InvalidFile('%s: unknown loss type %s in reinsurance'
-                              % (self.inputs['job_ini'], lt))
+            self.raise_invalid('%s: unknown loss type %s in reinsurance' % lt)
         if '+' in lt and not self.total_losses:
-            raise InvalidFile('%s: you forgot to set total_losses=%s'
-                              % (self.inputs['job_ini'], lt))
+            self.raise_invalid('you forgot to set total_losses=%s' % lt)
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or
@@ -2054,14 +2291,16 @@ class OqParam(valid.ParamSet):
                 'contain a single point')
 
     def check_source_model(self):
-        if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
-                'multi_peril' in self.inputs or 'rupture_model' in self.inputs
+        if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs
+                or 'rupture_model' in self.inputs
                 or 'scenario' in self.calculation_mode
                 or 'ins_loss' in self.inputs):
             return
         if ('source_model_logic_tree' not in self.inputs and
+                'source_model' not in self.inputs and
+                'multi_peril' not in self.inputs and
                 self.inputs['job_ini'] != '<in-memory>' and
-                not self.hazard_calculation_id):
+                self.hazard_calculation_id is None):
             raise ValueError('Missing source_model_logic_tree in %s '
                              'or missing --hc option' %
                              self.inputs.get('job_ini', 'job_ini'))
@@ -2072,10 +2311,9 @@ class OqParam(valid.ParamSet):
         """
         assert action in ('debug', 'info', 'warn', 'error'), action
         if self.inputs.get(param):
-            msg = '%s_file in %s is ignored in %s' % (
-                param, self.inputs['job_ini'], self.calculation_mode)
+            msg = '%s_file is ignored in %s' % (param, self.calculation_mode)
             if action == 'error':
-                raise InvalidFile(msg)
+                self.raise_invalid(msg)
             else:
                 getattr(logging, action)(msg)
 
@@ -2086,6 +2324,17 @@ class OqParam(valid.ParamSet):
         if 'gmfs' in self.inputs or 'hazard_curves' in self.inputs:
             return True
         return self.hazard_calculation_id
+
+    def get_haz_distance(self):
+        """
+        :returns: the asset_hazard_distance or region_grid_spacing * 1.414
+        """
+        asset_hazard_distance = max(self.asset_hazard_distance.values())
+        if self.region_grid_spacing:
+            haz_distance = self.region_grid_spacing * 1.414
+        else:
+            haz_distance = asset_hazard_distance
+        return haz_distance
 
     @classmethod
     def docs(cls):
@@ -2098,6 +2347,29 @@ class OqParam(valid.ParamSet):
             name = name.split()[-1]
             dic[name] = doc
         return dic
+
+    # tested in run-demos.sh
+    def to_ini(self, **inputs):
+        """
+        Converts the parameters into a string in .ini format
+        """
+        dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
+        dic['inputs'].update(inputs)
+        del dic['base_path'], dic['req_site_params']
+        dic.pop('close', None)
+        dic.pop('mags_by_trt', None)
+        dic.pop('sec_imts', None)
+        for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.\
+                split():
+            dic.pop(k, None)
+
+        if 'secondary_perils' in dic:
+            dic['secondary_perils'] = ' '.join(dic['secondary_perils'])
+        if 'aggregate_by' in dic:
+            dic['aggregate_by'] = '; '.join(
+                ','.join(keys) for keys in dic['aggregate_by'])
+        ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
+        return ini
 
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}
@@ -2124,3 +2396,54 @@ class OqParam(valid.ParamSet):
         if hasattr(self, 'maximum_distance') and not isinstance(
                 self.maximum_distance, Idist):
             self.maximum_distance = Idist(**self.maximum_distance)
+
+
+def _rel_fnames(obj, base):
+    # convert to relative paths
+    if isinstance(obj, str):
+        *b, n = pathlib.Path(obj).parts
+        offset = len(base) - len(b)
+        if offset > 0:
+            relpath = ['..'] * offset + [n]
+        else:
+            relpath = b[len(base):] + [n]
+        return '/'.join(relpath)
+    elif isinstance(obj, list):
+        return '\n  '.join(_rel_fnames(s, base) for s in obj)
+    else:  # assume dict
+        dic = {k: _rel_fnames(v, base) for k, v in obj.items()}
+        return str(dic)
+
+
+def to_ini(key, val):
+    """
+    Converts key, val into .ini format
+    """
+    if key == 'inputs':
+        *base, _name = pathlib.Path(val.pop('job_ini')).parts
+        fnames = []
+        for v in val.values():
+            if isinstance(v, str):
+                fnames.append(v)
+            elif isinstance(v, list):
+                fnames.extend(v)
+            elif isinstance(v, dict):
+                fnames.extend(v.values())
+        return '\n'.join(f'{k}_file = {_rel_fnames(v, base)}'
+                         for k, v in val.items()
+                         if not k.startswith('_'))
+    elif key == 'sites':
+        sites = ', '.join(f'{lon} {lat}' for lon, lat, dep in val)
+        return f"sites = {sites}"
+    elif key == 'region':
+        coords = val[9:-2].split(',')  # strip POLYGON((...))
+        return f'{key} = {", ".join(c for c in coords[:-1])}'
+    elif key == 'hazard_imtls':
+        return f"intensity_measure_types_and_levels = {val}"
+    elif key in ('reqv_ignore_sources', 'poes', 'quantiles', 'disagg_outputs',
+                 'source_id', 'source_nodes', 'soil_intensities'):
+        return f"{key} = {' '.join(map(str, val))}"
+    else:
+        if val is None:
+            val = ''
+        return f'{key} = {val}'

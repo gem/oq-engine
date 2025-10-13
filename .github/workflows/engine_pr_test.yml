@@ -10,146 +10,223 @@ jobs:
   engine:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-22.04]
-        python-version: ["3.9"]
+        os: [ubuntu-24.04]
+        python-version: ["3.12"]
     env:
-      GITHUB_HEAD_REF:  ${{ github.head_ref }}
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version:  ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        if [[ $FROM_FORK == "true" ]]; then
-          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-        else
-          python install.py devel --version=$GITHUB_HEAD_REF
-        fi
-    - name: Calculators and documentation tests
-      run: |
-        set -e
-        source ~/openquake/bin/activate
-        pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
-        oq dbserver upgrade
-        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage'
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          if [[ $FROM_FORK == "true" ]]; then
+            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+          else
+            python install.py devel --version=$GITHUB_HEAD_REF
+          fi
+      - name: Calculators hazard tests
+        run: |
+          set -e
+          source ~/openquake/bin/activate
+          pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+          oq engine --upgrade-db
+
+          # Test importing pyproj and hazardlib in both orders, to check the pyproj wheel
+          pytest openquake/baselib/tests/pyproj_wheel_test.py
+          pytest openquake/hazardlib/tests/pyproj_wheel_test.py
+
+          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
 
   hazardlib:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.9"]
+        os: [ubuntu-24.04]
+        python-version: ["3.12"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version:  ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        if [[ $FROM_FORK == "true" ]]; then
-          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-        else
-          python install.py devel --version=$GITHUB_HEAD_REF
-        fi
-    - name: Hazardlib tests
-      run: |
-        set -e
-        source ~/openquake/bin/activate
-        pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
-        oq dbserver upgrade
-        cd openquake
-        ruff check --preview --select NPY201 .
-        pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
-        pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          if [[ $FROM_FORK == "true" ]]; then
+            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+          else
+            python install.py devel --version=$GITHUB_HEAD_REF
+          fi
+      - name: Hazardlib tests
+        run: |
+          set -e
+          source ~/openquake/bin/activate
+          curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
+          pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+          oq engine --upgrade-db
+          cd openquake
+          ruff check --preview .
+          pytest calculators -k 'risk or damage or bcr' -x --doctest-modules --disable-warnings --color=yes --durations=5
+          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 sep hmtk risklib commonlib baselib hazardlib
+          pytest --doctest-modules ../doc/contributing/*.rst
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04]
         python-version: ["3.11"]
     env:
-      GITHUB_HEAD_REF:  ${{ github.head_ref }}
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: PUBLIC
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version:  ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        if [[ $FROM_FORK == "true" ]]; then
-          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-        else
-          python install.py devel --version=$GITHUB_HEAD_REF
-        fi
-    - name: Server 'PUBLIC' mode tests
-      run: |
-        source ~/openquake/bin/activate
-        # -v 2 also logs the test names
-        OQ_APPLICATION_MODE=public ./openquake/server/manage.py test -v 2 tests.test_public_mode
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          if [[ $FROM_FORK == "true" ]]; then
+            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+          else
+            python install.py devel --version=$GITHUB_HEAD_REF
+          fi
+      - name: Server 'PUBLIC' mode tests
+        run: |
+          source ~/openquake/bin/activate
+          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
+          pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+          oq engine --upgrade-db
+          # Starting the webui here is not needed by test_public_mode,
+          # but here we also want to check that the webui starts without errors
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+           sleep 5 # wait for 5 seconds before check again
+          done
+          pytest -xs --doctest-modules --disable-warnings --color=yes openquake/commands openquake/engine
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_public_mode.py
 
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04]
         python-version: ["3.11"]
     env:
-      GITHUB_HEAD_REF:  ${{ github.head_ref }}
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: READ_ONLY
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version:  ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        if [[ $FROM_FORK == "true" ]]; then
-          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-        else
-          python install.py devel --version=$GITHUB_HEAD_REF
-        fi
-    - name: Server 'READ_ONLY' mode tests
-      run: |
-        source ~/openquake/bin/activate
-        # -v 2 also logs the test names
-        OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          if [[ $FROM_FORK == "true" ]]; then
+            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+          else
+            python install.py devel --version=$GITHUB_HEAD_REF
+          fi
+      - name: Server 'READ_ONLY' mode tests
+        run: |
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_read_only_mode.py
+          pytest -m "not slow" -v openquake/_unc
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04]
         python-version: ["3.11"]
     env:
-      GITHUB_HEAD_REF:  ${{ github.head_ref }}
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: AELO
+      OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version:  ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        if [[ $FROM_FORK == "true" ]]; then
-          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
-        else
-          python install.py devel --version=$GITHUB_HEAD_REF
-        fi
-    - name: Server 'AELO' mode tests
-      run: |
-        source ~/openquake/bin/activate
-        # -v 2 also logs the test names
-        OQ_APPLICATION_MODE=aelo OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          if [[ $FROM_FORK == "true" ]]; then
+            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+          else
+            python install.py devel --version=$GITHUB_HEAD_REF
+          fi
+      - name: Actualize 'aelo' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.aelo.tmpl; do
+              cp -- "$file" "${file%.aelo.tmpl}"
+          done
+      - name: Server 'AELO' mode tests
+        run: |
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          ./openquake/server/manage.py migrate
+          ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
+          ./openquake/server/manage.py collectstatic --noinput
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_aelo_mode.py
+
+  server_impact_mode:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.11"]
+    env:
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: ARISTOTLE
+      OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          if [[ $FROM_FORK == "true" ]]; then
+            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+          else
+            python install.py devel --version=$GITHUB_HEAD_REF
+          fi
+      - name: Actualize 'impact' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.impact.tmpl; do
+              cp -- "$file" "${file%.impact.tmpl}"
+          done
+      - name: Server 'ARISTOTLE' mode tests
+        run: |
+          set -x
+          date
+          wget https://downloads.openquake.org/test_data/exposure.hdf5
+          date
+          mv exposure.hdf5 openquake/qa_tests_data/mosaic/
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          ./openquake/server/manage.py migrate
+          touch ~/webui-access.log
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_impact_mode.py

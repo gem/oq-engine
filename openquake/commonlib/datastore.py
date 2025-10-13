@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,26 +25,7 @@ import numpy
 import h5py
 
 from openquake.baselib import hdf5, performance, general
-from openquake.commonlib.logs import (
-    get_datadir, get_last_calc_id, CALC_REGEX, dbcmd, init)
-
-
-# FIXME: you should never use this
-def hdf5new(datadir=None):
-    """
-    Return a new `hdf5.File by` instance with name determined by the last
-    calculation in the datadir (plus one). Set the .path attribute to the
-    generated filename.
-    """
-    datadir = datadir or get_datadir()
-    if not os.path.exists(datadir):
-        os.makedirs(datadir)
-    calc_id = get_last_calc_id(datadir) + 1
-    fname = os.path.join(datadir, 'calc_%d.hdf5' % calc_id)
-    new = hdf5.File(fname, 'w')
-    new.path = fname
-    performance.init_performance(new)
-    return new
+from openquake.commonlib.logs import get_datadir, CALC_REGEX, dbcmd, init
 
 
 def extract_calc_id_datadir(filename):
@@ -134,24 +115,25 @@ def new(calc_id, oqparam, datadir=None, mode=None):
         a DataStore instance associated to the given calc_id
     """
     dstore = _read(calc_id, mode, datadir)
-    dstore['oqparam'] = oqparam
+    if 'oqparam' not in dstore:
+        dstore['oqparam'] = oqparam
     if oqparam.hazard_calculation_id:
         dstore.ppath = read(calc_id, 'r', datadir).ppath
     return dstore
 
 
-def build_dstore_log(description='custom calculation', parent=(), ini=None):
+def create_job_dstore(description='custom calculation', parent=(), ini=None):
     """
-    :returns: DataStore instance associated to the .calc_id
+    :returns: <DataStore> and <LogContext> associated to the calculation
     """
     if ini is not None:
         dic = ini
     else:
         dic = dict(description=description, calculation_mode='custom')
-    log = init('job', dic)
+    log = init(dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
-    return dstore, log
+    return log, dstore
 
 
 def read_hc_id(hdf5):
@@ -167,6 +149,9 @@ def read_hc_id(hdf5):
     return oq.hazard_calculation_id
 
 
+# NB: the way to store utf8-strings is
+# dstore.create_dset(name, hdf5.vstr, len(strings))[:] = strings
+
 class DataStore(collections.abc.MutableMapping):
     """
     DataStore class to store the inputs/outputs of a calculation on the
@@ -174,7 +159,7 @@ class DataStore(collections.abc.MutableMapping):
 
     Here is a minimal example of usage:
 
-    >>> dstore, log = build_dstore_log()
+    >>> log, dstore = create_job_dstore()
     >>> with dstore, log:
     ...     dstore['example'] = 42
     ...     print(dstore['example'][()])
@@ -314,7 +299,7 @@ class DataStore(collections.abc.MutableMapping):
         return dict(dset.attrs)
 
     def create_dset(self, key, dtype, shape=(None,), compression=None,
-                    fillvalue=0, attrs=None):
+                    fillvalue=None, attrs=None):
         """
         Create a one-dimensional HDF5 dataset.
 
@@ -331,6 +316,8 @@ class DataStore(collections.abc.MutableMapping):
                 compression, fillvalue, attrs)
             dset[:] = dtype
             return dset
+        if isinstance(shape, int):
+            shape = shape,
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 
@@ -497,8 +484,13 @@ class DataStore(collections.abc.MutableMapping):
         :returns: datastore metadata version, date, checksum as a dictionary
         """
         a = self.hdf5.attrs
-        return dict(generated_by='OpenQuake engine %s' % a['engine_version'],
-                    start_date=a['date'], checksum=a['checksum32'])
+        if 'aelo_version' in a:
+            return dict(generated_by='AELO %s' % a['aelo_version'],
+                        start_date=a['date'], checksum=a['checksum32'])
+        else:
+            return dict(
+                generated_by='OpenQuake engine %s' % a['engine_version'],
+                start_date=a['date'], checksum=a['checksum32'])
 
     def __getitem__(self, key):
         if self.hdf5 == ():  # the datastore is closed

@@ -1,64 +1,119 @@
 ---
 #
-- import_playbook: check_py_ver.yaml
-
 - hosts: all
   #
   serial: 1
   order: sorted
+  gather_facts: yes
   become: yes
   vars:
     venv_dir: /opt/openquake
     venv_bin: "{{ venv_dir }}/bin"
-    server_host: "{{hostvars['server']['ansible_default_ipv4']['address']}}"
-    worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(' -1,') }} -1"
-    oq_version: master
+    server_host: "{{hostvars['server']['ansible_host']}}"
+    worker_nodes_zmq: "{{ groups['worker'] | map('extract', hostvars, ['ansible_host']) | join(' -1,') }} -1"
 
   pre_tasks:
     - name: ping hosts
       ping:
 
-    - name: check OS
-      debug: msg={{ansible_distribution}}-{{ansible_distribution_version}}-{{ansible_python_version}}
+    - name: Update apt repo and cache on Debian
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == 'Debian'
 
-    - name: check server host IP
-      debug: msg={{ server_host }}
+    - name: Install required extra system packages for Debian based
+      apt:
+        state: present
+        cache_valid_time: 3600
+        pkg:
+         - man
+         - nfs-common
+         - python3
+         - python3-venv
+         - openssh-client
+         - openssh-server
+         - git
+         - acl
+         - strace
+         - htop
+         - lsof
+      when: ansible_os_family == 'Debian'
 
-    - name: check workers host_cores
-      debug: msg={{ worker_nodes_zmq }}
+
+    - name: Enable dnf-plugins-core on Rocky
+      dnf:
+        name: dnf-command(config-manager)
+        state: latest
+        update_cache: yes
+      when: ansible_distribution == 'Rocky'
+
+    - name: Enable EPEL Repository on Rocky
+      dnf:
+        name: epel-release
+        state: latest
+        update_cache: yes
+      when:
+        - ansible_distribution == 'Rocky'
+
+    - name: Enable PowerTools (crb) on Rocky 9
+      command: dnf config-manager --enable crb
+      when:
+        - ansible_distribution == 'Rocky'
+        - ansible_distribution_major_version == "9"
+
+    - name: Install required extra system packages
+      ansible.builtin.package:
+        name:
+          - python3
+          - python3-pip
+          - nfs-utils
+          - curl
+          - git
+          - wget
+          - rsync
+          - openssh-server
+          - python311
+          - strace
+          - htop
+          - lsof
+        state: latest
+        update_cache: yes
+      when:
+        - ansible_distribution == 'Rocky'
+  
+    - name: Config and Start sshd
+      systemd:
+        name: sshd
+        enabled: yes
+        state: restarted
 
     - name: Ensure user openquake exist and generate ssh key
       user:
         name: openquake
-        home: /home.dev/openquake
+        home: /home/openquake
         shell: /bin/bash
         state: present
         generate_ssh_key: yes
         ssh_key_bits: 2048
         ssh_key_file: .ssh/id_rsa
 
+    - name: Add IP address of all hosts to all hosts
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '.*{{ item }}$'
+        line: "{{ hostvars[item].ansible_host }} {{item}}"
+        state: present
+      when: hostvars[item].ansible_host is defined
+      with_items: "{{ groups.all }}"
+
   tasks:
 
-    - name: Download installation scripts only on master node
-      get_url:
-        url: https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-        dest: /tmp/install.py
-        mode: '0644'
-      when: "'master' in group_names" 
-
-    - name: Run install script from github repo only on master node
-      shell: |
-        cd /home.dev/openquake 
-        git clone https://github.com/gem/oq-engine.git 
-        cd oq-engine 
-        python3.8 ./install.py server --version={{ oq_version }}
-      register: oq_install
-      when: "'master' in group_names" 
-   
-- import_playbook: inst_nfs.yaml
-  when: "'master' in group_names" 
 
 - import_playbook: inst_nfs.yaml
-  when: "'worker' in group_names" 
+  when: "'master' in group_names"
+
+- import_playbook: inst_nfs.yaml
+  when: "'worker' in group_names"
 
 - import_playbook: oq_zmq.yaml

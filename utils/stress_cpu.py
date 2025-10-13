@@ -7,7 +7,7 @@ import sys
 import numpy
 import logging
 from openquake.baselib.parallel import Starmap
-from openquake.commonlib.datastore import hdf5new
+from openquake.commonlib.datastore import create_job_dstore
 
 
 def stress_cpu(zeros, monitor):
@@ -22,8 +22,9 @@ if __name__ == '__main__':
     ct = int(args[0]) if args else 64
     logging.basicConfig(level=logging.INFO)
     logging.info('Producing %d tasks', ct)
-    with hdf5new() as h5:
+    log, dstore = create_job_dstore()
+    with dstore, log:
         Starmap.apply(stress_cpu, (numpy.zeros(10_000),),
-                      concurrent_tasks=ct, h5=h5).reduce()
-        logging.info('Performance info in %s', h5.filename)
+                      concurrent_tasks=ct, h5=dstore).reduce()
+        logging.info('Performance info in %s', dstore.filename)
     Starmap.shutdown()

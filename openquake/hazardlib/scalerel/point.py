@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -47,4 +47,4 @@ class PointMSR(BaseMSR):
         >>> 1e-4 == point_msr.get_median_area(9.0, 0)
         True
         """
-        return numpy.full_like(mag, 1e-4)
+        return numpy.full_like(mag, 1e-4, dtype=float)

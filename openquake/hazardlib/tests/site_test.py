@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -34,7 +34,6 @@ class SiteModelParam(object):
         self.reference_vs30_type = 'measured'
         self.reference_depth_to_1pt0km_per_sec = 3.4
         self.reference_depth_to_2pt5km_per_sec = 5.6
-        self.reference_backarc = False
 
 
 class SiteTestCase(unittest.TestCase):
@@ -63,14 +62,17 @@ class SiteTestCase(unittest.TestCase):
         self._assert_creation(error=error, vs30=-1)
 
     def test_wrong_z1pt0(self):
-        error = 'z1pt0 must be positive'
+        error = 'z1pt0 must be positive or set to -999'
         self._assert_creation(error=error, z1pt0=0)
         self._assert_creation(error=error, z1pt0=-1)
 
     def test_wrong_z2pt5(self):
-        error = 'z2pt5 must be positive'
+        error = 'z2pt5 must be positive or set to -999'
         self._assert_creation(error=error, z2pt5=0)
         self._assert_creation(error=error, z2pt5=-1)
+
+    def test_infer_zref(self):
+        self._assert_creation(z1pt0=-999, z2pt5=-999)
 
     def test_successful_creation(self):
         self._assert_creation()
@@ -94,11 +96,9 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
         assert_eq(cll.mesh.depths, [30, -5.6])
         for arr in (cll.vs30, cll.z1pt0, cll.z2pt5):
             self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.flags.writeable, True)
             self.assertEqual(arr.dtype, float)
         for arr in (cll.vs30measured,):
             self.assertIsInstance(arr, numpy.ndarray)
-            self.assertEqual(arr.flags.writeable, True)
             self.assertEqual(arr.dtype, bool)
         self.assertEqual(len(cll), 2)
 

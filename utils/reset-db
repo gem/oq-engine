@@ -119,7 +119,7 @@ if [[ "$answer" == "y" ]]; then
         startstop start
         echo " * Migrating schema"
         cd /usr/share/openquake/engine || true
-        oq webui migrate
+        python3 -m openquake.server.manage migrate
         echo " * Database created"
     fi
     echo ''

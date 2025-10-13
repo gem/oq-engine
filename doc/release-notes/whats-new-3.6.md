@@ -63,7 +63,7 @@ classical calculation. The engine has acquired the ability to estimate the
 runtime of each task and if the estimated time exceeds a `task_duration`
 parameter, the engine is able to split the task in subtasks that run
 in less than `task_duration` seconds. The user can set the `task_duration`
-manually in the `job.ini`, or she can leave it empty; in that case the
+manually in the `job.ini`, or the user can leave it empty; in that case the
 engine will figure out a reasonable value for it.
 
 The approach is not perfect since there are non-splittable sources, so

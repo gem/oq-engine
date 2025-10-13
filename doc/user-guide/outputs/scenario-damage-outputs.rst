@@ -1,5 +1,5 @@
-Scenario Damage Outputs
-=======================
+Scenario Damage
+===============
 
 The Scenario Damage Calculator produces the following output file for all loss types (amongst “structural”, 
 “nonstructural”, “contents”, or “business_interruption”) for which a fragility model file was provided in the 

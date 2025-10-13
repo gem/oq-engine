@@ -1,7 +1,7 @@
-Scenario Based Seismic Damage and Risk Analysis
-===============================================
+Scenario Damage and Risk
+========================
 
-.. _scenario-damage-assessment:
+.. _scenario-damage-intro:
 
 Scenario Damage Assessment
 --------------------------
@@ -45,7 +45,7 @@ interruption) for which a *Fragility Model* file is provided. Whereas providing 
 loss type is mandatory for running a Scenario Damage calculation, providing corresponding *Consequence Model* files is 
 optional.
 
-.. _scenario-risk-assessment:
+.. _scenario-risk-intro:
 
 Scenario Risk Assessment
 ------------------------

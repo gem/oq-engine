@@ -17,7 +17,6 @@ models for the 6th Generation Seismic Hazard Model of Canada. 12th Canadian
 Conference on Earthquake Engineering, Quebec City, Canada.
 """
 import os
-import io
 import numpy as np
 import pandas as pd
 import openquake.hazardlib.gsim.atkinson_boore_2006 as AB06
@@ -32,7 +31,7 @@ from openquake.hazardlib.gsim.gmpe_table import _get_mean, _get_stddev
 from openquake.hazardlib.gsim.boore_atkinson_2008 import \
     BooreAtkinson2008 as BA08
 
-dirname = os.path.dirname(__file__)
+dirname = os.path.abspath(os.path.dirname(__file__))
 BASE_PATH_AA13 = os.path.join(dirname, 'AA13')
 BASE_PATH_NGAE = os.path.join(dirname, 'NGA-East-13')
 
@@ -140,20 +139,12 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
     REQUIRES_SITES_PARAMETERS = {'vs30'}
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    def __init__(self, **kwargs):
+    def __init__(self, submodel):
         """
         submodel is one of: "low", "central" or "high"
         """
-        subm = kwargs['submodel']
-        fname = os.path.join(BASE_PATH_AA13, f'ENA_{subm}_cl450.hdf5')
-        if isinstance(fname, io.BytesIO):
-            # magic happening in the engine when reading the gsim from HDF5
-            pass
-        else:
-            # fname is really a filename (absolute in the engine)
-            kwargs['gmpe_table'] = os.path.join(
-                os.path.dirname(__file__), fname)
-        super().__init__(**kwargs)
+        fname = os.path.join(BASE_PATH_AA13, f'ENA_{submodel}_cl450.hdf5')
+        super().__init__(fname)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -323,7 +314,7 @@ def BA08_BC17(self, imt, PGArock, ctx):
 
     # log amplification factors for various IMTs at 2000 and 760 m/s
     i = np.zeros(8, dtype=object)
-    if imt == PGA() or imt == PGV():
+    if imt.period == 0:  # PGA, SA(0) or PGV
         F_2000 = np.log(BC17_amp(self, imt, ctx.mag, ctx.rrup[lt3000]))
         i[[0, 1, 2, 4, 5, 6]] = [vs_gt2000, vs_gt2000, vs == 2000,
                                     vs_lt2000gt760, vs_lt2000gt760, vs_lte760]
@@ -410,10 +401,10 @@ def BC17_amp(self, imt, ctx, dist):
     different reference-rock site conditions, Bull.Seism. Soc. Am.,
     107(1), 132–148
     """
-    if imt == PGA():
-        interpolant_mag = f_pga
-    elif imt == PGV():
+    if imt == PGV():
         interpolant_mag = f_pgv
+    elif imt.period == 0:
+        interpolant_mag = f_pga
 
     # clip values outside of BC17 range
     rrup = dist.copy()
@@ -452,32 +443,21 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
     
     NGA_EAST_TABLE = ""
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     REQUIRES_SITES_PARAMETERS = {'vs30'}
     REQUIRES_DISTANCES = {'rhypo'}
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
-    def __init__(self, **kwargs):
+    def __init__(self, submodel):
         """
         Submodel is one of: "01", "02", "03", "04", "05", "06", "07", "08",
                             "09", "10", "11", "12", "13"
         """
-        subm = kwargs['submodel']
-        fname = f'SHM6-trial_NGA-East_Model_{subm}_AA13_sigma.vs3000.hdf5'
-        fname = os.path.join(BASE_PATH_NGAE, fname)
-        if isinstance(fname, io.BytesIO):
-            # magic happening in the engine when reading the gsim from HDF5
-            pass
-        else:
-            # fname is really a filename (absolute in the engine)
-            kwargs['gmpe_table'] = os.path.join(
-                os.path.dirname(__file__), fname)
-        super().__init__(**kwargs)
-        #self.REQUIRES_DISTANCES = frozenset(kwargs['REQUIRES_DISTANCES'])
-        #self.DEFINED_FOR_TECTONIC_REGION_TYPE = kwargs[
-        #    'DEFINED_FOR_TECTONIC_REGION_TYPE']
+        fname = f'SHM6-trial_NGA-East_Model_{submodel}_AA13_sigma.vs3000.hdf5'
+        gmpe_table = os.path.join(BASE_PATH_NGAE, fname)
+        super().__init__(gmpe_table)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

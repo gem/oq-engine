@@ -359,7 +359,7 @@ Additional validations
 
 The engine is more picky than before. For instance if an user
 specifies `quantile_loss_curves` or `conditional_loss_poes` in a
-`classical_damage` calculation she will now get an error, since such
+`classical_damage` calculation, the user will now get an error, since such
 settings make no sense in that context. Before they were silently
 ignored.
 
@@ -368,7 +368,7 @@ vulnerability functions available, now the user gets a clear error
 before starting the calculation and not in the middle of it.
 
 If an user provides a complex logic tree file which is
-invalid for the scenario calculator, now she gets a clear error message.
+invalid for the scenario calculator, now the user gets a clear error message.
 
 There are more checks for patological situations, like the user 
 providing no intensity measure sites, no GSIMs, no sites: now a clearer
@@ -479,7 +479,7 @@ the amount of dependencies needed by `python-oq-engine` when installed on
 a single node. Specific configurations for _master_ and _workers_ nodes
 are provided by dedicated packages.
 This setup will be ported to Ubuntu packages too in the next release.
-See the [documentation](cluster) for further information.
+See the documentation for further information.
 
 Deprecations
 ------------------------------

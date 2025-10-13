@@ -1,0 +1,5 @@
+id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weight,parent_id
+E1,89.955,24.615,bridge,1,edge,A,B,NA,1,E1
+E2,89.96,24.61,bridge,1,edge,A,C,NA,1,E2
+E3,89.965,24.615,bridge,1,edge,B,C,NA,1,E3
+E4,89.975,24.615,bridge,1,edge,C,D,NA,1,E4

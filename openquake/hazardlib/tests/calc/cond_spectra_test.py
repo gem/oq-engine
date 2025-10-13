@@ -62,7 +62,7 @@ poes = [0.000404]
 # useful while debugging
 def plot(df, imts):
     import matplotlib.pyplot as plt
-    fig, axs = plt.subplots(1, 2)
+    _fig, axs = plt.subplots(1, 2)
     axs[0].plot(df.period[:11], df.cs_exp[:11], 'x-')
     axs[0].plot(df.period[11:], df.cs_exp[11:], 'x-')
     axs[1].plot(df.period[:11], df.cs_std[:11], 'x-')

@@ -1,0 +1,55 @@
+          <div class="span12">
+            <h2>Run an AELO calculation</h2>
+            {% if not user.email %}
+            <h3>
+              WARNING: no email address is specified for your user account, therefore email notifications will be disabled
+            </h3>
+            {% endif %}
+            <form id="aelo_run_form" method="post">
+              {% csrf_token %}
+              <table class="table-aelo-form table">
+                <thead>
+                  <tr>
+                    <th><label class="aelo-label" for"lat">{{ aelo_form_labels.lat }}</label></th>
+                    <th><label class="aelo-label" for"lon">{{ aelo_form_labels.lon }}</label></th>
+                    <th><label class="aelo-label" for"siteid">{{ aelo_form_labels.siteid }}</label></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><input class="aelo-input" type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/></td>
+                    <td><input class="aelo-input" type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/></td>
+                    <td><input class="aelo-input aelo-input-siteid" type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/></td>
+                  </tr>
+                </tbody>
+              </table>
+              <table class="table-aelo-form-2 table">
+                <thead>
+                  <tr>
+                    <th><label class="aelo-label" for="asce_version">{{ aelo_form_labels.asce_version }}</label></th>
+                    <th><label class="aelo-label" for"site_class">{{ aelo_form_labels.site_class }}</label></th>
+                    <th><label class="aelo-label vs30" for"vs30">{{ aelo_form_labels.vs30 }}</label></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                        <select class="aelo-select" name="asce_version" id="asce_version">
+                        {% for asce_version, asce_version_label in asce_versions.items %}
+                        {% if asce_version == default_asce_version %}
+                        <option value="{{ asce_version }}" selected>{{ asce_version_label }}</option>
+                        {% else %}
+                        <option value="{{ asce_version }}">{{ asce_version_label }}</option>
+                        {% endif %}
+                        {% endfor %}
+                        </select>
+                    </td>
+                    <td><select class="aelo-select" name="site_class" id="site_class"><option value="BC">BC</option></select></td>
+                    <td><span class="vs30"><input class="aelo-input" type="text" id="vs30" name="vs30" value='760' placeholder="{{ aelo_form_placeholders.vs30 }}" disabled/></span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <button id="submit_aelo_calc" type="submit" class="btn">Submit</button>
+              <!-- <input type="submit"> -->
+            </form>
+          </div>

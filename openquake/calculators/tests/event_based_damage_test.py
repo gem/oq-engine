@@ -16,15 +16,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
 import numpy
-
 from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.event_based_damage import (
-    case_11, case_12, case_13, case_14, case_15)
+    case_11, case_12, case_13, case_14, case_15, case_16)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.getters import NotFound
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
+from openquake.calculators.views import view, text_table
+from openquake.calculators.checkers import assert_close
 
 
 class EventBasedDamageTestCase(CalculatorTestCase):
@@ -131,3 +133,15 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.assertEqual(
             list(dic),
             ['rlz-000', 'rlz-001', 'rlz-002', 'rlz-003', 'rlz-004', 'extra'])
+
+        # check risk_by_event
+        [f] = export(('risk_by_event', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=5E-5)
+
+    def test_case_16(self):
+        # test sampling with collect_rlzs
+        self.run_calc(case_16.__file__, 'job.ini')
+        pdd = view('portfolio_dmgdist', self.calc.datastore)
+        assert_close(text_table(pdd, ext='org'),
+                     os.path.join(self.testdir, 'dmgdist.txt'),
+                     rtol=.00012)

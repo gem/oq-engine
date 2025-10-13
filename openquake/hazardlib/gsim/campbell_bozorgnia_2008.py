@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,15 +22,38 @@ Module exports :class:`CampbellBozorgnia2008`, and
 """
 import numpy as np
 from math import log, exp
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, PGD, CAV, SA
+from openquake.hazardlib.gsim.chiou_youngs_2008 import _get_z1_ref
 
 
-def _compute_basin_response_term(C, z2pt5):
+METRES_PER_KM = 1000.
+
+
+def _get_cb07_z2pt5_ref(vs30):
+    """
+    Estimate unknown z2pt5 using the relationships described
+    in Campbell and Bozorgnia (2007). Returns z2pt5 in km.
+    """
+    # First get z1pt0 (in metres) using Chiou and Youngs (2008)
+    z1pt0 = _get_z1_ref(vs30)
+    
+    # Now use Campbell and Bozorgnia (2007) to get z2pt5 from z1pt0
+    z2pt5 = 519 + (3.595 * z1pt0)
+
+    return z2pt5 / METRES_PER_KM
+
+
+def _get_basin_term(C, ctx, region=None):
     """
     Returns the basin response term (equation 12, page 146)
     """
+    z2pt5 = ctx.z2pt5.copy()
+    # Use GMM's vs30 to z2pt5 for non-measured values
+    mask = z2pt5 == -999
+    z2pt5[mask] = _get_cb07_z2pt5_ref(ctx.vs30[mask])
     fsed = np.zeros_like(z2pt5, dtype=float)
     idx = z2pt5 < 1.0
     if np.any(idx):
@@ -76,7 +99,7 @@ def _compute_imt1100(C, ctx, get_pga_site=False):
                      _compute_distance_term(C, ctx) +
                      _compute_style_of_faulting_term(C, ctx) +
                      _compute_hanging_wall_term(C, ctx) +
-                     _compute_basin_response_term(C, ctx.z2pt5) +
+                     _get_basin_term(C, ctx) +
                      fsite)
     # If PGA at the site is needed then remove factor for rock and
     # re-calculate on correct site condition
@@ -321,7 +344,7 @@ class CampbellBozorgnia2008(GMPE):
                        _compute_style_of_faulting_term(C, ctx) +
                        _compute_hanging_wall_term(C, ctx) +
                        _compute_shallow_site_response(C, ctx, pga1100) +
-                       _compute_basin_response_term(C, ctx.z2pt5))
+                       _get_basin_term(C, ctx))
 
             # If it is necessary to ensure that Sa(T) >= PGA
             # (see previous comment)

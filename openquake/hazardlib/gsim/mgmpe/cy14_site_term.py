@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,7 +26,7 @@ from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 
-def _get_site_term(C, vs30, ln_y_ref):
+def _get_cy14_site_term(C, vs30, ln_y_ref):
     """
     Applies the linear and nonlinear site amplification term of Chiou &
     Youngs (2014) (excluding the basin amplification term)
@@ -63,7 +63,6 @@ class CY14SiteTerm(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     def __init__(self, gmpe_name, **kwargs):
-        super().__init__(gmpe_name=gmpe_name, **kwargs)
         self.gmpe = registry[gmpe_name]()
         self.set_parameters()
         #
@@ -101,8 +100,9 @@ class CY14SiteTerm(GMPE):
         # CHECKED [MP]: The computed reference motion is equal to the one in
         # the CY14 model
         self.gmpe.compute(rup_rock, imts, mean, sig, tau, phi)
+
         # Compute the site term correction factor for each IMT
         vs30 = ctx.vs30.copy()
         for m, imt in enumerate(imts):
             C = ChiouYoungs2014.COEFFS[imt]
-            mean[m] += _get_site_term(C, vs30, mean[m])
+            mean[m] += _get_cy14_site_term(C, vs30, mean[m])

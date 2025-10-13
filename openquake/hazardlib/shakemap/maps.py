@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,9 +42,6 @@ def get_sitecol_shapefile(uridict, required_imts, sitecol=None,
 
     available_imts = set(shakemap['val'].dtype.names)
 
-    bbox = (shakemap['bbox']['minx'].min(), shakemap['bbox']['miny'].min(),
-            shakemap['bbox']['maxx'].max(), shakemap['bbox']['maxy'].max())
-
     check_required_imts(required_imts, available_imts)
 
     # build a copy of the ShakeMap with only the relevant IMTs
@@ -61,7 +58,6 @@ def get_sitecol_shapefile(uridict, required_imts, sitecol=None,
             shakemap[name] = centroids[name]
         return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
 
-    sitecol = apply_bounding_box(sitecol, bbox)
     return geo.utils.assoc_to_polygons(polygons, shakemap, sitecol, mode)
 
 
@@ -80,8 +76,6 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
 
     available_imts = set(shakemap['val'].dtype.names)
 
-    bbox = (shakemap['lon'].min(), shakemap['lat'].min(),
-            shakemap['lon'].max(), shakemap['lat'].max())
     check_required_imts(required_imts, available_imts)
 
     # build a copy of the ShakeMap with only the relevant IMTs
@@ -90,7 +84,6 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
     if sitecol is None:
         return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
 
-    sitecol = apply_bounding_box(sitecol, bbox)
     return geo.utils.assoc(shakemap, sitecol, assoc_dist, mode)
 
 
@@ -103,6 +96,9 @@ def filter_unused_imts(shakemap, required_imts,
     :param required_imts: imts to keep in shakemap array
     :param site_fields: single columns which are copied over
     """
+    if 'SA(0.6)' in required_imts and (shakemap['val']['SA(0.6)'] == 0).all():
+        raise ValueError('The downloaded ShakeMap is missing SA(0.6)!')
+
     dt = [(imt, F32) for imt in sorted(required_imts)]
     dtlist = [('lon', F32), ('lat', F32), ('vs30', F32),
               ('val', dt), ('std', dt)]

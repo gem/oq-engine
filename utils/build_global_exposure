@@ -17,70 +17,31 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import csv
 import os
 import logging
-import operator
 import pandas
 import numpy
-import h5py
-from openquake.baselib import hdf5, sap, performance, general
-from openquake.baselib.parallel import Starmap
-from openquake.hazardlib import nrml
-from openquake.hazardlib.geo.utils import geohash3
-from openquake.commonlib.datastore import build_dstore_log
-from openquake.commonlib.oqvalidation import OqParam
+from openquake.baselib import sap, general, performance
+from openquake.hazardlib import nrml, gsim_lt, site
 from openquake.risklib.riskmodels import CompositeRiskModel, RiskFuncList
 from openquake.risklib.asset import _get_exposure
-from openquake.qa_tests_data import mosaic
+from openquake.commonlib.datastore import create_job_dstore
+from openquake.commonlib.oqvalidation import OqParam
+from openquake.commonlib import expo_to_hdf5
+from openquake.engine.global_ses import dt
 
 U16 = numpy.uint16
-U32 = numpy.uint32
 F32 = numpy.float32
-CONV = {n: F32 for n in '''
-BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD
-COST_STRUCTURAL_USD LATITUDE LONGITUDE OCCUPANTS_PER_ASSET
-OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
-OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
-TOTAL_AREA_SQM'''.split()}
-CONV['ASSET_ID'] = (numpy.string_, 24)
-for f in (None, 'ID_1'):
-    CONV[f] = str
-TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'OCCUPANCY': []}
-IGNORE = set('NAME_0 NAME_1 SETTLEMENT TOTAL_REPL_COST_USD COST_PER_AREA_USD'
-             .split())
-MOSAIC_DIR = os.path.dirname(mosaic.__file__)
-
-
-def add_geohash3(array):
-    if len(array) == 0:
-        return ()
-    dt = array.dtype
-    dtlist = [('geohash3', U16)] + [(n, dt[n]) for n in dt.names]
-    out = numpy.zeros(len(array), dtlist)
-    for n in dt.names:
-        out[n] = array[n]
-        out['geohash3'] = geohash3(array['LONGITUDE'], array['LATITUDE'])
-    return out
-
-
-def fix(arr):
-    # prepend the country to ASSET_ID and ID_1
-    ID0 = arr['ID_0']
-    ID1 = arr['ID_1']
-    arr['ASSET_ID'] = numpy.char.add(numpy.array(ID0, 'S3'), arr['ASSET_ID'])
-    for i, (id0, id1) in enumerate(zip(ID0, ID1)):
-        if not id1.startswith(id0):
-            ID1[i] = '%s-%s' % (id0, ID1[i])
 
 
 def collect_exposures(grm_dir):
     """
     Collect the files of kind Exposure_<Country>.xml.
 
-    :returns: exposure, xmlfiles, csvfiles
+    :returns: xmlfiles
     """
     out = []
-    csvfiles = []
     for region in os.listdir(grm_dir):
         expodir = os.path.join(grm_dir, region, 'Exposure', 'Exposure')
         if not os.path.exists(expodir):
@@ -89,109 +50,7 @@ def collect_exposures(grm_dir):
             if fname.startswith('Exposure_'):  # i.e. Exposure_Chile.xml
                 fullname = os.path.join(expodir, fname)
                 out.append(fullname)
-                exposure, _ = _get_exposure(fullname)
-                csvfiles.extend(exposure.datafiles)
-    return exposure, out, csvfiles
-
-
-def exposure_by_geohash(array, monitor):
-    """
-    Yields pairs (geohash, array)
-    """
-    array = add_geohash3(array)
-    fix(array)
-    for gh in numpy.unique(array['geohash3']):
-        yield gh, array[array['geohash3']==gh]
-
-
-def store_tagcol(dstore):
-    """
-    A TagCollection is stored as arrays like taxonomy = [
-    "?", "Adobe", "Concrete", "Stone-Masonry", "Unreinforced-Brick-Masonry",
-    "Wood"] with attributes __pyclass__, tagnames, tagsize
-    """
-    tagsizes = []
-    tagnames = []
-    for tagname in TAGS:
-        name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
-        tagnames.append(name)
-        tagvalues = numpy.concatenate(TAGS[tagname])
-        uvals, inv = numpy.unique(tagvalues, return_inverse=1)
-        size = len(uvals) + 1
-        tagsizes.append(size)
-        logging.info('Storing %s[%d/%d]', tagname,size, len(inv))
-        hdf5.extend(dstore[f'assets/{tagname}'], inv)
-        dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
-
-    dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
-               tagnames=numpy.array(tagnames, hdf5.vstr),
-               tagsizes=tagsizes)
-    dstore.getitem('tagcol').attrs.update(dic)
-
-
-def gen_tasks(files, monitor):
-    """
-    Generate tasks of kind exposure_by_geohash for large files
-    """
-    for file in files:
-        dfs = pandas.read_csv(
-            file.fname, names=file.header, dtype=CONV,
-            usecols=file.fields, skiprows=1, chunksize=1_000_000)
-        for i, df in enumerate(dfs):
-            if len(df) == 0:
-                continue
-            dt = hdf5.build_dt(CONV, df.columns, file.fname)
-            array = numpy.zeros(len(df), dt)
-            for col in df.columns:
-                array[col] = df[col].to_numpy()
-            if i == 0:
-                yield from exposure_by_geohash(array, monitor)
-            else:
-                print(file.fname)
-                yield exposure_by_geohash, array
-
-
-def read_world_exposure(grm_dir, dstore):
-    """
-    Read the exposure files for the entire world (assume some conventions
-    on the file names are respected).
-
-    :param grm_dir: directory containing the global risk model
-    """
-    exposure, fnames, csvfiles = collect_exposures(grm_dir)
-    dstore['exposure'] = exposure
-    files = hdf5.sniff(csvfiles, ',', IGNORE)
-    dtlist = [(t, U32) for t in TAGS] + \
-        [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
-        [('ASSET_ID', h5py.string_dtype('ascii', 25))]
-    dstore.create_df('assets', dtlist, 'gzip')
-    slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
-    dstore.create_dset('assets/slice_by_gh3', slc_dt, fillvalue=None)
-    dstore.swmr_on()
-    smap = Starmap.apply(gen_tasks, (files,),
-                         weight=operator.attrgetter('size'), h5=dstore.hdf5)
-    num_assets = 0
-    # NB: we need to keep everything in memory to make gzip efficient
-    acc = general.AccumDict(accum=[])
-    for gh3, arr in smap:
-        for name in files[0].fields:
-            if name in TAGS:
-                TAGS[name].append(arr[name])
-            else:
-                acc[name].append(arr[name])
-        n = len(arr)
-        slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
-        hdf5.extend(dstore['assets/slice_by_gh3'], slc)
-        num_assets += n
-    Starmap.shutdown()
-    for name in sorted(acc):
-        lst = acc.pop(name)
-        arr = numpy.concatenate(lst, dtype=lst[0].dtype)
-        logging.info(f'Storing assets/{name}')
-        hdf5.extend(dstore['assets/' + name], arr)
-
-    store_tagcol(dstore)
-    return num_assets
+    return out
 
 
 def read_world_vulnerability(grm_dir, dstore):
@@ -199,7 +58,7 @@ def read_world_vulnerability(grm_dir, dstore):
     Store the world CompositeRiskModel
     """
     kinds = ['structural', 'nonstructural', 'contents', 'area', 'number',
-             'fatalities', 'residents']
+             'fatalities', 'residents', 'affectedpop', 'injured']
     vfuncs = RiskFuncList()
     for kind in kinds:
         name = f'Vulnerability/vulnerability/vulnerability_{kind}.xml'
@@ -215,46 +74,170 @@ def read_world_vulnerability(grm_dir, dstore):
     return len(vfuncs)
 
 
-def read_world_tmap(grm_dir, dstore):
+def get_gsim_lt(cwd):
     """
-    Store the world taxonomy mapping
+    :returns: a GsimLogicTree instance
     """
-    # get the names of the files to read
-    tmap_df = pandas.read_csv(os.path.join(MOSAIC_DIR, 'taxonomy_mapping.csv'),
-                              index_col=['country'])
-    dic = {}
-    for fname, df in tmap_df.groupby('fname'):
-        dic[fname] = '_'.join(sorted(df.index))
-    n = len(dic)
-    assert len(set(dic.values())) == n, sorted(dic.values())
+    f1 = os.path.join(cwd, 'gmmLTrisk.xml')
+    if os.path.exists(f1):
+        return gsim_lt.GsimLogicTree(f1)
+    f2 = os.path.join(cwd, 'gmmLT.xml')
+    return gsim_lt.GsimLogicTree(f2)
+
+
+def discard_dupl(records):
+    # discard duplicate sites
+    acc = {}
+    for rec in records:
+        lonlat = rec['lon'], rec['lat']
+        if lonlat not in acc:
+            acc[lonlat] = rec
+    return numpy.array(list(acc.values()), dtype=rec.dtype)
+
+
+def build_site_model(grm_dir):
+    """
+    Build the global site model starting from the CSV files in the
+    global_risk_model directory
+    """
+    factor = float(os.environ.get('OQ_SAMPLE_ASSETS', 1))
+    dfs = []
     for cwd, dirs, files in os.walk(grm_dir):
         for f in files:
-            if f in dic:
+            if f.startswith('Site_model_') and f.endswith('.csv'):
+                print('Reading %s' % f)
                 df = pandas.read_csv(os.path.join(cwd, f))
-                dstore.create_df('tmap/' + dic[f], df)
-    return n
+                if factor < 1:
+                    df = general.random_filter(df, factor*10)
+                if len(df):
+                    dfs.append(df)
+    columns = set()
+    n = 0
+    for df in dfs:
+        columns.update(df.columns)
+        n += len(df)
+    dt = [(col, site.site_param_dt[col]) for col in sorted(columns)]
+    sm = numpy.zeros(n, dt)
+    row = 0
+    for df in dfs:
+        n = len(df)
+        recs = sm[row:row + n]
+        for col in df.columns:
+            val = df[col].to_numpy()
+            if col in ('lon', 'lat'):
+                recs[col] = numpy.round(val, 5)
+            else:
+                recs[col] = val
+        row += n
+    return discard_dupl(sm)
 
 
-def main(grm_dir):
+def build_site_model_gsims(mosaic_dir, grm_dir, dstore):
     """
-    Storing global exposure
+    Storing the global site_model and gsim table
     """
+    rows = []
+    for cwd, dirs, files in os.walk(mosaic_dir):
+        for f in files:
+            if f == 'job_vs30.ini':
+                model = cwd.split('/')[-2]
+                gsim_lt = get_gsim_lt(cwd)
+                for trt, gsims in gsim_lt.values.items():
+                    for gsim in gsims:
+                        q = (model, trt, str(gsim), gsim.weight['default'])
+                        rows.append(q)
+    smodel = build_site_model(grm_dir)
+    dstore['site_model'] = smodel
+    dstore['model_trt_gsim_weight'] = numpy.array(rows, dt)
+    return len(smodel)
+
+
+def find_long_strings_and_export(csv_paths, fieldname, output_csv_path,
+                                 min_length=32):
+    results = []
+    for file_path in csv_paths:
+        try:
+            with open(file_path, newline='', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                headers = next(reader, None)
+                if not headers or fieldname not in headers:
+                    continue  # skip if the field is missing
+                field_index = headers.index(fieldname)
+                for i, row in enumerate(reader, start=2):  # skip header
+                    if len(row) > field_index:
+                        value = row[field_index]
+                        if len(value) > min_length:
+                            results.append({
+                                "filename": file_path,
+                                "linenumber": i,
+                                fieldname: value,
+                                f"{fieldname}_len": len(value)
+                            })
+        except Exception as e:
+            print(f"Error reading {file_path}: {e}")
+    if results:
+        with open(output_csv_path, 'w', newline='', encoding='utf-8') as out:
+            fieldnames = ["filename", "linenumber", fieldname,
+                          f"{fieldname}_len"]
+            writer = csv.DictWriter(out, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in results:
+                writer.writerow(row)
+        print(f"Results saved to {output_csv_path}")
+    else:
+        print("No strings longer than {} characters found.".format(min_length))
+
+
+def main(mosaic_dir, grm_dir, wfp=False, action='build'):
+    """
+    If action='build' (the default) stores the global exposure and tmap.
+    If action='zip' zips the global exposure in a single file exposures.zip
+    If action='find_long_XXX' find the fields XXX longer than 32 chars
+    """
+    if action.startswith('find_long'):  # i.e. find_long_NAME_2
+        fieldname = action[10:]
+        exposures_xml = collect_exposures(grm_dir)
+        csv_files = []
+        for xml in exposures_xml:
+            exposure, _ = _get_exposure(xml, stop='asset')
+            csv_files.extend(exposure.datafiles)
+        output_file = "long_strings.csv"
+        find_long_strings_and_export(csv_files, fieldname, output_file)
+        return
+    elif action == 'zip':
+        tmaps = sorted(expo_to_hdf5.read_world_tmap(grm_dir))
+        exposures_xml = collect_exposures(grm_dir)
+        csv_files = []
+        for xml in exposures_xml:
+            print(f'Reading {xml}')
+            exposure, _ = _get_exposure(xml, stop='asset')
+            csv_files.extend(exposure.datafiles)
+        n = len(tmaps) + len(exposures_xml) + len(csv_files)
+        print(f'Zipping {n} files')
+        a = general.zipfiles(tmaps + exposures_xml + csv_files, 'exposures.zip')
+        print(f'Saved {a} [{general.humansize(os.path.getsize(a))}]')
+        return
+
     mon = performance.Monitor(measuremem=True)
-    dstore, log = build_dstore_log()
-    with dstore, log:
+    description = 'Storing global exposure to hdf5'
+    if wfp:
+        description += ' (only for WFP countries)'
+    job, dstore = create_job_dstore(description=description)
+    with dstore, job:
         with mon:
+            n = build_site_model_gsims(mosaic_dir, grm_dir, dstore)
+            logging.info('Stored {:_d} sites'.format(n))
             n = read_world_vulnerability(grm_dir, dstore)
             logging.info('Read %d vulnerability functions', n)
-            n = read_world_tmap(grm_dir, dstore)
-            logging.info('Read %d taxonomy mappings', n)
-            n = read_world_exposure(grm_dir, dstore)
-            logging.info('Created {} with {:_d} assets'.
-                         format(dstore.filename, n))
+            fnames = collect_exposures(grm_dir)
+            expo_to_hdf5.store(fnames, grm_dir, wfp, dstore)
         logging.info(mon)
 
 
-main.grm_dir = 'global risk model directory'
-
+main.mosaic_dir = 'Directory containing the hazard mosaic'
+main.grm_dir = 'Directory containing the global risk model'
+main.wfp = 'If true, consider only 7 countries for the World Food Program'
+main.action = 'Perform an action (build, zip, find_long_<FIELD>)'
 
 if __name__ == '__main__':
     sap.run(main)

@@ -1,0 +1,310 @@
+name: Weekly Engine tests
+on:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+  schedule:
+    - cron: "0 1 * * 0"
+
+jobs:
+  engine:
+    runs-on: ${{ matrix.os }}
+    needs: webUI
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+            python install.py devel --version=master
+      - name: Calculators hazard tests
+        run: |
+          set -e
+          source ~/openquake/bin/activate
+          pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+          oq engine --upgrade-db
+          pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage and not bcr'
+
+  webUI:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Setup debugging session
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      - name: Install dependencies
+        run: |
+          set -x
+          BRANCH=master
+          python install.py devel --version=master
+          # Standalone apps
+          source ~/openquake/bin/activate
+          echo "Downloading standalone apps"
+          cd ..
+          pwd
+          TOOLS_BRANCH=master
+          for app in oq-platform-standalone oq-platform-ipt oq-platform-taxonomy; do
+           echo "We need to use the branch $TOOLS_BRANCH for the standalone apps"
+           git clone -b ${TOOLS_BRANCH} --depth=1 https://github.com/gem/${app}.git
+           pip install -e ./${app}
+          done
+          deactivate
+      - name: Actualize 'default' templates for email notifications
+        run: |
+          for file in /home/runner/work/oq-engine/oq-engine/openquake/server/templates/registration/*.default.tmpl; do
+              cp -- "$file" "${file%.default.tmpl}"
+          done
+      - name: Test WebUI and run https calculation
+        run: |
+          BRANCH=master
+          source ~/openquake/bin/activate
+          set -x
+          sudo mkdir /var/log/oq-engine/
+          sudo chown -R runner /var/log/oq-engine/
+          oq engine --upgrade-db
+          oq --version
+          #
+          echo "Add settings for login and logging on webui before to start"
+          cd /home/runner/work/oq-engine/oq-engine
+          cd openquake/server
+          cat > local_settings.py << EOF
+          LOCKDOWN = True
+          WEBUI_USER = 'runner'
+          WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+          DEBUG = True
+          EOF
+          echo "DISPLAY content of local_settings"
+          cat local_settings.py
+          # START WEBUI
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+            sleep 5 # wait for 1/10 of the second before check again
+          done
+          echo "Test WebUI with curl before to test django"
+          sleep 1
+          # Perform migration after setup local_settings
+          cd /home/runner/work/oq-engine/oq-engine/openquake/server
+          python manage.py migrate
+          sleep 1
+          curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
+          echo -n "Test Standalone Tools pages"
+          curl --fail -I -L -X GET http://127.0.0.1:8800/
+          curl --fail -I -L -X GET http://127.0.0.1:8800/taxonomy
+          curl --fail -I -L -X GET http://127.0.0.1:8800/ipt
+          echo -n "TEST DJANGO LOGIN "
+          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
+          YOUR_USER='username'
+          YOUR_PASS='password'
+          COOKIES=cookies.txt
+          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+          echo -n "Django Auth: get csrftoken ..."
+          $CURL_BIN $LOGIN_URL > /dev/null
+          DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
+          echo " perform login ..."
+          $CURL_BIN \
+              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+              -X POST $LOGIN_URL > /dev/null
+          echo "--------------------"
+          echo "display log of webui"
+          echo "--------------------"
+          cat /var/log/oq-engine/webui-access.log
+          if [ -s /var/log/oq-engine/webui-access.log ]; then
+          # The file is not-empty.
+          cat /var/log/oq-engine/webui-access.log
+          else
+          ## The file is empty.
+          echo "Something not work as expected"
+          exit 1
+          fi
+          # Run a calcs using https
+          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+
+  hazardlib:
+    runs-on: ${{ matrix.os }}
+    needs: engine
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python install.py devel --version=master
+      - name: Hazardlib tests
+        run: |
+          set -e
+          source ~/openquake/bin/activate
+          curl https://downloads.openquake.org/test_data/exposure.hdf5 -o openquake/qa_tests_data/mosaic/exposure.hdf5
+          pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+          oq engine --upgrade-db
+          cd openquake
+          ruff check --preview .
+          pytest calculators -k 'risk or damage or bcr' -x --doctest-modules --disable-warnings --color=yes --durations=5
+          pytest -xs --doctest-modules --disable-warnings --color=yes --durations=8 sep hmtk risklib commonlib baselib hazardlib
+          pytest --doctest-modules ../doc/contributing/*.rst
+
+  server_public_mode:
+    runs-on: ${{ matrix.os }}
+    needs: webUI
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: PUBLIC
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python install.py devel --version=master
+      - name: Server 'PUBLIC' mode tests
+        run: |
+          source ~/openquake/bin/activate
+          curl -O https://downloads.openquake.org/test_data/exposure.hdf5
+          pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
+          oq engine --upgrade-db
+          # Starting the webui here is not needed by test_public_mode,
+          # but here we also want to check that the webui starts without errors
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+           sleep 5 # wait for 5 seconds before check again
+          done
+          pytest -xs --doctest-modules --disable-warnings --color=yes openquake/commands openquake/engine
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_public_mode.py
+
+  server_read_only_mode:
+    runs-on: ${{ matrix.os }}
+    needs: engine
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      OQ_APPLICATION_MODE: READ_ONLY
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python install.py devel --version=master
+      - name: Server 'READ_ONLY' mode tests
+        run: |
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_read_only_mode.py
+
+  server_aelo_mode:
+    runs-on: ${{ matrix.os }}
+    needs: engine
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      OQ_APPLICATION_MODE: AELO
+      OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python install.py devel --version=master
+      - name: Actualize 'aelo' templates for email notifications
+        run: |
+          for file in ./openquake/server/templates/registration/*.aelo.tmpl; do
+              cp -- "$file" "${file%.aelo.tmpl}"
+          done
+      - name: Server 'AELO' mode tests
+        run: |
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          ./openquake/server/manage.py migrate
+          ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
+          ./openquake/server/manage.py collectstatic --noinput
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_aelo_mode.py
+
+  server_impact_mode:
+    runs-on: ${{ matrix.os }}
+    needs: engine
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
+    env:
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: ARISTOTLE
+      OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python install.py devel --version=master
+      - name: Actualize 'impact' templates for email notifications
+        run: |
+          for file in ./openquake/server/templates/registration/*.impact.tmpl; do
+              cp -- "$file" "${file%.impact.tmpl}"
+          done
+      - name: Server 'ARISTOTLE' mode tests
+        run: |
+          set -x
+          date
+          wget https://downloads.openquake.org/test_data/exposure.hdf5
+          date
+          mv exposure.hdf5 openquake/qa_tests_data/mosaic/
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          ./openquake/server/manage.py migrate
+          touch ~/webui-access.log
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_impact_mode.py

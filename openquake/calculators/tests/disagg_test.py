@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
+from unittest import mock
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
@@ -27,9 +28,10 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_15, case_master)
+    case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_master)
 
 aae = numpy.testing.assert_almost_equal
+ae = numpy.testing.assert_equal
 
 RLZCOL = re.compile(r'rlz\d+')
 
@@ -155,14 +157,25 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
         aae(haz[1], 0.13311564, decimal=6)
 
-        # test normal disaggregation
-        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/TRT-0.csv', fname)
+        # test traditional disaggregation
+        query = ('disagg?kind=TRT&spec=rlzs-traditional&poe_id=0&site_id=0'
+                 '&imt=PGA')
+        aw = extract(self.calc.datastore, query)
+        df = aw.to_dframe()
+        assert len(df) == 0  # because the array is zero for the first poe
+        query = ('disagg?kind=TRT&spec=rlzs-traditional&poe_id=1&site_id=0'
+                 '&imt=PGA')
+        aw = extract(self.calc.datastore, query)
+        [arr] = aw.to_dframe().to_numpy()  # nonzero for the second poe
+        assert tuple(arr) == ('Subduction Interface', 'PGA', 0.0044, 1.0, 1.0)
 
-        # test conditional disaggregation
         [fname] = export(('disagg-rlzs-traditional', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/TRT-traditional-0.csv', fname)
+
+        # test normal disaggregation
+        [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/TRT-0.csv', fname)
 
     def test_case_8(self):
         # test epsilon star
@@ -196,13 +209,13 @@ class DisaggregationTestCase(CalculatorTestCase):
         aw = extract(self.calc.datastore, 'disagg?kind=Mag&site_id=0&'
                      'imt=SA(0.1)&poe_id=0&spec=rlzs')
         self.assertEqual(len(aw.mag), 4)
-        self.assertEqual(aw.shape, (4, 1, 1))
+        self.assertEqual(aw.shape, (4, 1, 1, 1))
 
         aw = extract(self.calc.datastore, 'disagg?kind=Mag_Dist_Eps&site_id=0&'
                      'imt=SA(0.1)&poe_id=0&spec=rlzs')
         self.assertEqual(len(aw.dist), 10)
         self.assertEqual(len(aw.eps), 6)
-        self.assertEqual(aw.shape, (4, 10, 6, 1, 1))
+        self.assertEqual(aw.shape, (4, 10, 6, 1, 1, 1))
 
     def test_case_10(self):
         # test single magnitude
@@ -226,17 +239,30 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(case_13.__file__, 'job.ini')
 
     def test_case_14(self):
-        # check split_by_mag with NGAEastUSGS, see bug
-        # https://github.com/gem/oq-engine/issues/8780
-        self.run_calc(case_14.__file__, 'job.ini')
+        # check non-invertible hazard curve
+        with mock.patch('logging.warning') as warn:
+            self.run_calc(case_14.__file__, 'job.ini', calculation_mode='classical')
+        self.assertIn('cannot be inverted reliably around poe=0.000404',
+                      warn.call_args[0][0])
 
+    # NB: the largest mean_rates_by_src is SUPER-SENSITIVE to numerics!
+    # in particular it has very different values between 2 and 16 cores(!)
     def test_case_15(self):
         # check that mean_rates_by_src are always annual
         self.run_calc(case_15.__file__, 'job_50yr.ini')
         mrs50 = self.calc.datastore['mean_rates_by_src']
         self.run_calc(case_15.__file__, 'job_1yr.ini')
         mrs1 = self.calc.datastore['mean_rates_by_src']
-        aae(mrs1.array, mrs50.array)
+        small1 = mrs1.array[mrs1.array < 2.]  # large rates are different!
+        small50 = mrs50.array[mrs50.array < 2.]
+        numpy.testing.assert_allclose(small1, small50, rtol=1E-4)
+
+    def test_case_16(self):
+        # Check slab variant of NZ22 Kuehn 2020 GMM has required attributes
+        # which could (pre-fix) be sometimes missing (seemingly randomly)
+        # from the K20 GSIM object (test just checks execution not correctness
+        # of values)
+        self.run_calc(case_16.__file__, 'job_dsg.ini')
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree

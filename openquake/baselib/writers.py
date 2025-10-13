@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -98,6 +98,17 @@ def _header(fields, renamedict):
     return fields
 
 
+def convert_item(item):
+    # avoids numpy v2 conversion issues
+    name, value = item
+    if isinstance(value, (numpy.float32, numpy.float64)):
+        value = float(value)
+    if isinstance(value, (numpy.uint32, numpy.uint64,
+                          numpy.int32, numpy.int64)):
+        value = int(value)
+    return '%s=%r' % (name, value)
+
+
 def write_csv(dest, data, sep=',', fmt='%.6E', header=(), comment=None,
               renamedict=None):
     """
@@ -111,7 +122,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=(), comment=None,
        optional comment dictionary
     """
     if comment is not None:
-        comment = ', '.join('%s=%r' % item for item in comment.items())
+        comment = ', '.join(convert_item(item) for item in comment.items())
     close = True
     if dest is None:  # write on a temporary file
         fd, dest = tempfile.mkstemp(suffix='.csv')

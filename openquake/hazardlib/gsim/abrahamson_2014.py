@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,15 +22,16 @@ Module exports :class:`AbrahamsonEtAl2014`
                :class:`AbrahamsonEtAl2014RegJPN`
                :class:`AbrahamsonEtAl2014RegTWN`
 """
-import copy
 import numpy as np
 
 from scipy import interpolate
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z1pt0_usgs_basin_scaling
 
-METRES_PER_KM = 1000.0
+METRES_PER_KM = 1000.
 
 #: equation constants (that are IMT independent)
 CONSTS = {
@@ -41,7 +42,21 @@ CONSTS = {
     'h1': +0.25,
     'h2': +1.50,
     'h3': -0.75
-}
+    }
+
+# CyberShake basin adjustments for ASK14 (only applied above 
+# 1.9 seconds so don't provide dummy values listed below 2 s)
+# Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/ASK14.csv?ref_type=heads
+COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
+IMT   a44cy    a45cy   
+2.0   0.048    0.114     
+3.0   0.092    0.223
+4.0   0.202    0.333
+5.0   0.270    0.399
+6.0   0.320    0.200  
+7.5   0.354    0.426
+10    0.343    0.334
+""")
 
 
 def _get_phi_al_regional(C, mag, vs30measured, rrup):
@@ -240,30 +255,58 @@ def _get_site_response_term(C, imt, vs30, sa1180):
     return site_resp_term
 
 
-def _get_soil_depth_term(region, C, z1pt0, vs30):
+def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False, v1180=None):
     """
     Compute and return soil depth term.  See page 1042.
     """
+    # Get vs30
+    vs30 = ctx.vs30
+
+    if v1180 is None:
+        z10 = ctx.z1pt0.copy()
+    else:
+        vs30 = v1180
+        # fake Z1.0 - Since negative it will be replaced by the default Z1.0
+        # for the corresponding region
+        z10 = np.ones_like(vs30) * -1
+
+    # Get USGS basin scaling factor if required
+    if usgs_bs:
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(z10, imt.period)
+    else:
+        usgs_baf = np.ones(len(vs30))
+
     # Get reference z1pt0
-    z1ref = _get_z1pt0ref(region, vs30)
+    z1ref = _get_z1pt0ref(region, vs30) # in km
     # Get z1pt0
-    z10 = copy.deepcopy(z1pt0)
-    z10 /= METRES_PER_KM
+    z10 /= METRES_PER_KM # convert site z1pt0 to km
     # This is used for the calculation of the motion on reference rock
-    idx = z1pt0 < 0
-    z10[idx] = z1ref[idx]
+    idx = z10 < 0
+    z10[idx] = z1ref[idx] # -999 z1pt0 values in site model updated here
     factor = np.log((z10 + 0.01) / (z1ref + 0.01))
+    
+    # Get cybershake adjustments if required and SA(T > 1.9)
+    if cy and imt.period > 1.9:
+        a44 = COEFFS_CY[imt]['a44cy']
+        a45 = COEFFS_CY[imt]['a45cy']
+        adj = 0.1 # CY_CSIM variable in USGS java code for ASK14
+    # Regular basin term
+    else:
+        a44 = C['a44']
+        a45 = C['a45']
+        adj = 0.  # No additive adjustment
+
     # Here we use a linear interpolation as suggested in the 'Application
     # guidelines' at page 1044
     # Above 700 m/s the trend is flat, but we extend the Vs30 range to
     # 6,000 m/s (basically the upper limit for mantle shear wave velocity
     # on earth) to allow extrapolation without throwing an error.
-    f2 = interpolate.interp1d(
-        [0.0, 150, 250, 400, 700, 1000, 6000],
-        [C['a43'], C['a43'], C['a44'], C['a45'], C['a46'], C['a46'],
-         C['a46']],
-        kind='linear')
-    return f2(vs30) * factor
+    f2 = interpolate.interp1d([0.0, 150, 250, 400, 700, 1000, 6000],
+                              [C['a43'], C['a43'], a44, a45, C['a46'],
+                               C['a46'], C['a46']], kind='linear')
+    f10 = (f2(vs30) * factor) + adj
+    
+    return f10 * usgs_baf
 
 
 def _get_stddevs(region, C, imt, ctx, sa1180):
@@ -313,14 +356,16 @@ def _get_vs30star(vs30, imt):
 
 def _get_z1pt0ref(region, vs30):
     """
-    This computes the reference depth to the 1.0 km/s interface using
-    equation 18 at page 1042 of Abrahamson et al. (2014)
+    This computes the reference depth to the 1.0 km/s interface
+    (z1pt0 in km) using equation 18 at page 1042 of Abrahamson et
+    al. (2014)
     """
     if region == 'JPN':
-        return 1./1000. * np.exp(-5.23/2.*np.log((vs30**2+412.**2.) /
-                                                 (1360.**2+412**2.)))
-    return (1. / 1000.) * np.exp((-7.67 / 4.)*np.log((vs30**4 + 610.**4) /
-                                                     (1360.**4 + 610.**4)))
+        return np.exp(-5.23/2.*np.log(
+            (vs30**2+412.**2.) / (1360.**2+412**2.))) / METRES_PER_KM
+    else:    
+        return np.exp((-7.67 / 4.)*np.log(
+            (vs30**4 + 610.**4) / (1360.**4 + 610.**4))) / METRES_PER_KM
 
 
 def _hw_taper1(ctx):
@@ -375,7 +420,7 @@ def _hw_taper5(ctx):
     return T5
 
 
-def _get_sa_at_1180(region, C, imt, ctx):
+def _get_sa_at_1180(region, C, imt, ctx, usgs_baf=False, cy=False):
     """
     Compute and return mean imt value for rock conditions
     (vs30 = 1100 m/s)
@@ -384,33 +429,40 @@ def _get_sa_at_1180(region, C, imt, ctx):
     vs30_1180 = np.ones_like(ctx.vs30) * 1180.
     # reference shaking intensity = 0
     ref_iml = np.zeros_like(ctx.vs30)
-    # fake Z1.0 - Since negative it will be replaced by the default Z1.0
-    # for the corresponding region
-    fake_z1pt0 = np.ones_like(ctx.vs30) * -1
     return (_get_basic_term(C, ctx) +
             _get_faulting_style_term(C, ctx) +
             _get_site_response_term(C, imt, vs30_1180, ref_iml) +
             _get_hanging_wall_term(C, ctx) +
             _get_top_of_rupture_depth_term(C, imt, ctx) +
-            _get_soil_depth_term(region, C, fake_z1pt0, vs30_1180) +
+            _get_basin_term(C, ctx, region, imt, usgs_baf, cy, vs30_1180) +
             _get_regional_term(region, C, imt, vs30_1180, ctx.rrup))
 
 def get_epistemic_sigma(ctx):
     """
-    This function gives the epistemic sigma computed following USGS-2014 approach. Also, note that the events are
-    counted in each magnitude and distance bins. However, the epistemic sigma is based on NZ SMDB v1.0
+    This function gives the epistemic sigma computed following USGS-2014
+    approach. Also, note that the events are
+    counted in each magnitude and distance bins. However, the epistemic sigma
+    is based on NZ SMDB v1.0
     """
-
     n = 2
-    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
+    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11),
+                             np.where((ctx.rrup > 10) & (ctx.rrup <30),
+                                      0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
 
-    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
+    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2),
+                             np.where((ctx.rrup > 10) & (ctx.rrup <30),
+                                      0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
 
-    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
+    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2),
+                                 np.where((ctx.rrup > 10) & (ctx.rrup <30),
+                                          0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
 
-    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6, np.where((ctx.mag >=6) & (ctx.mag < 7), dist_func_6_7, dist_func_7_above))
+    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6,
+                         np.where((ctx.mag >=6) & (ctx.mag < 7),
+                                  dist_func_6_7, dist_func_7_above))
 
     return sigma_epi
+
 
 class AbrahamsonEtAl2014(GMPE):
     """
@@ -454,11 +506,13 @@ class AbrahamsonEtAl2014(GMPE):
     #: Reference rock conditions as defined at page
     DEFINED_FOR_REFERENCE_VELOCITY = 1180
 
-    def __init__(self, sigma_mu_epsilon = 0.0, **kwargs):
-        super().__init__(sigma_mu_epsilon = sigma_mu_epsilon, **kwargs)
-        self.region = kwargs.get('region')
+    def __init__(self, sigma_mu_epsilon=0.0, region=None,
+                 usgs_basin_scaling=False, cybershake_basin_adj=False):
+        self.region = region
         assert self.region in (None, 'CHN', 'JPN', 'TWN'), region
         self.sigma_mu_epsilon = sigma_mu_epsilon
+        self.usgs_basin_scaling = usgs_basin_scaling
+        self.cybershake_basin_adj = cybershake_basin_adj
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -470,7 +524,10 @@ class AbrahamsonEtAl2014(GMPE):
             C = self.COEFFS[imt]
             # compute median sa on rock (vs30=1180m/s). Used for site response
             # term calculation
-            sa1180 = np.exp(_get_sa_at_1180(self.region, C, imt, ctx))
+            sa1180 = np.exp(_get_sa_at_1180(self.region,
+                                            C, imt, ctx,
+                                            self.usgs_basin_scaling,
+                                            self.cybershake_basin_adj))
 
             # For debugging purposes
             # f1 = _get_basic_term(C, ctx)
@@ -478,7 +535,9 @@ class AbrahamsonEtAl2014(GMPE):
             # f5 = _get_site_response_term(C, imt, ctx.vs30, sa1180)
             # f6 = _get_top_of_rupture_depth_term(C, imt, ctx)
             # f7 = _get_faulting_style_term(C, ctx)
-            # f10 =_get_soil_depth_term(self.region, C, ctx.z1pt0, ctx.vs30)
+            # f10 = _get_basin_term(C, ctx, self.region, imt,
+            #                       self.usgs_basin_scaling,
+            #                       self.cybershake)
             # fre = _get_regional_term(self.region, C, imt, ctx.vs30, ctx.rrup)
 
             # get the mean value
@@ -487,8 +546,9 @@ class AbrahamsonEtAl2014(GMPE):
                        _get_site_response_term(C, imt, ctx.vs30, sa1180) +
                        _get_top_of_rupture_depth_term(C, imt, ctx) +
                        _get_faulting_style_term(C, ctx) +
-                       _get_soil_depth_term(self.region, C, ctx.z1pt0,
-                                            ctx.vs30))
+                       _get_basin_term(C, ctx, self.region, imt,
+                                       self.usgs_basin_scaling,
+                                       self.cybershake_basin_adj))
 
             mean[m] += _get_regional_term(
                 self.region, C, imt, ctx.vs30, ctx.rrup)
@@ -501,7 +561,7 @@ class AbrahamsonEtAl2014(GMPE):
 
     #: Coefficient tables as per annex B of Abrahamson et al. (2014)
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-IMT     m1      vlin    b       c       c4      a1      a2      a3      a4      a5      a6      a7   a8      a10     a11     a12     a13     a14     a15     a17     a43     a44     a45     a46     a25     a28     a29     a31     a36     a37     a38     a39     a40     a41     a42     s1e     s2e     s3      s4      s1m     s2m     s5      s6
+IMT     m1      vlin    b       c       c4      a1      a2      a3      a4      a5      a6      a7   a8      a10     a11     a12     a13     a14     a15     a17     a43     a44     a45     a46     a25     a28     a29     a31     a36     a37     a38     a39     a40     a41     a42     s1e     s2e     s3      s4      s1m     s2m     s5      s6      
 pga     6.75    660     -1.47   2.4     4.5     0.587   -0.79   0.275   -0.1    -0.41   2.154   0.0  -0.015  1.735   0       -0.1    0.6     -0.3    1.1     -0.0072 0.1     0.05    0       -0.05   -0.0015 0.0025  -0.0034 -0.1503 0.265   0.337   0.188   0       0.088   -0.196  0.044   0.754   0.52    0.47    0.36    0.741   0.501   0.54    0.6300
 pgv     6.75    330     -2.02   2400    4.5     5.975   -0.919  0.275   -0.1    -0.41   2.366   0.0  -0.094  2.36    0       -0.1    0.25    0.22    0.3     -0.0005 0.28    0.15    0.09    0.07    -0.0001 0.0005  -0.0037 -0.1462 0.377   0.212   0.157   0       0.095   -0.038  0.065   0.662   0.51    0.38    0.38    0.66    0.51    0.58    0.5300
 0.01    6.75    660     -1.47   2.4     4.5     0.587   -0.790  0.275   -0.1    -0.41   2.154   0.0  -0.015  1.735   0       -0.1    0.6     -0.3    1.1     -0.0072 0.1     0.05    0       -0.05   -0.0015 0.0025  -0.0034 -0.1503 0.265   0.337   0.188   0       0.088   -0.196  0.044   0.754   0.52    0.47    0.36    0.741   0.501   0.54    0.6300

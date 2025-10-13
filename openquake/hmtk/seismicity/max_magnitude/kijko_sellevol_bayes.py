@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can
 # redistribute it and/or modify it under the terms of the GNU Affero General
@@ -51,7 +51,7 @@ from observed seismicity with uncertain b-value
 
 import numpy as np
 from math import fabs
-from scipy.integrate import quadrature
+from scipy.integrate import quad
 from openquake.hmtk.seismicity.max_magnitude.base import (
     BaseMaximumMagnitude,
     MAX_MAGNITUDE_METHODS,
@@ -139,7 +139,7 @@ class KijkoSellevolBayes(BaseMaximumMagnitude):
             ldelt = (1.0 / (1.0 - (rval**qval))) ** neq
             delta = (
                 ldelt
-                * quadrature(
+                * quad(
                     self._ksb_intfunc, mmin, mmax, args=(neq, mmin, pval, qval)
                 )[0]
             )

@@ -172,7 +172,7 @@ class MultiLine(object):
         llenghts = np.array([ln.length for ln in lines])
         azimuths = np.array([line.azimuth for line in lines])
         self.ends = np.array([ln.coo[[0, -1], 0:2] for ln in lines])  # (L,2,2)
-        proj = utils.OrthographicProjection.from_lons_lats(
+        proj = utils.OrthographicProjection.from_(
             self.ends[:, :, 0], self.ends[:, :, 1])
         self.flipped, self.soidx, self.shift = _build3(
             llenghts, azimuths, proj.lam0, proj.phi0, self.ends)
@@ -203,24 +203,24 @@ class MultiLine(object):
             # fast lane, when the number of segments is constant
             lam0s, phi0s, coos, slens, uhats, thats = build_line_params(
                 self.lines)
-            out = get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
+            return get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
                            self.soidx, self.flipped, lons, lats)
-        else:
-            # slow lane
-            out = []
-            for idx in self.soidx:
-                line = self.lines[idx]
-                slen, uhat, that = line.sut_hat
-                if self.flipped[idx]:
-                    coo = np.flipud(line.coo[:, 0:2])
-                    uhat = -uhat
-                    that = -that
-                else:
-                    coo = line.coo[:, :2]
-                tuw = get_tuw(line.proj.lam0, line.proj.phi0, coo,
-                              slen, uhat, that,  lons, lats)
-                out.append(tuw)
-        return out
+        # else slow lane
+        out = []
+        for idx in self.soidx:
+            line = self.lines[idx]
+            slen, uhat, that = line.sut_hat
+            if self.flipped[idx]:
+                coo = np.flipud(line.coo[:, 0:2])
+                uhat = -uhat
+                that = -that
+            else:
+                coo = line.coo[:, :2]
+            tuw = get_tuw(line.proj.lam0, line.proj.phi0, coo,
+                          slen, uhat, that,  lons, lats)
+            out.append(tuw)
+        return np.array(out)
+
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs

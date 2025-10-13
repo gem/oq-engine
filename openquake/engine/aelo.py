@@ -22,34 +22,63 @@ import os
 import sys
 import getpass
 import logging
+import functools
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid, geo
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, oqvalidation
 from openquake.engine import engine
+from openquake.qa_tests_data import mosaic
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-
-IMTLS = '''\
-{"PGA": logscale(0.005, 3.00, 25),
- "SA(0.2)": logscale(0.005, 9.00, 25),
- "SA(1.0)": logscale(0.005, 3.60, 25)}
-'''
-
-PRELIMINARY_MODELS = ['CEA', 'CHN', 'NEA']
-PRELIMINARY_MODEL_WARNING = (
+PRELIMINARY_MODELS = []
+PRELIMINARY_MODEL_WARNING_MSG = (
     'Results are preliminary. The seismic hazard model used for the site'
     ' is under review and will be updated' ' during Year 3.')
 
 
-def get_params_from(inputs, mosaic_dir, exclude=()):
+def get_boundaries_file(mosaic_dir, other_dir):
     """
-    :param inputs: a dictionary with sites, vs30, siteid
-    :param mosaic_dir: directory where the mosaic is located
+    Search the passed mosaic_dir and then qa_tests_data/mosaic
+    for ModelBoundaries.gpkg|shp
+    """
+    fname = config.directory.mosaic_boundaries_file
+    if fname:
+        assert os.path.exists(fname), fname
+        return fname
+    for mdir in (mosaic_dir, other_dir):
+        fname = os.path.join(mdir, 'ModelBoundaries.gpkg')
+        if os.path.exists(fname):
+            return fname
+        fname = os.path.join(mdir, 'ModelBoundaries.shp')
+        if os.path.exists(fname):
+            return fname
+    raise FileNotFoundError('ModelBoundaries')
+
+
+@functools.lru_cache
+def get_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
+    """
+    :returns: a DataFrame with the mosaic geometries used in AELO
+    """
+    path = get_boundaries_file(mosaic_dir, os.path.dirname(mosaic.__file__))
+    logging.info(f'Reading {path}')
+    df = readinput.read_geometries(path, 'name', buffer)
+    return df
+
+
+def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
+    """
+    :param inputs:
+        a dictionary with sites, vs30, siteid, asce_version, site_class
+    :param mosaic_dir:
+        directory where the mosaic is located
+    :param ini:
+        path of the job ini file (if specified, mosaic_dir will be ignored)
 
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
-    mosaic_df = readinput.read_mosaic_df()
+    mosaic_df = get_mosaic_df(buffer=0)
     lonlats = valid.coordinates(inputs['sites'])
     models = geo.utils.geolocate(lonlats, mosaic_df, exclude)
     if len(set(models)) > 1:
@@ -59,24 +88,26 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     if models[0] == '???':
         raise ValueError(
             f'Site at lon={lon} lat={lat} is not covered by any model!')
-    ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
+    if ini is None:
+        ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['mosaic_model'] = models[0]
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
+        # in aelo_test.py
         params['description'] += f' ({lon}, {lat})'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
-    params['intensity_measure_types_and_levels'] = IMTLS
     params['truncation_level'] = '3.'
     params['disagg_by_src'] = 'true'
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
     params['sites'] = inputs['sites']
-    params['max_sites_disagg'] = '1'
+    params['max_sites_disagg'] = len(lonlats)
     if 'vs30' in inputs:
-        params['override_vs30'] = '%(vs30)s' % inputs
+        if inputs['vs30']:
+            params['override_vs30'] = '%(vs30)s' % inputs
     params['distance_bin_width'] = '20'
     params['num_epsilon_bins'] = '10'
     params['mag_bin_width'] = '0.1'
@@ -90,6 +121,15 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
         raise ValueError('Invalid investigation time %(investigation_time)s'
                          % params)
     params['export_dir'] = ''
+    params['asce_version'] = inputs.get(
+        'asce_version', oqvalidation.OqParam.asce_version.default)
+    if params['asce_version'] == 'ASCE7-16':
+        params['intensity_measure_types_and_levels'] = (
+            '{"PGA": logscale(0.005, 3.00, 25),'
+            ' "SA(0.2)": logscale(0.005, 9.00, 25),'
+            ' "SA(1.0)": logscale(0.005, 3.00, 25)}')
+    params['site_class'] = inputs.get(
+        'site_class', oqvalidation.OqParam.site_class.default)
     return params
 
 
@@ -104,6 +144,8 @@ def main(lon: valid.longitude,
          lat: valid.latitude,
          vs30: valid.positivefloat,
          siteid: str,
+         asce_version: str,
+         site_class: str,
          job_owner_email=None,
          outputs_uri=None,
          jobctx=None,
@@ -113,7 +155,10 @@ def main(lon: valid.longitude,
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
-    inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid)
+    oqvalidation.OqParam.asce_version.validator(asce_version)
+    oqvalidation.OqParam.site_class.validator(site_class)
+    inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
+                  asce_version=asce_version, site_class=site_class)
     warnings = []
     if jobctx is None:
         # in  testing mode create a new job context
@@ -136,7 +181,7 @@ def main(lon: valid.longitude,
             raise exc
 
     if jobctx.params['mosaic_model'] in PRELIMINARY_MODELS:
-        warnings.append(PRELIMINARY_MODEL_WARNING)
+        warnings.append(PRELIMINARY_MODEL_WARNING_MSG)
     logging.root.handlers = []  # avoid breaking the logs
     try:
         engine.run_jobs([jobctx])

@@ -1,0 +1,47 @@
+          <div class="span12">
+            <h2>Run an earthquake impact assessment</h2>
+            {% if not user.email %}
+            <h3>
+              WARNING: no email address is specified for your user account, therefore email notifications will be disabled
+            </h3>
+            {% endif %}
+            <form id="impact_get_rupture_form" method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              <div id="impact_approach">
+                  {% for approach_id, approach_display_name in impact_approaches.items %}
+                  <label><input type="radio" name="impact_approach" value="{{ approach_id }}" {% if approach_id == 'use_shakemap_from_usgs' %}checked{% endif %}>{{ approach_display_name }}</label>
+                  {% endfor %}
+              </div>
+              <div id="usgs_id_grp" class="impact_form_row usgs_id_grp">
+                <label for"usgs_id">{{ impact_form_labels.usgs_id }}</label>
+                <input class="impact-input" type="text" id="usgs_id" name="usgs_id" placeholder="{{ impact_form_placeholders.usgs_id }}" value="{{ impact_default_usgs_id }}"/>
+              </div>
+              <div id="shakemap_version_grp" class="impact_form_row usgs_id_grp">
+                <label for="shakemap_version">{{ impact_form_labels.shakemap_version }}</label>
+                <select name="shakemap_version" id="shakemap_version" class="impact-select"></select>
+              </div>
+              <div id="rupture_from_usgs_grp" class="impact_form_row">
+                <label for"rupture_from_usgs">{{ impact_form_labels.rupture_from_usgs }}</label>
+                <input class="impact-input" type="hidden" id="rupture_from_usgs" name="rupture_data_file_from_usgs" placeholder="{{ impact_form_placeholders.rupture_from_usgs }}" disabled />
+                <input class="impact-input" type="text" id="rupture_was_loaded" name="rupture_was_loaded" disabled />
+              </div>
+              <div id="upload_rupture_grp" class="impact_form_row hidden">
+                <label for"rupture_file">{{ impact_form_labels.rupture_file }}</label>
+                <input class="impact-input" type="file" id="rupture_file_input" name="rupture_file" placeholder="{{ impact_form_placeholders.rupture_file }}" >
+                <button type="button" id="clearRuptureFile">Clear File</button>
+              </div>
+              {% include './impact_rupture_params_from.html' %}
+              <div class="impact_form_row">
+                <button id="submit_impact_get_rupture" type="submit" class="btn">Retrieve data</button>
+              </div>
+            </form>
+            <div id="shakemap-image-row" style="display: none;">
+                <div id="intensity-map" style="display: none;" class="shakemap-image-container"></div>
+                <div id="pga-map" style="display: none;" class="shakemap-image-container"></div>
+            </div>
+            <div id="rupture-map" style="display: none;" class="rupture-image-container"></div>
+            <div class="shakemap-clear-float"></div>
+            <form id="impact_run_form" method="post" enctype="multipart/form-data">
+            {% include './impact_run_form.html' %}
+            </form>
+          </div>

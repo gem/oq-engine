@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="lt"
+    >
+        <logicTreeBranchSet
+        branchSetID="bs0"
+        uncertaintyType="sourceModel"
+        >
+            <logicTreeBranch
+            branchID="ssm"
+            >
+                <uncertaintyModel>
+                    nva.xml
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000000E+00
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToSources="nva"
+        branchSetID="bs1"
+        uncertaintyType="areaSourceGeometryAbsolute"
+        >
+            <logicTreeBranch
+            branchID="es"
+            >
+                <uncertaintyModel>
+                    <areaGeometry>
+  <gml:Polygon>
+     <gml:exterior>
+       <gml:LinearRing>
+         <gml:posList>
+         
+-121.16104 49.28325 -121.70759 49.10641 -121.7803 49.23488 -121.91309 49.34564 -123.08491 50.29564 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551 -121.22422 49.41373 -121.16104 49.28325
+
+         </gml:posList>
+      </gml:LinearRing>
+    </gml:exterior>
+  </gml:Polygon>
+<upperSeismoDepth>
+0.0
+</upperSeismoDepth>
+<lowerSeismoDepth>
+15.0
+</lowerSeismoDepth>
+</areaGeometry>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.3400000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="en"
+            >
+                <uncertaintyModel>
+                    <areaGeometry>
+  <gml:Polygon>
+     <gml:exterior>
+       <gml:LinearRing>
+         <gml:posList>
+         
+-121.28842 49.54551 -121.91309 49.34564 -123.08491 50.29564 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551
+
+         </gml:posList>
+      </gml:LinearRing>
+    </gml:exterior>
+  </gml:Polygon>
+<upperSeismoDepth>
+0.0
+</upperSeismoDepth>
+<lowerSeismoDepth>
+15.0
+</lowerSeismoDepth>
+</areaGeometry>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    4.0200000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ec"
+            >
+                <uncertaintyModel>
+                    <areaGeometry>
+  <gml:Polygon>
+     <gml:exterior>
+       <gml:LinearRing>
+         <gml:posList>
+         
+-121.7803 49.23488 -121.91309 49.34564 -123.08491 50.29564 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551 -121.22422 49.41373 -121.7803 49.23488
+
+         </gml:posList>
+      </gml:LinearRing>
+    </gml:exterior>
+  </gml:Polygon>
+<upperSeismoDepth>
+0.0
+</upperSeismoDepth>
+<lowerSeismoDepth>
+15.0
+</lowerSeismoDepth>
+</areaGeometry>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.3400000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ws"
+            >
+                <uncertaintyModel>
+                    <areaGeometry>
+  <gml:Polygon>
+     <gml:exterior>
+       <gml:LinearRing>
+         <gml:posList>
+         
+-121.70759 49.10641 -121.94909 49.02693 -122.05466 49.14506 -122.15546 49.26664 -122.27591 49.41094 -123.01238 49.82133 -124.68987 50.71523 -125.13614 50.91171 -125.80908 51.11105 -126.56198 51.32721 -126.47716 51.56968 -126.21795 51.67803 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551 -121.22422 49.41373 -121.16104 49.28325 -121.70759 49.10641
+
+         </gml:posList>
+      </gml:LinearRing>
+    </gml:exterior>
+  </gml:Polygon>
+<upperSeismoDepth>
+0.0
+</upperSeismoDepth>
+<lowerSeismoDepth>
+15.0
+</lowerSeismoDepth>
+</areaGeometry>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    6.6000000E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="wn"
+            >
+                <uncertaintyModel>
+                    <areaGeometry>
+  <gml:Polygon>
+     <gml:exterior>
+       <gml:LinearRing>
+         <gml:posList>
+         
+-121.28842 49.54551 -121.91309 49.34564 -122.15546 49.26664 -122.27591 49.41094 -123.01238 49.82133 -124.68987 50.71523 -125.13614 50.91171 -125.80908 51.11105 -126.56198 51.32721 -126.47716 51.56968 -126.21795 51.67803 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551
+
+         </gml:posList>
+      </gml:LinearRing>
+    </gml:exterior>
+  </gml:Polygon>
+<upperSeismoDepth>
+0.0
+</upperSeismoDepth>
+<lowerSeismoDepth>
+15.0
+</lowerSeismoDepth>
+</areaGeometry>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.9800000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="wc"
+            >
+                <uncertaintyModel>
+                    <areaGeometry>
+  <gml:Polygon>
+     <gml:exterior>
+       <gml:LinearRing>
+         <gml:posList>
+         
+-121.7803 49.23488 -122.05466 49.14506 -122.15546 49.26664 -122.27591 49.41094 -123.01238 49.82133 -124.68987 50.71523 -125.13614 50.91171 -125.80908 51.11105 -126.56198 51.32721 -126.47716 51.56968 -126.21795 51.67803 -125.97668 51.77786 -125.66343 51.90604 -124.78584 51.92274 -123.74283 51.46238 -122.66185 51.12547 -121.94294 50.77203 -121.45788 49.88948 -121.28842 49.54551 -121.22422 49.41373 -121.7803 49.23488
+
+         </gml:posList>
+      </gml:LinearRing>
+    </gml:exterior>
+  </gml:Polygon>
+<upperSeismoDepth>
+0.0
+</upperSeismoDepth>
+<lowerSeismoDepth>
+15.0
+</lowerSeismoDepth>
+</areaGeometry>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    6.6000000E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToSources="nva"
+        branchSetID="bs2"
+        uncertaintyType="abGRAbsolute"
+        >
+            <logicTreeBranch
+            branchID="ab0"
+            >
+                <uncertaintyModel>
+                    1.144375 0.5535
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    8.6824159E-03
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab1"
+            >
+                <uncertaintyModel>
+                    1.555686 0.6813
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    2.6117011E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab2"
+            >
+                <uncertaintyModel>
+                    1.970773 0.809
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    3.0156485E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab3"
+            >
+                <uncertaintyModel>
+                    2.386173 0.9368
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.5198986E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab4"
+            >
+                <uncertaintyModel>
+                    2.801201 1.0645
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    3.6951018E-03
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab5"
+            >
+                <uncertaintyModel>
+                    1.266199 0.5535
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.9593201E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab6"
+            >
+                <uncertaintyModel>
+                    1.681187 0.6813
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    7.4035943E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab7"
+            >
+                <uncertaintyModel>
+                    2.096274 0.809
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0132525E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab8"
+            >
+                <uncertaintyModel>
+                    2.511673 0.9368
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    5.8015175E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab9"
+            >
+                <uncertaintyModel>
+                    2.926702 1.0645
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.5533167E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab10"
+            >
+                <uncertaintyModel>
+                    1.363446 0.5535
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.7662801E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab11"
+            >
+                <uncertaintyModel>
+                    1.778434 0.6813
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    8.5165169E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab12"
+            >
+                <uncertaintyModel>
+                    2.193522 0.80
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.3994067E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab13"
+            >
+                <uncertaintyModel>
+                    2.60892 0.9368
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    9.2004240E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab14"
+            >
+                <uncertaintyModel>
+                    3.02395 1.0645
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    2.7369319E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab15"
+            >
+                <uncertaintyModel>
+                    1.476012 0.5535
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    6.1173179E-03
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab16"
+            >
+                <uncertaintyModel>
+                    1.891 0.6813
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    4.0550596E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab17"
+            >
+                <uncertaintyModel>
+                    2.306088 0.809
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    8.4531934E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab18"
+            >
+                <uncertaintyModel>
+                    2.721487 0.9368
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    6.6527816E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab19"
+            >
+                <uncertaintyModel>
+                    3.136516 1.0645
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    2.2700337E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab20"
+            >
+                <uncertaintyModel>
+                    1.565326 0.5535
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    9.4576404E-04
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab21"
+            >
+                <uncertaintyModel>
+                    1.980314 0.6813
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    8.8379121E-03
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab22"
+            >
+                <uncertaintyModel>
+                    2.395402 0.809
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    2.3747118E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab23"
+            >
+                <uncertaintyModel>
+                    2.810801 0.936
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    2.2620635E-02
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="ab24"
+            >
+                <uncertaintyModel>
+                    3.22583 1.0645
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    8.9256359E-03
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToSources="nva"
+        branchSetID="bs3"
+        uncertaintyType="setLowerSeismDepthAbsolute"
+        >
+            <logicTreeBranch
+            branchID="lsd15"
+            >
+                <uncertaintyModel>
+                    15
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    3.0000000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="lsd20"
+            >
+                <uncertaintyModel>
+                    20
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    4.0000000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="lsd25"
+            >
+                <uncertaintyModel>
+                    25
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    3.0000000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToSources="nva"
+        branchSetID="bs4"
+        uncertaintyType="maxMagGRAbsolute"
+        >
+            <logicTreeBranch
+            branchID="mm6pt8"
+            >
+                <uncertaintyModel>
+                    6.8000000E+00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    3.0000000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="mm7pt0"
+            >
+                <uncertaintyModel>
+                    7.0000000E+00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    3.0000000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="mm7pt3"
+            >
+                <uncertaintyModel>
+                    7.3000000E+00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    3.0000000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="mm7pt6"
+            >
+                <uncertaintyModel>
+                    7.5000000E+00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000000E-01
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

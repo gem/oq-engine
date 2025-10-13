@@ -1,5 +1,7 @@
-Infrastructure Risk Analysis
-============================
+.. _infrastructure-risk-intro:
+
+Infrastructure Risk
+===================
 
 Calculation Steps
 -----------------
@@ -44,5 +46,5 @@ The present work has been done in the framework of grant agreement No. 813137 fu
 Sklodowska-Curie project “New Challenges for Urban Engineering Seismology (URBASIS-EU)” by Astha Poudel, ESR 4.5 
 (Aristotle University of Thessaloniki, Université Grenoble Alpes) with the support from Kyriazis Pitilakis, Vitor Silva, 
 Anirudh Rao, and Michele Simionato. Also, we would like to acknowledge the contributors of the SYNER-G project that was 
-funded from the European Community’s 7th Framework Program under grant No. 244061 from which many conceptual frameworks 
+funded from the European Community's 7th Framework Program under grant No. 244061 from which many conceptual frameworks 
 have been built upon.

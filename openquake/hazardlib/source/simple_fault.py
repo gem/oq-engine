@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -59,8 +59,8 @@ class SimpleFaultSource(ParametricSeismicSource):
         1/4 of the fault length and at 1/4 of the fault width along the dip and
         occurs with a weight of 0.3, the other one is at 3/4 of fault length
         along strike and at 3/4 of fault width along strike with a weight of
-        0.7. The numpy array would be entered as numpy.array([[0.25, 0.25, 0.3],
-        [0.75, 0.75, 0.7]]).
+        0.7. The numpy array would be entered as
+        numpy.array([[0.25, 0.25, 0.3], [0.75, 0.75, 0.7]]).
     :param slip_list:
         Array describing the rupture slip direction, which desribes the rupture
         propagation direction on the rupture surface. Each line represents a
@@ -93,7 +93,7 @@ class SimpleFaultSource(ParametricSeismicSource):
                  temporal_occurrence_model,
                  # simple fault specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 fault_trace, dip, rake, hypo_list=(), slip_list=()):
+                 fault_trace, dip, rake, hypo_slip_list=()):
         super().__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
             magnitude_scaling_relationship, rupture_aspect_ratio,
@@ -109,11 +109,15 @@ class SimpleFaultSource(ParametricSeismicSource):
         self.dip = dip
         self.rake = rake
 
-        min_mag, max_mag = self.mfd.get_min_max_mag()
+        min_mag, _max_mag = self.mfd.get_min_max_mag()
         cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
                                                  min_mag)
-        self.slip_list = slip_list
-        self.hypo_list = hypo_list
+        if hypo_slip_list:
+            self.hypo_list = hypo_slip_list[0]
+            self.slip_list = hypo_slip_list[1]
+        else:
+            self.hypo_list = ()
+            self.slip_list = ()
 
         if (len(self.hypo_list) and not len(self.slip_list) or
            not len(self.hypo_list) and len(self.slip_list)):

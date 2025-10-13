@@ -23,6 +23,7 @@ Module exports :class:`PhungEtAl2020SInter`
 """
 import math
 import numpy as np
+
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
@@ -38,10 +39,11 @@ def get_stddevs(C):
             phi_tot]
 
 
-def _basin_term(region, C, vs30, z1pt0):
+def _get_basin_term(C, ctx, region):
     """
     Basin term [16].
     """
+    vs30 = ctx.vs30
     if region == 'glb':
         return 0
 
@@ -56,6 +58,10 @@ def _basin_term(region, C, vs30, z1pt0):
             phi6 = 300
         else:
             phi6 = 800
+    
+    z1pt0 = ctx.z1pt0.copy()
+    mask = z1pt0 == -999 # None-measured values
+    z1pt0[mask] = ez_1[mask]
 
     d_z1 = z1pt0 - ez_1
     return np.where(
@@ -131,10 +137,7 @@ class PhungEtAl2020Asc(GMPE):
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
-    def __init__(self, region='glb', aftershocks=False, d_dpp=0, **kwargs):
-        super().__init__(region=region, aftershocks=aftershocks, d_dpp=d_dpp,
-                         **kwargs)
-
+    def __init__(self, region='glb', aftershocks=False, d_dpp=0):
         # region options:
         # 'glb', 'tw', 'ca', 'jp' (global, Taiwan, California, Japan)
         self.region = region
@@ -185,7 +188,7 @@ class PhungEtAl2020Asc(GMPE):
                     C['phi3'] * (1130 - 360))) * np.log(
                         (sa1130 + C['phi4']) / C['phi4'])
             # basin term [16]
-            lnmed += _basin_term(self.region, C, ctx.vs30, ctx.z1pt0)
+            lnmed += _get_basin_term(C, ctx, self.region)
             mean[m] = lnmed
             sig[m], tau[m], phi[m] = get_stddevs(C)
 
@@ -277,15 +280,19 @@ def _fz1pt0(region, C, vs30, z1pt0):
     """
     Basin depth term.
     """
-    result = np.zeros_like(z1pt0)
-    idx = np.where(z1pt0 >= 0)
-
     if region == 'tw':
         ez_1 = np.exp(-3.96 / 2 * np.log((vs30 ** 2 + 352.7 ** 2)
                                          / (1750 ** 2 + 352.7 ** 2)))
     elif region == 'jptw':
         ez_1 = np.exp(-5.23 / 2 * np.log((vs30 ** 2 + 412.39 ** 2)
                                          / (1360 ** 2 + 412.39 ** 2)))
+
+    # Use GMM's vs30 to z1pt0 for none-measured values
+    mask = z1pt0 == -999
+    z1pt0[mask] = ez_1[mask]
+
+    result = np.zeros_like(z1pt0)
+    idx = np.where(z1pt0 >= 0)
 
     result[idx] = C['a8' + region] * np.minimum(np.log(z1pt0[idx] / ez_1), 1)
     return result
@@ -338,9 +345,7 @@ class PhungEtAl2020SInter(GMPE):
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
 
-    def __init__(self, region='jptw', **kwargs):
-        super().__init__(region=region, **kwargs)
-
+    def __init__(self, region='jptw'):
         # region options:
         # 'jptw', 'tw' (Japan/Taiwan joined, Taiwan)
         self.region = region
@@ -370,7 +375,8 @@ class PhungEtAl2020SInter(GMPE):
             # non-linear component
             f_site = _fsite(s, self.region, C, vs30, pga_1000)
             # basin depth term
-            f_z1pt0 = _fz1pt0(self.region, C, vs30, ctx.z1pt0)
+            z1pt0 = ctx.z1pt0.copy()
+            f_z1pt0 = _fz1pt0(self.region, C, vs30, z1pt0)
 
             # median total and stddev
             mean[m] = f_mag + f_p + f_ztor + f_site + f_z1pt0

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -284,14 +284,14 @@ class AbrahamsonEtAl2015SInter(GMPE):
     kind = "base"
     FABA_ALL_MODELS = {}  # overridden in BCHydro
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.ergodic = kwargs.get('ergodic', True)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
-        self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
-        faba_type = kwargs.get("faba_taper_model", "Step")
+    def __init__(self, ergodic=True, theta6_adjustment=0, sigma_mu_epsilon=0.,
+                 faba_taper_model='Step', **faba_args):
+        self.ergodic = ergodic
+        self.theta6_adj = theta6_adjustment
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+        faba_type = faba_taper_model
         if 'xvf' in self.REQUIRES_SITES_PARAMETERS:  # BCHydro subclasses
-            self.faba_model = self.FABA_ALL_MODELS[faba_type](**kwargs)
+            self.faba_model = self.FABA_ALL_MODELS[faba_type](**faba_args)
         else:
             self.faba_model = None
 

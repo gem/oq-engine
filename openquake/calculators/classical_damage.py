@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,21 +39,21 @@ def classical_damage(riskinputs, param, monitor):
         dictionaries asset_ordinal -> damage(R, L, D)
     """
     crmodel = monitor.read('crmodel')
+    L = crmodel.oqparam.L
     mon = monitor('getting hazard', measuremem=False)
     for ri in riskinputs:
-        R = ri.hazard_getter.num_rlzs
-        L = len(crmodel.lti)
+        R = ri.hazard_getter.R
         D = len(crmodel.damage_states)
         result = AccumDict(accum=numpy.zeros((R, L, D), F32))
         with mon:
             haz = ri.hazard_getter.get_hazard()
         for taxo, assets in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
-                hcurve = haz.extract(rlz)
-                out = crmodel.get_output(assets, hcurve)
-                for li, loss_type in enumerate(crmodel.loss_types):
-                    for a, frac in zip(assets.ordinal, out[loss_type]):
-                        result[a][rlz, li] = frac
+                hcurve = haz[:, rlz]
+                [out] = crmodel.get_outputs(assets, hcurve)
+                for li, lt in enumerate(crmodel.oqparam.loss_types):
+                    for a, frac in zip(assets.ordinal, out[lt]):
+                        result[a][rlz, li] += frac
         yield result
 
 
@@ -70,16 +70,15 @@ class ClassicalDamageCalculator(classical_risk.ClassicalRiskCalculator):
         Export the result in CSV format.
 
         :param result:
-            a dictionary asset_ordinal -> array(R, L, D)
+            a dictionary asset_ordinal -> array(R, D)
         """
         D = len(self.crmodel.damage_states)
-        damages = numpy.zeros((self.A, self.R, self.L, D), numpy.float32)
+        R = self.datastore['full_lt'].get_num_paths()  # don't use self.R
+        damages = numpy.zeros((1, self.A, R, self.L, D), numpy.float32)
         for a in result:
-            damages[a] = result[a]
-        self.datastore['damages-rlzs'] = damages
+            damages[0, a] = result[a]
+        self.datastore['damages-rlzs'] = self.crmodel.to_multi_damage(damages)
         stats.set_rlzs_stats(self.datastore, 'damages-rlzs',
-                             assets=self.assetcol['id'],
-                             loss_type=self.oqparam.loss_types,
-                             dmg_state=self.crmodel.damage_states)
+                             assets=self.assetcol['id'])
         dmg = views.view('portfolio_damage', self.datastore)
         logging.info('\n' + views.text_table(dmg, ext='org'))

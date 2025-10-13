@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -87,4 +87,5 @@ class CY14SiteTermTestCase(unittest.TestCase):
         aae(sig[0], sig[1], decimal=1)
 
     def test_raise_error(self):
-        self.assertRaises(ValueError, CY14SiteTerm, 'AbrahamsonEtAl2014')
+        self.assertRaises(ValueError, CY14SiteTerm,
+                          gmpe_name='AbrahamsonEtAl2014')

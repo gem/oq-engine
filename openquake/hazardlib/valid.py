@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,6 +27,7 @@ import json
 import toml
 import socket
 import logging
+import inspect
 from functools import partial
 import numpy
 
@@ -37,10 +38,15 @@ from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc.filters import (  # noqa
     IntegrationDistance, floatdict
 )
+from openquake.sep import classes
+
+RENAMED_SEPS = {
+    'NewmarkDisplacement': "Jibson2007BLandslides",
+    'GrantEtAl2016RockSlopeFailure': "Jibson2007ALandslides"}
 
 PRECISION = pmf.PRECISION
 
-SCALEREL = scalerel.get_available_magnitude_scalerel()
+SCALEREL = scalerel._get_available_class(scalerel.BaseMSR)
 
 GSIM = gsim.get_available_gsims()
 
@@ -105,15 +111,14 @@ class FromFile(object):
     Fake GSIM to be used when the GMFs are imported from an
     external file and not computed with a GSIM.
     """
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     DEFINED_FOR_REFERENCE_VELOCITY = None
+    _toml = '[FromFile]'
     kwargs = {}
-
-    def init(self):
-        pass
 
     def compute(self, ctx, imts, mean, sig, tau, phi):
         pass
@@ -182,10 +187,28 @@ def gsim(value, basedir=''):
     try:
         gsim_class = registry[gsim_name]
     except KeyError:
-        raise ValueError('Unknown GSIM: %s' % gsim_name)
-    gs = gsim_class(**kwargs)
+        raise NameError('Unknown GSIM: %s' % gsim_name)
+    if inspect.isclass(gsim_class):
+        gs = gsim_class(**kwargs)
+    else:  # is an alias, i.e. a thunk
+        gs = gsim_class()
     gs._toml = '\n'.join(line.strip() for line in value.splitlines())
     return gs
+
+
+def modified_gsim(gmpe, **kwargs):
+    """
+    Builds a ModifiableGMPE from a gmpe. Used for instance in the GEESE project
+    as follows:
+
+    mgs = modified_gsim(gsim, add_between_within_stds={'with_betw_ratio':1.5})
+    """
+    name, *args = gmpe._toml.split('\n')
+    text = name.replace('[', '[ModifiableGMPE.gmpe.')
+    for arg in args:
+        text += '\n' + arg
+    text += '\n' + toml.dumps({'ModifiableGMPE': kwargs})
+    return gsim(text)
 
 
 def occurrence_model(value):
@@ -314,6 +337,11 @@ class Regex(object):
 name = Regex(r'^[a-zA-Z_]\w*$')
 
 name_with_dashes = Regex(r'^[a-zA-Z_][\w\-]*$')
+
+# e.g. 2023-02-06 04:17:34+03:00
+# +03:00 indicates the time zone offset from Coordinated Universal Time (UTC)
+local_timestamp = Regex(
+    r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2})$")
 
 
 class SimpleId(object):
@@ -501,6 +529,8 @@ def nonzero(value):
     return value
 
 
+# NB: numpy.round != round; for instance numpy.round(123.300795, 5)
+# is 123.30080, different from round(123.300795, 5) = 123.30079
 def longitude(value):
     """
     :param value: input string
@@ -517,6 +547,8 @@ def longitude(value):
     return lon
 
 
+# NB: numpy.round != round; for instance numpy.round(123.300795, 5)
+# is 123.30080, different from round(123.300795, 5) = 123.30079
 def latitude(value):
     """
     :param value: input string
@@ -559,8 +591,10 @@ def lon_lat(value):
 
     >>> lon_lat('12 14')
     (12.0, 14.0)
+    >>> lon_lat('12,14')
+    (12.0, 14.0)
     """
-    lon, lat = value.split()
+    lon, lat = value.replace(',', ' ').split()
     return longitude(lon), latitude(lat)
 
 
@@ -663,6 +697,30 @@ def positivefloats(value):
     return floats
 
 
+def positivefloatorsentinel(value):
+    """
+    :param value: input string
+    :returns: positive float or -999 (sentinel)
+    """
+    f = float(not_empty(value))
+    if f < 0 and f!= -999:
+        msg = 'float %s < 0 or not equal to -999' % f
+        raise ValueError(msg)
+    return f
+
+
+def positivefloatsorsentinels(value):
+    """
+    :param value:
+        string of whitespace separated floats
+    :returns:
+        a list of positive floats or -999 (sentinel) values
+    """
+    values = value.strip('[]').split()
+    floats = list(map(positivefloatorsentinel, values))
+    return floats
+
+
 def floats(value):
     """
     :param value:
@@ -733,10 +791,11 @@ def probabilities(value, rows=0, cols=0):
     [1.0]
     >>> probabilities('0.1 0.2')
     [0.1, 0.2]
-    >>> probabilities('0.1, 0.2')  # commas are ignored
+    >>> probabilities('[0.1, 0.2]')  # commas and brackets are ignored
     [0.1, 0.2]
     """
-    probs = list(map(probability, value.replace(',', ' ').split()))
+    val = value.replace('[', '').replace(']', '').replace(',', ' ')
+    probs = list(map(probability, val.split()))
     if rows and cols:
         probs = numpy.array(probs).reshape((len(rows), len(cols)))
     return probs
@@ -836,6 +895,8 @@ def check_levels(imls, imt, min_iml=1E-10):
        ...
     ValueError: Found duplicated levels for PGA: [0.2, 0.2]
     """
+    if imls == [0]:  # corresponds to intensity_measure_levels
+        return
     if len(imls) < 1:
         raise ValueError('No imls for %s: %s' % (imt, imls))
     elif imls != sorted(imls):
@@ -903,6 +964,23 @@ def logscale(x_min, x_max, n):
     return numpy.exp(delta * numpy.arange(n) / (n - 1)) * x_min
 
 
+def linscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min <= 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    return numpy.linspace(x_min, x_max, num=n)
+
+
 def dictionary(value):
     """
     :param value:
@@ -920,24 +998,70 @@ def dictionary(value):
     Traceback (most recent call last):
        ...
     ValueError: '"vs30_clustering: true"' is not a valid Python dictionary
-    >>> dictionary('{"ls": logscale(0.01, 2, 5)}')
-    {'ls': [0.01, 0.03760603093086393, 0.14142135623730948, 0.5318295896944986, 1.9999999999999991]}
+    >>> numpy.array(dictionary('{"ls": logscale(0.01, 2, 5)}')['ls'])
+    array([0.01      , 0.03760603, 0.14142136, 0.53182959, 2.        ])
     """
     if not value:
         return {}
-    value = value.replace('logscale(', '("logscale", ')  # dirty but quick
+
+    if 'logscale' in value:
+        value = value.replace('logscale(', '("logscale", ')  # dirty but quick
+    if 'linscale' in value:
+        value = value.replace('linscale(', '("linscale", ')  # dirty but quick
+
     try:
         dic = dict(ast.literal_eval(value))
     except Exception:
         raise ValueError('%r is not a valid Python dictionary' % value)
+
     for key, val in dic.items():
-        try:
-            has_logscale = (val[0] == 'logscale')
-        except Exception:  # no val[0]
-            continue
-        if has_logscale:
-            dic[key] = list(logscale(*val[1:]))
+        if isinstance(val, tuple):
+            if val[0] == 'logscale':
+                dic[key] = list(logscale(*val[1:]))
+            elif val[0] == 'linscale':
+                dic[key] = list(linscale(*val[1:]))
     return dic
+
+
+def uint8dict(value):
+    """
+    :param value:
+        input string corresponding to a literal Python dictionary
+    :returns:
+        dictionary string -> uint8 number
+
+    >>> uint8dict('')
+    {}
+    >>> uint8dict('{}')
+    {}
+    >>> uint8dict('{"a": 1}')
+    {'a': 1}
+    >>> uint8dict('{"a": 0}')
+    Traceback (most recent call last):
+       ...
+    AssertionError: a must be in the range 1-255, got 0
+    """
+    if not value:
+        return {}
+    try:
+        dic = dict(ast.literal_eval(value))
+    except Exception:
+        raise ValueError('%r is not a valid Python dictionary' % value)
+
+    for key, val in dic.items():
+        assert isinstance(val, int), f'{key} must be integer, got {val}'
+        assert 0 < val < 256, f'{key} must be in the range 1-255, got {val}'
+    return dic
+
+
+def list_of_dict(value):
+    """
+    :param value:
+        input string corresponding to a list of literal Python dictionaries
+    :returns:
+        the list
+    """
+    return json.loads(value)
 
 
 # ########################### SOURCES/RUPTURES ############################# #
@@ -1122,6 +1246,31 @@ def positiveints(value):
     return ints
 
 
+def indexes(value):
+    """
+    >>> indexes("1,2,A")
+    ('1', '2', 'A')
+    """
+    return tuple(value.split(','))
+
+
+def tile_spec(value):
+    """
+    Specify a tile with a string of format "no:nt"
+    where `no` is an integer in the range `1..nt` and `nt`
+    is the total number of tiles.
+
+    >>> tile_spec('[1,2]')
+    [1, 2]
+    >>> tile_spec('[2,2]')
+    [2, 2]
+    """
+    no, ntiles = ast.literal_eval(value)
+    assert ntiles > 0, ntiles
+    assert no > 0 and no <= ntiles, no
+    return [no, ntiles]
+
+
 def simple_slice(value):
     """
     >>> simple_slice('2:5')
@@ -1166,9 +1315,6 @@ def host_port(value=None):
 
 
 # used for the exposure validation
-cost_type = Choice('structural', 'nonstructural', 'contents',
-                   'business_interruption')
-
 cost_type_type = Choice('aggregated', 'per_area', 'per_asset')
 
 
@@ -1187,6 +1333,35 @@ def site_param(dic):
         else:
             new[name] = val
     return new
+
+
+def version(value: str):
+    """
+    >>> version('3.22')
+    (3, 22, 0)
+    >>> version('3.22.0-gitXXX')
+    (3, 22, 0)
+    """
+    vers = [0, 0, 0]
+    for i, number in enumerate(value.split('.')):
+        if 'git' not in number:
+            vers[i] = int(number)
+    return tuple(vers)
+
+
+def secondary_perils(value: str):
+    """
+    >>> secondary_perils("Jibson2007ALandslides, AllstadtEtAl2022Liquefaction")
+    ['Jibson2007ALandslides', 'AllstadtEtAl2022Liquefaction']
+    """
+    clsnames = namelist(value)
+    out = []
+    for name in clsnames:
+        if name in RENAMED_SEPS:
+            raise ValueError(
+                f'{name} has been replaced with {RENAMED_SEPS[name]}')
+        out.append(getattr(classes, name).__name__)
+    return out
 
 
 ###########################################################################
@@ -1416,6 +1591,11 @@ def corename(src):
     :returns: the core name of a source
     """
     src = src if isinstance(src, str) else src.source_id
+    # @ section of multifault source
+    # ! source model logic tree branch
+    # : component of mutex source
+    # ; alternate logictree version of a source
+    # . component of split source
     return re.split('[!:;.]', src)[0]
 
 
@@ -1427,4 +1607,3 @@ def fragmentno(src):
         return -1
     fragment = fragments[1].split('!')[0]  # strip !b16
     return int(fragment)
-

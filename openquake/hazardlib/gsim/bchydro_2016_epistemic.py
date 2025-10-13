@@ -32,18 +32,6 @@ class FABATaperStep(object):
     forearc sites (negative backarc distance), and 1 for backarc sites
     (positive backarc distance)
     """
-    def __init__(self, **kwargs):
-        """
-        Instantiates the class with any required arguments controlling the
-        shape of the taper (none in the case of the current step taper). As
-        the range of possible parameters take different meanings and default
-        values in the subclasses of the function an indefinite set of inputs
-        (**kwargs) is used rather than an explicit parameter list. The
-        definition of parameters used within each subclass can be found in the
-        respective subclass documentation strings.
-        """
-        pass
-
     def __call__(self, x):
         """
         :param numpy.ndarray x:
@@ -69,10 +57,9 @@ class FABATaperSFunc(FABATaperStep):
     :param float b:
         'floor', where the function reaches zero.
     """
-    def __init__(self, **kwargs):
-        super().__init__()
-        self.a = kwargs.get("a", 0.0)
-        self.b = kwargs.get("b", 0.0)
+    def __init__(self, a=0., b=0.):
+        self.a = a
+        self.b = b
         # a must be less than or equal to b
         assert self.a <= self.b
 
@@ -103,9 +90,8 @@ class FABATaperLinear(FABATaperStep):
     :param float width:
         Distance (km) across which x tapers to 0
     """
-    def __init__(self, **kwargs):
-        super().__init__()
-        self.width = kwargs.get("width", 1.0)
+    def __init__(self, width=1.0):
+        self.width = width
         # width must be greater than 0
         assert self.width > 0.0
 
@@ -131,9 +117,8 @@ class FABATaperSigmoid(FABATaperStep):
 
     :param float c: Bandwidth in km of the sigmoid function
     """
-    def __init__(self, **kwargs):
-        super().__init__()
-        self.c = kwargs.get("c", 1.0)
+    def __init__(self, c=1.0):
+        self.c = c
         # sigmoid function bandwidth must be greater than zero
         assert self.c > 0.
 
@@ -163,12 +148,8 @@ class FABATaperGaussian(FABATaperStep):
     :param float b:
         Termination point of tapering (km)
     """
-    def __init__(self, **kwargs):
-
-        super().__init__()
-        self.sigma = kwargs.get("sigma", 1.0)
-        a = kwargs.get("a", -np.inf)
-        b = kwargs.get("b", np.inf)
+    def __init__(self, a=-np.inf, b=np.inf, sigma=1.0):
+        self.sigma = sigma
         # Gaussian sigma must be positive non-zero and upper bound must be
         # greater than or equal to the lower bound
         assert self.sigma > 0

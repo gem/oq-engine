@@ -17,6 +17,9 @@ xmlns:gml="http://www.opengis.net/gml"
             id="1"
             name="Test1"
             >
+              <faults>
+                <fault tag="f1" indexes="0,1"/>
+              </faults>
                 <multiPlanesRupture
                 probs_occur="0.8 0.2"
                 >

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <logicTree logicTreeID="Default">
+    <logicTreeBranchSet
+        applyToTectonicRegionType="Subduction Interface"
+        branchSetID="SI"
+        uncertaintyType="gmpeModel">
+      <logicTreeBranch branchID="AM09-BASIN">
+        <uncertaintyModel>
+          [AtkinsonMacias2009]
+          ba08_site_term=true
+          cb14_basin_term=true
+        </uncertaintyModel>
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    <logicTreeBranchSet
+        applyToTectonicRegionType="Active Shallow Crust"
+        branchSetID="ASC"
+        uncertaintyType="gmpeModel">
+      <logicTreeBranch branchID="ASK14_MEAN">
+        <uncertaintyModel>AbrahamsonEtAl2014NSHMPMean</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="BSSA14_MEAN">
+        <uncertaintyModel>BooreEtAl2014NSHMPMean</uncertaintyModel>
+        <uncertaintyWeight>0.50</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="dummy">
+        <uncertaintyModel>DummyGMPE</uncertaintyModel>
+        <uncertaintyWeight>0.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

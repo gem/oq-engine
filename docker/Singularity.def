@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2023 GEM Foundation
+# Copyright (C) 2023-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 #
-# 
+#
 # Singularity recipe does not have ARG like Dockerfile
 # Default value for oq_branch variable is master
 # Remember to change if needed

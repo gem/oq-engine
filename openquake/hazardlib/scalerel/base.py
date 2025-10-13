@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,6 +22,14 @@ classes for :class:`ASR <BaseASR>`, :class:`MSR <BaseMSR>`,
 :class:`ASRSigma <BaseASRSigma>`, and :class:`MSRSigma <BaseMSRSigma>`
 """
 import abc
+import inspect
+
+
+def check_args(func, expected):
+    got = inspect.getfullargspec(func).args
+    if got != expected:
+        raise SyntaxError('%s must must have signature (%s), got (%s)' %
+                          (func.__name__, ', '.join(expected), ', '.join(got)))
 
 
 class BaseASR(metaclass=abc.ABCMeta):
@@ -29,6 +37,12 @@ class BaseASR(metaclass=abc.ABCMeta):
     A base class for Area-Magnitude Scaling Relationship.
     Allows calculation of rupture magnitude from area.
     """
+    def __init_subclass__(cls):
+        for key, func in cls.__dict__.items():
+            if key == 'get_std_dev_mag':
+                check_args(func, ['self', 'area', 'rake'])
+            elif key == 'get_median_area':
+                check_args(func, ['self', 'mag', 'rake'])
 
     @abc.abstractmethod
     def get_median_mag(self, area, rake):

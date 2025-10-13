@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,9 +16,8 @@
 
 import unittest
 import numpy as np
-from openquake.hazardlib.imt import PGA, AvgSA
-from openquake.hazardlib.contexts import RuptureContext
-from openquake.hazardlib import gsim, imt, const
+from openquake.hazardlib.imt import AvgSA
+from openquake.hazardlib import gsim
 from openquake.hazardlib.gsim.mgmpe.generic_gmpe_avgsa import (
     GenericGmpeAvgSA, GmpeIndirectAvgSA)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase

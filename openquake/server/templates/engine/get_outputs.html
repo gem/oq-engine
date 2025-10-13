@@ -10,7 +10,7 @@
         <div id="oq-body-wrapper">
           <div class="span12">
             {% if application_mode == 'AELO' %}
-            <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}</h2>
+            <h2>{{ site_name }}, Lat: {{ lat }}, Lon: {{ lon }}, Site Class: {{ site_class }}, {{ asce_version }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}</h2>
             {% else %}
             <h2>Outputs from calculation {{ calc_id }}</h2>
             {% endif %}
@@ -30,10 +30,28 @@
                   Show hazard map</a>
               </div>
               {% endif %}
-              {% if governing_mce %}
+              {% for img in avg_gmf %}
               <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
-                  Show governing MCE</a>
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
+                  Show average GMF - {{ img|get_imt }}</a>
+              </div>
+              {% endfor %}
+              {% if assets %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/assets.png" class="btn btn-sm">
+                  Show assets</a>
+              </div>
+              {% endif %}
+              {% if mce %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/mce.png" class="btn btn-sm">
+                  Show MCE</a>
+              </div>
+              {% endif %}
+              {% if mce_spectra %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/mce_spectra.png" class="btn btn-sm">
+                  Show MCE spectra</a>
               </div>
               {% endif %}
               {% if hcurves %}
@@ -46,7 +64,7 @@
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
                   {# NOTE: uncomment below to show the IMT #}
-                  {# Show hazard curves per source - {{ img|get_disagg_by_src_imt }}</a> #}
+                  {# Show hazard curves per source - {{ img|get_imt }}</a> #}
                   Show hazard curves per source</a>
               </div>
               {% endfor %}

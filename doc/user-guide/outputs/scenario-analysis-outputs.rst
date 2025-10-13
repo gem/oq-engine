@@ -1,5 +1,5 @@
-Scenario Hazard Analysis Outputs
-================================
+Scenario Hazard
+===============
 
 By default, the scenario hazard calculator computes and stores Ground Motion Fields for each GMPE specified in the job 
 configuration file. The Ground Motion Fields will be computed at each of the sites and for each of the intensity measure 

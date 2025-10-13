@@ -6,8 +6,8 @@
   <description>A flexible exposure model</description>
 
   <conversions>
-    <area type="per_asset" unit="SQM" />
     <costTypes>
+      <costType name="area" type="per_asset" unit="SQM" />
       <costType name="structural" type="per_area" unit="USD" />
       <costType name="nonstructural" type="per_asset" unit="USD" />
       <costType name="contents" type="per_asset" unit="USD" />

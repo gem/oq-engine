@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2023 GEM Foundation
+# Copyright (C) 2023-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,18 +19,19 @@
 import os
 import sys
 import time
-import json
 import logging
 import getpass
 import cProfile
 import pandas
 import collections
-from openquake.baselib import config, performance
+from unittest import mock
+from openquake.baselib import config, parallel, performance, sap
 from openquake.qa_tests_data import mosaic
-from openquake.commonlib import readinput, logs, datastore
+from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
 from openquake.engine import engine
-from openquake.engine.aelo import get_params_from
+from openquake.engine.impact import main_cmd
+from openquake.engine.aelo import get_params_from, get_mosaic_df
 from openquake.hazardlib.geo.utils import geolocate
 
 FAMOUS = os.path.join(os.path.dirname(mosaic.__file__), 'famous_ruptures.csv')
@@ -46,32 +47,11 @@ def engine_profile(jobctx, nrows):
     print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                            ext='org'))
 
-def fix(asce, siteid):
-    dic = json.loads(asce.decode('ascii'))
-    dic = {k: v if isinstance(v, str) else round(v, 2)
-           for k, v in dic.items()}
-    dic['siteid'] = siteid
-    return dic
-
-
-def get_from(calc_id, key, ids):
-    """
-    :param calc_id: calculation ID
-    :param key: "asce41" or "asce07"
-    :param ids: site IDs
-    :returns: a list of dictionaries, one per site
-    """
-    dstore = datastore.read(calc_id)
-    model = dstore['oqparam'].description[9:12]
-    return [fix(a, model + str(id))
-            for id, a in zip(ids[model], dstore[key])]
-
-
 # ########################## run_site ############################## #
 
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
-def from_file(fname, mosaic_dir, concurrent_jobs):
+def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     """
     Run an AELO analysis on the given sites and returns an array with
     the ASCE-41 parameters.
@@ -84,7 +64,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     exclude subsets of sites from those specified in the CSV file:
 
     * `OQ_ONLY_MODELS`: a comma-separated list of mosaic models (each
-      identified by the corresponding 3-charracters code) to be selected,
+      identified by the corresponding 3-characters code) to be selected,
       excluding sites covered by other models
     * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by
       all models except those specified in this list
@@ -97,6 +77,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     starts with the codes `CAN` or `AUS`, i.e. those covered by the mosaic
     models for Canada and Australia.
     """
+    assert os.path.exists('asce'), 'You are not in the mosaic directory!'
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
@@ -105,68 +86,81 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
-    mosaic_df = readinput.read_mosaic_df(buffer=0.1)
-    sites_df['model']= geolocate(lonlats, mosaic_df)
+    mosaic_df = get_mosaic_df(0.0, mosaic_dir)
+    sites_df['model'] = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
-    for model, df in sites_df.groupby('model'):
-        if model in ('???', 'USA', 'GLD'):
-            continue
-        if exclude_models and model in exclude_models.split(','):
-            continue
-        if only_models and model not in only_models.split(','):
-            continue
-
-        df = df.sort_values(['Longitude', 'Latitude'])
-        ids[model] = df.ID.to_numpy()
-        sites = ','.join('%s %s' % tuple(lonlat)
-                         for lonlat in lonlats[df.index])
-        dic = dict(siteid=model + str(ids[model]), sites=sites)
-        allparams.append(get_params_from(dic, mosaic_dir))
+    if not 'vs30' in sites_df.keys():
+        sites_df['vs30'] = [vs30] * len(sites_df)
+    models = []
+    for vs30, dvf in sites_df.groupby('vs30'):
+        for model, df in dvf.groupby('model'):
+            if model in ('???', 'USA', 'GLD'):
+                continue
+            if exclude_models and model in exclude_models.split(','):
+                continue
+            if only_models and model not in only_models.split(','):
+                continue
+            
+            df = df.sort_values(['Longitude', 'Latitude'])
+            ids[model] = df.ID.to_numpy()
+            sites = ','.join('%s %s' % tuple(lonlat)
+                             for lonlat in lonlats[df.index])
+            dic = dict(siteid=model + str(ids[model]), 
+                       sites=sites, vs30=vs30, asce_version=asce_version)
+            params = get_params_from(dic, mosaic_dir)
+            # del params['postproc_func']
+            allparams.append(params)
+            models.append(model)
+    print('Considering %d sites (excluding USA, GLD)' %
+          (sum(len(ls) for ls in ids.values())))
 
     logging.root.handlers = []  # avoid too much logging
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
+    cj = min(parallel.num_cores, len(allparams)) // 4 or 1
+    with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
+        engine.run_jobs(logctxs, concurrent_jobs=cj)
     out = []
     count_errors = 0
-    a07dics, a41dics = [], []
-    for logctx in logctxs:
+    asce = {}
+    for model, logctx in zip(models, logctxs):
         job = logs.dbcmd('get_job', logctx.calc_id)
         tb = logs.dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
         if tb:
             count_errors += 1
+        dstore = datastore.read(logctx.calc_id)
         try:
-            a07dics.extend(get_from(logctx.calc_id, 'asce07', ids))
-            a41dics.extend(get_from(logctx.calc_id, 'asce41', ids))
+            asce[model + '07'] = views.view('asce:07', dstore)
+            asce[model + '41'] = views.view('asce:41', dstore)
         except KeyError:
-            # AELO results could not be computed due to some error
-            continue
+            # AELO results could not be computed due to some error,
+            # so the asce data is missing in the datastore
+            pass
 
     # printing/saving results
-    header = ['job_id', 'description', 'error']
-    print(views.text_table(out, header, ext='org'))
+    print(views.text_table(out, ['job_id', 'description', 'error'], ext='org'))
     dt = (time.time() - t0) / 60
-    print('Total time: %.1f minutes' % dt) 
-    if not a07dics or not a41dics:
+    print('Total time: %.1f minutes' % dt)
+    if not asce:
         # serious problem to debug
         breakpoint()
-    for name, dics in zip(['asce07', 'asce41'], [a07dics, a41dics]):
-        header = sorted(dics[0])
-        rows = [[dic[k] for k in header] for dic in dics]
-        fname = os.path.abspath(name + '.csv')
+    for name, table in asce.items():
+        fname = os.path.abspath(f'asce/{name}.org')
         with open(fname, 'w') as f:
-            print(views.text_table(rows, header, ext='csv'), file=f)
+            print(views.text_table(table[1:], table[0], ext='org'), file=f)
         print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
+    return [log.calc_id for log in logctxs]
 
 
 def run_site(lonlat_or_fname, mosaic_dir=None,
              *, hc: int = None, slowest: int = None,
-             concurrent_jobs: int = None, vs30: float = 760):
+             concurrent_jobs: int = None, vs30: float = 760,
+             asce_version: str = oqvalidation.OqParam.asce_version.default):
     """
     Run a PSHA analysis on the given sites or given a CSV file
     formatted as described in the 'from_file' function. For instance
@@ -175,12 +169,17 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
     """
     if not mosaic_dir and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
+    try:
+        import rtgmpy
+    except ImportError:
+        sys.exit('Please install the rtgmpy wheel')
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
-        from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs)
-        return
+        return from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs,
+                         asce_version, vs30)
     sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
-    params = get_params_from(dict(sites=sites, vs30=vs30), mosaic_dir)
+    params = get_params_from(
+        dict(sites=sites, vs30=vs30, asce_version=asce_version), mosaic_dir)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
@@ -188,6 +187,7 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
         engine_profile(jobctx, slowest or 40)
     else:
         engine.run_jobs([jobctx], concurrent_jobs=concurrent_jobs)
+    return [jobctx.calc_id]
 
 
 run_site.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
@@ -195,8 +195,10 @@ run_site.mosaic_dir = 'mosaic directory'
 run_site.hc = 'previous calculation ID'
 run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
-run_site.vs30 = 'vs30 value for the calculation'
-
+run_site.vs30 = 'vs30 value for the calculation; ignored if in lonlat csv file'
+run_site.asce_version = dict(
+    help='ASCE version',
+    choices=oqvalidation.OqParam.asce_version.validator.choices)
 
 # ######################### sample rups and gmfs ######################### #
 
@@ -206,7 +208,8 @@ MIN_DIST = 0.
 
 
 def build_params(model, trunclevel, mindist, extreme_gmv, gmf):
-    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+    ini = os.path.join(
+        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     # change the parameters to produce an eff_time of 100,000 years
     itime = int(round(float(params['investigation_time'])))
@@ -276,24 +279,86 @@ sample_rups.gmfs = 'compute GMFs'
 sample_rups.slowest = 'profile and show the slowest operations'
 
 
-def aristotle(datadir, rupfname=FAMOUS):
-    smodel = os.path.join(datadir, 'site_model.hdf5')
-    expo = os.path.join(datadir, 'exposure.hdf5')
-    allparams = []
-    for i, row in pandas.read_csv(rupfname).iterrows():
-        rupdic = str(row.to_dict())
-        dic = dict(calculation_mode='scenario_risk', rupture_dict=rupdic,
-                   exposure_file=expo, site_model_file=smodel)
-        allparams.append(dic)
-        break
-    jobs = engine.create_jobs(allparams, config.distribution.log_level,
-                              None, getpass.getuser(), None)
-    engine.run_jobs(jobs)
+impact_res = dict(count_errors=0, res_list=[])
 
-aristotle.datadir = 'Directory containing site_model.hdf5 and exposure.hdf5'
-aristotle.rupfname = 'Filename with planar ruptures'
-    
+
+def callback(job_id, params, exc=None):
+    if exc:
+        logging.error(str(exc), exc_info=True)
+        impact_res['count_errors'] += 1
+        error = str(exc)
+    else:
+        error = ''
+    description = params['description']
+    impact_res['res_list'].append((job_id, description, error))
+
+
+def impact(exposure_hdf5='', *,
+           rupfname=FAMOUS,
+           stations='',
+           mosaic_model='',
+           maximum_distance='300',
+           maximum_distance_stations='',
+           asset_hazard_distance='15',
+           number_of_ground_motion_fields='10'):
+    """
+    Run OQImpact calculations starting from a rupture file that can be
+    an XML or a CSV (by default "famous_ruptures.csv"). You must pass
+    a directory containing two files site_model.hdf5 and exposure.hdf5
+    with a well defined structure.
+    """
+    if not exposure_hdf5 and not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
+    trt = ''
+    truncation_level = '3'
+    ses_seed = '42'
+    t0 = time.time()
+    if rupfname.endswith('.csv'):
+        df = pandas.read_csv(rupfname)
+        for i, row in df.iterrows():
+            usgs_id = row['usgs_id']
+            print('###################### %s [%d/%d] #######################' %
+                  (usgs_id, i + 1, len(df)))
+            main_cmd(
+                usgs_id, None, callback,
+                maximum_distance=maximum_distance,
+                mosaic_model=mosaic_model,
+                trt=trt, truncation_level=truncation_level,
+                number_of_ground_motion_fields=number_of_ground_motion_fields,
+                asset_hazard_distance=asset_hazard_distance,
+                ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
+                station_data_file=stations,
+                maximum_distance_stations=maximum_distance_stations)
+    else:  # assume .xml
+        main_cmd('WithRuptureFile', rupfname, callback,
+                 maximum_distance=maximum_distance,
+                 mosaic_model=mosaic_model,
+                 trt=trt, truncation_level=truncation_level,
+                 number_of_ground_motion_fields=number_of_ground_motion_fields,
+                 asset_hazard_distance=asset_hazard_distance,
+                 ses_seed=ses_seed, exposure_hdf5=exposure_hdf5,
+                 station_data_file=stations,
+                 maximum_distance_stations=maximum_distance_stations)
+    header = ['job_id', 'description', 'error']
+    print(views.text_table(impact_res['res_list'], header, ext='org'))
+    dt = (time.time() - t0) / 60
+    print('Total time: %.1f minutes' % dt)
+    if impact_res['count_errors']:
+        sys.exit(f'{impact_res["count_errors"]} error(s) occurred')
+
+
+impact.exposure_hdf5 = 'Path to the file exposure.hdf5'
+impact.rupfname = ('Filename with the same format as famous_ruptures.csv '
+                      'or file rupture_model.xml')
+impact.stations = 'Path to a csv file with the station data'
+impact.mosaic_model = 'Mosaic model 3-characters code'
+impact.maximum_distance = 'Maximum distance in km'
+impact.maximum_distance_stations = "Maximum distance from stations in km"
+impact.number_of_ground_motion_fields = 'Number of ground motion fields'
+
 # ################################## main ################################## #
 
-main = dict(run_site=run_site, aristotle=aristotle,
+main = dict(run_site=run_site, impact=impact,
             sample_rups=sample_rups)
+if __name__ == '__main__':
+    sap.run(main)

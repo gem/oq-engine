@@ -1,3 +1,0 @@
-#,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.11.0-gite54a474a1c', start_date='2021-02-17T10:52:45', checksum=1454271571, kind='quantile-0.85', risk_investigation_time=50.0"
-asset_id,taxonomy,lon,lat,business_interruption~poe-0.02,business_interruption~poe-0.1,contents~poe-0.02,contents~poe-0.1,nonstructural~poe-0.02,nonstructural~poe-0.1,occupants~poe-0.02,occupants~poe-0.1,structural~poe-0.02,structural~poe-0.1
-a3,tax1,-122.57000,38.11300,1.87980E+02,8.83195E+01,1.53520E+03,5.79776E+02,1.69483E+03,8.22781E+02,3.75960E-03,1.76639E-03,8.07138E+02,3.28045E+02

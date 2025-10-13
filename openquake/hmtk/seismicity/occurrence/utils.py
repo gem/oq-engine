@@ -3,7 +3,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -195,7 +195,7 @@ def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
 #    return np.array(new_comp_table)
 
 
-def get_completeness_counts(catalogue, completeness, d_m):
+def get_completeness_counts(catalogue, completeness, d_m, return_empty=False):
     """
     Returns the number of earthquakes in a set of magnitude bins of specified
     with, along with the corresponding completeness duration (in years) of the
@@ -245,9 +245,18 @@ def get_completeness_counts(catalogue, completeness, d_m):
         ].astype(float)
         count_years[m_idx[:-1]] += float(nyrs)
     # Removes any zero rates greater than
-    last_loc = np.where(count_rates > 0)[0][-1]
-    n_obs = count_rates[: (last_loc + 1)]
-    t_per = count_years[: (last_loc + 1)]
-    cent_mag = (master_bins[:-1] + master_bins[1:]) / 2.0
-    cent_mag = np.around(cent_mag[: (last_loc + 1)], 3)
+    try:
+        last_loc = np.where(count_rates > 0)[0][-1]
+        n_obs = count_rates[: (last_loc + 1)]
+        t_per = count_years[: (last_loc + 1)]
+        cent_mag = (master_bins[:-1] + master_bins[1:]) / 2.0
+        cent_mag = np.around(cent_mag[: (last_loc + 1)], 3)
+    except IndexError as e:
+        if return_empty:
+            n_obs = np.array([]) # empty
+            t_per = np.array([])
+            cent_mag = np.array([])
+        else:
+            print(e)
+
     return cent_mag, t_per, n_obs

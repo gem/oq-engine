@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -166,11 +166,11 @@ def _get_pga_on_rock(suffix, C, ctx):
 
 
 def get_stddevs(suffix, C):
-    """
+    r"""
     Standard deviations given in COEFFS with suffix
-    Between event standard deviations as Be_.
-    Within event stdvs as We_.
-    Total as sigma_.
+    between event standard deviations as Be\_
+    within event stdvs as We\_
+    total as sigma\_
     """
     intra_e_sigma = np.sqrt(C["We_" + suffix] ** 2 + C["phiS2S"] ** 2)
     return [C["sigma_" + suffix], C["Be_" + suffix], intra_e_sigma]
@@ -308,14 +308,11 @@ class Atkinson2022Crust(GMPE):
     # define constant parameters
     suffix = "crust"
 
-    def __init__(self, epistemic="Central", modified_sigma=False, **kwargs):
+    def __init__(self, epistemic="Central", modified_sigma=False):
         """
         Aditional parameter for epistemic central,
         lower and upper bounds.
         """
-        super().__init__(
-            epistemic=epistemic, modified_sigma=modified_sigma, **kwargs
-        )
         self.epistemic = epistemic
         self.modified_sigma = modified_sigma
 

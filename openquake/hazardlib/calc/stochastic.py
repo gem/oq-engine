@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -29,7 +29,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import nofilter, SourceFilter
 from openquake.hazardlib.source.rupture import (
     BaseRupture, EBRupture, rupture_dt)
-from openquake.hazardlib.geo.mesh import surface_to_arrays
+from openquake.hazardlib.geo.surface.base import to_geom_lons_lats
 
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
@@ -45,7 +45,7 @@ MAX_RUPTURES = 2000
 
 
 # this is really fast
-def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
+def get_rup_array(ebruptures, srcfilter=nofilter, model='???', model_geom=None):
     """
     Convert a list of EBRuptures into a numpy composite array, by filtering
     out the ruptures far away from every site. If a shapely polygon is passed
@@ -58,25 +58,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
     geoms = []
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
-        arrays = surface_to_arrays(rup.surface)  # one array per surface
-        lons = []
-        lats = []
-        points = []
-        shapes = []
-        for array in arrays:
-            s0, s1, s2 = array.shape
-            assert s0 == 3, s0
-            assert s1 < TWO16, 'Too many lines'
-            assert s2 < TWO16, 'The rupture mesh spacing is too small'
-            shapes.append(s1)
-            shapes.append(s2)
-            lons.append(array[0].flat)
-            lats.append(array[1].flat)
-            points.append(array.flat)
-        lons = numpy.concatenate(lons)
-        lats = numpy.concatenate(lats)
-        points = F32(numpy.concatenate(points))
-        shapes = U32(shapes)
+        geom, lons, lats = to_geom_lons_lats(rup.surface)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['id'] = ebrupture.id
@@ -87,6 +69,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
         rec['maxlat'] = maxlat = numpy.nanmax(lats)
         rec['mag'] = rup.mag
         rec['hypo'] = hypo
+        rec['model'] = model
 
         # apply magnitude filtering
         if srcfilter.integration_distance(rup.mag) == 0:
@@ -107,7 +90,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.id, ebrupture.seed, ebrupture.source_id,
                ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
-               rate, minlon, minlat, maxlon, maxlat, hypo, 0, nsites, 0)
+               rate, minlon, minlat, maxlon, maxlat, hypo, 0, nsites, 0, model)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are
@@ -118,8 +101,6 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model_geom=None):
         # and points.reshape(3, 4) containing lons, lats and depths;
         # in classical/case_29 there is a non parametric source containing
         # 2 KiteSurfaces with shapes=[8, 5, 8, 5] and 240 = 3*2*8*5 coordinates
-        # NB: the geometries are read by source.rupture.to_arrays
-        geom = numpy.concatenate([[len(shapes) // 2], shapes, points])
         geoms.append(geom)
     if not rups:
         return ()
@@ -222,6 +203,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
     :yields:
         dictionaries with keys rup_array, source_data
     """
+    model = getattr(cmaker, 'model', '???')
     model_geom = getattr(cmaker, 'model_geom', None)
     srcfilter = SourceFilter(sitecol, cmaker.maximum_distance)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
@@ -248,8 +230,9 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
 
         # Yield ruptures
         er = sum(src.num_ruptures for src in sources)
-        dic = dict(rup_array=get_rup_array(eb_ruptures, srcfilter, model_geom),
-                   source_data=source_data, eff_ruptures={grp_id: er})
+        dic = dict(
+            rup_array=get_rup_array(eb_ruptures, srcfilter, model, model_geom),
+            source_data=source_data, eff_ruptures={grp_id: er})
         yield AccumDict(dic)
     else:
         eb_ruptures = []
@@ -262,7 +245,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
                 # yield partial result to avoid running out of memory
                 yield AccumDict(dict(
                     rup_array=get_rup_array(
-                        eb_ruptures, srcfilter, model_geom),
+                        eb_ruptures, srcfilter, model, model_geom),
                     source_data={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
@@ -277,7 +260,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
             source_data['weight'].append(src.weight)
             source_data['taskno'].append(monitor.task_no)
         t0 = time.time()
-        rup_array = get_rup_array(eb_ruptures, srcfilter, model_geom)
+        rup_array = get_rup_array(eb_ruptures, srcfilter, model, model_geom)
         dt = time.time() - t0
         if len(rup_array):
             yield AccumDict(dict(rup_array=rup_array, source_data=source_data,

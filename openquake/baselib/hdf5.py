@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import csv
 import sys
 import inspect
@@ -24,6 +25,7 @@ import tempfile
 import warnings
 import importlib
 import itertools
+from dataclasses import dataclass
 from urllib.parse import quote_plus, unquote_plus
 import collections
 import json
@@ -41,8 +43,6 @@ vuint16 = h5py.special_dtype(vlen=numpy.uint16)
 vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
-
-CSVFile = collections.namedtuple('CSVFile', 'fname header fields size')
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
@@ -50,6 +50,25 @@ MAX_ROWS = 10_000_000
 if sys.platform == 'win32':
     # go back to the behavior before hdf5==1.12 i.e. h5py==3.4
     os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
+
+
+@dataclass
+class CSVFile:
+    fname: str
+    header: list[str]
+    fields: list[str]
+    size: int
+    skip: int
+    admin2: bool
+
+    def read_df(self):
+        return pandas.read_csv(
+            self.fname, skiprows=self.skip, usecols=self.fields,
+            encoding='utf-8-sig')
+
+    def countlines(self):
+        n = sum(1 for line in open(self.fname))
+        return n - self.skip
 
 
 def sanitize(value):
@@ -67,7 +86,7 @@ def sanitize(value):
 
 
 def create(hdf5, name, dtype, shape=(None,), compression=None,
-           fillvalue=0, attrs=None):
+           fillvalue=None, attrs=None):
     """
     :param hdf5: a h5py.File object
     :param name: an hdf5 key string
@@ -99,6 +118,14 @@ def preshape(obj):
     return ()
 
 
+class FakeDataset:
+    """
+    Used for null saving
+    """
+    def flush(self):
+        pass
+
+
 def extend(dset, array, **attrs):
     """
     Extend an extensible dataset with an array of a compatible dtype.
@@ -107,6 +134,8 @@ def extend(dset, array, **attrs):
     :param array: an array of length L
     :returns: the total length of the dataset (i.e. initial length + L)
     """
+    if isinstance(dset, FakeDataset):  # save nothing
+        return 0
     length = len(dset)
     if len(array) == 0:
         return length
@@ -337,13 +366,16 @@ class File(h5py.File):
         :param key:
             name of the dataset
         :param nametypes:
-            list of pairs (name, dtype) or (name, array) or DataFrame
+            pairs (name, dtype)|(name, array)|structured array|DataFrame
         :param compression:
             the kind of HDF5 compression to use
         :param kw:
             extra attributes to store
         """
-        if isinstance(nametypes, pandas.DataFrame):
+        if hasattr(nametypes, 'dtype') and nametypes.dtype.names:
+            nametypes = [(name, nametypes[name])
+                         for name in nametypes.dtype.names]
+        elif isinstance(nametypes, pandas.DataFrame):
             nametypes = [(name, nametypes[name].to_numpy())
                          for name in nametypes.columns]
         names = []
@@ -412,6 +444,9 @@ class File(h5py.File):
                     data[templ % i] = arr[(slice(None),) + i]
             else:  # scalar field
                 data[name] = arr
+        if sel:
+            for k, v in sel.items():
+                data = data[data[k] == v]
         return pandas.DataFrame.from_records(data, index=index)
 
     def save_vlen(self, key, data):  # used in SourceWriterTestCase
@@ -460,7 +495,7 @@ class File(h5py.File):
                 # for an exposure with more than 65536 assets
                 if isinstance(k, tuple):  # multikey
                     k = '-'.join(k)
-                key = '%s/%s' % (path, quote_plus(k))
+                key = '%s/%s' % (path, k)
                 self[key] = v
             if isinstance(obj, Group):
                 self.save_attrs(
@@ -634,6 +669,12 @@ class ArrayWrapper(object):
         self.extra = list(extra)
         if len(array):
             self.array = array
+        n = len(extra)
+        if 'shape_descr' in attrs and n > 1:
+            assert len(attrs['shape_descr']) == len(array.shape[:-1]), (
+                attrs['shape_descr'], array.shape[:-1])
+        if n > 1:
+            assert array.shape[-1] == n, (array.shape[-1], n)
 
     def __iter__(self):
         if hasattr(self, 'array'):
@@ -869,7 +910,7 @@ def check_length(field, size):
     return check
 
 
-def _read_csv(fileobj, compositedt, usecols=None):
+def _read_csv(fname, compositedt, usecols=None, skip=0):
     dic = {}
     conv = {}
     for name in compositedt.names:
@@ -880,17 +921,26 @@ def _read_csv(fileobj, compositedt, usecols=None):
             conv[name] = check_length(name, dt.itemsize)
         else:
             dic[name] = dt
-    df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
-                         dtype=dic, usecols=usecols,
-                         keep_default_na=False, na_filter=False)
+    df = pandas.read_csv(fname, names=compositedt.names, converters=conv,
+                         dtype=dic, usecols=usecols, skiprows=skip,
+                         keep_default_na=False, na_filter=False,
+                         encoding='utf-8-sig')
     return df
 
 
-def find_error(fname, errors, dtype):
+def find_error(fname, errors, dtype, exc):
     """
     Given a CSV file with an error, parse it with the csv.reader
     and get a better exception including the first line with an error
     """
+    # first of all, search for errors like 'cannot safely convert passed user
+    # dtype of float64 for object dtyped data in column 16'
+    mo = re.search(r'column (\d+)', str(exc))
+    if mo:
+        c = int(mo.group(1))
+        exc.lineno = -1
+        exc.line = f'column {c} = {dtype.names[c]}'
+        return exc
     with open(fname, encoding='utf-8-sig', errors=errors) as f:
         reader = csv.reader(f)
         start = 1
@@ -909,27 +959,32 @@ def find_error(fname, errors, dtype):
             return exc
 
 
-def sniff(fnames, sep=',', ignore=set()):
+# called in `oq info file.csv`, used expecially for the exposures
+def sniff(fnames, sep=',', ignore=set(), keep=lambda csvfile: True):
     """
     Read the first line of a set of CSV files by stripping the pre-headers.
 
     :returns: a list of CSVFile namedtuples.
     """
-    common = None
+    common = set()
     files = []
     for fname in fnames:
-        with open(fname, encoding='utf-8-sig', errors='ignore') as f:
-            while True:
-                first = next(f)
-                if first.startswith('#'):
-                    continue
-                break
-            header = first.strip().split(sep)
-            if common is None:
-                common = set(header)
+        df = pandas.read_csv(fname, encoding='utf-8-sig', nrows=1)
+        if df.columns[0] == '#':
+            [row] = df.itertuples()
+            header = row[1:]
+            skip = 2  # comment+header
+        else:
+            header = df.columns
+            skip = 1  # only header
+        csvfile = CSVFile(fname, header, common, os.path.getsize(fname),
+                          skip, 'ID_2' in header)
+        if keep(csvfile):
+            if not common:
+                common.update(header)
             else:
                 common &= set(header)
-            files.append(CSVFile(fname, header, common, os.path.getsize(fname)))
+            files.append(csvfile)
     common -= ignore
     assert common, 'There is no common header subset among %s' % fnames
     return files
@@ -951,24 +1006,31 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
-    with open(fname, encoding='utf-8-sig', errors=errors) as f:
-        while True:
-            first = next(f)
-            if first.startswith('#'):
-                attrs = dict(parse_comment(first.strip('#,\n ')))
-                continue
-            break
-        header = first.strip().split(sep)
-        dt = build_dt(dtypedict, header, fname)
+    if fname.endswith('.csv'):
+        with open(fname, encoding='utf-8-sig', errors='ignore') as f:
+            skip = 0
+            while True:
+                first = next(f)
+                skip += 1
+                if first.startswith('#'):
+                    attrs = dict(parse_comment(first.strip('#,\n ')))
+                    continue
+                break
+            header = first.strip().split(sep)
+            dt = build_dt(dtypedict, header, fname)
         try:
-            df = _read_csv(f, dt, usecols)
+            df = _read_csv(fname, dt, usecols, skip)
         except Exception as exc:
-            err = find_error(fname, errors, dt)
+            err = find_error(fname, errors, dt, exc)
             if err:
                 raise InvalidFile('%s: %s\nline:%d:%s' %
                                   (fname, err, err.lineno, err.line))
             else:
                 raise InvalidFile('%s: %s' % (fname, exc))
+    else:  # .csv.gz, assume no attributes on the top comment
+        [csvfile] = sniff([fname])
+        dt = build_dt(dtypedict, csvfile.header, fname)
+        df = _read_csv(fname, dt, usecols, csvfile.skip)
     arr = numpy.zeros(len(df), dt)
     for col in df.columns:
         arr[col] = df[col].to_numpy()

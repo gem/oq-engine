@@ -1,5 +1,5 @@
-Benefit-Cost Ratio Outputs
-==========================
+Benefit-Cost Ratio
+==================
 
 Retrofitting benefit/cost ratio maps
 ------------------------------------
@@ -9,7 +9,7 @@ using the Classical Probabilistic Risk calculator. For this reason, the paramete
 are also included in this NRML schema, so the whole calculation process can be traced back. The results for each asset 
 are stored as depicted in the table below.
 
-Example benefit-cost ratio map output
+Example benefit-cost ratio map output:
 
 +---------+---------+---------------+------------------+---------------------+---------+
 | **lon** | **lat** | **asset_ref** | **aal_original** | **aal_retrofitted** | **bcr** |

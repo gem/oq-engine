@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,23 +25,25 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
     get_tau_at_quantile, get_phi_ss_at_quantile, TAU_EXECUTION, TAU_SETUP,
-    PHI_SETUP, get_phi_ss, NGAEastGMPE, _get_f760, get_nonlinear_stddev,
-    get_linear_stddev, _get_fv, get_fnl)
+    PHI_SETUP, get_phi_ss, _get_f760, get_nonlinear_stddev,
+    get_linear_stddev, _get_fv, get_fnl, COEFFS_LINEAR, COEFFS_NONLINEAR,
+    COEFFS_F760)
+from openquake.hazardlib.gsim.nga_east import CONSTANTS as C_NGAE
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
 from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
 
-CONSTANTS = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
+CONST = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
 
 
 def get_distance_term(C, mag, rrup):
     """
     Returns the distance attenuation factor
     """
-    rval = np.sqrt(rrup ** 2. + CONSTANTS["h"] ** 2.)
-    rref_val = np.sqrt(CONSTANTS["Rref"] ** 2. +
-                       CONSTANTS["h"] ** 2.)
+    rval = np.sqrt(rrup ** 2. + CONST["h"] ** 2.)
+    rref_val = np.sqrt(CONST["Rref"] ** 2. +
+                       CONST["h"] ** 2.)
 
-    f_r = (C["c1"] + C["c2"] * (mag - CONSTANTS["Mref"])) *\
+    f_r = (C["c1"] + C["c2"] * (mag - CONST["Mref"])) *\
         np.log(rval / rref_val) + (C["c3"] * (rval - rref_val) / 100.)
     return f_r
 
@@ -59,8 +61,8 @@ def get_magnitude_scaling(C, mag):
     """
     Returns the magnitude scaling term
     """
-    d_m = mag - CONSTANTS["Mh"]
-    return np.where(mag <= CONSTANTS["Mh"],
+    d_m = mag - CONST["Mh"]
+    return np.where(mag <= CONST["Mh"],
                     C["e1"] + C["b1"] * d_m + C["b2"] * d_m ** 2.0,
                     C["e1"] + C["b3"] * d_m)
 
@@ -71,9 +73,9 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
     (Hashash et al., 2019) amplification terms
     """
     # Get the coefficients for the IMT
-    C_LIN = NGAEastGMPE.COEFFS_LINEAR[imt]
-    C_F760 = NGAEastGMPE.COEFFS_F760[imt]
-    C_NL = NGAEastGMPE.COEFFS_NONLINEAR[imt]
+    C_LIN = COEFFS_LINEAR[imt]
+    C_F760 = COEFFS_F760[imt]
+    C_NL = COEFFS_NONLINEAR[imt]
     if str(imt).startswith("PGA"):
         period = 0.01
     elif str(imt).startswith("PGV"):
@@ -81,11 +83,9 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
     else:
         period = imt.period
     # Get f760
-    f760 = _get_f760(C_F760, ctx.vs30,
-                     NGAEastGMPE.CONSTANTS)
+    f760 = _get_f760(C_F760, ctx.vs30, C_NGAE)
     # Get the linear amplification factor
-    f_lin = _get_fv(C_LIN, ctx, f760,
-                    NGAEastGMPE.CONSTANTS)
+    f_lin = _get_fv(C_LIN, ctx.vs30, f760, C_NGAE)
     # Get the nonlinear amplification from Hashash et al., (2017)
     f_nl, f_rk = get_fnl(C_NL, pga_r, ctx.vs30, period)
     # Mean amplification
@@ -97,12 +97,10 @@ def get_site_amplification(site_epsilon, imt, pga_r, ctx):
         # In the case of the linear model sigma_f760 and sigma_fv are
         # assumed independent and the resulting sigma_flin is the root
         # sum of squares (SRSS)
-        f760_stddev = _get_f760(C_F760, ctx.vs30,
-                                NGAEastGMPE.CONSTANTS,
-                                is_stddev=True)
+        f760_stddev = _get_f760(C_F760, ctx.vs30, C_NGAE, is_stddev=True)
         f_lin_stddev = np.sqrt(
             f760_stddev ** 2. + get_linear_stddev(
-                C_LIN, ctx.vs30, NGAEastGMPE.CONSTANTS) ** 2)
+                C_LIN, ctx.vs30, C_NGAE) ** 2)
         # Likewise, the epistemic uncertainty on the linear and nonlinear
         # model are assumed independent and the SRSS is taken
         f_nl_stddev = get_nonlinear_stddev(
@@ -211,21 +209,22 @@ class ESHM20Craton(GMPE):
     #: Defined for a reference velocity of 3000 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 3000.0
 
-    def __init__(self, **kwargs):
+    def __init__(self, epsilon=0, tau_model="global", phi_model="global",
+                 ergodic=True, tau_quantile=None, phi_ss_quantile=None,
+                 site_epsilon=0.):
         """
         Instantiates the class with additional terms controlling both the
         epistemic uncertainty in the median and the preferred aleatory
         uncertainty model ('global', 'cena_constant', 'cena'), and the quantile
         of the epistemic uncertainty model (float in the range 0 to 1, or None)
         """
-        super().__init__(**kwargs)
-        self.epsilon = kwargs.get("epsilon", 0.0)
-        self.tau_model = kwargs.get("tau_model", "global")
-        self.phi_model = kwargs.get("phi_model", "global")
-        self.ergodic = kwargs.get("ergodic", True)
-        self.tau_quantile = kwargs.get("tau_quantile", None)
-        self.phi_ss_quantile = kwargs.get("phi_ss_quantile", None)
-        self.site_epsilon = kwargs.get("site_epsilon", 0.0)
+        self.epsilon = epsilon
+        self.tau_model = tau_model
+        self.phi_model = phi_model
+        self.ergodic = ergodic
+        self.tau_quantile = tau_quantile
+        self.phi_ss_quantile = phi_ss_quantile
+        self.site_epsilon = site_epsilon
         self.PHI_S2SS = None
         # define the standard deviation model from the NGA East aleatory
         # uncertainty model according to the calibrations specified by the user

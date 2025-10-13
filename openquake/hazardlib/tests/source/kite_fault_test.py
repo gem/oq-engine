@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,6 +26,7 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.tests import assert_pickleable
 from openquake.hazardlib.scalerel import PeerMSR
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
+from openquake.hazardlib.source.base import SourceParam
 from openquake.hazardlib.source.kite_fault import KiteFaultSource
 from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
@@ -157,10 +158,10 @@ class FromSimpleFaultDataTestCase(unittest.TestCase):
         floating_x_step = 0.5
         floating_y_step = 0.5
         dip = 90.0
-        src = KiteFaultSource.as_simple_fault(
+        param = SourceParam(
             source_id, name, trt, mfd, rupture_mesh_spacing,
-            magnitude_scaling_relationship, rupture_aspect_ratio,
-            tom, upper_seismogenic_depth,
+            magnitude_scaling_relationship, rupture_aspect_ratio, tom)
+        src = KiteFaultSource.as_simple_fault(param, upper_seismogenic_depth,
             lower_seismogenic_depth, fault_trace, dip, rake,
             floating_x_step, floating_y_step)
 

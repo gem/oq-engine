@@ -1,7 +1,7 @@
 .. _unix:
 
-Running the OpenQuake Engine via Unix
-=====================================
+Via Unix
+========
 
 The OpenQuake Engine can be run via a command line interface or a WebUI. For the WebUI have a look to :ref:`its documentation <web-ui>`.
 
@@ -10,8 +10,8 @@ Running via command line interface (CLI)
 
 The OpenQuake Engine command line tool is ``oq``. To run a calculation the command ``oq engine`` must be run.
 
-There are several demo calculations included with the package. Depending on the installation they are located in 
-``/usr/share/openquake/engine/demos``. or ``~/openquake/share/engine/demos/`` or just ``oq-engine/demos`` in the source 
+There are several demo calculations included with the package. Depending on the installation they are located in
+``/usr/share/openquake/engine/demos``. or ``~/openquake/share/engine/demos/`` or just ``oq-engine/demos`` in the source
 repository.
 
 An example of running the ``AreaSourceClassicalPSHA`` demo::
@@ -64,10 +64,10 @@ For a list of additional commands, type ``oq engine --help``.
 Running via SSH
 ---------------
 
-When the OpenQuake Engine is driven via the ``oq`` command over an SSH connection an associated terminal must exist 
+When the OpenQuake Engine is driven via the ``oq`` command over an SSH connection an associated terminal must exist
 throughout the ``oq`` calculation lifecycle.
 
-To avoid the ``openquake.engine.engine.MasterKilled: The openquake master lost its controlling terminal`` error you must 
+To avoid the ``openquake.engine.engine.MasterKilled: The openquake master lost its controlling terminal`` error you must
 make sure that a terminal is always associated with the ``oq`` process.
 
 Non-interactive use
@@ -82,6 +82,4 @@ More info about ``nohup``: https://en.wikipedia.org/wiki/Nohup.
 Interactive use
 ---------------
 
-For an interactive use of ``oq`` we suggest to install `byobu <http://byobu.co/>`_ on the target server and use it to run ``oq``.
-
-More info about byobu: http://byobu.co/.
+For an interactive use of ``oq`` we suggest to install screen or byobu on the target server and use it to run ``oq``.

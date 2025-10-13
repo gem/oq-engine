@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -412,9 +412,8 @@ class AtkinsonBoore2006(GMPE):
 
     kind = '2006'
 
-    def __init__(self, mag_eq="NA", scale_fac=0, **kwargs):
+    def __init__(self, mag_eq="NA", scale_fac=0):
         assert mag_eq in "Mblg87 Mblg96 Mw NA", mag_eq
-        super().__init__(**kwargs)
         self.mag_eq = mag_eq
         self.scale_fac = scale_fac
 

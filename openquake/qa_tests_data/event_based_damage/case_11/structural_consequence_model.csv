@@ -1,0 +1,4 @@
+risk_id,consequence,peril,ds1,ds2,ds3,ds4
+tax1,losses,groundshaking,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
+tax2,losses,groundshaking,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01
+tax3,losses,groundshaking,4.000000E-02,1.600000E-01,3.200000E-01,6.400000E-01

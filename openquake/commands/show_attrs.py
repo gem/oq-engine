@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,23 +19,28 @@ from openquake.commonlib import datastore
 import h5py
 
 
-def main(key, calc_id: int = -1):
+def main(key, calc_id=-1):
     """
     Show the attributes of a HDF5 dataset in the datastore.
     """
-    ds = datastore.read(calc_id)
     try:
-        attrs = h5py.File.__getitem__(ds.hdf5, key).attrs
+        calc_id = int(calc_id)
+    except ValueError:  # passed filename
+        hdf5 = h5py.File(calc_id)
+    else:
+        hdf5 = datastore.read(calc_id).hdf5
+    try:
+        attrs = h5py.File.__getitem__(hdf5, key).attrs
     except KeyError:
-        print('%r is not in %s' % (key, ds))
+        print('%r is not in %s' % (key, hdf5))
     else:
         if len(attrs) == 0:
             print('%s has no attributes' % key)
         for name, value in attrs.items():
             print(name, value)
     finally:
-        ds.close()
+        hdf5.close()
 
 
 main.key = 'key of the datastore'
-main.calc_id = 'calculation ID'
+main.calc_id = 'calculation ID or filename.hdf5'

@@ -22,7 +22,7 @@ import logging
 import numpy
 from openquake.baselib import parallel, hdf5, sap
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.probability_map import compute_hazard_maps
+from openquake.hazardlib.map_array import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
@@ -94,7 +94,7 @@ def compute_cs(dstore, oq, N, M, P):
     imls = compute_hazard_maps(  # shape (N, L) => (N, P)
         curves[:, 0, 0, :], oq.imtls[oq.imt_ref], oq.poes)
     N, P = imls.shape
-    cmakers = read_cmakers(dstore)
+    cmakers = read_cmakers(dstore).to_array()
 
     # Computing CS
     toms = decode(dstore['toms'][:])
@@ -158,8 +158,9 @@ def _apply_weights(dstore, acc, N, R, M, P, trt_rlzs):
     # build conditional spectra for each realization
     outdic = outdict(M, N, P, 0, R)
     for g, trs in enumerate(trt_rlzs):
-        for r in trs % TWO24:
-            outdic[r] += acc[g]
+        if g in acc:  # missing in case_3, with a non-contributing TRT
+            for r in trs % TWO24:
+                outdic[r] += acc[g]
 
     # build final conditional mean and std
     weights = dstore['weights'][:]

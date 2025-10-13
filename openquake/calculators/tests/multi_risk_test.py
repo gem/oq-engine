@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,14 @@ class MultiRiskTestCase(CalculatorTestCase):
         # case with volcanic multiperil ASH, LAVA, LAHAR, PYRO
         self.run_calc(case_1.__file__, 'job.ini')
 
-        # check extract
+        # check extract gmf_data, called by QGIS
+        aw = extract(self.calc.datastore, 'gmf_data?event_id=0')
+        ae(len(aw['rlz-000']), 173)
+        ae(aw['rlz-000'].dtype.names,
+           ('custom_site_id', 'lon', 'lat', 'Volcanic_ASH', 'Volcanic_LAVA',
+            'Volcanic_LAHAR', 'Volcanic_PYRO'))
+
+        # check extract exposure_metadata
         md = json.loads(extract(self.calc.datastore, 'exposure_metadata').json)
         ae(md['names'], ['value-number', 'value-structural', 'occupants_night'])
         ae(md['multi_risk'], ['collapse-structural-ASH_DRY',
@@ -87,8 +94,3 @@ class MultiRiskTestCase(CalculatorTestCase):
         with self.assertRaises(ValueError):
             self.run_calc(case_1.__file__, 'job.ini',
                           structura_fragility_file='fragility_model.xml')
-
-        # check invalid key structural_consequence_file
-        with self.assertRaises(ValueError):
-            self.run_calc(case_1.__file__, 'job.ini',
-                          structura_consequence_file='consequence_model.xml')

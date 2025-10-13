@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,26 +25,34 @@ import logging
 import operator
 import collections
 
-import fiona
-from shapely.geometry import shape
 import numpy
+import pandas
+from shapely.geometry import shape
 from decorator import FunctionMaker
 
-from openquake.baselib import config
+from openquake.baselib import config, hdf5
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import gsim, nrml, imt
+from openquake.hazardlib import nrml, imt, logictree, site, geo, lt
+from openquake.hazardlib.geo.packager import fiona
+from openquake.hazardlib.gsim.base import registry
 from openquake.hazardlib.mfd.base import BaseMFD
+from openquake.hazardlib.scalerel.base import BaseMSR
 from openquake.hazardlib.source.base import BaseSeismicSource
-from openquake.hazardlib.valid import pmf_map
+from openquake.hazardlib.valid import pmf_map, lon_lat
+from openquake.hazardlib.shakemap.parsers import get_rup_dic
+from openquake.sep.classes import SecondaryPeril
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, logictree, logs
-from openquake.risklib import scientific
+from openquake.commonlib import readinput, logs
+from openquake.risklib import asset, scientific
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import DISPLAY_NAME
+
+F32 = numpy.float32
+U8 = numpy.uint8
 
 
 def print_features(fiona_file):
@@ -55,6 +63,111 @@ def print_features(fiona_file):
         header = list(dic)
         rows.append(dic.values())
     print(text_table(rows, header, ext='org'))
+
+
+def print_subclass(what, cls):
+    """
+    Print the docstring of the given subclass, or print all available
+    subclasses.
+    """
+    split = what.split(':')
+    if len(split) == 1:
+        # no subclass specified, print all
+        for cls in gen_subclasses(cls):
+            print(cls.__name__)
+    else:
+        # print the specified subclass, if known
+        for cls in gen_subclasses(cls):
+            if cls.__name__ == split[1]:
+                print(cls.__doc__)
+                break
+        else:
+            print('Unknown class %s' % split[1])
+
+
+def print_imt(what):
+    """
+    Print the docstring of the given IMT, or print all available
+    IMTs.
+    """
+    split = what.split(':')
+    if len(split) == 1:
+        # no IMT specified, print all
+        for im in vars(imt).values():
+            if inspect.isfunction(im) and is_upper(im):
+                print(im.__name__)
+    else:
+        # print the docstring of the specified IMT, if known
+        for im in vars(imt).values():
+            if inspect.isfunction(im) and is_upper(im):
+                if im.__name__ == split[1]:
+                    print(im.__doc__)
+                    break
+        else:
+            print('Unknown IMT %s' % split[1])
+
+
+def print_gsim(what):
+    """
+    Print the docstring of the given GSIM, or print all available
+    GSIMs.
+    """
+    split = what.split(':')
+    if len(split) == 1:
+        # no GSIM specified, print all
+        for gs in sorted(registry):
+            print(gs)
+    else:
+        # print the docstring of the specified GSIM, if known
+        for gs, cls in registry.items():
+            if cls.__name__ == split[1]:
+                print(cls.__doc__)
+                break
+        else:
+            print('Unknown GSIM %s' % split[1])
+
+
+def print_peril(what):
+    """
+    Print the docstring of the given SecondaryPeril, or print all available
+    subclasses
+    """
+    split = what.split(':')
+    if len(split) == 1:
+        # no peril specified, print all
+        for cls in SecondaryPeril.__subclasses__():
+            print(cls.__name__)
+    else:
+        # print the docstring of the specified class, if known
+        for cls in SecondaryPeril.__subclasses__():
+            if cls.__name__ == split[1]:
+                print(cls.__doc__)
+                break
+        else:
+            print('Unknown SecondaryPeril %s' % split[1])
+
+
+def print_geohash(what):
+    lon, lat = lon_lat(what.split(':')[1])
+    # print(geo.utils.geohash3(F32([lon]), F32([lat])))
+    arr = geo.utils.CODE32[geo.utils.geohash(F32([lon]), F32([lat]), U8(8))]
+    gh = b''.join([row.tobytes() for row in arr])
+    print(gh.decode('ascii'))
+
+
+# tested in run-demos.sh
+def print_usgs_rupture(what):
+    """
+    Show the parameters of a rupture downloaded from the USGS site.
+    $ oq info usgs_rupture:us70006sj8
+    {'lon': 74.628, 'lat': 35.5909, 'dep': 13.8, 'mag': 5.6, 'rake': 0.0}
+    """
+    try:
+        usgs_id = what.split(':', 1)[1]
+    except IndexError:
+        return 'Example: oq info usgs_rupture:us70006sj8'
+    dic = dict(usgs_id=usgs_id, approach='use_shakemap_fault_rup_from_usgs')
+    print(get_rup_dic(dic)[1])
 
 
 def source_model_info(sm_nodes):
@@ -104,8 +217,8 @@ def do_build_reports(directory):
 
 
 choices = ['calculators', 'cfg', 'consequences',
-           'gsims', 'imts', 'views', 'exports', 'disagg',
-           'extracts', 'parameters', 'sources', 'mfds', 'venv']
+           'gsim', 'imt', 'views', 'exports', 'disagg',
+           'extracts', 'parameters', 'sources', 'mfd', 'msr', 'venv']
 
 
 def is_upper(func):
@@ -132,16 +245,14 @@ def main(what, report=False):
         print(fields.replace(',', '\t'))
         for row in rows:
             print('\t'.join(map(str, row)))
-    elif what == 'gsims':
-        for gs in gsim.get_available_gsims():
-            print(gs)
-    elif what == 'portable_gsims':
-        for gs in gsim.get_portable_gsims():
-            print(gs)
-    elif what == 'imts':
-        for im in vars(imt).values():
-            if inspect.isfunction(im) and is_upper(im):
-                print(im.__name__)
+    elif what.startswith('peril'):
+        print_peril(what)
+    elif what.startswith('gsim'):
+        print_gsim(what)
+    elif what.startswith('imt'):
+        print_imt(what)
+    elif what.startswith('usgs_rupture'):
+        print_usgs_rupture(what)
     elif what == 'views':
         for name in sorted(view):
             print(name)
@@ -175,18 +286,47 @@ def main(what, report=False):
         for param in params:
             print(param)
             print(docs[param])
-    elif what == 'mfds':
-        for cls in gen_subclasses(BaseMFD):
-            print(cls.__name__)
+    elif what == 'loss_types':
+        ltypes = [ltype for ltype in scientific.LOSSTYPE
+                  if '+' not in ltype and '_ins' not in ltype]
+        for ltype in sorted(ltypes):
+            print(ltype)
+    elif what == 'uncertainty_types':
+        uncs = [unc for unc in lt.apply_uncertainty if unc != 'dummy']
+        uncs.extend(lt.NOAPPLY_UNCERTAINTIES)
+        for i, unc in enumerate(sorted(uncs), 1):
+            print('%02d' % i, unc)
+    elif what.startswith('mfd'):
+        print_subclass(what, BaseMFD)
+    elif what.startswith('msr'):
+        print_subclass(what, BaseMSR)
+    elif what.startswith('geohash'):
+        print_geohash(what)
     elif what == 'venv':
         print(sys.prefix)
     elif what == 'cfg':
         print('Looking at the following paths (the last wins)')
         for path in config.paths:
             print(path)
+    elif what == 'site_params':
+        lst = sorted(site.site_param_dt)
+        maxlen = max(len(x) for x in lst)
+        ncols = 4
+        nrows = int(numpy.ceil(len(lst) / ncols))
+        for r in range(nrows):
+            col = []
+            for c in range(ncols):
+                try:
+                    col.append(lst[r * ncols + c].rjust(maxlen))
+                except IndexError:
+                    col.append(' ' * maxlen)
+            print(''.join(col))
     elif what == 'sources':
-        for cls in gen_subclasses(BaseSeismicSource):
-            print(cls.__name__)
+        pairs = sorted((cls.__name__, cls.code)
+                       for cls in gen_subclasses(BaseSeismicSource)
+                       if hasattr(cls, 'code'))
+        for i, (name, code) in enumerate(pairs, 1):
+            print('%02d' % i, code.decode('ascii'), name)
     elif what == 'disagg':
         for out in pmf_map:
             print(out)
@@ -200,11 +340,24 @@ def main(what, report=False):
             with mock.patch.object(logging.root, 'info'):  # reduce logging
                 do_build_reports(what)
         print(mon)
+    elif what.endswith('.csv'):
+        [rec] = hdf5.sniff([what])
+        df = pandas.read_csv(what, skiprows=rec.skip)
+        if len(df) > 25:
+            dots = pandas.DataFrame({col: ['...'] for col in df.columns})
+            df = pandas.concat([df[:10], dots, df[-10:]])
+        print(text_table(df, ext='org'))
     elif what.endswith('.xml'):
         node = nrml.read(what)
-        if node[0].tag.endswith('sourceModel'):
+        tag = node[0].tag
+        if tag.endswith('sourceModel'):
             print(source_model_info([node]))
-        elif node[0].tag.endswith('logicTree'):
+        elif tag.endswith('exposureModel'):
+            _exp, df = asset.read_exp_df(what)
+            print(node.to_str())
+            print(df.set_index('id')[[
+                'lon', 'lat', 'taxonomy', 'value-structural']])
+        elif tag.endswith('logicTree'):
             bset = node[0][0]
             if bset.tag.endswith("logicTreeBranchingLevel"):
                 bset = bset[0]
@@ -218,7 +371,7 @@ def main(what, report=False):
                 print(logictree.GsimLogicTree(what))
         else:
             print(node.to_str())
-    elif what.endswith('.shp'):
+    elif what.endswith(('.shp', '.gpkg')):
         with fiona.open(what) as f:
             print_features(f)
     elif what.endswith(('.ini', '.zip')):
@@ -227,13 +380,13 @@ def main(what, report=False):
                 print('Generated', reportwriter.build_report(what))
             else:
                 oq = readinput.get_oqparam(what)
-                lt = readinput.get_logic_tree(oq)
+                ltree = readinput.get_logic_tree(oq)
                 size = humansize(oq.get_input_size())
                 print('calculation_mode: %s' % oq.calculation_mode)
                 print('description: %s' % oq.description)
                 print('input size: %s' % size)
-                for bset in lt.branchsets:
-                    pprint(bset.to_list())
+                for bset in ltree.branchsets:
+                    pprint(bset)
         if mon.duration > 1:
             print(mon)
     elif what:

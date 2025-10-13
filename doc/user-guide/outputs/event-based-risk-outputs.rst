@@ -1,5 +1,5 @@
-Event Based Risk Outputs
-========================
+Event Based Damage and Risk
+===========================
 
 The asset loss table
 --------------------

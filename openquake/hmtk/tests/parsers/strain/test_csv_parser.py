@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani,
+# Copyright (C) 2010-2025 GEM Foundation, G. Weatherill, M. Pagani,
 # D. Monelli.
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
@@ -55,13 +55,111 @@ import unittest
 import numpy as np
 from openquake.hmtk.strain.geodetic_strain import GeodeticStrain
 from openquake.hmtk.parsers.strain.strain_csv_parser import (
-    ReadStrainCsv,
-    WriteStrainCsv,
-)
+    ReadStrainCsv, WriteStrainCsv)
 
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "strain_files")
 IN_FILE = os.path.join(BASE_DATA_PATH, "simple_strain_values.csv")
+exp_longitude = np.array(
+    [
+        -74.2,
+        -74.1,
+        -74.0,
+        -73.9,
+        -72.9,
+        -72.8,
+        46.2,
+        46.3,
+        46.4,
+        176.9,
+        177.0,
+        177.1,
+        -74.1,
+        -74.0,
+        -73.9,
+        -73.8,
+        -112.2,
+        -112.1,
+        -112.0,
+        -111.9,
+        -111.8,
+    ]
+)
+exp_latitude = np.array(
+    [
+        -55.7,
+        -55.7,
+        -55.7,
+        -55.7,
+        -55.7,
+        -55.7,
+        -38.2,
+        -38.2,
+        -38.2,
+        -38.2,
+        -38.2,
+        -38.2,
+        -38.1,
+        -38.1,
+        -38.1,
+        -38.1,
+        -24.8,
+        -24.8,
+        -24.8,
+        -24.8,
+        -24.8,
+    ]
+)
+region = np.array(
+    [
+        b"IPL",
+        b"IPL",
+        b"IPL",
+        b"IPL",
+        b"R",
+        b"R",
+        b"O",
+        b"O",
+        b"O",
+        b"C",
+        b"C",
+        b"C",
+        b"S",
+        b"S",
+        b"S",
+        b"S",
+        b"R",
+        b"R",
+        b"R",
+        b"R",
+        b"R",
+    ]
+)
+str_2nd_inv = np.array(
+    [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        6.97660913e-07,
+        4.64676812e-07,
+        3.51209339e-08,
+        3.59874978e-08,
+        3.69339952e-08,
+        9.96827969e-08,
+        8.17414827e-08,
+        5.58344876e-08,
+        3.42756721e-07,
+        3.42576969e-07,
+        3.55996685e-07,
+        3.35017194e-07,
+        1.11642096e-06,
+        2.39838312e-06,
+        2.73038946e-06,
+        2.46489650e-06,
+        1.14653444e-06,
+    ]
+)
 
 
 class TestStrainCsvReader(unittest.TestCase):
@@ -100,107 +198,6 @@ class TestStrainCsvReader(unittest.TestCase):
         self.model = ReadStrainCsv(IN_FILE)
         strain = self.model.read_data()
         # First test - check longitude and latitude
-        exp_longitude = np.array(
-            [
-                -74.2,
-                -74.1,
-                -74.0,
-                -73.9,
-                -72.9,
-                -72.8,
-                46.2,
-                46.3,
-                46.4,
-                176.9,
-                177.0,
-                177.1,
-                -74.1,
-                -74.0,
-                -73.9,
-                -73.8,
-                -112.2,
-                -112.1,
-                -112.0,
-                -111.9,
-                -111.8,
-            ]
-        )
-        exp_latitude = np.array(
-            [
-                -55.7,
-                -55.7,
-                -55.7,
-                -55.7,
-                -55.7,
-                -55.7,
-                -38.2,
-                -38.2,
-                -38.2,
-                -38.2,
-                -38.2,
-                -38.2,
-                -38.1,
-                -38.1,
-                -38.1,
-                -38.1,
-                -24.8,
-                -24.8,
-                -24.8,
-                -24.8,
-                -24.8,
-            ]
-        )
-        region = np.array(
-            [
-                b"IPL",
-                b"IPL",
-                b"IPL",
-                b"IPL",
-                b"R",
-                b"R",
-                b"O",
-                b"O",
-                b"O",
-                b"C",
-                b"C",
-                b"C",
-                b"S",
-                b"S",
-                b"S",
-                b"S",
-                b"R",
-                b"R",
-                b"R",
-                b"R",
-                b"R",
-            ]
-        )
-        str_2nd_inv = np.array(
-            [
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                6.97660913e-07,
-                4.64676812e-07,
-                3.51209339e-08,
-                3.59874978e-08,
-                3.69339952e-08,
-                9.96827969e-08,
-                8.17414827e-08,
-                5.58344876e-08,
-                3.42756721e-07,
-                3.42576969e-07,
-                3.55996685e-07,
-                3.35017194e-07,
-                1.11642096e-06,
-                2.39838312e-06,
-                2.73038946e-06,
-                2.46489650e-06,
-                1.14653444e-06,
-            ]
-        )
-
         np.testing.assert_array_almost_equal(
             exp_longitude, strain.data["longitude"]
         )

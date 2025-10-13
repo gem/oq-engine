@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,13 +22,48 @@ Module exports :class:`ZhaoEtAl2006Asc`, :class:`ZhaoEtAl2006SInter`,
 :class:`ZhaoEtAl2006SSlabNSHMP2014`
 """
 import numpy as np
-# standard acceleration of gravity in m/s**2
-from scipy.constants import g
+from scipy.constants import g # standard acceleration of gravity in m/s**2
 import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
+
+
+def _get_us23_nshm_adjustments(ln_mean, imt, ctx, cb14_basin_term,
+                               m9_basin_term):
+    """
+    If specified get the US 2023 NSHM basin adjustments:
+
+    1) The ZhaoEtAl2006 GMM lacks a basin term and therefore uses the Campbell
+       and Bozorgnia (2014) (z2pt5-based) basin term.
+    2) If Seattle Basin region, the M9 basin term is applied instead of the
+       CB14 basin term if long period ground-motion (T >= 1.9s) and is a deep
+       basin site (z2pt5 >= 6.0 km)
+    """
+    # Set a null basin term
+    fb = np.zeros(len(ln_mean))
+    # Apply cb14 basin term if specified (-999 z2pt5
+    # values will be updated within this function)
+    if cb14_basin_term:
+        fb = _get_cb14_basin_term(imt, ctx)
+    # Apply m9 basin term if specified (will override
+    # cb14 basin term for basin sites if T >= 1.9 s)
+    if m9_basin_term and imt.period >= 1.9:
+        # NOTE: also need to update -999 z2pt5 here so have
+        # a z2pt5 for each site to ensure always applying m9
+        # basin term where appropriate --> given always using
+        # (at least in US23 model) in combination with CB14 basin
+        # term use this relationship to estimate missing z2pt5
+        # consistently
+        z2pt5 = ctx.z2pt5.copy()
+        mask = z2pt5 == -999 # None-measured values
+        z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
+        fb[z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
+
+    return fb
 
 
 def _compute_distance_term(C, mag, rrup):
@@ -172,6 +207,13 @@ class ZhaoEtAl2006Asc(GMPE):
     #  DEFINED_FOR_REFERENCE_VELOCITY = 1100
     DEFINED_FOR_REFERENCE_VELOCITY = 800
 
+    def __init__(self, cb14_basin_term=False, m9_basin_term=False):
+        if cb14_basin_term or m9_basin_term:
+            self.REQUIRES_SITES_PARAMETERS = frozenset(
+            self.REQUIRES_SITES_PARAMETERS | {'z2pt5'})
+        self.cb14_basin_term = cb14_basin_term
+        self.m9_basin_term = m9_basin_term
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -187,7 +229,7 @@ class ZhaoEtAl2006Asc(GMPE):
             # interface and intraslab terms (that is SI, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909).
-            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+            mean_i = _compute_magnitude_term(C, ctx.mag) +\
                 _compute_distance_term(C, ctx.mag, ctx.rrup) +\
                 _compute_focal_depth_term(C, ctx.hypo_depth) +\
                 _compute_faulting_style_term(C, ctx.rake) +\
@@ -195,8 +237,15 @@ class ZhaoEtAl2006Asc(GMPE):
                 _compute_magnitude_squared_term(P=0.0, M=6.3, Q=C['QC'],
                                                 W=C['WC'], mag=ctx.mag)
 
-            # convert from cm/s**2 to g
-            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            # convert from cm/s**2 to g and back into natural log
+            ln_mean = np.log(np.exp(mean_i) * 1e-2 / g)
+
+            # Get basin adjustments if specified
+            fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
+                                            self.cb14_basin_term,
+                                            self.m9_basin_term)
+
+            mean[m] = ln_mean + fb
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C['tauC'])
 
     #: Coefficient table obtained by joining table 4 (except columns for
@@ -265,18 +314,24 @@ class ZhaoEtAl2006SInter(ZhaoEtAl2006Asc):
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+            mean_i = _compute_magnitude_term(C, ctx.mag) +\
                 _compute_distance_term(C, ctx.mag, ctx.rrup) +\
                 _compute_focal_depth_term(C, ctx.hypo_depth) +\
                 _compute_site_class_term(C, ctx.vs30) + \
                 _compute_magnitude_squared_term(P=0.0, M=6.3,
                                                 Q=C_SINTER['QI'],
                                                 W=C_SINTER['WI'],
-                                                mag=ctx.mag) +\
-                C_SINTER['SI']
+                                                mag=ctx.mag) + C_SINTER['SI']
 
-            # convert from cm/s**2 to g
-            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            # Convert from cm/s**2 to g then back into natural log
+            ln_mean = np.log(np.exp(mean_i) * 1e-2 / g)
+            
+            # Get basin adjustments if specified
+            fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
+                                            self.cb14_basin_term,
+                                            self.m9_basin_term)
+
+            mean[m] = ln_mean + fb
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
 
     #: Coefficient table containing subduction interface coefficients,
@@ -350,18 +405,27 @@ class ZhaoEtAl2006SSlab(ZhaoEtAl2006Asc):
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+            mean_i = _compute_magnitude_term(C, ctx.mag) +\
                 _compute_distance_term(C, ctx.mag, d) +\
                 _compute_focal_depth_term(C, ctx.hypo_depth) +\
                 _compute_site_class_term(C, ctx.vs30) +\
-                _compute_magnitude_squared_term(P=C_SSLAB['PS'], M=6.5,
-                                                Q=C_SSLAB['QS'],
-                                                W=C_SSLAB['WS'],
-                                                mag=ctx.mag) +\
-                C_SSLAB['SS'] + _compute_slab_correction_term(C_SSLAB, d)
+                _compute_magnitude_squared_term(
+                    P=C_SSLAB['PS'],
+                    M=6.5,
+                    Q=C_SSLAB['QS'],
+                    W=C_SSLAB['WS'],
+                    mag=ctx.mag) + C_SSLAB['SS'] +\
+                    _compute_slab_correction_term(C_SSLAB, d)
 
-            # convert from cm/s**2 to g
-            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            # Convert from cm/s**2 to g and back into natural log
+            ln_mean = np.log(np.exp(mean_i) * 1e-2 / g)
+
+            # Get basin adjustments if specified
+            fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
+                                            self.cb14_basin_term,
+                                            self.m9_basin_term)
+
+            mean[m] = ln_mean + fb
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
 
     #: Coefficient table containing subduction slab coefficients taken from
@@ -473,7 +537,7 @@ class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-            mean[m] = _compute_magnitude_term(C, rup_mag) +\
+            mean_i = _compute_magnitude_term(C, rup_mag) +\
                 _compute_distance_term(C, rup_mag, d) +\
                 _compute_focal_depth_term(C, ctx.hypo_depth) +\
                 _compute_site_class_term(C, ctx.vs30) +\
@@ -483,8 +547,14 @@ class ZhaoEtAl2006SSlabNSHMP2014(ZhaoEtAl2006SSlab):
                                                 mag=rup_mag) +\
                 C_SSLAB['SS'] + _compute_slab_correction_term(C_SSLAB, d)
 
-            # convert from cm/s**2 to g
-            mean[m] = np.log(np.exp(mean[m]) * 1e-2 / g)
+            # Convert from cm/s**2 to g and back into natural log
+            ln_mean = np.log(np.exp(mean_i) * 1e-2 / g)
+
+            # Get basin adjustments if specified
+            fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
+                                            self.cb14_basin_term,
+                                            self.m9_basin_term)
+            mean[m] = ln_mean + fb
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
 
 
@@ -549,19 +619,25 @@ class ZhaoEtAl2006SInterCascadia(ZhaoEtAl2006SInter):
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+            mean_i = _compute_magnitude_term(C, ctx.mag) +\
                 _compute_distance_term(C, ctx.mag, ctx.rrup) +\
                 _compute_focal_depth_term(C, ctx.hypo_depth) +\
                 _compute_site_class_term(C, ctx.vs30) + \
                 _compute_magnitude_squared_term(P=0.0, M=6.3,
                                                 Q=C_SINTER['QI'],
                                                 W=C_SINTER['WI'],
-                                                mag=ctx.mag) +\
-                C_SINTER['SI']
+                                                mag=ctx.mag) + C_SINTER['SI']
 
             # multiply by site factor to "convert" Japan values to Cascadia
             # values then convert from cm/s**2 to g
-            mean[m] = np.log((np.exp(mean[m]) * C_SF["MF"]) * 1e-2 / g)
+            ln_mean = np.log((np.exp(mean_i) * C_SF["MF"]) * 1e-2 / g)
+
+            # Get basin adjustments if specified
+            fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
+                                            self.cb14_basin_term,
+                                            self.m9_basin_term)
+            
+            mean[m] = ln_mean + fb            
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
 
 
@@ -600,7 +676,7 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
-            mean[m] = _compute_magnitude_term(C, ctx.mag) +\
+            mean_i = _compute_magnitude_term(C, ctx.mag) +\
                 _compute_distance_term(C, ctx.mag, d) +\
                 _compute_focal_depth_term(C, ctx.hypo_depth) +\
                 _compute_site_class_term(C, ctx.vs30) +\
@@ -611,8 +687,14 @@ class ZhaoEtAl2006SSlabCascadia(ZhaoEtAl2006SSlab):
                 C_SSLAB['SS'] + _compute_slab_correction_term(C_SSLAB, d)
 
             # multiply by site factor to "convert" Japan values to Cascadia
-            # values then convert from cm/s**2 to g
-            mean[m] = np.log((np.exp(mean[m]) * C_SF["MF"]) * 1e-2 / g)
+            # values then convert from cm/s**2 to g and back into natural log
+            ln_mean = np.log((np.exp(mean_i) * C_SF["MF"]) * 1e-2 / g)
+
+            # Get basin adjustments if specified
+            fb = _get_us23_nshm_adjustments(ln_mean, imt, ctx,
+                                            self.cb14_basin_term,
+                                            self.m9_basin_term)
+            mean[m] = ln_mean + fb
             _set_stddevs(sig[m], tau[m], phi[m], C['sigma'], C_SSLAB['tauS'])
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,47 +18,68 @@
 
 """
 Module exports :class:`ChiouYoungs2014`
-               :class:`ChiouYoungs2014Japan`
-               :class:`ChiouYoungs2014Italy`
-               :class:`ChiouYoungs2014Wenchuan`
                :class:`ChiouYoungs2014PEER`
                :class:`ChiouYoungs2014NearFaultEffect`
 """
+import os
+import pathlib
 import numpy as np
 
 from openquake.baselib.general import CallableDict
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z1pt0_usgs_basin_scaling
+
 
 CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
 
 
-def _get_centered_cdpp(clsname, ctx):
-    """
-    Returns the centred dpp term (zero by default)
-    """
-    if clsname.endswith("NearFaultEffect"):
-        return ctx.rcdpp
-    return np.zeros(ctx.rrup.shape)
+# CyberShake basin adjustments for CY14 (only applied above 
+# 1.9 seconds so don't provide dummy values listed below 2 s)
+# Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/CY14.csv?ref_type=heads
+COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
+IMT   phi5cy   phi6cy   
+2     0.244    1000
+3     0.262    608
+4     0.819    1000
+5     1.085    1000
+7.5   1.365    1000
+10    1.234    1000
+""")
 
 
-def _get_centered_z1pt0(clsname, ctx):
+def japan_mean_z1pt0(vs30):
+    """
+    Return z1pt0 based on Japan region CY14 relationship
+    """
+    return (-5.23 / 2.) * np.log(((
+        vs30 ** 2.) + 412.39 ** 2.) / (1360 ** 2. + 412.39 ** 2.))
+
+
+def global_mean_z1pt0(vs30):
+    """
+    Return z1pt0 based on non-Japan region CY14 relationship
+    """
+    return (-7.15 / 4.) * np.log((
+        (vs30) ** 4. + 570.94 ** 4.) / (1360 ** 4. + 570.94 ** 4.))
+
+
+def _get_centered_z1pt0(region, vs30, z1pt0):
     """
     Get z1pt0 centered on the Vs30- dependent average z1pt0(m)
     California and non-Japan regions
     """
-    if clsname.endswith("Japan"):
-        mean_z1pt0 = (-5.23 / 2.) * np.log(((ctx.vs30 ** 2.) + 412.39 ** 2.)
-                                           / (1360 ** 2. + 412.39 ** 2.))
-        return ctx.z1pt0 - np.exp(mean_z1pt0)
+    if region == "JPN":
+        mean_z1pt0 = japan_mean_z1pt0(vs30)
+        return z1pt0 - np.exp(mean_z1pt0)
 
-    #: California and non-Japan regions
-    mean_z1pt0 = (-7.15 / 4.) * np.log(((ctx.vs30) ** 4. + 570.94 ** 4.)
-                                       / (1360 ** 4. + 570.94 ** 4.))
-    return ctx.z1pt0 - np.exp(mean_z1pt0)
+    else:
+        mean_z1pt0 = global_mean_z1pt0(vs30)
+        return z1pt0 - np.exp(mean_z1pt0)
 
 
 def _get_centered_ztor(ctx):
@@ -150,30 +171,62 @@ def _get_mean(ctx, C, ln_y_ref, exp1, exp2):
     return ln_y
 
 
-def get_basin_depth_term(clsname, C, centered_z1pt0):
+def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
     Returns the basin depth scaling
     """
-    if clsname.endswith("Japan"):
-        return C["phi5jp"] * (1.0 - np.exp(-centered_z1pt0 /
-                                           CONSTANTS["phi6jp"]))
-    return C["phi5"] * (1.0 - np.exp(-centered_z1pt0 /
-                                     CONSTANTS["phi6"]))
+    z1pt0 = ctx.z1pt0.copy()
+
+    # Use GMMs vs30 to z1pt0 for non-measured values
+    mask = z1pt0 == -999
+    if region == "JPN":
+        z1pt0[mask] = np.exp(japan_mean_z1pt0(ctx.vs30[mask]))
+    else:
+        z1pt0[mask] = np.exp(global_mean_z1pt0(ctx.vs30[mask]))
+
+    # Get USGS basin scaling factor if required
+    if usgs_bs:
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(z1pt0, imt.period)
+    else:
+        usgs_baf = np.ones(len(ctx.vs30))
+
+    # Get basin depth
+    dz1pt0 = _get_centered_z1pt0(region, ctx.vs30, z1pt0)
+
+    # for Z1.0 = 0.0 no deep soil correction is applied
+    dz1pt0[z1pt0 <= 0.0] = 0.0
+    if region == "JPN":
+        return C["phi5jp"] * (1.0 - np.exp(-dz1pt0 / CONSTANTS["phi6jp"]))
+
+    # Apply cybershake adjustment if specified and SA(T > 1.9)
+    if cy and imt.period > 1.9:
+        phi5 = COEFFS_CY[imt]["phi5cy"]
+        phi6 = COEFFS_CY[imt]["phi6cy"]
+        adj = 0.1 # CY_CSIM variable in java code
+    else:
+        phi5 = C["phi5"]
+        phi6 = CONSTANTS["phi6"]
+        adj = 0.
+    
+    fb = (phi5 * (1.0 - np.exp(-dz1pt0 / phi6))) + adj
+
+    return fb * usgs_baf
 
 
-def get_directivity(clsname, C, ctx):
+def get_directivity(C, ctx):
     """
-    Returns the directivity term.
+    Returns the directivity term, if any.
 
     The directivity prediction parameter is centered on the average
     directivity prediction parameter. Here we set the centered_dpp
     equal to zero, since the near fault directivity effect prediction is
     off by default in our calculation.
-    """
-    cdpp = _get_centered_cdpp(clsname, ctx)
-    if not np.any(cdpp > 0.0):
+    """    
+    try:
+        cdpp =  ctx.rcdpp
+    except AttributeError:
         # No directivity term
-        return 0.0
+        return 0.
     f_dir = np.exp(-C["c8a"] * ((ctx.mag - C["c8b"]) ** 2.)) * cdpp
     f_dir *= np.clip((ctx.mag - 5.5) / 0.8, 0., 1.)
     rrup_max = ctx.rrup - 40.
@@ -187,68 +240,84 @@ get_far_field_distance_scaling = CallableDict()
 
 
 @get_far_field_distance_scaling.add("CAL")
-def get_far_field_distance_scaling_1(region, C, mag, rrup):
+def get_far_field_distance_scaling_1(region, C, mag, rrup, delta_g):
     """
     Returns the far-field distance scaling term - both magnitude and
     distance - for California and other regions
     """
-    # Get the attenuation distance scaling
+    # Get the attenuation distance scaling (geometric spreading term)
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
+    
     # Get the magnitude dependent term
-    f_rm = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
-    return f_r + f_rm * rrup
+    gamma = C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None))
+    
+    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
+    f_rm = (gamma + delta_g) * rrup
+    
+    return f_r + f_rm
 
 
 @get_far_field_distance_scaling.add("JPN")
-def get_far_field_distance_scaling_2(region, C, mag, rrup):
+def get_far_field_distance_scaling_2(region, C, mag, rrup, delta_g):
     """
     Returns the far-field distance scaling term - both magnitude and
     distance - for Japan
     """
-    # Get the attenuation distance scaling
+    # Get the attenuation distance scaling (geometric spreading term)
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] + C["cg2"] /
-            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    gamma = (C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None)))
+    
+    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
+    f_rm = (gamma + delta_g) * rrup
+    
     # Apply adjustment factor for Japan
     f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
+    
     return f_r + f_rm
 
 
 @get_far_field_distance_scaling.add("ITA")
-def get_far_field_distance_scaling_3(region, C, mag, rrup):
+def get_far_field_distance_scaling_3(region, C, mag, rrup, delta_g):
     """
     Returns the far-field distance scaling term - both magnitude and
     distance - for Italy
     """
-    # Get the attenuation distance scaling
+    # Get the attenuation distance scaling (geometric spreading term)
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] + C["cg2"] /
-            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    gamma = (C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None)))
+    
+    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
+    f_rm = (gamma + delta_g) * rrup
+    
     # Apply adjustment factor for Italy
     f_rm[(mag > 6.0) & (mag < 6.9)] *= C["gjpit"]
+    
     return f_r + f_rm
 
 
 @get_far_field_distance_scaling.add("WEN")
-def get_far_field_distance_scaling_4(region, C, mag, rrup):
+def get_far_field_distance_scaling_4(region, C, mag, rrup, delta_g):
     """
     Returns the far-field distance scaling term - both magnitude and
     distance - for Wenchuan
     """
-    # Get the attenuation distance scaling
+    # Get the attenuation distance scaling (geometric spreading term)
     f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
         np.sqrt(rrup ** 2. + CONSTANTS["crb"] ** 2.))
 
     # Get the magnitude dependent term
-    f_rm = (C["cg1"] + C["cg2"] /
-            np.cosh(np.clip(mag - C["cg3"], 0.0, None))) * rrup
+    gamma = (C["cg1"] + C["cg2"] / np.cosh(np.clip(mag - C["cg3"], 0.0, None)))
+    
+    # Adjust path if delta_g (from Boore et al. 2022 CY14 adjustments paper)
+    f_rm = (gamma + delta_g) * rrup
+    
     # Apply adjustment factor for Wenchuan
     return f_r + (f_rm * C["gwn"])
 
@@ -276,49 +345,154 @@ def get_hanging_wall_term(C, ctx):
     return fhw
 
 
-def get_linear_site_term(clsname, C, ctx):
+def get_linear_site_term(region, C, ctx):
     """
     Returns the linear site scaling term
     """
-    if clsname.endswith("Japan"):
+    if region == "JPN":
         return C["phi1jp"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
     return C["phi1"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
 
+    
+def get_delta_c1(rrup, imt, mag):
+    """
+    Return the delta_c1 long-period adjustment parameter as defined by equation
+    2 of Boore et al.(2022).
+    """
+    # Initialise output
+    delta_c1 = np.zeros_like(mag)
 
-def get_region(clsname):
-    if clsname.endswith("Italy"):
-        return "ITA"
-    elif clsname.endswith("Japan"):
-        return "JPN"
-    elif clsname.endswith("Wenchuan"):
-        return "WEN"
+    # Apply correction only to 'PGA'
+    if str(imt) != 'PGA':
+
+        # Computing tB, the period below which the correction do not apply
+        tb = 2 - np.maximum(0, mag-7)
+
+        # Apply correction only if period is larger than tb
+        idx = float(imt.period) > tb
+        if np.any(idx):
+
+            # Equations 3b, 3c and 3d
+            s1 = 0.2704 - 0.0694 * np.maximum(mag[idx]-7, 0)
+            s2 = -0.1342 + 0.0716 * np.maximum(mag[idx]-7, 0)
+            s3 = 0.2513 - 0.0419 * np.maximum(mag[idx]-7, 0)
+
+            # Equation 3a - Note that we add a capping to rrup to avoid an
+            # overflow
+            dst = rrup[idx]
+            dst[dst>100] = 100
+            s = s1 + s2 / np.cosh(s3 * dst)
+
+            # Equation 2
+            delta_c1[idx] = s * np.maximum(
+                np.log(float(imt.period)/tb[idx]), 0)**2
+
+    return delta_c1
+    
+
+def _get_delta_cm(conf, imt):
+    """
+    Return the delta_cm parameter as defined by equation A19 in Boore et al.
+    (2022) for the host-to-target region source-scaling adjustment. 
+    """
+    # If the stress parameters are not defined at the instantiation level, the
+    # conf dictionary does not contain the source_function_table
+    source_function_table = conf.get('source_function_table', None)
+    
+    # Get stress params
+    stress_par_host = conf.get('stress_par_host')
+    stress_par_targ = conf.get('stress_par_target')
+    C = source_function_table[imt]
+
+    # Compute chi
+    if stress_par_targ > stress_par_host:
+        chi = C['chi_delta_pos']
     else:
-        return "CAL"
+        chi = C['chi_delta_neg']
+
+    # Compute delta_cm
+    delta_cm = chi * 2/3 * np.log10(stress_par_targ / stress_par_host)
+
+    return delta_cm
 
 
-def get_ln_y_ref(clsname, C, ctx):
+def _get_delta_g(delta_gamma_tab, ctx, imt):
+    """
+    Returns the delta_g parameter as defined by equation 13 in Boore et al.
+    (2022) for the host-to-target region path adjustment
+    """
+    # Get coefficients for imt
+    C = delta_gamma_tab[imt]
+    
+    # Compute delta_g (magnitude-dependent)
+    delta_g = C['c0'] + C['c1']*(ctx.mag - 6) + C['c2']*(
+        ctx.mag - 6)**2 + C['c3']*(ctx.mag - 6)**3
+    
+    return delta_g
+    
+
+def get_ln_y_ref(region, C, ctx, conf):
     """
     Returns the ground motion on the reference rock, described fully by
-    Equation 11
+    Equation 11 in CY14 (page 1131).
     """
-    region = get_region(clsname)
+    # Read configuration parameters
+    imt = conf.get('imt')
+    add_delta_c1 = conf.get('add_delta_c1')
+    use_hw = conf.get('use_hw')
+    alpha_nm = conf.get('alpha_nm')
+
+    # Get the region name from the name of the class
     delta_ztor = _get_centered_ztor(ctx)
-    return (get_stress_scaling(C) +
-            get_magnitude_scaling(C, ctx.mag) +
-            get_source_scaling_terms(C, ctx, delta_ztor) +
-            get_hanging_wall_term(C, ctx) +
-            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
-            get_far_field_distance_scaling(region, C, ctx.mag, ctx.rrup) +
-            get_directivity(clsname, C, ctx))
+
+    # If stress correction required get delta cm
+    delta_cm = 0
+    if 'source_function_table' in conf:
+        delta_cm = _get_delta_cm(conf, imt)
+
+    # If path correction required get delta g
+    delta_g = 0
+    if 'delta_gamma_tab' in conf:
+        delta_g = _get_delta_g(conf['delta_gamma_tab'], ctx, imt)
+
+    # Compute median ground motion:
+    # - The `get_magnitude_scaling` function when `delta_cm` ≠ 0 applies a
+    #   correction to ground motion that accounts for the differences in the
+    #   stress parameter between the host and target region as described in
+    #   Boore at al. (2022)
+    # - The `get_source_scaling_terms` function applies a correction to
+    #   ground motion for the style of faulting as per Boore et al. (2022;
+    #   eq. 5). The `alpha_nm` is provided at the instantiation level.
+    # - The `get_far_field_distance_scaling` function applies a correction to
+    #   ground motion for anelastic attenuation as per Boore et al. (2022)
+    out = (get_stress_scaling(C) +
+           get_magnitude_scaling(C, ctx.mag, delta_cm) +
+           get_source_scaling_terms(C, ctx, delta_ztor, alpha_nm) +
+           get_geometric_spreading(C, ctx.mag, ctx.rrup) +
+           get_far_field_distance_scaling(
+               region, C, ctx.mag, ctx.rrup, delta_g) +
+           get_directivity(C, ctx))
+
+    # Adjust ground-motion for the hanging wall effect
+    if use_hw:
+        out += get_hanging_wall_term(C, ctx)
+
+    # Long period adjustment as per Boore et al. (2022; see equation 4)
+    if add_delta_c1:
+        out += get_delta_c1(ctx.rrup, imt, ctx.mag)
+
+    return out
 
 
-def get_magnitude_scaling(C, mag):
+def get_magnitude_scaling(C, mag, delta_cm):
     """
     Returns the magnitude scaling
     """
-    f_m = np.log(1.0 + np.exp(C["cn"] * (C["cm"] - mag)))
-    f_m = CONSTANTS["c2"] * (mag - 6.0) +\
-        ((CONSTANTS["c2"] - C["c3"]) / C["cn"]) * f_m
+    f_m = np.zeros_like(mag)
+    f_m = np.log(1.0 + np.exp(C["cn"] * (C["cm"] + delta_cm - mag)))
+    f_m = (CONSTANTS["c2"] * (mag - 6.0) +
+           ((CONSTANTS["c2"] - C["c3"]) / C["cn"]) * f_m -
+           (CONSTANTS["c2"] - C["c3"]) * delta_cm)
     return f_m
 
 
@@ -346,33 +520,38 @@ def get_phi(C, mag, ctx, nl0):
     return mdep * phi
 
 
-def get_source_scaling_terms(C, ctx, delta_ztor):
+def get_source_scaling_terms(C, ctx, delta_ztor, alpha_nm):
     """
     Returns additional source scaling parameters related to style of
     faulting, dip and top of rupture depth
     """
     f_src = np.zeros_like(ctx.mag)
     coshm = np.cosh(2.0 * np.clip(ctx.mag - 4.5, 0., None))
+
     # Style of faulting term
     pos = (30 <= ctx.rake) & (ctx.rake <= 150)
     neg = (-120 <= ctx.rake) & (ctx.rake <= -60)
+
     # reverse faulting flag
     f_src[pos] += C["c1a"] + (C["c1c"] / coshm[pos])
+
     # normal faulting flag
-    f_src[neg] += C["c1b"] + (C["c1d"] / coshm[neg])
+    f_src[neg] += (C["c1b"] + (C["c1d"] / coshm[neg])) * alpha_nm
+
     # Top of rupture term
     f_src += (C["c7"] + (C["c7b"] / coshm)) * delta_ztor
+
     # Dip term
     f_src += ((CONSTANTS["c11"] + (C["c11b"] / coshm)) *
               np.cos(np.radians(ctx.dip)) ** 2.0)
     return f_src
 
 
-def get_stddevs(clsname, C, ctx, mag, y_ref, f_nl_scaling):
+def get_stddevs(peer, C, ctx, mag, y_ref, f_nl_scaling):
     """
     Returns the standard deviation model described in equation 13
     """
-    if clsname == 'ChiouYoungs2014PEER':
+    if peer:
         # the standard deviation, which is fixed at 0.65 for every site
         return [0.65 * np.ones_like(ctx.vs30), 0, 0]
 
@@ -403,43 +582,63 @@ def get_tau(C, mag):
     return C['tau1'] + (C['tau2'] - C['tau1']) / 1.5 * mag_test
 
 
-def get_mean_stddevs(name, C, ctx):
+def get_mean_stddevs(region, C, ctx, imt, conf, usgs_bs=False, cy=False):
     """
     Return mean and standard deviation values
     """
     # Get ground motion on reference rock
-    ln_y_ref = get_ln_y_ref(name, C, ctx)
+    ln_y_ref = get_ln_y_ref(region, C, ctx, conf)
     y_ref = np.exp(ln_y_ref)
-    # Get the site amplification
-    # Get basin depth
-    dz1pt0 = _get_centered_z1pt0(name, ctx)
-    # for Z1.0 = 0.0 no deep soil correction is applied
-    dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
-    f_z1pt0 = get_basin_depth_term(name, C, dz1pt0)
+
+    # Get basin term
+    f_z1pt0 = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
+
     # Get linear amplification term
-    f_lin = get_linear_site_term(name, C, ctx)
+    f_lin = get_linear_site_term(region, C, ctx)
+
     # Get nonlinear amplification term
     f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
+
     # Get standard deviations
     sig, tau, phi = get_stddevs(
-        name, C, ctx, ctx.mag, y_ref, f_nl_scaling)
+        conf['peer'], C, ctx, ctx.mag, y_ref, f_nl_scaling)
 
     return mean, sig, tau, phi
 
 
 class ChiouYoungs2014(GMPE):
     """
-    Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
+    Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs.
 
-    Chiou, B. S.-J. and Youngs, R. R. (2014), "Updated of the Chiou and Youngs
+    Chiou, B. S.-J. and Youngs, R. R. (2014), "Update of the Chiou and Youngs
     NGA Model for the Average Horizontal Component of Peak Ground Motion and
     Response Spectra, Earthquake Spectra, 30(3), 1117 - 1153,
     DOI: 10.1193/072813EQS219M
+    
+    :param sigma_mu_epsilon:
+        Epsilon for the statistical uncertainty term.
+    :param use_hw:
+        Bool which if true turns on the hanging-wall effect.
+    :poram add_delta_c1:
+        Long-period adjustment parameter as described in Boore et al. (2022)
+        backbone paper.
+    :param alpha_nm:
+        Style-of-faulting correction for normal-faulting as described in Boore
+        et al. (2022) backbone paper. This correction is magnitude independent.
+    :param stress_par_host:
+        Stress parameter for the host-region in bars. Used in Boore et al.
+        (2022) backbone methodology.
+    :param stress_par_target:
+        Stress parameter for the target-region in bars. Used in Boore et
+        al. (2022) backbone methodology.
+    :param delta_gamma_tab:
+        Filename containing path adjustments as described in Boore et al.
+        (2022) backbone paper.
     """
-    adapted = False  # overridden in acme_2019
+    adapted = False  # Overridden in acme_2019
 
     #: Supported tectonic region type is active shallow crust
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
@@ -470,10 +669,64 @@ class ChiouYoungs2014(GMPE):
 
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
+        
+    def __init__(self, region='CAL', sigma_mu_epsilon=0.0, use_hw=True,
+                 add_delta_c1=False, alpha_nm=1.0, stress_par_host=None,
+                 stress_par_target=None, delta_gamma_tab=None,
+                 usgs_basin_scaling=False, cybershake_basin_adj=False):
 
-    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
-        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, **kwargs)
+        # set region
+        self.region = region
+
+        # set sigma_mu_epsilon 
         self.sigma_mu_epsilon = sigma_mu_epsilon
+
+        # set the conf dictionary
+        self.conf = {}
+        self.conf['peer'] = self.__class__.__name__.endswith('PEER')
+        self.conf['use_hw'] = use_hw 
+        self.conf['alpha_nm'] = alpha_nm
+        self.conf['add_delta_c1'] = add_delta_c1
+        self.conf['stress_par_host'] = stress_par_host
+        self.conf['stress_par_target'] = stress_par_target
+        
+        # The file with the `source function table` has a structure similar to
+        # a traditional coefficient table. The columns in the `source function
+        # table` are:
+        # - IMT             the intensity measure type (either PGA or SA)
+        # - S1FS            param
+        # - S1RS            param
+        # - S2FS            param
+        # - S2RS            param
+        # - chi             i.e. χFS2RS in equation 6
+        if stress_par_target is not None:
+            cwd = pathlib.Path(__file__).parent.resolve()
+            fname = os.path.join('chiou_youngs_2014',
+                                 'source_function_table.txt')
+            fpath = os.path.join(cwd, fname)
+            with open(fpath, encoding='utf8') as f:
+                tmp = f.read()
+            self.conf['source_function_table'] = CoeffsTable(
+                sa_damping=5, table=tmp)
+
+        # The file with the `path adjustment table` also has a structure which
+        # is similar to traditional coefficient table. The columns in the `path
+        # adjustment table` are:
+        # - IMT             the intensity measure type (either PGA or SA)
+        # - c0              param
+        # - c1              param
+        # - c2              param
+        # - c3              param
+        if delta_gamma_tab is not None:
+            with open(delta_gamma_tab, encoding='utf8') as f:
+                tmp = f.read()
+            self.conf['delta_gamma_tab'] = CoeffsTable(sa_damping=5, table=tmp)
+
+        # USGS basin scaling
+        self.usgs_basin_scaling = usgs_basin_scaling
+
+        # CyberShake basin adj
+        self.cybershake_basin_adj = cybershake_basin_adj
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -481,31 +734,35 @@ class ChiouYoungs2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        name = self.__class__.__name__
-        # reference to page 1144, PSA might need PGA value
-        pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(name, self.COEFFS[PGA()], ctx)
+        # Reference to page 1144, PSA might need PGA value
+        self.conf['imt'] = PGA()
+        pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
+            self.region, self.COEFFS[PGA()], ctx, PGA(), self.conf,
+            self.usgs_basin_scaling, self.cybershake_basin_adj)
+        # compute
         for m, imt in enumerate(imts):
+            self.conf['imt'] = imt
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
-                imt_mean, imt_sig, imt_tau, imt_phi = \
-                    get_mean_stddevs(name, self.COEFFS[imt], ctx)
-                # reference to page 1144
-                # Predicted PSA value at T ≤ 0.3s should be set equal to the value of PGA
-                # when it falls below the predicted PGA
+                imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
+                    self.region, self.COEFFS[imt], ctx, imt, self.conf,
+                    self.usgs_basin_scaling, self.cybershake_basin_adj)
+                # Reference to page 1144
+                # Predicted PSA value at T ≤ 0.3s should be set equal to the
+                # value of PGA when it falls below the predicted PGA
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 \
                     else imt_mean
-
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
 
     #: Coefficient tables are constructed from values in tables 1 - 5
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-IMT     c1      c1a     c1b     c1c     c1d     cn      cm    c2      c3    c4     c4a  crb   c5      chm     c6      c7      c7b     c8     c8a    c8b       c9     c9a    c9b     c11      c11b        cg1        cg2       cg3     phi1       phi2      phi3     phi4     phi5   phi6  gjpit  gwn      phi1jp  phi5jp   phi6jp     tau1    tau2    sig1    sig2    sig3    sig2jp
+IMT     c1      c1a     c1b     c1c     c1d     cn      cm    c2      c3    c4     c4a  crb   c5      chm     c6      c7      c7b     c8     c8a    c8b       c9     c9a    c9b     c11      c11b        cg1        cg2       cg3     phi1       phi2      phi3     phi4     phi5   phi6  gjpit  gwn      phi1jp  phi5jp   phi6jp     tau1     tau2    sig1    sig2    sig3    sig2jp
 pga   -1.5065  0.165  -0.255  -0.165  0.255  16.0875  4.9993  1.06  1.9636  -2.1  -0.5  50  6.4551  3.0956  0.4908  0.0352   0.0462  0.     0.2695  0.4833  0.9228  0.1202  6.8607  0.      -0.4536    -0.007146  -0.006758  4.2542  -0.521   -0.1417   -0.00701   0.102151  0.     300  1.5817  0.7594  -0.6846  0.459    800.        0.4     0.26    0.4912  0.3762  0.8     0.4528
 pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1  -0.5  50  5.8096  3.0514  0.4407  0.0324   0.0097  0.2154 0.2695  5.      0.3079  0.1     6.5     0       -0.3834    -0.001852  -0.007403  4.3439  -0.7936  -0.0699   -0.008444  5.41      0.0202 300. 2.2306  0.335   -0.7966  0.9488   800.        0.3894  0.2578  0.4785  0.3629  0.7504  0.3918
 0.01  -1.5065  0.165  -0.255  -0.165  0.255  16.0875  4.9993  1.06  1.9636  -2.1  -0.5  50  6.4551  3.0956  0.4908  0.0352   0.0462  0.     0.2695  0.4833  0.9228  0.1202  6.8607  0.      -0.4536    -0.007146  -0.006758  4.2542  -0.521   -0.1417   -0.00701   0.102151  0.     300  1.5817  0.7594  -0.6846  0.459    800.        0.4     0.26    0.4912  0.3762  0.8     0.4528
@@ -535,28 +792,20 @@ pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1
 """)
 
 
-class ChiouYoungs2014Japan(ChiouYoungs2014):
-    """
-    Regionalisation of the Chiou & Youngs (2014) GMPE for use with the
-    Japan far-field distance attuation scaling and site model
-    """
+# Regionalisation of the Chiou & Youngs (2014) GMPE for use with the
+# Japan far-field distance attuation scaling and site model
+add_alias('ChiouYoungs2014Japan', ChiouYoungs2014, region='JPN')
 
+# Adaption of the Chiou & Youngs (2014) GMPE for the the Italy far-field
+# attenuation scaling, but assuming the California site amplification model
+add_alias('ChiouYoungs2014Italy', ChiouYoungs2014, region='ITA')
 
-class ChiouYoungs2014Italy(ChiouYoungs2014):
-    """
-    Adaption of the Chiou & Youngs (2014) GMPE for the the Italy far-field
-    attenuation scaling, but assuming the California site amplification model
-    """
-
-
-class ChiouYoungs2014Wenchuan(ChiouYoungs2014):
-    """
-    Adaption of the Chiou & Youngs (2014) GMPE for the Wenchuan far-field
-    attenuation scaling, but assuming the California site amplification model.
-    It should be note that according to Chiou & Youngs (2014) this adjustment
-    is calibrated only for the M7.9 Wenchuan earthquake, so application to
-    other scenarios is at the user's own risk
-    """
+# Adaption of the Chiou & Youngs (2014) GMPE for the Wenchuan far-field
+# attenuation scaling, but assuming the California site amplification model.
+# It should be note that according to Chiou & Youngs (2014) this adjustment
+# is calibrated only for the M7.9 Wenchuan earthquake, so application to
+#  other scenarios is at the user's own risk
+add_alias('ChiouYoungs2014Wenchuan', ChiouYoungs2014, region='WEN')
 
 
 class ChiouYoungs2014PEER(ChiouYoungs2014):
@@ -599,7 +848,7 @@ class ChiouYoungs2014ACME2019(ChiouYoungs2014):
             C = self.COEFFS[imt]
             # intensity on a reference soil is used for both mean
             # and stddev calculations.
-            ln_y_ref = _get_ln_y_ref(self.__class__.__name__, ctx, C)
+            ln_y_ref = _get_ln_y_ref(self.region, ctx, C)
             # exp1 and exp2 are parts of eq. 12 and eq. 13,
             # calculate it once for both.
             exp1 = np.exp(C['phi3'] * (ctx.vs30.clip(-np.inf, 1130) - 360))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -18,16 +18,19 @@
 
 import os
 import csv
+import glob
 import logging
 import unittest
+import tokenize
 
 import numpy as np
 import pandas
-from openquake.baselib.general import all_equals, RecordBuilder
+from openquake.baselib.general import (
+    all_equals, RecordBuilder, random_filter, humansize)
 from openquake.hazardlib import contexts, imt
 
 NORMALIZE = False
-
+MAXSIZE = 600_000
 
 def _normalize(float_string):
     try:
@@ -116,8 +119,9 @@ def read_cmaker_df(gsim, csvfnames):
     cmap = {}
     for col in df.columns:
         try:
-            im = str(imt.from_string(col if col.startswith("AvgSA")
-                                     else col.upper()))
+            im = str(imt.from_string(
+                col if (col.startswith("AvgSA") or
+                        col.startswith("SDi")) else col.upper()))
         except KeyError:
             pass
         else:
@@ -198,15 +202,27 @@ class BaseGSIMTestCase(unittest.TestCase):
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
     GSIM_CLASS = None
 
+    def check_large_files(cls, fnames):
+        """
+        Log a warning for large files
+        """
+        for fname in fnames:
+            size = os.path.getsize(fname)
+            hsize = humansize(size)
+            if size > MAXSIZE:
+                raise ValueError(f'{cls.__module__}: {fname} is {hsize}')
+
     def check(self, *filenames, max_discrep_percentage,
               std_discrep_percentage=None, truncation_level=99., **kwargs):
         if std_discrep_percentage is None:
             std_discrep_percentage = max_discrep_percentage
         fnames = [os.path.join(self.BASE_DATA_PATH, filename)
                   for filename in filenames]
+        self.check_large_files(fnames)
         if NORMALIZE:
             normalize(fnames)
             return
+
         gsim = self.GSIM_CLASS(**kwargs)
         out_types = ["MEAN"]
         for sdt in contexts.STD_TYPES:
@@ -242,3 +258,44 @@ class BaseGSIMTestCase(unittest.TestCase):
                         for par in cmaker.REQUIRES_RUPTURE_PARAMETERS:
                             msg[par] = getattr(ctx, par)
                         raise ValueError(msg)
+
+
+def _reduce_files(fnames, redfactor):
+    # returns (before, after) pair
+    if not fnames:
+        return 0, 0
+
+    dfs = []
+    for fname in fnames:
+        dfs.append(pandas.read_csv(fname))
+    before = [len(df) for df in dfs]
+    after = []
+    for df, fname in zip(dfs, fnames):
+        df = random_filter(df, redfactor)
+        df.to_csv(fname, index=False)
+        after.append(len(df))
+    return sum(before), sum(after)
+
+
+def reduce_gsim_test(fname, redfactor):
+    """
+    :param fname: a test file, like campbell_bozorgnia_2014_test.py
+    :param redfactor: reduction factor in the range 0..1
+    :returns: a message telling how much the CSV files were reduced
+
+    Reduce the mean and stddev files used by a gsim test by the redfactor
+    """
+    fnames = set()
+    with open(fname) as f:
+        for token in tokenize.generate_tokens(f.readline):
+            # parse literal strings corresponding to csv files
+            if token.type == 3 and token.string.endswith((".csv'", '.csv"')):
+                name = token.string[1:-1]  # strip quotes
+                fname = os.path.join(BaseGSIMTestCase.BASE_DATA_PATH, name)
+                if '%s' in name:  # boore_2014_test.py
+                    for f in glob.glob(fname.replace('%s', '*')):
+                        fnames.add(f)
+                else:
+                    fnames.add(fname)
+    before_after = _reduce_files(fnames, redfactor)
+    return 'Reduced %d lines -> %d lines' % tuple(before_after)

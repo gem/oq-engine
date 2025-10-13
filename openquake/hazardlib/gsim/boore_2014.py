@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,8 +28,11 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
+    _get_z1pt0_usgs_basin_scaling
 
-#: Equation constants that are IMT-independent
+
+# Equation constants that are IMT-independent
 CONSTS = {
     "Mref": 4.5,
     "Rref": 1.0,
@@ -39,22 +42,66 @@ CONSTS = {
     "v1": 225.0,
     "v2": 300.0}
 
+# CyberShake basin adjustments for BSSA14 (only applied above 
+# 1.9 seconds so don't provide dummy values listed below 2 s)
+# Taken from https://code.usgs.gov/ghsc/nshmp/nshmp-lib/-/blob/main/src/main/resources/gmm/coeffs/BSSA14.csv?ref_type=heads
+COEFFS_CY = CoeffsTable(sa_damping=5, table="""\
+    IMT          f6cy        f7cy       dz1cy
+    2.000    0.296000    0.163000    0.550000
+    3.000    0.503000    0.277000    0.550000
+    4.000    0.878000    0.483000    0.550000
+    5.000    1.180000    0.457000    0.388695
+    7.500    1.480000    0.549000    0.370751
+    10.00    1.340000    0.498000    0.370755
+    """)
 
-def _get_basin_depth_term(region, C, ctx, period):
+METRES_PER_KM = 1000.
+
+
+def _get_basin_term(C, ctx, region, imt, usgs_bs=False, cy=False):
     """
     In the case of the base model the basin depth term is switched off.
     Therefore we return an array of zeros.
     """
-    if region == "nobasin" or period < 0.65:  # switched off
-        return np.zeros(len(ctx.vs30), dtype=float)
-    bmodel = (japan_basin_model(ctx.vs30) if region == "JPN"
-              else california_basin_model(ctx.vs30))
-    f_dz1 = C["f7"] + np.zeros(len(ctx.vs30), dtype=float)
-    f_ratio = C["f7"] / C["f6"]
-    dz1 = (ctx.z1pt0 / 1000.0) - bmodel
-    idx = dz1 <= f_ratio
-    f_dz1[idx] = C["f6"] * dz1[idx]
-    return f_dz1
+    # Get basin model
+    if region == "JPN":
+        bmodel_mu_z1 = japan_basin_model(ctx.vs30)
+    else:
+        bmodel_mu_z1 = california_basin_model(ctx.vs30)
+
+    # Get z1pt0
+    if hasattr(ctx, "z1pt0"):
+        z1pt0 = ctx.z1pt0.copy() # Site z1pt0 in metres
+        # Use GMM's vs30 to z1pt0 for non-measured values
+        mask = z1pt0 == -999
+        z1pt0[mask] = bmodel_mu_z1[mask] * METRES_PER_KM # mu_z1 to metres
+
+    # Get USGS basin scaling factor if required
+    if usgs_bs:
+        usgs_baf = _get_z1pt0_usgs_basin_scaling(z1pt0, imt.period)
+    else:
+        usgs_baf = np.ones(len(ctx.vs30))
+
+    # Get basin model or return no basin term
+    if region == "nobasin" or imt.period < 0.65:  
+        return np.zeros(len(ctx.vs30), dtype=float) # Switched off
+    
+    # If cybershake basin adj and SA(T > 1.9)
+    if cy and imt.period > 1.9: 
+        C_cy = COEFFS_CY[imt]
+        dz1_cy = np.full(len(ctx.vs30), C_cy["dz1cy"])
+        cy_csim = 0.1 # CY_CSIM variable in java code
+        f_dz1 = np.where(dz1_cy <= C_cy["f6cy"],
+                         C_cy["f6cy"] * dz1_cy,
+                         C_cy["f7cy"]) + cy_csim
+    
+    # Regular basin term
+    else:
+        dz1 = (z1pt0 / METRES_PER_KM) - bmodel_mu_z1 # Convert site z1pt0 to km
+        f_ratio = C["f7"] / C["f6"]
+        f_dz1 = np.where(dz1 <= f_ratio, C["f6"] * dz1, C["f7"])
+        
+    return f_dz1 * usgs_baf
 
 
 def _get_inter_event_tau(C, mag):
@@ -194,7 +241,8 @@ def _get_pga_on_rock(kind, region, sof, C, ctx):
                   _get_path_scaling(kind, region, C, ctx))
 
 
-def _get_site_scaling(kind, region, C, pga_rock, ctx, period, rjb):
+def _get_site_scaling(kind, region, C, pga_rock, ctx, imt, rjb,
+                      usgs_bs=False, cy=False):
     """
     Returns the site-scaling term (equation 5), broken down into a
     linear scaling, a nonlinear scaling and a basin scaling term
@@ -204,7 +252,7 @@ def _get_site_scaling(kind, region, C, pga_rock, ctx, period, rjb):
     if kind == 'stewart':
         fbd = 0.  # there is no basin term in the Stewart models
     else:
-        fbd = _get_basin_depth_term(region, C, ctx, period)
+        fbd = _get_basin_term(C, ctx, region, imt, usgs_bs, cy)
     return flin + fnl + fbd
 
 
@@ -273,11 +321,14 @@ class BooreEtAl2014(GMPE):
 
     kind = "base"
 
-    def __init__(self, region='nobasin', sof=True, sigma_mu_epsilon=0.0, **kwargs):
-        super().__init__(sigma_mu_epsilon = sigma_mu_epsilon, **kwargs)
+    def __init__(self, region='nobasin', sof=True, sigma_mu_epsilon=0.0,
+                 usgs_basin_scaling=False, cybershake_basin_adj=False):
         self.region = region
         self.sof = sof
         self.sigma_mu_epsilon = sigma_mu_epsilon
+        self.usgs_basin_scaling = usgs_basin_scaling
+        self.cybershake_basin_adj = cybershake_basin_adj
+
         if region != "nobasin":  # z1pt0 is used if period >= 0.65
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
 
@@ -286,7 +337,11 @@ class BooreEtAl2014(GMPE):
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-        """
+        """ 
+        if self.usgs_basin_scaling and self.region == 'nobasin':
+            raise ValueError('USGS basin scaling requires a '
+                             'basin region to be specified.')
+
         C_PGA = self.COEFFS[PGA()]
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
@@ -296,13 +351,15 @@ class BooreEtAl2014(GMPE):
                 _get_magnitude_scaling_term(self.sof, C, ctx) +
                 _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
-                                  C, pga_rock, ctx, imt.period, ctx.rjb))
+                                  C, pga_rock, ctx, imt, ctx.rjb,
+                                  self.usgs_basin_scaling,
+                                  self.cybershake_basin_adj))
             if self.sigma_mu_epsilon:
                 mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\
-    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2         tau1         tau2
+    IMT            e0          e1          e2          e3         e4          e5          e6         Mh          c1         c2          c3          h        Dc3           c            Vc          f4          f5          f6          f7           R1           R2        DfR        DfV         f1         f2       tau1       tau2      
     pgv      5.037000    5.078000    4.849000    5.033000   1.073000   -0.153600    0.225200   6.200000   -1.243000   0.148900   -0.003440   5.300000   0.000000   -0.840000   1300.000000   -0.100000   -0.008440   -9.900000   -9.900000   105.000000   272.000000   0.082000   0.080000   0.644000   0.552000   0.401000   0.346000
     pga      0.447300    0.485600    0.245900    0.453900   1.431000    0.050530   -0.166200   5.500000   -1.134000   0.191700   -0.008088   4.500000   0.000000   -0.600000   1500.000000   -0.150000   -0.007010   -9.900000   -9.900000   110.000000   270.000000   0.100000   0.070000   0.695000   0.495000   0.398000   0.348000
     0.010    0.453400    0.491600    0.251900    0.459900   1.421000    0.049320   -0.165900   5.500000   -1.134000   0.191600   -0.008088   4.500000   0.000000   -0.603720   1500.200000   -0.148330   -0.007010   -9.900000   -9.900000   111.670000   270.000000   0.096000   0.070000   0.698000   0.499000   0.402000   0.345000

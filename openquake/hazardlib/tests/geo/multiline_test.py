@@ -155,7 +155,7 @@ def get_lines_figure09():
 
     # Projection
     oprj = geo.utils.OrthographicProjection
-    proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
+    proj = oprj.from_(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     # Section trace 1
     px = np.array([8, -9.])
@@ -191,7 +191,7 @@ def get_lines_figure08():
 
     # Projection
     oprj = geo.utils.OrthographicProjection
-    proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
+    proj = oprj.from_(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     px = np.array([-2.1416918, -40.01534, -43.44729])
     py = np.array([13.50913, 47.34280, 55.86207])

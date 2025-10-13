@@ -1,4 +1,4 @@
-﻿taxonomy,consequence,loss_type,minor,major
+﻿risk_id,consequence,loss_type,minor,major
 bridge1,non_operational,structural,0,1
 bridge2,non_operational,structural,0,1
 bridge3,non_operational,structural,0,1

@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -60,7 +60,8 @@ class TruncatedGRMFD(BaseMFD):
     to a histogram. See :meth:`_get_min_mag_and_num_bins`.
     """
     MODIFICATIONS = {'increment_max_mag', 'set_max_mag', 'increment_b',
-                     'set_ab', 'set_bGR'}
+                     'set_ab', 'set_ab_max_mag', 'set_bGR',
+                     'increment_max_mag_no_mo_balance'}
 
     def __init__(self, min_mag, max_mag, bin_width, a_val, b_val):
         self.min_mag = min_mag
@@ -208,6 +209,16 @@ class TruncatedGRMFD(BaseMFD):
                           - 9.05
                           - math.log10(self.b_val))
 
+    def modify_increment_max_mag_no_mo_balance(self, value):
+        """
+        Apply relative maximum magnitude modification.
+
+        :param value:
+            A float value to add to ``max_mag``.
+        """
+        self.max_mag += value
+
+
     def modify_increment_max_mag(self, value):
         """
         Apply relative maximum magnitude modification.
@@ -275,6 +286,24 @@ class TruncatedGRMFD(BaseMFD):
         """
         self.b_val = b_val
         self.a_val = a_val
+
+    def modify_set_ab_max_mag(self, a_val, b_val, max_mag):
+        """
+        Apply absolute ``a`` and ``b`` values modification, plus max_mag
+        modification.
+
+        :param a_val:
+            A float value to use as a new ``a_val``.
+        :param b_val:
+            A float value to use as a new ``b_val``.
+        :param max_mag:
+            A float value to assign to ``max_mag``.
+
+        No recalculation of other Gutenberg-Richter parameters is done.
+        """
+        self.b_val = b_val
+        self.a_val = a_val
+        self.max_mag = max_mag
 
     @classmethod
     def from_moment(cls, min_mag, max_mag, bin_width, b_val, moment_rate,

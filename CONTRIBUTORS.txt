@@ -59,12 +59,13 @@ Richard Styron           (@cossatot)            July 2019
 Kris Vanneste            (@krisvanneste)        September 2019
 Alberto Chiusole         (@bebosudo)            November 2019
 Iason Grigoratos         (@jasongrig)           April 2020
-Francis Jenner Bernales  (@ftbernales)          August 2020
+Francis Bernales         (@ftbernales)          August 2020
 Athanasios Papadopoulos  (@thpap)               September 2020
 Viktor Polak             (@viktor76525)         November 2020
 Thomas Chartier          (@tomchartier)         December 2020
 Claudia Mascandola       (@mascandola)          December 2020
 Nicolas Schmid           (@schmidni)            March 2021
+Antonio Ettorre          (@antonioettorre)      April 2021
 Stanley Sayson           (@stansays)            July 2021
 Nico Kuehn               (@nikuehn)             July 2021
 Elena Manea              (@manea)               August 2021
@@ -84,6 +85,21 @@ Astha Poudel             (@asthapoudel)         July 2023
 Lana Todorovic           (@LanaTodorovic93)     August 2023
 Christopher Brooks       (@CB-quakemodel)       September 2023
 Chris di Caprio          (@chrisdicaprio)       January 2024
+Michal Kolaj             (@MichalKolaj)         March 2024
+Kirsty Bayliss           (@kirstybayliss)       April 2024 
+Fatemeh Alishahiha       (@FatemehAlsh)         May 2024
+Anna Rood                (@AnnaRood)            May 2024
+Kyle Smith               (@kslytherin)          June 2024
+Savvinos Aristeidou      (@Savvinos-Aristeidou) July 2024
+Davit Shahnazaryan       (@davitshahnazaryan3)  July 2024
+Enrico Abcede            (@emabcede30)          September 2024
+Ilaria Oliveti           (@IlariaOliveti)       October 2024
+Catarina Costa           (@catarinaquintela)    February 2025
+Mara Mita                (@MaraMita)            February 2025
+Valeria Cascone          (@ValeriaCascone)      February 2025
+Baran Güryuva            (@BaranGuryuva)        May 2025
+Guillermo Aldama-Bustos  (@aldabus)             August 2025
+Myles Turner             (@mylesturner99)       August 2025
 
 Project management
 ------------------

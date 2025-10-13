@@ -2,6 +2,9 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/macos/arm64/py310/h3-3.7.7-cp310-cp310-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py310/charset_normalizer-3.3.2-cp310-cp310-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py310/pyzmq-26.0.3-cp310-cp310-macosx_10_15_universal2.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/pandas-2.0.3-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/kiwisolver-1.4.5-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/h5py-3.10.0-cp310-cp310-macosx_11_0_arm64.whl
@@ -18,7 +21,6 @@ https://wheelhouse.openquake.org/macos/arm64/py310/psutil-5.9.6-cp310-abi3-macos
 https://wheelhouse.openquake.org/macos/arm64/py310/fiona-1.9.5-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/GDAL-3.7.3-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/pyproj-3.6.1-cp310-cp310-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py310/pyzmq-25.1.1-cp310-cp310-macosx_10_15_universal2.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/setproctitle-1.3.3-cp310-cp310-macosx_10_9_universal2.whl
 #pp
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl
@@ -32,8 +34,10 @@ https://wheelhouse.openquake.org/v3/py/cligj-0.7.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/coloredlogs-15.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/cycler-0.12.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/decorator-5.1.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/Django-4.2.10-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/django-4.2.21-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_pam-2.1.2-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/django_cookie_consent-0.6.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/django_cors_headers-4.3.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/docutils-0.20.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flake8-6.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flatbuffers-23.5.26-py2.py3-none-any.whl
@@ -48,13 +52,11 @@ https://wheelhouse.openquake.org/v3/py/munch-4.0.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/networkx-3.2.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/packaging-23.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pbr-6.0.0-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/pluggy-1.3.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/protobuf-4.25.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pycodestyle-2.11.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyflakes-3.1.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-3.1.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyreadline3-3.4.1-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/pyshp-2.3.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/python_pam-2.0.2-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pytz-2023.3-py2.py3-none-any.whl
@@ -67,3 +69,6 @@ https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/tzdata-2023.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/urllib3-2.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/zipp-3.17.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/pluggy-1.5.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/pytest-8.3.3-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/django_appconf-1.0.6-py3-none-any.whl

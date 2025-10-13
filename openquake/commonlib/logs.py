@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,16 +22,17 @@ import os
 import re
 import getpass
 import logging
-import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
 
+UTC = timezone.utc
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
+SIMPLE_TYPES = (str, int, float, bool, datetime, list, tuple, dict, type(None))
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 MODELS = []  # to be populated in get_tag
 
@@ -41,11 +42,16 @@ def get_tag(job_ini):
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
     if not MODELS:  # first time
-        MODELS.extend(readinput.read_mosaic_df().code)
+        MODELS.extend(readinput.read_mosaic_df(buffer=.1).code)
     splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
     if len(splits) > 3 and splits[-3] in MODELS:
         return splits[-3]  # EUR
     return ''
+
+
+def on_workers(action):
+    master = w.WorkerMaster(-1)  # current job
+    return getattr(master, action[8:])()  # workers_(stop|kill)
 
 
 def dbcmd(action, *args):
@@ -55,11 +61,19 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
+    # make sure the passed arguments are simple (i.e. not Django
+    # QueryDict that cannot be deserialized without settings.py)
+    for arg in args:
+        if type(arg) not in SIMPLE_TYPES:
+            raise TypeError(f'{arg} is not a simple type')
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
-    if dbhost == 'local':
+    if (action.startswith('workers_') and config.zworkers.host_cores
+          == '127.0.0.1 -1'):  # local zmq
+        return on_workers(action)
+    elif dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
+        # no server mode, access the database directly
         if action.startswith('workers_'):
-            master = w.WorkerMaster()  # zworkers
-            return getattr(master, action[8:])()
+            return on_workers(action)
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)
@@ -67,6 +81,8 @@ def dbcmd(action, *args):
             return dbapi.db(action, *args)
         else:
             return func(dbapi.db, *args)
+
+    # send a command to the database
     tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
     sock = zeromq.Socket(tcp, zeromq.zmq.REQ, 'connect',
                          timeout=600)  # when the system is loaded
@@ -82,7 +98,7 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     Log on the database
     """
     task = 'task #%d' % task_no
-    return dbcmd('log', job_id, datetime.utcnow(), level, task, msg)
+    return dbcmd('log', job_id, datetime.now(UTC), level, task, msg)
 
 
 def get_datadir():
@@ -179,7 +195,7 @@ class LogDatabaseHandler(logging.Handler):
         self.job_id = job_id
 
     def emit(self, record):
-        dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
+        dbcmd('log', self.job_id, datetime.now(UTC), record.levelname,
               '%s/%s' % (record.processName, record.process),
               record.getMessage())
 
@@ -188,24 +204,24 @@ class LogContext:
     """
     Context manager managing the logging functionality
     """
-    multi = False
     oqparam = None
 
-    def __init__(self, job_ini, calc_id, log_level='info', log_file=None,
+    def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, tag=''):
+        if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
+            raise RuntimeError('You forgot to run oq engine --upgrade-db -y')
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
-        if isinstance(job_ini, dict):  # dictionary of parameters
-            self.params = job_ini
-        else:  # path to job.ini file
-            self.params = readinput.get_params(job_ini)
+        self.params = params
         if 'inputs' not in self.params:  # for reaggregate
             self.tag = tag
         else:
-            self.tag = tag or get_tag(self.params['inputs']['job_ini'])
+            inputs = self.params['inputs']
+            self.tag = tag or get_tag(inputs.get('job_ini', '<in-memory>'))
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
+        calc_id = int(params.get('job_id', 0))
         if calc_id == 0:
             datadir = get_datadir()
             self.calc_id = dbcmd(
@@ -217,12 +233,9 @@ class LogContext:
             if os.path.exists(path):  # sanity check on the calculation ID
                 raise RuntimeError('There is a pre-existing file %s' % path)
             self.usedb = True
-        elif calc_id == -1:
-            # only works in single-user situations
-            self.calc_id = get_last_calc_id() + 1
-            self.usedb = False
         else:
             # assume the calc_id was alreay created in the db
+            assert calc_id > 0, calc_id
             self.calc_id = calc_id
             self.usedb = True
 
@@ -253,12 +266,19 @@ class LogContext:
             handler.setFormatter(
                 logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S'))
             logging.root.addHandler(handler)
+        if os.environ.get('NUMBA_DISABLE_JIT'):
+            logging.warning('NUMBA_DISABLE_JIT is set')
         return self
 
     def __exit__(self, etype, exc, tb):
         if tb:
-            logging.critical(traceback.format_exc())
-            dbcmd('finish', self.calc_id, 'failed')
+            if etype is SystemExit:
+                dbcmd('finish', self.calc_id, 'aborted')
+            else:
+                # remove StreamHandler to avoid logging twice
+                logging.root.removeHandler(self.handlers[-1])
+                logging.exception(f'{etype.__name__}: {exc}')
+                dbcmd('finish', self.calc_id, 'failed')
         else:
             dbcmd('finish', self.calc_id, 'complete')
         for handler in self.handlers:
@@ -299,5 +319,7 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     """
     if job_ini in ('job', 'calc'):  # backward compatibility
         job_ini = dummy
-    return LogContext(job_ini, 0, log_level, log_file,
+    if not isinstance(job_ini, dict):
+        job_ini = readinput.get_params(job_ini)
+    return LogContext(job_ini, log_level, log_file,
                       user_name, hc_id, host, tag)

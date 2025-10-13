@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2023 GEM Foundation
+# Copyright (C) 2013-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -284,6 +284,5 @@ class DerrasEtAl2014RhypoGermany(DerrasEtAl2014):
     REQUIRES_DISTANCES = {'rjb', 'rhypo'}
     REQUIRES_RUPTURE_PARAMETERS = {"rake", "mag", "hypo_depth", "width"}
 
-    def __init__(self, adjustment_factor=1.0, **kwargs):
-        super().__init__(adjustment_factor=adjustment_factor, **kwargs)
+    def __init__(self, adjustment_factor=1.0):
         self.adjustment_factor = np.log(adjustment_factor)

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><shakemap_grid xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://earthquake.usgs.gov/eqcenter/shakemap" xsi:schemaLocation="http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd" event_id="us6000f65h" shakemap_id="us6000f65h" shakemap_version="15" code_version="4.0.2+646.g680fce1" process_timestamp="2022-08-11T23:59:19" shakemap_originator="us" map_status="automatic" shakemap_event_type="ACTUAL">
+<event event_id="us6000f65h" magnitude="7.2" depth="10.0" lat="18.4335" lon="-73.4822" event_timestamp="2021-08-14T12:29:08" event_network="us" event_description="10 km SSE of Petit Trou de Nippes, Nippes, HT" intensity_observations="199" seismic_stations="8" point_source="False" />
+<grid_specification lon_min="-77.2667" lat_min="15.1333" lon_max="-70.0000" lat_max="21.6333" nominal_lon_spacing="0.0167" nominal_lat_spacing="0.0167" nlon="437" nlat="391"/><grid_field index="1" name="LON" units="dd" />
+<grid_field index="2" name="LAT" units="dd" />
+<grid_field index="3" name="MMI" units="intensity" />
+<grid_field index="4" name="PGA" units="%g" />
+<grid_field index="5" name="PGV" units="cm/s" />
+<grid_field index="6" name="PSA03" units="%g" />
+<grid_field index="7" name="PSA10" units="%g" />
+<grid_field index="8" name="PSA30" units="%g" />
+<grid_field index="9" name="SVEL" units="m/s" />
+<grid_data>
+-77.2667 21.6333 3.6 0.1857 1.308 0.5959 1.635 0.6872 237.1
+-77.2500 21.6333 3.6 0.1871 1.308 0.5987 1.633 0.6851 238.5
+-77.2333 21.6333 3.7 0.2037 1.47 0.6864 1.914 0.8019 203.7
+-77.2167 21.6333 3.7 0.2105 1.529 0.7207 2.017 0.8436 194
+-77.2000 21.6333 3.7 0.2066 1.47 0.6921 1.907 0.7963 206.3
+-70.0000 15.1333 3.1 0.09954 0.6174 0.2354 0.5971 0.2588 600
+</grid_data>
+</shakemap_grid>

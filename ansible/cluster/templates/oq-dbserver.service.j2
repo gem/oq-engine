@@ -6,7 +6,7 @@ After=network.target
 [Service]
 User=openquake
 Group=openquake
-Environment=
+Environment=OQ_WORKERPOOL_ERROR=1
 WorkingDirectory={{ workdir_services }}
 ExecStart=/opt/openquake/bin/oq dbserver start -f
 Restart=always

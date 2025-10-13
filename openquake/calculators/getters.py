@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2023 GEM Foundation
+# Copyright (C) 2018-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,16 +15,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
+import os
+import copy
 import operator
+import collections
 import numpy
 
 from openquake.baselib import general, hdf5
-from openquake.hazardlib import probability_map, stats
+from openquake.hazardlib.map_array import MapArray
+from openquake.hazardlib.contexts import read_cmakers, get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
-from openquake.hazardlib.source.rupture import (
-    BaseRupture, RuptureProxy, get_ebr)
-from openquake.commonlib import datastore
+from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
+from openquake.commonlib.calc import get_proxies
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -34,26 +36,28 @@ TWO24 = 2 ** 24
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 weight = operator.itemgetter('n_occ')
+slice_dt = numpy.dtype([('idx', U32), ('start', int), ('stop', int)])
 
 
 class NotFound(Exception):
     pass
 
 
-def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
+def build_stat_curve(hcurve, imtls, stat, weights, wget, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
-    poes = hcurve.array.T  # shape R, L
+    poes = hcurve.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
-    if isinstance(weights, list):  # IMT-dependent weights
+    
+    if weights.shape[1] > 1:  # IMT-dependent weights
         # this is slower since the arrays are shorter
         for imt in imtls:
             slc = imtls(imt)
-            ws = [w[imt] for w in weights]
-            if sum(ws) == 0:  # expect no data for this IMT
+            ws = wget(weights, imt)
+            if not ws.sum():  # expect no data for this IMT
                 continue
             if use_rates:
                 array[slc, 0] = to_probs(stat(to_rates(poes[:, slc]), ws))
@@ -61,10 +65,10 @@ def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
                 array[slc, 0] = stat(poes[:, slc], ws)
     else:
         if use_rates:
-            array[:, 0] = to_probs(stat(to_rates(poes), weights))
+            array[:, 0] = to_probs(stat(to_rates(poes), weights[:, -1]))
         else:
-            array[:, 0] = stat(poes, weights)
-    return probability_map.ProbabilityCurve(array)
+            array[:, 0] = stat(poes, weights[:, -1])
+    return array
 
 
 def sig_eps_dt(imts):
@@ -131,40 +135,176 @@ class HcurvesGetter(object):
         return weights @ curves
 
 
-class PmapGetter(object):
+# NB: using 32 bit ratemaps
+def get_pmaps_gb(dstore, full_lt=None):
+    """
+    :returns: memory required on the master node to keep the pmaps
+    """
+    N = len(dstore['sitecol/sids'])
+    L = dstore['oqparam'].imtls.size
+    full_lt = full_lt or dstore['full_lt'].init()
+    if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+        trt_smrs = [[0]]
+    else:
+        trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
+    trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
+    max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
+    return max_gb, trt_rlzs
+
+
+def get_num_chunks_sites(dstore):
+    """
+    :returns: (number of postclassical tasks to generate, number of sites)
+
+    It is 20 times the number of GB required to store the rates.
+    """
+    N = len(dstore['sitecol/sids'])
+    max_chunks = min(dstore['oqparam'].max_sites_disagg, N)
+    try:
+        req_gb = dstore['source_groups'].attrs['req_gb']
+    except KeyError:
+        return max_chunks, N
+    chunks = max(int(20 * req_gb), max_chunks)
+    return chunks, N
+
+
+def map_getters(dstore, full_lt=None, disagg=False):
+    """
+    :returns: a list of pairs (MapGetter, weights)
+    """
+    oq = dstore['oqparam']
+    # disaggregation is meant for few sites, i.e. no tiling
+    n, N = get_num_chunks_sites(dstore)
+    if disagg and N > n:
+        raise ValueError('There are %d sites but only %d chunks' % (N, n))
+
+    # full_lt is None in classical_risk, classical_damage
+    full_lt = full_lt or dstore['full_lt'].init()
+    R = full_lt.get_num_paths()
+    _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
+    if oq.fastmean and not disagg:  # in classical
+        # pass gweights
+        weights = numpy.concatenate([cm.wei for cm in read_cmakers(dstore)])
+        trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
+    else:
+        attrs = vars(full_lt)
+        weights = [full_lt.weights]
+        for label in oq.site_labels:
+            flt = copy.copy(full_lt)
+            flt.__dict__.update(attrs)
+            flt.gsim_lt = dstore['gsim_lt' + label]
+            flt.init()
+            weights.append(full_lt.weights)
+    fnames = [dstore.filename]
+    try:
+        scratch_dir = dstore.hdf5.attrs['scratch_dir']
+    except KeyError:  # no tiling
+        pass
+    else:
+        for f in os.listdir(scratch_dir):
+            if f.endswith('.hdf5'):
+                fnames.append(os.path.join(scratch_dir, f))
+    out = []
+    for chunk in range(n):
+        getter = MapGetter(fnames, chunk, trt_rlzs, R, oq)
+        getter.weights = weights
+        if oq.site_labels:
+            getter.ilabels = dstore['sitecol'].ilabel
+        out.append(getter)
+    return out
+
+
+class ZeroGetter(object):
+    """
+    Return an array of zeros of shape (L, R)
+    """
+    def __init__(self, L, R):
+        self.L = L
+        self.R = R
+
+    def get_hazard(self):
+        return numpy.zeros((self.L, self.R))
+
+
+class CurveGetter(object):
+    """
+    Hazard curve builder used in classical_risk/classical_damage.
+
+    :param sid: site index
+    :param rates: array of shape (L, G) for the given site
+    """
+    @classmethod
+    def build(cls, dstore):
+        """
+        :returns: a dictionary sid -> CurveGetter
+        """
+        rates = {}
+        for mgetter in map_getters(dstore):
+            pmap = mgetter.init()
+            for sid in pmap:
+                rates[sid] = pmap[sid]  # shape (L, G)
+        dic = collections.defaultdict(lambda: ZeroGetter(mgetter.L, mgetter.R))
+        for sid in rates:
+            dic[sid] = cls(sid, rates[sid], mgetter.trt_rlzs, mgetter.R)
+        return dic                
+
+    def __init__(self, sid, rates, trt_rlzs, R):
+        self.sid = sid
+        self.rates = rates
+        self.trt_rlzs = trt_rlzs
+        self.R = R
+
+    def get_hazard(self):
+        r0 = numpy.zeros((len(self.rates), self.R))
+        for g, t_rlzs in enumerate(self.trt_rlzs):
+            rlzs = t_rlzs % TWO24
+            rates = self.rates[:, g]
+            for rlz in rlzs:
+                r0[:, rlz] += rates
+        return to_probs(r0)
+
+
+class DeltaRatesGetter(object):
+    """
+    Read the delta rates from an aftershock datastore
+    """
+    def __init__(self, dstore):
+        self.dstore = dstore
+
+    def __call__(self, src_id):
+        with self.dstore.open('r') as dstore:
+            return dstore['delta_rates'][src_id]
+
+
+class MapGetter(object):
     """
     Read hazard curves from the datastore for all realizations or for a
     specific realization.
-
-    :param dstore: a DataStore instance or file system path to it
-    :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, full_lt, slices, imtls=(), poes=(), use_rates=0):
-        self.filename = dstore if isinstance(dstore, str) else dstore.filename
-        if len(full_lt.weights[0].dic) == 1:  # no weights by IMT
-            self.weights = numpy.array([w['weight'] for w in full_lt.weights])
-        else:
-            self.weights = full_lt.weights
-        self.imtls = imtls
-        self.poes = poes
-        self.use_rates = use_rates
-        self.num_rlzs = len(full_lt.weights)
+    def __init__(self, filenames, idx, trt_rlzs, R, oq):
+        self.filenames = filenames
+        self.idx = idx
+        self.trt_rlzs = trt_rlzs
+        self.R = R
+        self.imtls = oq.imtls
+        self.poes = oq.poes
+        self.use_rates = oq.use_rates
         self.eids = None
-        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
-            self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
-        else:
-            self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-        self.slices = slices
-        self._pmap = {}
+        self.ilabels = ()  # overridden in case of ilabels
+        self._map = {}
 
     @property
     def sids(self):
         self.init()
-        return list(self._pmap)
+        return list(self._map)
 
     @property
     def imts(self):
         return list(self.imtls)
+
+    @property
+    def G(self):
+        return len(self.trt_rlzs)
 
     @property
     def L(self):
@@ -173,117 +313,64 @@ class PmapGetter(object):
     @property
     def N(self):
         self.init()
-        return len(self._pmap)
+        return len(self._map)
 
     @property
     def M(self):
         return len(self.imtls)
 
-    @property
-    def R(self):
-        return len(self.weights)
-
     def init(self):
         """
-        Build the probability curves from the underlying dataframes
+        Build the _map from the underlying dataframes
         """
-        if self._pmap or len(self.slices) == 0:
-            return self._pmap
-        G = len(self.trt_rlzs)
-        with hdf5.File(self.filename) as dstore:
-            rates_df = dstore.read_df('_rates', slices=self.slices)
-            for sid, df in rates_df.groupby('sid'):
-                try:
-                    array = self._pmap[sid].array
-                except KeyError:
-                    array = numpy.zeros((self.L, G))
-                    self._pmap[sid] = probability_map.ProbabilityCurve(
-                        array)
-                array[df.lid, df.gid] = df.rate
-        return self._pmap
-
-    # used in risk calculations where there is a single site per getter
-    def get_hazard(self, gsim=None):
-        """
-        :param gsim: ignored
-        :returns: a probability curve of shape (L, R) for the given site
-        """
-        self.init()
-        if not self.sids:
-            # this happens when the poes are all zeros, as in
-            # classical_risk/case_3 for the first site
-            return probability_map.ProbabilityCurve(
-                numpy.zeros((self.L, self.num_rlzs)))
-        return self.get_hcurve(self.sids[0])
+        if self._map:
+            return self._map
+        for fname in self.filenames:
+            with hdf5.File(fname) as dstore:
+                slices = dstore['_rates/slice_by_idx'][:]
+                slices = slices[slices['idx'] == self.idx]
+                for start, stop in zip(slices['start'], slices['stop']):
+                    rates_df = dstore.read_df('_rates', slc=slice(start, stop))
+                    # not using groupby to save memory
+                    for sid in rates_df.sid.unique():
+                        df = rates_df[rates_df.sid == sid]
+                        try:
+                            array = self._map[sid]
+                        except KeyError:
+                            array = numpy.zeros((self.L, self.G))
+                            self._map[sid] = array
+                        array[df.lid, df.gid] += df.rate
+        return self._map
 
     def get_hcurve(self, sid):  # used in classical
         """
         :param sid: a site ID
-        :returns: a ProbabilityCurve of shape L, R for the given site ID
+        :returns: an array of shape (L, R) for the given site ID
         """
         pmap = self.init()
-        pc0 = probability_map.ProbabilityCurve(
-            numpy.zeros((self.L, self.num_rlzs)))
+        r0 = numpy.zeros((self.L, self.R))
         if sid not in pmap:  # no hazard for sid
-            return pc0
+            return r0
         for g, t_rlzs in enumerate(self.trt_rlzs):
             rlzs = t_rlzs % TWO24
-            rates = pmap[sid].array[:, g]
+            rates = pmap[sid][:, g]
             for rlz in rlzs:
-                pc0.array[:, rlz] += rates
-        pc0.array = to_probs(pc0.array)
-        return pc0
+                r0[:, rlz] += rates
+        return to_probs(r0)
 
-    def get_mean(self):
+    def get_fast_mean(self, gweights):
         """
-        Compute the mean curve as a ProbabilityMap
-
-        :param grp:
-            if not None must be a string of the form "grp-XX"; in that case
-            returns the mean considering only the contribution for group XX
+        :returns: a MapArray of shape (N, M, L1) with the mean hcurves
         """
-        self.init()
-        if len(self.weights) == 1:  # one realization
-            # the standard deviation is zero
-            pmap = self.get(0)
-            for sid, hcurve in pmap.items():
-                array = numpy.zeros(hcurve.array.shape)
-                array[:, 0] = hcurve.array[:, 0]
-                hcurve.array = array
-            return pmap
-        L = self.imtls.size
-        pmap = probability_map.ProbabilityMap(self.sids, L, 1)
+        M = self.M
+        L1 = self.L // M
+        means = MapArray(U32(self.sids), M, L1).fill(0)
         for sid in self.sids:
-            pmap[sid] = build_stat_curve(
-                self.get_hcurve(sid),
-                self.imtls, stats.mean_curve, self.weights)
-        return pmap
-
-
-def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):
-    """
-    :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
-    :param ct: number of concurrent tasks
-    :returns: a list of RuptureGetters
-    """
-    full_lt = dstore['full_lt'].init()
-    rup_array = dstore['ruptures'][:]
-    if rupids is not None:
-        rup_array = rup_array[numpy.isin(rup_array['id'], rupids)]
-    if len(rup_array) == 0:
-        raise NotFound('There are no ruptures in %s' % dstore)
-    proxies = [RuptureProxy(rec) for rec in rup_array]
-    maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
-    rgetters = []
-    for block in general.block_splitter(
-            proxies, maxweight, operator.itemgetter('n_occ'),
-            key=operator.itemgetter('trt_smr')):
-        trt_smr = block[0]['trt_smr']
-        rbg = full_lt.get_rlzs_by_gsim(trt_smr)
-        rg = RuptureGetter(block, dstore.filename, trt_smr,
-                           full_lt.trt_by(trt_smr), rbg)
-        rgetters.append(rg)
-    return rgetters
+            idx = means.sidx[sid]
+            rates = self._map[sid]  # shape (L, G)
+            means.array[idx] = (rates @ gweights).reshape((M, L1))
+        means.array[:] = to_probs(means.array)
+        return means
 
 
 def get_ebruptures(dstore):
@@ -291,10 +378,33 @@ def get_ebruptures(dstore):
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    for rgetter in get_rupture_getters(dstore):
-        for proxy in rgetter.get_proxies():
-            ebrs.append(proxy.to_ebr(rgetter.trt))
+    trts = list(dstore['full_lt/gsim_lt'].values)
+    if 'trt_smr_start_stop' in dstore:  # regular case
+        for trt_smr, start, stop in dstore['trt_smr_start_stop']:
+            trt = trts[trt_smr // TWO24]
+            for proxy in get_proxies(dstore.filename, slice(start, stop)):
+                ebrs.append(proxy.to_ebr(trt))
+    else:  # OQImpact calculations, I have no test for this :-(
+        for proxy in get_proxies(dstore.filename, slice(None)):
+            ebrs.append(proxy.to_ebr(trts[0]))
     return ebrs
+
+
+def get_ebrupture(dstore, rup_id):  # used in show rupture
+    """
+    This is EXTREMELY inefficient, since it reads all ruptures.
+    NB: it assumes rup_is is unique
+    """
+    rups = dstore['ruptures'][:]  # read everything in memory
+    rupgeoms = dstore['rupgeoms']  # do not read everything in memory
+    idxs, = numpy.where(rups['id'] == rup_id)
+    if len(idxs) == 0:
+        raise ValueError(f"Missing {rup_id=}")
+    [rec] = rups[idxs]
+    trts = dstore.getitem('full_lt').attrs['trts']
+    trt = trts[rec['trt_smr'] // TWO24]
+    geom = rupgeoms[rec['geom_id']]
+    return get_ebr(rec, geom, trt)
 
 
 def line(points):
@@ -306,99 +416,8 @@ def multiline(array3RC):
     :param array3RC: array of shape (3, R, C)
     :returns: a MULTILINESTRING
     """
-    D, R, C = array3RC.shape
+    D, R, _C = array3RC.shape
     assert D == 3, D
     lines = 'MULTILINESTRING(%s)' % ', '.join(
         line(array3RC[:, r, :].T) for r in range(R))
     return lines
-
-
-def get_ebrupture(dstore, rup_id):  # used in show rupture
-    """
-    This is EXTREMELY inefficient, so it must be used only when you are
-    interested in a single rupture.
-    """
-    rups = dstore['ruptures'][:]  # read everything in memory
-    rupgeoms = dstore['rupgeoms']  # do not read everything in memory
-    idx = numpy.searchsorted(rups['id'], rup_id)
-    if idx == len(rups):
-        raise ValueError(f"Missing {rup_id=}")
-    rec = rups[idx]
-    if rec['id'] != rup_id:
-        raise ValueError(f"Missing {rup_id=}")
-    trts = dstore.getitem('full_lt').attrs['trts']
-    trt = trts[rec['trt_smr'] // TWO24]
-    geom = rupgeoms[rec['geom_id']]
-    return get_ebr(rec, geom, trt)
-
-
-# this is never called directly; get_rupture_getters is used instead
-class RuptureGetter(object):
-    """
-    :param proxies:
-        a list of RuptureProxies
-    :param filename:
-        path to the HDF5 file containing a 'rupgeoms' dataset
-    :param trt_smr:
-        source group index
-    :param trt:
-        tectonic region type string
-    :param rlzs_by_gsim:
-        dictionary gsim -> rlzs for the group
-    """
-    def __init__(self, proxies, filename, trt_smr, trt, rlzs_by_gsim):
-        self.proxies = proxies
-        self.weight = sum(proxy['n_occ'] for proxy in proxies)
-        self.filename = filename
-        self.trt_smr = trt_smr
-        self.trt = trt
-        self.rlzs_by_gsim = rlzs_by_gsim
-        self.num_events = sum(int(proxy['n_occ']) for proxy in proxies)
-
-    @property
-    def num_ruptures(self):
-        return len(self.proxies)
-
-    @property
-    def seeds(self):
-        return [p['seed'] for p in self.proxies]
-
-    def get_proxies(self, min_mag=0):
-        """
-        :returns: a list of RuptureProxies
-        """
-        proxies = []
-        with datastore.read(self.filename) as dstore:
-            rupgeoms = dstore['rupgeoms']
-            for proxy in self.proxies:
-                if proxy['mag'] < min_mag:
-                    # discard small magnitudes
-                    continue
-                proxy.geom = rupgeoms[proxy['geom_id']]
-                proxies.append(proxy)
-        return proxies
-
-    # called in ebrisk calculations
-    def split(self, srcfilter, maxw):
-        """
-        :returns: RuptureProxies with weight < maxw
-        """
-        proxies = []
-        for proxy in self.proxies:
-            sids = srcfilter.close_sids(proxy.rec, self.trt)
-            if len(sids):
-                proxies.append(proxy)
-        rgetters = []
-        for block in general.block_splitter(proxies, maxw, weight):
-            rg = RuptureGetter(block, self.filename, self.trt_smr, self.trt,
-                               self.rlzs_by_gsim)
-            rgetters.append(rg)
-        return rgetters
-
-    def __len__(self):
-        return len(self.proxies)
-
-    def __repr__(self):
-        wei = ' [w=%d]' % self.weight if hasattr(self, 'weight') else ''
-        return '<%s trt_smr=%d, %d rupture(s)%s>' % (
-            self.__class__.__name__, self.trt_smr, len(self), wei)

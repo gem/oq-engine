@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+import zlib
+import pickle
+from openquake.baselib import sap, performance
+from openquake.commonlib import datastore
+
+
+def main(grp_id: int, calc_id: int=-1):
+    """
+    Determine how much memory is needed to read a source group.
+    To be run after a (pre)classical calculation.
+    """
+    dstore = datastore.read(calc_id)
+    with performance.Monitor(measuremem=True) as mon:
+        arr = dstore.getitem('_csm')[grp_id]
+        grp = pickle.loads(zlib.decompress(arr.tobytes()))
+        print(grp)
+    print(mon)
+
+main.grp_id = 'source group ID'
+main.calc_id = 'calculation ID'
+
+
+if __name__ == '__main__':
+    sap.run(main)

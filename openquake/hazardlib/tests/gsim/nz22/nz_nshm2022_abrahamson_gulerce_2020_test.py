@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -30,18 +30,21 @@ from openquake.hazardlib.gsim.nz22.nz_nshm2022_abrahamson_gulerce_2020 import (
 class NZNSHM2022_AbrahamsonGulerce2020TestCase(BaseGSIMTestCase):
 
     FILES = [
-        "nz22/ag2020/AG20_{}_GLO_GNS_MEAN.csv",
-        "nz22/ag2020/AG20_{}_GLO_GNS_TOTAL_STDDEV.csv",
+        "nz22/ag2020/AG20_%s_GLO_GNS_MEAN.csv",
+        "nz22/ag2020/AG20_%s_GLO_GNS_TOTAL_STDDEV.csv",
     ]
     REG = "GLO"
     ADJ = False
     SIGMA_MU_EPSILON = 0.0
 
     def test_all(self):
-        for gcls, trt in zip([NZNSHM2022_AbrahamsonGulerce2020SInter, NZNSHM2022_AbrahamsonGulerce2020SSlab],
-                             ['INTERFACE', 'SLAB']):
+        for gcls, trt in zip(
+                [NZNSHM2022_AbrahamsonGulerce2020SInter,
+                 NZNSHM2022_AbrahamsonGulerce2020SSlab],
+                ['INTERFACE',
+                 'SLAB']):
             self.GSIM_CLASS = gcls
-            mean_file, std_file = [f.format(trt) for f in self.FILES]
+            mean_file, std_file = [f % trt for f in self.FILES]
             
             self.check(
                 mean_file,

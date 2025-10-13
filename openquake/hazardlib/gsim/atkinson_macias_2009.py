@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2015-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,10 +21,14 @@ Module exports :class:'AtkinsonMacias2009'
 """
 import numpy as np
 from scipy.constants import g
+import copy
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
+from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
+from openquake.hazardlib.gsim.campbell_bozorgnia_2014 import _get_z2pt5_ref
 
 
 def _get_distance_term(C, rrup, mag):
@@ -77,6 +81,19 @@ class AtkinsonMacias2009(GMPE):
     #: Required distance measure is rupture distance
     REQUIRES_DISTANCES = {'rrup'}
 
+    def __init__(self, ba08_site_term=False,
+                 cb14_basin_term=False, m9_basin_term=False):
+        if cb14_basin_term or m9_basin_term:
+            self.REQUIRES_SITES_PARAMETERS |= {'z2pt5'}
+        if ba08_site_term:
+            self.REQUIRES_SITES_PARAMETERS |= {'vs30'}
+            self.REQUIRES_RUPTURE_PARAMETERS |= {'rake'}
+        self.ba08_site_term = ba08_site_term
+        if self.ba08_site_term:
+            self.REQUIRES_DISTANCES |= {"rjb"}
+        self.cb14_basin_term = cb14_basin_term
+        self.m9_basin_term = m9_basin_term
+        
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -89,7 +106,34 @@ class AtkinsonMacias2009(GMPE):
                      _get_distance_term(C, ctx.rrup, ctx.mag))
             # Convert mean from cm/s and cm/s/s and from common logarithm to
             # natural logarithm
-            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            ln_mean = np.log((10.0 ** (imean - 2.0)) / g)
+            # Set a null site term
+            fs = np.zeros(len(ln_mean))
+            # Apply the ba08 site term if specified
+            if self.ba08_site_term:
+                fs = _get_ba08_site_term(imt, ctx) 
+            # Set a null basin term
+            fb = np.zeros(len(ln_mean))
+            # Apply cb14 basin term if specified (-999 z2pt5
+            # values will be updated within this function)
+            if self.cb14_basin_term:
+                fb = _get_cb14_basin_term(imt, ctx)
+            # Apply m9 basin term if specified (will override
+            # cb14 basin term for basin sites if T >= 1.9 s)
+            if self.m9_basin_term and imt.period >= 1.9:
+                # Also need to update -999 z2pt5 here so have
+                # a z2pt5 for each site to ensure always applying m9
+                # basin term where appropriate --> In US23 model we
+                # always use in combination with CB14 basin term so
+                # using this relationship here to provides consistency
+                # for estimating z2pt5 from vs30
+                z2pt5 = ctx.z2pt5.copy()
+                mask = z2pt5 == -999 # None-measured values
+                z2pt5[mask] = _get_z2pt5_ref(False, ctx.vs30[mask])
+                fb[z2pt5 >= 6.0] = np.log(2.0) # Basin sites use m9 basin
+            
+            # Add site/basin term (if any) to mean and get sigma
+            mean[m] = ln_mean + fs + fb
             sig[m] = np.log(10.0 ** C["sigma"])
 
     COEFFS = CoeffsTable(sa_damping=5, table="""

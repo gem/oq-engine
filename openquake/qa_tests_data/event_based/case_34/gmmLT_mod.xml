@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="ESHM20 Logic Tree - 5 Stress Branch"
+    >
+        <logicTreeBranchSet
+        applyToTectonicRegionType='Shallow Default'
+        branchSetID="Shallow_Def"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="b11"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+                        sigma_mu_epsilon = -2.85697000
+                        c3_epsilon = -1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Craton"
+        branchSetID="CratonModel"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="b21"
+            >
+                <uncertaintyModel>
+                    [RietbrockEtAl2013MagDependent]
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Subduction Interface"
+        branchSetID="BCHydroSubIF"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="b31"
+            >
+                <uncertaintyModel>
+                    [ParkerEtAl2020SInter] 
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Subduction Inslab"
+        branchSetID="BCHydroSubIS"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="b41"
+            >
+                <uncertaintyModel>
+                    [ParkerEtAl2020SSlab] 
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Non-Subduction Deep"
+        branchSetID="BCHydroSubVrancea"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="b51"
+            >
+                <uncertaintyModel>
+                    [ParkerEtAl2020SSlab] 
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet
+        branchSetID="Volcanic"
+        applyToTectonicRegionType="Volcanic"
+        uncertaintyType="gmpeModel"
+		>
+            <logicTreeBranch branchID="b61">
+                <uncertaintyModel>
+                    LanzanoLuzi2019shallow
+                </uncertaintyModel>
+
+                <uncertaintyWeight>
+                    1.0000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Iceland Atlantic Active Region"
+        branchSetID="IcelandActiveZone"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="b71"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020]
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+    </logicTree>
+</nrml>

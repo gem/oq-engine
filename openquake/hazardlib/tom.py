@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2023 GEM Foundation
+# Copyright (C) 2012-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -213,7 +213,7 @@ def get_pnes(rate, probs, poes, time_span):
     if time_span == 0.:  # FatedTOM
         return 1. - poes
     elif len(probs) == 0:  # poissonian
-        return numpy.exp(-rate * time_span * poes)
+        return numpy.exp(- rate * time_span * poes)
     else:
         # Uses the formula
         #
@@ -226,7 +226,7 @@ def get_pnes(rate, probs, poes, time_span):
         #
         # `p(k|T)` is given by the attribute probs_occur and
         # `p(X<x|rup)` is computed as ``1 - poes``.
-        pnes = numpy.full_like(poes, probs[0])
+        pnes = numpy.full(poes.shape, probs[0])
         for p, prob in enumerate(probs[1:], 1):
             pnes[:] += prob * (1 - poes) ** p
         return pnes.clip(0., 1.)  # avoid numeric issues

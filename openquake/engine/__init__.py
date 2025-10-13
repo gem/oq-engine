@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2023 GEM Foundation
+# Copyright (C) 2010-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -33,7 +33,7 @@ Up-to-date sphinx documentation is at
 This software is licensed under the AGPL license, for more details
 please see the LICENSE file.
 
-Copyright (C) 2010-2023 GEM Foundation
+Copyright (C) 2010-2025 GEM Foundation
 
 OpenQuake is free software: you can redistribute it and/or modify it
 under the terms of the GNU Affero General Public License as published

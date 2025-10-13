@@ -1,4 +1,4 @@
-# Copyright (C) 2019-2024 GEM Foundation
+# Copyright (C) 2019-2025 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-FROM python:3.11-slim AS compile-image
+FROM python:3.12.11-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 RUN useradd -m -u 1000 -s /bin/bash openquake
@@ -22,11 +22,11 @@ ARG oq_branch
 ENV VIRTUAL_ENV=/opt/openquake
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-#clone repository and install engine 
-RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \ 
-    pip --disable-pip-version-check install . -r requirements-py311-linux64.txt --no-warn-script-location
+#clone repository and install engine
+RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
+    pip --disable-pip-version-check install . -r requirements-py312-linux64.txt --no-warn-script-location
 #
-FROM python:3.11-slim AS build-image
+FROM python:3.12.11-slim AS build-image
 COPY --from=compile-image /opt/openquake/ /opt/openquake/
 ENV LANG en_US.UTF-8
 ENV LOCKDOWN=False
@@ -36,7 +36,7 @@ ENV HOME /home/openquake
 WORKDIR ${HOME}
 ENV PATH="/opt/openquake/bin:$PATH"
 #
-RUN mkdir oqdata 
+RUN mkdir oqdata
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash", "-c"]
