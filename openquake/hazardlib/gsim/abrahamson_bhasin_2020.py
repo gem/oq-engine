@@ -52,7 +52,7 @@ M1 = 5.0
 M2 = 7.0
 
 
-def _get_tref(mag) -> float:
+def _get_tref(mag):
     """Magnitude-dependent conditioning period Tref.
     (see Table 3.1)
 
@@ -64,7 +64,7 @@ def _get_tref(mag) -> float:
     return 2.80
 
 
-def _get_trilinear_magnitude_term(ctx: np.recarray, C: dict) -> np.ndarray:
+def _get_trilinear_magnitude_term(ctx: np.recarray, C: dict):
     """Magnitude-dependent slope term f1(M) of ln(PSA(tref)). 
     (see eq. 3.8)
 
@@ -79,8 +79,8 @@ def _get_trilinear_magnitude_term(ctx: np.recarray, C: dict) -> np.ndarray:
     return f1
 
 
-def _tri_linear_stdev_term(M: np.ndarray, stdev1: float, stdev2: float) -> np.ndarray:
-    """Tri-linear interpolation between (M1, v1) and (M2, v2) used in pga- and sa1-based
+def _tri_linear_stdev_term(M: np.ndarray, stdev1: float, stdev2: float):
+    """Tri-linear interpolation between used in pga- and sa1-based
     models. 
     (see eq. 3.9)
 
@@ -144,11 +144,23 @@ def get_standard_deviations(
 
 
 class AbrahamsonBhasin2020(GMPE):
-    """Conditional PGV GMPE (Abrahamson & Bhasin, 2020) for active shallow crust.
+    """Implementation of a conditional GMPE of Abrahamson & Bhasin (2020)
+    for Peak Ground Velocity (PGV) applicable to active shallow crustal 
+    earthquakes. This requires characterisation of the SA at reference 
+    period (which is magnitude-dependent), in addition to magnitude and vs30, 
+    to define PGV and propagate the associated uncertainty. It also includes 
+    single-period SA variants (e.g., PGA and SA(1.0)), designed for use with 
+    seismic design maps that typically provide SA values at only a few spectral 
+    periods.
+    
+    Abrahamson N, Bhasin S (2020) "Conditional Ground-Motion Model for Peak Ground
+    Velocity for Active Crustal Regions.", PEER Report 2020/05, Pacific Earthquake 
+    Engineering Research Center Headquarters, University of California at Berkeley.
+    (October 2010)
 
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}   # PGV-only output
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT
@@ -171,30 +183,26 @@ class AbrahamsonBhasin2020(GMPE):
 
     def compute(self, ctx: np.recarray, imts: list,
                 mean: np.ndarray, sig: np.ndarray, tau: np.ndarray, phi: np.ndarray):
-        # 1) Pick conditioning IMT by kind
         if self.kind == "general":
             tref = _get_tref(ctx)
             self.last_tref = tref
             cond_imt = SA(tref)
         elif self.kind == "pga-based":
             cond_imt = PGA()
-        else:  # "sa1_based"
+        else: 
             cond_imt = SA(1.0)
 
         key = str(cond_imt)
 
-        # 2) Get lnY and its stddevs from base GMPE
         mean_gms, sigma_gms, tau_gms, phi_gms = get_mean_stds(
             self.gmpe, ctx, {cond_imt}, return_dicts=True
         )
 
-        # 3) Mean and stddevs of PGV
         lnpgv = get_mean_conditional_pgv(self.c, ctx, mean_gms, key)
         sigma_pgv, tau_pgv, phi_pgv = get_standard_deviations(
             self.c, ctx, sigma_gms=sigma_gms, tau_gms=tau_gms, phi_gms=phi_gms, imt_key=key
         )
 
-        # 4) Fill outputs (PGV only)
         mean[0] = lnpgv
         sig[0]  += sigma_pgv
         tau[0]  += tau_pgv
