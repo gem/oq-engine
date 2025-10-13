@@ -7,7 +7,6 @@ numpy==2.2.6
 shapely==2.1.0
 scipy==1.15.3
 h5py==3.13.0
-h3==3.7.7
 pandas==2.2.3
 pyzmq==26.2.0
 #pp
