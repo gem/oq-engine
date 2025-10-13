@@ -485,8 +485,8 @@ def _build_dparam(src, sitecol, cmaker):
         for param in dparams:
             out[sec.idx, param] = get_dparam(sec, sitecol, param)
     # use multi_fault_test to debug this
-    # from openquake.baselib.general import getsizeof
-    # print(getsizeof(out))
+    from openquake.baselib.general import getsizeof
+    print(src, 'MB =', getsizeof(out) / 1024**2)
     return out
 
 
@@ -1045,6 +1045,8 @@ class ContextMaker(object):
             return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
+                # build dparam in classical but not in preclassical
+                # NB: this is using a lot of memory in the USA model
                 with self.sec_mon:
                     self.dparam = _build_dparam(src, sitecol, self)
             else:
