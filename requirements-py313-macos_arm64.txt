@@ -9,6 +9,7 @@ scipy==1.15.3
 h5py==3.13.0
 pandas==2.2.3
 pyzmq==26.2.0
+onnxruntime==1.21.1
 #pp
 https://wheelhouse.openquake.org/v3/py/pycparser-2.22-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl
