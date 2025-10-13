@@ -1505,7 +1505,6 @@ class PmapMaker(object):
         # the dparam cache, we split the sites in tiles
         if src.code == b'F' and len(sites) > 5000:
             tiles = sites.split_in_tiles(len(sites) // 5000)
-            print(src, 'ntiles =', len(tiles))
         else:
             tiles = [sites]
         for tile in tiles:

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced the memory consumption of multifault sources for the USA model
   * Improved the parallelization of disagg_source in AELO calculations
   * Fixed the OverflowError: Python integer out of bounds for uint32
     happening for extra-large calculations when saving source_info
