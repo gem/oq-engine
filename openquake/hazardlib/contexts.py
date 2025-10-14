@@ -1197,7 +1197,7 @@ class ContextMaker(object):
             self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
-    def ratesNLG(self, srcgroup, sitecol):
+    def get_rmap(self, srcgroup, sitecol):
         """
         Used for debugging simple sources
 

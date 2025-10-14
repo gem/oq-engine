@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat, config
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
+from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -573,6 +574,9 @@ class CompositeSourceModel:
         keys = [sg.sources[0].trt_smrs for sg in self.src_groups]
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
+
+    def get_cmakers(self, oq):
+        return get_cmakers(self.trt_smrs(), self.full_lt, oq)
 
     def get_sources(self, atomic=None):
         """
