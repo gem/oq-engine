@@ -1197,7 +1197,7 @@ class ContextMaker(object):
             self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
-    def ratesNLG(self, srcgroup, sitecol):
+    def get_rmap(self, srcgroup, sitecol):
         """
         Used for debugging simple sources
 
@@ -1916,6 +1916,9 @@ class ContextMakerSequence(collections.abc.Sequence):
     def to_array(self, grp_ids=slice(None)):
         return numpy.array([self[inv] for inv in self.inverse[grp_ids]])
 
+    def __repr__(self):
+        num_gsims = '+'.join(str(len(cm.gsims)) for cm in self.cmakers)
+        return f'<{self.__class__.__name__} {num_gsims} gsims>'
 
 def get_unique_inverse(all_trt_smrs):
     """
