@@ -486,7 +486,7 @@ def _build_dparam(src, sitecol, cmaker):
             out[sec.idx, param] = get_dparam(sec, sitecol, param)
     # use multi_fault_test to debug this
     # from openquake.baselib.general import getsizeof
-    # print(getsizeof(out))
+    # print(src, sitecol, getsizeof(out) / 1024**2)
     return out
 
 
@@ -1317,9 +1317,9 @@ class ContextMaker(object):
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code in b'NX':  # increase weight
             weight *= 5.
-        elif src.code == b'S':  # needed for SAM
+        elif src.code in b'SF':  # needed for SAM
             weight *= 2
-        if len(srcfilter.sitecol) < 100 and src.code in b'NXSC':  # few sites
+        if len(srcfilter.sitecol) < 100 and src.code in b'NFSC':  # few sites
             weight *= 10  # make fault sources much heavier
         return max(weight, eps), int(esites)
 
@@ -1501,18 +1501,27 @@ class PmapMaker(object):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
-        for ctx in self.cmaker.get_ctx_iter(src, sites):
-            if self.cmaker.deltagetter:
-                # adjust occurrence rates in case of aftershocks
-                with self.cmaker.delta_mon:
-                    delta = self.cmaker.deltagetter(src.id)
-                    ctx.occurrence_rate += delta[ctx.rup_id]
-            if self.fewsites:  # keep rupdata in memory (before collapse)
-                if self.src_mutex:
-                    # needed for Disaggregator.init
-                    ctx.src_id = valid.fragmentno(src)
-                self.rupdata.append(ctx)
-            yield ctx
+        # to avoid running OOM in multifault sources when building
+        # the dparam cache, we split the sites in tiles
+        tiles = [sites]
+        if src.code == b'F':
+            # tested in oq-risk-tests/test/classical/usa_ucerf
+            size = len(src.get_unique_idxs()) * len(sites)
+            if  size > 500_000:
+                tiles = sites.split_in_tiles(len(sites) // 1000)
+        for tile in tiles:
+            for ctx in self.cmaker.get_ctx_iter(src, tile):
+                if self.cmaker.deltagetter:
+                    # adjust occurrence rates in case of aftershocks
+                    with self.cmaker.delta_mon:
+                        delta = self.cmaker.deltagetter(src.id)
+                        ctx.occurrence_rate += delta[ctx.rup_id]
+                if self.fewsites:  # keep rupdata in memory (before collapse)
+                    if self.src_mutex:
+                        # needed for Disaggregator.init
+                        ctx.src_id = valid.fragmentno(src)
+                    self.rupdata.append(ctx)
+                yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
