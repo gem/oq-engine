@@ -334,7 +334,7 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs):
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
 
-    
+
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
              precalc=False):
     """
