@@ -276,17 +276,20 @@ class EngineServerTestCase(django.test.TestCase):
         self.user1.groups.add(self.show_exposure_group)
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
-        [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
-        ret = self.c.get(exposure_url)
+        [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        download_exposure_url = download_url
+        ret = self.c.get(download_url)
         self.assertEqual(ret.status_code, 200)
 
         # level 2 users without the show_exposure group can see the exposure
-        self.c.logout()
         self.user1.groups.remove(self.show_exposure_group)
         self.user1.profile.level = 2
+        self.user1.profile.save()
         self.user1.save()
-        self.assertEqual(self.user1.level, 2)
-        self.c.login(username=self.user1.username, password=self.password1)
+        # try to download the exposure, knowing the corresponding url
+        ret = self.c.get(download_exposure_url)
+        self.assertEqual(ret.status_code, 200)
+        # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
         [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
@@ -294,26 +297,31 @@ class EngineServerTestCase(django.test.TestCase):
         self.assertEqual(ret.status_code, 200)
 
         # level 0 users without the show_exposure group can't see the exposure
-        self.c.logout()
         self.user1.profile.level = 0
+        self.user1.profile.save()
         self.user1.save()
-        self.assertEqual(self.user1.level, 0)
-        self.c.login(username=self.user1.username, password=self.password1)
+        # try to download the exposure, knowing the corresponding url
+        ret = self.c.get(download_exposure_url)
+        self.assertEqual(ret.status_code, 403)
+        # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
 
         # level 1 users without the show_exposure group can't see the exposure
-        self.c.logout()
         self.user1.profile.level = 1
+        self.user1.profile.save()
         self.user1.save()
-        self.assertEqual(self.user1.level, 1)
-        self.c.login(username=self.user1.username, password=self.password1)
+        # try to download the exposure, knowing the corresponding url
+        ret = self.c.get(download_exposure_url)
+        self.assertEqual(ret.status_code, 403)
+        # check if the exposure is shown in the list of downloadable results
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
+
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError(
