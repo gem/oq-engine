@@ -36,6 +36,7 @@ from datetime import datetime, timezone
 import psutil
 import h5py
 import numpy
+import requests
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -295,11 +296,45 @@ def watchdog(calc_id, pid, timeout):
             break
 
 
-def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs):
+def do_nothing(job_id=None, notify_to_url=None, exc=None):
+    """
+    Default on_complete callback. Does nothing
+    """
+    pass
+
+
+def notify_job_complete(job_id, notify_to_url, exc=None):
+    """
+    Callback to notify a web endpoint that a job has completed.
+
+    :param job_id): ID of the completed job
+    :param notify_to_url: the endpoint to send the notification to
+    :param exc: the exception raised during the job, if any
+    """
+    status = "failed" if exc else "success"
+    payload = {
+        "job_id": job_id,
+        "status": status,
+        "error": str(exc) if exc else None,
+    }
+    print(f'FIXME remove this print: Calling {notify_to_url} with {payload=}')
+    response = requests.post(notify_to_url, json=payload, timeout=5)
+    response.raise_for_status()
+
+
+ON_COMPLETE_CALLBACKS = {
+    'do_nothing': do_nothing,
+    'notify_job_complete': notify_job_complete,
+}
+
+
+def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs, on_complete,
+         notify_to_url):
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.now(UTC)}
         logs.dbcmd('update_job', job.calc_id, dic)
+    exc = None
     try:
         if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
             start_workers(job_id, dist, nodes)
@@ -317,8 +352,8 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs):
                 args = [(ctx,) for ctx in jobctxs[1:]]
             else:
                 args = [(ctx,) for ctx in jobctxs]
-            #with multiprocessing.pool.Pool(concurrent_jobs) as pool:
-            #    pool.starmap(run_calc, args)
+            # with multiprocessing.pool.Pool(concurrent_jobs) as pool:
+            #     pool.starmap(run_calc, args)
             parallel.multispawn(run_calc, args, concurrent_jobs or 1)
         elif concurrent_jobs:
             nc = 1 + parallel.num_cores // concurrent_jobs
@@ -330,13 +365,17 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs):
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
+    except Exception as e:
+        exc = e
+        raise
     finally:
+        on_complete(job_id, notify_to_url, exc)
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
 
 
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
-             precalc=False):
+             precalc=False, on_complete=do_nothing, notify_to_url=None):
     """
     Run jobs using the specified config file and other options.
 
@@ -385,7 +424,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
             for job in jobctxs:
                 logs.dbcmd('finish', job.calc_id, 'aborted')
             raise
-    _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs)
+    _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs, on_complete,
+         notify_to_url)
     return jobctxs
 
 

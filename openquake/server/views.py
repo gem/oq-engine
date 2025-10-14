@@ -64,6 +64,7 @@ from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
+from openquake.engine.engine import ON_COMPLETE_CALLBACKS
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
@@ -710,8 +711,16 @@ def calc_run(request):
     else:
         ini = job_ini if job_ini else ".ini"
     user = utils.get_user(request)
+    on_complete_fname = request.POST.get('on_complete')
+    notify_to_url = request.POST.get('notify_to_url')
+
+    if on_complete_fname:
+        on_complete = ON_COMPLETE_CALLBACKS[on_complete_fname]
+    else:
+        on_complete = ON_COMPLETE_CALLBACKS['do_nothing']
     try:
-        job_id = submit_job(request.FILES, ini, user, hazard_job_id)
+        job_id = submit_job(
+            request.FILES, ini, user, hazard_job_id, on_complete, notify_to_url)
     except Exception as exc:  # job failed, for instance missing .xml file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
@@ -1225,7 +1234,8 @@ def aelo_run(request):
     return JsonResponse(response_data, status=200)
 
 
-def submit_job(request_files, ini, username, hc_id):
+def submit_job(request_files, ini, username, hc_id,
+               on_complete=None, notify_to_url=None):
     """
     Create a job object from the given files and run it in a new process.
 
@@ -1272,7 +1282,12 @@ def submit_job(request_files, ini, username, hc_id):
                     CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
-        proc = mp.Process(target=engine.run_jobs, args=([job],))
+        kwargs = {}
+        if on_complete is not None:
+            kwargs['on_complete'] = on_complete
+        if notify_to_url is not None:
+            kwargs['notify_to_url'] = notify_to_url
+        proc = mp.Process(target=engine.run_jobs, args=([job],), kwargs=kwargs)
         proc.start()
         if config.webapi.calc_timeout:
             mp.Process(
@@ -1695,7 +1710,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        mce=mce, mce_spectra=mce_spectra,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version_full,
-                       lon=lon, lat=lat, site_class=site_class_display_name, site_name=site_name)
+                       lon=lon, lat=lat, site_class=site_class_display_name,
+                       site_name=site_name)
                   )
 
 
