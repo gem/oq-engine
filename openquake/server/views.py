@@ -1295,10 +1295,13 @@ def save_pik(job, dirname):
 def get_allowed_outputs(oes, user):
     # HIDDEN_OUTPUTS are visible only to users whose level is at least level 2 or
     # who belong to a group called show_<OUTPUT>
-    return [e for o, e in oes
-            if o not in HIDDEN_OUTPUTS
-            or user.groups.filter(name=f'show_{o}').exists()
-            or user.level >= 2]
+    if user is not None:
+        return [e for o, e in oes
+                if o not in HIDDEN_OUTPUTS
+                or user.groups.filter(name=f'show_{o}').exists()
+                or user.level >= 2]
+    else:
+        return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
 
 
 @require_http_methods(['GET'])
@@ -1327,8 +1330,13 @@ def calc_results(request, calc_id):
     # NB: export_output has as keys the list (output_type, extension)
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
+    try:
+        user = request.user
+    except AttributeError:
+        # without authentication
+        user = None
     output_types = groupby(export, lambda oe: oe[0],
-                           lambda oes: get_allowed_outputs(oes, request.user))
+                           lambda oes: get_allowed_outputs(oes, user))
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
