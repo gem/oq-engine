@@ -1208,6 +1208,8 @@ class ContextMaker(object):
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
 
+    ratesNLG = get_rmap  # for compatibility with the past
+
     def update(self, pmap, ctx, rup_mutex=None):
         """
         :param pmap: probability map to update
