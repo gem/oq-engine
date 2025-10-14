@@ -33,6 +33,7 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
     EBRupture)
 
+F64 = numpy.float64
 
 @dataclass
 class SourceParam:
@@ -272,16 +273,23 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         :returns: the magnitudes of the ruptures contained in the source
         """
-        mags = set()
         if hasattr(self, 'get_annual_occurrence_rates'):
-            for mag, rate in self.get_annual_occurrence_rates():
-                mags.add(mag)
-        elif hasattr(self, 'mags'):  # MultiFaultSource
+            return F64([m for m, r in self.get_annual_occurrence_rates()])
+        mags = set()
+        if hasattr(self, 'mags'):  # MultiFaultSource
             mags.update(self.mags)
         else:  # nonparametric
             for rup, pmf in self.data:
                 mags.add(rup.mag)
         return sorted(mags)
+
+    def get_mrates(self):
+        """
+        :returns: the magnitude rates (if any)
+        """
+        if hasattr(self, 'get_annual_occurrence_rates'):
+            return F64([r for m, r in self.get_annual_occurrence_rates()])
+        return F64([])
 
     def get_magstrs(self):
         """

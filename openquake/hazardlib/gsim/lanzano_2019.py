@@ -86,6 +86,22 @@ def _gen2ref_rock_scaling(C, vs30, kappa0, imt):
     return C['a'] + C['b'] * np.log10(vs30/800.0) + C['c'] * kappa0
 
 
+def _ness_correction(ctx, dist_type, C):
+    """
+    Compute near-source correction C in Eq. 4 of Sgobba, S., Felicetta,
+    C., Lanzano, G., Ramadan, F., D’Amico, M., & Pacor, F. (2021).
+    NESS2. 0: An updated version of the worldwide dataset for calibrating
+    and adjusting ground‐motion models in near source. 
+    Bulletin of the Seismological Society of America, 111(5), 2358-2378.
+    """
+    dist = getattr(ctx, dist_type)
+    R = np.sqrt(dist ** 2 + C['hR'] ** 2)
+    SS, _NF, TF = utils.get_fault_type_dummy_variables(ctx)
+    return np.where(ctx.mag <= C['MrefR'], C['aR'] + C['bR'] * (ctx.mag - C['MrefR']) +
+                C['cR'] * np.log10(R) + C['f1R'] * SS + C['f2R'] * TF,
+                C['aR'] + C['cR'] * np.log10(R) + C['f1R'] * SS + C['f2R'] * TF)
+
+
 def _get_mechanism(ctx, C):
     """
     Compute the part of the second term of the equation 1 (FM(SoF)):
@@ -458,3 +474,126 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
 
             # Convert units to g, but only for PGA and SA (not PGV):
             mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+
+
+class LanzanoEtAl2019_RJB_OMO_NESS2(GMPE):
+    """
+    Implements GMPE developed by G.Lanzano, L.Luzi, F.Pacor, L.Luzi,
+    C.Felicetta, R.Puglia, S. Sgobba, M. D'Amico and published as "A Revised
+    Ground-Motion Prediction Model for Shallow Crustal Earthquakes in Italy",
+    Bull Seismol. Soc. Am., DOI 10.1785/0120180210
+    SA are given up to 10 s.
+
+    The horizontal component of motion corresponds to RotD50, i.e. the median
+    of the distribution of the intensity measures, obtained from the
+    combination of the two horizontal components across all nonredundant
+    azimuths (Boore, 2010).
+
+    In this version we add a near-source correction as calibrated in
+    Sgobba, S., Felicetta, C., Lanzano, G., Ramadan, F., D’Amico, M.,
+    & Pacor, F. (2021). NESS2. 0: An updated version of the worldwide
+    dataset for calibrating and adjusting ground‐motion models in near source.
+    Bulletin of the Seismological Society of America, 111(5), 2358-2378.
+    """
+    #: Supported tectonic region type is 'active shallow crust' because the
+    #: equations have been derived from data from Italian database ITACA, as
+    #: explained in the 'Introduction'.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+
+    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
+    #: this GSIM can calculate. A set should contain classes from module
+    #: :mod:`openquake.hazardlib.imt`.
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+
+    #: Supported intensity measure component is orientation-independent
+    #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
+
+    #: Supported standard deviation types are inter-event, intra-event
+    #: and total, page 1904
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+
+    #: Required site parameter is only Vs30
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
+
+    #: Required rupture parameters are magnitude and rake (eq. 1).
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
+
+    #: Required distance measure is R Joyner-Boore distance (eq. 1).
+    REQUIRES_DISTANCES = {'rjb'}
+
+    COEFFS = LanzanoEtAl2019_RJB_OMO.COEFFS
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
+        [dist_type] = self.REQUIRES_DISTANCES
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(ctx, dist_type, C) +
+                     _site_amplification(ctx, C) +
+                     _get_mechanism(ctx, C))
+
+            istddevs = _get_stddevs(C)
+
+            # Return stddevs in terms of natural log scaling
+            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+
+            # Apply correction to reference according to Sgobba et al (2021)
+            COEFF_R = self.COEFFS_R[imt]
+            adjustment = _ness_correction(ctx, dist_type, COEFF_R)
+            adjustment[adjustment < 0] = 0
+            imean += adjustment
+
+            # Convert units to g, but only for PGA and SA (not PGV):
+            if imt.string.startswith(("SA", "PGA")):
+                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+            else:
+                mean[m] = np.log(10.0 ** imean)
+
+    COEFFS_R = CoeffsTable(sa_damping=5, table="""
+    IMT     aR              bR              cR              f1R             f2R             hR          MrefR
+    pga     0.787478215     0.088770426     -0.413768294    -0.06026392     0.033858525     47.74672921 6.7
+    pgv     0.8592549       0.071563232     -0.491301268    0.026774225     0.069196361     41.20192962 6.7
+    0.010   0.787175425     0.08896066      -0.413534       -0.06028122     0.03365462      47.75602121 6.7
+    0.025   0.764491242     0.093130958     -0.396257625    -0.069223728    0.023615346     48.9614708  6.7
+    0.040   0.726355304     0.115782012     -0.366697331    -0.074779741    0.013805846     51.15058401 6.7
+    0.050   0.612054704     0.122639338     -0.299314474    -0.084376271    0.0110746       49.05470755 6.7
+    0.070   0.400708515     0.108985501     -0.182716111    -0.087470327    0.014284547     45.72288419 6.7
+    0.100   0.15499496      0.095270453     -0.039327593    -0.099731305    0.018751436     40.91092673 6.7
+    0.150   -0.00844227     0.055307361     0.054636175     -0.097962926    0.032572387     41.2447101  6.7
+    0.200   0.009087855     0.057109969     0.043497701     -0.114999243    0.021501432     38.36526231 6.7
+    0.250   -0.00226902     0.055972206     0.049428586     -0.119321061    0.016406682     40.70320281 6.7
+    0.300   0.133512633     0.053620918     -0.030034406    -0.12000329     0.018602122     39.49920779 6.7
+    0.350   0.168517781     0.046429228     -0.052704492    -0.115711083    0.018465044     38.75956761 6.7
+    0.400   0.274226221     0.039948329     -0.121628272    -0.099248914    0.040560722     41.50434408 6.7
+    0.450   0.3981889       0.036947038     -0.203091887    -0.071998627    0.065723723     47.32999832 6.7
+    0.500   0.64992861      0.046333218     -0.338630857    -0.049621838    0.081624352     58.44922068 6.7
+    0.600   1.131029598     0.025283514     -0.578953165    -0.02155919     0.086655937     78.36451744 6.7
+    0.700   1.153825076     0.013173396     -0.591675895    -0.007083008    0.083557283     81.12064206 6.7
+    0.750   1.035871545     -0.001472946    -0.540809171    0.004759027     0.077596681     77.74202337 6.7
+    0.800   1.024820433     -0.001170074    -0.539405242    0.008952563     0.069284856     74.31852489 6.7
+    0.900   1.960532101     0.023226485     -0.972275599    0.017006082     0.065846277     96.96619773 6.7
+    1.000   2.010631147     0.027242195     -1.017890523    0.032711631     0.060514594     86.4514989  6.7
+    1.200   2.388754809     0.048935181     -1.234235642    0.059185841     0.061690355     80.93239898 6.7
+    1.400   1.646513458     0.081121474     -0.898090616    0.065535469     0.078703437     60.67359062 6.7
+    1.600   1.331164843     0.099387448     -0.754064859    0.092138178     0.123430272     51.23511146 6.7
+    1.800   1.19457951      0.084516446     -0.685088996    0.111323616     0.142764607     51.02063196 6.7
+    2.000   0.97064787      0.077383157     -0.561095606    0.108652508     0.138837329     48.15759882 6.7
+    2.500   0.541663899     0.0854089       -0.340575056    0.143613017     0.146084029     37.91884921 6.7
+    3.000   0.528462362     0.102182005     -0.333805253    0.143023908     0.141003536     39.51910168 6.7
+    3.500   0.635235933     0.105833915     -0.383912684    0.110313089     0.064950541     35.5783488  6.7
+    4.000   0.499658821     0.118334308     -0.310867658    0.130591575     0.064005226     32.29346011 6.7
+    4.500   0.661570957     0.128856871     -0.403179297    0.137230924     0.04353781      34.30312303 6.7
+    5.000   0.969181154     0.129530859     -0.584060571    0.146503294     0.026093139     38.41884159 6.7
+    6.000   1.147797426     0.080843293     -0.688890512    0.168970647     0.025350344     43.92034279 6.7
+    7.000   1.101971251     0.053294728     -0.659793326    0.127546199     0.010135258     44.77159699 6.7
+    8.000   0.878221711     0.047664714     -0.530125235    0.110275005     -0.004572099    40.26392403 6.7
+    9.000   0.521928688     0.041132751     -0.318520893    0.08476785      -0.02866004     30.74731071 6.7
+    10.000  0.489350096     0.035146663     -0.296663906    0.0675214       -0.035733553    26.74188349 6.7
+    """)

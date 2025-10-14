@@ -718,12 +718,13 @@ class SiteCollection(object):
         elif hint > len(self):
             hint = len(self)
         tiles = []
-        for sids in numpy.array_split(self.sids, hint):
-            assert len(sids), 'Cannot split %s in %d tiles' % (self, hint)
-            sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.complete.array[sids]
-            sc.complete = self.complete
-            tiles.append(sc)
+        for tileno in range(hint):
+            ok = self.sids % hint == tileno
+            if ok.any():
+                sc = SiteCollection.__new__(SiteCollection)
+                sc.array = self.complete.array[self.sids[ok]]
+                sc.complete = self.complete
+                tiles.append(sc)
         return tiles
 
     def split_by_gh3(self):
