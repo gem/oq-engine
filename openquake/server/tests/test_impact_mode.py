@@ -49,6 +49,7 @@ CALC_RUN_TIMEOUT = 60
 django.setup()
 try:
     from django.contrib.auth.models import User  # noqa
+    from django.contrib.auth.models import Group # noqa
 except RuntimeError:
     # Django tests are meant to be run with the command
     # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
@@ -186,6 +187,7 @@ class EngineServerTestCase(django.test.TestCase):
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
         cls.user1, cls.password1 = get_or_create_user(1)  # level 1
+        cls.show_exposure_group, _ = Group.objects.get_or_create(name='show_exposure')
         cls.c = Client()
         cls.c.login(username=cls.user1.username, password=cls.password1)
         cls.maxDiff = None
@@ -260,6 +262,58 @@ class EngineServerTestCase(django.test.TestCase):
         losses_by_site = numpy.load(BytesIO(content))
         pandas.DataFrame.from_dict(
             {item: losses_by_site[item] for item in losses_by_site})
+
+        # check that users can download hidden outputs only if their level is at
+        # least 2 or if they blong to a group named like 'show_<OUTPUT>'
+
+        # level 1 users without the show_exposure group can't see the exposure
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        self.assertEqual(len(exposure_urls), 0)
+
+        # level 1 users with the show_exposure group can see the exposure
+        self.user1.groups.add(self.show_exposure_group)
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        ret = self.c.get(exposure_url)
+        self.assertEqual(ret.status_code, 200)
+
+        # level 2 users without the show_exposure group can see the exposure
+        self.c.logout()
+        self.user1.groups.remove(self.show_exposure_group)
+        self.user1.profile.level = 2
+        self.user1.save()
+        self.assertEqual(self.user1.level, 2)
+        self.c.login(username=self.user1.username, password=self.password1)
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        ret = self.c.get(exposure_url)
+        self.assertEqual(ret.status_code, 200)
+
+        # level 0 users without the show_exposure group can't see the exposure
+        self.c.logout()
+        self.user1.profile.level = 0
+        self.user1.save()
+        self.assertEqual(self.user1.level, 0)
+        self.c.login(username=self.user1.username, password=self.password1)
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        self.assertEqual(len(exposure_urls), 0)
+
+        # level 1 users without the show_exposure group can't see the exposure
+        self.c.logout()
+        self.user1.profile.level = 1
+        self.user1.save()
+        self.assertEqual(self.user1.level, 1)
+        self.c.login(username=self.user1.username, password=self.password1)
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        self.assertEqual(len(exposure_urls), 0)
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError(
