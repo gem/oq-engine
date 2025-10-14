@@ -633,6 +633,7 @@ class CompositeSourceModel:
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
+        # this is called in preclassical and then in classical
         assert len(source_data) < TWO24, len(source_data)
         for src_id, nsites, weight, ctimes in python3compat.zip(
                 source_data['src_id'], source_data['nsites'],
@@ -640,7 +641,7 @@ class CompositeSourceModel:
             baseid = basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
-            row[NUM_SITES] += nsites
+            row[NUM_SITES] = nsites
 
     def count_ruptures(self):
         """
