@@ -31,6 +31,8 @@ from openquake.hazardlib.source.rupture import (
     ParametricProbabilisticRupture, PointRupture)
 from openquake.hazardlib.geo.utils import get_bounding_box, angular_distance
 
+F32 = numpy.float32
+F64 = numpy.float64
 
 def msr_name(src):
     """
@@ -165,18 +167,19 @@ class PointSource(ParametricSeismicSource):
         :return: array of dtype planin_dt of shape (#mags, #planes)
         """
         if magd is None:
-            magd = [(r, mag) for mag, r in self.get_annual_occurrence_rates()]
+            mags = F64([mag for mag, r in self.get_annual_occurrence_rates()])
+        else:
+            mags = F64([mag for mag, r in magd])
         if npd is None:
             npd = self.nodal_plane_distribution.data
         msr = self.magnitude_scaling_relationship
-        planin = numpy.zeros((len(magd), len(npd)), planin_dt).view(
+        planin = numpy.zeros((len(mags), len(npd)), planin_dt).view(
             numpy.recarray)
-        mrate, mags = numpy.array(magd).T  # shape (2, num_mags)
         nrate = numpy.array([nrate for nrate, np in npd])
 
-        planin['rate'] = mrate[:, None] * nrate
         for n, (nrate, np) in enumerate(npd):
             arr = planin[:, n]
+            arr['rate'] = nrate
             arr['area'] = msr.get_median_area(mags, np.rake)
             arr['mag'] = mags
             arr['strike'] = np.strike
@@ -256,14 +259,14 @@ class PointSource(ParametricSeismicSource):
         if step == 1:
             # return full ruptures (one per magnitude)
             planardict = self.get_planar(shift_hypo, iruptures)
-            for mag, [planar] in planardict.items():
+            for magi, (mag, [planar]) in enumerate(planardict.items()):
+                mrate = magd[magi][0]
                 for pla in planar.reshape(-1, 3):
                     surface = PlanarSurface.from_(pla)
                     _strike, _dip, rake = pla.sdr
-                    rate = pla.wlr[2]
                     yield ParametricProbabilisticRupture(
                         mag, rake, self.tectonic_region_type,
-                        Point(*pla.hypo), surface, rate,
+                        Point(*pla.hypo), surface, pla.wlr[2] * mrate,
                         self.temporal_occurrence_model)
         else:
             # return point ruptures (fast)

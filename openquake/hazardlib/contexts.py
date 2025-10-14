@@ -313,14 +313,14 @@ def simple_cmaker(gsims, imts, **params):
 
 # ############################ genctxs ################################## #
 
-# generator of quintets (rup_index, mag, planar_array, sites)
-def _quintets(cmaker, src, sitecol):
+# generator of sextets (rup_index, mag, planar_array, sites)
+def _sextets(cmaker, src, sitecol):
     with cmaker.ir_mon:
         # building planar geometries
         planardict = src.get_planar(cmaker.shift_hypo)
 
-    magdist = {mag: cmaker.maximum_distance(mag)
-               for mag, rate in src.get_annual_occurrence_rates()}
+    mag_rates = src.get_annual_occurrence_rates()
+    magdist = {mag: cmaker.maximum_distance(mag) for mag, rate in mag_rates}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range
     maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
     maxdist = magdist[maxmag]
@@ -338,10 +338,11 @@ def _quintets(cmaker, src, sitecol):
         # one rupture per magnitude
         for m, (mag, pla) in enumerate(planardict.items()):
             if minmag <= mag <= maxmag:
-                yield m, mag, magdist[mag], pla, sitecol
+                yield m, mag, mag_rates[m][1], magdist[mag], pla, sitecol
     else:
         for m, rup in enumerate(src.iruptures()):
             mag = rup.mag
+            rate = mag_rates[m][1]
             if mag > maxmag or mag < minmag:
                 continue
             mdist = magdist[mag]
@@ -354,17 +355,17 @@ def _quintets(cmaker, src, sitecol):
             far = sitecol.filter(cdist[mask] > psdist)
             if cmaker.fewsites:
                 if close is None:  # all is far, common for small mag
-                    yield m, mag, mdist, arr, sitecol
+                    yield m, mag, rate, mdist, arr, sitecol
                 else:  # something is close
-                    yield m, mag, mdist, pla, sitecol
+                    yield m, mag, rate, mdist, pla, sitecol
             else:  # many sites
                 if close is None:  # all is far
-                    yield m, mag, mdist, arr, far
+                    yield m, mag, rate, mdist, arr, far
                 elif far is None:  # all is close
-                    yield m, mag, mdist, pla, close
+                    yield m, mag, rate, mdist, pla, close
                 else:  # some sites are far, some are close
-                    yield m, mag, mdist, arr, far
-                    yield m, mag, mdist, pla, close
+                    yield m, mag, rate, mdist, arr, far
+                    yield m, mag, rate, mdist, pla, close
 
 
 # helper used to populate contexts for planar ruptures
@@ -459,7 +460,8 @@ def genctxs_Pp(src, sitecol, cmaker):
                          if par in dd]
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
-    for magi, mag, magdist, planars, sites in _quintets(cmaker, src, sitecol):
+    for magi, mag, rate, magdist, planars, sites in _sextets(
+            cmaker, src, sitecol):
         if not planars:
             continue
         elif len(planars) > 1:  # when using ps_grid_spacing
@@ -471,6 +473,7 @@ def genctxs_Pp(src, sitecol, cmaker):
             cmaker, builder, mag, magi, pla, sites, src.id, src.offset, tom)
         ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
+            ctxt.occurrence_rate *= rate
             yield ctxt
 
 
