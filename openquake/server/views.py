@@ -712,6 +712,8 @@ def calc_run(request):
         The request also needs to contain the files needed to perform the
         calculation. They can be uploaded as separate files, or zipped
         together.
+        If the request has the attribute `notify_to`, and it starts with
+        'http[s]://', the engine will send a notification to the given url
     """
     job_ini = request.POST.get('job_ini')
     hazard_job_id = request.POST.get('hazard_job_id')
@@ -748,6 +750,8 @@ def calc_run_ini(request):
     :param request:
         a `django.http.HttpRequest` object.
         The request must contain the full path to a job.ini file
+        If the request has the attribute `notify_to`, and it starts with
+        'http[s]://', the engine will send a notification to the given url
     """
     ini = request.POST['job_ini']
     hazard_job_id = request.POST.get('hazard_job_id')

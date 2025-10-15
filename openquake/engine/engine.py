@@ -301,7 +301,7 @@ def notify_job_complete(job_id, notify_to, exc=None):
     Callback to notify a web endpoint that a job has completed.
 
     :param job_id): ID of the completed job
-    :param notify_to_url: the endpoint to send the notification to
+    :param notify_to: the endpoint to send the notification to
     :param exc: the exception raised during the job, if any
     """
     if not notify_to:
