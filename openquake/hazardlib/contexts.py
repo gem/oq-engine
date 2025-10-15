@@ -1302,6 +1302,8 @@ class ContextMaker(object):
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
             return (0, 0) if src.code in b'pP' else (eps, 0)
+        # sanity check, preclassical must has set .num_ruptures
+        assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
@@ -1315,7 +1317,6 @@ class ContextMaker(object):
         lenctx = sum(len(ctx) for ctx in ctxs)
         esites = (lenctx * src.num_ruptures /
                   self.num_rups * srcfilter.multiplier)
-        assert src.num_ruptures, src
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code in b'NX':  # increase weight
