@@ -295,6 +295,7 @@ class SourceGroup(collections.abc.Sequence):
         """
         return self.sources[0].trt_smr
 
+    # not used by the engine
     def count_ruptures(self):
         """
         Set src.num_ruptures on each source in the group

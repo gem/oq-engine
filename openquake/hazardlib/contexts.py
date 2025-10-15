@@ -1302,6 +1302,8 @@ class ContextMaker(object):
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
             return (0, 0) if src.code in b'pP' else (eps, 0)
+        # sanity check, preclassical must has set .num_ruptures
+        assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
