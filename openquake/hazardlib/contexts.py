@@ -1923,6 +1923,28 @@ class ContextMakerSequence(collections.abc.Sequence):
     def to_array(self, grp_ids=slice(None)):
         return numpy.array([self[inv] for inv in self.inverse[grp_ids]])
 
+    def combine_rates(self, rmap):
+        """
+        :returns: an array of shape (N, L, R) for the given site ID
+        """
+        N, L, G = rmap.array.shape
+        maxr = 0
+        Gt = 0
+        for cm in self.cmakers:
+            for rlzs in cm.gsims.values():
+                maxr = max(maxr, rlzs[-1])
+            Gt += len(cm.gsims)
+        assert Gt == G, (Gt, G)
+        r0 = numpy.zeros((N, L, maxr + 1))
+        g = 0
+        for cm in self.cmakers:
+            for i, rlzs in enumerate(cm.gsims.values()):
+                rates = rmap.array[:, :, g]
+                for rlz in rlzs:
+                    r0[:, :, rlz] += rates
+                g += 1
+        return r0
+
     def __repr__(self):
         num_gsims = '+'.join(str(len(cm.gsims)) for cm in self.cmakers)
         return f'<{self.__class__.__name__} {num_gsims} gsims>'
