@@ -1512,8 +1512,7 @@ class PmapMaker(object):
         tiles = [sites]
         if src.code == b'F':
             # tested in oq-risk-tests/test/classical/usa_ucerf
-            size = len(src.get_unique_idxs()) * len(sites)
-            if  size > 500_000:
+            if len(sites) >= 2000:
                 tiles = sites.split_in_tiles(len(sites) // 1000)
         for tile in tiles:
             for ctx in self.cmaker.get_ctx_iter(src, tile):
