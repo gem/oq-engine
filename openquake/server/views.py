@@ -122,7 +122,7 @@ AELO_FORM_PLACEHOLDERS = {
     'asce_version': 'ASCE standards',
 }
 
-HIDDEN_OUTPUTS = ['exposure', 'job']
+HIDDEN_RESOURCES = ['exposure', 'job', 'assetcol']
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -1293,15 +1293,15 @@ def save_pik(job, dirname):
 
 
 def get_allowed_outputs(oes, user):
-    # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
+    # HIDDEN_RESOURCES are visible only to users with level ≥ 2 or who have the
     # permission 'can_view_<OUTPUT>'
     if user is not None:
         return [e for o, e in oes
-                if o not in HIDDEN_OUTPUTS
+                if o not in HIDDEN_RESOURCES
                 or user.has_perm(f'auth.can_view_{o}')
                 or user.level >= 2]
     else:
-        return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
+        return [e for o, e in oes if o not in HIDDEN_RESOURCES]
 
 
 @require_http_methods(['GET'])
@@ -1411,9 +1411,9 @@ def calc_result(request, result_id):
     try:
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
+        # HIDDEN_RESOURCES are visible only to users with level ≥ 2 or who have the
         # permission 'can_view_<OUTPUT>'
-        if (ds_key in HIDDEN_OUTPUTS
+        if (ds_key in HIDDEN_RESOURCES
                 and not request.user.has_perm(f'auth.can_view_{ds_key}')
                 and not request.user.level >= 2):
             return HttpResponseForbidden()
@@ -1531,6 +1531,10 @@ def extract(request, calc_id, what):
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    if (what in HIDDEN_RESOURCES
+            and not request.user.has_perm(f'auth.can_view_{what}')
+            and not request.user.level >= 2):
         return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
@@ -2017,6 +2021,10 @@ def extract_html_table(request, calc_id, name):
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    if (name in HIDDEN_RESOURCES
+            and not request.user.has_perm(f'auth.can_view_{name}')
+            and not request.user.level >= 2):
         return HttpResponseForbidden()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
