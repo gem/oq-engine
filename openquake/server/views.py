@@ -64,7 +64,7 @@ from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
-from openquake.engine.engine import ON_COMPLETE_CALLBACKS
+from openquake.engine.engine import notify_job_complete
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
@@ -689,6 +689,15 @@ def calc_log_size(request, calc_id):
 
 
 @csrf_exempt
+@require_http_methods(['POST'])
+def log_callback(request):
+    print(request.POST)
+    print(request.GET)
+    print(request.body.decode('utf8'))
+    return HttpResponse(content='Done')
+
+
+@csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def calc_run(request):
@@ -711,16 +720,12 @@ def calc_run(request):
     else:
         ini = job_ini if job_ini else ".ini"
     user = utils.get_user(request)
-    on_complete_fname = request.POST.get('on_complete')
-    notify_to_url = request.POST.get('notify_to_url')
+    notify_to = request.POST.get('notify_to')
+    # notify_to = 'http://127.0.0.1:8800/v1/log_callback?pippo=pluto'
 
-    if on_complete_fname:
-        on_complete = ON_COMPLETE_CALLBACKS[on_complete_fname]
-    else:
-        on_complete = ON_COMPLETE_CALLBACKS['do_nothing']
     try:
         job_id = submit_job(
-            request.FILES, ini, user, hazard_job_id, on_complete, notify_to_url)
+            request.FILES, ini, user, hazard_job_id, notify_to)
     except Exception as exc:  # job failed, for instance missing .xml file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
@@ -744,10 +749,13 @@ def calc_run_ini(request):
         a `django.http.HttpRequest` object.
         The request must contain the full path to a job.ini file
     """
-    ini = request.POST.get('job_ini')
+    ini = request.POST['job_ini']
+    hazard_job_id = request.POST.get('hazard_job_id')
     user = utils.get_user(request)
+    notify_to = request.POST.get('notify_to')
+    # notify_to = 'http://127.0.0.1:8800/v1/log_callback?pippo=pluto'
     try:
-        job_id = submit_job([], ini, user, hc_id=None)
+        job_id = submit_job([], ini, user, hazard_job_id, notify_to=notify_to)
     except Exception as exc:  # job failed, for instance missing .ini file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
@@ -1234,8 +1242,7 @@ def aelo_run(request):
     return JsonResponse(response_data, status=200)
 
 
-def submit_job(request_files, ini, username, hc_id,
-               on_complete=None, notify_to_url=None):
+def submit_job(request_files, ini, username, hc_id, notify_to=None):
     """
     Create a job object from the given files and run it in a new process.
 
@@ -1283,10 +1290,8 @@ def submit_job(request_files, ini, username, hc_id,
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
         kwargs = {}
-        if on_complete is not None:
-            kwargs['on_complete'] = on_complete
-        if notify_to_url is not None:
-            kwargs['notify_to_url'] = notify_to_url
+        if notify_to is not None:
+            kwargs['notify_to'] = notify_to
         proc = mp.Process(target=engine.run_jobs, args=([job],), kwargs=kwargs)
         proc.start()
         if config.webapi.calc_timeout:
