@@ -30,6 +30,7 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib import config
+from openquake.baselib.general import getsizeof
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
     sqrscale)
@@ -484,9 +485,7 @@ def _build_dparam(src, sitecol, cmaker):
         out[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
         for param in dparams:
             out[sec.idx, param] = get_dparam(sec, sitecol, param)
-    # use multi_fault_test to debug this
-    # from openquake.baselib.general import getsizeof
-    # print(src, sitecol, getsizeof(out) / 1024**2)
+    cmaker.dparam_mb = max(cmaker.dparam_mb, getsizeof(out) / 1024**2)
     return out
 
 
@@ -543,6 +542,7 @@ class ContextMaker(object):
     ilabel = None
     tom = None
     cluster = None  # set in PmapMaker
+    dparam_mb = 0  # set in build_dparam
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
@@ -682,7 +682,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
-        self.sec_mon = monitor('building dparam', measuremem=True)
+        self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
@@ -1197,7 +1197,7 @@ class ContextMaker(object):
             self.update(pmap, ctx, rup_mutex)
         return ~pmap if rup_indep else pmap
 
-    def ratesNLG(self, srcgroup, sitecol):
+    def get_rmap(self, srcgroup, sitecol):
         """
         Used for debugging simple sources
 
@@ -1207,6 +1207,8 @@ class ContextMaker(object):
         """
         pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
         return (~pmap).to_rates()
+
+    ratesNLG = get_rmap  # for compatibility with the past
 
     def update(self, pmap, ctx, rup_mutex=None):
         """
@@ -1300,6 +1302,8 @@ class ContextMaker(object):
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
             return (0, 0) if src.code in b'pP' else (eps, 0)
+        # sanity check, preclassical must has set .num_ruptures
+        assert src.num_ruptures, src
         sites = srcfilter.get_close_sites(src)
         if sites is None:
             # may happen for CollapsedPointSources
@@ -1321,6 +1325,8 @@ class ContextMaker(object):
             weight *= 2
         if len(srcfilter.sitecol) < 100 and src.code in b'NFSC':  # few sites
             weight *= 10  # make fault sources much heavier
+        elif len(sites) > 100:  # many sites, raise the weight for many gsims
+            weight *= (1 + len(self.gsims) // 5)
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter):
@@ -1638,6 +1644,7 @@ class PmapMaker(object):
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
         dic['grp_id'] = self.sources[0].grp_id
+        dic['dparam_mb'] = self.cmaker.dparam_mb
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because
             # of the groupby(group, corename) in classical.py
@@ -1916,6 +1923,31 @@ class ContextMakerSequence(collections.abc.Sequence):
     def to_array(self, grp_ids=slice(None)):
         return numpy.array([self[inv] for inv in self.inverse[grp_ids]])
 
+    def combine_rates(self, rmap):
+        """
+        :returns: an array of shape (N, L, R) for the given site ID
+        """
+        N, L, G = rmap.array.shape
+        maxr = 0
+        Gt = 0
+        for cm in self.cmakers:
+            for rlzs in cm.gsims.values():
+                maxr = max(maxr, rlzs[-1])
+            Gt += len(cm.gsims)
+        assert Gt == G, (Gt, G)
+        r0 = numpy.zeros((N, L, maxr + 1))
+        g = 0
+        for cm in self.cmakers:
+            for i, rlzs in enumerate(cm.gsims.values()):
+                rates = rmap.array[:, :, g]
+                for rlz in rlzs:
+                    r0[:, :, rlz] += rates
+                g += 1
+        return r0
+
+    def __repr__(self):
+        num_gsims = '+'.join(str(len(cm.gsims)) for cm in self.cmakers)
+        return f'<{self.__class__.__name__} {num_gsims} gsims>'
 
 def get_unique_inverse(all_trt_smrs):
     """
