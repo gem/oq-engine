@@ -1315,6 +1315,7 @@ class ContextMaker(object):
         lenctx = sum(len(ctx) for ctx in ctxs)
         esites = (lenctx * src.num_ruptures /
                   self.num_rups * srcfilter.multiplier)
+        assert src.num_ruptures, src
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code in b'NX':  # increase weight

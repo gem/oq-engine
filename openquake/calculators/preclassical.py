@@ -271,6 +271,9 @@ class PreClassicalCalculator(base.HazardCalculator):
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
+                # compute weight sequentially
+                for src in sg:
+                    src.num_ruptures = src.count_ruptures()
                 cmakers[grp_id].set_weight(sg, sf)
                 atomic_sources.extend(sg)
             else:
