@@ -1293,8 +1293,8 @@ def save_pik(job, dirname):
 
 
 def get_allowed_outputs(oes, user):
-    # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or to those in a
-    # group named show_<OUTPUT>
+    # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
+    # permission 'can_view_<OUTPUT>'
     if user is not None:
         return [e for o, e in oes
                 if o not in HIDDEN_OUTPUTS
@@ -1411,8 +1411,8 @@ def calc_result(request, result_id):
     try:
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or to those in a
-        # group named show_<OUTPUT>
+        # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
+        # permission 'can_view_<OUTPUT>'
         if (ds_key in HIDDEN_OUTPUTS
                 and not request.user.has_perm(f'auth.can_view_{ds_key}')
                 and not request.user.level >= 2):
