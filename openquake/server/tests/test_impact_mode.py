@@ -32,6 +32,7 @@ import django
 from django.test import Client, override_settings
 from django.conf import settings
 from django.http import HttpResponseNotFound
+from django.contrib.auth.models import Permission
 from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.dbapi import db
@@ -48,8 +49,7 @@ CALC_RUN_TIMEOUT = 60
 
 django.setup()
 try:
-    from django.contrib.auth.models import User  # noqa
-    from django.contrib.auth.models import Group # noqa
+    from django.contrib.auth.models import User, Group, Permission  # noqa
 except RuntimeError:
     # Django tests are meant to be run with the command
     # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
@@ -187,7 +187,10 @@ class EngineServerTestCase(django.test.TestCase):
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
         cls.user1, cls.password1 = get_or_create_user(1)  # level 1
-        cls.show_exposure_group, _ = Group.objects.get_or_create(name='show_exposure')
+        cls.users_who_can_view_exposure, _ = Group.objects.get_or_create(
+            name='Users who can view the exposure')
+        perm = Permission.objects.get(codename='can_view_exposure')
+        cls.users_who_can_view_exposure.permissions.add(perm)
         cls.c = Client()
         cls.c.login(username=cls.user1.username, password=cls.password1)
         cls.maxDiff = None
@@ -264,16 +267,16 @@ class EngineServerTestCase(django.test.TestCase):
             {item: losses_by_site[item] for item in losses_by_site})
 
         # check that users can download hidden outputs only if their level is at
-        # least 2 or if they belong to a group named like 'show_<OUTPUT>'
+        # least 2 or if they have the can_view_exposure permission
 
-        # level 1 users without the show_exposure group can't see the exposure
+        # level 1 users without the can_view_exposure permission can't see the exposure
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
 
-        # level 1 users with the show_exposure group can see the exposure
-        self.user1.groups.add(self.show_exposure_group)
+        # level 1 users with the can_view_exposure permission can see the exposure
+        self.user1.groups.add(self.users_who_can_view_exposure)
         ret = self.get('%s/results' % job_id)
         results = json.loads(ret.content.decode('utf8'))
         [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
@@ -282,7 +285,7 @@ class EngineServerTestCase(django.test.TestCase):
         self.assertEqual(ret.status_code, 200)
 
         # level 2 users without the show_exposure group can see the exposure
-        self.user1.groups.remove(self.show_exposure_group)
+        self.user1.groups.remove(self.users_who_can_view_exposure)
         self.user1.profile.level = 2
         self.user1.profile.save()
         self.user1.save()
@@ -296,7 +299,7 @@ class EngineServerTestCase(django.test.TestCase):
         ret = self.c.get(exposure_url)
         self.assertEqual(ret.status_code, 200)
 
-        # level 0 users without the show_exposure group can't see the exposure
+        # level 0 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 0
         self.user1.profile.save()
         self.user1.save()
@@ -309,7 +312,7 @@ class EngineServerTestCase(django.test.TestCase):
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
 
-        # level 1 users without the show_exposure group can't see the exposure
+        # level 1 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 1
         self.user1.profile.save()
         self.user1.save()

@@ -1298,7 +1298,7 @@ def get_allowed_outputs(oes, user):
     if user is not None:
         return [e for o, e in oes
                 if o not in HIDDEN_OUTPUTS
-                or user.groups.filter(name=f'show_{o}').exists()
+                or user.has_perm(f'auth.can_view_{o}')
                 or user.level >= 2]
     else:
         return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
@@ -1414,7 +1414,7 @@ def calc_result(request, result_id):
         # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or to those in a
         # group named show_<OUTPUT>
         if (ds_key in HIDDEN_OUTPUTS
-                and not request.user.groups.filter(name=f'show_{ds_key}').exists()
+                and not request.user.has_perm(f'auth.can_view_{ds_key}')
                 and not request.user.level >= 2):
             return HttpResponseForbidden()
         if not utils.user_has_permission(request, job_user, job_status):
