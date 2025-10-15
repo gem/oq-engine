@@ -264,7 +264,7 @@ class EngineServerTestCase(django.test.TestCase):
             {item: losses_by_site[item] for item in losses_by_site})
 
         # check that users can download hidden outputs only if their level is at
-        # least 2 or if they blong to a group named like 'show_<OUTPUT>'
+        # least 2 or if they belong to a group named like 'show_<OUTPUT>'
 
         # level 1 users without the show_exposure group can't see the exposure
         ret = self.get('%s/results' % job_id)
