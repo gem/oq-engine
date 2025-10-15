@@ -30,6 +30,7 @@ import shapely
 from scipy.interpolate import interp1d
 
 from openquake.baselib import config
+from openquake.baselib.general import getsizeof
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
     sqrscale)
@@ -484,9 +485,7 @@ def _build_dparam(src, sitecol, cmaker):
         out[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
         for param in dparams:
             out[sec.idx, param] = get_dparam(sec, sitecol, param)
-    # use multi_fault_test to debug this
-    # from openquake.baselib.general import getsizeof
-    # print(src, sitecol, getsizeof(out) / 1024**2)
+    cmaker.dparam_mb = max(cmaker.dparam_mb, getsizeof(out) / 1024**2)
     return out
 
 
@@ -543,6 +542,7 @@ class ContextMaker(object):
     ilabel = None
     tom = None
     cluster = None  # set in PmapMaker
+    dparam_mb = 0  # set in build_dparam
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
@@ -1640,6 +1640,7 @@ class PmapMaker(object):
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
         dic['grp_id'] = self.sources[0].grp_id
+        dic['dparam_mb'] = self.cmaker.dparam_mb
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because
             # of the groupby(group, corename) in classical.py
