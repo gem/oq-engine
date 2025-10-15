@@ -1323,6 +1323,8 @@ class ContextMaker(object):
             weight *= 2
         if len(srcfilter.sitecol) < 100 and src.code in b'NFSC':  # few sites
             weight *= 10  # make fault sources much heavier
+        elif len(sites) > 100:  # many sites, raise the weight for many gsims
+            weight *= (1 + len(self.gsims) // 5)
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter):
