@@ -64,7 +64,6 @@ from openquake.calculators.postproc.plots import plot_shakemap, plot_rupture
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo, impact
-from openquake.engine.engine import notify_job_complete
 from openquake.engine.aelo import (
     get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING_MSG)
 from openquake.engine.export.core import DataStoreExportError
@@ -584,7 +583,7 @@ def calc_remove(request, calc_id):
     Remove the calculation id
     """
     # Only the owner can remove a job
-    user = utils.get_user(request)
+    user = utils.get_username(request)
     try:
         message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
@@ -714,6 +713,8 @@ def calc_run(request):
         together.
         If the request has the attribute `notify_to`, and it starts with
         'http[s]://', the engine will send a notification to the given url
+        If the request has the attribute `job_owner`, the owner of the job will be set
+        to that string instead of the name of the user performing the request.
     """
     job_ini = request.POST.get('job_ini')
     hazard_job_id = request.POST.get('hazard_job_id')
@@ -721,13 +722,13 @@ def calc_run(request):
         ini = job_ini if job_ini else "risk.ini"
     else:
         ini = job_ini if job_ini else ".ini"
-    user = utils.get_user(request)
     notify_to = request.POST.get('notify_to')
-    # notify_to = 'http://127.0.0.1:8800/v1/log_callback?pippo=pluto'
-
+    # notify_to = 'http://127.0.0.1:8800/v1/log_callback?key=value'
+    username = request.POST.get('job_owner')
+    if not username:
+        username = utils.get_username(request)
     try:
-        job_id = submit_job(
-            request.FILES, ini, user, hazard_job_id, notify_to)
+        job_id = submit_job(request.FILES, ini, username, hazard_job_id, notify_to)
     except Exception as exc:  # job failed, for instance missing .xml file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
@@ -752,14 +753,18 @@ def calc_run_ini(request):
         The request must contain the full path to a job.ini file
         If the request has the attribute `notify_to`, and it starts with
         'http[s]://', the engine will send a notification to the given url
+        If the request has the attribute `job_owner`, the owner of the job will be set
+        to that string instead of the name of the user performing the request.
     """
     ini = request.POST['job_ini']
     hazard_job_id = request.POST.get('hazard_job_id')
-    user = utils.get_user(request)
     notify_to = request.POST.get('notify_to')
-    # notify_to = 'http://127.0.0.1:8800/v1/log_callback?pippo=pluto'
+    # notify_to = 'http://127.0.0.1:8800/v1/log_callback?key=value'
+    username = request.POST.get('job_owner')
+    if not username:
+        username = utils.get_username(request)
     try:
-        job_id = submit_job([], ini, user, hazard_job_id, notify_to=notify_to)
+        job_id = submit_job([], ini, username, hazard_job_id, notify_to=notify_to)
     except Exception as exc:  # job failed, for instance missing .ini file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
@@ -993,7 +998,7 @@ def get_uploaded_file_path(request, filename):
 def create_impact_job(request, params):
     [jobctx] = engine.create_jobs(
         [params], config.distribution.log_level,
-        user_name=utils.get_user(request))
+        user_name=utils.get_username(request))
 
     job_owner_email = request.user.email
     response_data = dict()
@@ -1209,7 +1214,7 @@ def aelo_run(request):
         return JsonResponse(response_data, status=400)
     [jobctx] = engine.create_jobs(
         [params],
-        config.distribution.log_level, None, utils.get_user(request), None)
+        config.distribution.log_level, None, utils.get_username(request), None)
     job_id = jobctx.calc_id
 
     outputs_uri_web = request.build_absolute_uri(
