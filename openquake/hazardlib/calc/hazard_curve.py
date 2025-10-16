@@ -44,7 +44,7 @@ the engine manages all the realizations at once.
 
 import operator
 import numpy
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, monitor_alloc
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.map_array import MapArray
@@ -71,7 +71,8 @@ def classical(group, sitecol, cmaker):
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
         assert trt == cmaker.trt, (trt, cmaker.trt)
-    dic = PmapMaker(cmaker, sitecol, group).make()
+    with monitor_alloc():
+        dic = PmapMaker(cmaker, sitecol, group).make()
     return dic
 
 
