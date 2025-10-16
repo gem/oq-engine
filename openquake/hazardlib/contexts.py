@@ -485,7 +485,8 @@ def _build_dparam(src, sitecol, cmaker):
         out[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
         for param in dparams:
             out[sec.idx, param] = get_dparam(sec, sitecol, param)
-    cmaker.dparam_mb = max(cmaker.dparam_mb, getsizeof(out) / 1024**2)
+    cmaker.dparam_mb = max(cmaker.dparam_mb, getsizeof(out) / TWO20)
+    cmaker.source_mb += getsizeof(src) / TWO20
     return out
 
 
@@ -543,6 +544,7 @@ class ContextMaker(object):
     tom = None
     cluster = None  # set in PmapMaker
     dparam_mb = 0  # set in build_dparam
+    source_mb = 0  # set in build_dparam
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
@@ -1321,7 +1323,7 @@ class ContextMaker(object):
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code in b'NX':  # increase weight
             weight *= 5.
-        elif src.code in b'SF':  # needed for SAM
+        elif src.code == b'S':  # needed for SAM
             weight *= 2
         if len(srcfilter.sitecol) < 100 and src.code in b'NFSC':  # few sites
             weight *= 10  # make fault sources much heavier
@@ -1512,8 +1514,7 @@ class PmapMaker(object):
         tiles = [sites]
         if src.code == b'F':
             # tested in oq-risk-tests/test/classical/usa_ucerf
-            size = len(src.get_unique_idxs()) * len(sites)
-            if  size > 500_000:
+            if len(sites) >= 2000:
                 tiles = sites.split_in_tiles(len(sites) // 1000)
         for tile in tiles:
             for ctx in self.cmaker.get_ctx_iter(src, tile):
@@ -1581,9 +1582,9 @@ class PmapMaker(object):
         nsites = 0
         esites = 0
         nctxs = 0
+        G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
-        pmap = MapArray(
-            sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
+        pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)
         for src in self.sources:
             t0 = time.time()
             pm = MapArray(
@@ -1605,7 +1606,10 @@ class PmapMaker(object):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
             else:
-                pmap.array = 1. - (1-pmap.array) * (1-pm.array)
+                for g in range(G):
+                    # looping to save memory when there are many gsims
+                    pmap.array[:, :, g] = 1. - (1-pmap.array[:, :, g]) * (
+                        1-pm.array[:, :, g])
             weight += src.weight
         pmap.array *= self.grp_probability
         dt = time.time() - t0
@@ -1645,6 +1649,7 @@ class PmapMaker(object):
         dic['task_no'] = self.task_no
         dic['grp_id'] = self.sources[0].grp_id
         dic['dparam_mb'] = self.cmaker.dparam_mb
+        dic['source_mb'] = self.cmaker.source_mb
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because
             # of the groupby(group, corename) in classical.py
