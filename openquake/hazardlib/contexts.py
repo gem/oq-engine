@@ -485,7 +485,8 @@ def _build_dparam(src, sitecol, cmaker):
         out[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
         for param in dparams:
             out[sec.idx, param] = get_dparam(sec, sitecol, param)
-    cmaker.dparam_mb = max(cmaker.dparam_mb, getsizeof(out) / 1024**2)
+    cmaker.dparam_mb = max(cmaker.dparam_mb, getsizeof(out) / TWO20)
+    cmaker.source_mb += getsizeof(src) / TWO20
     return out
 
 
@@ -543,6 +544,7 @@ class ContextMaker(object):
     tom = None
     cluster = None  # set in PmapMaker
     dparam_mb = 0  # set in build_dparam
+    source_mb = 0  # set in build_dparam
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
         self.trt = trt
@@ -1647,6 +1649,7 @@ class PmapMaker(object):
         dic['task_no'] = self.task_no
         dic['grp_id'] = self.sources[0].grp_id
         dic['dparam_mb'] = self.cmaker.dparam_mb
+        dic['source_mb'] = self.cmaker.source_mb
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because
             # of the groupby(group, corename) in classical.py
