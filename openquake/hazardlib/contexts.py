@@ -1909,6 +1909,13 @@ class ContextMakerSequence(collections.abc.Sequence):
         self.cmakers = cmakers
         self.inverse = inverse
 
+    @property
+    def Gt(self):
+        """
+        The total number of gsims in the underlying context makers
+        """
+        return sum(len(cm.gsims) for cm in self.cmakers)
+
     def __getitem__(self, idx):
         return self.cmakers[idx]
 
@@ -1927,13 +1934,11 @@ class ContextMakerSequence(collections.abc.Sequence):
         :returns: an array of shape (N, L, R) for the given site ID
         """
         N, L, G = rmap.array.shape
+        assert self.Gt == G, (self.Gt, G)
         maxr = 0
-        Gt = 0
         for cm in self.cmakers:
             for rlzs in cm.gsims.values():
                 maxr = max(maxr, rlzs[-1])
-            Gt += len(cm.gsims)
-        assert Gt == G, (Gt, G)
         r0 = numpy.zeros((N, L, maxr + 1))
         g = 0
         for cm in self.cmakers:
@@ -1947,6 +1952,7 @@ class ContextMakerSequence(collections.abc.Sequence):
     def __repr__(self):
         num_gsims = '+'.join(str(len(cm.gsims)) for cm in self.cmakers)
         return f'<{self.__class__.__name__} {num_gsims} gsims>'
+
 
 def get_unique_inverse(all_trt_smrs):
     """
