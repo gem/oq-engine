@@ -1050,7 +1050,6 @@ def main(dstore, csm):
 
     asce41 = compute_asce41(dstore, mce_dfs, sitecol, facts, locs,
                             custom_ids, ASCE_version)
-    breakpoint()
     dstore["asce41"] = to_array(asce41)
     if len(notifications):
         dstore['notifications'] = notifications
