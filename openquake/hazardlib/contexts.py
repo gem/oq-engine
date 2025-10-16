@@ -1121,7 +1121,7 @@ class ContextMaker(object):
             probs = [rec.probs_occur[0] for rec in ctxt]
             return -numpy.log(probs) / self.investigation_time
 
-    # not used by the engine, is is meant for notebooks
+    # not used by the engine, it is meant for notebooks
     def get_poes(self, srcs, sitecol, tom=None, rup_mutex={},
                  collapse_level=-1):
         """
@@ -1141,7 +1141,7 @@ class ContextMaker(object):
             # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
 
-        if len(ctx) < 1000:
+        if len(ctx) < 100:
             # do not split in slices to make debugging easier
             slices = [slice(0, len(ctx))]
         else:
