@@ -188,8 +188,10 @@ class EngineServerTestCase(django.test.TestCase):
         env['OQ_DISTRIBUTE'] = 'no'
         cls.user1, cls.password1 = get_or_create_user(1)  # level 1
         cls.users_who_can_view_exposure, _ = Group.objects.get_or_create(
-            name='Users who can view the exposure')
+            name='Users who can view the exposure and the assetcol')
         perm = Permission.objects.get(codename='can_view_exposure')
+        cls.users_who_can_view_exposure.permissions.add(perm)
+        perm = Permission.objects.get(codename='can_view_assetcol')
         cls.users_who_can_view_exposure.permissions.add(perm)
         cls.c = Client()
         cls.c.login(username=cls.user1.username, password=cls.password1)
@@ -274,6 +276,9 @@ class EngineServerTestCase(django.test.TestCase):
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_assetcol they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
 
         # level 1 users with the can_view_exposure permission can see the exposure
         self.user1.groups.add(self.users_who_can_view_exposure)
@@ -282,6 +287,9 @@ class EngineServerTestCase(django.test.TestCase):
         [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
         download_exposure_url = download_url
         ret = self.c.get(download_url)
+        self.assertEqual(ret.status_code, 200)
+        # ...and with can_view_assetcol they can extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
         self.assertEqual(ret.status_code, 200)
 
         # level 2 users without the show_exposure group can see the exposure
@@ -298,6 +306,9 @@ class EngineServerTestCase(django.test.TestCase):
         [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
         ret = self.c.get(exposure_url)
         self.assertEqual(ret.status_code, 200)
+        # ...and even without can_view_assetcol they can extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 200)
 
         # level 0 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 0
@@ -311,6 +322,9 @@ class EngineServerTestCase(django.test.TestCase):
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_assetcol they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
 
         # level 1 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 1
@@ -324,6 +338,9 @@ class EngineServerTestCase(django.test.TestCase):
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_assetcol they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
 
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
