@@ -399,6 +399,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
         self.cfactor += dic.pop('cfactor')
         self.dparam_mb = max(dic.pop('dparam_mb'), self.dparam_mb)
+        self.source_mb = max(dic.pop('source_mb'), self.source_mb)
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
@@ -485,6 +486,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.cfactor = numpy.zeros(2)
         self.dparam_mb = 0
+        self.source_mb = 0
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         if oq.disagg_by_src:
             M = len(oq.imtls)
@@ -565,6 +567,11 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             logging.info('cfactor = {:_d}'.format(int(self.cfactor[0])))
         self.store_info()
+        if self.dparam_mb:
+            logging.info('maximum size of the dparam cache=%.1f MB',
+                         self.dparam_mb)
+            logging.info('maximum size of the multifaults=%.1f MB',
+                         self.source_mb)
         self.build_curves_maps()
         return True
 
@@ -745,9 +752,6 @@ class ClassicalCalculator(base.HazardCalculator):
         Check for slow tasks
         """
         oq = self.oqparam
-        if getattr(self, 'dparam_mb', 0):
-            logging.info('maximum size of the dparam cache=%.1f MB',
-                         self.dparam_mb)
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
             dur = views.discard_small(task_info.loc[b'classical'].duration)
