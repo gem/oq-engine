@@ -251,7 +251,7 @@ def ajax_login(request):
     """
     username = request.POST['username']
     password = request.POST['password']
-    user = authenticate(username=username, password=password)
+    user = authenticate(request=request, username=username, password=password)
     if user is not None:
         if user.is_active:
             login(request, user)
