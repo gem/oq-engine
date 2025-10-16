@@ -35,6 +35,7 @@ Useful abbreviations:
 - PGA_G: PGA for Geometric Mean (no Risk Targeted)
 - PGA: PGA for Maximum Component
 """
+
 import io
 import sys
 import logging
@@ -897,12 +898,23 @@ def make_figure_sites(dstore, oq, locs, sitecol, notifications):
         # Disaggregation by Source (3 rows, n_sids columns)
         make_figure_disagg_by_src(plt, sids_to_plot, dstore, vs30s)
 
+def define_unique_csi(custom_ids):
+    unique_custom_ids = []
+    seen = set()
+    
+    for item in custom_ids:
+        key = item.split(':')[0]
+        if key not in seen:
+            seen.add(key)
+            unique_custom_ids.append(key)
+    return unique_custom_ids
 
 def compute_asce07(dstore, mce_df, sitecol, custom_ids):
     # FIXME: in case of multiple sites on the same location
     # there will be duplications
     asce07 = {}
-    for s, custom_id in enumerate(custom_ids):
+    unique_custom_ids = define_unique_csi(custom_ids)
+    for s, custom_id in enumerate(unique_custom_ids):
         csi = custom_id.split(':')[0]
         mce_site = mce_df[mce_df['custom_site_id'] == csi]
         Vs30 = sitecol["vs30"][s]
@@ -922,7 +934,6 @@ def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
     if mce_dfs:
         mce_df = dstore.read_df('mce')
     sa_asce41 = []  # list to collect DataFrames for each site
-
     for sid in sitecol['sids']:
         mce_df_site = mce_df[mce_df['sid'] == sid]['MCE']
         custom_id = sitecol[sitecol['sids'] == sid]['custom_site_id']
@@ -952,8 +963,8 @@ def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
     # 3) compute asce41 parameters:
     keys_asce41 = ['BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475']
     asce41 = {}
-
-    for s, custom_id in enumerate(custom_ids):
+    unique_custom_ids = define_unique_csi(custom_ids)
+    for s, custom_id in enumerate(unique_custom_ids):
         csi = custom_id.split(':')[0]
         Vs30 = sitecol["vs30"][s]
         asce_sa = asce41_spectra[asce41_spectra['custom_site_id'] == csi]
@@ -1039,6 +1050,7 @@ def main(dstore, csm):
 
     asce41 = compute_asce41(dstore, mce_dfs, sitecol, facts, locs,
                             custom_ids, ASCE_version)
+    breakpoint()
     dstore["asce41"] = to_array(asce41)
     if len(notifications):
         dstore['notifications'] = notifications
