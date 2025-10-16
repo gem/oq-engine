@@ -1582,9 +1582,9 @@ class PmapMaker(object):
         nsites = 0
         esites = 0
         nctxs = 0
+        G = len(self.cmaker.gsims)
         sids = self.srcfilter.sitecol.sids
-        pmap = MapArray(
-            sids, self.cmaker.imtls.size, len(self.cmaker.gsims)).fill(0)
+        pmap = MapArray(sids, self.cmaker.imtls.size, G).fill(0)
         for src in self.sources:
             t0 = time.time()
             pm = MapArray(
@@ -1606,7 +1606,10 @@ class PmapMaker(object):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
             else:
-                pmap.array = 1. - (1-pmap.array) * (1-pm.array)
+                for g in range(G):
+                    # looping to save memory when there are many gsims
+                    pmap.array[:, :, g] = 1. - (1-pmap.array[:, :, g]) * (
+                        1-pm.array[:, :, g])
             weight += src.weight
         pmap.array *= self.grp_probability
         dt = time.time() - t0
