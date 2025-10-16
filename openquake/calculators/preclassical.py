@@ -171,8 +171,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
 
-    max_transfer_gb = sum(row['blocks'] * row['max_mb']
-                          for row in data if row['blocks'] > 1) / 1024
+    max_transfer_gb = sum(row['blocks'] * row['max_mb'] for row in data) / 1024
     logging.info("Estimated maximum data transfer = %.1f GB", max_transfer_gb)
 
     # determine light groups and tiling
