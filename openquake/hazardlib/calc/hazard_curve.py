@@ -44,7 +44,6 @@ the engine manages all the realizations at once.
 
 import operator
 import numpy
-from openquake.baselib.general import getsizeof
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
@@ -63,9 +62,6 @@ def classical(group, sitecol, cmaker):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    # print(f'{getsizeof(group)=}')
-    # print(f'{getsizeof(sitecol)=}')
-    # print(f'{getsizeof(cmaker)=}')
     trts = set()
     for src in group:
         if not src.num_ruptures:
