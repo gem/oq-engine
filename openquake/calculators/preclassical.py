@@ -158,8 +158,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         N = len(sitecol)
     oq = cmakers[0].oq
     fac = oq.imtls.size * N * 4 / 1024**2
-    max_transfer_gb = cmakers.Gt * fac * oq.concurrent_tasks / 1024
-    logging.info("Estimated maximum data transfer = %.1f GB", max_transfer_gb)
     max_weight = csm.get_max_weight(oq)
 
     # build source_groups
@@ -173,6 +171,10 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
 
+    max_transfer_gb = sum(row['blocks'] * row['max_mb']
+                          for row in data if row['blocks'] > 1) / 1024
+    logging.info("Estimated maximum data transfer = %.1f GB", max_transfer_gb)
+
     # determine light groups and tiling
     light = cmakers.inverse[data['grp_id'][data['blocks'] == 1]]
     req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
@@ -184,7 +186,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     else:
         logging.info('Required mem_gb = %.2f', req_gb)
     max_gb = float(config.memory.pmap_max_gb or parallel.num_cores/8)
-    regular = (max_transfer_gb < 50 and mem_gb < max_gb or oq.disagg_by_src or
+    regular = (max_transfer_gb < 100 and mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
     if oq.tiling is None:
         tiling = not regular

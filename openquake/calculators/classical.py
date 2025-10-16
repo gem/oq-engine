@@ -633,8 +633,8 @@ class ClassicalCalculator(base.HazardCalculator):
         n_out = []
         for cmaker, tilegetters, blocks, extra in self.csm.split(
                 self.cmdict, self.sitecol, self.max_weight,
-                self.num_chunks, True):
-            for block in blocks:
+                self.num_chunks, tiling=True):
+            for block in blocks:  # NB: blocks are actually grp_ids
                 for tgetter in tilegetters:
                     assert isinstance(block, int)
                     tgetter.grp_id = block
