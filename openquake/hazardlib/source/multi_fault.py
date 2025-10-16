@@ -195,6 +195,7 @@ class MultiFaultSource(BaseSeismicSource):
                 continue
             idxs = rupture_idxs[i]
             sfc = MultiSurface([sec[idx] for idx in idxs], msparams[i])
+            print(self, i, general.getsizeof(sfc) / 1E6)
             rake = self.rakes[i]
             hypo = sfc.get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
