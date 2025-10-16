@@ -2018,7 +2018,12 @@ def download_aggrisk(request, calc_id):
     return response
 
 
-def can_extract(user, resource):
+def can_extract(request, resource):
+    try:
+        user = request.user
+    except AttributeError:
+        # without authentication
+        return True
     if (resource in EXTRACTABLE_RESOURCES
             or user.level >= 2
             or user.has_perm(f'auth.can_view_{resource}')):
