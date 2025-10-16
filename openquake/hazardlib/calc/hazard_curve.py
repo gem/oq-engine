@@ -63,9 +63,9 @@ def classical(group, sitecol, cmaker):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    print(f'{getsizeof(group)=}')
-    print(f'{getsizeof(sitecol)=}')
-    print(f'{getsizeof(cmaker)=}')
+    # print(f'{getsizeof(group)=}')
+    # print(f'{getsizeof(sitecol)=}')
+    # print(f'{getsizeof(cmaker)=}')
     trts = set()
     for src in group:
         if not src.num_ruptures:
