@@ -1538,7 +1538,7 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
-    if not can_extract(request.user, what):
+    if not can_extract(request, what):
         return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
@@ -2043,7 +2043,7 @@ def extract_html_table(request, calc_id, name):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
-    if not can_extract(request.user, name):
+    if not can_extract(request, name):
         return HttpResponseForbidden()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
