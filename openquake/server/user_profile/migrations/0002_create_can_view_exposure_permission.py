@@ -1,7 +1,7 @@
 from django.db import migrations
 
 
-def create_exposure_permission(apps, schema_editor):
+def create_can_view_exposure_permission(apps, schema_editor):
     Permission = apps.get_model('auth', 'Permission')
     ContentType = apps.get_model('contenttypes', 'ContentType')
 
@@ -16,7 +16,7 @@ def create_exposure_permission(apps, schema_editor):
     )
 
 
-def delete_exposure_permission(apps, schema_editor):
+def delete_can_view_exposure_permission(apps, schema_editor):
     Permission = apps.get_model('auth', 'Permission')
     Permission.objects.filter(codename='can_view_exposure').delete()
 
@@ -27,5 +27,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(create_exposure_permission, delete_exposure_permission),
+        migrations.RunPython(create_can_view_exposure_permission,
+                             delete_can_view_exposure_permission),
     ]
