@@ -1598,10 +1598,7 @@ class PmapMaker(object):
             nsites += n
             esites += src.esites
             for ctx in ctxs:
-                if self.rup_mutex:
-                    cm.update(pm, ctx, self.rup_mutex)
-                else:
-                    cm.update(pm, ctx)
+                cm.update(pm, ctx, self.rup_mutex)
             if hasattr(src, 'mutex_weight'):
                 # in classical/case_27
                 arr = pm.array if self.rup_mutex else 1. - pm.array
