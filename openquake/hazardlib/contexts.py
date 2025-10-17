@@ -1630,8 +1630,7 @@ class PmapMaker(object):
             pnemap = self._make_src_mutex()
         if self.cluster:
             with self.cmaker.clu_mon:
-                # TODO: reduce 50 to 10 to make the calculation faster
-                for nocc in range(0, 50):
+                for nocc in range(0, 10):
                     prob_n_occ = self.tom.get_probability_n_occurrences(
                         self.tom.occurrence_rate, nocc)
                     if nocc == 0:
