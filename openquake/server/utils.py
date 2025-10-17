@@ -27,6 +27,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from openquake.engine import __version__ as oqversion
 from openquake.calculators.base import get_aelo_version
+from openquake.commonlib import logs
 
 
 def is_superuser(request):
@@ -39,21 +40,21 @@ def is_superuser(request):
     return request.user.is_superuser if hasattr(request, 'user') else False
 
 
-def get_user(request):
+def get_username(request):
     """
     Returns the users from `request` if authentication is enabled, otherwise
     returns the default user (from settings, or as reported by the OS).
     """
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated:
-            user = request.user.username
+            username = request.user.username
         else:
             # This may happen with crafted requests
-            user = ''
+            username = ''
     else:
-        user = getattr(settings, 'DEFAULT_USER', getpass.getuser())
+        username = getattr(settings, 'DEFAULT_USER', getpass.getuser())
 
-    return user
+    return username
 
 
 def get_valid_users(request):
@@ -63,7 +64,7 @@ def get_valid_users(request):
     """
     if settings.LOCKDOWN:
         User = get_user_model()
-    users = [get_user(request)]
+    users = [get_username(request)]
     if settings.LOCKDOWN and hasattr(request, 'user'):
         if request.user.is_authenticated:
             groups = request.user.groups.all()
