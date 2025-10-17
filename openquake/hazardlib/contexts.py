@@ -1133,15 +1133,15 @@ class ContextMaker(object):
         return self.get_pmap(ctxs, tom, rup_mutex).array
 
     def _gen_poes(self, ctx):
+        # NB: by construction ctx.mag contains a single magnitude
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 
         # split large context arrays to avoid filling the CPU cache
         with self.gmf_mon:
-            # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
 
-        if len(ctx) < 1000:
+        if len(ctx) < 100:
             # do not split in slices to make debugging easier
             slices = [slice(0, len(ctx))]
         else:
@@ -1177,7 +1177,6 @@ class ContextMaker(object):
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), 1]
-
             for poes, mea, sig, tau, slc in self._gen_poes(ctxt):
                 # NB: using directly 64 bit poes would be slower without reason
                 # since with astype(F64) the numbers are identical
@@ -1219,6 +1218,7 @@ class ContextMaker(object):
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
         for poes, mea, sig, tau, ctxt in self.gen_poes(ctx):
+            # ctxt contains an unique magnitude
             if rup_mutex:
                 pmap.update_mutex(poes, ctxt, self.tom.time_span, rup_mutex)
             elif self.cluster:
