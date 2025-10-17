@@ -1599,15 +1599,12 @@ class PmapMaker(object):
             esites += src.esites
             for ctx in ctxs:
                 cm.update(pm, ctx, self.rup_mutex)
-            if not self.rup_mutex:
+            if self.rup_mutex:
+                # in classical/case_80
+                pmap.array += (1.- pmap.array) * pm.array
+            else:
                 # in classical/case_27
                 pmap.array += (1. - pm.array) * src.mutex_weight
-            else:
-                # in classical/case_80
-                for g in range(G):
-                    # looping to save memory when there are many gsims
-                    pmap.array[:, :, g] = 1. - (1-pmap.array[:, :, g]) * (
-                        1-pm.array[:, :, g])
             weight += src.weight
         pmap.array *= self.grp_probability
         dt = time.time() - t0
