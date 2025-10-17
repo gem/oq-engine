@@ -411,6 +411,7 @@ class CallbackTest(LiveServerTestCase):
         body = on_job_complete_callback_data["body"]
         get_params = on_job_complete_callback_data['GET']
         self.assertEqual(body['job_id'], job_id)
-        self.assertEqual(body['status'], 'success')
+        self.assertEqual(body['status'], 'complete')
+        self.assertEqual(body['user_name'], 'custom_owner')
         self.assertEqual(get_params['first'], 'one')
         self.assertEqual(get_params['second'], 'two')

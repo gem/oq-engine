@@ -706,17 +706,6 @@ def check_callback(request):
     return JsonResponse(on_job_complete_callback_data)
 
 
-def get_job_info(job_id):
-    job = logs.dbcmd('get_job', int(job_id))
-    job_info = {key: val
-            for (key, val) in zip(job.__dict__['_fields'], job.__dict__['_values'])}
-    # NOTE: returning more than before, but keeping job_id instead of id for backwards
-    # compatibility
-    job_info['job_id'] = job_info['id']
-    del job_info['id']
-    return job_info
-
-
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -756,7 +745,7 @@ def calc_run(request):
         response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
-        response_data = get_job_info(job_id)
+        response_data = logs.get_job_info(job_id)
         status = 200
     return JsonResponse(response_data, status=status)
 
@@ -791,7 +780,7 @@ def calc_run_ini(request):
         response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
-        response_data = get_job_info(job_id)
+        response_data = logs.get_job_info(job_id)
         status = 200
     return JsonResponse(response_data, status=status)
 

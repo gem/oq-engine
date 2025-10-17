@@ -307,13 +307,9 @@ def notify_job_complete(job_id, notify_to, exc=None):
     if not notify_to:
         return
     if notify_to.startswith('https://') or notify_to.startswith('http://'):
-        status = "failed" if exc else "success"
-        payload = {
-            "job_id": job_id,
-            "status": status,
-            "error": str(exc) if exc else None,
-        }
-        response = requests.post(notify_to, json=payload, timeout=5)
+        job_info = logs.get_job_info(job_id)
+        job_info['error'] = str(exc) if exc else None
+        response = requests.post(notify_to, json=job_info, timeout=5)
         response.raise_for_status()
     else:
         logging.error(f'notify_job_complete: {notify_to=} not valid')

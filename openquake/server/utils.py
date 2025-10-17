@@ -27,6 +27,7 @@ from django.apps import apps
 from django.contrib.auth import get_user_model
 from openquake.engine import __version__ as oqversion
 from openquake.calculators.base import get_aelo_version
+from openquake.commonlib import logs
 
 
 def is_superuser(request):
