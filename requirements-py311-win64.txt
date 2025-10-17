@@ -19,7 +19,7 @@ https://wheelhouse.openquake.org/v3/windows/py311/scipy-1.11.4-cp311-cp311-win_a
 https://wheelhouse.openquake.org/v3/windows/py311/onnxruntime-1.16.3-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/fiona-1.9.5-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/GDAL-3.7.3-cp311-cp311-win_amd64.whl
-https://wheelhouse.openquake.org/v3/windows/py311/pyproj-3.6.1-cp311-cp311-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py311/pyproj-3.7.2-cp311-cp311-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py311/psutil-5.9.6-cp311-abi3-win_amd64.whl
 #pp
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl
