@@ -389,6 +389,13 @@ class CallbackTest(LiveServerTestCase):
         on_job_complete_callback_event.clear()
         on_job_complete_callback_data.clear()
 
+    def wait_for_callback(self, timeout=10):
+        for _ in range(int(timeout * 10)):
+            if on_job_complete_callback_event.is_set():
+                return
+            time.sleep(0.1)
+        self.fail("Timeout waiting for callback on job completion")
+
     def test_callback_on_job_successfully_completed(self):
         notify_to = f"{self.live_server_url}/v1/check_callback?first=one&second=two"
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
@@ -402,12 +409,7 @@ class CallbackTest(LiveServerTestCase):
         job_info = json.loads(resp.content.decode('utf8'))
         self.assertEqual(job_info['user_name'], 'custom_owner')
         job_id = job_info['job_id']
-        for _ in range(100):  # 10s max (100 × 0.1s)
-            if on_job_complete_callback_event.is_set():
-                break
-            time.sleep(0.1)
-        else:
-            self.fail("Timeout waiting for callback on job completion")
+        self.wait_for_callback()
         body = on_job_complete_callback_data["body"]
         get_params = on_job_complete_callback_data['GET']
         self.assertEqual(body['job_id'], job_id)
