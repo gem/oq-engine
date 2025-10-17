@@ -19,8 +19,7 @@
 import logging
 import numpy
 from openquake.baselib import sap
-from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import get_cmakers, RmapMaker
+from openquake.hazardlib.contexts import get_cmakers
 
 F32 = numpy.float32
 CUTOFF = 1E-12
