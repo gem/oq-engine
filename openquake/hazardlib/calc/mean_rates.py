@@ -93,7 +93,7 @@ def calc_mcurves(src_groups, sitecol, full_lt, oq):
     :returns: an array of shape (N, M, L1)
     """
     assert oq.use_rates
-    rmap, _, cmakers = calc_rmap(src_groups, full_lt, sitecol, oq)
+    rmap, cmakers = calc_rmap(src_groups, full_lt, sitecol, oq)
     gweights = numpy.concatenate([cm.wei for cm in cmakers])
     rates = (rmap.array @ gweights).reshape(len(sitecol), len(oq.imtls), -1)
     return to_probs(rates)
@@ -111,7 +111,7 @@ def main(job_ini):
     csm = readinput.get_composite_source_model(oq)
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
-    rmap, _ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
+    rmap, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
     gws = numpy.concatenate([cm.wei for cm in cmakers])
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, _M, L1 = rates.shape
