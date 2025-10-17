@@ -28,6 +28,7 @@ import operator
 import itertools
 import subprocess
 import collections
+import tracemalloc
 from datetime import datetime
 from contextlib import contextmanager
 from decorator import decorator
@@ -597,3 +598,15 @@ def kollapse(array, kfields, kround=kround0, mfields=(), afield=''):
     if afield:
         return res, split_array(array[afield], indices, counts)
     return res
+
+
+@contextmanager
+def monitor_alloc():
+    tracemalloc.start()
+    snap1 = tracemalloc.take_snapshot()
+    yield
+    snap2 = tracemalloc.take_snapshot()
+    top_stats = snap2.compare_to(snap1, 'lineno')
+    print("Top 10 memory differences:")
+    for stat in top_stats[:10]:
+        print(stat)

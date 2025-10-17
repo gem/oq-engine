@@ -32,7 +32,6 @@ import scipy.stats
 from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.valid import corename
@@ -42,9 +41,9 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import ContextMaker, Oq, FarAwayRupture
-from openquake.hazardlib.calc.mean_rates import (
-    calc_rmap, calc_mean_rates, to_rates, to_probs)
+from openquake.hazardlib.contexts import (
+    ContextMaker, Oq, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.calc.mean_rates import to_rates, to_probs
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
@@ -368,6 +367,7 @@ class Disaggregator(object):
             self.sitecol = site
             assert len(site) == 1, site
         self.sid = sid = self.sitecol.sids[0]
+
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0],  # mag
@@ -387,17 +387,7 @@ class Disaggregator(object):
             for rlz in rlzs:
                 self.g_by_rlz[rlz] = g
 
-        if isinstance(srcs_or_ctxs[0], numpy.ndarray):
-            # passed contexts, see logictree_test/case_05
-            # consider only the contexts affecting the site
-            ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
-        else:  # passed sources, used only in test_disaggregator
-            ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
-        if sum(len(c) for c in ctxs) == 0:
-            raise FarAwayRupture('No ruptures affecting site #%d' % sid)
-
-        ctx = numpy.concatenate(ctxs).view(numpy.recarray)
-        self.fullctx = ctx
+        self.srcs_or_ctxs = srcs_or_ctxs
 
     def init(self, magi, src_mutex,
              mon0=Monitor('disagg mean_stds'),
@@ -411,7 +401,19 @@ class Disaggregator(object):
         self.mon3 = mon3
         if not hasattr(self, 'ctx_by_magi'):
             # the first time build the magnitude bins
-            self.ctx_by_magi = split_by_magbin(self.fullctx, self.bin_edges[0])
+            if isinstance(self.srcs_or_ctxs[0], numpy.ndarray):
+                # passed contexts, see logictree_test/case_05
+                # consider only the contexts affecting the site
+                self.source_id = 'some_source'
+                ctxs = [ctx[ctx.sids == self.sid] for ctx in self.srcs_or_ctxs]
+            else:  # passed sources, used only in test_disaggregator
+                self.source_id = corename(self.srcs_or_ctxs[0].source_id)
+                ctxs = self.cmaker.from_srcs(self.srcs_or_ctxs, self.sitecol)
+            if sum(len(c) for c in ctxs) == 0:
+                raise FarAwayRupture(
+                    'No ruptures affecting site #%d' % self.sid)
+            ctx = numpy.concatenate(ctxs).view(numpy.recarray)
+            self.ctx_by_magi = split_by_magbin(ctx, self.bin_edges[0])
         try:
             self.ctx = self.ctx_by_magi[magi]
         except KeyError:
@@ -532,7 +534,10 @@ class Disaggregator(object):
         return to_rates(out) if src_mutex else out
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {humansize(self.fullctx.nbytes)} >'
+        source_id, sid = self.source_id, self.sid
+        rep = (f'<{self.__class__.__name__} {source_id=} {sid=} '
+               f'{humansize(self.fullctx.nbytes)} >')
+        return rep
 
 
 # this is used in the hazardlib tests, not in the engine
@@ -666,30 +671,25 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def collect_std(disaggs):
+def collect_std(disaggs, Ma, D, M, G):
     """
-    :returns: an array of shape (Ma, D, M', G)
+    :param disaggs: dictionaries with keys sid, source_id, dist_idx, std
+    :returns: an array of shape (Ma, D, M, G)
     """
     assert len(disaggs)
-    gsims = set()
-    for dis in disaggs:
-        gsims.update(dis.cmaker.gsims)
-    gidx = {gsim: g for g, gsim in enumerate(sorted(gsims))}
-    G, M = len(gidx), len(dis.cmaker.imts)
-    out = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
+    acc = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
     cnt = collections.Counter()  # (magi, dsti)
     for dis in disaggs:
-        for magi in dis.std:
-            for gsim, std in zip(dis.cmaker.gsims, dis.std[magi]):
-                g = gidx[gsim]  # std has shape (M, U)
-                for dsti, val in zip(dis.dist_idx[magi], std.T):
-                    if (magi, dsti) in out:
-                        out[magi, dsti][g] += val  # shape M
+        for magi in dis['std']:
+            for g, std in enumerate(dis['std'][magi]):
+                for dsti, val in zip(dis['dist_idx'][magi], std.T):
+                    if (magi, dsti) in acc:
+                        acc[magi, dsti][g] += val  # shape M
                     else:
-                        out[magi, dsti][g] = val.copy()
+                        acc[magi, dsti][g] = val.copy()
                     cnt[magi, dsti] += 1 / G
-    sig = numpy.zeros((dis.Ma, dis.D, M, G))
-    for (magi, dsti), v in out.items():
+    sig = numpy.zeros((Ma, D, M, G))
+    for (magi, dsti), v in acc.items():
         sig[magi, dsti] = v.T / cnt[magi, dsti]
 
     # the sigmas are artificially zero for not covered (magi, disti) bins
@@ -714,8 +714,7 @@ def get_ints(src_ids):
     return numpy.uint32(out)
 
 
-def disagg_source(groups, site, reduced_lt, edges_shapedic,
-                  oq, monitor=Monitor()):
+def gen_disagg_source(groups, site, reduced_lt, edges_shapedic, oq):
     """
     Compute disaggregation for the given source. Assume oq.imtls has a
     single level for each IMT.
@@ -728,18 +727,10 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     :param monitor: a Monitor instance
     :returns: sid, src_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
     """
-    imldic = {imt: imls[0] for imt, imls in oq.imtls.items()}
     sitecol = SiteCollection([site])
-    sitecol.sids[:] = 0
     if not hasattr(reduced_lt, 'trt_rlzs'):
         reduced_lt.init()
     edges, s = edges_shapedic
-    drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
-    source_id = corename(groups[0].sources[0].source_id)
-    name = ' on site (%.5f, %.5f)' % (
-        site.location.longitude, site.location.latitude)
-    with monitor('calc_rmap' + name, measuremem=True):
-        rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     ws = reduced_lt.rlzs['weight']
     if any(grp.src_interdep == 'mutex' for grp in groups):
         [grp] = groups  # There can be only one mutex group
@@ -749,19 +740,15 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
             'weight': [src.mutex_weight for src in grp]}
     else:
         src_mutex = {}
-    disaggs = []
-    with monitor('disagg_mag_dist_eps' + name, measuremem=True):
-        if len(cmakers) == 1:
-            # common case, concatenate the ctxs for minor speedup
-            dis = Disaggregator(ctxs, sitecol, cmakers[0], edges)
-            drates4D[:] = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-            disaggs.append(dis)
-        else:
-            # in logictree_test/case_12
-            for ctx, cmaker in zip(ctxs, cmakers.to_array()):
-                if len(ctx):
-                    dis = Disaggregator([ctx], sitecol, cmaker, edges)
-                    drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
-                    disaggs.append(dis)
-    std4D = collect_std(disaggs)
-    return site.id, source_id, std4D, drates4D
+    all_trt_smrs = [sg[0].trt_smrs for sg in groups]
+    cmakers = get_cmakers(all_trt_smrs, reduced_lt, oq)
+    for group, cmaker in zip(groups, cmakers.to_array()):
+        dis = Disaggregator(group, sitecol, cmaker, edges)
+        yield dis, src_mutex, ws
+
+
+def disagg_source(dis, src_mutex, ws, monitor):
+    imldic = {imt: imls[0] for imt, imls in dis.cmaker.oq.imtls.items()}
+    rates4D = dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
+    return dict(source_id=dis.source_id, sid=dis.sid,
+                rates4D=rates4D, std=dis.std, dist_idx=dis.dist_idx)

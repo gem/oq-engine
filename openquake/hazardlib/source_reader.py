@@ -26,6 +26,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat, config
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
+from openquake.hazardlib.contexts import get_cmakers
 from openquake.hazardlib.source.multi_fault import save_and_split
 from openquake.hazardlib.source.point import msr_name
 from openquake.hazardlib.valid import basename, fragmentno
@@ -574,6 +575,9 @@ class CompositeSourceModel:
         assert len(keys) < TWO16, len(keys)
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
+    def get_cmakers(self, oq):
+        return get_cmakers(self.trt_smrs(), self.full_lt, oq)
+
     def get_sources(self, atomic=None):
         """
         There are 3 options:
@@ -633,6 +637,7 @@ class CompositeSourceModel:
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
+        # this is called in preclassical and then in classical
         assert len(source_data) < TWO24, len(source_data)
         for src_id, nsites, weight, ctimes in python3compat.zip(
                 source_data['src_id'], source_data['nsites'],
@@ -640,7 +645,7 @@ class CompositeSourceModel:
             baseid = basename(src_id)
             row = self.source_info[baseid]
             row[CALC_TIME] += ctimes
-            row[NUM_SITES] += nsites
+            row[NUM_SITES] = nsites
 
     def count_ruptures(self):
         """
