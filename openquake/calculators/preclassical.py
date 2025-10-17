@@ -173,6 +173,8 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     max_transfer_gb = sum(row['blocks'] * row['max_mb'] for row in data) / 1024
     logging.info("Estimated maximum data transfer = %.1f GB", max_transfer_gb)
+    transfer_gb = sum(row['blocks'] * row['max_mb'] for row in data
+                      if row['blocks'] > 1) / 1024
 
     # determine light groups and tiling
     light = cmakers.inverse[data['grp_id'][data['blocks'] == 1]]
@@ -185,10 +187,8 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     else:
         logging.info('Required mem_gb = %.2f', req_gb)
     max_gb = float(config.memory.pmap_max_gb or parallel.num_cores/8)
-    regular = (mem_gb < max_gb or oq.disagg_by_src or
+    regular = (transfer_gb < 100 and mem_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
-    if not config.directory.custom_tmp:
-        regular &= (max_transfer_gb < 100)
     if oq.tiling is None:
         tiling = not regular
     else:
