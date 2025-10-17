@@ -27,6 +27,8 @@ from openquake.hazardlib.imt import SA, PGV, PGA
 from openquake.hazardlib.gsim.base import GMPE, registry
 from openquake.hazardlib.contexts import get_mean_stds
 
+not_verified = True
+
 # Abrahamson & Bhasin (2020) conditional PGV (horizontal component)
 # coefficients (Table 3.2)
 AB20_COEFFS = {
