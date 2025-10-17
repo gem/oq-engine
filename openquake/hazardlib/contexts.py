@@ -543,7 +543,7 @@ class ContextMaker(object):
     fewsites = False
     ilabel = None
     tom = None
-    cluster = None  # set in PmapMaker
+    cluster = None  # set in RmapMaker
     dparam_mb = 0  # set in build_dparam
     source_mb = 0  # set in build_dparam
 
@@ -1458,7 +1458,7 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
             out[:, mL1:mL1 + L1] = 0
 
 
-class PmapMaker(object):
+class RmapMaker(object):
     """
     A class to compute the PoEs from a given source
     """
@@ -1915,6 +1915,10 @@ class ContextMakerSequence(collections.abc.Sequence):
         self.cmakers = cmakers
         self.inverse = inverse
 
+    @property
+    def Gt(self):
+        return sum(len(cm.gsims) for cm in self.cmakers)
+
     def __getitem__(self, idx):
         return self.cmakers[idx]
 
@@ -1927,6 +1931,18 @@ class ContextMakerSequence(collections.abc.Sequence):
 
     def to_array(self, grp_ids=slice(None)):
         return numpy.array([self[inv] for inv in self.inverse[grp_ids]])
+
+    def calc_rmap(self, src_groups, sitecol):
+        """
+        :returns: a RateMap of shape (N, L, Gt)
+        """
+        cmakers = self.to_array()
+        assert len(src_groups) == len(cmakers)
+        L = cmakers[0].imtls.size
+        rmap = MapArray(sitecol.sids, L, self.Gt).fill(0)
+        for group, cmaker in zip(src_groups, cmakers):
+            rmap += RmapMaker(cmaker, sitecol, group).make()['rmap']
+        return rmap
 
     def combine_rates(self, rmap):
         """
