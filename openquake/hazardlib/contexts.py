@@ -320,8 +320,7 @@ def _quintets(cmaker, src, sitecol):
         # building planar geometries
         planardict = src.get_planar(cmaker.shift_hypo)
 
-    magdist = {mag: cmaker.maximum_distance(mag)
-               for mag, rate in src.get_annual_occurrence_rates()}
+    magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range
     maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
     maxdist = magdist[maxmag]
@@ -369,7 +368,7 @@ def _quintets(cmaker, src, sitecol):
 
 
 # helper used to populate contexts for planar ruptures
-def _get_ctx_planar(cmaker, builder, mag, magi, planar, sites,
+def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
                     src_id, src_offset, tom):
     zeroctx = builder.zeros((len(planar), len(sites)))  # shape (N, U)
     if cmaker.fewsites:
@@ -400,7 +399,7 @@ def _get_ctx_planar(cmaker, builder, mag, magi, planar, sites,
         if par == 'mag':
             ctxt[par] = mag
         elif par == 'occurrence_rate':
-            ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
+            ctxt[par] = mrate * planar.wlr[:, 2]  # shape U-> (N, U)
         elif par == 'width':
             ctxt[par] = planar.wlr[:, 0]
         elif par == 'strike':
@@ -430,7 +429,7 @@ def _get_ctx_planar(cmaker, builder, mag, magi, planar, sites,
     if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
         # read Probability Mass Function from model and reshape it
         # into predetermined shape of probs_occur
-        pmf = tom.get_pmf(planar.wlr[:, 2],
+        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate,
                           n_max=zeroctx['probs_occur'].shape[2])
         zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
@@ -460,16 +459,18 @@ def genctxs_Pp(src, sitecol, cmaker):
                          if par in dd]
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
-    for magi, mag, magdist, planars, sites in _quintets(cmaker, src, sitecol):
+    mrate = dict(src.get_annual_occurrence_rates())
+    for magi, mag,  magdist, planars, sites in _quintets(cmaker, src, sitecol):
         if not planars:
             continue
         elif len(planars) > 1:  # when using ps_grid_spacing
             pla = numpy.concatenate(planars).view(numpy.recarray)
+            pla.wlr[:, 2] /= len(planars)  # reduce the rate
         else:
             pla = planars[0]
         # building contexts
-        ctx = _get_ctx_planar(
-            cmaker, builder, mag, magi, pla, sites, src.id, src.offset, tom)
+        ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
+                              pla, sites, src.id, src.offset, tom)
         ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
             yield ctxt
