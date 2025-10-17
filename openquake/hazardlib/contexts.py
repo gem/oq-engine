@@ -1604,9 +1604,11 @@ class PmapMaker(object):
                 else:
                     cm.update(pm, ctx)
             if hasattr(src, 'mutex_weight'):
+                # in classical/case_27
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
             else:
+                # in classical/case_80
                 for g in range(G):
                     # looping to save memory when there are many gsims
                     pmap.array[:, :, g] = 1. - (1-pmap.array[:, :, g]) * (
