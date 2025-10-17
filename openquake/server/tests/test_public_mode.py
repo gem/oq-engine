@@ -28,15 +28,17 @@ import tempfile
 import string
 import random
 import logging
-
+import time
 import django
-from django.test import Client
+from django.test import LiveServerTestCase, Client
 from unittest import skipIf
 from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
+from openquake.server.views import (
+    on_job_complete_callback_data, on_job_complete_callback_event)
 from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
 from openquake.qa_tests_data.classical import case_01
 
@@ -377,3 +379,38 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
             self.assertEqual(resp.status_code, 200)
             resp_text_dict = json.loads(resp.content.decode('utf8'))
             self.assertFalse(resp_text_dict['success'])
+
+
+class CallbackTest(LiveServerTestCase):
+    """Integration test checking the callback on job completion"""
+
+    def setUp(self):
+        self.client = Client()
+        on_job_complete_callback_event.clear()
+        on_job_complete_callback_data.clear()
+
+    def test_callback_on_job_successfully_completed(self):
+        notify_to = f"{self.live_server_url}/v1/check_callback?first=one&second=two"
+        job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
+        post_args = dict(
+            job_ini=job_ini,
+            notify_to=notify_to,
+            job_owner='custom_owner',
+        )
+        resp = self.client.post('/v1/calc/run_ini', post_args)
+        self.assertEqual(resp.status_code, 200)
+        job_info = json.loads(resp.content.decode('utf8'))
+        self.assertEqual(job_info['user_name'], 'custom_owner')
+        job_id = job_info['job_id']
+        for _ in range(100):  # 10s max (100 × 0.1s)
+            if on_job_complete_callback_event.is_set():
+                break
+            time.sleep(0.1)
+        else:
+            self.fail("Timeout waiting for callback on job completion")
+        body = on_job_complete_callback_data["body"]
+        get_params = on_job_complete_callback_data['GET']
+        self.assertEqual(body['job_id'], job_id)
+        self.assertEqual(body['status'], 'success')
+        self.assertEqual(get_params['first'], 'one')
+        self.assertEqual(get_params['second'], 'two')

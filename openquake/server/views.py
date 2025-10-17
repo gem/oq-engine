@@ -31,6 +31,7 @@ import signal
 import zlib
 import re
 import psutil
+from threading import Event
 from collections import defaultdict
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
@@ -687,13 +688,33 @@ def calc_log_size(request, calc_id):
     return JsonResponse(response_data)
 
 
+on_job_complete_callback_event = Event()
+on_job_complete_callback_data = {}
+
+
 @csrf_exempt
+@cross_domain_ajax
 @require_http_methods(['POST'])
-def log_callback(request):
-    print(request.POST)
-    print(request.GET)
-    print(request.body.decode('utf8'))
-    return HttpResponse(content='Done')
+def check_callback(request):
+    global on_job_complete_callback_event, on_job_complete_callback_data
+    body = json.loads(request.body.decode('utf8'))
+    on_job_complete_callback_data.clear()
+    on_job_complete_callback_data['body'] = body
+    on_job_complete_callback_data['POST'] = request.POST
+    on_job_complete_callback_data['GET'] = request.GET
+    on_job_complete_callback_event.set()
+    return JsonResponse(on_job_complete_callback_data)
+
+
+def get_job_info(job_id):
+    job = logs.dbcmd('get_job', int(job_id))
+    job_info = {key: val
+            for (key, val) in zip(job.__dict__['_fields'], job.__dict__['_values'])}
+    # NOTE: returning more than before, but keeping job_id instead of id for backwards
+    # compatibility
+    job_info['job_id'] = job_info['id']
+    del job_info['id']
+    return job_info
 
 
 @csrf_exempt
@@ -723,7 +744,6 @@ def calc_run(request):
     else:
         ini = job_ini if job_ini else ".ini"
     notify_to = request.POST.get('notify_to')
-    # notify_to = 'http://127.0.0.1:8800/v1/log_callback?key=value'
     username = request.POST.get('job_owner')
     if not username:
         username = utils.get_username(request)
@@ -736,7 +756,7 @@ def calc_run(request):
         response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
-        response_data = dict(status='created', job_id=job_id)
+        response_data = get_job_info(job_id)
         status = 200
     return JsonResponse(response_data, status=status)
 
@@ -759,7 +779,6 @@ def calc_run_ini(request):
     ini = request.POST['job_ini']
     hazard_job_id = request.POST.get('hazard_job_id')
     notify_to = request.POST.get('notify_to')
-    # notify_to = 'http://127.0.0.1:8800/v1/log_callback?key=value'
     username = request.POST.get('job_owner')
     if not username:
         username = utils.get_username(request)
@@ -772,7 +791,7 @@ def calc_run_ini(request):
         response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
-        response_data = dict(status='created', job_id=job_id)
+        response_data = get_job_info(job_id)
         status = 200
     return JsonResponse(response_data, status=status)
 
