@@ -1473,8 +1473,7 @@ class PmapMaker(object):
         except AttributeError:  # already a list of sources
             self.sources = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
-        self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
-        if self.rup_indep:
+        if getattr(group, 'rup_interdep', None) != 'mutex':
             self.rup_mutex = {}
         else:
             self.rup_mutex = {}  # src_id, rup_id -> rup_weight
@@ -1590,7 +1589,7 @@ class PmapMaker(object):
             t0 = time.time()
             pm = MapArray(
                 pmap.sids, cm.imtls.size, len(cm.gsims)
-            ).fill(self.rup_indep)
+            ).fill(not self.rup_mutex)
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
@@ -1605,7 +1604,7 @@ class PmapMaker(object):
                     cm.update(pm, ctx)
             if hasattr(src, 'mutex_weight'):
                 # in classical/case_27
-                arr = 1. - pm.array if self.rup_indep else pm.array
+                arr = pm.array if self.rup_mutex else 1. - pm.array
                 pmap.array += arr * src.mutex_weight
             else:
                 # in classical/case_80
@@ -1630,7 +1629,7 @@ class PmapMaker(object):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
-        if self.rup_indep and not self.src_mutex:
+        if not self.src_mutex and not self.rup_mutex:
             pnemap = self._make_src_indep()
         else:
             pnemap = self._make_src_mutex()
