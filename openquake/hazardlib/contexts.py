@@ -687,6 +687,7 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
+        self.clu_mon = monitor('cluster loop', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
@@ -1628,14 +1629,16 @@ class PmapMaker(object):
         else:
             pnemap = self._make_src_mutex()
         if self.cluster:
-            for nocc in range(0, 50):
-                prob_n_occ = self.tom.get_probability_n_occurrences(
-                    self.tom.occurrence_rate, nocc)
-                if nocc == 0:
-                    pmapclu = pnemap.new(numpy.full(pnemap.shape, prob_n_occ))
-                else:
-                    pmapclu.array += pnemap.array**nocc * prob_n_occ
-            pnemap.array[:] = pmapclu.array
+            with self.cmaker.clu_mon:
+                for nocc in range(0, 50):
+                    prob_n_occ = self.tom.get_probability_n_occurrences(
+                        self.tom.occurrence_rate, nocc)
+                    if nocc == 0:
+                        pmapclu = pnemap.new(
+                            numpy.full(pnemap.shape, prob_n_occ))
+                    else:
+                        pmapclu.array += pnemap.array**nocc * prob_n_occ
+                pnemap.array[:] = pmapclu.array
 
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
