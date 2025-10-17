@@ -465,7 +465,7 @@ def genctxs_Pp(src, sitecol, cmaker):
             continue
         elif len(planars) > 1:  # when using ps_grid_spacing
             pla = numpy.concatenate(planars).view(numpy.recarray)
-            pla.wlr[:, 2] /= len(planars)  # reduce the rate
+            pla.wlr[:, 2] /= len(planars)  # average rate
         else:
             pla = planars[0]
         # building contexts
