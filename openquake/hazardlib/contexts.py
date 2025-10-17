@@ -1223,6 +1223,7 @@ class ContextMaker(object):
             if rup_mutex:
                 pmap.update_mutex(poes, ctxt, self.tom.time_span, rup_mutex)
             elif self.cluster:
+                # in classical/case_35
                 for poe, sidx in zip(poes, pmap.sidx[ctxt.sids]):
                     pmap.array[sidx] *= 1. - poe
             else:
