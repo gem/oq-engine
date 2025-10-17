@@ -320,8 +320,7 @@ def _quintets(cmaker, src, sitecol):
         # building planar geometries
         planardict = src.get_planar(cmaker.shift_hypo)
 
-    magdist = {mag: cmaker.maximum_distance(mag)
-               for mag, rate in src.get_annual_occurrence_rates()}
+    magdist = {mag: cmaker.maximum_distance(mag) for mag in planardict}
     # cmaker.maximum_distance(mag) can be 0 if outside the mag range
     maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
     maxdist = magdist[maxmag]
@@ -369,7 +368,7 @@ def _quintets(cmaker, src, sitecol):
 
 
 # helper used to populate contexts for planar ruptures
-def _get_ctx_planar(cmaker, builder, mag, magi, planar, sites,
+def _get_ctx_planar(cmaker, builder, mag, mrate, magi, planar, sites,
                     src_id, src_offset, tom):
     zeroctx = builder.zeros((len(planar), len(sites)))  # shape (N, U)
     if cmaker.fewsites:
@@ -400,7 +399,7 @@ def _get_ctx_planar(cmaker, builder, mag, magi, planar, sites,
         if par == 'mag':
             ctxt[par] = mag
         elif par == 'occurrence_rate':
-            ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
+            ctxt[par] = mrate * planar.wlr[:, 2]  # shape U-> (N, U)
         elif par == 'width':
             ctxt[par] = planar.wlr[:, 0]
         elif par == 'strike':
@@ -430,7 +429,7 @@ def _get_ctx_planar(cmaker, builder, mag, magi, planar, sites,
     if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
         # read Probability Mass Function from model and reshape it
         # into predetermined shape of probs_occur
-        pmf = tom.get_pmf(planar.wlr[:, 2],
+        pmf = tom.get_pmf(planar.wlr[:, 2] * mrate,
                           n_max=zeroctx['probs_occur'].shape[2])
         zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
@@ -460,16 +459,18 @@ def genctxs_Pp(src, sitecol, cmaker):
                          if par in dd]
     cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
-    for magi, mag, magdist, planars, sites in _quintets(cmaker, src, sitecol):
+    mrate = dict(src.get_annual_occurrence_rates())
+    for magi, mag,  magdist, planars, sites in _quintets(cmaker, src, sitecol):
         if not planars:
             continue
         elif len(planars) > 1:  # when using ps_grid_spacing
             pla = numpy.concatenate(planars).view(numpy.recarray)
+            pla.wlr[:, 2] /= len(planars)  # average rate
         else:
             pla = planars[0]
         # building contexts
-        ctx = _get_ctx_planar(
-            cmaker, builder, mag, magi, pla, sites, src.id, src.offset, tom)
+        ctx = _get_ctx_planar(cmaker, builder, mag, mrate[mag], magi,
+                              pla, sites, src.id, src.offset, tom)
         ctxt = ctx[ctx.rrup < magdist]
         if len(ctxt):
             yield ctxt
@@ -686,6 +687,7 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
+        self.clu_mon = monitor('cluster loop', measuremem=True)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
@@ -1133,12 +1135,12 @@ class ContextMaker(object):
         return self.get_pmap(ctxs, tom, rup_mutex).array
 
     def _gen_poes(self, ctx):
+        # NB: by construction ctx.mag contains a single magnitude
         from openquake.hazardlib.site_amplification import get_poes_site
         (M, L1), G = self.loglevels.array.shape, len(self.gsims)
 
         # split large context arrays to avoid filling the CPU cache
         with self.gmf_mon:
-            # split_by_mag=False because already contains a single mag
             mean_stdt = self.get_mean_stds([ctx], split_by_mag=False)
 
         if len(ctx) < 100:
@@ -1177,7 +1179,6 @@ class ContextMaker(object):
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
             self.cfactor += [len(ctxt), 1]
-
             for poes, mea, sig, tau, slc in self._gen_poes(ctxt):
                 # NB: using directly 64 bit poes would be slower without reason
                 # since with astype(F64) the numbers are identical
@@ -1219,9 +1220,11 @@ class ContextMaker(object):
         :param rup_mutex: dictionary (src_id, rup_id) -> weight
         """
         for poes, mea, sig, tau, ctxt in self.gen_poes(ctx):
+            # ctxt contains an unique magnitude
             if rup_mutex:
                 pmap.update_mutex(poes, ctxt, self.tom.time_span, rup_mutex)
             elif self.cluster:
+                # in classical/case_35
                 for poe, sidx in zip(poes, pmap.sidx[ctxt.sids]):
                     pmap.array[sidx] *= 1. - poe
             else:
@@ -1472,8 +1475,7 @@ class PmapMaker(object):
         except AttributeError:  # already a list of sources
             self.sources = group
         self.src_mutex = getattr(group, 'src_interdep', None) == 'mutex'
-        self.rup_indep = getattr(group, 'rup_interdep', None) != 'mutex'
-        if self.rup_indep:
+        if getattr(group, 'rup_interdep', None) != 'mutex':
             self.rup_mutex = {}
         else:
             self.rup_mutex = {}  # src_id, rup_id -> rup_weight
@@ -1589,7 +1591,7 @@ class PmapMaker(object):
             t0 = time.time()
             pm = MapArray(
                 pmap.sids, cm.imtls.size, len(cm.gsims)
-            ).fill(self.rup_indep)
+            ).fill(not self.rup_mutex)
             ctxs = list(self.gen_ctxs(src))
             n = sum(len(ctx) for ctx in ctxs)
             if n == 0:
@@ -1598,18 +1600,13 @@ class PmapMaker(object):
             nsites += n
             esites += src.esites
             for ctx in ctxs:
-                if self.rup_mutex:
-                    cm.update(pm, ctx, self.rup_mutex)
-                else:
-                    cm.update(pm, ctx)
-            if hasattr(src, 'mutex_weight'):
-                arr = 1. - pm.array if self.rup_indep else pm.array
-                pmap.array += arr * src.mutex_weight
+                cm.update(pm, ctx, self.rup_mutex)
+            if self.rup_mutex:
+                # in classical/case_80
+                pmap.array += (1.- pmap.array) * pm.array
             else:
-                for g in range(G):
-                    # looping to save memory when there are many gsims
-                    pmap.array[:, :, g] = 1. - (1-pmap.array[:, :, g]) * (
-                        1-pm.array[:, :, g])
+                # in classical/case_27
+                pmap.array += (1. - pm.array) * src.mutex_weight
             weight += src.weight
         pmap.array *= self.grp_probability
         dt = time.time() - t0
@@ -1627,19 +1624,22 @@ class PmapMaker(object):
         dic = {}
         self.rupdata = []
         self.source_data = AccumDict(accum=[])
-        if self.rup_indep and not self.src_mutex:
+        if not self.src_mutex and not self.rup_mutex:
             pnemap = self._make_src_indep()
         else:
             pnemap = self._make_src_mutex()
         if self.cluster:
-            for nocc in range(0, 50):
-                prob_n_occ = self.tom.get_probability_n_occurrences(
-                    self.tom.occurrence_rate, nocc)
-                if nocc == 0:
-                    pmapclu = pnemap.new(numpy.full(pnemap.shape, prob_n_occ))
-                else:
-                    pmapclu.array += pnemap.array**nocc * prob_n_occ
-            pnemap.array[:] = pmapclu.array
+            with self.cmaker.clu_mon:
+                # TODO: reduce 50 to 10 to make the calculation faster
+                for nocc in range(0, 50):
+                    prob_n_occ = self.tom.get_probability_n_occurrences(
+                        self.tom.occurrence_rate, nocc)
+                    if nocc == 0:
+                        pmapclu = pnemap.new(
+                            numpy.full(pnemap.shape, prob_n_occ, dtype=F32))
+                    else:
+                        pmapclu.array += pnemap.array**nocc * F32(prob_n_occ)
+                pnemap.array[:] = pmapclu.array
 
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
