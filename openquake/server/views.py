@@ -122,7 +122,7 @@ AELO_FORM_PLACEHOLDERS = {
     'asce_version': 'ASCE standards',
 }
 
-HIDDEN_OUTPUTS = ['assetcol', 'job']
+HIDDEN_OUTPUTS = ['exposure', 'job']
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -251,7 +251,7 @@ def ajax_login(request):
     """
     username = request.POST['username']
     password = request.POST['password']
-    user = authenticate(username=username, password=password)
+    user = authenticate(request=request, username=username, password=password)
     if user is not None:
         if user.is_active:
             login(request, user)
@@ -1292,8 +1292,16 @@ def save_pik(job, dirname):
     return pathpik
 
 
-def get_public_outputs(oes):
-    return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
+def get_allowed_outputs(oes, user):
+    # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
+    # permission 'can_view_<OUTPUT>'
+    if user is not None:
+        return [e for o, e in oes
+                if o not in HIDDEN_OUTPUTS
+                or user.has_perm(f'auth.can_view_{o}')
+                or user.level >= 2]
+    else:
+        return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
 
 
 @require_http_methods(['GET'])
@@ -1322,8 +1330,13 @@ def calc_results(request, calc_id):
     # NB: export_output has as keys the list (output_type, extension)
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
+    try:
+        user = request.user
+    except AttributeError:
+        # without authentication
+        user = None
     output_types = groupby(export, lambda oe: oe[0],
-                           get_public_outputs)
+                           lambda oes: get_allowed_outputs(oes, user))
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
@@ -1336,6 +1349,8 @@ def calc_results(request, calc_id):
             outtypes = [ot for ot in output_types[rtype] if ot != 'txt']
         except KeyError:
             continue  # non-exportable outputs should not be shown
+        if not outtypes:  # happens for 'exposure', since it is hidden
+            continue
         path = f'v1/calc/result/{result.id}'
         url = urljoin(base_url, path)
         # NOTE: in case of multiple available export types, we provide only the url to
@@ -1396,7 +1411,11 @@ def calc_result(request, result_id):
     try:
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        if ds_key in HIDDEN_OUTPUTS:
+        # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
+        # permission 'can_view_<OUTPUT>'
+        if (ds_key in HIDDEN_OUTPUTS
+                and not request.user.has_perm(f'auth.can_view_{ds_key}')
+                and not request.user.level >= 2):
             return HttpResponseForbidden()
         if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
@@ -1695,7 +1714,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        mce=mce, mce_spectra=mce_spectra,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version_full,
-                       lon=lon, lat=lat, site_class=site_class_display_name, site_name=site_name)
+                       lon=lon, lat=lat, site_class=site_class_display_name,
+                       site_name=site_name)
                   )
 
 
