@@ -1629,18 +1629,15 @@ class RmapMaker(object):
         else:
             pnemap = self._make_src_mutex()
         if self.cluster:
-            N, L, Gt = pnemap.shape
             with self.cmaker.clu_mon:
-                # looping on Gt to save memory in the USA model
-                for g in range(Gt):
-                    prob0 = self.tom.get_probability_n_occurrences(
-                        self.tom.occurrence_rate, 0)  # prob zero occurrences
-                    array = numpy.full((N, L), prob0, dtype=F32)
-                    for nocc in range(1, 20):
-                        probn = F32(self.tom.get_probability_n_occurrences
-                                    (self.tom.occurrence_rate, nocc))
-                        array += pnemap.array[:, :, g] ** nocc * probn
-                    pnemap.array[:, :, g] = array
+                prob0 = self.tom.get_probability_n_occurrences(
+                    self.tom.occurrence_rate, 0)  # prob zero occurrences
+                array = numpy.full(pnemap.shape, prob0, dtype=F32)
+                for nocc in range(1, 20):
+                    probn = F32(self.tom.get_probability_n_occurrences
+                                (self.tom.occurrence_rate, nocc))
+                    array += pnemap.array ** nocc * probn
+                pnemap.array = array
 
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
