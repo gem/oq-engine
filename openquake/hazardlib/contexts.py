@@ -1630,12 +1630,10 @@ class RmapMaker(object):
             pnemap = self._make_src_mutex()
         if self.cluster:
             with self.cmaker.clu_mon:
-                prob0 = self.tom.get_probability_n_occurrences(
-                    self.tom.occurrence_rate, 0)  # prob zero occurrences
-                array = numpy.full(pnemap.shape, prob0, dtype=F32)
-                for nocc in range(1, 20):
-                    probn = F32(self.tom.get_probability_n_occurrences
-                                (self.tom.occurrence_rate, nocc))
+                probs =  F32(self.tom.get_probability_n_occurrences(
+                    self.tom.occurrence_rate, numpy.arange(20)))
+                array = numpy.full(pnemap.shape, probs[0], dtype=F32)
+                for nocc, probn in enumerate(probs[1:], 1):
                     array += pnemap.array ** nocc * probn
                 pnemap.array = array
 
