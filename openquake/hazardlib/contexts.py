@@ -1630,16 +1630,14 @@ class RmapMaker(object):
             pnemap = self._make_src_mutex()
         if self.cluster:
             with self.cmaker.clu_mon:
-                # TODO: reduce 50 to 10 to make the calculation faster
-                for nocc in range(0, 50):
+                for nocc in range(0, 20):
                     prob_n_occ = self.tom.get_probability_n_occurrences(
                         self.tom.occurrence_rate, nocc)
                     if nocc == 0:
-                        pmapclu = pnemap.new(
-                            numpy.full(pnemap.shape, prob_n_occ, dtype=F32))
+                        array = numpy.full(pnemap.shape, prob_n_occ, dtype=F32)
                     else:
-                        pmapclu.array += pnemap.array**nocc * F32(prob_n_occ)
-                pnemap.array[:] = pmapclu.array
+                        array += pnemap.array**nocc * F32(prob_n_occ)
+                pnemap.array = array
 
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
