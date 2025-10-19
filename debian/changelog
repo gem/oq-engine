@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Reduced the number of tiles
   * Optimized the management of cluster of sources (the array loop)
   * Changed the ps_grid_spacing approximation to use average occurrence rates
 
