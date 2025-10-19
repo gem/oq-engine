@@ -1963,8 +1963,9 @@ class ContextMakerSequence(collections.abc.Sequence):
         return r0
 
     def __repr__(self):
-        num_gsims = '+'.join(str(len(cm.gsims)) for cm in self.cmakers)
-        return f'<{self.__class__.__name__} {num_gsims} gsims>'
+        name = self.__class__.__name__
+        return f'<{name} Gt={self.Gt}, groups={len(self.inverse)}>'
+
 
 def get_unique_inverse(all_trt_smrs):
     """

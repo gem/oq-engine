@@ -447,6 +447,11 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
+            # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
+            # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
+            # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
+            # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
+            # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             sg = apply_uncertainties(bset_values, src_group)
             full_lt.set_trt_smr(sg, smr=rlz.ordinal)
             for src in sg:
