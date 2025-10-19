@@ -581,7 +581,7 @@ class CompositeSourceModel:
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
     def get_cmakers(self, oq):
-        return get_cmakers(self.trt_smrs(), self.full_lt, oq)
+        return get_cmakers(self.get_trt_smrs(), self.full_lt, oq)
 
     def get_sources(self, atomic=None):
         """

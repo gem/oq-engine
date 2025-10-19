@@ -1933,6 +1933,7 @@ class ContextMakerSequence(collections.abc.Sequence):
         :returns: a RateMap of shape (N, L, Gt)
         """
         cmakers = self.to_array()
+        assert cmakers[0].oq.use_rates
         assert len(src_groups) == len(cmakers)
         L = cmakers[0].imtls.size
         rmap = MapArray(sitecol.sids, L, self.Gt).fill(0)
