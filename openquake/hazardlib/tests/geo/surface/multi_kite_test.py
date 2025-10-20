@@ -262,7 +262,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
     def test_get_middle_point(self):
         # The computed middle point is the mid point of the first surface
         midp = self.msrf.get_middle_point()
-        expected = [-70.4537, 19.6960, 10.2449]
+        expected = [-70.4442, 19.6919, 9.314]
         computed = [midp.longitude, midp.latitude, midp.depth]
         aae(expected, computed, decimal=4)
 

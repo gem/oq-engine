@@ -94,7 +94,7 @@ def compute_cs(dstore, oq, N, M, P):
     imls = compute_hazard_maps(  # shape (N, L) => (N, P)
         curves[:, 0, 0, :], oq.imtls[oq.imt_ref], oq.poes)
     N, P = imls.shape
-    cmakers = read_cmakers(dstore)
+    cmakers = read_cmakers(dstore).to_array()
 
     # Computing CS
     toms = decode(dstore['toms'][:])

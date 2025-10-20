@@ -23,7 +23,7 @@ import numpy
 
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, get_unique_inverse
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import BaseRupture, get_ebr
 from openquake.commonlib.calc import get_proxies
@@ -146,7 +146,7 @@ def get_pmaps_gb(dstore, full_lt=None):
     if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
         trt_smrs = [[0]]
     else:
-        trt_smrs = dstore['trt_smrs'][:]
+        trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
     trt_rlzs = full_lt.get_trt_rlzs(trt_smrs)
     max_gb = len(trt_rlzs) * N * L * 4 / 1024**3
     return max_gb, trt_rlzs
@@ -156,7 +156,7 @@ def get_num_chunks_sites(dstore):
     """
     :returns: (number of postclassical tasks to generate, number of sites)
 
-    It is 5 times the number of GB required to store the rates.
+    It is 20 times the number of GB required to store the rates.
     """
     N = len(dstore['sitecol/sids'])
     max_chunks = min(dstore['oqparam'].max_sites_disagg, N)
@@ -164,7 +164,7 @@ def get_num_chunks_sites(dstore):
         req_gb = dstore['source_groups'].attrs['req_gb']
     except KeyError:
         return max_chunks, N
-    chunks = max(int(5 * req_gb), max_chunks)
+    chunks = max(int(20 * req_gb), max_chunks)
     return chunks, N
 
 
@@ -182,10 +182,10 @@ def map_getters(dstore, full_lt=None, disagg=False):
     full_lt = full_lt or dstore['full_lt'].init()
     R = full_lt.get_num_paths()
     _req_gb, trt_rlzs = get_pmaps_gb(dstore, full_lt)
-    if oq.fastmean and not disagg:
-        weights = numpy.concatenate(
-            [cm.wei for cm in read_cmakers(dstore)])
-        trt_rlzs = numpy.zeros(len(weights))  # reduces the data transfer
+    if oq.fastmean and not disagg:  # in classical
+        # pass gweights
+        weights = numpy.concatenate([cm.wei for cm in read_cmakers(dstore)])
+        trt_rlzs = numpy.zeros(len(trt_rlzs))  # reduces the data transfer
     else:
         attrs = vars(full_lt)
         weights = [full_lt.weights]
@@ -339,7 +339,7 @@ class MapGetter(object):
                         except KeyError:
                             array = numpy.zeros((self.L, self.G))
                             self._map[sid] = array
-                        array[df.lid, df.gid] = df.rate
+                        array[df.lid, df.gid] += df.rate
         return self._map
 
     def get_hcurve(self, sid):  # used in classical

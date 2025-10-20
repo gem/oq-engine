@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<fragilityModel id="1" assetCategory="RDN" lossCategory="structural">
+		<description>Road Network
+</description>
+		<limitStates>slight moderate extensive collapse</limitStates>
+		<fragilityFunction id="connection" format="discrete">
+			<imls imt="LiqProb" noDamageLimit="0">0 0.2 0.40 0.49 0.5 0.79 0.8 1</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 1 1 1 1</poes>
+			<poes ls="collapse">0 0 0 0 1 1 1 1</poes>
+		</fragilityFunction>
+		<fragilityFunction id="tunnel" format="discrete">
+			<imls imt="LiqProb" noDamageLimit="0">0 0.25 0.35 0.45 0.55 1</imls>
+			<poes ls="slight">0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 0 0</poes>
+			<poes ls="collapse">0 0 0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="road" format="discrete">
+			<imls imt="LiqProb" noDamageLimit="0">0 0.2 0.40 0.49 0.5 0.79 0.8 1</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 1 1 1 1</poes>
+			<poes ls="collapse">0 0 0 0 1 1 1 1</poes>
+		</fragilityFunction>
+
+		<fragilityFunction id="TAZ" format="discrete">
+			<imls imt="LiqProb" noDamageLimit="0">0 0.2 0.40 0.49 0.5 0.79 0.8 1</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 1 1 1 1</poes>
+			<poes ls="collapse">0 0 0 0 1 1 1 1</poes>
+		</fragilityFunction>
+		<fragilityFunction id="Single_span_bridge" format="discrete">
+			<imls imt="LiqProb" noDamageLimit="0">0 0.2 0.40 0.49 0.5 0.79 0.8 1</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 1 1 1 1</poes>
+			<poes ls="collapse">0 0 0 0 1 1 1 1</poes>
+		</fragilityFunction>
+		<fragilityFunction id="Multi_span_medium_bridge" format="discrete">
+			<imls imt="LiqProb" noDamageLimit="0">0 0.2 0.40 0.49 0.5 0.79 0.8 1</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 1 1 1 1</poes>
+			<poes ls="collapse">0 0 0 0 1 1 1 1</poes>
+		</fragilityFunction>
+		<fragilityFunction id="Multi_span_major_bridge" format="discrete">
+			<imls imt="LiqProb" noDamageLimit="0">0 0.2 0.40 0.49 0.5 0.79 0.8 1</imls>
+			<poes ls="slight">0 0 0 0 0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0 0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0 1 1 1 1</poes>
+			<poes ls="collapse">0 0 0 0 1 1 1 1</poes>
+		</fragilityFunction>
+	</fragilityModel>
+</nrml>

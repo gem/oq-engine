@@ -24,6 +24,7 @@ import json
 import inspect
 import logging
 import pathlib
+import tempfile
 import functools
 import collections
 import numpy
@@ -64,6 +65,11 @@ aggregate_by:
   calculations. Takes in input one or more exposure tags.
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
+
+aggregate_exposure:
+  Used to aggregate the exposure by hazard site and taxonomy.
+  Example: *aggregate_exposure = true*
+  Default: False
 
 aggregate_loss_curves_types:
   Used for event-based risk and damage calculations, to estimate the aggregated
@@ -132,9 +138,6 @@ avg_losses:
   Default: True
 
 base_path:
-  INTERNAL
-
-cachedir:
   INTERNAL
 
 cache_distances:
@@ -747,22 +750,20 @@ shift_hypo:
   Example: *shift_hypo = true*.
   Default: false
 
-site_effects:
-  Used in ShakeMap calculations to turn on GMF amplification based
-  on the vs30 values in the ShakeMap (site_effects='shakemap') or in the
-  site collection (site_effects='sitecol').
-  Example: *site_effects = 'shakemap'*.
-  Default: 'no'
+site_class:
+  ASCE site class used in AELO mode.
+  Example: *site_class = 'A'*.
+  Default: None
 
 sites:
   Used to specify a list of sites.
   Example: *sites = 10.1 45, 10.2 45*.
 
 site_labels:
-  Specify a list of labels (i.e. strings without spaces) assuming each site
+  Specify a dictionary label_string -> label_index assuming each site
   have a field "label" corresponding to the label index.
-  Example: *site_labels = Cascadia*.
-  Default: []
+  Example: *site_labels = {"Cascadia": 1}*.
+  Default: {}
 
 tile_spec:
   INTERNAL
@@ -914,6 +915,19 @@ VULN_TYPES = COST_TYPES + [
 ASCE_VERSIONS = {'ASCE7-16': 'ASCE 7-16 & 41-17',
                  'ASCE7-22': 'ASCE 7-22 & 41-23'}
 
+SITE_CLASSES = {
+    'A': {'display_name': 'A - Hard Rock', 'vs30': 1500},
+    'B': {'display_name': 'B - Rock', 'vs30': 1080},
+    'BC': {'display_name': 'BC', 'vs30': 760},
+    'C': {'display_name': 'C - Very Dense Soil and Soft Rock', 'vs30': 530},
+    'CD': {'display_name': 'CD', 'vs30': 365},
+    'D': {'display_name': 'D - Stiff Soil', 'vs30': 260},
+    'DE': {'display_name': 'DE', 'vs30': 185},
+    'E': {'display_name': 'E - Soft Clay Soil', 'vs30': 150},
+    'default': {'display_name': 'Default', 'vs30': [260, 365, 530]},
+    'custom': {'display_name': 'Specify Vs30', 'vs30': None},
+}
+
 
 def check_same_levels(imtls):
     """
@@ -985,6 +999,7 @@ class OqParam(valid.ParamSet):
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloats, ())
     aggregate_by = valid.Param(valid.namelists, [])
+    aggregate_exposure = valid.Param(valid.boolean, False)
     aggregate_loss_curves_types = valid.Param(
         # accepting all comma-separated permutations of 1, 2 or 3 elements
         # of the list ['ep', 'aep' 'oep']
@@ -1020,7 +1035,6 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
-    cachedir = valid.Param(valid.utf8, '')
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
@@ -1102,9 +1116,11 @@ class OqParam(valid.ParamSet):
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
-    reference_depth_to_1pt0km_per_sec = valid.Param( # Can be positive float, -999 or nan
-        valid.positivefloatorsentinel, numpy.nan) 
-    reference_depth_to_2pt5km_per_sec = valid.Param( # Can be positive float, -999 or nan
+    reference_depth_to_1pt0km_per_sec = valid.Param(
+        # Can be positive float, -999 or nan
+        valid.positivefloatorsentinel, numpy.nan)
+    reference_depth_to_2pt5km_per_sec = valid.Param(
+        # Can be positive float, -999 or nan
         valid.positivefloatorsentinel, numpy.nan)
     reference_vs30_type = valid.Param(
         valid.Choice('measured', 'inferred'), 'inferred')
@@ -1134,9 +1150,9 @@ class OqParam(valid.ParamSet):
     # example: shakemap_uri = {'kind': 'usgs_id', 'id': 'XXX'}
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
-    site_effects = valid.Param(
-        valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
-    site_labels = valid.Param(valid.namelist, [])
+    site_class = valid.Param(
+        valid.NoneOr(valid.Choice(*SITE_CLASSES)), None)
+    site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)
     tiling = valid.Param(valid.boolean, None)
@@ -1461,7 +1477,7 @@ class OqParam(valid.ParamSet):
                 self.num_epsilon_bins = 1
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 self.raise_invalid('you cannot set rlzs_index and '
-                                  'num_rlzs_disagg at the same time')
+                                   'num_rlzs_disagg at the same time')
 
         # check compute_rtgm will run
         if 'rtgm' in self.postproc_func:
@@ -1627,8 +1643,6 @@ class OqParam(valid.ParamSet):
         """
         :returns: a vector of minimum intensities, one per IMT
         """
-        #if 'scenario' in self.calculation_mode:  # disable min_iml
-        #    return numpy.full(len(self.imtls), 1E-10)
         mini = self.minimum_intensity
         if mini:
             for imt in self.imtls:
@@ -1919,7 +1933,7 @@ class OqParam(valid.ParamSet):
         yes = exposures and exposures[0].endswith('.hdf5')
         if yes:
             if not self.quantiles:
-                self.quantiles = [0.05, 0.95]
+                self.quantiles = [0.05, 0.50, 0.95]
             if not self.aggregate_by:
                 # self.aggregate_by = [['ID_1'], ['OCCUPANCY']]
                 self.aggregate_by = [['ID_2']]
@@ -2166,15 +2180,16 @@ class OqParam(valid.ParamSet):
         export_dir={export_dir} must refer to a directory,
         and the user must have the permission to write on it.
         """
-        if self.export_dir and not os.path.isabs(self.export_dir):
+        if self.export_dir == '/tmp' and sys.platform == 'win32':
+            # magically convert to the Windows tempdir
+            self.export_dir = tempfile.gettempdir()
+        if not os.path.isabs(self.export_dir):
             self.export_dir = os.path.normpath(
                 os.path.join(self.input_dir, self.export_dir))
-        if not self.export_dir:
-            self.export_dir = os.path.expanduser('~')  # home directory
-            logging.info('export_dir not specified. Using export_dir=%s'
-                         % self.export_dir)
+        if not self.exports or not self.exports[0]:  # () or ('',)
+            # we are not exporting anything
             return True
-        if not os.path.exists(self.export_dir):
+        elif not os.path.exists(self.export_dir):
             try:
                 os.makedirs(self.export_dir)
             except PermissionError:
@@ -2234,14 +2249,12 @@ class OqParam(valid.ParamSet):
             return True
         return self.minimum_engine_version <= valid.version(engine_version())
 
-
     def check_aggregate_by(self):
         tagset = asset.tagset(self.aggregate_by)
         if 'id' in tagset and len(tagset) > 1:
             raise ValueError('aggregate_by = id must contain a single tag')
-        elif 'site_id' in tagset and len(tagset) > 1:
-            raise ValueError(
-                'aggregate_by = site_id must contain a single tag')
+        elif 'site_id' in tagset and self.avg_losses:
+            logging.warning('avg_losses with site_id in aggregate_by')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
                 err_msg = ('The field `aggregate_by = policy`'
@@ -2258,7 +2271,8 @@ class OqParam(valid.ParamSet):
         try:
             [lt] = dic
         except ValueError:
-            self.raise_invalid('too many loss types in reinsurance %s' % list(dic))
+            self.raise_invalid(
+                'too many loss types in reinsurance %s' % list(dic))
         if lt not in scientific.LOSSID:
             self.raise_invalid('%s: unknown loss type %s in reinsurance' % lt)
         if '+' in lt and not self.total_losses:
@@ -2311,6 +2325,17 @@ class OqParam(valid.ParamSet):
             return True
         return self.hazard_calculation_id
 
+    def get_haz_distance(self):
+        """
+        :returns: the asset_hazard_distance or region_grid_spacing * 1.414
+        """
+        asset_hazard_distance = max(self.asset_hazard_distance.values())
+        if self.region_grid_spacing:
+            haz_distance = self.region_grid_spacing * 1.414
+        else:
+            haz_distance = asset_hazard_distance
+        return haz_distance
+
     @classmethod
     def docs(cls):
         """
@@ -2334,7 +2359,8 @@ class OqParam(valid.ParamSet):
         dic.pop('close', None)
         dic.pop('mags_by_trt', None)
         dic.pop('sec_imts', None)
-        for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.split():
+        for k in 'export_dir exports all_cost_types hdf5path ideduc M K A'.\
+                split():
             dic.pop(k, None)
 
         if 'secondary_perils' in dic:

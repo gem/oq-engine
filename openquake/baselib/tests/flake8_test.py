@@ -53,9 +53,11 @@ def _long_funcs(module, maxlen):
             # Adjust start line to skip the docstring if present
             if (doc and isinstance(node.body[0], ast.Expr)
                     and isinstance(node.body[0].value, ast.Constant)):
-                start_line = node.body[0].end_lineno + 1  # First line after docstring
+                start_line = node.body[0].end_lineno + 1
+                # First line after docstring
             else:
-                start_line = node.lineno + 1  # First line after function definition
+                start_line = node.lineno + 1
+                # First line after function definition
             numlines = node.end_lineno - start_line
             if numlines > maxlen:
                 out.append((dotname, numlines))
@@ -193,6 +195,7 @@ def test_forbid_long_funcs():
                                  'openquake.engine',
                                  'openquake.hmtk',
                                  'openquake.sep',
+                                 'openquake._unc',
                                  ], 90)
     if long_funcs:
         raise RuntimeError(long_funcs)

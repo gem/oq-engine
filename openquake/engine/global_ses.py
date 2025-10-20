@@ -16,8 +16,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-"""
-This first version of the global_ses script, available from engine-3.22, is
+"""This first version of the global_ses script, available from engine-3.22, is
 able to generate the Global Stochastic Event Set for the entire world
 from the GEM mosaic of hazard models. The workflow is a follows:
 
@@ -26,21 +25,18 @@ from the GEM mosaic of hazard models. The workflow is a follows:
 
 $ /opt/openquake/venv/bin/python -m openquake.engine.global_ses
 
-3. the script accepts five arguments: 
-the directory where the mosaic is stored (i.e. /home/hazard/mosaic)
-the name of the generated output file (i.e. ruptures.hdf5); 
-the number_of_logic_tree_samples
-the ses_per_logic_tree_path and
-minimum_magnitude
+3. the script accepts five arguments:
 
-For performance, we strongly suggest to use the zmq distribution mechanism which allows multiple models to
-run in parallel.
+- the directory where the mosaic is stored (i.e. /home/hazard/mosaic)
+- the name of the generated output file (i.e. ruptures.hdf5);
+- the number_of_logic_tree_samples
+- the ses_per_logic_tree_path and
+- minimum_magnitude
 
-OQ_DISTRIBUTE=zmq /opt/openquake/venv/bin/python -m openquake.engine.global_ses $HOME/mosaic ruptures.hdf5
-
-4. by default the script samples 2000 realizations with 50 SES per logic tree path,
-with an investigation time of 1, i.e. 100,000 years with a minimum magnitude of 5.
-Such parameters are currently hard-coded by easily changeable in the script itself.
+4. by default the script samples 2000 realizations with 50 SES per
+   logic tree path, with an investigation time of 1, i.e. 100,000 years
+   with a minimum magnitude of 5.  Such parameters are currently
+   hard-coded by easily changeable in the script itself.
 
 After the file ruptures.hdf5 has been generated, it can be used in
 event based calculations by simply setting in the job.ini
@@ -61,6 +57,7 @@ Note 2: for JPN and KOR instead of using 50 ses x 1 year,
 Note 3: ruptures.hdf5 will contain a global site model with all the
         available site parameters merged together, with zeros for missing
         parameters (i.e. xvf will be zero for most models).
+
 """
 
 import os
@@ -107,8 +104,7 @@ def read_job_inis(mosaic_dir, INPUTS):
 
 def main(mosaic_dir, out, models='ALL', *,
          number_of_logic_tree_samples:int=2000,
-         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5.,
-         imts='PGA,SA(0.1),SA(0.2),SA(0.3),SA(0.6),SA(1.0),SA(2.0)'):
+         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5):
     """
     Storing global SES
     """
@@ -127,9 +123,9 @@ def main(mosaic_dir, out, models='ALL', *,
         ses_per_logic_tree_path = str(ses_per_logic_tree_path),
         investigation_time='1',
         ground_motion_fields='false',
-        minimum_magnitude=str(minimum_magnitude),
-        models=models,
-        intensity_measure_types=imts)
+        models=models)
+    if minimum_magnitude:
+        INPUTS['minimum_magnitude'] = str(minimum_magnitude)
     job_inis, rows = read_job_inis(mosaic_dir, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
@@ -151,8 +147,7 @@ main.out = 'Output file'
 main.models = 'Models to consider (comma-separated)'
 main.number_of_logic_tree_samples = 'Number of samples'
 main.ses_per_logic_tree_path = 'Number of SES'
-main.minimum_magnitude = 'Minimum magnitude'
-main.imts = 'Intensity Measure Types (comma-separated)'
+main.minimum_magnitude = 'Discard ruptures below this magnitude'
 
 if __name__ == '__main__':
     sap.run(main)

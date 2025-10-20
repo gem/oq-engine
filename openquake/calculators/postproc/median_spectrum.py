@@ -117,19 +117,20 @@ def compute_median_spectrum(
     one_site_poe = len(sids) == 1 and P == 1
     for site_id in sids:
         ctx = context[context.sids == site_id]
+        grp_id = ctx[0]['grp_id']
         mea, sig, tau, wei = get_mea_sig_wei(cmaker, ctx, uhs[site_id])
         out = np.empty((3, M, P))  # <mea>, <sig>, tot_w
         out[0] = np.einsum("gmup,gmu->mp", wei, mea)
         out[1] = np.einsum("gmup,gmu->mp", wei, sig)
         out[2] = wei.sum(axis=(0, 2))
-        yield {(cmaker.grp_id, site_id): out}
+        yield {(grp_id, site_id): out}
         if one_site_poe:
             ok = wei.sum(axis=(0, 1, 3)) > 0
             arr = general.compose_arrays(
                 rup_id=ctx.rup_id, mag=ctx.mag, rrup=ctx.rrup,
                 occurrence_rate=ctx.occurrence_rate,
                 mea=tr(mea), sig=tr(sig), tau=tr(tau), wei=tr(wei[:, :, :, 0]))
-            yield {(cmaker.grp_id, -1): [arr[ok]]}
+            yield {(grp_id, -1): [arr[ok]]}
 
 
 # NB: we are ignoring IMT-dependent weights
@@ -153,8 +154,8 @@ def main(dstore, csm):
 
     # read the precomputed mean hazard spectrum
     ref_uhs = dstore.sel("hmaps-stats", stat="mean")[:, 0]  # shape NSMP -> NMP
-    cmakers = contexts.read_cmakers(dstore)
-    G = {cm.grp_id: len(cm.gsims) for cm in cmakers}
+    cmakers = contexts.read_cmakers(dstore).to_array()
+    G = {grp_id: len(cm.gsims) for grp_id, cm in enumerate(cmakers)}
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
     # check_rup_unique(ctx_by_grp)
     totsize = sum(len(ctx) * G[grp_id] for grp_id, ctx in ctx_by_grp.items())
@@ -163,7 +164,7 @@ def main(dstore, csm):
     for grp_id, ctx in ctx_by_grp.items():
         # reduce the levels to 1 level per IMT
         cmaker = cmakers[grp_id]
-        splits = np.ceil(len(ctx) * G[cmaker.grp_id] / blocksize)
+        splits = np.ceil(len(ctx) * G[grp_id] / blocksize)
         for ctxt in np.array_split(ctx, splits):
             smap.submit((cmaker, ctxt, ref_uhs))
     res = smap.reduce()
@@ -176,7 +177,7 @@ def main(dstore, csm):
 
     # create median_spectrum_disagg datasets
     if N == 1 and P == 1:
-        for cm in cmakers:
+        for grp_id, cm in enumerate(cmakers):
             G = len(cm.gsims)
             dtlist = [('rup_id', I64),
                       ('mag', F32),
@@ -191,7 +192,7 @@ def main(dstore, csm):
                 dtlist.append((f'tau{g}', dt))
             for g in range(G):
                 dtlist.append((f'wei{g}', dt))
-            name = f"median_spectrum_disagg/grp{cm.grp_id}"
+            name = f"median_spectrum_disagg/grp{grp_id}"
             logging.info('Creating %s', name)
             dstore.create_dset(name, dtlist)
 

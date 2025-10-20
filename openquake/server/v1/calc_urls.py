@@ -23,6 +23,7 @@ from openquake.server import views
 # each url is prefixed with /v1/calc/
 urlpatterns = [
     re_path(r'^list$', views.calc_list),
+    re_path(r'^jobs_from_inis$', views.jobs_from_inis),
     re_path(r'^(\d+)/status$', views.calc_list),
     re_path(r'^(\d+)$', views.calc),
     re_path(r'^(\d+)/datastore$', views.calc_datastore),
@@ -63,5 +64,6 @@ elif settings.APPLICATION_MODE != 'READ_ONLY':
         re_path(r'^(\d+)/abort$', views.calc_abort),
         re_path(r'^(\d+)/remove$', views.calc_remove),
         re_path(r'^run$', views.calc_run),
+        re_path(r'^run_ini$', views.calc_run_ini),
         re_path(r'^validate_zip$', views.validate_zip),
     ])

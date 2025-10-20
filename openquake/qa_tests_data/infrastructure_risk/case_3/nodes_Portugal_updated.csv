@@ -1,0 +1,16 @@
+id,lon,lat,taxonomy_old,number,start_node,end_node,purpose,weight,type,parent_id,structural,taxonomy
+125,-7.929360512,37.04201929,connection,1,nan,nan,connection,1,node,125,100,connection
+395,-7.9335768,37.0257151,connection,1,nan,nan,connection,1,node,395,100,connection
+2544,-8.1063431,37.8253484,connection,1,nan,nan,connection,1,node,2544,100,Single_span_bridge
+2925,-8.4139014,38.1168937,connection,1,nan,nan,connection,1,node,2925,100,connection
+3518,-8.33073151,39.47010355,connection,1,nan,nan,connection,1,node,3518,100,connection
+4102,-8.3431707,39.9231508,connection,1,nan,nan,connection,1,node,4102,100,Multi_span_medium_bridge
+4351,-8.5367504,37.1577831,connection,1,nan,nan,connection,1,node,4351,100,connection
+4498,-8.6842431,37.7970037,connection,1,nan,nan,connection,1,node,4498,100,connection
+5229,-8.9430621,38.6810258,connection,1,nan,nan,connection,1,node,5229,100,connection
+7180,-8.8555239,39.796752,connection,1,nan,nan,connection,1,node,7180,100,Multi_span_medium_bridge
+8309,-9.035237227,38.51296185,connection,1,nan,nan,connection,1,node,8309,100,connection
+9712,-9.212253,38.9607878,connection,1,nan,nan,connection,1,node,9712,100,Multi_span_major_bridge
+9810,-9.0505563,38.8950825,connection,1,nan,nan,connection,1,node,9810,100,Single_span_bridge
+10963,-9.0545223,39.080866,connection,1,nan,nan,connection,1,node,10963,100,Single_span_bridge
+11445,-9.00247515,39.3330031,connection,1,nan,nan,connection,1,node,11445,100,connection

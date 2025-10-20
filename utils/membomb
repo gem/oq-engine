@@ -34,7 +34,7 @@ def main(n: int = 1):
     Allocate a lot of memory; used to simulate OOM situations
     """
     tot = 0
-    allargs = [(n,) for _ in range(parallel.Starmap.num_cores)]
+    allargs = [(n,) for _ in range(parallel.num_cores)]
     for z in parallel.Starmap(allocate_mem, allargs):
         tot += z.nbytes
     logging.warning('Allocated %.1f GB', tot / 1024**3)

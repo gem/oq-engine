@@ -754,8 +754,16 @@ def add_checksum(db, job_id, value):
         job ID
     :param value:
         value of the checksum (32 bit integer)
+    :returns:
+        The unique job_id with that checksum or None
     """
-    return db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value).lastrowid
+    try:
+        jid = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',
+                 value, scalar=True)
+    except NotFound:
+        db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value)
+    else:
+        return jid
 
 
 def update_job_checksum(db, job_id, checksum):
@@ -767,8 +775,8 @@ def update_job_checksum(db, job_id, checksum):
     :param checksum:
         the checksum (32 bit integer)
     """
-    db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
-       job_id, checksum)
+    return db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
+              job_id, checksum).lastrowid
 
 
 def get_checksum_from_job(db, job_id):

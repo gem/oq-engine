@@ -50,24 +50,24 @@ def calculate_z1pt0(vs30, country):
     '''
     Reads an array of vs30 values (in m/s) and returns the depth to
     the 1.0 km/s velocity horizon (in m)
-    Ref: Chiou, B. S.-J. and Youngs, R. R., 2014. 'Update of the 
+    Ref: Chiou, B. S.-J. and Youngs, R. R., 2014. 'Update of the
     Chiou and Youngs NGA model for the average horizontal component
     of peak ground motion and response spectra.' Earthquake Spectra,
     30(3), pp.1117–1153.
     :param vs30: the shear wave velocity (in m/s) at a depth of 30m
-    :param country: country as defined by geoBoundariesCGAZ_ADM0.shp
+    :param country: country as defined by geoBoundariesCGAZ_ADM0.gpkg
 
     '''
     z1pt0 = numpy.zeros(len(vs30))
     df = pandas.DataFrame({'codes': country})
-    idx_glo = df.loc[df.codes!='JPN'].index.values
-    idx_jpn = df.loc[df.codes=='JPN'].index.values
+    idx_glo = df.loc[df.codes != 'JPN'].index.values
+    idx_jpn = df.loc[df.codes == 'JPN'].index.values
 
     c1_glo = 571 ** 4.
     c2_glo = 1360.0 ** 4.
     z1pt0[idx_glo] = numpy.exp((-7.15 / 4.0) * numpy.log(
         (vs30[idx_glo] ** 4 + c1_glo) / (c2_glo + c1_glo)))
-    
+
     c1_jpn = 412 ** 2.
     c2_jpn = 1360.0 ** 2.
     z1pt0[idx_jpn] = numpy.exp((-5.23 / 2.0) * numpy.log(
@@ -86,20 +86,20 @@ def calculate_z2pt5(vs30, country):
     Earthquake Spectra, 30(3), pp.1087–1114.
 
     :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
-    :param country: country as defined by geoBoundariesCGAZ_ADM0.shp
-                    
+    :param country: country as defined by geoBoundariesCGAZ_ADM0.gpkg
+
     '''
     z2pt5 = numpy.zeros(len(vs30))
     df = pandas.DataFrame({'codes': country})
-    idx_glo = df.loc[df.codes!='JPN'].index.values
-    idx_jpn = df.loc[df.codes=='JPN'].index.values
+    idx_glo = df.loc[df.codes != 'JPN'].index.values
+    idx_jpn = df.loc[df.codes == 'JPN'].index.values
 
     c1_glo = 7.089
     c2_glo = -1.144
     z2pt5[idx_glo] = numpy.exp(c1_glo + numpy.log(vs30[idx_glo]) * c2_glo)
 
     c1_jpn = 5.359
-    c2_jpn = -1.102    
+    c2_jpn = -1.102
     z2pt5[idx_jpn] = numpy.exp(c1_jpn + c2_jpn * numpy.log(vs30[idx_jpn]))
 
     return z2pt5
@@ -276,7 +276,7 @@ site_param_dt = {
     'tri': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
-    'lithology': (numpy.bytes_,2),
+    'lithology': (numpy.bytes_, 2),
     'landcover': (numpy.float64),
     'hratio': (numpy.float64),
     'tslope': (numpy.float64),
@@ -294,6 +294,7 @@ site_param_dt = {
     'region': numpy.uint32,
     'in_cshm': bool  # used in mcverry
 }
+
 
 def add(string, suffix, maxlen):
     """
@@ -514,7 +515,8 @@ class SiteCollection(object):
                  soil_values=F64([152, 213, 305, 442, 640, 914, 1500])):
         """
         Multiply a site collection with the given vs30 values.
-        NB: only the sites with vs30 = -999. are multiplied.
+        NB: if there are multiple values the sites with vs30 = -999. are multiplied,
+        otherwise the given value is applied to all sites.
         """
         classes = general.find_among(soil_classes, soil_values, vs30s)
         n = len(vs30s)
@@ -535,8 +537,9 @@ class SiteCollection(object):
         tot = sites_to_multiply * n + (N - sites_to_multiply)
         array = numpy.empty(tot, dt)
         j = 0
+        multi_vs30 = len(vs30s) > 1
         for i, orig_rec in enumerate(self.array):
-            if not ok[i]:  # do not multiply
+            if multi_vs30 and not ok[i]:  # do not multiply
                 rec = array[j]
                 for name in names:
                     if name == 'custom_site_id':
@@ -546,6 +549,7 @@ class SiteCollection(object):
                         rec[name] = orig_rec[name]
                 j += 1
                 continue
+            # else override the vs30
             for cl, vs30 in zip(classes, vs30s):
                 rec = array[j]
                 for name in names:
@@ -566,6 +570,18 @@ class SiteCollection(object):
         new.array = array
         new.complete = new
         return new
+
+    def get_around(self, lon, lat, digits=5):
+        """
+        :returns: the submesh around lon, lat with the given precision
+        """
+        out = []
+        lons = numpy.round(self.lons, digits)
+        lats = numpy.round(self.lats, digits)
+        for i, (lo, la) in enumerate(zip(lons, lats)):
+            if lo == lon and la == lat:
+                out.append(i)
+        return self[out]
 
     def reduce(self, nsites):
         """
@@ -702,12 +718,13 @@ class SiteCollection(object):
         elif hint > len(self):
             hint = len(self)
         tiles = []
-        for sids in numpy.array_split(self.sids, hint):
-            assert len(sids), 'Cannot split %s in %d tiles' % (self, hint)
-            sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.complete.array[sids]
-            sc.complete = self.complete
-            tiles.append(sc)
+        for tileno in range(hint):
+            ok = self.sids % hint == tileno
+            if ok.any():
+                sc = SiteCollection.__new__(SiteCollection)
+                sc.array = self.complete.array[self.sids[ok]]
+                sc.complete = self.complete
+                tiles.append(sc)
         return tiles
 
     def split_by_gh3(self):
@@ -853,7 +870,7 @@ class SiteCollection(object):
         """
         Return the countries for each site in the SiteCollection.
         The boundaries of the countries are defined as in the file
-        geoBoundariesCGAZ_ADM0.shp
+        geoBoundariesCGAZ_ADM0.gpkg
         """
         from openquake.commonlib import readinput
         geom_df = readinput.read_countries_df()

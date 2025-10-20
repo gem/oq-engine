@@ -1,4 +1,87 @@
+  [Paolo Tormene]
+  * Added a whitelist of resources that can be extracted from the datastore
+    via the '/v1/calc/<calc_id>/extract/<resource>' and the
+    '/v1/calc/<calc_id>/extract_html_table/<resource>' API endpoints. All
+    resources can still be extracted if the WebUI authentication is disabled
+    or if the current user has a high profile level (>1) or has the permission
+    'auth.can_view_<resource>'
+
   [Michele Simionato]
+  * Reduced the number of tiles
+  * Optimized the management of cluster of sources (the array loop)
+  * Changed the ps_grid_spacing approximation to use average occurrence rates
+
+  [Claudia Mascandola]
+  * Added class "LanzanoEtAl2019_RJB_OMO_NESS2" to lanzano_2019 gsim
+
+  [Michele Simionato]
+  * Reduced the memory consumption of multifault sources for the USA model
+  * Improved the parallelization of disagg_source in AELO calculations
+  * Fixed the OverflowError: Python integer out of bounds for uint32
+    happening for extra-large calculations when saving source_info
+
+  [Guillermo Aldama-Bustos]
+  * Fixed the unit of measure in the Douglas et al (2024) GMM and updated
+   coefficients for the 3- and 5-branch models to fix an error
+
+  [Michele Simionato, Kendra Johnson]
+  * Internal: parallelized the AELO mosaic tests and made it possible to pass
+    the asce_version and vs30 parameters
+
+  [Michele Simionato]
+  * Extended the source_id-filtering feature to use .startswith
+  * Added a flag "aggregate_exposure" (false by default) to aggregate
+    the assets with the same taxonomy on the same hazard site
+  * Optimized "building cmakers" and the RateMap in the case of clusters
+    of sources (260x for the latest USA model)
+
+  [Christopher Brooks]
+  * Added BSSA14 site term capability to Modifiable GMPE + unit tests
+
+  [Richard Styron]
+  * Added method `from_moment` to the `TaperedGRMFD` class
+  * Fixed `KiteSurface.get_middle_point` to manage NaNs
+
+  [Michele Simionato]
+  * Doing the check on the `export_dir` only if `--exports` is passed
+  * Fixed a `NameError: Missing liquefaction:LiqProb in gmf_data`
+    when using the TodorovicSilva2022NonParametric model
+  * gzipping the avg_losses reducing the disk space by half or so
+  * Added an extractor `losses_by_location`
+  * Filtering the assets around the rupture according to the maximum distance
+    in scenario calculations
+
+  [Claudia Mascandola]
+  * Added a Ramadan et al (2023) gsim
+
+  [Michele Simionato]
+  * Disabled the threads in PicklableInferenceSession, making it possible
+    to use the TodorovicSilva2022NonParametric model in high concurrency
+    situations
+  * Made it possible to merge pre_job.ini and job.ini in ShakeMap calculations
+  * Internal: changed `Exposure.read_around` to work in terms of h3 hexagons;
+    changed the exposure.hdf5 accordingly
+  * Added a private endpoint `/v1/calc/run_ini` to run remote calculations
+  * Added a private endpoint `/v1/calc/jobs_from_inis`
+
+  [Myles Turner, Guillermo Aldama-Bustos]
+  * Added GMM of Douglas et al. (2024)
+
+  [Michele Simionato]
+  * Added a parameter config.dbserver.cache to avoid repeating calculations
+  * Removed the --reuse-input flag, since it was not used (use --hc instead)
+  * Changed install.py to exit if any of the tools is not installed
+  * Fixed small negative damages due to numeric errors
+  * Fixed the MIMETYPE to application/x-zip when needed in the WebUI
+  * Removed the parameter `site_effects` since it is useless
+  * Changed num_cores to be equal to the pool size when explicit
+  * On Windows use as default num_cores
+    num_threads/2 if num_threads > 8 else num_threads
+  * Extended the aggregation by `site_id` to multiple tags
+  * Fixed an extract bug in disagg-traditional with realizations
+  * Fixed a bug with the quantiles in event_based_damage
+  * Improved loggin the progress in event based risk
+  * Reduced slow tasks in the USA model
   * Added output `mce_default` in AELO calculations
   * Extended `oq export_mean_disagg_by_src` to multiple sites
   * Extended `oq export_mag_dst_eps_sig` to multiple sites

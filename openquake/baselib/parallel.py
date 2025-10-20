@@ -678,24 +678,25 @@ class SharedArray(object):
         self.sm.close()
         self.sm.unlink()
 
-# determine the number of cores to use
+# determine the number of cores to use; for instance on a system with
+# 12 threads and 8 GB of RAM, tot_cores = min(12, 8) = 8
 cpu_count = psutil.cpu_count()
-if sys.platform == 'win32':
-    # assume hyperthreading is on; use half the threads to save memory
-    tot_cores = cpu_count // 2 or 1
-elif sys.platform == 'linux':
+gb_count = int(psutil.virtual_memory().total / 1E9)
+if sys.platform == 'linux':
     # use only the "visible" cores, not the total system cores
     # if the underlying OS supports it (macOS does not)
-    tot_cores = len(psutil.Process().cpu_affinity())
+    tot_cores = min(len(psutil.Process().cpu_affinity()), gb_count)
 else:
-    tot_cores = cpu_count
+    tot_cores = min(cpu_count, gb_count)
+num_cores = int(os.environ.get('OQ_NUM_CORES') or
+                config.distribution.get('num_cores')
+                or tot_cores)
 
 
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
     maxtasksperchild = None  # with 1 it hangs on the EUR calculation!
-    num_cores = int(config.distribution.get('num_cores', '0')) or tot_cores
     CT = num_cores * 2
     expected_outputs = 0  # unknown
 
@@ -709,16 +710,18 @@ class Starmap(object):
             # we use spawn here to avoid deadlocks with logging, see
             # https://github.com/gem/oq-engine/pull/3923 and
             # https://codewithoutrules.com/2018/09/04/python-multiprocessing/
-            cls.pool = mp_context.Pool(
-                cls.num_cores if cls.num_cores <= tot_cores else tot_cores,
-                init_workers, maxtasksperchild=cls.maxtasksperchild)
+            cls.pool = mp_context.Pool(num_cores, init_workers,
+                                       maxtasksperchild=cls.maxtasksperchild)
             cls.pids = [proc.pid for proc in cls.pool._pool]
             # after spawning the processes restore the original handlers
             # i.e. the ones defined in openquake.engine.engine
             signal.signal(signal.SIGTERM, term_handler)
             signal.signal(signal.SIGINT, int_handler)
         elif cls.distribute == 'threadpool' and not hasattr(cls, 'pool'):
-            cls.pool = multiprocessing.dummy.Pool(cls.num_cores)
+            cls.pool = multiprocessing.dummy.Pool(num_cores)
+
+        if num_cores > tot_cores:
+            logging.warning(f'{num_cores=} but {tot_cores=}')
 
     @classmethod
     def shutdown(cls):
@@ -775,7 +778,7 @@ class Starmap(object):
         Same as Starmap.apply, but possibly produces subtasks
         """
         args = (allargs[0], task, allargs[1:], duration, outs_per_task)
-        return cls.apply(split_task, args, concurrent_tasks or 2*cls.num_cores,
+        return cls.apply(split_task, args, concurrent_tasks or 2*num_cores,
                          maxweight, weight, key, distribute, progress, h5)
 
     def __init__(self, task_func, task_args=(), distribute=None,
@@ -996,15 +999,16 @@ class Starmap(object):
                 if self.distribute in ('zmq', 'slurm'):
                     mem_gb = 0
                     if res.mon.task_no % 10 == 0:
-                        # measure the memory only for 1 task out of 10, to be fast
+                        # measure the memory only for 1 task out of 10
                         # with 8 nodes the time to get the memory is 0.01 secs
                         for line in host_cores:
                             host, _cores = line.split()
-                            addr = 'tcp://%s:%s' % (host, config.zworkers.ctrl_port)
+                            addr = 'tcp://%s:%s' % (
+                                host, config.zworkers.ctrl_port)
                             with Socket(addr, zmq.REQ, 'connect') as sock:
                                 mem_gb += sock.send('memory_gb')
                 elif self._shared:
-                    # do not measure the memory on the workers, only in the master
+                    # do not measure the memory on the workers
                     # otherwise memory_rss would double count the shared memory
                     mem_gb = memory_gb()
                 else:
@@ -1021,6 +1025,9 @@ class Starmap(object):
         self.socket.__exit__(None, None, None)
         self.tasks.clear()
         self.unlink()
+        if self.expected_outputs:
+            assert self.expected_outputs == self.n_out, (
+                self.expected_outputs, self.n_out)
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
             logging.info(
@@ -1087,7 +1094,7 @@ def logfinish(n, tot):
     return n + 1
 
 
-def multispawn(func, allargs, nprocs=Starmap.num_cores, logfinish=True):
+def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
     """
     Spawn processes with the given arguments
     """

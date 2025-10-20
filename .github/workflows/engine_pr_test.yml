@@ -147,6 +147,7 @@ jobs:
           oq engine --upgrade-db
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_read_only_mode.py
+          pytest -m "not slow" -v openquake/_unc
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}

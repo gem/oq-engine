@@ -452,6 +452,12 @@ class MapArray(object):
         update_pmap_m(self.array, poes, rates, probs_occur, weights,
                       sidxs, itime)
 
+    def __add__(self, other):
+        return self.new(self.array + other.array)
+
+    def __truediv__(self, other):
+        return self.new(self.array / other)
+
     def __invert__(self):
         return self.new(1. - self.array)
 
@@ -465,6 +471,17 @@ class MapArray(object):
         for i, g in enumerate(other.gid):
             iadd(self.array[:, :, g], other.array[:, :, i % G], sidx)
         return self
+
+    def __toh5__(self):
+        N, Y, Z = self.shape
+        return self.array, dict(sids=self.sids, shape_y=Y, shape_z=Z,
+                                rates=self.rates)
+
+    def __fromh5__(self, array, attrs):
+        self.sids = attrs['sids']
+        self.shape = len(self.sids), attrs['shape_y'], attrs['shape_z']
+        self.rates = attrs['rates']
+        self.array = array
 
     def __repr__(self):
         tup = self.shape + (humansize(self.array.nbytes),)

@@ -339,7 +339,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             )  # backarc term applied to path function for reference rock PGA
             fd = _depth_scaling(trt, C, ctx)
             fd_pga = _depth_scaling(trt, C_PGA, ctx)
-            fb = _get_basin_term(self.region, self.basin, C, ctx, imt, self.basin)
+            fb = _get_basin_term(C, ctx, self.region, imt, self.basin)
             flin = _linear_amplification(self.region, C, ctx.vs30)
             fnl = _non_linear_term(
                 C, imt, ctx.vs30, fp_pga, fm_pga, c0_pga, fd_pga

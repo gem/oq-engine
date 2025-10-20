@@ -134,7 +134,9 @@ class CalculatorTestCase(unittest.TestCase):
             else testfile
         params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
         log = logs.init(params)
-        return base.calculators(log.get_oqparam(), log.calc_id)
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.test_mode = True
+        return calc
 
     def run_calc(self, testfile, job_ini, **kw):
         """

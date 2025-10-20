@@ -50,6 +50,8 @@ if settings.WEBUI:
             re_path(r'^engine/aelo_changelog$',
                     views.aelo_changelog,
                     name="aelo_changelog"),
+            re_path(r'^v1/aelo_site_classes$', views.aelo_site_classes,
+                    name="aelo_site_classes"),
         ]
     elif settings.APPLICATION_MODE == 'ARISTOTLE':
         urlpatterns += [

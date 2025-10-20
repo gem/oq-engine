@@ -147,6 +147,22 @@ def print_peril(what):
             print('Unknown SecondaryPeril %s' % split[1])
 
 
+def print_cols(lst, ncols):
+    """
+    Print a list of strings in right justified columns
+    """
+    maxlen = max(len(x) for x in lst)
+    nrows = int(numpy.ceil(len(lst) / ncols))
+    for r in range(nrows):
+        col = []
+        for c in range(ncols):
+            try:
+                col.append(lst[r * ncols + c].rjust(maxlen))
+            except IndexError:
+                col.append(' ' * maxlen)
+        print(''.join(col))
+
+
 def print_geohash(what):
     lon, lat = lon_lat(what.split(':')[1])
     # print(geo.utils.geohash3(F32([lon]), F32([lat])))
@@ -216,9 +232,10 @@ def do_build_reports(directory):
                     logging.error(str(e))
 
 
-choices = ['calculators', 'cfg', 'consequences',
+choices = ['calculators', 'cfg', 'consequences', 'site_params',
            'gsim', 'imt', 'views', 'exports', 'disagg',
-           'extracts', 'parameters', 'sources', 'mfd', 'msr', 'venv']
+           'extracts', 'parameters', 'sources', 'mfd', 'msr', 'venv',
+           'loss_types', 'uncertainty_types']
 
 
 def is_upper(func):
@@ -309,18 +326,7 @@ def main(what, report=False):
         for path in config.paths:
             print(path)
     elif what == 'site_params':
-        lst = sorted(site.site_param_dt)
-        maxlen = max(len(x) for x in lst)
-        ncols = 4
-        nrows = int(numpy.ceil(len(lst) / ncols))
-        for r in range(nrows):
-            col = []
-            for c in range(ncols):
-                try:
-                    col.append(lst[r * ncols + c].rjust(maxlen))
-                except IndexError:
-                    col.append(' ' * maxlen)
-            print(''.join(col))
+        print_cols(sorted(site.site_param_dt), 4)
     elif what == 'sources':
         pairs = sorted((cls.__name__, cls.code)
                        for cls in gen_subclasses(BaseSeismicSource)
@@ -371,7 +377,7 @@ def main(what, report=False):
                 print(logictree.GsimLogicTree(what))
         else:
             print(node.to_str())
-    elif what.endswith('.shp'):
+    elif what.endswith(('.shp', '.gpkg')):
         with fiona.open(what) as f:
             print_features(f)
     elif what.endswith(('.ini', '.zip')):

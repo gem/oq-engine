@@ -783,7 +783,7 @@ class RiskComputerTestCase(unittest.TestCase):
             'eid': [0, 1],
             'sid': [0, 0],
             'PGA': [.098234, .165975],
-            'LandslidesDispProb': [.335, .335]})
+            'JibsonEtAl2000Landslides_DispProb': [.335, .335]})
         dd5 = rc.get_dd5(asset_df, gmf_df)  # (P, A, E, L, D)
         dd0 = dd5[0, 0, 0, 0, 1:]
         dd1 = dd5[0, 0, 1, 0, 1:]

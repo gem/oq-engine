@@ -118,7 +118,6 @@ class DisaggregateTestCase(unittest.TestCase):
         cls.cmaker = ContextMaker(cls.trt, {gsim: [0]}, oq)
         cls.bin_edges, _ = disagg.get_edges_shapedic(cls.cmaker.oq, sitecol)
         cls.sources[0].grp_id = 0
-        cls.cmaker.grp_id = 0
         cls.cmaker.poes = [.001]
 
     def test_minimum_distance(self):
@@ -267,18 +266,3 @@ class PMFExtractorsTestCase(unittest.TestCase):
             (pmf1 + pmf2) / 2, [1, 1])
         numpy.testing.assert_allclose(
             valid.mag_pmf(mean), [0.99999944, 0.99999999])
-
-
-@pytest.mark.parametrize('job_ini', ['job_sampling.ini', 'job.ini'])
-def test_single_source(job_ini):
-    job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
-    inp = read_input(job_ini)
-    oq = inp.oq
-    [site] = inp.sitecol
-    edges_shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
-    _sid, srcid, _std4D, rates4D, rates2D = disagg.disagg_source(
-        inp.groups, site, inp.full_lt, edges_shapedic, oq, {'PGA': .1})
-    # rates4D has shape (Ma, D, E, M), rates2D shape (M, L1)
-    print(srcid)
-    print(rates4D.sum(axis=(1, 2)))
-    print(rates2D)

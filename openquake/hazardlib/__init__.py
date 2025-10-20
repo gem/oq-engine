@@ -167,7 +167,7 @@ def get_smlt(hparams, sourceID=''):
         smlt = logictree.SourceModelLogicTree(*args)
     elif 'source_model' in hparams['inputs']:
         smlt = logictree.SourceModelLogicTree.trivial(
-            hparams['inputs']['source_model'],
+            hparams['inputs']['source_model'][0],
             hparams.get('sampling_method', 'early_weights'),
             sourceID)
     else:
@@ -231,7 +231,7 @@ class Input(object):
         hparams.setdefault('width_of_mfd_bin', 1.0),
         hparams.setdefault('area_source_discretization', 10.)
         hparams.setdefault('minimum_magnitude', {'default': 0})
-        hparams.setdefault('source_id', None)
+        hparams.setdefault('source_id', ())
         hparams.setdefault('discard_trts', '')
         hparams.setdefault('floating_x_step', 0)
         hparams.setdefault('floating_y_step', 0)

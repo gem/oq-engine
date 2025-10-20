@@ -195,6 +195,20 @@ class SourceGroup(collections.abc.Sequence):
                     assert rup.weight is not None
 
     @property
+    def grp_id(self):
+        """
+        The grp_id of the underlying sources
+        """
+        return self.sources[0].grp_id
+
+    @property
+    def trt_smrs(self):
+        """
+        The trt_smrs of the underlying sources
+        """
+        return self.sources[0].trt_smrs
+
+    @property
     def tom_name(self):
         """
         :returns: name of the associated temporal occurrence model
@@ -281,6 +295,7 @@ class SourceGroup(collections.abc.Sequence):
         """
         return self.sources[0].trt_smr
 
+    # not used by the engine
     def count_ruptures(self):
         """
         Set src.num_ruptures on each source in the group
@@ -719,7 +734,7 @@ class SourceConverter(RuptureConverter):
                  complex_fault_mesh_spacing=None, width_of_mfd_bin=1.0,
                  area_source_discretization=None,
                  minimum_magnitude={'default': 0},
-                 source_id=None, discard_trts=(),
+                 source_id=(), discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
                  source_nodes=(),
                  infer_occur_rates=False):
@@ -730,7 +745,7 @@ class SourceConverter(RuptureConverter):
         self.complex_fault_mesh_spacing = (
             complex_fault_mesh_spacing or rupture_mesh_spacing)
         self.width_of_mfd_bin = width_of_mfd_bin
-        self.source_id = source_id
+        self.source_id = tuple(source_id)
         self.discard_trts = discard_trts
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
@@ -739,7 +754,7 @@ class SourceConverter(RuptureConverter):
 
     def convert_node(self, node):
         """
-        Convert the given source node into a hazardlib source, depending
+        Convert the given node into a hazardlib source or group, depending
         on the node tag.
 
         :param node: a node representing a source or a SourceGroup
@@ -750,7 +765,7 @@ class SourceConverter(RuptureConverter):
         name = striptag(node.tag)
         if name.endswith('Source'):  # source node
             source_id = node['id']
-            if self.source_id and source_id not in self.source_id:
+            if self.source_id and not source_id.startswith(self.source_id):
                 # if source_id is set in the job.ini, discard all other sources
                 return
             elif self.source_nodes and name not in self.source_nodes:

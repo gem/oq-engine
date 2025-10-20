@@ -28,7 +28,9 @@ import numpy
 import pandas
 from scipy.stats import linregress
 from shapely.geometry import Polygon, LineString
+from openquake.baselib import hdf5
 from openquake.commonlib import readinput
+from openquake.commonlib.util import unique_filename
 from openquake.hazardlib.geo.utils import PolygonPlotter
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
@@ -40,23 +42,35 @@ from openquake.calculators.postproc.plots import (
     plot_avg_gmf, import_plt, add_borders, plot_rupture, plot_rupture_webmercator,
     plot_rupture_3d, adjust_limits, auto_limits)
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce, plot_sites)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src,
+    plot_governing_mce_asce_7_16, plot_mce_spectra, plot_governing_mce,
+    plot_sites)
 
 
 def getparams(what):
     """
+    >>> getparams('rupture?')
+    ({}, False)
     >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10')
-    {'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, False)
+    >>> getparams('rupture?mag=6&lon=10&lat=45&dep=10&with_borders=True')
+    ({'mag': 6, 'lon': 10, 'lat': 45, 'dep': 10}, True)
     """
     assert '?' in what, what
-    dic = {}
+    params = {}
+    with_borders = False
     for namevalue in what.split('?')[1].split('&'):
+        if not namevalue:
+            continue
         name, value = namevalue.split('=')
-        try:
-            dic[name] = ast.literal_eval(value)
-        except ValueError:
-            dic[name] = value
-    return dic
+        if name == 'with_borders':
+            with_borders = ast.literal_eval(value)
+        else:
+            try:
+                params[name] = ast.literal_eval(value)
+            except ValueError:
+                params[name] = value
+    return params, with_borders
 
 
 def make_figure_magdist(extractors, what):
@@ -328,7 +342,7 @@ def make_figure_disagg(extractors, what):
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    y = disagg.array[..., 0, 0]  # shape (..., M, P)
+    y = disagg.array[..., 0, 0, 0]  # shape (..., M, P, Z) => (...)
     ndims = len(kind)  # number of dimensions of the array
     assert ndims == len(y.shape), (ndims, len(y.shape))
     print(y)
@@ -742,11 +756,33 @@ def make_figure_tot_curves(extractors, what):
 
 def make_figure_mean_hcurves_rtgm(extractors, what):
     """
-    $ oq plot "mean_hcurves_rtgm?"
+    $ oq plot "mean_hcurves_rtgm?sid=0"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_mean_hcurves_rtgm(dstore)
+    kwargs = parse_qs(what.split('?')[1])
+    [sid] = kwargs.get('sid', ['0'])
+    plt = plot_mean_hcurves_rtgm(dstore, sid=int(sid))
+    return plt
+
+
+def make_figure_governing_mce_asce_7_16(extractors, what):
+    """
+    $ oq plot "governing_mce_asce_7_16?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_governing_mce_asce_7_16(dstore)
+    return plt
+
+
+def make_figure_mce_spectra(extractors, what):
+    """
+    $ oq plot "mce_spectra?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_mce_spectra(dstore)
     return plt
 
 
@@ -762,11 +798,13 @@ def make_figure_governing_mce(extractors, what):
 
 def make_figure_disagg_by_src(extractors, what):
     """
-    $ oq plot "disagg_by_src?"
+    $ oq plot "disagg_by_src?sid=0"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_disagg_by_src(dstore)
+    kwargs = parse_qs(what.split('?')[1])
+    [sid] = kwargs.get('sid', ['0'])
+    plt = plot_disagg_by_src(dstore, sid=int(sid))
     return plt
 
 
@@ -1054,20 +1092,37 @@ def make_figure_rupture(extractors, what):
 
     $ oq plot "rupture?"
 
-    extracts the rupture from an already performed scenario calculation;
+    plots the first rupture from an already performed scenario calculation
 
-    $ oq plot "rupture?mag=6&lon=10&lat=45&dep=10&rake=45&msr=WC1994"
+    $ oq plot "rupture?rup_id=1"
+
+    plots the rupture with the given id;
+
+    $ oq plot "rupture?with_borders=True"
+
+    also plots country borders
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    params, with_borders = getparams(what)
+    rup_id = params['rup_id'] if 'rup_id' in params else 0
+    rup = get_ebrupture(dstore, rup_id=rup_id).rupture
+    return plot_rupture(rup, with_borders=with_borders)
+
+
+def make_figure_build_rupture(extractors, what):
+    """
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994"
 
     builds a new planar rupture.
+
+    $ oq plot "build_rupture?mag=7&lon=10&lat=45&dep=10&rake=45&dip=30&strike=45&msr=WC1994&with_borders=True"
+
+    also plots country borders.
     """
-    params = getparams(what)
-    if params:
-        rup = build_planar_rupture_from_dict(params)
-    else:
-        [ex] = extractors
-        dstore = ex.dstore
-        rup = get_ebrupture(dstore, rup_id=0).rupture
-    return plot_rupture(rup, with_borders=False)
+    params, with_borders = getparams(what)
+    rup = build_planar_rupture_from_dict(params)
+    return plot_rupture(rup, with_borders=with_borders)
 
 
 def make_figure_rupture_webmercator(extractors, what):
@@ -1086,7 +1141,9 @@ def make_figure_rupture_3d(extractors, what):
     """
     [ex] = extractors
     dstore = ex.dstore
-    ebr = get_ebrupture(dstore, rup_id=0)
+    params, _ = getparams(what)
+    rup_id = params['rup_id'] if 'rup_id' in params else 0
+    ebr = get_ebrupture(dstore, rup_id=rup_id)
     return plot_rupture_3d(ebr.rupture)
 
 
@@ -1097,6 +1154,22 @@ def make_figure_sites(extractors, what):
     [ex] = extractors
     dstore = ex.dstore
     plt = plot_sites(dstore)
+    return plt
+
+
+def make_figure_show_png(extractors, what):
+    """
+    oq plot "show_png?site.png"
+
+    shows an image stored in 'png/IMAGE_NAME'
+    """
+    plt = import_plt()
+    [ex] = extractors
+    dstore = ex.dstore
+    name = what.split('?')[1]
+    img = dstore['png'][name]
+    plt.imshow(img)
+    plt.axis('off')
     return plt
 
 
@@ -1114,6 +1187,33 @@ def plot_wkt(wkt_string):
     _fig, ax = plt.subplots()
     ax.plot(coo[:, 0], coo[:, 1], 'o')
     add_borders(ax, readinput.read_mosaic_df, buffer=0.)
+    return plt
+
+
+def plot_h3(hexes):
+    """
+    $ oq plot "H3 811ebffffff 81387fffff"
+
+    plots H3 hexagons given a list of hexes
+    """
+    import h3
+    import shapely
+    plt = import_plt()
+    # normalize the hexes to 15 characters
+    for i, hex in enumerate(hexes):
+        lenh = len(hex)
+        if lenh < 15:
+            hexes[i] = hex + 'f' * (15-lenh)
+        elif lenh > 15:
+            raise ValueError('%s must have <= 15 characters, got %d' %
+                             (hex, lenh))
+    _fig, ax = plt.subplots()
+    for hex in hexes:
+        mp = shapely.MultiPolygon(h3.h3_set_to_multi_polygon([hex]))
+        lat, lon = mp.geoms[0].exterior.xy
+        ax.fill(lon, lat, alpha=0.5, fc="lightblue", ec="blue")
+    add_borders(ax, readinput.read_countries_df, buffer=0.)
+    ax.set_aspect('equal')
     return plt
 
 
@@ -1148,17 +1248,39 @@ def plot_csv(fname):
 def main(what,
          calc_id: int = -1,
          others: int = [],
+         *,
+         save_to: str = None,
          webapi=False,
-         local=False):
+         local=False,
+         ):
     """
     Generic plotter for local and remote calculations.
     """
     if what.endswith('.csv'):
         plot_csv(what)
         return
+    if save_to:
+        save_to = unique_filename(save_to)
     if what.startswith(('POINT', 'POLYGON', 'LINESTRING')):
         plt = plot_wkt(what)
-        plt.show()
+        if save_to:
+            plt.savefig(save_to, dpi=300)
+            logging.info(f'Plot saved to {save_to}')
+        else:
+            plt.show()
+        return
+    if what.startswith('H3'):
+        hexes = what[2:].split()
+        if what.endswith('.hdf5'):
+            with hdf5.File(hexes[0]) as h5:
+                hexes = [h.decode('ascii') for h in numpy.unique(
+                    h5['assets/slice_by_hex6']['hex6'])]
+        plt = plot_h3(hexes)
+        if save_to:
+            plt.savefig(save_to, dpi=300)
+            logging.info(f'Plot saved to {save_to}')
+        else:
+            plt.show()
         return
     if what == 'examples':
         help_msg = ['Examples of possible plots:']
@@ -1192,11 +1314,16 @@ def main(what,
             xs.append(Extractor(other_id))
     make_figure = globals()['make_figure_' + prefix]
     plt = make_figure(xs, what)
-    plt.show()
+    if save_to:
+        plt.savefig(save_to, dpi=300)
+        logging.info(f'Plot saved to {save_to}')
+    else:
+        plt.show()
 
 
 main.what = 'what to extract (try examples)'
 main.calc_id = 'computation ID'
 main.others = dict(help='IDs of other computations', nargs='*')
+main.save_to = 'if passed, save the plot to file instead of showing it'
 main.webapi = 'if given, pass through the WebAPI'
 main.local = 'if passed, use the local WebAPI'

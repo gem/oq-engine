@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import sys
 import collections
 import numpy
@@ -377,7 +379,7 @@ def compare_column_values(array0, array1, what, atol=0, rtol=1E-5):
         return True
     print(f"There are {len(diff_idxs)} different elements "
           f"in the '{what}' column:")
-    print(array0[diff_idxs], array1[diff_idxs])
+    print(array0[diff_idxs], array1[diff_idxs], diff_idxs)
 
 
 def check_column_names(array0, array1, what, calc_id0, calc_id1):
@@ -488,20 +490,24 @@ def read_org_df(fname):
     return df.rename(columns=dict(zip(df.columns, strip(df.columns))))
 
 
-def compare_asce(file1_org: str, file2_org: str, atol=1E-3, rtol=1E-3):
+def compare_asce(dir1: str, dir2: str, atol=1E-3, rtol=1E-3):
     """
-    compare_asce('asce07.org', 'asce07_expected.org') exits with 0
-    if all values are equal within the tolerance, otherwise with 1.
+    compare_asce('asce', 'expected') exits with 0
+    if all file are equal within the tolerance, otherwise with 1.
     """
-    df1 = read_org_df(file1_org)
-    df2 = read_org_df(file2_org)
-    equal = []
-    for col in df1.columns:
-        ok = compare_column_values(strip(df1[col].to_numpy()),
-                                   strip(df2[col].to_numpy()),
-                                   col, atol, rtol)
-        equal.append(ok)
-    sys.exit(not all(equal))
+    for fname in os.listdir(dir2):
+        if fname.endswith('.org'):
+            print(f"Comparing {fname}")
+            df1 = read_org_df(os.path.join(dir1, fname))
+            df2 = read_org_df(os.path.join(dir2, fname))
+            equal = []
+            for col in df1.columns:
+                ok = compare_column_values(strip(df1[col].to_numpy()),
+                                           strip(df2[col].to_numpy()),
+                                           col, atol, rtol)
+                equal.append(ok)
+            if not all(equal):
+                sys.exit(1)
 
 
 main = dict(rups=compare_rups,

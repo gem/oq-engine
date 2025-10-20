@@ -8,7 +8,7 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
-              <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}, {{ asce_version }}</h2>
+              <h2>{{ site_name }}, Lat: {{ lat }}, Lon: {{ lon }}, Site Class: {{ site_class }}, {{ asce_version }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}</h2>
               {% if warnings %}
               <div id="warnings-box" class="alert alert-warning" style=>
                   WARNING: {{ warnings }}
@@ -33,6 +33,12 @@
                   Show site</a>
               </div>
               {% endif %}
+              {% if governing_mce %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
+                  Show Multi-Period MCEr Spectrum</a>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -53,7 +59,7 @@
       </thead>
       <tbody>
         <% _.each(outputs, function(output) { %>
-        <% if (['hmaps', 'hcurves', 'uhs', 'realizations', 'fullreport', 'rtgm', 'mean_rates_by_src', 'mag_dst_eps_sig', 'mean_disagg_by_src', 'site_model'].indexOf(output.get('type')) >= 0) { %>
+        <% if (['hmaps', 'hcurves', 'uhs', 'realizations', 'fullreport', 'rtgm', 'mean_rates_by_src', 'mag_dst_eps_sig', 'mean_disagg_by_src', 'site_model', 'mce'].indexOf(output.get('type')) >= 0) { %>
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}

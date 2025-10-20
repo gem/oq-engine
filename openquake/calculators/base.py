@@ -26,6 +26,7 @@ import inspect
 import logging
 import operator
 import traceback
+import tempfile
 import getpass
 from datetime import datetime
 from shapely import wkt
@@ -172,6 +173,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     precalc = None
     accept_precalc = []
     from_engine = False  # set by engine.run_calc
+    test_mode = False  # set in the tests
     is_stochastic = False  # True for scenario and event based calculators
 
     def __init__(self, oqparam, calc_id):
@@ -226,6 +228,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
+            return logs.dbcmd('add_checksum', self.datastore.calc_id, check)
 
     def check_precalc(self, precalc_mode):
         """
@@ -270,7 +273,18 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if self.precalc is None:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
-            self.save_params(**kw)
+            old_job_id = self.save_params(**kw)
+            assert config.dbserver.cache in ('on', 'off')
+            if (old_job_id and config.dbserver.cache == 'on' and
+                    not self.test_mode):
+                logging.info(f"Already calculated, {old_job_id=}")
+                calc_id = self.datastore.calc_id
+                self.datastore = datastore.read(old_job_id)
+                logs.dbcmd("UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
+                           self.datastore.filename[:-5], calc_id)  # strip .hdf5
+                expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
+                self.export(kw.get('exports', ''))
+                return self.exported
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -382,14 +396,13 @@ class BaseCalculator(metaclass=abc.ABCMeta):
     def _export(self, ekey):
         if ekey not in exp or self.exported.get(ekey):  # already exported
             return
-        with self.monitor('export'):
-            try:
-                self.exported[ekey] = fnames = exp(ekey, self.datastore)
-            except Exception as exc:
-                fnames = []
-                logging.error('Could not export %s: %s', ekey, exc)
-            if fnames:
-                logging.info('exported %s: %s', ekey[0], fnames)
+        try:
+            self.exported[ekey] = fnames = exp(ekey, self.datastore)
+        except Exception as exc:
+            fnames = []
+            logging.error('Could not export %s: %s', ekey, exc)
+        if fnames:
+            logging.info('exported %s: %s', ekey[0], fnames)
 
     def __repr__(self):
         return '<%s#%d>' % (self.__class__.__name__, self.datastore.calc_id)
@@ -527,7 +540,7 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         dist = parallel.oq_distribute()
         avail = psutil.virtual_memory().available / 1024**3
-        required = .25 * (1 if dist == 'no' else parallel.Starmap.num_cores)
+        required = .25 * (1 if dist == 'no' else parallel.num_cores)
         if (dist == 'processpool' and avail < required and
                 sys.platform != 'darwin'):
             # macos tells that there is no memory when there is, so we
@@ -574,10 +587,12 @@ class HazardCalculator(BaseCalculator):
                     oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
                 if oq.site_labels:
-                    dic = GsimLogicTree.read_dict(oq.inputs['gsim_logic_tree'])
+                    trts = {sg.trt for sg in csm.src_groups}
+                    dic = GsimLogicTree.read_dict(
+                        oq.inputs['gsim_logic_tree'], trts)
+                    assert list(dic)[0] == 'Default', list(dic)
                     for label in list(dic)[1:]:
                         self.datastore['gsim_lt' + label] = dic[label]
-                oq.mags_by_trt = csm.get_mags_by_trt(oq.maximum_distance)
                 assert oq.mags_by_trt, 'Filtered out all magnitudes!'
                 for trt in oq.mags_by_trt:
                     mags = numpy.array(oq.mags_by_trt[trt])
@@ -599,19 +614,9 @@ class HazardCalculator(BaseCalculator):
             gsim_lt = self.full_lt.gsim_lt
         else:
             gsim_lt = readinput.get_gsim_lt(oq)
-        if self.amplifier:            
+        if self.amplifier:
             self.amplifier.check(self.sitecol.vs30, oq.vs30_tolerance,
                                  gsim_lt.values)
-        for gsims in gsim_lt.values.values():
-            for gsim in gsims:
-                if self.sitecol and getattr(
-                        gsim, 'DEFINED_FOR_REFERENCE_VELOCITY', None):
-                    vs30ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
-                    if delta(self.sitecol.vs30, vs30ref) > .10:
-                        logging.info(
-                            f'{gsim.__class__.__name__}.'
-                            f'DEFINED_FOR_REFERENCE_VELOCITY={vs30ref} '
-                            'is not satisfied, please check the vs30s')
 
     def import_perils(self):  # called in pre_execute
         """
@@ -721,7 +726,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'collect_rlzs=true can be specified only if '
                     'the realizations have identical weights')
-        if oqparent.imtls:
+        if oqparent.imtls and oq.calculation_mode in ('classical', 'disagg'):
             check_imtls(oq.imtls, oqparent.imtls)
         self.check_precalc(oqparent.calculation_mode)
         self.datastore.parent = parent
@@ -988,7 +993,8 @@ class HazardCalculator(BaseCalculator):
         else:  # no exposure
             self._read_no_exposure(haz_sitecol)
         if (oq.calculation_mode.startswith(('event_based', 'ebrisk')) and
-                self.N > 1000 and len(oq.min_iml) == 0):
+                oq.ground_motion_fields and self.N > 1000 and
+                len(oq.min_iml) == 0):
             oq.raise_invalid(f'minimum_intensity must be set, see {EBDOC}')
 
         if oq_hazard:
@@ -1336,11 +1342,8 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     eids.sort()
     if eids[0] != 0:
         raise ValueError('The event_id must start from zero in %s' % fname)
-    E = len(eids)
-    events = numpy.zeros(E, rupture.events_dt)
-    events['id'] = eids
-    logging.info('Storing %d events, all relevant', E)
-    dstore['events'] = events
+    store_events(dstore, eids)
+    logging.info('Storing %d events, all relevant', len(eids))
     # store the GMFs
     dic = general.group_array(arr, 'sid')
     offset = 0
@@ -1533,6 +1536,9 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
     Create and possibly populate the datasets in the gmf_data group
     """
     oq = dstore['oqparam']
+    if not R and 'full_lt' not in dstore:  # from shakemap
+        dstore['full_lt'] = logictree.FullLogicTree.fake()
+        store_events(dstore, E)
     R = R or dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
     if data is None:
@@ -1584,6 +1590,23 @@ def save_agg_values(dstore, assetcol, lossnames, aggby):
         dstore['agg_values'] = assetcol.get_agg_values(aggby)
 
 
+def store_events(dstore, eids):
+    """
+    Store E events associated to a single realization
+    """
+    if isinstance(eids, numpy.ndarray):
+        E = len(eids)
+        events = numpy.zeros(E, rupture.events_dt)
+        events['id'] = eids
+    else:  # scalar
+        E = eids
+        events = numpy.zeros(E, rupture.events_dt)
+        events['id'] = numpy.arange(E, dtype=U32)
+    dstore['events'] = events
+    dstore['weights'] = [1.]
+    return events
+
+
 def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
@@ -1591,20 +1614,13 @@ def store_gmfs(calc, sitecol, shakemap, gmf_dict):
     logging.info('Building GMFs')
     oq = calc.oqparam
     with calc.monitor('building/saving GMFs'):
-        if oq.site_effects == 'no':
-            vs30 = None  # do not amplify
-        elif oq.site_effects == 'shakemap':
-            vs30 = shakemap['vs30']
-        elif oq.site_effects == 'sitemodel':
-            vs30 = sitecol.vs30
+        vs30 = None  # do not amplify, the ShakeMap takes care of that already
         imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
         N, E, _M = gmfs.shape
-        events = numpy.zeros(E, rupture.events_dt)
-        events['id'] = numpy.arange(E, dtype=U32)
-        calc.datastore['events'] = events
+        events = store_events(calc.datastore, E)
         # convert into an array of dtype gmv_data_dt
         lst = [(sitecol.sids[s], ei) + tuple(gmfs[s, ei])
                for ei, event in enumerate(events)
@@ -1703,6 +1719,44 @@ def create_risk_by_event(calc):
                          L=len(oq.loss_types), limit_states=dmgs)
 
 
+class DstoreCache:
+    """
+    Datastore cache based on a file called 'ini_hdf5.csv'
+    containing associations job.ini -> calc_XXX.hdf5
+    """
+    def __init__(self, dirpath):
+        self.ini_hdf5_csv = os.path.join(dirpath or tempfile.gettempdir(),
+                                         'ini_hdf5.csv')
+
+    def read(self):
+        cache = {}
+        if not os.path.exists(self.ini_hdf5_csv):
+            return cache
+        with open(self.ini_hdf5_csv, 'rt') as f:
+            for line in f:
+                ini, hdf5 = line.split(',')
+                cache[ini] = hdf5[:-1]  # strip trailing \n
+        return cache
+
+    def get(self, ini):
+        assert ',' not in ini, ini
+        cache = self.read()
+        if ini in cache:
+            return datastore.read(cache[ini])
+        dstore = run_calc(ini).datastore
+        cache[ini] = dstore.filename
+        assert ',' not in cache[ini], cache[ini]
+        with open(self.ini_hdf5_csv, 'w') as f:
+            for ini, h5 in sorted(cache.items()):
+                print(f'{ini},{h5}', file=f)
+        return dstore
+
+    def clear(self):
+        os.remove(self.ini_hdf5_csv)
+
+dcache = DstoreCache(config.directory.custom_tmp)
+
+
 def run_calc(job_ini, **kw):
     """
     Helper to run calculations programmatically.
@@ -1718,7 +1772,7 @@ def run_calc(job_ini, **kw):
         return calc
 
 
-def expose_outputs(dstore, owner=USER, status='complete'):
+def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
     """
     Build a correspondence between the outputs in the datastore and the
     ones in the database.
@@ -1781,4 +1835,4 @@ def expose_outputs(dstore, owner=USER, status='complete'):
         if size_mb:
             keysize.append((key, size_mb))
     ds_size = dstore.getsize() / MB
-    logs.dbcmd('create_outputs', dstore.calc_id, keysize, ds_size)
+    logs.dbcmd('create_outputs', calc_id or dstore.calc_id, keysize, ds_size)

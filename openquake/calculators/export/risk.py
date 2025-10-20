@@ -430,11 +430,13 @@ def export_damages_csv(ekey, dstore):
     csqs = tuple(dstore.getitem('crm').attrs['consequences'])
     for i, ros in enumerate(rlzs_or_stats):
         if ebd:  # export only the consequences from damages-rlzs, i == 0
-            if len(csqs) == 0:  # no consequences, export nothing
+            if len(csqs) == 0:
+                print('No consequences, exporting nothing')
                 return []
             rate = len(dstore['events']) * oq.time_ratio / len(rlzs)
             data = orig[:, i]
-            dtlist = [(col, F32) for col in data.dtype.names if col.endswith(csqs)]
+            dtlist = [(col, F32) for col in data.dtype.names
+                      if col.endswith(csqs)]
             damages = numpy.zeros(len(data), dtlist)
             for csq, _ in dtlist:
                 damages[csq] = data[csq] * rate
@@ -807,6 +809,7 @@ def export_exposure(ekey, dstore):
     return [exposure_xml, assetcol_csv]
 
 
+# tested in impact_test[1]
 @export.add(('job', 'zip'))
 def export_job_zip(ekey, dstore):
     """
@@ -863,7 +866,9 @@ def export_job_zip(ekey, dstore):
     writer.save(taxmap, dest)
     inputs['taxonomy_mapping'] = dest
     inputs['sites'] = dstore.export_path('sites.csv')
-    writer.save(dstore['sitecol'].array, inputs['sites'])
+    sitecol = dstore['sitecol']
+    sitecol.make_complete()  # needed for test_impact[1]
+    writer.save(sitecol.array, inputs['sites'])
     with open(job_ini, 'w') as out:
         out.write(oq.to_ini(**inputs))
     fnames = list(inputs.values()) + [assetcol_csv]

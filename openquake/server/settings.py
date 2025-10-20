@@ -234,6 +234,8 @@ MAX_AELO_SITE_NAME_LEN = 256
 
 GOOGLE_ANALYTICS_TOKEN = None
 
+HELP_URL = 'https://docs.openquake.org/oq-engine/latest/manual/'
+
 CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
 
 # OpenQuake Standalone tools (IPT, Taxonomy Glossary)

@@ -174,7 +174,6 @@ def export_aelo_csv(key, dstore):
 
     return [fname]
 
-
 def get_all_imtls(dstore):
     """
     :returns: a DictArray imt->imls if the datastore contains 'all_imtls'
@@ -338,7 +337,7 @@ def export_median_spectra(ekey, dstore):
         for p, poe in enumerate(oq.poes):
             aw = extract(dstore, f'median_spectra?site_id={n}&poe_id={p}')
             Gt = len(aw.array)
-            aggr = aw.array.sum(axis=0) # shape (3, P)
+            aggr = aw.array.sum(axis=0)  # shape (3, P)
             df = aw.to_dframe().sort_values(['grp_id', 'period'])
             comment = dstore.metadata.copy()
             comment['site_id'] = n
@@ -356,7 +355,6 @@ def export_median_spectra(ekey, dstore):
             writer.save(aggdf, fname, comment=comment)
             fnames.append(fname)
     return fnames
-
 
 
 @export.add(('median_spectrum_disagg', 'csv'))
@@ -470,11 +468,16 @@ def export_gmf_data_csv(ekey, dstore):
 @export.add(('site_model', 'csv'))
 def export_site_model_csv(ekey, dstore):
     sitecol = dstore['sitecol']
+    if os.environ.get('OQ_APPLICATION_MODE') == 'AELO':
+        core_params = ('custom_site_id', 'site_id', 'sids', 'lat', 'lon', 'depth',
+                       'vs30', 'vs30measured', 'z1pt0', 'z2pt5')
+        keep = [name for name in sitecol.array.dtype.names if name in core_params]
+        arr = sitecol.array[keep]
+    else:
+        arr = sitecol.array
     fname = dstore.build_fname(ekey[0], '', ekey[1])
-    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(
-        sitecol.array, fname, comment=dstore.metadata)
+    writers.CsvWriter(fmt=writers.FIVEDIGITS).save(arr, fname, comment=dstore.metadata)
     return [fname]
-
 
 
 @export.add(('gmf_data', 'hdf5'))
@@ -752,12 +755,25 @@ def export_rtgm(ekey, dstore):
     return [fname]
 
 
-@export.add(('mce', 'csv'), ('mce_default', 'csv'))
+@export.add(('spectra_asce41', 'csv'), ('asce41_sa_final', 'csv'))
+def export_asce41_spectra(ekey, dstore):
+    key = ekey[0]
+    df = dstore.read_df(key)
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path(f'{key}.csv')
+    comment = dstore.metadata.copy()
+    writer.save(df, fname, comment=comment)
+    return [fname]
+
+
+@export.add(('mce', 'csv'), ('mce_governing', 'csv'))
 def export_mce(ekey, dstore):
     key = ekey[0]
     df = dstore.read_df(key)
     if key == 'mce':
-        df = df.replace(columns={'PGA': 'PGA_G'})  # at Manuela's request
+        df.iloc[:, 0] = df.iloc[:, 0].replace('PGA', 'PGA_G')
+    if key == 'mce_governing':
+        df = df[df.period != 0]
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fname = dstore.export_path(f'{key}.csv')
     comment = dstore.metadata.copy()
@@ -778,8 +794,7 @@ def export_asce(ekey, dstore):
         comment['lat'] = sitecol.lats[s]
         comment['vs30'] = sitecol.vs30[s]
         comment['site_name'] = dstore['oqparam'].description  # 'CCA example'
-        writer.save(dic.items(), fname, header=['parameter', 'value'],
-                comment=comment)
+        writer.save(dic.items(), fname, header=['parameter', 'value'], comment=comment)
     return [fname]
 
 
@@ -797,13 +812,13 @@ def _export_mde(writer, dstore, key, site, descr, suffix=''):
 
 @export.add(('mag_dst_eps_sig', 'csv'))
 def export_mag_dst_eps_sig(ekey, dstore):
-    site_ids= list(dstore[ekey[0]])
+    site_ids = list(dstore[ekey[0]])
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     writer = writers.CsvWriter(fmt='%.5f')
     if len(site_ids) == 1:
         [site] = sitecol
-        return _export_mde(writer, dstore, ekey[0], site, oq.description)
+        return [_export_mde(writer, dstore, ekey[0], site, oq.description)]
     else:
         return [_export_mde(writer, dstore, ekey[0], site, oq.description,
                             f'-{site.id}') for site in sitecol]

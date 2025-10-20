@@ -100,6 +100,7 @@ class CY14SiteTerm(GMPE):
         # CHECKED [MP]: The computed reference motion is equal to the one in
         # the CY14 model
         self.gmpe.compute(rup_rock, imts, mean, sig, tau, phi)
+
         # Compute the site term correction factor for each IMT
         vs30 = ctx.vs30.copy()
         for m, imt in enumerate(imts):

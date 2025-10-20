@@ -18,6 +18,7 @@
 import os
 import numpy
 from openquake.commonlib.expo_to_hdf5 import store
+from openquake.commonlib.expo_count import count_assets
 from openquake.commonlib.datastore import create_job_dstore
 
 ae = numpy.testing.assert_equal
@@ -75,24 +76,22 @@ EXPECTED_ID1s = sorted([
     b'TWNB'])
 
 EXPECTED_NAME2s = [
-    '?', 'ACIGÖL', 'ANTAKYA', 'Arauquita', 'Bogota', 'Cali', 'Croix-des-Bouquets',
-    'Iles', 'KOCASİNAN', 'Port-de-Paix', 'Saint-Marc', 'Sincelejo', 'Taitung County',
-    'Taitung County', 'TÜRKELİ', 'le Cap-Haïtien', 'le Trou-du-Nord', 'les Cayes',
-    'ÇAYIRALAN']
+    '?', 'ACIGÖL', 'ANTAKYA', 'Arauquita', 'Bogota', 'Cali',
+    'Croix-des-Bouquets', 'Iles', 'KOCASİNAN', 'Port-de-Paix', 'Saint-Marc',
+    'Sincelejo', 'Taitung County', 'Taitung County', 'TÜRKELİ',
+    'le Cap-Haïtien', 'le Trou-du-Nord', 'les Cayes', 'ÇAYIRALAN']
 
 
 def test_expo_to_hdf5():
-    expo1_xml = os.path.join(os.path.dirname(__file__),
-                             'data', 'Exposure_Taiwan.xml')
-    expo2_xml = os.path.join(os.path.dirname(__file__),
-                             'data', 'Exposure_Haiti.xml')
-    expo3_xml = os.path.join(os.path.dirname(__file__),
-                             'data', 'Exposure_Colombia.xml')
-    expo4_xml = os.path.join(os.path.dirname(__file__),
-                             'data', 'Exposure_Turkiye.xml')
+    grm_dir = os.path.join(os.path.dirname(__file__), 'data')
+    expo1_xml = os.path.join(grm_dir, 'Exposure_Taiwan.xml')
+    expo2_xml = os.path.join(grm_dir, 'Exposure_Haiti.xml')
+    expo3_xml = os.path.join(grm_dir, 'Exposure_Colombia.xml')
+    expo4_xml = os.path.join(grm_dir, 'Exposure_Turkiye.xml')
     job, dstore = create_job_dstore()
     with job, dstore:
-        store([expo1_xml, expo2_xml, expo3_xml, expo4_xml], True, dstore)
+        store([expo1_xml, expo2_xml, expo3_xml, expo4_xml], grm_dir,
+              True, dstore)
         assets = sorted(dstore['assets/ASSET_ID'][:])
         ae(assets, EXPECTED_ASSETS)
         assert len(dstore['assets/ID_1']) == 30
@@ -103,5 +102,12 @@ def test_expo_to_hdf5():
         NAME2s = sorted(dstore['NAME_2'][:])
         assert [x.decode('utf8') for x in NAME2s] == EXPECTED_NAME2s
 
-        slices = dstore['assets/slice_by_gh3'][:]
-        assert len(slices) == 13
+        slices = dstore['assets/slice_by_hex6'][:]
+        assert len(slices) == 16
+
+    # test count_assets
+    ca = count_assets(dstore.filename)
+    assert ca == [('832d05', 1), ('832d10', 1), ('832da1', 1), ('834c8a', 1),
+                  ('836606', 1), ('836672', 1), ('8366d1', 1), ('8366e4', 1),
+                  ('8366f1', 1), ('836724', 1), ('836725', 1), ('836726', 1),
+                  ('832d11', 2), ('8366e0', 2), ('834c88', 4), ('834b84', 10)]

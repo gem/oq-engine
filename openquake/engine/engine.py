@@ -89,7 +89,7 @@ def set_concurrent_tasks_default(calc):
         parallel.Starmap.CT = num_workers * 2
         OqParam.concurrent_tasks.default = num_workers * 2
     else:
-        num_workers = parallel.Starmap.num_cores
+        num_workers = parallel.num_cores
     if dist == 'no':
         logging.warning('Disabled distribution')
     else:
@@ -295,7 +295,48 @@ def watchdog(calc_id, pid, timeout):
             break
 
 
-def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False):
+def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs):
+    for job in jobctxs:
+        dic = {'status': 'executing', 'pid': _PID,
+               'start_time': datetime.now(UTC)}
+        logs.dbcmd('update_job', job.calc_id, dic)
+    try:
+        if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
+            start_workers(job_id, dist, nodes)
+
+        # run the jobs sequentially or in parallel, with slurm or without
+        if dist == 'slurm' and sbatch:
+            scratch_dir = parallel.scratch_dir(job_id)
+            with open(os.path.join(scratch_dir, 'jobs.pik'), 'wb') as f:
+                pickle.dump(jobctxs, f)
+            w.WorkerMaster(job_id).send_jobs()
+            print('oq engine --show-log %d to see the progress' % job_id)
+        elif len(jobctxs) > 1 and dist in ('zmq', 'slurm'):
+            if precalc:
+                run_calc(jobctxs[0])
+                args = [(ctx,) for ctx in jobctxs[1:]]
+            else:
+                args = [(ctx,) for ctx in jobctxs]
+            #with multiprocessing.pool.Pool(concurrent_jobs) as pool:
+            #    pool.starmap(run_calc, args)
+            parallel.multispawn(run_calc, args, concurrent_jobs or 1)
+        elif concurrent_jobs:
+            nc = 1 + parallel.num_cores // concurrent_jobs
+            logging.warning('Using %d pools of %d cores each',
+                            concurrent_jobs, nc)
+            os.environ['OQ_NUM_CORES'] = str(nc)
+            parallel.multispawn(
+                run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
+        else:
+            for jobctx in jobctxs:
+                run_calc(jobctx)
+    finally:
+        if dist == 'zmq' or (dist == 'slurm' and not sbatch):
+            stop_workers(job_id)
+
+
+def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
+             precalc=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -307,17 +348,11 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
     dist = parallel.oq_distribute()
     if dist == 'slurm':
         # check the total number of required cores
-        tot_cores = parallel.Starmap.num_cores * nodes
+        tot_cores = parallel.num_cores * nodes
         max_cores = int(config.distribution.max_cores)
         if tot_cores > max_cores:
             raise ValueError('You can use at most %d nodes' %
-                             (max_cores // parallel.Starmap.num_cores))
-
-    if concurrent_jobs is None:
-        # // 8 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 8 or 1
-        if dist in ('slurm', 'zmq'):
-            print(f'{concurrent_jobs=}')
+                             (max_cores // parallel.num_cores))
 
     job_id = jobctxs[0].calc_id
     if precalc:
@@ -350,36 +385,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False, precalc=False
             for job in jobctxs:
                 logs.dbcmd('finish', job.calc_id, 'aborted')
             raise
-    for job in jobctxs:
-        dic = {'status': 'executing', 'pid': _PID,
-               'start_time': datetime.now(UTC)}
-        logs.dbcmd('update_job', job.calc_id, dic)
-    try:
-        if dist in ('zmq', 'slurm') and w.WorkerMaster(job_id).status() == []:
-            start_workers(job_id, dist, nodes)
-
-        # run the jobs sequentially or in parallel, with slurm or without
-        if dist == 'slurm' and sbatch:
-            scratch_dir = parallel.scratch_dir(job_id)
-            with open(os.path.join(scratch_dir, 'jobs.pik'), 'wb') as f:
-                pickle.dump(jobctxs, f)
-            w.WorkerMaster(job_id).send_jobs()
-            print('oq engine --show-log %d to see the progress' % job_id)
-        elif len(jobctxs) > 1 and dist in ('zmq', 'slurm'):
-            if precalc:
-                run_calc(jobctxs[0])
-                args = [(ctx,) for ctx in jobctxs[1:]]
-            else:
-                args = [(ctx,) for ctx in jobctxs]
-            #with multiprocessing.pool.Pool(concurrent_jobs) as pool:
-            #    pool.starmap(run_calc, args)
-            parallel.multispawn(run_calc, args, concurrent_jobs)
-        else:
-            for jobctx in jobctxs:
-                run_calc(jobctx)
-    finally:
-        if dist == 'zmq' or (dist == 'slurm' and not sbatch):
-            stop_workers(job_id)
+    _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs)
     return jobctxs
 
 

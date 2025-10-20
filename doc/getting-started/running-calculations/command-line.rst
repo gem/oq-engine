@@ -70,7 +70,6 @@ The result is the following::
 	                        in order of priority
 	  -l, --log-level {debug, info, warn, error, critical}
 	                        Defaults to "info"
-	  -r, --reuse-input    Read the sources|exposures from the cache (if any)
 	  --param PARAM, -p PARAM
 	                        Override parameters specified with the syntax
 	                        NAME1=VALUE1,NAME2=VALUE2,...

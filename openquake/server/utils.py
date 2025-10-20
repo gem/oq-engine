@@ -133,6 +133,7 @@ def oq_server_context_processor(request):
     context['external_tools'] = settings.EXTERNAL_TOOLS
     context['application_mode'] = settings.APPLICATION_MODE
     context['announcements'] = announcements
+    context['help_url'] = settings.HELP_URL
     if settings.GOOGLE_ANALYTICS_TOKEN is not None:
         context['google_analytics_token'] = settings.GOOGLE_ANALYTICS_TOKEN
     if settings.APPLICATION_MODE == 'AELO':

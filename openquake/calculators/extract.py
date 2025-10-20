@@ -576,7 +576,7 @@ def extract_mean_by_rup(dstore, what):
     assert N == 1
     out = []
     ctx_by_grp = read_ctx_by_grp(dstore)
-    cmakers = read_cmakers(dstore)
+    cmakers = read_cmakers(dstore).to_array()
     for gid, ctx in ctx_by_grp.items():
         # shape (4, G, M, U) => U
         means = cmakers[gid].get_mean_stds([ctx], split_by_mag=True)[0].mean(
@@ -854,7 +854,12 @@ def extract_mmi_tags(dstore, what):
     """
     Aggregates exposure by MMI regions and tags. Use it as /extract/mmi_tags?
     """
-    return dstore.read_df('mmi_tags')
+    df = dstore.read_df('mmi_tags')
+
+    # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1 values
+    df.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
+
+    return df
 
 
 # tested in impact_test and partially in case_1_ins
@@ -920,6 +925,11 @@ def extract_aggrisk_tags(dstore, what):
         total[aggby] = '*total*'
         if aggby == ['ID_2']:
             total['NAME_2'] = '*total*'
+
+        # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1 values
+        out.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
+        total.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
+
         outs.append(pandas.concat([out, total], ignore_index=True))
     return pandas.concat(outs)
 
@@ -1056,8 +1066,10 @@ def extract_losses_by_site(dstore, what):
     :returns: a DataFrame (lon, lat, number, structural, ...)
     """
     sitecol = dstore['sitecol']
-    dic = {'lon': F32(sitecol.lons), 'lat': F32(sitecol.lats)}
+    sitecol.make_complete()  # tested in test_impact_mode
     array = dstore['assetcol/array'][:][['site_id', 'lon', 'lat']]
+    ok_sids = sitecol.sids[numpy.unique(array['site_id'])]
+    dic = {'lon': F32(sitecol.lons[ok_sids]), 'lat': F32(sitecol.lats[ok_sids])}
     try:
         grp = dstore.getitem('avg_losses-stats')
     except KeyError:
@@ -1066,6 +1078,37 @@ def extract_losses_by_site(dstore, what):
     for loss_type in grp:
         losses = grp[loss_type][:, 0]
         dic[loss_type] = F32(general.fast_agg(array['site_id'], losses))
+    return pandas.DataFrame(dic)
+
+
+@extract.add('losses_by_location')
+def extract_losses_by_location(dstore, what):
+    """
+    :returns: a DataFrame (lon, lat, number, structural, ...)
+    """
+    lonlats = dstore['assetcol'][['ordinal', 'lon', 'lat']]
+    try:
+        grp = dstore.getitem('avg_losses-stats')
+    except KeyError:
+        # there is only one realization
+        grp = dstore.getitem('avg_losses-rlzs')
+    dic = {}
+    # this is fast enough, we can do millions of assets in seconds
+    tags = ['%.5f,%.5f' % (row['lon'], row['lat'])
+            for row in lonlats]
+    uniq, indices = numpy.unique(tags, return_inverse=True)
+    lons, lats = [], []
+    for lonlat in uniq:
+        lo, la = lonlat.split(',')
+        lons.append(lo)
+        lats.append(la)
+    dic['lon'] = F32(lons)
+    dic['lat'] = F32(lats)
+    for loss_type in grp:
+        losses = grp[loss_type][:, 0][lonlats['ordinal']]
+        dic[loss_type] = F32(general.fast_agg(indices, losses))
+    logging.info('There are {:_d} assets on {:_d} locations'.format(
+        len(lonlats), len(lons)))
     return pandas.DataFrame(dic)
 
 
@@ -1335,9 +1378,11 @@ def extract_disagg(dstore, what):
     bins = {k: bin_edges(v, sid) for k, v in dstore['disagg-bins'].items()}
     fullmatrix = dstore['disagg-%s/%s' % (spec, label)][sid]
     # matrix has shape (..., M, P, Z)
-    matrix = fullmatrix[..., imti, poei, :]
+    matrix = fullmatrix[..., imti, :, :][..., poei, :]
     if traditional:
-        poe_agg = dstore['poe4'][sid, imti, poei]  # shape (M, P, Z)
+        # tested in disagg/case_7
+        poe3 = dstore['poe4'][sid]
+        poe_agg = poe3[imti][:, poei]  # shape (M, P, Z)
         matrix[:] = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
     disag_tup = tuple(label.split('_'))

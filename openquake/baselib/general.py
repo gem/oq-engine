@@ -51,9 +51,12 @@ from openquake.baselib.python3compat import decode
 
 U8 = numpy.uint8
 U16 = numpy.uint16
+U32 = numpy.uint32
+U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+TWO32 = U64(2 ** 32)
 BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
            "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
            "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
@@ -1531,6 +1534,8 @@ def getsizeof(o, ids=None):
                             for k, v in o.items())
     elif isinstance(o, Container):
         return nbytes + sum(getsizeof(x, ids) for x in o)
+    elif hasattr(o, '__dict__'):
+        return nbytes + sum(getsizeof(x, ids) for x in o.__dict__.values())
 
     return nbytes
 

@@ -290,6 +290,9 @@ class GmfComputer(object):
                         o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
                             key = f'{sp.__class__.__name__}_{outkey}'
+                            if outkey == 'Disp':
+                                # Catarina Costa says to ignore small displacements
+                                outarr[outarr < 1e-4] = 0
                             data[key].append(outarr)
                 n += E
 

@@ -24,17 +24,20 @@ import tempfile
 import string
 import unittest
 import secrets
-import io
 import numpy
+import pandas
+from io import BytesIO
 
 import django
 from django.test import Client, override_settings
 from django.conf import settings
 from django.http import HttpResponseNotFound
+from django.contrib.auth.models import Permission
 from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.dbapi import db
 from openquake.commonlib.logs import dbcmd
+from openquake.commonlib.readinput import loadnpz
 from openquake.engine.engine import create_jobs
 
 # NOTE: before importing User or any other model, django.setup() is needed,
@@ -46,17 +49,12 @@ CALC_RUN_TIMEOUT = 60
 
 django.setup()
 try:
-    from django.contrib.auth.models import User  # noqa
+    from django.contrib.auth.models import User, Group, Permission  # noqa
 except RuntimeError:
     # Django tests are meant to be run with the command
     # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
     # ./openquake/server/manage.py test tests.views_test
     raise unittest.SkipTest('Authentication not configured')
-
-
-def loadnpz(lines):
-    bio = io.BytesIO(b''.join(ln for ln in lines))
-    return numpy.load(bio)
 
 
 def get_email_content(directory, search_string):
@@ -132,7 +130,7 @@ class EngineServerTestCase(django.test.TestCase):
     def get(cls, path, **data):
         resp = cls.c.get('/v1/calc/%s' % path, data, HTTP_HOST='testserver')
         if not resp.status_code == 200:
-            raise RuntimeError(resp.reason_phrase)
+            raise RuntimeError(resp.content.decode('utf8'))
         return resp
 
     @classmethod
@@ -171,6 +169,17 @@ class EngineServerTestCase(django.test.TestCase):
                 return job_dic
 
     @classmethod
+    def get_response_content(cls, response):
+        """
+        Extract content from either HttpResponse or FileResponse
+        NOTE: the django test client works differently with respect to requests.Session
+        """
+        if hasattr(response, 'content'):
+            return response.content
+        else:
+            return b''.join(response.streaming_content)
+
+    @classmethod
     def setUpClass(cls):
         super().setUpClass()
         dbcmd('reset_is_running')  # cleanup stuck calculations
@@ -178,6 +187,10 @@ class EngineServerTestCase(django.test.TestCase):
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
         cls.user1, cls.password1 = get_or_create_user(1)  # level 1
+        cls.users_who_can_view_exposure, _ = Group.objects.get_or_create(
+            name='Users who can view the exposure')
+        perm = Permission.objects.get(codename='can_view_exposure')
+        cls.users_who_can_view_exposure.permissions.add(perm)
         cls.c = Client()
         cls.c.login(username=cls.user1.username, password=cls.password1)
         cls.maxDiff = None
@@ -187,19 +200,17 @@ class EngineServerTestCase(django.test.TestCase):
         cls.user1.delete()
         super().tearDownClass()
 
-
-
     def impact_run_then_remove(
             self, endpoint, data, expected_error=None):
         with tempfile.TemporaryDirectory() as email_dir:
             with override_settings(EMAIL_FILE_PATH=email_dir):  # FIXME: it is ignored!
                 resp = self.post(endpoint, data=data)
-                if resp.status_code == 400:
-                    self.assertIsNotNone(expected_error)
+                if resp.status_code != 200:
                     content = json.loads(resp.content)
+                    print(content, file=sys.stderr)
+                    self.assertIsNotNone(expected_error)
                     self.assertIn(expected_error, content['error_msg'])
                     return
-                self.assertEqual(resp.status_code, 200)
                 # the job is supposed to start
                 # and, if expected_error is not None, to fail afterwards
                 try:
@@ -231,6 +242,10 @@ class EngineServerTestCase(django.test.TestCase):
                 self.assertGreater(
                     len(results), 0,
                     'The job produced no outputs!')
+        # Check that the Django views to visualize simplified and advanced outputs
+        # pages do not raise any exceptions
+        self.c.get(f'/engine/{job_id}/outputs')
+        self.c.get(f'/engine/{job_id}/outputs_impact')
         # NOTE: the get_json utility decodes the json and returns a dict
         ret = self.get_json('%s/impact' % job_id)
         self.assertEqual(list(ret), ['loss_type_descriptions', 'impact'])
@@ -239,31 +254,139 @@ class EngineServerTestCase(django.test.TestCase):
         ret = self.get('%s/download_aggrisk' % job_id)
         ret = self.get('%s/extract_html_table/aggrisk_tags' % job_id)
         ret = self.get('%s/extract_html_table/mmi_tags' % job_id)
+        ret = self.get('%s/extract/losses_by_asset' % job_id)
+        content = self.get_response_content(ret)
+        losses_by_asset_mean = numpy.load(BytesIO(content))['rlz-000']
+        dic = {key: losses_by_asset_mean[key]
+               for key in losses_by_asset_mean.dtype.names}
+        pandas.DataFrame(dic)
         ret = self.get('%s/extract/losses_by_site' % job_id)
+        content = self.get_response_content(ret)
+        losses_by_site = numpy.load(BytesIO(content))
+        pandas.DataFrame.from_dict(
+            {item: losses_by_site[item] for item in losses_by_site})
+        ret = self.get('%s/extract/losses_by_location' % job_id)
+        content = self.get_response_content(ret)
+        losses_by_location = numpy.load(BytesIO(content))
+        pandas.DataFrame.from_dict(
+            {item: losses_by_location[item] for item in losses_by_location})
+
+        # check that users can download hidden outputs only if their level is at
+        # least 2 or if they have the can_view_exposure permission
+
+        # level 1 users without the can_view_exposure permission can't see the exposure
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_exposure they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
+
+        # level 1 users with the can_view_exposure permission can see the exposure
+        self.user1.groups.add(self.users_who_can_view_exposure)
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        download_exposure_url = download_url
+        ret = self.c.get(download_url)
+        self.assertEqual(ret.status_code, 200)
+        # ...and with can_view_exposure they can extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 200)
+
+        # level 2 users without the show_exposure group can see the exposure
+        self.user1.groups.remove(self.users_who_can_view_exposure)
+        self.user1.profile.level = 2
+        self.user1.profile.save()
+        self.user1.save()
+        # try to download the exposure, knowing the corresponding url
+        ret = self.c.get(download_exposure_url)
+        self.assertEqual(ret.status_code, 200)
+        # check if the exposure is shown in the list of downloadable results
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        ret = self.c.get(exposure_url)
+        self.assertEqual(ret.status_code, 200)
+        # ...and even without can_view_exposure they can extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 200)
+
+        # level 0 users without the can_view_exposure permission can't see the exposure
+        self.user1.profile.level = 0
+        self.user1.profile.save()
+        self.user1.save()
+        # try to download the exposure, knowing the corresponding url
+        ret = self.c.get(download_exposure_url)
+        self.assertEqual(ret.status_code, 403)
+        # check if the exposure is shown in the list of downloadable results
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_exposure they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
+
+        # level 1 users without the can_view_exposure permission can't see the exposure
+        self.user1.profile.level = 1
+        self.user1.profile.save()
+        self.user1.save()
+        # try to download the exposure, knowing the corresponding url
+        ret = self.c.get(download_exposure_url)
+        self.assertEqual(ret.status_code, 403)
+        # check if the exposure is shown in the list of downloadable results
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_exposure they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
+
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError(
                 'Unable to remove job %s:\n%s' % (job_id, ret))
 
     def test_run_by_usgs_id_then_remove_calc_failure(self):
+        shakemap_version = 'urn:usgs-product:us:shakemap:us6000jllz:1675824364065'
         data = dict(usgs_id='us6000jllz',
                     approach='use_shakemap_from_usgs',
-                    shakemap_version='usgs_preferred',
-                    lon=37.0143, lat=37.2256, dep=10.0, mag=7.8,
-                    rake=0.0, dip=90, strike=0,
-                    time_event='night',
+                    shakemap_version=shakemap_version,
+                    lon=37.60602, lat=37.6446,
+                    dep=9.0, mag=7.8,
+                    rake=0.0, dip=90, strike=51.88112,
+                    time_event='day',
                     maximum_distance=100,
-                    mosaic_model='MIE',
-                    trt='Active Shallow Crust', truncation_level=3,
+                    mosaic_model='ARB',
+                    trt='TECTONIC_REGION_1',
+                    truncation_level=3,
                     number_of_ground_motion_fields=2,
                     asset_hazard_distance=15, ses_seed=42,
-                    local_timestamp='2023-02-06 04:17:34+03:00',
-                    maximum_distance_stations='')
+                    maximum_distance_stations='', msr='WC1994',
+                    description=('us6000jllz: M 7.8 - Pazarcik earthquake,'
+                                 ' Kahramanmaras earthquake sequence'))
         expected_error = 'IMT SA(0.6) is required'
         self.impact_run_then_remove('impact_run', data, expected_error)
 
     def test_run_by_usgs_id_then_remove_calc_success(self):
-        data = dict(usgs_id='us7000n05d')
+        # NOTE: this case tests the extractor for losses_by_site in the case discarding
+        # sites that do not correspond to any assets, e.g. for the JRC script that uses
+        # shakemap_id = 'urn:usgs-product:us:shakemap:us6000phrk:1735953132990'
+        # {
+        #     "id": "urn:usgs-product:us:shakemap:us6000phrk:1736792435199",
+        #     "number": "5",
+        #     "utc_date_time": "2025-01-13 18:20:35"
+        # },
+        usgs_id = 'us6000phrk'
+        resp = self.post('impact_get_shakemap_versions',
+                         prefix='/v1/', data={'usgs_id': usgs_id})
+        js = json.loads(resp.content.decode('utf8'))
+        [shakemap_id] = [version['id'] for version in js['shakemap_versions']
+                         if version['number'] == '5']
+        data = dict(usgs_id=usgs_id, shakemap_version=shakemap_id)
         self.impact_run_then_remove('impact_run_with_shakemap', data)
 
     # check that the URL 'run' cannot be accessed in ARISTOTLE mode
@@ -277,6 +400,47 @@ class EngineServerTestCase(django.test.TestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
+
+    def test_get_impact_form_defaults(self):
+        resp = self.c.get('/v1/get_impact_form_defaults')
+        resp = json.loads(resp.content.decode('utf8'))
+        expected_list = ['usgs_id', 'rupture_from_usgs', 'rupture_file', 'lon',
+                         'lat', 'dep', 'mag', 'aspect_ratio', 'rake',
+                         'local_timestamp', 'time_event', 'dip', 'strike',
+                         'maximum_distance', 'truncation_level',
+                         'number_of_ground_motion_fields', 'asset_hazard_distance',
+                         'ses_seed', 'station_data_file_from_usgs',
+                         'station_data_file', 'maximum_distance_stations',
+                         'msr', 'rupture_was_loaded', 'rupture_file_input',
+                         'station_data_file_input', 'station_data_file_loaded',
+                         'description']
+        self.assertEqual(list(resp), expected_list)
+
+    def test_impact_get_shakemap_versions(self):
+        resp = self.c.post('/v1/impact_get_shakemap_versions',
+                           data={'usgs_id': 'us6000jllz'})
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertIn('shakemap_versions', resp)
+        self.assertIn('usgs_preferred_version', resp)
+        self.assertIsNone(resp['shakemap_versions_issue'])
+
+    def test_impact_get_nodal_planes_and_info(self):
+        resp = self.c.post('/v1/impact_get_nodal_planes_and_info',
+                           data={'usgs_id': 'us6000jllz'})
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertIn('nodal_planes', resp)
+        self.assertIsNone(resp['nodal_planes_issue'])
+        self.assertIn('info', resp)
+
+    def test_impact_get_stations_from_usgs(self):
+        shakemap_version = 'urn:usgs-product:us:shakemap:us6000jllz:1756920117251'
+        resp = self.c.post('/v1/impact_get_stations_from_usgs',
+                           data={'usgs_id': 'us6000jllz',
+                                 'shakemap_version': shakemap_version})
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertIn('station_data_file', resp)
+        self.assertIn('n_stations', resp)
+        self.assertIsNone(resp['station_data_issue'])
 
 
 class ShareJobTestCase(django.test.TestCase):

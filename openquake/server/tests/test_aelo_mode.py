@@ -34,6 +34,8 @@ from django.contrib.auth import get_user_model
 from django.test import Client, override_settings
 from django.conf import settings
 from openquake.baselib import config
+from openquake.calculators.base import get_aelo_version
+from openquake.commonlib.oqvalidation import OqParam, ASCE_VERSIONS
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
 from openquake.server.views import get_disp_val
@@ -127,20 +129,31 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                     self.assertIn('finished correctly', email_content)
                 email_from = settings.EMAIL_HOST_USER
                 email_to = settings.EMAIL_SUPPORT
+                asce_version = params.get(
+                    'asce_version', OqParam.asce_version.default)
                 self.assertIn(f'From: {email_from}', email_content)
                 self.assertIn('To: django-test-user@email.test', email_content)
-                self.assertIn(f'Reply-To: {email_to}',
-                              email_content)
+                self.assertIn(f'Reply-To: {email_to}', email_content)
                 self.assertIn(
-                    f"Input values: lon = {params['lon']},"
-                    f" lat = {params['lat']}, vs30 = {params['vs30']},"
-                    f" siteid = {params['siteid']}", email_content)
+                    f"Site name: {params['siteid']}\n"
+                    f"Latitude: {params['lat']}, Longitude: {params['lon']}\n"
+                    f"Site Class: Vs30 = {params['vs30']}m/s\n"
+                    f"ASCE standard: {ASCE_VERSIONS[asce_version]}\n"
+                    f"AELO version: {get_aelo_version()}\n\n", email_content)
                 if failure_reason:
                     self.assertIn(failure_reason, email_content)
                 else:
                     self.assertIn('Please find the results here:',
                                   email_content)
                     self.assertIn(f'engine/{job_id}/outputs', email_content)
+        # Check that the Django views to visualize simplified and advanced outputs
+        # pages do not raise any exceptions
+        self.c.get(f'/engine/{job_id}/outputs')
+        self.c.get(f'/engine/{job_id}/outputs_aelo')
+        self.c.get(f'/v1/calc/{job_id}/download_png/hcurves.png')
+        self.c.get(f'/v1/calc/{job_id}/download_png/site.png')
+        self.c.get(f'/v1/calc/{job_id}/download_png/mce.png')
+        self.c.get(f'/v1/calc/{job_id}/download_png/disagg_by_src-All-IMTs.png')
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError('Unable to remove job %s:\n%s' % (job_id, ret))
@@ -249,3 +262,13 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
             '1.00', '1.00', '1.01', '1.10', '1.10', '1.50']
         computed = [get_disp_val(v) for v in test_vals_in]
         assert expected == computed
+
+    def test_aelo_changelog(self):
+        resp = self.c.get('/engine/aelo_changelog')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_aelo_site_classes(self):
+        resp = self.c.get('/v1/aelo_site_classes')
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertEqual(resp['default'],
+                         {'display_name': 'Default', 'vs30': [260, 365, 530]})

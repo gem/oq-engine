@@ -213,17 +213,21 @@ IMPACT_FORM_DEFAULTS = {
     'description': '',
 }
 
+IMPACT_APPROACHES = {
+    'use_shakemap_from_usgs': 'Use ShakeMap from the USGS',
+    'use_pnt_rup_from_usgs': 'Use point rupture from the USGS',
+    'build_rup_from_usgs': 'Build rupture from USGS nodal plane solutions',
+    'use_shakemap_fault_rup_from_usgs': 'Use ShakeMap fault rupture from the USGS',
+    'use_finite_fault_model_from_usgs': 'Use finite fault model from the USGS',
+    'provide_rup': 'Provide earthquake rupture in OpenQuake NRML format',
+    'provide_rup_params': 'Provide earthquake rupture parameters',
+}
+
 
 msr_choices = [msr.__class__.__name__ for msr in get_available_magnitude_scalerel()]
 
 validators = {
-    'approach': valid.Choice('use_shakemap_from_usgs',
-                             'use_pnt_rup_from_usgs',
-                             'build_rup_from_usgs',
-                             'use_shakemap_fault_rup_from_usgs',
-                             'use_finite_fault_model_from_usgs',
-                             'provide_rup',
-                             'provide_rup_params'),
+    'approach': valid.Choice(*IMPACT_APPROACHES),
     'usgs_id': valid.simple_id,
     'lon': nrml_validators['lon'],
     'lat': nrml_validators['lat'],
@@ -253,7 +257,7 @@ def _validate(POST):
     validation_errs = {}
     invalid_inputs = []
     params = {}
-    dic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
+    inputdic = dict(approach=None, usgs_id=None, lon=None, lat=None, dep=None,
                mag=None, msr=None, aspect_ratio=None, rake=None, dip=None,
                strike=None, description=None)
     for field, validation_func in validators.items():
@@ -265,16 +269,16 @@ def _validate(POST):
             blankable = ['dip', 'strike', 'maximum_distance_stations',
                          'local_timestamp']
             if field in blankable and POST.get(field) == '':
-                if field in dic:
-                    dic[field] = None
+                if field in inputdic:
+                    inputdic[field] = None
                 else:
                     params[field] = None
                 continue
             validation_errs[IMPACT_FORM_LABELS[field]] = str(exc)
             invalid_inputs.append(field)
             continue
-        if field in dic:
-            dic[field] = value
+        if field in inputdic:
+            inputdic[field] = value
         else:
             params[field] = value
 
@@ -288,7 +292,7 @@ def _validate(POST):
                "invalid_inputs": invalid_inputs}
     else:
         err = {}
-    return dic, params, err
+    return inputdic, params, err
 
 
 def get_trts_around(mosaic_model, exposure_hdf5):
@@ -324,14 +328,16 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     (rup, rupdic, params, error).
     """
     err = {}
-    dic, params, err = _validate(POST)
+    inputdic, params, err = _validate(POST)
     if err:
-        return None, dic, params, err
+        return None, inputdic, params, err
 
     # NOTE: in level 1 interface the ShakeMap has to be used.
     #       in level 2 interface it depends from the selected approach
     if user.level == 1:
-        dic['approach'] = 'use_shakemap_from_usgs'
+        inputdic['approach'] = 'use_shakemap_from_usgs'
+    else:
+        inputdic['approach'] = POST['approach']
     use_shakemap = user.level == 1
     if 'use_shakemap' in POST:
         use_shakemap = POST['use_shakemap'] == 'true'
@@ -341,7 +347,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
         shakemap_version = 'usgs_preferred'
 
     rup, rupdic, err = get_rup_dic(
-        dic, user, use_shakemap, shakemap_version, rupture_file, monitor)
+        inputdic, user, use_shakemap, shakemap_version, rupture_file, monitor)
     if err:
         return None, None, None, err
     # round floats
@@ -360,8 +366,8 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
     rupdic['mosaic_models'] = mosaic_models
     rupdic['rupture_from_usgs'] = rupture_file
     rupdic['rupture_was_loaded'] = rup is not None
-    if 'description' in dic and dic['description']:
-        params['description'] = dic['description']
+    if 'description' in inputdic and inputdic['description']:
+        params['description'] = inputdic['description']
     if len(params) > 1:  # called by impact_run
         params['rupture_dict'] = rupdic
         params['station_data_file'] = station_data_file
@@ -370,7 +376,7 @@ def impact_validate(POST, user, rupture_file=None, station_data_file=None,
             ap = AristotleParam(**params)
             try:
                 oqparams = ap.get_oqparams(
-                    dic['usgs_id'], mosaic_models, trts, use_shakemap)
+                    inputdic['usgs_id'], mosaic_models, trts, use_shakemap)
             except SiteAssociationError as exc:
                 oqparams = None
                 err = {"status": "failed", "error_msg": str(exc)}

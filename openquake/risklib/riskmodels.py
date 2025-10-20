@@ -28,6 +28,7 @@ from openquake.baselib.node import Node
 from openquake.baselib.general import AccumDict, cached_property
 from openquake.hazardlib import nrml, InvalidFile
 from openquake.hazardlib.sourcewriter import obj_to_node
+from openquake.sep.classes import corresponds
 from openquake.risklib import scientific
 
 U8 = numpy.uint8
@@ -241,18 +242,6 @@ class PerilDict(dict):
             return dict.__getitem__(self, ('groundshaking', lt))
 
 
-def corresponds(col, peril, imt):
-    """
-    True if the column in gmf_data corresponds to the peril for the given imt
-    """
-    if col.startswith('HazusDeformation'):
-        # TODO: this looks wrong, it should be liquefaction
-        return peril == 'groundshaking' and col.endswith(imt)
-    elif peril == 'groundshaking':
-        return col == imt
-    return peril in col.lower() and col.endswith(imt)
-
-
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -446,7 +435,7 @@ class RiskModel(object):
                 gmvs = gmf_df[col].to_numpy()
                 break
         else:
-            raise NameError(f'Missing {peril}:{imt} in gmf_data')
+            raise NameError(f'Missing {imt} in gmf_data for {peril}')
         ffs = self.risk_functions[peril][loss_type]
         damages = scientific.scenario_damage(ffs, gmvs).T
         return numpy.array([damages] * len(assets))

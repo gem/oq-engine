@@ -20,6 +20,7 @@
 Utilities to read the input files recognized by the OpenQuake engine.
 """
 
+import io
 import os
 import re
 import ast
@@ -31,15 +32,13 @@ import pathlib
 import logging
 import tempfile
 import functools
+import traceback
 import configparser
 import collections
 import itertools
-import json
 
 import numpy
 import pandas
-from scipy.spatial import cKDTree
-from scipy.spatial.distance import cdist
 import requests
 from shapely import wkt, geometry
 
@@ -52,18 +51,18 @@ from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.packager import fiona
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
-from openquake.hazardlib.calc.filters import getdefault, get_distances
+from openquake.hazardlib.calc.filters import getdefault, RuptureFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.source.rupture import build_planar_rupture_from_dict
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.geo.utils import (
-    spherical_to_cartesian, geohash3, get_dist)
+from openquake.hazardlib.geo.utils import hex6
 from openquake.hazardlib.shakemap.parsers import convert_to_oq_xml
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
+from openquake.commonlib import logs
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.qa_tests_data import mosaic, global_risk
 
@@ -460,44 +459,6 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
-def rup_radius(rup):
-    """
-    Maximum distance from the rupture mesh to the hypocenter
-    """
-    hypo = rup.hypocenter
-    xyz = spherical_to_cartesian(hypo.x, hypo.y, hypo.z).reshape(1, 3)
-    radius = cdist(rup.surface.mesh.xyz, xyz).max(axis=0)
-    return radius
-
-
-def filter_site_array_around(array, rup, dist):
-    """
-    :param array: array with fields 'lon', 'lat'
-    :param rup: a rupture object
-    :param dist: integration distance in km
-    :returns: slice to the rupture
-    """
-    hypo = rup.hypocenter
-    x, y, z = hypo.x, hypo.y, hypo.z
-    xyz_all = spherical_to_cartesian(array['lon'], array['lat'], 0)
-    xyz = spherical_to_cartesian(x, y, z)
-
-    # first raw filtering
-    tree = cKDTree(xyz_all)
-    # NB: on macOS query_ball returns the indices in a different order
-    # than on linux and windows, hence the need to sort
-    idxs = tree.query_ball_point(xyz, dist + rup_radius(rup), eps=.001)
-    idxs.sort()
-
-    # then fine filtering
-    r_sites = site.SiteCollection.from_(array[idxs])
-    dists = get_distances(rup, r_sites, 'rrup')
-    ids, = numpy.where(dists < dist)
-    if len(ids) < len(idxs):
-        logging.info('Filtered %d/%d sites', len(ids), len(idxs))
-    return r_sites.array[ids]
-
-
 def get_site_model_around(site_model_hdf5, rup, dist):
     """
     :param site_model_hdf5: path to an HDF5 file containing a 'site_model'
@@ -507,7 +468,7 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     """
     with hdf5.File(site_model_hdf5) as f:
         sm = f['site_model'][:]
-    return filter_site_array_around(sm, rup, dist)
+    return RuptureFilter(rup, dist)(sm)
 
 
 def _smparse(fname, oqparam, arrays, sm_fieldsets):
@@ -554,12 +515,13 @@ def _smparse(fname, oqparam, arrays, sm_fieldsets):
                     z[name] = valid.longitudes(coos)
             elif name in ["vs30", "z1pt0", "z2pt5"]:
                 pars = ' '.join(str(x) for x in vals)
-                if name == 'vs30':
+                if name == 'vs30' and not oqparam.override_vs30:
+                    # if override_vs30 is set, then we can have vs30=-999
                     z[name] = valid.positivefloats(pars)
                 else:
                     z[name] = valid.positivefloatsorsentinels(pars)
             else:
-                z[name] = vals # None-core site parameter
+                z[name] = vals  # None-core site parameter
 
         else:
             # If missing use the global parameter
@@ -663,6 +625,13 @@ def get_site_model(oqparam, h5=None):
                     f' {this_sm_fname} were not found in {other_sm_fname}')
 
     sm = numpy.concatenate(arrays, dtype=arrays[0].dtype)
+    if oqparam.site_labels:
+        assert 'ilabel' in sm.dtype.names, 'Missing ilabel in site_model.csv'
+        ilabels = set(sm['ilabel']) - {0}  # 0 means no label
+        for ilabel in ilabels:
+            if ilabel not in oqparam.site_labels.values():
+                raise KeyError(
+                    f'{oqparam.inputs["job_ini"]}: Unknown {ilabel=}')
     if h5:
         h5['site_model'] = sm
 
@@ -998,17 +967,6 @@ def _check_csm(csm, oqparam, h5):
         source.check_complex_faults(srcs)
 
 
-# tested in test_mosaic
-def get_cache_path(oqparam, h5=None):
-    """
-    :returns: cache path of the form OQ_DATA/csm_<checksum>.hdf5
-    """
-    if oqparam.cachedir:
-        checksum = get_checksum32(oqparam, h5)
-        return os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
-    return ''
-
-
 def get_composite_source_model(oqparam, dstore=None):
     """
     Parse the XML and build a complete composite source model in memory.
@@ -1025,15 +983,9 @@ def get_composite_source_model(oqparam, dstore=None):
     h5 = dstore.hdf5 if dstore else None
     with Monitor('building full_lt', measuremem=True, h5=h5):
         full_lt = get_full_lt(oqparam)  # builds the weights
-    path = get_cache_path(oqparam, h5)
-    if os.path.exists(path):
-        from openquake.commonlib import datastore  # avoid circular import
-        with datastore.read(os.path.realpath(path)) as ds:
-            csm = ds['_csm']
-            csm.init(full_lt)
-    else:
-        csm = source_reader.get_csm(oqparam, full_lt, dstore)
-        _check_csm(csm, oqparam, dstore)
+    csm = source_reader.get_csm(oqparam, full_lt, dstore)
+    _check_csm(csm, oqparam, dstore)
+    oqparam.mags_by_trt = csm.get_mags_by_trt(oqparam.maximum_distance)
     return csm
 
 
@@ -1134,11 +1086,18 @@ def get_exposure(oqparam, h5=None):
     if 'exposure' not in oq.inputs:
         return
     fnames = oq.inputs['exposure']
+    if oqparam.rupture_xml or oqparam.rupture_dict:
+        rup = get_rupture(oqparam)
+        dist = oqparam.maximum_distance('*')(rup.mag)
+        rupfilter = RuptureFilter(rup, dist)
+    else:
+        rupfilter = None
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
-            gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
-            exposure = asset.Exposure.read_around(fnames[0], gh3)
+            h6 = [x.encode('ascii') for x in sorted(set(
+                hex6(sm['lon'], sm['lat'])))]
+            exposure = asset.Exposure.read_around(fnames[0], h6, rupfilter)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
@@ -1150,7 +1109,7 @@ def get_exposure(oqparam, h5=None):
                 oq.ignore_missing_costs,
                 errors='ignore' if oq.ignore_encoding_errors else None,
                 infr_conn_analysis=oq.infrastructure_connectivity_analysis,
-                aggregate_by=oq.aggregate_by)
+                aggregate_by=oq.aggregate_by, rupfilter=rupfilter)
     return exposure
 
 
@@ -1279,6 +1238,23 @@ def assoc_to_shakemap(oq, haz_sitecol, assetcol):
     return sitecol, shakemap
 
 
+def assoc_exposure(exp, haz_sitecol, oqparam, h5):
+    """
+    Associate the assets to the hazard sites
+    """
+    # this is absurdely fast: 10 million assets can be associated in <10s
+    A = len(exp.assets)
+    N = len(haz_sitecol)
+    with Monitor('associating exposure', measuremem=True, h5=h5):
+        region = wkt.loads(oqparam.region) if oqparam.region else None
+        sitecol, discarded = exp.associate(
+            haz_sitecol, oqparam.get_haz_distance(), region)
+        logging.info(
+            'Associated {:_d} assets (of {:_d}) to {:_d} sites'
+            ' (of {:_d})'.format(len(exp.assets), A, len(sitecol), N))
+    return sitecol, discarded
+
+
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     """
     :param oqparam: calculation parameters
@@ -1286,35 +1262,23 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     :param inp_types: the input loss types
     :returns: (site collection, asset collection, discarded, exposure)
     """
-    asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
+        # read the sites from the sites/site_model/region
         haz_sitecol = get_site_collection(oqparam, h5)
     try:
         exp = haz_sitecol.exposure
     except AttributeError:
-        exp = get_exposure(oqparam)
-
-    if oqparam.region_grid_spacing:
-        haz_distance = oqparam.region_grid_spacing * 1.414
-        if haz_distance != asset_hazard_distance:
-            logging.debug('Using asset_hazard_distance=%d km instead of %d km',
-                          haz_distance, asset_hazard_distance)
-    else:
-        haz_distance = asset_hazard_distance
-
-    # associate the assets to the hazard sites
-    # this is absurdely fast: 10 million assets can be associated in <10s
-    A = len(exp.assets)
-    N = len(haz_sitecol)
-    with Monitor('associating exposure', measuremem=True, h5=h5):
-        region = wkt.loads(oqparam.region) if oqparam.region else None
-        sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
-    logging.info(
-        'Associated {:_d} assets (of {:_d}) to {:_d} sites'
-        ' (of {:_d})'.format(len(exp.assets), A, len(sitecol), N))
+        # in scenario_risk test_case_6a
+        exp = get_exposure(oqparam, h5)
+    sitecol, discarded = assoc_exposure(exp, haz_sitecol, oqparam, h5)
 
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
+    if oqparam.aggregate_exposure:
+        A = len(assetcol)
+        assetcol = assetcol.agg_by_site()
+        logging.info(f'Aggregated {A} assets -> {len(assetcol)} assets')
+
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
     tax = assetcol.tagcol.taxonomy[u[idx]]
@@ -1333,6 +1297,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and 'station_data' not in oqparam.inputs
+            and not oqparam.rupture_dict  # and not oqparam.rupture_xml
             and sitecol is not sitecol.complete):
         # for predefined hazard you cannot reduce the site collection; instead
         # you can in other cases, typically with a grid which is mostly empty
@@ -1669,7 +1634,7 @@ def get_input_files(oqparam):
             fnames.update(gsim_lt.collect_files(fname))
             fnames.add(fname)
         elif key == 'source_model':
-            fnames.add(oqparam.inputs['source_model'])
+            fnames.update(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list
             fnames.update(fname)
             if any(f.endswith(('.xml', '.nrml')) for f in fnames):
@@ -1788,23 +1753,20 @@ def read_mosaic_df(buffer):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """
-    '''
-    fname = os.path.join(os.path.dirname(mosaic.__file__), 'mosaic.geojson')
-    if os.path.exists(fname):
-        return read_geometries(fname, 'name', buffer)
-    '''
-    fname = os.path.join(os.path.dirname(mosaic.__file__),
-                         'mosaic.geojson')
-    return read_geometries(fname, 'name', buffer)
+    mosaic_boundaries_file = config.directory.mosaic_boundaries_file
+    if not mosaic_boundaries_file:
+        mosaic_boundaries_file = os.path.join(
+            os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+    return read_geometries(mosaic_boundaries_file, 'name', buffer)
 
 
 def read_countries_df(buffer=0.1):
     """
     :returns: a DataFrame of geometries for the world countries
     """
-    logging.info('Reading geoBoundariesCGAZ_ADM0.sh')  # slow
+    logging.info('Reading geoBoundariesCGAZ_ADM0.gpkg')  # slow
     fname = os.path.join(os.path.dirname(global_risk.__file__),
-                         'geoBoundariesCGAZ_ADM0.shp')
+                         'geoBoundariesCGAZ_ADM0.gpkg')
     return read_geometries(fname, 'shapeGroup', buffer)
 
 
@@ -1840,3 +1802,37 @@ def read_source_models(fnames, hdf5path='', **converterparams):
                 if src.code == b'F':  # multifault
                     src.set_msparams(secparams)
     return smodels
+
+
+def loadnpz(resp):
+    """
+    Get an .npz file from the WebUI
+    """
+    if hasattr(resp, 'content'):
+        # there was an error and we got an HTTP response from Django
+        raise RuntimeError(resp.content.decode('utf-8'))
+    bio = io.BytesIO(b''.join(ln for ln in resp))
+    return numpy.load(bio)
+
+
+# tested in commands_test
+def jobs_from_inis(inis):
+    """
+    :param inis: list of pathnames
+    :returns:
+        {'success': jids or [], 'error': '' or traceback string}
+    """
+    jids = []
+    try:
+        for ini in inis:
+            oq = get_oqparam(ini)
+            checksum = get_checksum32(oq)
+            jobs = logs.dbcmd('SELECT job_id FROM checksum '
+                              'WHERE hazard_checksum=?x', checksum)
+            if jobs:
+                jids.append(jobs[0].job_id)
+            else:
+                jids.append(0)
+    except Exception:
+        return {'success': [], 'error': traceback.format_exc()}
+    return {'success': jids, 'error': ''}

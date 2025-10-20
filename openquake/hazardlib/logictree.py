@@ -47,13 +47,14 @@ from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
 from openquake.hazardlib.lt import (
     Branch, BranchSet, count_paths, Realization, CompositeLogicTree,
-    dummy_branchset, LogicTreeError, parse_uncertainty, random)
+    dummy_branchset, LogicTreeError, parse_uncertainty)
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 TWO24 = 2 ** 24
+ONE_LETTER_BASE = True
 
 rlz_dt = numpy.dtype([
     ('ordinal', U32),
@@ -95,6 +96,16 @@ branch_dt = numpy.dtype([
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 OQ_REDUCE = os.environ.get('OQ_REDUCE') == 'smlt'
+
+
+def check_unique_uncertainties(source_specific_lts):
+    """
+    Make sure that each uncertainty in the underlying logic trees is unique
+    """
+    for sslt in source_specific_lts:
+        utypes = [bset.uncertainty_type for bset in sslt.branchsets]
+        if len(utypes) > len(set(utypes)):
+            raise nrml.DuplicatedID(utypes)
 
 
 # this is very fast
@@ -389,8 +400,8 @@ class SourceModelLogicTree(object):
             self.tectonic_region_types = set()
             self.collect_source_model_data('br0', source_model_file)
         self.source_data = numpy.array(self.source_data, source_dt)
-        self.info = Info([source_model_file], [], collections.defaultdict(list))
-
+        self.info = Info([source_model_file], [],
+                         collections.defaultdict(list))
         arr = numpy.array(
             [('bs0', 'br0', 'sourceModel', source_model_file, 1)], branch_dt)
         dic = dict(filename=source_model_file, seed=0, num_samples=0,
@@ -464,8 +475,9 @@ class SourceModelLogicTree(object):
             bset.applied is None for bset in self.branchsets)
         if self.is_source_specific:
             # fast algorithm, otherwise models like ZAF would hang
-            self.num_paths = prod(
-                sslt.num_paths for sslt in self.decompose().values())
+            sslts = self.decompose().values()
+            self.num_paths = prod(sslt.num_paths for sslt in sslts)
+            check_unique_uncertainties(sslts)
         else:  # slow algorithm
             self.num_paths = count_paths(self.root_branchset.branches)
 
@@ -594,7 +606,7 @@ class SourceModelLogicTree(object):
         # branches; however, you can actually raise the limit to 33489 branches
         # by commenting/uncommenting the two lines below, if you really need
         maxlen = 183
-        # maxlen = 183 if bsno else 33489  # sourceModel branchset can be longer
+        # maxlen=183 if bsno else 33489  # sourceModel branchset can be longer
         if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
@@ -642,7 +654,7 @@ class SourceModelLogicTree(object):
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
             # use two-letter abbrev for the first branchset (sourceModel)
-            base = BASE183 if bsno else BASE33489
+            base = BASE183 if ONE_LETTER_BASE or bsno else BASE33489
             self.shortener[branch_id] = keyno(branch_id, bsno, brno, base)
             weight_sum += weight
         if zeros:
@@ -995,7 +1007,7 @@ class LtRealization(object):
     a GSIM realization.
     """
     # NB: for EUR, with 302_990_625 realizations, the usage of __slots__
-    # save little memory, from 95.3 GB down to 81.0 GB
+    # saves little memory, from 95.3 GB down to 81.0 GB
     __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight']
 
     def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):

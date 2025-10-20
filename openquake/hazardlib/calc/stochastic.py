@@ -29,7 +29,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.filters import nofilter, SourceFilter
 from openquake.hazardlib.source.rupture import (
     BaseRupture, EBRupture, rupture_dt)
-from openquake.hazardlib.geo.mesh import surface_to_arrays
+from openquake.hazardlib.geo.surface.base import to_geom_lons_lats
 
 TWO16 = 2 ** 16  # 65,536
 TWO32 = 2 ** 32  # 4,294,967,296
@@ -58,25 +58,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model='???', model_geom=None):
     geoms = []
     for ebrupture in ebruptures:
         rup = ebrupture.rupture
-        arrays = surface_to_arrays(rup.surface)  # one array per surface
-        lons = []
-        lats = []
-        points = []
-        shapes = []
-        for array in arrays:
-            s0, s1, s2 = array.shape
-            assert s0 == 3, s0
-            assert s1 < TWO16, 'Too many lines'
-            assert s2 < TWO16, 'The rupture mesh spacing is too small'
-            shapes.append(s1)
-            shapes.append(s2)
-            lons.append(array[0].flat)
-            lats.append(array[1].flat)
-            points.append(array.flat)
-        lons = numpy.concatenate(lons)
-        lats = numpy.concatenate(lats)
-        points = F32(numpy.concatenate(points))
-        shapes = U32(shapes)
+        geom, lons, lats = to_geom_lons_lats(rup.surface)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['id'] = ebrupture.id
@@ -119,8 +101,6 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model='???', model_geom=None):
         # and points.reshape(3, 4) containing lons, lats and depths;
         # in classical/case_29 there is a non parametric source containing
         # 2 KiteSurfaces with shapes=[8, 5, 8, 5] and 240 = 3*2*8*5 coordinates
-        # NB: the geometries are read by source.rupture.to_arrays
-        geom = numpy.concatenate([[len(shapes) // 2], shapes, points])
         geoms.append(geom)
     if not rups:
         return ()

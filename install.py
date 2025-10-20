@@ -220,8 +220,7 @@ def ensure(pip=None, pyvenv=None):
     try:
         if pyvenv:
             if os.path.exists(pyvenv):
-                answer = input(REMOVE_VENV % pyvenv)
-                if answer.lower() == "y":
+                if input(REMOVE_VENV % pyvenv).lower() == "y":
                     shutil.rmtree(pyvenv)
                 else:
                     sys.exit(0)
@@ -233,8 +232,8 @@ def ensure(pip=None, pyvenv=None):
             shutil.rmtree(inst.VENV)
             raise RuntimeError(
                 "Could not execute ensurepip --upgrade: %s"
-                % ("Probably you are using the system Python (%s)" % sys.executable)
-            )
+                % ("Probably you are using the system Python (%s)" %
+                   sys.executable))
 
 
 def get_requirements_branch(version, inst, from_fork):
@@ -268,6 +267,7 @@ def install_standalone(venv):
     """
     Install the standalone Django applications if possible
     """
+    errors = []
     print("The standalone applications are not installed yet")
     if sys.platform == "win32":
         if os.path.exists("python\\python._pth.old"):
@@ -285,10 +285,13 @@ def install_standalone(venv):
             print("Applications " + app + " are not installed yet \n")
 
             subprocess.check_call(
-                [pycmd, "-m", "pip", "install", "--find-links", URL_STANDALONE, app]
+                [pycmd, "-m", "pip", "install", "--find-links", URL_STANDALONE,
+                 app]
             )
         except Exception as exc:
-            print("%s: could not install %s" % (exc, app))
+            # for instance is somebody removed a wheel from the wheelhouse
+            errors.append("%s: could not install %s" % (exc, app))
+    return errors
 
 
 def before_checks(inst, venv, port, remove, usage):
@@ -312,15 +315,18 @@ def before_checks(inst, venv, port, remove, usage):
 
     # check user
     user = getpass.getuser()
-    if (inst is server and user != "root") or (inst is devel_server and user != "root"):
+    if (inst is server and user != "root") or (
+            inst is devel_server and user != "root"):
         sys.exit(
             "Error: you cannot perform a server or devel_server "
             "installation unless "
             "you are root. If you do not have root permissions, you "
             "can install the engine in user mode.\n\n" + usage
         )
-    elif (inst is user and user == "root") or (inst is devel and user == "root"):
-        sys.exit("Error: you cannot perform a user or devel installation" " as root.")
+    elif (inst is user and user == "root") or (
+            inst is devel and user == "root"):
+        sys.exit("Error: you cannot perform a user or devel installation"
+                 " as root.")
 
     # check if there is a DbServer running
     if not remove:
@@ -421,13 +427,13 @@ def install(inst, version, from_fork):
     else:
         if os.path.exists("python\\python._pth.old"):
             subprocess.check_call(
-                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel", "urllib3"]
-            )
+                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel",
+                 "urllib3"])
         else:
             subprocess.check_call([pycmd, "-m", "ensurepip", "--upgrade"])
             subprocess.check_call(
-                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel", "urllib3"]
-            )
+                [pycmd, "-m", "pip", "install", "--upgrade", "pip", "wheel",
+                 "urllib3"])
 
     # install the requirements
     branch = get_requirements_branch(version, inst, from_fork)
@@ -437,8 +443,8 @@ def install(inst, version, from_fork):
         mac = ("",)
     req = (
         f"https://raw.githubusercontent.com/gem/oq-engine/{branch}/"
-        "requirements-py%d%d-%s%s.txt" % (PYVER[:2] + PLATFORM[sys.platform] + mac)
-    )
+        "requirements-py%d%d-%s%s.txt" % (PYVER[:2] + PLATFORM[sys.platform]
+                                          + mac))
 
     subprocess.check_call(
         [
@@ -463,7 +469,8 @@ def install(inst, version, from_fork):
         )
     elif re.match(r"\d+(\.\d+)+", version):  # install an official version
         subprocess.check_call(
-            [pycmd, "-m", "pip", "install", "--upgrade", "openquake.engine==" + version]
+            [pycmd, "-m", "pip", "install", "--upgrade",
+             "openquake.engine==" + version]
         )
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)
@@ -473,7 +480,7 @@ def install(inst, version, from_fork):
         )
         fix_version(commit, inst.VENV)
 
-    install_standalone(inst.VENV)
+    errors = install_standalone(inst.VENV)
 
     # create openquake.cfg
     if inst is server or inst is devel_server:
@@ -513,7 +520,8 @@ def install(inst, version, from_fork):
             "\\Scripts\\activate.ps1 (in PowerShell)"
         )
     elif inst in (user, devel):
-        print(f"Please activate the venv with source {inst.VENV}" "/bin/activate")
+        print(f"Please activate the venv with source {inst.VENV}"
+              "/bin/activate")
 
     # create systemd services
     if (inst is server and os.path.exists("/run/systemd/system")) or (
@@ -536,7 +544,8 @@ def install(inst, version, from_fork):
                         command=command,
                     )
                     f.write(srv)
-            subprocess.check_call(["systemctl", "enable", "--now", service_name])
+            subprocess.check_call(
+                ["systemctl", "enable", "--now", service_name])
             subprocess.check_call(["systemctl", "start", service_name])
 
     if inst in (user, server):
@@ -553,13 +562,15 @@ def install(inst, version, from_fork):
             zipfile.ZipFile(tmp).extractall(inst.VENV)
             os.remove(tmp)
             path = os.path.join(
-                inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA", "job.ini"
-            )
+                inst.VENV, "demos", "hazard", "AreaSourceClassicalPSHA",
+                "job.ini")
             msg = (
                 "You can run a test calculation with the command\n"
                 f"{oqreal} engine --run {path}"
             )
             print("The engine was installed successfully.\n" + msg)
+
+    return errors
 
 
 def remove(inst):
@@ -577,8 +588,9 @@ def remove(inst):
                 os.remove(service_path)
                 print("removed " + service_name)
         subprocess.check_call(["systemctl", "daemon-reload"])
-    shutil.rmtree(inst.VENV)
-    print("%s has been removed" % inst.VENV)
+    if os.path.exists(inst.VENV):
+        shutil.rmtree(inst.VENV)
+        print("%s has been removed" % inst.VENV)
     if (
         inst is server
         and os.path.exists(server.OQ)
@@ -590,8 +602,8 @@ def remove(inst):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "inst",
         choices=["server", "user", "devel", "devel_server"],
@@ -599,22 +611,27 @@ if __name__ == "__main__":
         help="the kind of installation you want",
     )
     parser.add_argument("--venv", help="venv directory")
-    parser.add_argument("--remove", action="store_true", help="disinstall the engine")
+    parser.add_argument("--remove", action="store_true",
+                        help="disinstall the engine")
     parser.add_argument("--version", help="version to install (default stable)")
     parser.add_argument("--dbport", help="DbServer port (default 1907 or 1908)")
     # NOTE: This flag should be set when installing the engine from an action
     #       triggered by a fork
     parser.add_argument(
-        "--from_fork", dest="from_fork", action="store_true", help=argparse.SUPPRESS
-    )
+        "--from_fork", dest="from_fork", action="store_true",
+        help=argparse.SUPPRESS)
     parser.set_defaults(from_fork=False)
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.venv, args.dbport, args.remove, parser.format_usage())
+        before_checks(inst, args.venv, args.dbport, args.remove,
+                      parser.format_usage())
         if args.remove:
             remove(inst)
         else:
-            install(inst, args.version, args.from_fork)
+            errors = install(inst, args.version, args.from_fork)
+            if errors:
+                # NB: even if one of the tools is missing, the engine will work
+                sys.exit('\n'.join(errors))
     else:
         sys.exit("Please specify the kind of installation")

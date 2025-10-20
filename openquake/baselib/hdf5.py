@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import re
 import csv
 import sys
 import inspect
@@ -668,6 +669,12 @@ class ArrayWrapper(object):
         self.extra = list(extra)
         if len(array):
             self.array = array
+        n = len(extra)
+        if 'shape_descr' in attrs and n > 1:
+            assert len(attrs['shape_descr']) == len(array.shape[:-1]), (
+                attrs['shape_descr'], array.shape[:-1])
+        if n > 1:
+            assert array.shape[-1] == n, (array.shape[-1], n)
 
     def __iter__(self):
         if hasattr(self, 'array'):
@@ -921,11 +928,19 @@ def _read_csv(fname, compositedt, usecols=None, skip=0):
     return df
 
 
-def find_error(fname, errors, dtype):
+def find_error(fname, errors, dtype, exc):
     """
     Given a CSV file with an error, parse it with the csv.reader
     and get a better exception including the first line with an error
     """
+    # first of all, search for errors like 'cannot safely convert passed user
+    # dtype of float64 for object dtyped data in column 16'
+    mo = re.search(r'column (\d+)', str(exc))
+    if mo:
+        c = int(mo.group(1))
+        exc.lineno = -1
+        exc.line = f'column {c} = {dtype.names[c]}'
+        return exc
     with open(fname, encoding='utf-8-sig', errors=errors) as f:
         reader = csv.reader(f)
         start = 1
@@ -1006,7 +1021,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
         try:
             df = _read_csv(fname, dt, usecols, skip)
         except Exception as exc:
-            err = find_error(fname, errors, dt)
+            err = find_error(fname, errors, dt, exc)
             if err:
                 raise InvalidFile('%s: %s\nline:%d:%s' %
                                   (fname, err, err.lineno, err.line))

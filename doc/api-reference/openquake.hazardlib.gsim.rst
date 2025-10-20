@@ -584,6 +584,14 @@ dost_2004
     :undoc-members:
     :show-inheritance:
 
+douglas_et_al_2024
+-----------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.douglas_et_al_2024
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 douglas_stochastic_2013
 -------------------------------------------------------
 
@@ -1107,6 +1115,14 @@ raghukanth_iyengar_2007
     :undoc-members:
     :show-inheritance:
 
+ramadan_2023
+-------------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.ramadan_2023
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 rietbrock_2013
 ----------------------------------------------
 
@@ -1241,6 +1257,22 @@ stewart_2016_vh
 -----------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.stewart_2016_vh
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+taherian_2024_inland
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.taherian_2024_inland
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+taherian_2024_offshore
+
+-----------------------------------------------
+.. automodule:: openquake.hazardlib.gsim.taherian_2024_offshore
     :members:
     :undoc-members:
     :show-inheritance:

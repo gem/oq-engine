@@ -27,12 +27,14 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
+
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
-
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_cy14_site_term
-from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
 from openquake.hazardlib.gsim.mgmpe.ba08_site_term import _get_ba08_site_term
+from openquake.hazardlib.gsim.mgmpe.bssa14_site_term import _get_bssa14_site_term
+
+from openquake.hazardlib.gsim.mgmpe.cb14_basin_term import _get_cb14_basin_term
 from openquake.hazardlib.gsim.mgmpe.m9_basin_term import _apply_m9_basin_term
 
 from openquake.hazardlib.gsim.nga_east import (
@@ -48,6 +50,12 @@ from openquake.hazardlib.gsim.mgmpe.hashash2020 import (
 IMT_DEPENDENT_KEYS = ["set_scale_median_vector",
                       "set_scale_total_sigma_vector",
                       "set_fixed_total_sigma"]
+
+SITE_TERMS = ["cy14_site_term",
+              "ba08_site_term",
+              "bssa14_site_term",
+              "nrcan15_site_term",
+              "ceus2020_site_term"]
 
 
 # ################ BEGIN FUNCTIONS MODIFYING mean_stds ################## #
@@ -121,6 +129,13 @@ def ba08_site_term(ctx, imt, me, si, ta, phi):
     This function adds the BA08 site term to GMMs requiring it.
     """
     me[:] += _get_ba08_site_term(imt, ctx)
+
+
+def bssa14_site_term(ctx, imt, me, si, ta, phi):
+    """
+    This function adds the BSSA14 site term to GMMs requiring it.
+    """
+    me[:] += _get_bssa14_site_term(imt, ctx)
 
 
 def cb14_basin_term(ctx, imt, me, si, ta, phi):
@@ -309,19 +324,22 @@ class ModifiableGMPE(GMPE):
             setattr(self, 'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
                     {StdDev.TOTAL, StdDev.INTRA_EVENT, StdDev.INTER_EVENT})
 
-        if ('ba08_site_term' in self.params and
-                'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS):
-            # hazardlib/gsim/utils/get_fault_type_dummy_variables is called
-            # from AB06 and requires the rake parameter so add here if missing
-            self.REQUIRES_RUPTURE_PARAMETERS |= {"rake"}
+        if 'ba08_site_term' in self.params or 'bssa14_site_term' in self.params:
+            # Require rake and rjb in the ctx for computing bedrock PGA
+            if 'rake' not in self.gmpe.REQUIRES_RUPTURE_PARAMETERS:
+                self.REQUIRES_RUPTURE_PARAMETERS |= {"rake"}
+            if 'rjb' not in self.gmpe.REQUIRES_DISTANCES:
+                self.REQUIRES_DISTANCES |= {"rjb"}
 
-        if ('ba08_site_term' in self.params and
-                'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
+        if (any(sm in self.params for sm in SITE_TERMS) and
+            'vs30' not in self.gmpe.REQUIRES_SITES_PARAMETERS):
+            # Make sure is always Vs30 in the ctx
             self.REQUIRES_SITES_PARAMETERS |= {"vs30"}
 
         if ((('cb14_basin_term' in self.params) or
              ('m9_basin_term' in self.params)) and
                 ('z2pt5' not in self.gmpe.REQUIRES_SITES_PARAMETERS)):
+            # Require z2pt5 in ctx
             self.REQUIRES_SITES_PARAMETERS |= {"z2pt5"}
 
         # This is required by the `sigma_model_alatik2015` function
@@ -378,21 +396,18 @@ class ModifiableGMPE(GMPE):
         for spec of input and result values.
         """
         # Set reference Vs30 if required
-        if ('nrcan15_site_term' in self.params or
-                'cy14_site_term' in self.params or
-                'ba08_site_term' in self.params):
+        if any(sm in self.params for sm in SITE_TERMS):
             ctx_copy = ctx.copy()
-            if 'nrcan15_site_term' in self.params:
-                rock_vs30 = 760.
-            elif 'cy14_site_term' in self.params:
+            if 'cy14_site_term' in self.params:
                 rock_vs30 = 1130.
-            elif 'ba08_site_term' in self.params:
+            elif ('nrcan15_site_term' or 'ba08_site_term'
+                  or 'bssa14_site_term' in self.params):
                 rock_vs30 = 760.
-            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
+            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30) # rock
         else:
             ctx_copy = ctx
         g = globals()
-
+        
         # Compute the original mean and standard deviations
         self.gmpe.compute(ctx_copy, imts, mean, sig, tau, phi)
 

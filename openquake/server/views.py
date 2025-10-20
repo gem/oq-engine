@@ -50,7 +50,7 @@ from openquake.hazardlib import nrml, gsim, valid
 from openquake.hazardlib.scalerel import get_available_magnitude_scalerel
 from openquake.hazardlib.shakemap.validate import (
     impact_validate, IMPACT_FORM_LABELS, IMPACT_FORM_PLACEHOLDERS,
-    IMPACT_FORM_DEFAULTS)
+    IMPACT_FORM_DEFAULTS, IMPACT_APPROACHES)
 from openquake.hazardlib.shakemap.parsers import (
     get_stations_from_usgs, get_shakemap_versions, get_nodal_planes_and_info)
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
@@ -117,12 +117,18 @@ AELO_FORM_LABELS = {
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': 'float (150 - 3000)',
+    'vs30': 'float [150 - 3000]',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE standards',
 }
 
-HIDDEN_OUTPUTS = ['assetcol', 'job']
+HIDDEN_OUTPUTS = ['exposure', 'job']
+EXTRACTABLE_RESOURCES = ['aggrisk_tags', 'mmi_tags', 'losses_by_site',
+                         'losses_by_asset', 'losses_by_location']
+# NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
+#       datastore, and the can_view_exposure permission gives access both to the
+#       'exposure' output and to the 'assetcol' item in the datastore
+MAP_RESOURCE_OUTPUT = {'assetcol': 'exposure'}
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -200,6 +206,44 @@ def stream_response(fname, content_type, exportname=''):
     return response
 
 
+def infer_site_class(vs30):
+    # used for old jobs for which the site class was not saved into the datastore
+    site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES.items()
+                          if v['vs30'] == vs30]
+    if site_class_matches:
+        site_class = site_class_matches[0]
+    else:
+        site_class = 'custom'
+    return site_class
+
+
+def get_site_class_display_name(ds):
+    vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
+    site_class = ds['oqparam'].site_class
+    if site_class is not None:
+        if site_class == 'custom':
+            vs30 = vs30_in[0]
+            site_class_display_name = f'Vs30 = {vs30}m/s'
+        else:
+            site_class_display_name = oqvalidation.SITE_CLASSES[
+                site_class]['display_name']
+    else:  # old calculations without site_class in the datastore
+        if hasattr(vs30_in, '__len__'):
+            if len(vs30_in) == 1:
+                [vs30_in] = vs30_in
+                site_class = infer_site_class(vs30_in)
+            else:
+                site_class = 'default'
+        else:  # in old calculations, vs30_in was a float
+            site_class = infer_site_class(vs30_in)
+        if site_class == 'custom':
+            site_class_display_name = f'Vs30 = {vs30_in}m/s'
+        else:
+            site_class_display_name = oqvalidation.SITE_CLASSES[
+                site_class]['display_name']
+    return site_class_display_name
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -213,7 +257,7 @@ def ajax_login(request):
     """
     username = request.POST['username']
     password = request.POST['password']
-    user = authenticate(username=username, password=password)
+    user = authenticate(request=request, username=username, password=password)
     if user is not None:
         if user.is_active:
             login(request, user)
@@ -295,9 +339,20 @@ def get_ini_defaults(request):
 @require_http_methods(['GET'])
 def get_impact_form_defaults(request):
     """
-    Return a json string with a dictionary of oq-impact form field names and defaults
+    Return a json string with a dictionary of oq-impact form field names
+    and defaults
     """
     return JsonResponse(IMPACT_FORM_DEFAULTS)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def aelo_site_classes(request):
+    """
+    Return a json string with a dictionary of ASCE site classes, with corresponding
+    display names and Vs30 values
+    """
+    return JsonResponse(oqvalidation.SITE_CLASSES)
 
 
 def _make_response(error_msg, error_line, valid):
@@ -675,6 +730,33 @@ def calc_run(request):
     return JsonResponse(response_data, status=status)
 
 
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_run_ini(request):
+    """
+    Run a calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object.
+        The request must contain the full path to a job.ini file
+    """
+    ini = request.POST.get('job_ini')
+    user = utils.get_user(request)
+    try:
+        job_id = submit_job([], ini, user, hc_id=None)
+    except Exception as exc:  # job failed, for instance missing .ini file
+        # get the exception message
+        exc_msg = traceback.format_exc() + str(exc)
+        logging.error(exc_msg)
+        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
+        status = 500
+    else:
+        response_data = dict(status='created', job_id=job_id)
+        status = 200
+    return JsonResponse(response_data, status=status)
+
+
 def aelo_callback(
         job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
     if not job_owner_email:
@@ -682,10 +764,23 @@ def aelo_callback(
     from_email = settings.EMAIL_HOST_USER
     to = [job_owner_email]
     reply_to = settings.EMAIL_SUPPORT
+    siteid = inputs['siteid']
     lon, lat = inputs['sites'].split()
-    body = (f"Input values: lon = {lon}, lat = {lat},"
-            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']},"
-            f" asce_version = {inputs['asce_version']}\n\n")
+    site_class = inputs['site_class']
+    vs30s = inputs['vs30'].split()
+    vs30 = vs30s[0] if site_class != 'default' else 'default'
+    if site_class is None or site_class == 'custom':
+        site_class_vs30_str = f'Site Class: Vs30 = {vs30}m/s'
+    else:
+        site_class_display_name = oqvalidation.SITE_CLASSES[site_class]['display_name']
+        site_class_vs30_str = f'Site Class: {site_class_display_name}'
+    asce_version = oqvalidation.ASCE_VERSIONS[inputs['asce_version']]
+    aelo_version = base.get_aelo_version()
+    body = (f"Site name: {siteid}\n"
+            f"Latitude: {lat}, Longitude: {lon}\n"
+            f"{site_class_vs30_str}\n"
+            f"ASCE standard: {asce_version}\n"
+            f"AELO version: {aelo_version}\n\n")
     if warnings is not None:
         for warning in warnings:
             body += warning + '\n'
@@ -719,15 +814,12 @@ def impact_callback(
     # description: us6000jllz (37.2256, 37.0143) M7.8 TUR
 
     params_to_print = ''
-    exclude_from_print = []
+    exclude_from_print = ['rupture_from_usgs']
     if 'shakemap_uri' in params:
-        exclude_from_print = [
-            'station_data_file', 'station_data_issue',
-            'station_data_file_from_usgs',
+        exclude_from_print.extend([
+            'station_data_file', 'station_data_issue', 'station_data_file_from_usgs',
             'trts', 'mosaic_models', 'mosaic_model', 'tectonic_region_type',
-            'gsim', 'shakemap_uri', 'rupture_file', 'rupture_from_usgs',
-            'title', 'mmi_file',
-            'rake']
+            'gsim', 'shakemap_uri', 'rupture_file', 'title', 'mmi_file', 'rake'])
     for key, val in params.items():
         if key not in ['calculation_mode', 'inputs', 'job_ini',
                        'hazard_calculation_id']:
@@ -737,6 +829,8 @@ def impact_callback(
                 rupdic = ast.literal_eval(params['rupture_dict'])
                 for rupkey, rupval in rupdic.items():
                     if rupkey not in exclude_from_print:
+                        if rupkey == 'approach':
+                            rupval = IMPACT_APPROACHES[rupval]
                         params_to_print += f'{rupkey}: {rupval}\n'
             elif key not in exclude_from_print:
                 params_to_print += f'{key}: {val}\n'
@@ -973,12 +1067,18 @@ def impact_run_with_shakemap(request):
 
     :param request:
         a `django.http.HttpRequest` object containing a usgs_id and
-        optionally the time of the day ('day', 'night' or 'transit')
+        optionally:
+        the time_event, i.e. the time of the day ('day', 'night' or 'transit')
+        the shakemap_version, the shakemap id in the format returned by
+        the impact_get_shakemap_versions API endpoint
     """
     if request.user.level == 0:
         return HttpResponseForbidden()
     post = dict(usgs_id=request.POST['usgs_id'],
                 use_shakemap='true', approach='use_shakemap_from_usgs')
+    if 'shakemap_version' in request.POST:
+        shakemap_version = request.POST['shakemap_version']
+        post['shakemap_version'] = shakemap_version
     _rup, rupdic, _params, err = impact_validate(post, request.user)
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
@@ -988,11 +1088,15 @@ def impact_run_with_shakemap(request):
         post['time_event'] = request.POST['time_event']
     post['approach'] = 'use_shakemap_from_usgs'
     post['use_shakemap'] = 'true'
+    if 'shakemap_version' in request.POST:
+        post['shakemap_version'] = shakemap_version
     for field in IMPACT_FORM_DEFAULTS:
         if field not in post and IMPACT_FORM_DEFAULTS[field]:
             post[field] = IMPACT_FORM_DEFAULTS[field]
     _rup, rupdic, params, err = impact_validate(
         post, request.user, post['rupture_file'])
+    if err:
+        return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
@@ -1012,12 +1116,9 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['lat']] = str(exc)
         invalid_inputs.append('lat')
     try:
-        vs30 = validate_vs30(request.POST.get('vs30'))
-    except Exception as exc:
-        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
-        invalid_inputs.append('vs30')
-    try:
         siteid = request.POST.get('siteid')
+        if not siteid:
+            raise ValueError("can not be empty")
         if len(siteid) > settings.MAX_AELO_SITE_NAME_LEN:
             raise ValueError(
                 "site name can not be longer than %s characters" %
@@ -1032,6 +1133,24 @@ def aelo_validate(request):
     except Exception as exc:
         validation_errs[AELO_FORM_LABELS['asce_version']] = str(exc)
         invalid_inputs.append('asce_version')
+    try:
+        site_class = request.POST.get('site_class')
+        oqvalidation.OqParam.site_class.validator(site_class)
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['site_class']] = str(exc)
+        invalid_inputs.append('site_class')
+    try:
+        vs30s_in = sorted(
+            float(val) for val in request.POST.get('vs30').split())
+        if not vs30s_in:
+            raise ValueError('can not be empty')
+        vs30s_out = []
+        for vs30 in vs30s_in:
+            vs30s_out.append(validate_vs30(vs30))
+        vs30 = ' '.join(str(val) for val in vs30s_out)
+    except Exception as exc:
+        validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
+        invalid_inputs.append('vs30')
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -1042,7 +1161,7 @@ def aelo_validate(request):
         response_data = {"status": "failed", "error_msg": err_msg,
                          "invalid_inputs": invalid_inputs}
         return JsonResponse(response_data, status=400)
-    return lon, lat, vs30, siteid, asce_version
+    return lon, lat, siteid, asce_version, site_class, vs30
 
 
 @csrf_exempt
@@ -1059,19 +1178,19 @@ def aelo_run(request):
     res = aelo_validate(request)
     if isinstance(res, HttpResponse):  # error
         return res
-    lon, lat, vs30, siteid, asce_version = res
+    lon, lat, siteid, asce_version, site_class, vs30 = res
 
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
-                 asce_version=asce_version),
+            dict(sites='%s %s' % (lon, lat), siteid=siteid,
+                 asce_version=asce_version, site_class=site_class, vs30=vs30),
             config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
                          'error_msg': str(exc)}
-        logging.error('', exc_info=True)
+        logging.exception(str(exc))
         return JsonResponse(response_data, status=400)
     [jobctx] = engine.create_jobs(
         [params],
@@ -1106,7 +1225,8 @@ def aelo_run(request):
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, asce_version, job_owner_email, outputs_uri_web,
+        lon, lat, vs30, siteid, asce_version, site_class, job_owner_email,
+        outputs_uri_web,
         jobctx, aelo_callback)).start()
     return JsonResponse(response_data, status=200)
 
@@ -1125,7 +1245,10 @@ def submit_job(request_files, ini, username, hc_id):
 
     # store the request files and perform some validation
     try:
-        job_ini = store(request_files, ini, job.calc_id)
+        if request_files:
+            job_ini = store(request_files, ini, job.calc_id)
+        else:  # called by calc_run_ini
+            job_ini = ini
         job.oqparam = oq = readinput.get_oqparam(
             job_ini, kw={'hazard_calculation_id': hc_id})
         dic = dict(calculation_mode=oq.calculation_mode,
@@ -1175,8 +1298,16 @@ def save_pik(job, dirname):
     return pathpik
 
 
-def get_public_outputs(oes):
-    return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
+def get_allowed_outputs(oes, user):
+    # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
+    # permission 'can_view_<OUTPUT>'
+    if user is not None:
+        return [e for o, e in oes
+                if o not in HIDDEN_OUTPUTS
+                or user.has_perm(f'auth.can_view_{o}')
+                or user.level >= 2]
+    else:
+        return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
 
 
 @require_http_methods(['GET'])
@@ -1205,8 +1336,13 @@ def calc_results(request, calc_id):
     # NB: export_output has as keys the list (output_type, extension)
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
+    try:
+        user = request.user
+    except AttributeError:
+        # without authentication
+        user = None
     output_types = groupby(export, lambda oe: oe[0],
-                           get_public_outputs)
+                           lambda oes: get_allowed_outputs(oes, user))
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
@@ -1219,6 +1355,8 @@ def calc_results(request, calc_id):
             outtypes = [ot for ot in output_types[rtype] if ot != 'txt']
         except KeyError:
             continue  # non-exportable outputs should not be shown
+        if not outtypes:  # happens for 'exposure', since it is hidden
+            continue
         path = f'v1/calc/result/{result.id}'
         url = urljoin(base_url, path)
         # NOTE: in case of multiple available export types, we provide only the url to
@@ -1233,7 +1371,7 @@ def calc_results(request, calc_id):
             outtypes=outtypes, url=url_with_query, size_mb=result.size_mb)
         response_data.append(datum)
 
-    return HttpResponse(content=json.dumps(response_data))
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON)
 
 
 @require_http_methods(['GET'])
@@ -1279,7 +1417,11 @@ def calc_result(request, result_id):
     try:
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        if ds_key in HIDDEN_OUTPUTS:
+        # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
+        # permission 'can_view_<OUTPUT>'
+        if (ds_key in HIDDEN_OUTPUTS
+                and not request.user.has_perm(f'auth.can_view_{ds_key}')
+                and not request.user.level >= 2):
             return HttpResponseForbidden()
         if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
@@ -1309,11 +1451,11 @@ def calc_result(request, result_id):
         archname = ds_key + '-' + export_type + '.zip'
         zipfiles(exported, os.path.join(tmpdir, archname))
         exported = os.path.join(tmpdir, archname)
+        content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
     else:  # single file
         exported = exported[0]
-
-    content_type = EXPORT_CONTENT_TYPE_MAP.get(
-        export_type, DEFAULT_CONTENT_TYPE)
+        content_type = EXPORT_CONTENT_TYPE_MAP.get(
+            export_type, DEFAULT_CONTENT_TYPE)
 
     fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
     return stream_response(exported, content_type, fname)
@@ -1396,6 +1538,8 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
+    if not can_extract(request, what):
+        return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
     query_string = unquote_plus(path[n:])
@@ -1456,6 +1600,20 @@ def calc_datastore(request, job_id):
 
 @cross_domain_ajax
 @require_http_methods(['GET'])
+def jobs_from_inis(request):
+    """
+    :returns:
+        list of job IDs; the ID is 0 if there is no job with the given checksum
+    """
+    dic = readinput.jobs_from_inis(request.GET.getlist('ini'))
+    if dic['error']:
+        logging.error(dic['error'])
+        return JsonResponse(dic, status=500)
+    return HttpResponse(content=json.dumps(dic), content_type=JSON)
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
 def calc_zip(request, job_id):
     """
     Download job.zip file
@@ -1498,12 +1656,14 @@ def web_engine(request, **kwargs):
         params['aelo_form_labels'] = AELO_FORM_LABELS
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
         params['asce_versions'] = oqvalidation.ASCE_VERSIONS
+        params['site_classes'] = oqvalidation.SITE_CLASSES
         params['default_asce_version'] = (
             oqvalidation.OqParam.asce_version.default)
     elif application_mode == 'ARISTOTLE':
         params['impact_form_labels'] = IMPACT_FORM_LABELS
         params['impact_form_placeholders'] = IMPACT_FORM_PLACEHOLDERS
         params['impact_form_defaults'] = IMPACT_FORM_DEFAULTS
+        params['impact_approaches'] = IMPACT_APPROACHES
 
         # this is usually ''; can be set in the local settings for debugging
         params['impact_default_usgs_id'] = \
@@ -1522,6 +1682,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
+    avg_gmf = []
+    disagg_by_src = []
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
@@ -1532,23 +1694,36 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-') and 'All' in k]
-            governing_mce = 'governing_mce.png' in ds['png']
+            mce = 'mce.png' in ds['png']
+            mce_spectra = 'mce_spectra.png' in ds['png']
         else:
-            hmaps = assets = hcurves = governing_mce = False
-            avg_gmf = []
-            disagg_by_src = []
+            hmaps = assets = hcurves = mce = mce_spectra = False
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    lon = lat = vs30 = site_name = None
+    lon = lat = site_name = asce_version_full = calc_aelo_version = None
+    site_class_display_name = None
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_class_display_name = get_site_class_display_name(ds)
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
+        try:
+            asce_version = ds['oqparam'].asce_version
+        except AttributeError:
+            # for backwards compatibility on old calculations
+            asce_version = oqvalidation.OqParam.asce_version.default
+        try:
+            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+        except KeyError:
+            calc_aelo_version = '1.0.0'
+        asce_version_full = oqvalidation.ASCE_VERSIONS[asce_version]
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
-                       governing_mce=governing_mce,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,)
+                       mce=mce, mce_spectra=mce_spectra,
+                       calc_aelo_version=calc_aelo_version,
+                       asce_version=asce_version_full,
+                       lon=lon, lat=lat, site_class=site_class_display_name,
+                       site_name=site_name)
                   )
 
 
@@ -1608,7 +1783,7 @@ def group_keys_by_value(d):
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce07 = asce41 = site = None
+    asce07 = asce41 = site = governing_mce = None
     asce07_with_units = {}
     asce41_with_units = {}
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -1673,8 +1848,9 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce41_with_units[key + ' (g)'] = get_disp_val(value)
         if 'png' in ds:
             site = 'site.png' in ds['png']
+            governing_mce = 'governing_mce.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_class_str = get_site_class_display_name(ds)
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         notifications = numpy.array([], dtype=notification_dtype)
         sid_to_vs30 = {}
@@ -1687,9 +1863,9 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             notifications = numpy.concatenate(
                 (notifications, preliminary_model_warning))
             sid_to_vs30.update({-1: ''})  # warning about preliminary model
+        sitecol = ds['sitecol']
         if 'notifications' in ds:
             notifications = numpy.concatenate((notifications, ds['notifications']))
-            sitecol = ds['sitecol']
             # NOTE: the variable name 'site' is already used
             sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
         notes = {}
@@ -1702,15 +1878,18 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 warnings[vs30] = notification['description'].decode('utf8')
         notes = group_keys_by_value(notes)
         warnings = group_keys_by_value(warnings)
-        notes_str = '\n'.join([f'For {vs30=}: {msg}' for (vs30, msg) in notes.items()])
-        warnings_str = '\n'.join([f'For {vs30=}: {msg}' if vs30 else msg
-                                  for (vs30, msg) in warnings.items()])
+        # NOTE: we decided to avoid specifying which vs30 values are relevant with
+        # respect to the notifications (either for notes and warnings)
+        notes_str = '\n'.join([note for note in notes.values()])
+        warnings_str = '\n'.join([warning for warning in warnings.values()])
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
-                       lon=lon, lat=lat, vs30=vs30, site_name=site_name, site=site,
+                       lon=lon, lat=lat, site_class=site_class_str,
+                       site_name=site_name, site=site,
+                       governing_mce=governing_mce,
                        calc_aelo_version=calc_aelo_version,
-                       asce_version=asce_version,
+                       asce_version=oqvalidation.ASCE_VERSIONS[asce_version],
                        warnings=warnings_str, notes=notes_str))
 
 
@@ -1755,8 +1934,9 @@ def web_engine_get_outputs_impact(request, calc_id):
             losses = views.view('aggrisk', ds)
         except KeyError:
             max_avg_gmf = ds['avg_gmf'][0].max()
-            losses = (f'The risk can not be computed since the hazard is too low:'
-                      f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
+            losses = (
+                f'The risk can not be computed since the hazard is too low:'
+                f' the maximum value of the average GMF is {max_avg_gmf:.5f}')
             losses_header = None
             weights_precision = None
         else:
@@ -1784,6 +1964,15 @@ def web_engine_get_outputs_impact(request, calc_id):
             warnings = ds_warnings
         else:
             warnings += '\n' + ds_warnings
+    mmi_tags = 'mmi_tags' in ds
+    # NOTE: aggrisk_tags is not available as an attribute of the datastore
+    try:
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            _extract(ds, 'aggrisk_tags')
+    except KeyError:
+        aggrisk_tags = False
+    else:
+        aggrisk_tags = True
     if local_timestamp_str is not None:
         local_timestamp = datetime.strptime(
             local_timestamp_str, '%Y-%m-%d %H:%M:%S%z')
@@ -1799,7 +1988,9 @@ def web_engine_get_outputs_impact(request, calc_id):
                        losses_header=losses_header,
                        weights_precision=weights_precision,
                        avg_gmf=avg_gmf, assets=assets,
-                       warnings=warnings))
+                       warnings=warnings, mmi_tags=mmi_tags,
+                       aggrisk_tags=aggrisk_tags)
+                  )
 
 
 @cross_domain_ajax
@@ -1827,6 +2018,23 @@ def download_aggrisk(request, calc_id):
     return response
 
 
+def can_extract(request, resource):
+    try:
+        user = request.user
+    except AttributeError:
+        # without authentication
+        return True
+    if (resource in EXTRACTABLE_RESOURCES
+            or user.level >= 2
+            or user.has_perm(f'auth.can_view_{resource}')):
+        return True
+    if resource in MAP_RESOURCE_OUTPUT:
+        corresponding_output = MAP_RESOURCE_OUTPUT[resource]
+        if user.has_perm(f'auth.can_view_{corresponding_output}'):
+            return True
+    return False
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
@@ -1834,6 +2042,8 @@ def extract_html_table(request, calc_id, name):
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    if not can_extract(request, name):
         return HttpResponseForbidden()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
@@ -1844,12 +2054,23 @@ def extract_html_table(request, calc_id, name):
             content='%s: %s in %s\n%s' %
             (exc.__class__.__name__, exc, name, tb),
             content_type='text/plain', status=400)
-    table_html = table.to_html(classes="table table-striped", index=False)
     display_names = {'aggrisk_tags': 'Impact',
                      'mmi_tags': 'Exposure by MMI'}
     table_name = display_names[name] if name in display_names else name
+    table_header = []
+    for short_name in table.columns:
+        if short_name in AGGRISK_FIELD_DESCRIPTION:
+            display_name = AGGRISK_FIELD_DESCRIPTION[short_name]
+        elif short_name in EXPOSURE_FIELD_DESCRIPTION:
+            display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
+        else:
+            display_name = ''
+        table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
+    table_contents = table.to_numpy()
     return render(request, 'engine/show_table.html',
-                  {'table_name': table_name, 'table_html': table_html})
+                  {'table_name': table_name,
+                   'table_header': table_header,
+                   'table_contents': table_contents})
 
 
 @csrf_exempt

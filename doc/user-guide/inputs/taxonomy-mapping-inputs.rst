@@ -12,7 +12,7 @@ fragility function to the same building type in the exposure with different weig
 We may encode such information into a *taxonomy_mapping.csv* file like the following:
 
 +--------------+----------------+
-| **taxonomy** | **conversion** |
+| **taxonomy** | **risk_id**    |
 +==============+================+
 |     Wood     |  Wood Type A   |
 +--------------+----------------+
@@ -32,7 +32,7 @@ taxonomy, so we just use a generic “Wood” taxonomy in the exposure. We may e
 *taxonomy_mapping.csv* file like the following:
 
 +--------------+----------------+------------+
-| **taxonomy** | **conversion** | **weight** |
+| **taxonomy** | **risk_id**    | **weight** |
 +==============+================+============+
 |     Wood     |  Wood Type A   |    0.2     |
 +--------------+----------------+------------+

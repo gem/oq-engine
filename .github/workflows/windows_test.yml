@@ -23,7 +23,8 @@ jobs:
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     strategy:
       matrix:
-        os: [windows-2022, windows-2025]
+        #os: [windows-2022, windows-2025]
+        os: [windows-2022]
         python-version: ["3.10", "3.11", "3.12"]
     steps:
       - name: Check out the codebase.

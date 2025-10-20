@@ -340,6 +340,7 @@ def plot_rupture_3d(rup):
     ax.plot(rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z, marker='*',
             color='orange', label='Hypocenter', alpha=.5,
             linestyle='', markersize=8)
+    ax.invert_zaxis()  # positive depth goes downwards
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
     ax.set_zlabel('Depth')

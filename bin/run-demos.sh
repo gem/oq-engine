@@ -9,13 +9,18 @@ oq info venv
 oq info cfg
 
 # create .tmp.ini files with oqparam.to_ini()
-python -c"import os
+python -c"import os, sys
 from openquake.calculators.checkers import check_ini
 for cwd, dirs, files in os.walk('$1'):
      for f in files:
          if f.endswith('.ini') and not f.endswith('.tmp.ini'):
              path = os.path.join(cwd, f)
-             check_ini(path, hc='risk' in f)"
+             check_ini(path, hc='risk' in f)  # creating .tmp.ini
+             if 'MedianSpectrum' in path:
+                 # this demo hangs on the M1 machine
+                 if sys.platform == 'darwin':
+                     os.remove(path.replace('.ini', '.tmp.ini'))
+"
 # run the demos with the generated file
 for demo_dir in $(find "$1" -type d | sort); do
    if [ -f $demo_dir/job_hazard.ini ]; then
@@ -68,6 +73,9 @@ oq engine --list-outputs -1
 
 # sensitivity to the strike angle
 oq shell $1/risk/ScenarioRisk/sensitivity.py
+
+echo "Testing mean_rates"
+OQ_DISTRIBUTE=no python -m openquake.hazardlib.calc.mean_rates openquake/qa_tests_data/mosaic/KOR/in/job_vs30.ini
 
 echo "Testing csm2rup"
 OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
