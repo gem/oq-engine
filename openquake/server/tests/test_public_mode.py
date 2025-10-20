@@ -98,6 +98,10 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         # test no filtering in actions.get_calcs
         all_jobs = self.get('list')
         self.assertGreater(len(all_jobs), 0)
+        self.assertNotIn('oqparam', all_jobs[0])
+        all_jobs = self.get('list?include_oqparam')
+        self.assertIn('oqparam', all_jobs[0])
+        self.assertGreater(len(all_jobs[0]['oqparam']), 0)
 
         extract_url = '/v1/calc/%s/extract/' % job_id
 
