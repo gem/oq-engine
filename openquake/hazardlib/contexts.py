@@ -1331,6 +1331,7 @@ class ContextMaker(object):
         if len(srcfilter.sitecol) < 100 and src.code in b'NFSC':  # few sites
             weight *= 10  # make fault sources much heavier
         elif len(sites) > 100:  # many sites, raise the weight for many gsims
+            # important for USA 2023
             weight *= (1 + len(self.gsims) // 5)
         return max(weight, eps), int(esites)
 
