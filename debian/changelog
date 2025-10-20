@@ -1,3 +1,11 @@
+  [Paolo Tormene]
+  * Added a whitelist of resources that can be extracted from the datastore
+    via the '/v1/calc/<calc_id>/extract/<resource>' and the
+    '/v1/calc/<calc_id>/extract_html_table/<resource>' API endpoints. All
+    resources can still be extracted if the WebUI authentication is disabled
+    or if the current user has a high profile level (>1) or has the permission
+    'auth.can_view_<resource>'
+
   [Michele Simionato]
   * Reduced the number of tiles
   * Optimized the management of cluster of sources (the array loop)
