@@ -694,22 +694,19 @@ def calc_log_size(request, calc_id):
     return JsonResponse(response_data)
 
 
-on_job_complete_callback_event = Event()
-on_job_complete_callback_data = {}
+job_complete_callback_state = {'event': Event(), 'data': {}}
 
 
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def check_callback(request):
-    global on_job_complete_callback_event, on_job_complete_callback_data
     body = json.loads(request.body.decode('utf8'))
-    on_job_complete_callback_data.clear()
-    on_job_complete_callback_data['body'] = body
-    on_job_complete_callback_data['POST'] = request.POST
-    on_job_complete_callback_data['GET'] = request.GET
-    on_job_complete_callback_event.set()
-    return JsonResponse(on_job_complete_callback_data)
+    payload = dict(body=body, POST=request.POST, GET=request.GET)
+    job_complete_callback_state['data'].clear()
+    job_complete_callback_state['data'].update(payload)
+    job_complete_callback_state['event'].set()
+    return JsonResponse(payload)
 
 
 @csrf_exempt

@@ -28,17 +28,16 @@ import tempfile
 import string
 import random
 import logging
-import time
 import django
 from django.test import LiveServerTestCase, Client
 from unittest import skipIf
+from threading import Event
 from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db
-from openquake.server.views import (
-    on_job_complete_callback_data, on_job_complete_callback_event)
+from openquake.server.views import job_complete_callback_state
 from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
 from openquake.qa_tests_data.classical import case_01
 
@@ -382,19 +381,16 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
 
 class CallbackTest(LiveServerTestCase):
-    """Integration test checking the callback on job completion"""
+    """
+    Integration test checking the callback on job completion
+    """
 
     def setUp(self):
         self.client = Client()
-        on_job_complete_callback_event.clear()
-        on_job_complete_callback_data.clear()
-
-    def wait_for_callback(self, timeout=10):
-        for _ in range(int(timeout * 10)):
-            if on_job_complete_callback_event.is_set():
-                return
-            time.sleep(0.1)
-        self.fail("Timeout waiting for callback on job completion")
+        self.on_job_complete_event = Event()
+        self.on_job_complete_data = {}
+        job_complete_callback_state['event'] = self.on_job_complete_event
+        job_complete_callback_state['data'] = self.on_job_complete_data
 
     def test_callback_on_job_successfully_completed(self):
         notify_to = f"{self.live_server_url}/v1/check_callback?first=one&second=two"
@@ -409,11 +405,14 @@ class CallbackTest(LiveServerTestCase):
         job_info = json.loads(resp.content.decode('utf8'))
         self.assertEqual(job_info['user_name'], 'custom_owner')
         job_id = job_info['job_id']
-        self.wait_for_callback()
-        body = on_job_complete_callback_data["body"]
-        get_params = on_job_complete_callback_data['GET']
+        self.on_job_complete_event.wait(timeout=5)
+        body = self.on_job_complete_data['body']
+        get_params = self.on_job_complete_data['GET']
         self.assertEqual(body['job_id'], job_id)
         self.assertEqual(body['status'], 'complete')
         self.assertEqual(body['user_name'], 'custom_owner')
         self.assertEqual(get_params['first'], 'one')
         self.assertEqual(get_params['second'], 'two')
+
+    # TODO: we could add a test to test the callback in case of a job that starts
+    # successfully (the inputs are valid) but fails afterwards.
