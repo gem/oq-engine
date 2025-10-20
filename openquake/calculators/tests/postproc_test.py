@@ -236,7 +236,7 @@ class PostProcTestCase(CalculatorTestCase):
                          'BSE2E_Sx1': 0.34593,
                          'BSE1N_Sx1': 0.28645,
                          'BSE1E_Sx1': 0.18822,
-                         'custom_site_id': '0:BC'}
+                         'custom_site_id': '0'}
 
     def test_median_spectrum1(self):
         # test with a single site and many ruptures

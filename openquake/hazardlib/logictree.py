@@ -1007,7 +1007,7 @@ class LtRealization(object):
     a GSIM realization.
     """
     # NB: for EUR, with 302_990_625 realizations, the usage of __slots__
-    # save little memory, from 95.3 GB down to 81.0 GB
+    # saves little memory, from 95.3 GB down to 81.0 GB
     __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight']
 
     def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):
