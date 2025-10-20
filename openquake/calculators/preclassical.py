@@ -171,10 +171,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
 
-    max_transfer_gb = sum(row['blocks'] * row['max_mb'] for row in data) / 1024
-    logging.info("Estimated maximum data transfer = %.1f GB", max_transfer_gb)
-
-
     # determine light groups and tiling
     light = cmakers.inverse[data['grp_id'][data['blocks'] == 1]]
     req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
@@ -193,11 +189,14 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     else:
         tiling = oq.tiling
 
+    if req_gb >= 30 and not config.directory.custom_tmp:
+        logging.info('We suggest to set custom_tmp')
+    max_transfer_gb = sum(row['blocks'] * row['max_mb'] for row in data) / 1024
+    logging.info("Estimated maximum data transfer = %.1f GB", max_transfer_gb)
+
     # store source_groups
     dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
-    if req_gb >= 30 and not config.directory.custom_tmp:
-        logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs
 
 
