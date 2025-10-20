@@ -48,7 +48,7 @@ from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
 from openquake.hazardlib.map_array import MapArray
-from openquake.hazardlib.contexts import ContextMaker, PmapMaker
+from openquake.hazardlib.contexts import ContextMaker, RmapMaker
 from openquake.hazardlib.sourceconverter import SourceGroup
 
 
@@ -71,7 +71,7 @@ def classical(group, sitecol, cmaker):
     [trt] = trts  # there must be a single tectonic region type
     if cmaker.trt != '*':
         assert trt == cmaker.trt, (trt, cmaker.trt)
-    dic = PmapMaker(cmaker, sitecol, group).make()
+    dic = RmapMaker(cmaker, sitecol, group).make()
     return dic
 
 
@@ -168,5 +168,5 @@ def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
     trt = src.tectonic_region_type
     cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
     cmaker.tom = src.temporal_occurrence_model
-    rmap = PmapMaker(cmaker, site1, [src]).make()['rmap']
+    rmap = RmapMaker(cmaker, site1, [src]).make()['rmap']
     return 1. - numpy.exp(-rmap.array[0])

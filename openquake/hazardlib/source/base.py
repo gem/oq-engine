@@ -283,14 +283,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 mags.add(rup.mag)
         return sorted(mags)
 
-    def get_mrates(self):
-        """
-        :returns: the magnitude rates (if any)
-        """
-        if hasattr(self, 'get_annual_occurrence_rates'):
-            return F64([r for m, r in self.get_annual_occurrence_rates()])
-        return F64([])
-
     def get_magstrs(self):
         """
         :returns: the magnitudes of the ruptures contained as strings
