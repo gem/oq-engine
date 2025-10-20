@@ -125,7 +125,7 @@ def main(mosaic_dir, out, models='ALL', *,
         ground_motion_fields='false',
         models=models)
     if minimum_magnitude:
-        INPUTS[minimum_magnitude] = str(minimum_magnitude)
+        INPUTS['minimum_magnitude'] = str(minimum_magnitude)
     job_inis, rows = read_job_inis(mosaic_dir, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
