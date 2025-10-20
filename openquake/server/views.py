@@ -164,6 +164,13 @@ def _get_base_url(request):
     return base_url
 
 
+def get_bool_param(request, name, default=False):
+    val = request.GET.get(name)
+    if val is None:
+        return default
+    return str(val).lower() in ('1', 'true', 'yes', '')
+
+
 def store(request_files, ini, calc_id):
     """
     Store the uploaded files in calc_dir and select the job file by looking
@@ -499,10 +506,14 @@ def calc_list(request, id=None):
     is_running, description, and a url where more detailed information
     can be accessed. This is called several times by the Javascript.
 
+    If the parameter `include_oqparam` is specified, the response also includes the
+    whole set of job parameters
+
     Responses are in JSON.
     """
     # with pytest openquake/server/tests/test_public_mode.py -k classical
     # request.GET is <QueryDict: {'is_running': ['true']}>
+    include_oqparam = get_bool_param(request, 'include_oqparam')
     base_url = _get_base_url(request)
     # always filter calculation list unless user is a superuser
     calc_data = logs.dbcmd(
@@ -516,6 +527,14 @@ def calc_list(request, id=None):
         if host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
+        oqparam = None
+        if include_oqparam and utils.user_has_permission(request, owner, status):
+            job = logs.dbcmd('get_job', hc_id)
+            try:
+                with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+                    oqparam = ds['oqparam'].to_params()
+            except IOError:  # datastore not found
+                pass
         abortable = False
         if is_running:
             try:
@@ -526,12 +545,14 @@ def calc_list(request, id=None):
         start_time_str = (
             start_time.strftime("%Y-%m-%d, %H:%M:%S") + " "
             + settings.TIME_ZONE)
-        response_data.append(
-            dict(id=hc_id, owner=owner,
-                 calculation_mode=calculation_mode, status=status,
-                 is_running=bool(is_running), description=desc, url=url,
-                 parent_id=parent_id, abortable=abortable, size_mb=size_mb,
-                 start_time=start_time_str, relevant=relevant))
+        job_data = dict(
+            id=hc_id, owner=owner, calculation_mode=calculation_mode, status=status,
+            is_running=bool(is_running), description=desc, url=url,
+            parent_id=parent_id, abortable=abortable, size_mb=size_mb,
+            start_time=start_time_str, relevant=relevant)
+        if include_oqparam:
+            job_data['oqparam'] = oqparam
+        response_data.append(job_data)
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
