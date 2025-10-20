@@ -124,6 +124,12 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 HIDDEN_OUTPUTS = ['exposure', 'job']
+EXTRACTABLE_RESOURCES = ['aggrisk_tags', 'mmi_tags', 'losses_by_site',
+                         'losses_by_asset', 'losses_by_location']
+# NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
+#       datastore, and the can_view_exposure permission gives access both to the
+#       'exposure' output and to the 'assetcol' item in the datastore
+MAP_RESOURCE_OUTPUT = {'assetcol': 'exposure'}
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -1569,6 +1575,8 @@ def extract(request, calc_id, what):
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
         return HttpResponseForbidden()
+    if not can_extract(request, what):
+        return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
     query_string = unquote_plus(path[n:])
@@ -2047,6 +2055,23 @@ def download_aggrisk(request, calc_id):
     return response
 
 
+def can_extract(request, resource):
+    try:
+        user = request.user
+    except AttributeError:
+        # without authentication
+        return True
+    if (resource in EXTRACTABLE_RESOURCES
+            or user.level >= 2
+            or user.has_perm(f'auth.can_view_{resource}')):
+        return True
+    if resource in MAP_RESOURCE_OUTPUT:
+        corresponding_output = MAP_RESOURCE_OUTPUT[resource]
+        if user.has_perm(f'auth.can_view_{corresponding_output}'):
+            return True
+    return False
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
@@ -2054,6 +2079,8 @@ def extract_html_table(request, calc_id, name):
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    if not can_extract(request, name):
         return HttpResponseForbidden()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:

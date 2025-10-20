@@ -171,6 +171,10 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
 
+    max_transfer_gb = sum(row['blocks'] * row['max_mb'] for row in data) / 1024
+    logging.info("Estimated maximum data transfer = %.1f GB", max_transfer_gb)
+
+
     # determine light groups and tiling
     light = cmakers.inverse[data['grp_id'][data['blocks'] == 1]]
     req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
@@ -228,7 +232,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         logging.info('Building cmakers')
-        trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
+        trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None
