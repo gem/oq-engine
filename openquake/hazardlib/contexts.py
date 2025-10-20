@@ -543,7 +543,7 @@ class ContextMaker(object):
     fewsites = False
     ilabel = None
     tom = None
-    cluster = None  # set in PmapMaker
+    cluster = None  # set in RmapMaker
     dparam_mb = 0  # set in build_dparam
     source_mb = 0  # set in build_dparam
 
@@ -1123,7 +1123,7 @@ class ContextMaker(object):
             probs = [rec.probs_occur[0] for rec in ctxt]
             return -numpy.log(probs) / self.investigation_time
 
-    # not used by the engine, is is meant for notebooks
+    # not used by the engine, it is meant for notebooks
     def get_poes(self, srcs, sitecol, tom=None, rup_mutex={},
                  collapse_level=-1):
         """
@@ -1331,6 +1331,7 @@ class ContextMaker(object):
         if len(srcfilter.sitecol) < 100 and src.code in b'NFSC':  # few sites
             weight *= 10  # make fault sources much heavier
         elif len(sites) > 100:  # many sites, raise the weight for many gsims
+            # important for USA 2023
             weight *= (1 + len(self.gsims) // 5)
         return max(weight, eps), int(esites)
 
@@ -1458,7 +1459,7 @@ def set_poes(gsim, mean_std, cmaker, ctx, out, slc):
             out[:, mL1:mL1 + L1] = 0
 
 
-class PmapMaker(object):
+class RmapMaker(object):
     """
     A class to compute the PoEs from a given source
     """
@@ -1630,16 +1631,12 @@ class PmapMaker(object):
             pnemap = self._make_src_mutex()
         if self.cluster:
             with self.cmaker.clu_mon:
-                # TODO: reduce 50 to 10 to make the calculation faster
-                for nocc in range(0, 50):
-                    prob_n_occ = self.tom.get_probability_n_occurrences(
-                        self.tom.occurrence_rate, nocc)
-                    if nocc == 0:
-                        pmapclu = pnemap.new(
-                            numpy.full(pnemap.shape, prob_n_occ, dtype=F32))
-                    else:
-                        pmapclu.array += pnemap.array**nocc * F32(prob_n_occ)
-                pnemap.array[:] = pmapclu.array
+                probs = F32(self.tom.get_probability_n_occurrences(
+                    self.tom.occurrence_rate, numpy.arange(20)))
+                array = numpy.full(pnemap.shape, probs[0], dtype=F32)
+                for nocc, probn in enumerate(probs[1:], 1):
+                    array += pnemap.array ** nocc * probn
+                pnemap.array = array
 
         dic['rmap'] = pnemap.to_rates()
         dic['rmap'].gid = self.cmaker.gid
@@ -1915,6 +1912,13 @@ class ContextMakerSequence(collections.abc.Sequence):
         self.cmakers = cmakers
         self.inverse = inverse
 
+    @property
+    def Gt(self):
+        """
+        The total number of gsims in the underlying context makers
+        """
+        return sum(len(cm.gsims) for cm in self.cmakers)
+
     def __getitem__(self, idx):
         return self.cmakers[idx]
 
@@ -1928,18 +1932,29 @@ class ContextMakerSequence(collections.abc.Sequence):
     def to_array(self, grp_ids=slice(None)):
         return numpy.array([self[inv] for inv in self.inverse[grp_ids]])
 
+    def calc_rmap(self, src_groups, sitecol):
+        """
+        :returns: a RateMap of shape (N, L, Gt)
+        """
+        cmakers = self.to_array()
+        assert cmakers[0].oq.use_rates
+        assert len(src_groups) == len(cmakers)
+        L = cmakers[0].imtls.size
+        rmap = MapArray(sitecol.sids, L, self.Gt).fill(0)
+        for group, cmaker in zip(src_groups, cmakers):
+            rmap += RmapMaker(cmaker, sitecol, group).make()['rmap']
+        return rmap
+
     def combine_rates(self, rmap):
         """
         :returns: an array of shape (N, L, R) for the given site ID
         """
         N, L, G = rmap.array.shape
+        assert self.Gt == G, (self.Gt, G)
         maxr = 0
-        Gt = 0
         for cm in self.cmakers:
             for rlzs in cm.gsims.values():
                 maxr = max(maxr, rlzs[-1])
-            Gt += len(cm.gsims)
-        assert Gt == G, (Gt, G)
         r0 = numpy.zeros((N, L, maxr + 1))
         g = 0
         for cm in self.cmakers:
@@ -1951,8 +1966,9 @@ class ContextMakerSequence(collections.abc.Sequence):
         return r0
 
     def __repr__(self):
-        num_gsims = '+'.join(str(len(cm.gsims)) for cm in self.cmakers)
-        return f'<{self.__class__.__name__} {num_gsims} gsims>'
+        name = self.__class__.__name__
+        return f'<{name} Gt={self.Gt}, groups={len(self.inverse)}>'
+
 
 def get_unique_inverse(all_trt_smrs):
     """
