@@ -1299,18 +1299,17 @@ def save_pik(job, dirname):
 
 
 def get_allowed_outputs(oes, request):
-    try:
+    if settings.LOCKDOWN:
         user = request.user
-    except AttributeError:
-        # When authentication is disabled, all outputs are visible
-        return [e for o, e in oes]
-    else:
-        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to users with
-        # level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
         return [e for o, e in oes
                 if o not in HIDDEN_OUTPUTS
                 or user.has_perm(f'auth.can_view_{o}')
                 or user.level >= 2]
+    else:
+        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to users with
+        # level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
+        # When authentication is disabled, all outputs are visible
+        return [e for o, e in oes]
 
 
 @require_http_methods(['GET'])
@@ -1419,7 +1418,7 @@ def calc_result(request, result_id):
             return HttpResponseForbidden()
         # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
         # permission 'can_view_<OUTPUT>'
-        if (hasattr(request, 'user')  # authentication is enabled
+        if (settings.LOCKDOWN
                 and ds_key in HIDDEN_OUTPUTS
                 and not request.user.has_perm(f'auth.can_view_{ds_key}')
                 and not request.user.level >= 2):
