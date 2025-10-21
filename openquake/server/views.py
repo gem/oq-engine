@@ -714,7 +714,10 @@ def check_callback(request):
 @require_http_methods(['POST'])
 def calc_run(request):
     """
-    Run a calculation.
+    This endpoint accepts a POST request containing the configuration and input files
+    required to perform a calculation. It can also optionally reuse results from a
+    previous hazard calculation, assign a custom job owner, and specify a callback URL
+    for job completion notifications.
 
     :param request:
         a `django.http.HttpRequest` object.
@@ -725,9 +728,14 @@ def calc_run(request):
         calculation. They can be uploaded as separate files, or zipped
         together.
         If the request has the attribute `notify_to`, and it starts with
-        'http[s]://', the engine will send a notification to the given url
+        'http[s]://', the engine will send a notification to the given url.
         If the request has the attribute `job_owner`, the owner of the job will be set
         to that string instead of the name of the user performing the request.
+
+    :returns:
+        A `django.http.JsonResponse` object containing:
+        - On success (HTTP 200): information about the initialized job
+        - On failure (HTTP 500): traceback details and job ID (if available).
     """
     job_ini = request.POST.get('job_ini')
     hazard_job_id = request.POST.get('hazard_job_id')
@@ -758,15 +766,23 @@ def calc_run(request):
 @require_http_methods(['POST'])
 def calc_run_ini(request):
     """
-    Run a calculation.
+    This endpoint accepts a POST request containing the configuration .ini file that
+    defines the parameters needed to perform a calculation. It can optionally reuse
+    results from a previous hazard job, assign a custom job owner, and specify
+    a callback URL for job completion notifications.
 
     :param request:
         a `django.http.HttpRequest` object.
         The request must contain the full path to a job.ini file
         If the request has the attribute `notify_to`, and it starts with
-        'http[s]://', the engine will send a notification to the given url
+        'http[s]://', the engine will send a notification to the given url.
         If the request has the attribute `job_owner`, the owner of the job will be set
         to that string instead of the name of the user performing the request.
+
+    :returns:
+        A `django.http.JsonResponse` object containing:
+        - On success (HTTP 200): information about the initialized job
+        - On failure (HTTP 500): traceback details and job ID (if available).
     """
     ini = request.POST['job_ini']
     hazard_job_id = request.POST.get('hazard_job_id')
