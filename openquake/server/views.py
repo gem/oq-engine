@@ -1298,16 +1298,19 @@ def save_pik(job, dirname):
     return pathpik
 
 
-def get_allowed_outputs(oes, user):
-    # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
-    # permission 'can_view_<OUTPUT>'
-    if user is not None:
+def get_allowed_outputs(oes, request):
+    try:
+        user = request.user
+    except AttributeError:
+        # When authentication is disabled, all outputs are visible
+        return [e for o, e in oes]
+    else:
+        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to users with
+        # level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
         return [e for o, e in oes
                 if o not in HIDDEN_OUTPUTS
                 or user.has_perm(f'auth.can_view_{o}')
                 or user.level >= 2]
-    else:
-        return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
 
 
 @require_http_methods(['GET'])
@@ -1336,13 +1339,8 @@ def calc_results(request, calc_id):
     # NB: export_output has as keys the list (output_type, extension)
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
-    try:
-        user = request.user
-    except AttributeError:
-        # without authentication
-        user = None
     output_types = groupby(export, lambda oe: oe[0],
-                           lambda oes: get_allowed_outputs(oes, user))
+                           lambda oes: get_allowed_outputs(oes, request))
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
@@ -1417,13 +1415,14 @@ def calc_result(request, result_id):
     try:
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
+        if not utils.user_has_permission(request, job_user, job_status):
+            return HttpResponseForbidden()
         # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
         # permission 'can_view_<OUTPUT>'
-        if (ds_key in HIDDEN_OUTPUTS
+        if (hasattr(request, 'user')  # authentication is enabled
+                and ds_key in HIDDEN_OUTPUTS
                 and not request.user.has_perm(f'auth.can_view_{ds_key}')
                 and not request.user.level >= 2):
-            return HttpResponseForbidden()
-        if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
