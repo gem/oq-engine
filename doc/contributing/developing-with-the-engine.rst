@@ -209,8 +209,8 @@ object containing the parameters of the calculation::
 	... gsim='ToroEtAl2002SHARE',
 	... truncation_level='99.0',
 	... maximum_distance='200.0'))
-	>>> gsims = readinput.get_gsim_lt(oq).values["\*"]
-	>>> cmaker = ContextMaker("\*", gsims, oq)
+	>>> gsims = readinput.get_gsim_lt(oq).values["*"]
+	>>> cmaker = ContextMaker("*", gsims, oq)
 
 Then we can specify the sites and a source as follows::
 
@@ -320,13 +320,14 @@ N = 705 * 1 = 705. In general if there are multiple sites a context M is the tot
 if there are two contexts and the first affect 1 sites and the second 2 sites then N would be 1 + 2 = 3. This example
 correspond to 1 + 1 + … + 1 = 705.
 
-From the mean and standard deviation is possible to compute the probabilities of exceedence. The ``ContextMaker`` provides
-a method to compute directly the map of the rates, from which the hazard curves
-can be extracted::
+From the mean and standard deviation is possible to compute the
+probabilities of exceedence. The ``ContextMaker`` provides a method to
+compute directly the rates (annual frequencies), from which the hazard
+curves can be extracted::
 
 	>>> rmap = cmaker.get_rmap([src], sitecol)
-        >>> rmap.to_poes()
-	array([[0.00508004]], dtype=float32)
+        >>> 1. - numpy.exp(- rmap.array)  # rates -> poes, shape (N, L, G)
+	array([[[0.00508004]]], dtype=float32)
 
 If you want to know exactly how ``get_rmap`` works you are invited to
 look at the source code in ``openquake.hazardlib.contexts``.
