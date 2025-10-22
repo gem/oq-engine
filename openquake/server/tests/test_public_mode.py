@@ -89,6 +89,8 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
             self.assertGreater(len(log), 0)
         results = self.get('%s/results' % job_id)
         self.assertGreater(len(results), 0)
+        # check that a hidden output is visible and downloadable in PUBLIC mode
+        self.assertIn('exposure', [res['type'] for res in results])
         for res in results:
             for etype in res['outtypes']:  # test all export types
                 text = self.get_text(
