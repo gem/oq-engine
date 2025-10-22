@@ -146,6 +146,14 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                     self.assertIn('Please find the results here:',
                                   email_content)
                     self.assertIn(f'engine/{job_id}/outputs', email_content)
+        # Check that the Django views to visualize simplified and advanced outputs
+        # pages do not raise any exceptions
+        self.c.get(f'/engine/{job_id}/outputs')
+        self.c.get(f'/engine/{job_id}/outputs_aelo')
+        self.c.get(f'/v1/calc/{job_id}/download_png/hcurves.png')
+        self.c.get(f'/v1/calc/{job_id}/download_png/site.png')
+        self.c.get(f'/v1/calc/{job_id}/download_png/mce.png')
+        self.c.get(f'/v1/calc/{job_id}/download_png/disagg_by_src-All-IMTs.png')
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError('Unable to remove job %s:\n%s' % (job_id, ret))
@@ -254,3 +262,13 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
             '1.00', '1.00', '1.01', '1.10', '1.10', '1.50']
         computed = [get_disp_val(v) for v in test_vals_in]
         assert expected == computed
+
+    def test_aelo_changelog(self):
+        resp = self.c.get('/engine/aelo_changelog')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_aelo_site_classes(self):
+        resp = self.c.get('/v1/aelo_site_classes')
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertEqual(resp['default'],
+                         {'display_name': 'Default', 'vs30': [260, 365, 530]})

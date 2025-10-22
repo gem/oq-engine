@@ -104,7 +104,7 @@ def read_job_inis(mosaic_dir, INPUTS):
 
 def main(mosaic_dir, out, models='ALL', *,
          number_of_logic_tree_samples:int=2000,
-         ses_per_logic_tree_path:int=50, minimum_magnitude:float=0):
+         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5):
     """
     Storing global SES
     """
@@ -125,7 +125,7 @@ def main(mosaic_dir, out, models='ALL', *,
         ground_motion_fields='false',
         models=models)
     if minimum_magnitude:
-        INPUTS[minimum_magnitude] = str(minimum_magnitude)
+        INPUTS['minimum_magnitude'] = str(minimum_magnitude)
     job_inis, rows = read_job_inis(mosaic_dir, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
@@ -147,7 +147,7 @@ main.out = 'Output file'
 main.models = 'Models to consider (comma-separated)'
 main.number_of_logic_tree_samples = 'Number of samples'
 main.ses_per_logic_tree_path = 'Number of SES'
-main.minimum_magnitude = 'Override the minimum magnitude if given'
+main.minimum_magnitude = 'Discard ruptures below this magnitude'
 
 if __name__ == '__main__':
     sap.run(main)

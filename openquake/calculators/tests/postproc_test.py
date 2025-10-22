@@ -17,20 +17,23 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
+import unittest
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 try:
     import rtgmpy
 except ImportError:
     rtgmpy = None
 from openquake.baselib.performance import Monitor
-from openquake.baselib import hdf5, writers
+from openquake.baselib import writers
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
+from openquake.calculators.postproc.compute_rtgm import get_seismicity_class
 from openquake.qa_tests_data.postproc import (
     case_mrd, case_rtgm, case_median_spectrum)
 
@@ -220,7 +223,7 @@ class PostProcTestCase(CalculatorTestCase):
 
         # check string results
         dic07_str = [dic07[k] for k in ['Ss_seismicity', 'S1_seismicity']]
-        assert dic07_str == ['Very High', 'Very High']
+        assert dic07_str == ['Very High', 'High']
 
         asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
@@ -233,7 +236,7 @@ class PostProcTestCase(CalculatorTestCase):
                          'BSE2E_Sx1': 0.34593,
                          'BSE1N_Sx1': 0.28645,
                          'BSE1E_Sx1': 0.18822,
-                         'custom_site_id': '0:BC'}
+                         'custom_site_id': '0'}
 
     def test_median_spectrum1(self):
         # test with a single site and many ruptures
@@ -251,3 +254,35 @@ class PostProcTestCase(CalculatorTestCase):
         fnames = export(('median_spectra', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
+
+
+class SeismicityClassTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.periods = [0, 0.2, 1.0]
+        self.csid = ['7','7','7']
+
+    def test_get_seismicity_class_case1(self):
+        # testing that both periods are very high
+        SaM = [0.71853975, 1.68876704, 0.6]
+        mce_site = pd.DataFrame({'period': self.periods, 'SaM': SaM,
+                                 'custom_site_id': self.csid})
+        Ss_seismicity, S1_seismicity = get_seismicity_class(mce_site, 760)
+        assert Ss_seismicity == S1_seismicity == 'Very High'
+
+    def test_get_seismicity_class_case2(self):
+        # testing that S1 is high and Ss is very high
+        SaM = [0.7986, 1.902, 0.5637]
+        mce_site = pd.DataFrame({'period': self.periods, 'SaM': SaM,
+                                 'custom_site_id': self.csid})
+        Ss_seismicity, S1_seismicity = get_seismicity_class(mce_site, 760)
+        assert Ss_seismicity == 'Very High'
+        assert S1_seismicity == 'High'
+
+    def test_get_seismicity_class_case3(self):
+        # testing that other vs30 gives nan
+        SaM = [0.7986, 1.902, 0.5637]
+        mce_site = pd.DataFrame({'period': self.periods, 'SaM': SaM,
+                                 'custom_site_id': self.csid})
+        Ss_seismicity, S1_seismicity = get_seismicity_class(mce_site, 530)
+        assert Ss_seismicity == S1_seismicity =='n.a.'

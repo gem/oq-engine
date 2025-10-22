@@ -157,7 +157,7 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     else:
         N = len(sitecol)
     oq = cmakers[0].oq
-    fac = oq.imtls.size * N * 4 / 1024**3
+    fac = oq.imtls.size * N * 4 / 1024**2
     max_weight = csm.get_max_weight(oq)
 
     # build source_groups
@@ -166,15 +166,15 @@ def store_tiles(dstore, csm, sitecol, cmakers):
                 for sg in csm.src_groups if sg.grp_id == g]
     data = numpy.array(
         [(grp_id, len(cm.gsims), len(tgets), len(blocks),
-          len(cm.gsims) * fac * 1024, extra['weight'], extra['codes'], cm.trt)
+          len(cm.gsims) * fac, extra['weight'], extra['codes'], cm.trt)
          for grp_id, (cm, tgets, blocks, extra) in enumerate(quartets)],
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
-         ('tot_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
+         ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
 
     # determine light groups and tiling
     light = cmakers.inverse[data['grp_id'][data['blocks'] == 1]]
     req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
-    mem_gb = req_gb - sum(len(cmakers[inv].gsims) * fac
+    mem_gb = req_gb - sum(len(cmakers[inv].gsims) * fac / 1024
                           for inv in numpy.unique(light))
     if len(light):
         logging.info('mem_gb = %.2f with %d light groups out of %d',
@@ -189,11 +189,14 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     else:
         tiling = oq.tiling
 
+    if req_gb >= 30 and not config.directory.custom_tmp:
+        logging.info('We suggest to set custom_tmp')
+    max_transfer_gb = sum(row['blocks'] * row['max_mb'] for row in data) / 1024
+    logging.info("Estimated maximum data transfer = %.1f GB", max_transfer_gb)
+
     # store source_groups
     dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
-    if req_gb >= 30 and not config.directory.custom_tmp:
-        logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs
 
 
@@ -228,7 +231,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         logging.info('Building cmakers')
-        trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
+        trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None
@@ -271,6 +274,9 @@ class PreClassicalCalculator(base.HazardCalculator):
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
+                # compute weight sequentially
+                for src in sg:
+                    src.num_ruptures = src.count_ruptures()
                 cmakers[grp_id].set_weight(sg, sf)
                 atomic_sources.extend(sg)
             else:

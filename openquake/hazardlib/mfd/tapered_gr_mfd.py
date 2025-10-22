@@ -18,6 +18,9 @@
 
 import math
 
+import numpy as np
+from scipy.special import gammaincc, gamma
+
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.mfd.truncated_gr import TruncatedGRMFD
 
@@ -54,8 +57,14 @@ class TaperedGRMFD(BaseMFD):
 
     MODIFICATIONS = set(())
 
-    def __init__(self, min_mag: float, max_mag: float, corner_mag: float,
-                 bin_width: float, a_val: float, b_val: float):
+    def __init__(self, 
+                 min_mag: float, 
+                 max_mag: float, 
+                 corner_mag: float,
+                 bin_width: float,
+                 a_val: float,
+                 b_val: float,
+                 c_val: float=9.05):
 
         self.min_mag = min_mag
         self.max_mag = max_mag
@@ -63,6 +72,7 @@ class TaperedGRMFD(BaseMFD):
         self.bin_width = bin_width
         self.a_val = a_val
         self.b_val = b_val
+        self.c_val = c_val
 
         self.beta = 2. / 3. * self.b_val
 
@@ -129,8 +139,8 @@ class TaperedGRMFD(BaseMFD):
         Mfds.java in the nshmp-haz codebase.
         """
 
-        mag_mo_lo = mag_to_mo(mag - self.bin_width / 2.)
-        mag_mo_hi = mag_to_mo(mag + self.bin_width / 2.)
+        mag_mo_lo = mag_to_mo(mag - self.bin_width / 2., c=self.c_val)
+        mag_mo_hi = mag_to_mo(mag + self.bin_width / 2., c=self.c_val)
 
         scale_num = (self._pareto(mag_mo_lo, self.corner_mo) -
                      self._pareto(mag_mo_hi, self.corner_mo))
@@ -179,6 +189,60 @@ class TaperedGRMFD(BaseMFD):
             mag_rates.append((mag, self._scale_mag_bin_rate(mag, rate)))
 
         return mag_rates
+
+    def _H_interval(self, m_lo: float, m_hi: float):
+        s = 1.0 - self.beta
+        x_lo = 10.0 ** (1.5 * (m_lo - self.corner_mag))
+        x_hi = 10.0 ** (1.5 * (m_hi - self.corner_mag))
+        U = lambda x: _upper_gamma(s, x) + np.exp(-x) * (x **(1.0 - self.beta))
+        return U(x_lo) - U(x_hi)
+
+    def _get_total_moment_rate(self) -> float:
+        """
+        Exact total scalar moment rate (Nm/yr) over [min_mag, max_mag]
+        """
+        Mc = mag_to_mo(self.corner_mag, c=self.c_val)
+        C = (10.0 ** (self.a_val + self.beta * self.c_val)
+             ) * (Mc ** (1.0-self.beta))
+        return C * self._H_interval(self.min_mag, self.max_mag)
+
+    def _set_a(self, target_moment_rate: float):
+        """
+        Sets a_val so that the total moment rate equals the target moment rate.
+        """
+        if target_moment_rate <= 0.0:
+            raise ValueError(
+                    f"target_moment_rate {target_moment_rate} must be positive"
+                    )
+        H = self._H_interval(self.min_mag, self.max_mag)
+        # a = log10(total_moment_rate) - c - (1.5 - b) * m_c - log10(H)
+        new_a = (np.log10(target_moment_rate)
+                 - self.c_val
+                 - (1.5 - self.b_val) * self.corner_mag
+                 - np.log10(H)
+                 )
+        delta = new_a - self.a_val
+        self.a_val = float(new_a)
+        # keep internal GR in sync
+        if hasattr(self, "_dt_gr") and hasattr(self._dt_gr, "a_val"):
+            self._dt_gr.a_val += delta
+
+    @classmethod
+    def from_moment(cls,
+                    min_mag: float,
+                    max_mag: float,
+                    corner_mag: float,
+                    bin_width: float,
+                    b_val: float,
+                    moment_rate: float,
+                    c_val: float = 9.05):
+        self = cls(min_mag, max_mag, corner_mag, bin_width, 0.0, b_val)
+        self._set_a(moment_rate)
+        return self
+
+
+def _upper_gamma(s, x):
+    return gammaincc(s,x) * gamma(s)
 
 
 def mag_to_mo(mag, c=9.05):

@@ -1534,6 +1534,8 @@ def getsizeof(o, ids=None):
                             for k, v in o.items())
     elif isinstance(o, Container):
         return nbytes + sum(getsizeof(x, ids) for x in o)
+    elif hasattr(o, '__dict__'):
+        return nbytes + sum(getsizeof(x, ids) for x in o.__dict__.values())
 
     return nbytes
 

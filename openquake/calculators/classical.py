@@ -28,8 +28,7 @@ import numpy
 import pandas
 from PIL import Image
 from openquake.baselib import parallel, hdf5, config, python3compat
-from openquake.baselib.general import (
-    AccumDict, DictArray, groupby, humansize, block_splitter)
+from openquake.baselib.general import AccumDict, DictArray, groupby, humansize
 from openquake.hazardlib import valid, InvalidFile
 from openquake.hazardlib.contexts import get_cmakers, read_full_lt_by_label
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
@@ -130,7 +129,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 
 #  ########################### task functions ############################ #
-    
+
 def save_rates(g, N, jid, num_chunks, mon):
     """
     Store the rates for the given g on a file scratch/calc_id/task_no.hdf5
@@ -158,6 +157,7 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
             sources = pickle.loads(zlib.decompress(arr.tobytes()))
         sitecol = dstore['sitecol'].complete  # super-fast
 
+    # NB: disagg_by_src does not work with ilabel
     if cmaker.disagg_by_src and not extra['atomic']:
         # in case_27 (Japan) we do NOT enter here;
         # disagg_by_src still works since the atomic group contains a single
@@ -398,6 +398,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.source_data += sdata
             self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
         self.cfactor += dic.pop('cfactor')
+        self.dparam_mb = max(dic.pop('dparam_mb'), self.dparam_mb)
+        self.source_mb = max(dic.pop('source_mb'), self.source_mb)
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
@@ -467,7 +469,7 @@ class ClassicalCalculator(base.HazardCalculator):
         full_lt_by_label = read_full_lt_by_label(self.datastore)
         trt_smrs = self.datastore['trt_smrs'][:]
         self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq)
-                        for label, full_lt in full_lt_by_label.items()}
+                       for label, full_lt in full_lt_by_label.items()}
         if 'delta_rates' in self.datastore:  # aftershock
             drgetter = getters.DeltaRatesGetter(self.datastore)
             for cmakers in self.cmdict.values():
@@ -483,6 +485,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.cmdict['Default'])
 
         self.cfactor = numpy.zeros(2)
+        self.dparam_mb = 0
+        self.source_mb = 0
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         if oq.disagg_by_src:
             M = len(oq.imtls)
@@ -563,6 +567,11 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             logging.info('cfactor = {:_d}'.format(int(self.cfactor[0])))
         self.store_info()
+        if self.dparam_mb:
+            logging.info('maximum size of the dparam cache=%.1f MB',
+                         self.dparam_mb)
+            logging.info('maximum size of the multifaults=%.1f MB',
+                         self.source_mb)
         self.build_curves_maps()
         return True
 
@@ -631,8 +640,8 @@ class ClassicalCalculator(base.HazardCalculator):
         n_out = []
         for cmaker, tilegetters, blocks, extra in self.csm.split(
                 self.cmdict, self.sitecol, self.max_weight,
-                self.num_chunks, True):
-            for block in blocks:
+                self.num_chunks, tiling=True):
+            for block in blocks:  # NB: blocks are actually grp_ids
                 for tgetter in tilegetters:
                     assert isinstance(block, int)
                     tgetter.grp_id = block
@@ -664,7 +673,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 yield g, self.N, self.rmap.jid, self.num_chunks
 
         if (self.rmap.size_mb > 200 and config.directory.custom_tmp and
-            parallel.oq_distribute() != 'no'):
+                parallel.oq_distribute() != 'no'):
             # tested in the oq-risk-tests
             self.datastore.swmr_on()  # must come before the Starmap
             savemap = parallel.Starmap(save_rates, genargs(),

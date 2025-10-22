@@ -174,7 +174,7 @@ class PointSource(ParametricSeismicSource):
         mrate, mags = numpy.array(magd).T  # shape (2, num_mags)
         nrate = numpy.array([nrate for nrate, np in npd])
 
-        planin['rate'] = mrate[:, None] * nrate
+        planin['rate'] = nrate
         for n, (nrate, np) in enumerate(npd):
             arr = planin[:, n]
             arr['area'] = msr.get_median_area(mags, np.rake)
@@ -255,18 +255,19 @@ class PointSource(ParametricSeismicSource):
         clon, clat = self.location.x, self.location.y
         if step == 1:
             # return full ruptures (one per magnitude)
+            magrate = dict(self.get_annual_occurrence_rates())
             planardict = self.get_planar(shift_hypo, iruptures)
             for mag, [planar] in planardict.items():
                 for pla in planar.reshape(-1, 3):
                     surface = PlanarSurface.from_(pla)
                     _strike, _dip, rake = pla.sdr
-                    rate = pla.wlr[2]
+                    rate = magrate[mag] * pla.wlr[2]
                     yield ParametricProbabilisticRupture(
                         mag, rake, self.tectonic_region_type,
                         Point(*pla.hypo), surface, rate,
                         self.temporal_occurrence_model)
         else:
-            # return point ruptures (fast)
+            # in preclassical return point ruptures (fast)
             magd_ = list(enumerate(magd))
             npd_ = list(enumerate(npd))
             hdd_ = list(enumerate(hdd))
