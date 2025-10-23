@@ -766,7 +766,8 @@ def aelo_callback(
     if site_class is None or site_class == 'custom':
         site_class_vs30_str = f'Site Class: Vs30 = {vs30}m/s'
     else:
-        site_class_display_name = oqvalidation.SITE_CLASSES[site_class]['display_name']
+        site_class_display_name = oqvalidation.SITE_CLASSES[
+            site_class]['display_name']
         site_class_vs30_str = f'Site Class: {site_class_display_name}'
     asce_version = oqvalidation.ASCE_VERSIONS[inputs['asce_version']]
     aelo_version = base.get_aelo_version()

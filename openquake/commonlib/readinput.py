@@ -693,7 +693,7 @@ def get_site_collection(oqparam, h5=None):
                 or 'shakemap' in oqparam.inputs):
             req_site_params = set()   # no parameters are required
         else:
-            req_site_params = oqparam.req_site_params
+            req_site_params = set(oqparam.req_site_params)
         if oqparam.ruptures_hdf5 and not _vs30(oqparam.inputs):
             assoc_dist = (oqparam.region_grid_spacing * 1.414
                           if oqparam.region_grid_spacing else 10)
@@ -739,10 +739,7 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
 
     if oqparam.tile_spec:
-        if 'custom_site_id' not in sitecol.array.dtype.names:
-            gh = sitecol.geohash(6)
-            assert len(numpy.unique(gh)) == len(gh), 'geohashes are not unique'
-            sitecol.add_col('custom_site_id', 'S6', gh)
+        sitecol.ensure_custom_site_id(size=8)
         tileno, ntiles = oqparam.tile_spec
         assert len(sitecol) > ntiles, (len(sitecol), ntiles)
         mask = sitecol.sids % ntiles == tileno - 1
@@ -763,18 +760,19 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     sitecol.exposure = exp
 
     # add custom_site_id in risk calculations (or GMF calculations)
-    custom_site_id = any(x in oqparam.calculation_mode
-                         for x in ('scenario', 'event_based',
-                                   'risk', 'damage'))
-    if custom_site_id and 'custom_site_id' not in sitecol.array.dtype.names:
-        gh = sitecol.geohash(8)
-        if len(numpy.unique(gh)) < len(gh):
-            logging.error('geohashes are not unique')
-        sitecol.add_col('custom_site_id', 'S8', gh)
+    # or AELO calculations
+    if any(x in oqparam.calculation_mode
+           for x in ('scenario', 'event_based', 'risk', 'damage')):
+        custom_site_id, size = True, 8
+    elif oqparam.postproc_func == 'compute_rtgm.main':
+        custom_site_id, size = True, 6
+    else:
+        custom_site_id = False
+    if custom_site_id:
+        sitecol.ensure_custom_site_id(size)
         if sitecol is not sitecol.complete:
             # tested in scenario_risk/test_case_8
-            gh = sitecol.complete.geohash(8)
-            sitecol.complete.add_col('custom_site_id', 'S8', gh)
+            sitecol.complete.add_custom_site_id(size)
 
     debug_site(oqparam, sitecol)
     if h5:

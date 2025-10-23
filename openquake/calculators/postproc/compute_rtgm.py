@@ -451,7 +451,7 @@ class MCEGetter:
             yield sid, mag_dst_eps_sig, mce_df
 
 
-def find_max(df, key,custom_site_key):
+def find_max(df, key, custom_site_key):
     df['temp'] = df[key].fillna(float('-inf'))
     idx = df.groupby([custom_site_key, 'period'])['temp'].idxmax()
     out_max = df.loc[idx]

@@ -20,6 +20,7 @@
 Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 """
 
+import logging
 import numpy
 import pandas
 from scipy.spatial import distance
@@ -515,8 +516,8 @@ class SiteCollection(object):
                  soil_values=F64([152, 213, 305, 442, 640, 914, 1500])):
         """
         Multiply a site collection with the given vs30 values.
-        NB: if there are multiple values the sites with vs30 = -999. are multiplied,
-        otherwise the given value is applied to all sites.
+        NB: if there are multiple values the sites with vs30 = -999. are
+        multiplied, otherwise the given value is applied to all sites.
         """
         classes = general.find_among(soil_classes, soil_values, vs30s)
         n = len(vs30s)
@@ -608,6 +609,16 @@ class SiteCollection(object):
             if values is not None:
                 arr[colname] = values
             self.array = arr
+
+    def ensure_custom_site_id(self, size):
+        """
+        Add a custom_site_id if not present
+        """
+        if 'custom_site_id' not in self.array.dtype.names:
+            gh = self.geohash(size)
+            if len(numpy.unique(gh)) < len(gh):
+                logging.error('geohashes are not unique')
+            self.add_col('custom_site_id', f'S{size}', gh)
 
     def make_complete(self):
         """
