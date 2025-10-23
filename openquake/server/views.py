@@ -180,7 +180,7 @@ def store(request_files, ini, calc_id):
     if arch is None:
         # move each file to calc_dir using the upload file names
         inifiles = []
-        # NB: request_files.values() Django objects are not sortable
+        # NB: TemporaryUploadedFile Django objects are not sortable
         for input_file in input_files:
             new_path = os.path.join(calc_dir, input_file.name)
             shutil.move(input_file.temporary_file_path(), new_path)
