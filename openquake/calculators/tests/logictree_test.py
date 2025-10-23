@@ -23,7 +23,7 @@ from openquake.baselib import general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import contexts, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
-    calc_rmap, calc_mean_rates, to_rates)
+    get_rmap, calc_mean_rates, to_rates)
 from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
@@ -72,7 +72,7 @@ class LogicTreeTestCase(CalculatorTestCase):
             sitecol = self.calc.datastore['sitecol']
             trt_smrs, _ = contexts.get_unique_inverse(
                 self.calc.datastore['trt_smrs'])
-            rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
+            rmap = get_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
             wget = full_lt.gsim_lt.wget
             mean_rates = calc_mean_rates(
                 rmap, full_lt.g_weights(trt_smrs), wget, oq.imtls)
