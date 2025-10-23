@@ -744,9 +744,7 @@ def calc_run(request):
     else:
         ini = job_ini if job_ini else ".ini"
     notify_to = request.POST.get('notify_to')
-    username = request.POST.get('job_owner')
-    if not username:
-        username = utils.get_username(request)
+    username = request.POST.get('job_owner') or utils.get_username(request)
     try:
         job_id = submit_job(request.FILES, ini, username, hazard_job_id, notify_to)
     except Exception as exc:  # job failed, for instance missing .xml file
@@ -787,9 +785,7 @@ def calc_run_ini(request):
     ini = request.POST['job_ini']
     hazard_job_id = request.POST.get('hazard_job_id')
     notify_to = request.POST.get('notify_to')
-    username = request.POST.get('job_owner')
-    if not username:
-        username = utils.get_username(request)
+    username = request.POST.get('job_owner') or utils.get_username(request)
     try:
         job_id = submit_job([], ini, username, hazard_job_id, notify_to=notify_to)
     except Exception as exc:  # job failed, for instance missing .ini file
