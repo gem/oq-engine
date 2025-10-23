@@ -174,16 +174,6 @@ def export_aelo_csv(key, dstore):
 
     return [fname]
 
-def get_all_imtls(dstore):
-    """
-    :returns: a DictArray imt->imls if the datastore contains 'all_imtls'
-    """
-    try:
-        grp = dstore['all_imtls']
-    except KeyError:
-        return {}
-    return DictArray({imt: grp[imt][:] for imt in grp.attrs['imts'].split()})
-
 
 def export_hcurves_by_imt_csv(
         key, kind, dstore, fname, sitecol, imtls, comment):
@@ -272,7 +262,7 @@ def export_hcurves_csv(ekey, dstore):
                 imtls = DictArray(
                     {imt: oq.soil_intensities for imt in oq.imtls})
             else:
-                imtls = get_all_imtls(dstore) or oq.imtls
+                imtls = oq.imtls
             fnames.extend(export_hcurves_by_imt_csv(
                 ekey, kind, dstore, fname, sitecol, imtls, comment))
     return sorted(fnames)

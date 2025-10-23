@@ -447,6 +447,11 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
+            # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
+            # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
+            # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
+            # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
+            # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             sg = apply_uncertainties(bset_values, src_group)
             full_lt.set_trt_smr(sg, smr=rlz.ordinal)
             for src in sg:
@@ -576,7 +581,7 @@ class CompositeSourceModel:
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
     def get_cmakers(self, oq):
-        return get_cmakers(self.trt_smrs(), self.full_lt, oq)
+        return get_cmakers(self.get_trt_smrs(), self.full_lt, oq)
 
     def get_sources(self, atomic=None):
         """
@@ -748,7 +753,7 @@ class CompositeSourceModel:
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
-            tiles = max(hint, splits)
+            tiles = max(hint / 2, splits)
         else:
             # if hint > max_blocks generate max_blocks and more tiles
             blocks = list(general.split_in_blocks(

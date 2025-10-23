@@ -189,11 +189,14 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     else:
         tiling = oq.tiling
 
+    if req_gb >= 30 and not config.directory.custom_tmp:
+        logging.info('We suggest to set custom_tmp')
+    max_transfer_gb = sum(row['blocks'] * row['max_mb'] for row in data) / 1024
+    logging.info("Estimated maximum data transfer = %.1f GB", max_transfer_gb)
+
     # store source_groups
     dstore.create_dset('source_groups', data,
                        attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
-    if req_gb >= 30 and not config.directory.custom_tmp:
-        logging.info('We suggest to set custom_tmp')
     return req_gb, max_weight, trt_rlzs
 
 
@@ -228,7 +231,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         logging.info('Building cmakers')
-        trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
+        trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None

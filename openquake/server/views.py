@@ -123,6 +123,12 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 HIDDEN_OUTPUTS = ['exposure', 'job']
+EXTRACTABLE_RESOURCES = ['aggrisk_tags', 'mmi_tags', 'losses_by_site',
+                         'losses_by_asset', 'losses_by_location']
+# NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
+#       datastore, and the can_view_exposure permission gives access both to the
+#       'exposure' output and to the 'assetcol' item in the datastore
+MAP_RESOURCE_OUTPUT = {'assetcol': 'exposure'}
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -1292,16 +1298,18 @@ def save_pik(job, dirname):
     return pathpik
 
 
-def get_allowed_outputs(oes, user):
-    # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
-    # permission 'can_view_<OUTPUT>'
-    if user is not None:
+def get_allowed_outputs(oes, request):
+    if settings.LOCKDOWN:
+        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to users with
+        # level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
+        user = request.user
         return [e for o, e in oes
                 if o not in HIDDEN_OUTPUTS
                 or user.has_perm(f'auth.can_view_{o}')
                 or user.level >= 2]
     else:
-        return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
+        # When authentication is disabled, all outputs are visible
+        return [e for o, e in oes]
 
 
 @require_http_methods(['GET'])
@@ -1330,13 +1338,8 @@ def calc_results(request, calc_id):
     # NB: export_output has as keys the list (output_type, extension)
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
-    try:
-        user = request.user
-    except AttributeError:
-        # without authentication
-        user = None
     output_types = groupby(export, lambda oe: oe[0],
-                           lambda oes: get_allowed_outputs(oes, user))
+                           lambda oes: get_allowed_outputs(oes, request))
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
@@ -1411,13 +1414,14 @@ def calc_result(request, result_id):
     try:
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        # HIDDEN_OUTPUTS are visible only to users with level ≥ 2 or who have the
-        # permission 'can_view_<OUTPUT>'
-        if (ds_key in HIDDEN_OUTPUTS
+        if not utils.user_has_permission(request, job_user, job_status):
+            return HttpResponseForbidden()
+        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to users with
+        # level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
+        if (settings.LOCKDOWN
+                and ds_key in HIDDEN_OUTPUTS
                 and not request.user.has_perm(f'auth.can_view_{ds_key}')
                 and not request.user.level >= 2):
-            return HttpResponseForbidden()
-        if not utils.user_has_permission(request, job_user, job_status):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1531,6 +1535,8 @@ def extract(request, calc_id, what):
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    if not can_extract(request, what):
         return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
@@ -2010,6 +2016,23 @@ def download_aggrisk(request, calc_id):
     return response
 
 
+def can_extract(request, resource):
+    try:
+        user = request.user
+    except AttributeError:
+        # without authentication
+        return True
+    if (resource in EXTRACTABLE_RESOURCES
+            or user.level >= 2
+            or user.has_perm(f'auth.can_view_{resource}')):
+        return True
+    if resource in MAP_RESOURCE_OUTPUT:
+        corresponding_output = MAP_RESOURCE_OUTPUT[resource]
+        if user.has_perm(f'auth.can_view_{corresponding_output}'):
+            return True
+    return False
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
@@ -2017,6 +2040,8 @@ def extract_html_table(request, calc_id, name):
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    if not can_extract(request, name):
         return HttpResponseForbidden()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
