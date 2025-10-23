@@ -9,7 +9,7 @@
                         method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
                     <input type="hidden" name="calculation_type" value="hazard"/>
                     <label for="hazard_archive">Run a Calculation</label>
-                    <input id="hazard_archive" type="file" name="archive" style="display: none;" />
+                    <input id="hazard_archive" type="file" name="archive" multiple style="display: none;" />
                     <input type="hidden" name="database" value="openquake2"/>
                   </form>
                 </li>
