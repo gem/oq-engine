@@ -500,6 +500,24 @@ def install(inst, version, from_fork):
         oqreal = "%s\\Scripts\\oq" % inst.VENV
     else:
         oqreal = "%s/bin/oq" % inst.VENV
+
+    if sys.platform == 'linux':
+        try:
+            os_info = platform.freedesktop_os_release()
+        except OSError:
+            sys.exit("operative system detection failed")
+        if (sys.version_info[:2] == (3, 11) and
+            os_info['ID'] == 'debian' and
+            os_info['VERSION_ID'] in ['12', '13']):
+            print("Fix for python 3.11 and Debian 12 or 13")
+            readelf_ret, _ = subprocess.getstatusoutput('readelf --help')
+            if readelf_ret != 0:
+                sys.exit("'readelf' command not found, please install it and"
+                         " run engine installation again")
+
+            subprocess.run(['patchelf', '--clear-execstack',
+                            "%s/lib/python3.11/site-packages/onnxruntime/capi/*.so" % inst.VENV])
+
     print("Compiling python/numba modules")
     subprocess.run([oqreal, "--version"])  # compile numba
 
