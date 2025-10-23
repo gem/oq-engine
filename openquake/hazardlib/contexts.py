@@ -1942,7 +1942,6 @@ class ContextMakerSequence(collections.abc.Sequence):
         L = cmakers[0].imtls.size
         rmap = MapArray(sitecol.sids, L, self.Gt).fill(0)
         for group, cmaker in zip(src_groups, cmakers):
-            print(group.grp_id)
             rmap += RmapMaker(cmaker, sitecol, group).make()['rmap']
         return rmap
 
@@ -1953,6 +1952,7 @@ class ContextMakerSequence(collections.abc.Sequence):
         :returns: a list of RateMaps of shape (N, L, G), one per smr
         """
         # FIXME: works only for logic trees not changing the geometries
+        # and only for pointlike sources
         R = len(sources)
         cmaker = self.cmakers[0]
         assert cmaker.oq.use_rates
@@ -1960,7 +1960,7 @@ class ContextMakerSequence(collections.abc.Sequence):
         L = cmaker.imtls.size
         G = len(cmaker.gsims)
         tom = PoissonTOM(cmaker.oq.investigation_time)
-        rmaps = [MapArray(sitecol.sids, L, G).fill(0) for rlz in range(R)]
+        pmaps = [MapArray(sitecol.sids, L, G, True).fill(0) for rlz in range(R)]
         [ctx] = cmaker.from_srcs([sources[0]], sitecol)
         magrates = [{numpy.round(mag, 3): rate
                      for mag, rate in src.get_annual_occurrence_rates()}
@@ -1969,8 +1969,8 @@ class ContextMakerSequence(collections.abc.Sequence):
             mag = ctxt.mag[0]  # ctxt contains a single magnitude
             for smr, magrate in enumerate(magrates):
                 orate = ctxt.occurrence_rate / magrates[0][mag] * magrate[mag]
-                rmaps[smr].update_indep(poes, ctxt, tom.time_span, orate)
-        return rmaps
+                pmaps[smr].update_indep(poes, ctxt, tom.time_span, orate)
+        return [pmap.to_rates() for pmap in pmaps]
 
     def combine_rates(self, rmap):
         """
