@@ -18,10 +18,10 @@ jobs:
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
     strategy:
       matrix:
-        python-version: [python3.11]
-        req-version: [py311]
+        python-version: [python3.12]
+        req-version: [py312]
     container:
-      image: fedora:39
+      image: fedora:41
       options: --privileged
     steps:
     - name: Clone Repository (Master)
