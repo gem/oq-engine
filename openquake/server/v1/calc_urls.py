@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from django.urls import re_path
+from django.urls import re_path, path
 from django.conf import settings
 from openquake.server import views
 
@@ -38,6 +38,13 @@ urlpatterns = [
     re_path(r'^(\d+)/result/list$', views.calc_results),
     re_path(r'^(\d+)/share$', views.calc_share),
     re_path(r'^(\d+)/unshare$', views.calc_unshare),
+    # Tagging
+    path('<int:calc_id>/add_tag/<str:tag_name>', views.calc_add_tag),
+    path('<int:calc_id>/add_tag/<str:tag_name>/<int:is_preferred>',
+         views.calc_add_tag),
+    path('<int:calc_id>/remove_tag/<str:tag_name>', views.calc_remove_tag),
+    path('<int:calc_id>/set_preferred_job_for_tag/<str:tag_name>',
+         views.calc_set_preferred_for_tag),
 ]
 if settings.APPLICATION_MODE == 'AELO':
     urlpatterns.extend([

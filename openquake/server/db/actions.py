@@ -593,6 +593,53 @@ def share_job(db, job_id, share):
                        f' from "{initial_status}" to "{new_status}"'}
 
 
+def add_tag_to_job(db, job_id, tag_name, is_preferred=0):
+    try:
+        db(f"INSERT INTO job_tag (job_id, tag, is_preferred)"
+           f" VALUES ({job_id}, '{tag_name}', {is_preferred});")
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        msg = f'Job {job_id} is tagged as {tag_name}'
+        if is_preferred:
+            msg += ' and marked as preferred'
+        return {'success': msg}
+
+
+def remove_tag_from_job(db, job_id, tag_name):
+    try:
+        db(f"DELETE FROM job_tag WHERE job_id = {job_id} AND tag = '{tag_name}';")
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {tag_name} was removed from job {job_id}'}
+
+
+def set_preferred_job_for_tag(db, job_id, tag_name):
+    db(f"""
+BEGIN TRANSACTION;
+
+UPDATE job_tag
+SET is_preferred = 0
+WHERE tag = '{tag_name}' AND is_preferred = 1;
+
+INSERT INTO job_tag (job_id, tag, is_preferred)
+VALUES ({job_id}, '{tag_name}', 1)
+ON CONFLICT DO NOTHING;
+
+COMMIT;
+    """)
+
+
+def get_preferred_job_for_tag(db, tag_name):
+    db(f"""
+SELECT j.*
+FROM jobs AS j
+JOIN job_tag jt ON j.id = jt.job_id
+WHERE jt.tag = '{tag_name}' AND jt.is_preferred = 1;
+    """)
+
+
 def update_parent_child(db, parent_child):
     """
     Set hazard_calculation_id (parent) on a job_id (child)
