@@ -194,8 +194,9 @@ class GmfComputer(object):
         :mod:`openquake.hazardlib.sep`. Can be ``None``, in which
         case no secondary perils need to be evaluated.
     """
-    mtp_dt = numpy.dtype([('rup_id', I64), ('site_id', U32), ('gsim_id', U16),
-                          ('imt_id', U8), ('mea', F32), ('tau', F32), ('phi', F32)])
+    mtp_dt = numpy.dtype([('rup_id', I64), ('site_id', U32),
+                          ('gsim_id', U16), ('imt_id', U8),
+                          ('mea', F32), ('tau', F32), ('phi', F32)])
 
     # The GmfComputer is called from the OpenQuake Engine. In that case
     # the rupture is an EBRupture instance containing a
@@ -291,7 +292,7 @@ class GmfComputer(object):
                         for outkey, outarr in zip(sp.outputs, o):
                             key = f'{sp.__class__.__name__}_{outkey}'
                             if outkey == 'Disp':
-                                # Catarina Costa says to ignore small displacements
+                                # Catarina says to ignore small displacements
                                 outarr[outarr < 1e-4] = 0
                             data[key].append(outarr)
                 n += E

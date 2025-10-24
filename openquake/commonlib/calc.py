@@ -222,8 +222,6 @@ class RuptureImporter(object):
         logging.info('Reordering the ruptures and storing the events')
         geom_id = numpy.argsort(rup_array[['trt_smr', 'id']])
         rup_array = rup_array[geom_id]
-        self.datastore['rup_start_stop'] = performance.idx_start_stop(
-            rup_array['trt_smr'])
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'

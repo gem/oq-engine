@@ -105,8 +105,6 @@ def build_hcurves(dstore):
         min_ = gmf_df[sec_imt].min() + 1E-10  # to ensure min_ > 0
         max_ = gmf_df[sec_imt].max() + 2E-10  # to ensure max_ > min_
         imtls[sec_imt] = valid.logscale(min_, max_, L1)
-    dstore['all_imtls'] = imtls
-    dstore['all_imtls'].attrs['imts'] = ' '.join(imtls)
     hc_mon = performance.Monitor('building hazard curves', measuremem=False,
                                  h5=dstore)
     hcurves = {}
