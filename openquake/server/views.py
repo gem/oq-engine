@@ -31,6 +31,7 @@ import signal
 import zlib
 import re
 import psutil
+from threading import Event
 from collections import defaultdict
 from datetime import datetime, timezone
 from urllib.parse import unquote_plus, urljoin, urlencode, urlparse, urlunparse
@@ -593,7 +594,7 @@ def calc_remove(request, calc_id):
     Remove the calculation id
     """
     # Only the owner can remove a job
-    user = utils.get_user(request)
+    user = utils.get_username(request)
     try:
         message = logs.dbcmd('del_calc', calc_id, user)
     except dbapi.NotFound:
@@ -697,12 +698,30 @@ def calc_log_size(request, calc_id):
     return JsonResponse(response_data)
 
 
+job_complete_callback_state = {'event': Event(), 'data': {}}
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def check_callback(request):
+    body = json.loads(request.body.decode('utf8'))
+    payload = dict(body=body, POST=request.POST, GET=request.GET)
+    job_complete_callback_state['data'].clear()
+    job_complete_callback_state['data'].update(payload)
+    job_complete_callback_state['event'].set()
+    return JsonResponse(payload)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
 def calc_run(request):
     """
-    Run a calculation.
+    This endpoint accepts a POST request containing the configuration and input files
+    required to perform a calculation. It can also optionally reuse results from a
+    previous hazard calculation, assign a custom job owner, and specify a callback URL
+    for job completion notifications.
 
     :param request:
         a `django.http.HttpRequest` object.
@@ -712,6 +731,15 @@ def calc_run(request):
         The request also needs to contain the files needed to perform the
         calculation. They can be uploaded as separate files, or zipped
         together.
+        If the request has the attribute `notify_to`, and it starts with
+        'http[s]://', the engine will send a notification to the given url.
+        If the request has the attribute `job_owner`, the owner of the job will be set
+        to that string instead of the name of the user performing the request.
+
+    :returns:
+        A `django.http.JsonResponse` object containing:
+        - On success (HTTP 200): information about the initialized job
+        - On failure (HTTP 500): traceback details and job ID (if available).
     """
     job_ini = request.POST.get('job_ini')
     hazard_job_id = request.POST.get('hazard_job_id')
@@ -719,9 +747,10 @@ def calc_run(request):
         ini = job_ini if job_ini else "risk.ini"
     else:
         ini = job_ini if job_ini else ".ini"
-    user = utils.get_user(request)
+    notify_to = request.POST.get('notify_to')
+    username = request.POST.get('job_owner') or utils.get_username(request)
     try:
-        job_id = submit_job(request.FILES, ini, user, hazard_job_id)
+        job_id = submit_job(request.FILES, ini, username, hazard_job_id, notify_to)
     except Exception as exc:  # job failed, for instance missing .xml file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
@@ -729,7 +758,7 @@ def calc_run(request):
         response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
-        response_data = dict(status='created', job_id=job_id)
+        response_data = logs.get_job_info(job_id)
         status = 200
     return JsonResponse(response_data, status=status)
 
@@ -739,16 +768,30 @@ def calc_run(request):
 @require_http_methods(['POST'])
 def calc_run_ini(request):
     """
-    Run a calculation.
+    This endpoint accepts a POST request containing the configuration .ini file that
+    defines the parameters needed to perform a calculation. It can optionally reuse
+    results from a previous hazard job, assign a custom job owner, and specify
+    a callback URL for job completion notifications.
 
     :param request:
         a `django.http.HttpRequest` object.
         The request must contain the full path to a job.ini file
+        If the request has the attribute `notify_to`, and it starts with
+        'http[s]://', the engine will send a notification to the given url.
+        If the request has the attribute `job_owner`, the owner of the job will be set
+        to that string instead of the name of the user performing the request.
+
+    :returns:
+        A `django.http.JsonResponse` object containing:
+        - On success (HTTP 200): information about the initialized job
+        - On failure (HTTP 500): traceback details and job ID (if available).
     """
-    ini = request.POST.get('job_ini')
-    user = utils.get_user(request)
+    ini = request.POST['job_ini']
+    hazard_job_id = request.POST.get('hazard_job_id')
+    notify_to = request.POST.get('notify_to')
+    username = request.POST.get('job_owner') or utils.get_username(request)
     try:
-        job_id = submit_job([], ini, user, hc_id=None)
+        job_id = submit_job([], ini, username, hazard_job_id, notify_to=notify_to)
     except Exception as exc:  # job failed, for instance missing .ini file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
@@ -756,7 +799,7 @@ def calc_run_ini(request):
         response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
-        response_data = dict(status='created', job_id=job_id)
+        response_data = logs.get_job_info(job_id)
         status = 200
     return JsonResponse(response_data, status=status)
 
@@ -982,7 +1025,7 @@ def get_uploaded_file_path(request, filename):
 def create_impact_job(request, params):
     [jobctx] = engine.create_jobs(
         [params], config.distribution.log_level,
-        user_name=utils.get_user(request))
+        user_name=utils.get_username(request))
 
     job_owner_email = request.user.email
     response_data = dict()
@@ -1198,7 +1241,7 @@ def aelo_run(request):
         return JsonResponse(response_data, status=400)
     [jobctx] = engine.create_jobs(
         [params],
-        config.distribution.log_level, None, utils.get_user(request), None)
+        config.distribution.log_level, None, utils.get_username(request), None)
     job_id = jobctx.calc_id
 
     outputs_uri_web = request.build_absolute_uri(
@@ -1235,7 +1278,7 @@ def aelo_run(request):
     return JsonResponse(response_data, status=200)
 
 
-def submit_job(request_files, ini, username, hc_id):
+def submit_job(request_files, ini, username, hc_id, notify_to=None):
     """
     Create a job object from the given files and run it in a new process.
 
@@ -1282,7 +1325,10 @@ def submit_job(request_files, ini, username, hc_id):
                     CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
-        proc = mp.Process(target=engine.run_jobs, args=([job],))
+        kwargs = {}
+        if notify_to is not None:
+            kwargs['notify_to'] = notify_to
+        proc = mp.Process(target=engine.run_jobs, args=([job],), kwargs=kwargs)
         proc.start()
         if config.webapi.calc_timeout:
             mp.Process(

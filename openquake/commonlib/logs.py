@@ -68,7 +68,7 @@ def dbcmd(action, *args):
             raise TypeError(f'{arg} is not a simple type')
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
     if (action.startswith('workers_') and config.zworkers.host_cores
-          == '127.0.0.1 -1'):  # local zmq
+            == '127.0.0.1 -1'):  # local zmq
         return on_workers(action)
     elif dbhost == '127.0.0.1' and getpass.getuser() != 'openquake':
         # no server mode, access the database directly
@@ -91,6 +91,22 @@ def dbcmd(action, *args):
         if isinstance(res, parallel.Result):
             return res.get()
     return res
+
+
+def get_job_info(job_id):
+    job = dbcmd('get_job', int(job_id))
+    job_info = {key: val for (key, val) in zip(job.__dict__['_fields'],
+                                               job.__dict__['_values'])}
+    # NOTE: returning more than before, but keeping job_id instead of id for backwards
+    # compatibility
+    job_info['job_id'] = job_info['id']
+    del job_info['id']
+    # make datetime fields serializable
+    if job_info['start_time']:
+        job_info["start_time"] = job_info["start_time"].isoformat()
+    if job_info['stop_time']:
+        job_info["stop_time"] = job_info["stop_time"].isoformat()
+    return job_info
 
 
 def dblog(level: str, job_id: int, task_no: int, msg: str):
