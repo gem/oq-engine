@@ -1,3 +1,7 @@
+  [Michele Simionato, Antonio Ettorre]
+  * Upgraded numpy to version 2.2, including related dependencies such as
+    pandas, pyproj, GDAL, fiona, etc
+
   [Paolo Tormene]
   * When running a job via the WebUI it is possible to specify in the POST an
     additional 'notify_to' parameter to be used to send a notification on job
