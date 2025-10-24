@@ -21,7 +21,7 @@ https://wheelhouse.openquake.org/v3/linux/py311/matplotlib-3.8.2-cp311-cp311-man
 https://wheelhouse.openquake.org/v3/linux/py311/scipy-1.11.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/onnxruntime-1.16.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/psutil-5.9.6-cp311-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py311/pyproj-3.7.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py312/pyproj-3.7.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/GDAL-3.7.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py311/fiona-1.9.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #pp

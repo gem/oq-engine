@@ -5,7 +5,7 @@
 https://wheelhouse.openquake.org/v3/linux/py312/cffi-1.17.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/h3-3.7.7-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/timezonefinder-6.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py312/pyproj-3.7.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py312/pyproj-3.7.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/fiona-1.9.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/GDAL-3.7.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py312/charset_normalizer-3.4.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
