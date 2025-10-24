@@ -287,11 +287,11 @@ The contexts contain all the rupture, site and distance parameters.
 
 Then you have::
 
-	>>> ctx.mag[0]
+	>>> float(ctx.mag[0])
 	4.7
-	>>> round(ctx.rrup[0], 1)
+	>>> float(round(ctx.rrup[0], 1))
 	106.4
-	>>> round(ctx.rjb[0], 1)
+	>>> float(round(ctx.rjb[0], 1))
 	105.9
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site parameters, so calling ``ctx.vs30`` will raise an

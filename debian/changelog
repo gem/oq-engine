@@ -1,4 +1,15 @@
+  [Michele Simionato, Antonio Ettorre]
+  * Upgraded numpy to version 2.2, including related dependencies such as
+    pandas, pyproj, GDAL, fiona, etc
+
   [Paolo Tormene]
+  * When running a job via the WebUI it is possible to specify in the POST an
+    additional 'notify_to' parameter to be used to send a notification on job
+    completion via web hook to the given URL, and another 'job_owner'
+    parameter to assign the new job to the specified owner instead of to the
+    user performing the request
+  * When running a job via the WebUI it is possible to select multiple input
+    files or a single .zip file
   * Added a whitelist of resources that can be extracted from the datastore
     via the '/v1/calc/<calc_id>/extract/<resource>' and the
     '/v1/calc/<calc_id>/extract_html_table/<resource>' API endpoints. All
@@ -29,6 +40,8 @@
     the asce_version and vs30 parameters
 
   [Michele Simionato]
+  * Updated the related dependencies to numpy 2+  
+  * Changed the Starmap to ensure at least one GB of RAM per thread
   * Extended the source_id-filtering feature to use .startswith
   * Added a flag "aggregate_exposure" (false by default) to aggregate
     the assets with the same taxonomy on the same hazard site
