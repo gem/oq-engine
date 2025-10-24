@@ -29,7 +29,7 @@ import string
 import random
 import logging
 import django
-from django.test import LiveServerTestCase, Client
+from django.test import LiveServerTestCase, Client, override_settings
 from unittest import skipIf
 from threading import Event
 from openquake.baselib import config
@@ -382,6 +382,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
             self.assertFalse(resp_text_dict['success'])
 
 
+@override_settings(ROOT_URLCONF='openquake.server.tests.test_urls')
 class CallbackTest(LiveServerTestCase):
     """
     Integration test checking the callback on job completion

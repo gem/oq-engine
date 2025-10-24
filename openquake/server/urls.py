@@ -38,7 +38,6 @@ if settings.WEBUI:
         re_path(r'^v1/available_gsims$', views.get_available_gsims),
         re_path(r'^v1/ini_defaults$', views.get_ini_defaults,
                 name="ini_defaults"),
-        re_path(r'^v1/check_callback$', views.check_callback),
     ]
     if settings.APPLICATION_MODE != 'PUBLIC':
         urlpatterns += [
