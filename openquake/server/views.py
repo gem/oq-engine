@@ -172,15 +172,19 @@ def store(request_files, ini, calc_id):
     :returns: full path of the ini file
     """
     calc_dir = parallel.scratch_dir(calc_id)
-    arch = request_files.get('archive')
+    input_files = request_files.getlist('archive')
+    arch = None
+    for input_file in input_files:
+        if input_file.name.endswith('.zip'):
+            arch = input_file
     if arch is None:
         # move each file to calc_dir using the upload file names
         inifiles = []
-        # NB: request_files.values() Django objects are not sortable
-        for each_file in request_files.values():
-            new_path = os.path.join(calc_dir, each_file.name)
-            shutil.move(each_file.temporary_file_path(), new_path)
-            if each_file.name.endswith(ini):
+        # NB: TemporaryUploadedFile Django objects are not sortable
+        for input_file in input_files:
+            new_path = os.path.join(calc_dir, input_file.name)
+            shutil.move(input_file.temporary_file_path(), new_path)
+            if input_file.name.endswith(ini):
                 inifiles.append(new_path)
     else:  # extract the files from the archive into calc_dir
         inifiles = readinput.extract_from_zip(arch, ini, calc_dir)
