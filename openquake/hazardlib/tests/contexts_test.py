@@ -313,7 +313,7 @@ class FastRatesTestCase(unittest.TestCase):
     def test_get_rmaps(self):
         # changing 100 times abGR on an area sources is 10x faster
         # and allocates 10x less memory with get_rmaps
-        with Monitor('get_rmap', measuremem=True) as mon:
+        with Monitor('get_rmaps', measuremem=True) as mon:
             rmaps = self.cmakers.get_rmaps(self.sources, self.sitecol)
         print(self.mon)
         print(mon)

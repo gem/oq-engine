@@ -1,4 +1,6 @@
   [Paolo Tormene]
+  * When running a job via the WebUI it is possible to select multiple input
+    files or a single .zip file
   * Added a whitelist of resources that can be extracted from the datastore
     via the '/v1/calc/<calc_id>/extract/<resource>' and the
     '/v1/calc/<calc_id>/extract_html_table/<resource>' API endpoints. All
