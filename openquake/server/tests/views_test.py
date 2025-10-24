@@ -20,10 +20,30 @@ import os
 import sys
 import json
 import time
-
+import string
+import secrets
 import django
+from django.contrib.auth import get_user_model
 from openquake.baselib.general import gettemp
 from openquake.commonlib.readinput import loadnpz
+
+
+def get_or_create_user(level):
+    # creating/getting a user of the given level
+    # and returning the user object and its plain password
+    User = get_user_model()
+    username = f'django-test-user-level-{level}'
+    email = f'django-test-user-level-{level}@email.test'
+    password = ''.join((secrets.choice(
+        string.ascii_letters + string.digits + string.punctuation)
+        for i in range(8)))
+    user, created = User.objects.get_or_create(username=username, email=email)
+    if created:
+        user.set_password(password)
+    user.save()
+    user.profile.level = level
+    user.profile.save()
+    return user, password  # user.password is the hashed password instead
 
 
 class EngineServerTestCase(django.test.TestCase):
