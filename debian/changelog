@@ -1,4 +1,11 @@
   [Paolo Tormene]
+  * When running a job via the WebUI it is possible to specify in the POST an
+    additional 'notify_to' parameter to be used to send a notification on job
+    completion via web hook to the given URL, and another 'job_owner'
+    parameter to assign the new job to the specified owner instead of to the
+    user performing the request
+  * When running a job via the WebUI it is possible to select multiple input
+    files or a single .zip file
   * Added a whitelist of resources that can be extracted from the datastore
     via the '/v1/calc/<calc_id>/extract/<resource>' and the
     '/v1/calc/<calc_id>/extract_html_table/<resource>' API endpoints. All
