@@ -152,21 +152,3 @@ def calc_hazard_curves(
             rmap = dic['rmap']
             pmap.array[:] = 1. - (1.-pmap.array) * numpy.exp(-rmap.array)
     return pmap.convert(imtls, len(sitecol.complete))
-
-
-# called in adv-manual/developing.rst and in SingleSiteOptTestCase
-def calc_hazard_curve(site1, src, gsims, oqparam, monitor=Monitor()):
-    """
-    :param site1: site collection with a single site
-    :param src: a seismic source object
-    :param gsims: a list of GSIM objects
-    :param oqparam: an object with attributes .maximum_distance, .imtls
-    :param monitor: a Monitor instance (optional)
-    :returns: an array of shape (L, G)
-    """
-    assert len(site1) == 1, site1
-    trt = src.tectonic_region_type
-    cmaker = ContextMaker(trt, gsims, vars(oqparam), monitor)
-    cmaker.tom = src.temporal_occurrence_model
-    rmap = RmapMaker(cmaker, site1, [src]).make()['rmap']
-    return 1. - numpy.exp(-rmap.array[0])
