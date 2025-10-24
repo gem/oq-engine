@@ -130,4 +130,4 @@ else:  # linux
     config.multi_user = install_user in ('root', 'openquake')
 
 # the version is managed by the universal installer
-__version__ = '3.24.0'
+__version__ = '3.25.0'

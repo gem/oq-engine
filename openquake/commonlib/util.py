@@ -123,9 +123,9 @@ def closest_to_ref(arrays, ref, cutoff=1E-12):
     since it has a larger weight. You can check that it is indeed true by
     computing the sum of the quadratic deviations:
 
-    >>> ((c0 - mean)**2).sum()
+    >>> float(((c0 - mean)**2).sum())
     0.0004480000000000008
-    >>> ((c1 - mean)**2).sum()
+    >>> float(((c1 - mean)**2).sum())
     0.0010079999999999985
 
     If the 2 realizations have equal weights the distance from the mean will be
