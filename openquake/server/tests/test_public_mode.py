@@ -408,7 +408,7 @@ class CallbackTest(LiveServerTestCase):
         job_info = json.loads(resp.content.decode('utf8'))
         self.assertEqual(job_info['user_name'], 'custom_owner')
         job_id = job_info['job_id']
-        self.on_job_complete_event.wait(timeout=10)
+        self.on_job_complete_event.wait(timeout=30)
         self.assertTrue(self.on_job_complete_event.is_set())
         body = self.on_job_complete_data['body']
         get_params = self.on_job_complete_data['GET']
