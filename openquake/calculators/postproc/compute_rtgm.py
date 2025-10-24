@@ -457,7 +457,8 @@ def find_max(df, key, custom_site_key):
     out_max = df.loc[idx]
     out = {'period': out_max['period'].values,
            key: out_max[key].values,
-           'custom_site_id': out_max[key].values}
+           'custom_site_id': out_max[custom_site_key].values}
+    breakpoint()
     return pd.DataFrame(out)
     
 
