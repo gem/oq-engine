@@ -127,7 +127,7 @@ jobs:
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
-      OQ_APPLICATION_MODE: PUBLIC
+      OQ_APPLICATION_MODE: RESTRICTED
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python  ${{ matrix.python-version }}
