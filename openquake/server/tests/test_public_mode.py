@@ -396,7 +396,7 @@ class CallbackTest(LiveServerTestCase):
         job_complete_callback_state['data'] = self.on_job_complete_data
 
     def test_callback_on_job_successfully_completed(self):
-        notify_to = f"{self.live_server_url}/v1/check_callback?first=one&second=two"
+        notify_to = f"{self.live_server_url}/test/check_callback?first=one&second=two"
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         post_args = dict(
             job_ini=job_ini,
