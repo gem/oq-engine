@@ -24,6 +24,7 @@ import getpass
 import cProfile
 import pandas
 import collections
+from unittest import mock
 from openquake.baselib import config, parallel, performance, sap
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore, oqvalidation
@@ -119,7 +120,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
     cj = min(parallel.num_cores, len(allparams)) // 4 or 1
-    engine.run_jobs(logctxs, concurrent_jobs=cj)
+    with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
+        engine.run_jobs(logctxs, concurrent_jobs=cj)
     out = []
     count_errors = 0
     asce = {}

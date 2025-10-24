@@ -426,11 +426,12 @@ class MapArray(object):
         arr = self.to_rates().to_array(numpy.arange(G))
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
-    def update_indep(self, poes, ctxt, itime):
+    def update_indep(self, poes, ctxt, itime, rates=None):
         """
         Update probabilities for independent ruptures
         """
-        rates = ctxt.occurrence_rate
+        if rates is None:
+            rates = ctxt.occurrence_rate
         sidxs = self.sidx[ctxt.sids]
         if self.rates:
             update_pmap_r(self.array, poes, rates, ctxt.probs_occur,

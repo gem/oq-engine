@@ -398,6 +398,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.source_data += sdata
             self.rel_ruptures[grp_id] += sum(sdata['nrupts'])
         self.cfactor += dic.pop('cfactor')
+        self.dparam_mb = max(dic.pop('dparam_mb'), self.dparam_mb)
+        self.source_mb = max(dic.pop('source_mb'), self.source_mb)
 
         # store rup_data if there are few sites
         if self.few_sites and len(dic['rup_data']):
@@ -483,6 +485,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.cmdict['Default'])
 
         self.cfactor = numpy.zeros(2)
+        self.dparam_mb = 0
+        self.source_mb = 0
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         if oq.disagg_by_src:
             M = len(oq.imtls)
@@ -563,6 +567,11 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             logging.info('cfactor = {:_d}'.format(int(self.cfactor[0])))
         self.store_info()
+        if self.dparam_mb:
+            logging.info('maximum size of the dparam cache=%.1f MB',
+                         self.dparam_mb)
+            logging.info('maximum size of the multifaults=%.1f MB',
+                         self.source_mb)
         self.build_curves_maps()
         return True
 
@@ -631,8 +640,8 @@ class ClassicalCalculator(base.HazardCalculator):
         n_out = []
         for cmaker, tilegetters, blocks, extra in self.csm.split(
                 self.cmdict, self.sitecol, self.max_weight,
-                self.num_chunks, True):
-            for block in blocks:
+                self.num_chunks, tiling=True):
+            for block in blocks:  # NB: blocks are actually grp_ids
                 for tgetter in tilegetters:
                     assert isinstance(block, int)
                     tgetter.grp_id = block

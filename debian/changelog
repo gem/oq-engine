@@ -1,4 +1,21 @@
+  [Paolo Tormene]
+  * Added a whitelist of resources that can be extracted from the datastore
+    via the '/v1/calc/<calc_id>/extract/<resource>' and the
+    '/v1/calc/<calc_id>/extract_html_table/<resource>' API endpoints. All
+    resources can still be extracted if the WebUI authentication is disabled
+    or if the current user has a high profile level (>1) or has the permission
+    'auth.can_view_<resource>'
+
   [Michele Simionato]
+  * Reduced the number of tiles
+  * Optimized the management of cluster of sources (the array loop)
+  * Changed the ps_grid_spacing approximation to use average occurrence rates
+
+  [Claudia Mascandola]
+  * Added class "LanzanoEtAl2019_RJB_OMO_NESS2" to lanzano_2019 gsim
+
+  [Michele Simionato]
+  * Reduced the memory consumption of multifault sources for the USA model
   * Improved the parallelization of disagg_source in AELO calculations
   * Fixed the OverflowError: Python integer out of bounds for uint32
     happening for extra-large calculations when saving source_info
