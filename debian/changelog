@@ -1,3 +1,33 @@
+  [Paolo Tormene]
+  * Added a whitelist of resources that can be extracted from the datastore
+    via the '/v1/calc/<calc_id>/extract/<resource>' and the
+    '/v1/calc/<calc_id>/extract_html_table/<resource>' API endpoints. All
+    resources can still be extracted if the WebUI authentication is disabled
+    or if the current user has a high profile level (>1) or has the permission
+    'auth.can_view_<resource>'
+
+  [Michele Simionato]
+  * Reduced the number of tiles
+  * Optimized the management of cluster of sources (the array loop)
+  * Changed the ps_grid_spacing approximation to use average occurrence rates
+
+  [Claudia Mascandola]
+  * Added class "LanzanoEtAl2019_RJB_OMO_NESS2" to lanzano_2019 gsim
+
+  [Michele Simionato]
+  * Reduced the memory consumption of multifault sources for the USA model
+  * Improved the parallelization of disagg_source in AELO calculations
+  * Fixed the OverflowError: Python integer out of bounds for uint32
+    happening for extra-large calculations when saving source_info
+
+  [Guillermo Aldama-Bustos]
+  * Fixed the unit of measure in the Douglas et al (2024) GMM and updated
+   coefficients for the 3- and 5-branch models to fix an error
+
+  [Michele Simionato, Kendra Johnson]
+  * Internal: parallelized the AELO mosaic tests and made it possible to pass
+    the asce_version and vs30 parameters
+
   [Michele Simionato]
   * Extended the source_id-filtering feature to use .startswith
   * Added a flag "aggregate_exposure" (false by default) to aggregate
@@ -9,6 +39,7 @@
   * Added BSSA14 site term capability to Modifiable GMPE + unit tests
 
   [Richard Styron]
+  * Added method `from_moment` to the `TaperedGRMFD` class
   * Fixed `KiteSurface.get_middle_point` to manage NaNs
 
   [Michele Simionato]

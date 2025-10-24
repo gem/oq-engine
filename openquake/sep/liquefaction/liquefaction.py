@@ -700,7 +700,8 @@ def _hazus_magnitude_correction_factor(
     Corrects the liquefaction probabilty equations based on the magnitude
     of the causative earthquake.
     """
-    return m3_coeff * (mag**3) + m2_coeff * (mag**2) + m1_coeff * mag + intercept
+    return (m3_coeff * (mag**3) + m2_coeff * (mag**2) +
+            m1_coeff * mag + intercept)
 
 
 def _hazus_groundwater_correction_factor(
@@ -792,11 +793,13 @@ def hazus_liquefaction_probability(
         analysis, or how to compare this to other liquefaction models.
         Defaults to `True` following the HAZUS methods.
     """
-    groundwater_corr = _hazus_groundwater_correction_factor(groundwater_depth, unit="m")
+    groundwater_corr = _hazus_groundwater_correction_factor(
+        groundwater_depth, unit="m")
     mag_corr = _hazus_magnitude_correction_factor(mag)
 
     if isinstance(liq_susc_cat, str):
-        liq_susc_prob = _hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
+        liq_susc_prob = _hazus_conditional_liquefaction_probability(
+            pga, liq_susc_cat)
         if do_map_proportion_correction:
             map_unit_proportion = HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[
                 liq_susc_cat
@@ -804,7 +807,8 @@ def hazus_liquefaction_probability(
         else:
             map_unit_proportion = 1.0
     else:
-        liq_susc_prob = _hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
+        liq_susc_prob = _hazus_conditional_liquefaction_probability(
+            pga, liq_susc_cat)
 
         if do_map_proportion_correction:
             map_unit_proportion = np.array(

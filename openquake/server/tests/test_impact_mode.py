@@ -32,6 +32,7 @@ import django
 from django.test import Client, override_settings
 from django.conf import settings
 from django.http import HttpResponseNotFound
+from django.contrib.auth.models import Permission
 from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.dbapi import db
@@ -48,7 +49,7 @@ CALC_RUN_TIMEOUT = 60
 
 django.setup()
 try:
-    from django.contrib.auth.models import User  # noqa
+    from django.contrib.auth.models import User, Group, Permission  # noqa
 except RuntimeError:
     # Django tests are meant to be run with the command
     # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
@@ -186,6 +187,10 @@ class EngineServerTestCase(django.test.TestCase):
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
         cls.user1, cls.password1 = get_or_create_user(1)  # level 1
+        cls.users_who_can_view_exposure, _ = Group.objects.get_or_create(
+            name='Users who can view the exposure')
+        perm = Permission.objects.get(codename='can_view_exposure')
+        cls.users_who_can_view_exposure.permissions.add(perm)
         cls.c = Client()
         cls.c.login(username=cls.user1.username, password=cls.password1)
         cls.maxDiff = None
@@ -237,6 +242,10 @@ class EngineServerTestCase(django.test.TestCase):
                 self.assertGreater(
                     len(results), 0,
                     'The job produced no outputs!')
+        # Check that the Django views to visualize simplified and advanced outputs
+        # pages do not raise any exceptions
+        self.c.get(f'/engine/{job_id}/outputs')
+        self.c.get(f'/engine/{job_id}/outputs_impact')
         # NOTE: the get_json utility decodes the json and returns a dict
         ret = self.get_json('%s/impact' % job_id)
         self.assertEqual(list(ret), ['loss_type_descriptions', 'impact'])
@@ -256,6 +265,86 @@ class EngineServerTestCase(django.test.TestCase):
         losses_by_site = numpy.load(BytesIO(content))
         pandas.DataFrame.from_dict(
             {item: losses_by_site[item] for item in losses_by_site})
+        ret = self.get('%s/extract/losses_by_location' % job_id)
+        content = self.get_response_content(ret)
+        losses_by_location = numpy.load(BytesIO(content))
+        pandas.DataFrame.from_dict(
+            {item: losses_by_location[item] for item in losses_by_location})
+
+        # check that users can download hidden outputs only if their level is at
+        # least 2 or if they have the can_view_exposure permission
+
+        # level 1 users without the can_view_exposure permission can't see the exposure
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_exposure they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
+
+        # level 1 users with the can_view_exposure permission can see the exposure
+        self.user1.groups.add(self.users_who_can_view_exposure)
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        download_exposure_url = download_url
+        ret = self.c.get(download_url)
+        self.assertEqual(ret.status_code, 200)
+        # ...and with can_view_exposure they can extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 200)
+
+        # level 2 users without the show_exposure group can see the exposure
+        self.user1.groups.remove(self.users_who_can_view_exposure)
+        self.user1.profile.level = 2
+        self.user1.profile.save()
+        self.user1.save()
+        # try to download the exposure, knowing the corresponding url
+        ret = self.c.get(download_exposure_url)
+        self.assertEqual(ret.status_code, 200)
+        # check if the exposure is shown in the list of downloadable results
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
+        ret = self.c.get(exposure_url)
+        self.assertEqual(ret.status_code, 200)
+        # ...and even without can_view_exposure they can extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 200)
+
+        # level 0 users without the can_view_exposure permission can't see the exposure
+        self.user1.profile.level = 0
+        self.user1.profile.save()
+        self.user1.save()
+        # try to download the exposure, knowing the corresponding url
+        ret = self.c.get(download_exposure_url)
+        self.assertEqual(ret.status_code, 403)
+        # check if the exposure is shown in the list of downloadable results
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_exposure they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
+
+        # level 1 users without the can_view_exposure permission can't see the exposure
+        self.user1.profile.level = 1
+        self.user1.profile.save()
+        self.user1.save()
+        # try to download the exposure, knowing the corresponding url
+        ret = self.c.get(download_exposure_url)
+        self.assertEqual(ret.status_code, 403)
+        # check if the exposure is shown in the list of downloadable results
+        ret = self.get('%s/results' % job_id)
+        results = json.loads(ret.content.decode('utf8'))
+        exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
+        self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_exposure they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
+
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
             raise RuntimeError(
@@ -311,6 +400,47 @@ class EngineServerTestCase(django.test.TestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', data=dict(archive=a))
         self.assertEqual(resp.status_code, 404, resp)
+
+    def test_get_impact_form_defaults(self):
+        resp = self.c.get('/v1/get_impact_form_defaults')
+        resp = json.loads(resp.content.decode('utf8'))
+        expected_list = ['usgs_id', 'rupture_from_usgs', 'rupture_file', 'lon',
+                         'lat', 'dep', 'mag', 'aspect_ratio', 'rake',
+                         'local_timestamp', 'time_event', 'dip', 'strike',
+                         'maximum_distance', 'truncation_level',
+                         'number_of_ground_motion_fields', 'asset_hazard_distance',
+                         'ses_seed', 'station_data_file_from_usgs',
+                         'station_data_file', 'maximum_distance_stations',
+                         'msr', 'rupture_was_loaded', 'rupture_file_input',
+                         'station_data_file_input', 'station_data_file_loaded',
+                         'description']
+        self.assertEqual(list(resp), expected_list)
+
+    def test_impact_get_shakemap_versions(self):
+        resp = self.c.post('/v1/impact_get_shakemap_versions',
+                           data={'usgs_id': 'us6000jllz'})
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertIn('shakemap_versions', resp)
+        self.assertIn('usgs_preferred_version', resp)
+        self.assertIsNone(resp['shakemap_versions_issue'])
+
+    def test_impact_get_nodal_planes_and_info(self):
+        resp = self.c.post('/v1/impact_get_nodal_planes_and_info',
+                           data={'usgs_id': 'us6000jllz'})
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertIn('nodal_planes', resp)
+        self.assertIsNone(resp['nodal_planes_issue'])
+        self.assertIn('info', resp)
+
+    def test_impact_get_stations_from_usgs(self):
+        shakemap_version = 'urn:usgs-product:us:shakemap:us6000jllz:1756920117251'
+        resp = self.c.post('/v1/impact_get_stations_from_usgs',
+                           data={'usgs_id': 'us6000jllz',
+                                 'shakemap_version': shakemap_version})
+        resp = json.loads(resp.content.decode('utf8'))
+        self.assertIn('station_data_file', resp)
+        self.assertIn('n_stations', resp)
+        self.assertIsNone(resp['station_data_issue'])
 
 
 class ShareJobTestCase(django.test.TestCase):

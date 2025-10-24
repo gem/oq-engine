@@ -593,7 +593,6 @@ class HazardCalculator(BaseCalculator):
                     assert list(dic)[0] == 'Default', list(dic)
                     for label in list(dic)[1:]:
                         self.datastore['gsim_lt' + label] = dic[label]
-                oq.mags_by_trt = csm.get_mags_by_trt(oq.maximum_distance)
                 assert oq.mags_by_trt, 'Filtered out all magnitudes!'
                 for trt in oq.mags_by_trt:
                     mags = numpy.array(oq.mags_by_trt[trt])

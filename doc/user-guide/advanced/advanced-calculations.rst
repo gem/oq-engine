@@ -33,7 +33,7 @@ Sometimes it is necessary to reduce your expectations. The examples below will d
 of all, we must stress an important point::
 
 	Our experience tells us that THE PERFORMANCE BOTTLENECKS OF THE
-	REDUCED CALCULATION ARE TOTALLY DIFFERENT FROM THE BOTTLENECKS OF
+	REDUCED CALCULATION ARE OFTEN DIFFERENT FROM THE BOTTLENECKS OF
 	THE FULL CALCULATION. Do not trust your performance intuition.
 
 *********************************

@@ -122,7 +122,13 @@ AELO_FORM_PLACEHOLDERS = {
     'asce_version': 'ASCE standards',
 }
 
-HIDDEN_OUTPUTS = ['assetcol', 'job']
+HIDDEN_OUTPUTS = ['exposure', 'job']
+EXTRACTABLE_RESOURCES = ['aggrisk_tags', 'mmi_tags', 'losses_by_site',
+                         'losses_by_asset', 'losses_by_location']
+# NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
+#       datastore, and the can_view_exposure permission gives access both to the
+#       'exposure' output and to the 'assetcol' item in the datastore
+MAP_RESOURCE_OUTPUT = {'assetcol': 'exposure'}
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -251,7 +257,7 @@ def ajax_login(request):
     """
     username = request.POST['username']
     password = request.POST['password']
-    user = authenticate(username=username, password=password)
+    user = authenticate(request=request, username=username, password=password)
     if user is not None:
         if user.is_active:
             login(request, user)
@@ -1292,8 +1298,18 @@ def save_pik(job, dirname):
     return pathpik
 
 
-def get_public_outputs(oes):
-    return [e for o, e in oes if o not in HIDDEN_OUTPUTS]
+def get_allowed_outputs(oes, request):
+    if settings.LOCKDOWN:
+        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to users with
+        # level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
+        user = request.user
+        return [e for o, e in oes
+                if o not in HIDDEN_OUTPUTS
+                or user.has_perm(f'auth.can_view_{o}')
+                or user.level >= 2]
+    else:
+        # When authentication is disabled, all outputs are visible
+        return [e for o, e in oes]
 
 
 @require_http_methods(['GET'])
@@ -1323,7 +1339,7 @@ def calc_results(request, calc_id):
     # so this returns an ordered map output_type -> extensions such as
     # {'agg_loss_curve': ['xml', 'csv'], ...}
     output_types = groupby(export, lambda oe: oe[0],
-                           get_public_outputs)
+                           lambda oes: get_allowed_outputs(oes, request))
     results = logs.dbcmd('get_outputs', calc_id)
     if not results:
         return HttpResponseNotFound()
@@ -1336,6 +1352,8 @@ def calc_results(request, calc_id):
             outtypes = [ot for ot in output_types[rtype] if ot != 'txt']
         except KeyError:
             continue  # non-exportable outputs should not be shown
+        if not outtypes:  # happens for 'exposure', since it is hidden
+            continue
         path = f'v1/calc/result/{result.id}'
         url = urljoin(base_url, path)
         # NOTE: in case of multiple available export types, we provide only the url to
@@ -1396,9 +1414,14 @@ def calc_result(request, result_id):
     try:
         job_id, job_status, job_user, datadir, ds_key = logs.dbcmd(
             'get_result', result_id)
-        if ds_key in HIDDEN_OUTPUTS:
-            return HttpResponseForbidden()
         if not utils.user_has_permission(request, job_user, job_status):
+            return HttpResponseForbidden()
+        # When authentication is enabled, HIDDEN_OUTPUTS are visible only to users with
+        # level ≥ 2 or who have the permission 'can_view_<OUTPUT>'
+        if (settings.LOCKDOWN
+                and ds_key in HIDDEN_OUTPUTS
+                and not request.user.has_perm(f'auth.can_view_{ds_key}')
+                and not request.user.level >= 2):
             return HttpResponseForbidden()
     except dbapi.NotFound:
         return HttpResponseNotFound()
@@ -1512,6 +1535,8 @@ def extract(request, calc_id, what):
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    if not can_extract(request, what):
         return HttpResponseForbidden()
     path = request.get_full_path()
     n = len(request.path_info)
@@ -1695,7 +1720,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        mce=mce, mce_spectra=mce_spectra,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=asce_version_full,
-                       lon=lon, lat=lat, site_class=site_class_display_name, site_name=site_name)
+                       lon=lon, lat=lat, site_class=site_class_display_name,
+                       site_name=site_name)
                   )
 
 
@@ -1769,20 +1795,18 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         except KeyError:
             calc_aelo_version = '1.0.0'
         if 'asce07' in ds:
-            # try:
-            #     asce07_js = ds['asce07'][0].decode('utf8')
-            # except ValueError:
-            #     # NOTE: for backwards compatibility, read scalar
-            #     asce07_js = ds['asce07'][()].decode('utf8')
-            # asce07 = json.loads(asce07_js)
-            asce07 = ds['asce07']
+            try:
+                asce07_js = ds['asce07'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce07_js = ds['asce07'][()].decode('utf8')
+            asce07 = json.loads(asce07_js)
             asce07_key_mapping = {}
             if asce_version != 'ASCE7-16':
                 asce07_key_mapping = {
                     'PGA': 'PGAm',
                 }
-            asce07_m = {asce07_key_mapping.get(k, k): v[0] for k, v in asce07.items()}
-            # FIXME: keys have changed
+            asce07_m = {asce07_key_mapping.get(k, k): v for k, v in asce07.items()}
             for key, value in asce07_m.items():
                 if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
@@ -1794,13 +1818,12 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 else:
                     asce07_with_units[key + ' (g)'] = get_disp_val(value)
         if 'asce41' in ds:
-            # try:
-            #     asce41_js = ds['asce41'][0].decode('utf8')
-            # except ValueError:
-            #     # NOTE: for backwards compatibility, read scalar
-            #     asce41_js = ds['asce41'][()].decode('utf8')
-            # asce41 = json.loads(asce41_js)
-            asce41 = ds['asce41']
+            try:
+                asce41_js = ds['asce41'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce41_js = ds['asce41'][()].decode('utf8')
+            asce41 = json.loads(asce41_js)
             asce41_key_mapping = {}
             if asce_version != 'ASCE7-16':
                 asce41_key_mapping = {
@@ -1813,13 +1836,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     'BSE1N_S1': 'BSE1N_Sx1',
                     'BSE1E_S1': 'BSE1E_Sx1',
                 }
-            try:
-                asce41_m = {asce41_key_mapping.get(k, k): v[()][0]
-                            for k, v in asce41.items()}
-            except IndexError:
-                asce41_m = {asce41_key_mapping.get(k, k): v[()]
-                            for k, v in asce41.items()}
-            # FIXME: keys have changed
+            asce41_m = {asce41_key_mapping.get(k, k): v for k, v in asce41.items()}
             for key, value in asce41_m.items():
                 if not key.startswith('BSE'):
                     continue
@@ -1999,6 +2016,23 @@ def download_aggrisk(request, calc_id):
     return response
 
 
+def can_extract(request, resource):
+    try:
+        user = request.user
+    except AttributeError:
+        # without authentication
+        return True
+    if (resource in EXTRACTABLE_RESOURCES
+            or user.level >= 2
+            or user.has_perm(f'auth.can_view_{resource}')):
+        return True
+    if resource in MAP_RESOURCE_OUTPUT:
+        corresponding_output = MAP_RESOURCE_OUTPUT[resource]
+        if user.has_perm(f'auth.can_view_{corresponding_output}'):
+            return True
+    return False
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
@@ -2006,6 +2040,8 @@ def extract_html_table(request, calc_id, name):
     if job is None:
         return HttpResponseNotFound()
     if not utils.user_has_permission(request, job.user_name, job.status):
+        return HttpResponseForbidden()
+    if not can_extract(request, name):
         return HttpResponseForbidden()
     try:
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
