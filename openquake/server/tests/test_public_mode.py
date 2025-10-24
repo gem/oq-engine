@@ -409,7 +409,8 @@ class CallbackTest(LiveServerTestCase):
         self.assertEqual(job_info['user_name'], 'custom_owner')
         job_id = job_info['job_id']
         self.on_job_complete_event.wait(timeout=30)
-        self.assertTrue(self.on_job_complete_event.is_set())
+        self.assertTrue(self.on_job_complete_event.is_set(),
+                        "Expected on_job_complete_event to be set, but it was not.")
         body = self.on_job_complete_data['body']
         get_params = self.on_job_complete_data['GET']
         self.assertEqual(body['job_id'], job_id)
