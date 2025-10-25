@@ -145,7 +145,7 @@ def save_rates(g, N, jid, num_chunks, mon):
             _store(rats, num_chunks, None, mon)
 
 
-def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
+def classical(sources, tilegetters, cmaker, extra, gids, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
@@ -190,7 +190,13 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
             if config.directory.custom_tmp:
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, extra['num_chunks'], None, monitor)
+            elif set(cmaker.gid) <= set(gids):
+                # aggregate in agg_dicts
+                result['rmap'] = rmap
+                rmap.gid = cmaker.gid
+                rmap.wei = cmaker.wei
             else:
+                # store directly in agg_dicts
                 result['rmap'] = rmap.to_array(cmaker.gid)
         elif rmap.size_mb:
             result['rmap'] = rmap
@@ -602,13 +608,17 @@ class ClassicalCalculator(base.HazardCalculator):
         return sgs, ds
 
     def _execute_regular(self, sgs, ds):
+        L = self.oqparam.imtls.size
+        gids = get_heavy_gids(sgs, self.cmdict['Default'])
+        self.rmap = RateMap(self.sitecol.sids, L, gids)
+
         allargs = []
         n_out = []
         ntiles = {}
         for cmaker, tilegetters, blocks, extra in self.csm.split(
                 self.cmdict, self.sitecol, self.max_weight, self.num_chunks):
             for block in blocks:
-                allargs.append((block, tilegetters, cmaker, extra, ds))
+                allargs.append((block, tilegetters, cmaker, extra, gids, ds))
                 n_out.append(len(tilegetters))
             try:
                 grp_id = block[0].grp_id
@@ -623,10 +633,6 @@ class ClassicalCalculator(base.HazardCalculator):
         srcs = [src for src in self.csm.get_sources() if src.weight]
         maxsrc = max(srcs, key=lambda s: s.weight / ntiles[s.grp_id])
         logging.info('Heaviest: %s', maxsrc)
-
-        L = self.oqparam.imtls.size
-        gids = get_heavy_gids(sgs, self.cmdict['Default'])
-        self.rmap = RateMap(self.sitecol.sids, L, gids)
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
