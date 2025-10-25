@@ -29,6 +29,9 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.simple_fault import SimpleFaultSurface
 
 
+BASE = os.path.abspath("")
+
+
 def make_rupture(rupture_class, **kwargs):
     default_arguments = {
         'mag': 5.5,
@@ -257,7 +260,9 @@ class RuptureFromCsvTestCase(unittest.TestCase):
         csv = gettemp('''#,,,,,,,,,,"trts=['Stable Shallow Crust'], ses_seed=42"
 seed,mag,rake,lon,lat,dep,multiplicity,trt,kind,mesh,extra
 0,7.050000E+00,0.000000E+00,-55.93890,44.51041,1.050000E+01,1,Stable Shallow Crust,ParametricProbabilisticRupture PlanarSurface,"[[[[-55.9389, -55.9389, -55.9389, -55.9389]], [[44.37064, 44.65017, 44.37064, 44.65017]], [[2.72939, 2.72939, 18.27061, 18.27061]]]]","{""occurrence_rate"": 1.4580851940711274e-06}"''', suffix='.csv')
-        ruptures = get_ruptures(csv)
-        # Check strike and dip of surface are computable
-        self.assertEqual(ruptures[0].surface.get_strike(), 0)
-        self.assertEqual(ruptures[0].surface.get_dip(), 90)
+        get_ruptures(csv)
+
+    def test_surf(self):
+        rup = get_ruptures(os.path.join(BASE, "data", "rup.csv"))[0]
+        self.assertEqual(int(rup.surface.get_strike()), 90)
+        self.assertEqual(int(rup.surface.get_dip()), 27)
