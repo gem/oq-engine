@@ -191,12 +191,12 @@ def classical(sources, tilegetters, cmaker, extra, gids, dstore, monitor):
                 rates = rmap.to_array(cmaker.gid)
                 _store(rates, extra['num_chunks'], None, monitor)
             elif set(cmaker.gid) <= set(gids):
-                # aggregate in agg_dicts
+                # aggregate in agg_dicts, see disagg/case_11 with mutex sources
                 result['rmap'] = rmap
                 rmap.gid = cmaker.gid
                 rmap.wei = cmaker.wei
             else:
-                # store directly in agg_dicts
+                # store directly in agg_dicts, regular case
                 result['rmap'] = rmap.to_array(cmaker.gid)
         elif rmap.size_mb:
             result['rmap'] = rmap
