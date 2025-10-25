@@ -261,7 +261,3 @@ seed,mag,rake,lon,lat,dep,multiplicity,trt,kind,mesh,extra
         # Check strike and dip of surface are computable
         self.assertEqual(ruptures[0].surface.get_strike(), 0)
         self.assertEqual(ruptures[0].surface.get_dip(), 90)
-
-
-
-
