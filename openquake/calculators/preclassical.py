@@ -173,7 +173,6 @@ def store_tiles(dstore, csm, sitecol, cmakers):
 
     # determine if to use tiling
     req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
-    logging.info('Required mem_gb = %.2f', req_gb)
     max_gb = float(config.memory.pmap_max_gb or parallel.num_cores/8)
     regular = (req_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
@@ -182,6 +181,10 @@ def store_tiles(dstore, csm, sitecol, cmakers):
     else:
         tiling = oq.tiling
 
+    if tiling:
+        logging.info('Not requiring mem_gb = %.2f', req_gb)
+    else:
+        logging.info('Requiring mem_gb = %.2f', req_gb)
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
     max_transfer_gb = sum(row['blocks'] * row['max_mb'] for row in data) / 1024
