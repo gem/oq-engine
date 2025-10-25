@@ -867,7 +867,7 @@ def get_ruptures_aw(fname_csv):
         geoms.append(numpy.concatenate([[num_surfaces], shapes, points]))
     if not rups:
         return ()
-    dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
+    dic = dict(geom=numpy.array(geoms, F32), trts=aw.trts)
     # NB: PMFs for nonparametric ruptures are missing
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
 

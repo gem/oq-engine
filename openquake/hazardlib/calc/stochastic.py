@@ -104,7 +104,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model='???', model_geom=None):
         geoms.append(geom)
     if not rups:
         return ()
-    dic = dict(geom=numpy.array(geoms, object))
+    dic = dict(geom=numpy.array(geoms, F32))
     # NB: PMFs for nonparametric ruptures are not saved since they
     # are useless for the GMF computation
     arr = numpy.array(rups, rupture_dt)
