@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * gzipped the _rates dataset, saving up to 4x the disk space required in
+    classical calculations, as well as doubling the speed of the postclassical
+
   [Michele Simionato, Antonio Ettorre]
   * Upgraded numpy to version 2.2, including related dependencies such as
     pandas, pyproj, GDAL, fiona, etc
@@ -40,7 +44,6 @@
     the asce_version and vs30 parameters
 
   [Michele Simionato]
-  * Updated the related dependencies to numpy 2+  
   * Changed the Starmap to ensure at least one GB of RAM per thread
   * Extended the source_id-filtering feature to use .startswith
   * Added a flag "aggregate_exposure" (false by default) to aggregate
