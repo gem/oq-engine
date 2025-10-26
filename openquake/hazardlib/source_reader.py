@@ -536,6 +536,24 @@ def _get_csm(full_lt, groups, event_based):
     return CompositeSourceModel(full_lt, src_groups)
 
 
+def collect_atomic(allargs):
+    blocks_ = general.AccumDict(accum=[])
+    tilegetters_ = {}
+    cmaker_ = {}
+    for cmaker, tilegetters, blocks, extra in allargs:
+        gid = tuple(cmaker.gid)
+        tilegetters_[gid] = tilegetters
+        blocks_[gid].extend(blocks)
+        cmaker_[gid] = cmaker
+    out = []
+    extra = dict(atomic=1, blocks=1)
+    for gid in tilegetters_:
+        out.append((cmaker_[gid], tilegetters_[gid],
+                    [U16(blocks_[gid])], extra))
+    logging.info('Collapsed %d atomic groups into %d', len(allargs), len(out))
+    return out
+
+
 class CompositeSourceModel:
     """
     :param full_lt:
@@ -714,6 +732,17 @@ class CompositeSourceModel:
         logging.info('tot_weight={:_d}, max_weight={:_d}, num_sources={:_d}'.
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
+
+    def split_atomic(self, cmdict, sitecol, max_weight, num_chunks, tiling):
+        atomic = []
+        non_atomic = []
+        for cmaker, tilegetters, blocks, extra in self.split(
+            cmdict, sitecol, max_weight, num_chunks, tiling):
+            if extra['atomic']:
+                atomic.append((cmaker, tilegetters, blocks, extra))
+            else:
+                non_atomic.append((cmaker, tilegetters, blocks, extra))
+        return collect_atomic(atomic) + non_atomic
 
     def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
         """

@@ -136,9 +136,10 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     with dstore:
-        if isinstance(sources, int):  # read the full group from the datastore
+        if isinstance(sources, numpy.ndarray):
+            # read the grp_ids from the datastore
             arr = dstore.getitem('_csm')[sources]
-            sources = pickle.loads(zlib.decompress(arr.tobytes()))
+            sources = [pickle.loads(zlib.decompress(a.tobytes())) for a in arr]
         sitecol = dstore['sitecol'].complete  # super-fast
 
     # NB: disagg_by_src does not work with ilabel
@@ -170,8 +171,8 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
             rmap = result.pop('rmap').remove_zeros()
         # print(f"{monitor.task_no=} {rmap=}")
 
-        if (rmap.size_mb and config.directory.custom_tmp and extra['blocks'] == 1
-                and not cmaker.disagg_by_src):
+        if (rmap.size_mb and config.directory.custom_tmp and
+                extra['blocks'] == 1 and not cmaker.disagg_by_src):
             rates = rmap.to_array(cmaker.gid)
             _store(rates, extra['num_chunks'], None, monitor)
         elif rmap.size_mb:
@@ -586,24 +587,19 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_regular(self, sgs, ds):
         allargs = []
         n_out = []
-        ntiles = {}
-        for cmaker, tilegetters, blocks, extra in self.csm.split(
-                self.cmdict, self.sitecol, self.max_weight, self.num_chunks):
+        for cmaker, tilegetters, blocks, extra in self.csm.split_atomic(
+                self.cmdict, self.sitecol, self.max_weight, self.num_chunks,
+                tiling=False):
             for block in blocks:
                 allargs.append((block, tilegetters, cmaker, extra, ds))
                 n_out.append(len(tilegetters))
-            try:
-                grp_id = block[0].grp_id
-            except TypeError:  # block is an int
-                grp_id = block
-            ntiles[grp_id] = len(tilegetters)
         logging.warning('This is a regular calculation with %d outputs, '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         sum(n_out), len(allargs), min(n_out), max(n_out))
 
         # log info about the heavy sources
         srcs = [src for src in self.csm.get_sources() if src.weight]
-        maxsrc = max(srcs, key=lambda s: s.weight / ntiles[s.grp_id])
+        maxsrc = max(srcs, key=lambda s: s.weight)
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size

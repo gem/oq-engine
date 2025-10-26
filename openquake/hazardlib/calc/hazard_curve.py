@@ -62,16 +62,15 @@ def classical(group, sitecol, cmaker):
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
-    trts = set()
-    for src in group:
-        if not src.num_ruptures:
-            # not be set in hazardlib, but always in the engine
-            src.num_ruptures = src.count_ruptures()
-        trts.add(src.tectonic_region_type)
-    [trt] = trts  # there must be a single tectonic region type
-    if cmaker.trt != '*':
-        assert trt == cmaker.trt, (trt, cmaker.trt)
-    dic = RmapMaker(cmaker, sitecol, group).make()
+    if getattr(group[0], 'atomic', False):
+        # tested in case_80 with 5 subgroups of 3 sources each
+        dic = RmapMaker(cmaker, sitecol, group[0]).make()
+        for grp in group[1:]:
+            res = RmapMaker(cmaker, sitecol, grp).make()
+            dic['rmap'] += res['rmap']
+            # TODO: cfactor, rup_data, source_data, dparam_mb, source_mb
+    else:
+        dic = RmapMaker(cmaker, sitecol, group).make()
     return dic
 
 
