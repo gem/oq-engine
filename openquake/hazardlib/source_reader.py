@@ -782,7 +782,7 @@ class CompositeSourceModel:
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
-            tiles = max(hint / 2, splits)
+            tiles = max(hint, splits)
         else:
             # if hint > max_blocks generate max_blocks and more tiles
             blocks = list(general.split_in_blocks(
