@@ -185,13 +185,13 @@ def get_lvl(hcurve, imls, poe):
 
     >>> imls = numpy.array([.1, .2, .3, .4])
     >>> hcurve = numpy.array([1., .99, .90, .8])
-    >>> get_lvl(hcurve, imls, 1)
+    >>> int(get_lvl(hcurve, imls, 1))
     0
-    >>> get_lvl(hcurve, imls, .99)
+    >>> int(get_lvl(hcurve, imls, .99))
     1
-    >>> get_lvl(hcurve, imls, .91)
+    >>> int(get_lvl(hcurve, imls, .91))
     2
-    >>> get_lvl(hcurve, imls, .8)
+    >>> int(get_lvl(hcurve, imls, .8))
     3
     """
     [[iml]] = compute_hazard_maps(hcurve.reshape(1, -1), imls, [poe])
@@ -426,11 +426,12 @@ class MapArray(object):
         arr = self.to_rates().to_array(numpy.arange(G))
         return pandas.DataFrame({name: arr[name] for name in arr.dtype.names})
 
-    def update_indep(self, poes, ctxt, itime):
+    def update_indep(self, poes, ctxt, itime, rates=None):
         """
         Update probabilities for independent ruptures
         """
-        rates = ctxt.occurrence_rate
+        if rates is None:
+            rates = ctxt.occurrence_rate
         sidxs = self.sidx[ctxt.sids]
         if self.rates:
             update_pmap_r(self.array, poes, rates, ctxt.probs_occur,
