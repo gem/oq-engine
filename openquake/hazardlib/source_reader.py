@@ -536,6 +536,29 @@ def _get_csm(full_lt, groups, event_based):
     return CompositeSourceModel(full_lt, src_groups)
 
 
+def collect_atomic(allargs):
+    """
+    Generates tasks arguments from atomic groups
+    """
+    if not allargs:
+        return []
+    blocks_ = general.AccumDict(accum=[])
+    tilegetters_ = {}
+    cmaker_ = {}
+    for cmaker, tilegetters, blocks, extra in allargs:
+        gid = tuple(cmaker.gid)
+        tilegetters_[gid] = tilegetters
+        blocks_[gid].extend(blocks)
+        cmaker_[gid] = cmaker
+    out = []
+    extra = dict(atomic=1, blocks=1, num_chunks=extra['num_chunks'])
+    for gid, tgetters in tilegetters_.items():
+        for tgetter in tgetters:
+            out.append((cmaker_[gid], [tgetter], [U16(blocks_[gid])], extra))
+    logging.info('Collapsed %d atomic groups into %d', len(allargs), len(out))
+    return out
+
+
 class CompositeSourceModel:
     """
     :param full_lt:
@@ -715,6 +738,17 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
+    def split_atomic(self, cmdict, sitecol, max_weight, num_chunks, tiling):
+        atomic = []
+        non_atomic = []
+        for cmaker, tilegetters, blocks, extra in self.split(
+            cmdict, sitecol, max_weight, num_chunks, tiling):
+            if extra['atomic']:
+                atomic.append((cmaker, tilegetters, blocks, extra))
+            else:
+                non_atomic.append((cmaker, tilegetters, blocks, extra))
+        return collect_atomic(atomic) + non_atomic
+
     def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
@@ -753,7 +787,7 @@ class CompositeSourceModel:
         hint = sg.weight / max_weight
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
-            tiles = max(hint / 2, splits)
+            tiles = max(hint, splits)
         else:
             # if hint > max_blocks generate max_blocks and more tiles
             blocks = list(general.split_in_blocks(
