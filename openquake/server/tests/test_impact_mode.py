@@ -34,7 +34,7 @@ from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.commonlib.readinput import loadnpz
-from openquake.server.views_test import get_or_create_user
+from openquake.server.tests.views_test import get_or_create_user
 
 CALC_RUN_TIMEOUT = 60
 

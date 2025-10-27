@@ -2,7 +2,7 @@ import django
 from django.test import Client
 from openquake.commonlib.dbapi import db
 from openquake.engine.engine import create_jobs
-from openquake.server.views_test import get_or_create_user
+from openquake.server.tests.views_test import get_or_create_user
 
 
 class ShareJobTestCase(django.test.TestCase):
