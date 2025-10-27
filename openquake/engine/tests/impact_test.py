@@ -95,7 +95,7 @@ def test_impact(n):
         with log, log2:
             expose_outputs(calc.datastore)
             expose_outputs(calc2.datastore)
-            # compare(calc.datastore, calc2.datastore)
+            compare(calc.datastore, calc2.datastore)
 
 
 def test_impact5():
