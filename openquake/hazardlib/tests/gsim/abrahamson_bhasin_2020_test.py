@@ -28,6 +28,6 @@ class AbrahamsonBhasin2020TestCase(BaseGSIMTestCase):
     GSIM_CLASS = AbrahamsonBhasin2020
 
     def test_all(self):
-        self.check('AB2020/General.csv',
+        self.check('AB20/General.csv',
                    max_discrep_percentage=0.2,
                    gmpe={'Lin2009': {}})
