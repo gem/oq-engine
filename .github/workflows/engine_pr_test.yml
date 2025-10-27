@@ -141,6 +141,11 @@ jobs:
           else
             python install.py devel --version=$GITHUB_HEAD_REF
           fi
+      - name: Actualize 'default' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.default.tmpl; do
+              cp -- "$file" "${file%.default.tmpl}"
+          done
       - name: Server 'RESTRICTED' mode tests
         run: |
           source ~/openquake/bin/activate
