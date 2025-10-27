@@ -55,15 +55,30 @@ M2 = 7.0
 
 
 def _get_tref(mag):
-    """Magnitude-dependent conditioning period Tref.
-    (see Table 3.1)
-
     """
-    for mm, tt in [(3.5, 0.20), (4.5, 0.28), (5.5, 0.40),
-                   (6.5, 0.95), (7.5, 1.40), (8.5, 2.80)]:
-        if mag <= mm:
-            return tt
-    return 2.80
+    Magnitude-dependent conditioning period Tref (Table 3.1).
+    Accepts: scalar Mw, tuple/array-like, or a context (uses ctx.mag).
+    Returns a scalar float Tref.
+    """
+    # If a context was passed, use its mag
+    mag = getattr(mag, "mag", mag)
+
+    # Convert to ndarray; handle structured (record) inputs by picking a numeric field
+    m = np.asarray(mag)
+    if getattr(m, "dtype", None) is not None and getattr(m.dtype, "fields", None):
+        for name in ("mag", "rup_mag", "Mw", "M"):
+            if name in m.dtype.names:
+                m = m[name]
+                break
+
+    # Collapse to a single float (first element if array/tuple)
+    mval = float(np.asarray(m, dtype=float).flat[0])
+
+    bins  = np.array([3.5, 4.5, 5.5, 6.5, 7.5, 8.5], dtype=float)
+    trefs = np.array([0.20, 0.28, 0.40, 0.95, 1.40, 2.80], dtype=float)
+
+    idx = np.searchsorted(bins, mval, side="left")
+    return float(trefs[min(idx, len(trefs) - 1)])
 
 
 def _get_trilinear_magnitude_term(ctx: np.recarray, C: dict):
