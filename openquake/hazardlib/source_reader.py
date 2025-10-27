@@ -537,6 +537,9 @@ def _get_csm(full_lt, groups, event_based):
 
 
 def collect_atomic(allargs):
+    """
+    Generates tasks arguments from atomic groups
+    """
     blocks_ = general.AccumDict(accum=[])
     tilegetters_ = {}
     cmaker_ = {}
@@ -547,9 +550,9 @@ def collect_atomic(allargs):
         cmaker_[gid] = cmaker
     out = []
     extra = dict(atomic=1, blocks=1)
-    for gid in tilegetters_:
-        out.append((cmaker_[gid], tilegetters_[gid],
-                    [U16(blocks_[gid])], extra))
+    for gid, tgetters in tilegetters_.items():
+        for tgetter in tgetters:
+            out.append((cmaker_[gid], [tgetter], [U16(blocks_[gid])], extra))
     logging.info('Collapsed %d atomic groups into %d', len(allargs), len(out))
     return out
 

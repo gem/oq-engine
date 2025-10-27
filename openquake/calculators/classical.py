@@ -616,7 +616,7 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_tiling(self, sgs, ds):
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks, extra in self.csm.split(
+        for cmaker, tilegetters, blocks, extra in self.csm.split_atomic(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, tiling=True):
             for block in blocks:  # NB: blocks are actually grp_ids
