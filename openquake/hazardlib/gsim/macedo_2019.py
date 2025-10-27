@@ -207,6 +207,9 @@ class MacedoEtAl2019SInter(GMPE):
         # instantiate the underlying gmpe
         [(gmpe_name, kw)] = gmpe_dict.pop('gmpe').items()
         self.gmpe = registry[gmpe_name](**kw)
+        for attr in ("REQUIRES_SITES_PARAMETERS", "REQUIRES_RUPTURE_PARAMETERS", "REQUIRES_DISTANCES"): 
+            setattr(self, attr, 
+                    set(getattr(self, attr, ())) | set(getattr(self.gmpe, attr, ())))
 
     def compute(self, ctx: np.recarray, imts: list, mean: np.ndarray,
                 sig: np.ndarray, tau: np.ndarray, phi: np.ndarray):
