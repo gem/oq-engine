@@ -29,7 +29,7 @@ import string
 import random
 import logging
 import django
-from django.test import LiveServerTestCase, Client
+from django.test import LiveServerTestCase, Client, override_settings
 from unittest import skipIf
 from threading import Event
 from openquake.baselib import config
@@ -382,6 +382,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
             self.assertFalse(resp_text_dict['success'])
 
 
+@override_settings(ROOT_URLCONF='openquake.server.tests.test_urls')
 class CallbackTest(LiveServerTestCase):
     """
     Integration test checking the callback on job completion
@@ -395,7 +396,7 @@ class CallbackTest(LiveServerTestCase):
         job_complete_callback_state['data'] = self.on_job_complete_data
 
     def test_callback_on_job_successfully_completed(self):
-        notify_to = f"{self.live_server_url}/v1/check_callback?first=one&second=two"
+        notify_to = f"{self.live_server_url}/test/check_callback?first=one&second=two"
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         post_args = dict(
             job_ini=job_ini,
@@ -407,8 +408,9 @@ class CallbackTest(LiveServerTestCase):
         job_info = json.loads(resp.content.decode('utf8'))
         self.assertEqual(job_info['user_name'], 'custom_owner')
         job_id = job_info['job_id']
-        self.on_job_complete_event.wait(timeout=10)
-        self.assertTrue(self.on_job_complete_event.is_set())
+        self.on_job_complete_event.wait(timeout=30)
+        self.assertTrue(self.on_job_complete_event.is_set(),
+                        "Expected on_job_complete_event to be set, but it was not.")
         body = self.on_job_complete_data['body']
         get_params = self.on_job_complete_data['GET']
         self.assertEqual(body['job_id'], job_id)

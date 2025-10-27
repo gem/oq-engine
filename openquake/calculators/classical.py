@@ -91,22 +91,6 @@ class Set(set):
     __iadd__ = set.__ior__
 
 
-def get_heavy_gids(source_groups, cmakers):
-    """
-    :returns: the g-indices associated to the heavy groups
-    """
-    if source_groups.attrs['tiling']:
-        return []
-    elif cmakers[0].oq.disagg_by_src:
-        grp_ids = source_groups['grp_id']  # all groups
-    else:
-        grp_ids = source_groups['grp_id'][source_groups['blocks'] > 1]
-    gids = []
-    for inv in numpy.unique(cmakers.inverse[grp_ids]):
-        gids.extend(cmakers[inv].gid)
-    return gids
-
-
 def store_ctxs(dstore, rupdata_list, grp_id):
     """
     Store contexts in the datastore
@@ -186,12 +170,10 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
             rmap = result.pop('rmap').remove_zeros()
         # print(f"{monitor.task_no=} {rmap=}")
 
-        if rmap.size_mb and extra['blocks'] == 1 and not cmaker.disagg_by_src:
-            if config.directory.custom_tmp:
-                rates = rmap.to_array(cmaker.gid)
-                _store(rates, extra['num_chunks'], None, monitor)
-            else:
-                result['rmap'] = rmap.to_array(cmaker.gid)
+        if (rmap.size_mb and config.directory.custom_tmp and extra['blocks'] == 1
+                and not cmaker.disagg_by_src):
+            rates = rmap.to_array(cmaker.gid)
+            _store(rates, extra['num_chunks'], None, monitor)
         elif rmap.size_mb:
             result['rmap'] = rmap
             result['rmap'].gid = cmaker.gid
@@ -426,7 +408,7 @@ class ClassicalCalculator(base.HazardCalculator):
             # already stored in the workers, case_22
             pass
         elif isinstance(rmap, numpy.ndarray):
-            # store the rates directly, case_03 or tiling without custom_tmp
+            # store the rates directly for tiling without custom_tmp
             with self.monitor('storing rates', measuremem=True):
                 _store(rmap, self.num_chunks, self.datastore)
         else:
@@ -503,7 +485,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.num_chunks, _N = getters.get_num_chunks_sites(self.datastore)
         # create empty dataframes
         self.datastore.create_df(
-            '_rates', [(n, rates_dt[n]) for n in rates_dt.names])
+            '_rates', [(n, rates_dt[n]) for n in rates_dt.names], GZIP)
         self.datastore.create_dset('_rates/slice_by_idx', getters.slice_dt)
 
     def check_memory(self, N, L, maxw):
@@ -625,8 +607,8 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Heaviest: %s', maxsrc)
 
         L = self.oqparam.imtls.size
-        gids = get_heavy_gids(sgs, self.cmdict['Default'])
-        self.rmap = RateMap(self.sitecol.sids, L, gids)
+        Gt = self.cmdict['Default'].Gt
+        self.rmap = RateMap(self.sitecol.sids, L, numpy.arange(Gt))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
