@@ -540,6 +540,8 @@ def collect_atomic(allargs):
     """
     Generates tasks arguments from atomic groups
     """
+    if not allargs:
+        return []
     blocks_ = general.AccumDict(accum=[])
     tilegetters_ = {}
     cmaker_ = {}
@@ -549,7 +551,7 @@ def collect_atomic(allargs):
         blocks_[gid].extend(blocks)
         cmaker_[gid] = cmaker
     out = []
-    extra = dict(atomic=1, blocks=1)
+    extra = dict(atomic=1, blocks=1, num_chunks=extra['num_chunks'])
     for gid, tgetters in tilegetters_.items():
         for tgetter in tgetters:
             out.append((cmaker_[gid], [tgetter], [U16(blocks_[gid])], extra))

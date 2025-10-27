@@ -59,6 +59,8 @@ def classical(group, sitecol, cmaker):
     The arguments are the same as in :func:`calc_hazard_curves`, except
     for ``gsims``, which is a list of GSIM instances.
 
+    :param group: a list of sources or of atomic groups
+    :param sitecol: a filtered SiteCollection instance
     :returns:
         a dictionary with keys pmap, source_data, rup_data, extra
     """
@@ -69,7 +71,7 @@ def classical(group, sitecol, cmaker):
             res = RmapMaker(cmaker, sitecol, grp).make()
             dic['rmap'].array += res['rmap'].array
             # TODO: cfactor, rup_data, source_data, dparam_mb, source_mb
-    else:
+    else:  # simply a list of sources
         dic = RmapMaker(cmaker, sitecol, group).make()
     return dic
 

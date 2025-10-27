@@ -182,16 +182,17 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
         yield result
 
 
-def tiling(tilegetter, cmaker, num_chunks, dstore, monitor):
+def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     """
     Tiling calculator
     """
     cmaker.init_monitoring(monitor)
     with dstore:
-        arr = dstore.getitem('_csm')[tilegetter.grp_id]
-        sources = pickle.loads(zlib.decompress(arr.tobytes()))
+        arr = dstore.getitem('_csm')[grp_ids]
+        groups = [pickle.loads(zlib.decompress(a.tobytes())) for a in arr]
         sitecol = dstore['sitecol'].complete  # super-fast
-    result = hazclassical(sources, tilegetter(sitecol, cmaker.ilabel), cmaker)
+    group = groups[0] if len(groups) == 1 else groups
+    result = hazclassical(group, tilegetter(sitecol, cmaker.ilabel), cmaker)
     rmap = result.pop('rmap').remove_zeros()
     if config.directory.custom_tmp:
         rates = rmap.to_array(cmaker.gid)
@@ -616,15 +617,14 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_tiling(self, sgs, ds):
         allargs = []
         n_out = []
-        for cmaker, tilegetters, blocks, extra in self.csm.split_atomic(
+        for cmaker, tgetters, [block], extra in self.csm.split_atomic(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, tiling=True):
-            for block in blocks:  # NB: blocks are actually grp_ids
-                for tgetter in tilegetters:
-                    assert isinstance(block, int)
-                    tgetter.grp_id = block
-                    allargs.append((tgetter, cmaker, extra['num_chunks'], ds))
-                n_out.append(len(tilegetters))
+            if isinstance(block, int):
+                block = [block]
+            for tgetter in tgetters:
+                allargs.append((block, tgetter, cmaker, extra['num_chunks'], ds))
+                n_out.append(1)
         logging.warning('This is a tiling calculation with '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
                         len(allargs), min(n_out), max(n_out))
