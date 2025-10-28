@@ -26,7 +26,6 @@ from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
-from openquake.commonlib.logs import get_job_info
 from openquake.calculators.export import DISPLAY_NAME
 
 UTC = timezone.utc
@@ -615,11 +614,15 @@ def remove_tag_from_job(db, job_id, tag_name):
 
 def set_preferred_job_for_tag(db, job_id, tag_name):
     try:
-        db("BEGIN TRANSACTION;")
-        db(f"UPDATE job_tag SET is_preferred = 0"
-           f" WHERE tag = '{tag_name}' AND is_preferred = 1;")
-        db(f"INSERT INTO job_tag (job_id, tag, is_preferred)"
-           f" VALUES ({job_id}, '{tag_name}', 1) ON CONFLICT DO NOTHING;")
+        db("BEGIN;")
+        db(f"""
+           UPDATE job_tag SET is_preferred = 0
+           WHERE tag = '{tag_name}' AND is_preferred = 1;""")
+        db(f"""
+           INSERT INTO job_tag (job_id, tag, is_preferred)
+           VALUES ({job_id}, '{tag_name}', 1)
+           ON CONFLICT(job_id, tag) DO UPDATE
+            SET is_preferred = 1;""")
         db("COMMIT;")
     except Exception as exc:
         return {'error': str(exc)}

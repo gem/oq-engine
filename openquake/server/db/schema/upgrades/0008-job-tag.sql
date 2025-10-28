@@ -2,7 +2,8 @@ CREATE TABLE job_tag (
     id INTEGER PRIMARY KEY,
     job_id INTEGER NOT NULL REFERENCES job(id) ON DELETE CASCADE,
     tag TEXT NOT NULL,
-    is_preferred INTEGER DEFAULT 0 CHECK (is_preferred IN (0, 1))
+    is_preferred INTEGER DEFAULT 0 CHECK (is_preferred IN (0, 1)),
+    UNIQUE (job_id, tag)
 );
 
 -- Ensure only one preferred job per tag
