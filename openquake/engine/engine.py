@@ -315,7 +315,8 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
+def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
+         notify_to):
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.now(UTC)}
@@ -410,7 +411,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
             for job in jobctxs:
                 logs.dbcmd('finish', job.calc_id, 'aborted')
             raise
-    _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to)
+    _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
+         notify_to)
     return jobctxs
 
 
