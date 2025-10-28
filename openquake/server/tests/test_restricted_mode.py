@@ -12,8 +12,9 @@ class RestrictedModeTestCase(django.test.TestCase):
         return cls.c.post('/v1/calc/%s' % path, data)
 
     @classmethod
-    def get(cls, path):
-        return cls.c.get('/v1/calc/%s' % path)
+    def get(cls, path, **data):
+        return cls.c.get('/v1/calc/%s' % path, data,
+                         HTTP_HOST='127.0.0.1')
 
     @classmethod
     def setUpClass(cls):
@@ -170,6 +171,22 @@ class RestrictedModeTestCase(django.test.TestCase):
         ret = self.get(f'get_preferred_job_for_tag/{tag_name}')
         self.assertEqual(ret.status_code, 200)
         self.assertEqual(ret.json()['job_id'], jobs[1].calc_id)
+
+        # list all jobs (preferred and not preferred)
+        ret = self.get('list')
+        self.assertEqual(ret.status_code, 200)
+        self.assertGreater(len(ret.json()), 1)
+
+        # list only the preferred jobs
+        ret = self.get('list?preferred_only=1')
+        self.assertEqual(ret.status_code, 200)
+        self.assertEqual(len(ret.json()), 1)
+
+        # try to re-add the same first_tag to the second job
+        ret = self.get(f'{jobs[1].calc_id}/add_tag/{tag_name}')
+        self.assertEqual(ret.status_code, 403)
+        self.assertIn('error', ret.json())
+        self.assertIn("UNIQUE constraint failed", ret.json()['error'])
 
         # remove the first_tag from the second job
         ret = self.get(f'{jobs[1].calc_id}/remove_tag/first_tag')

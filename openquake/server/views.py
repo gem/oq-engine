@@ -503,6 +503,8 @@ def calc_list(request, id=None):
     Get a list of calculations and report their id, status, calculation_mode,
     is_running, description, and a url where more detailed information
     can be accessed. This is called several times by the Javascript.
+    If 'preferred_only' is specified in the GET parameters, only jobs set as
+    preferred for a tag are listed.
 
     Responses are in JSON.
     """
@@ -517,7 +519,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id, size_mb, host, start_time, relevant) in calc_data:
+         parent_id, size_mb, host, start_time, relevant, tags) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
@@ -536,7 +538,7 @@ def calc_list(request, id=None):
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
                  parent_id=parent_id, abortable=abortable, size_mb=size_mb,
-                 start_time=start_time_str, relevant=relevant))
+                 start_time=start_time_str, relevant=relevant, tags=tags))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -682,9 +684,7 @@ def set_preferred_job_for_tag(user_level, calc_id, tag_name):
     return check_db_response(resp)
 
 
-def get_preferred_job_for_tag(user_level, tag_name):
-    if user_level < 2:
-        return HttpResponseForbidden()
+def get_preferred_job_for_tag(tag_name):
     try:
         resp = logs.dbcmd('get_preferred_job_for_tag', tag_name)
     except dbapi.NotFound:
@@ -2235,10 +2235,9 @@ def calc_set_preferred_for_tag(request, calc_id, tag_name):
 @require_http_methods(['GET'])
 def calc_get_preferred_for_tag(request, tag_name):
     """
-    Get the calculation marked as the preferred one for the given `tag_name`
+    Get the id of the calculation marked as the preferred one for the given `tag_name`
     """
-    user_level = get_user_level(request)
-    return get_preferred_job_for_tag(user_level, tag_name)
+    return get_preferred_job_for_tag(tag_name)
 
 
 @require_http_methods(['GET'])

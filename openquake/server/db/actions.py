@@ -532,18 +532,35 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         time_filter = 1
 
+    preferred_only = 0
+    if 'preferred_only' in request_get_dict:
+        preferred_only = int(request_get_dict.get('preferred_only'))
+
     if user_acl_on:
         users_filter = "user_name IN (?X)"
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s AND status != '
-              "'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
-              % (users_filter, time_filter, limit), filterdict, allowed_users)
+    base_query = (
+        "SELECT j.*, GROUP_CONCAT(t.tag) AS tags "
+        "FROM job AS j "
+        "LEFT JOIN job_tag AS t ON j.id = t.job_id "
+        "WHERE j.status != 'deleted' "
+        "AND ((?A AND %s AND %s) OR j.status = 'shared')"
+    ) % (users_filter, time_filter)
+
+    if preferred_only:
+        base_query += (
+            " AND j.id IN (SELECT job_id FROM job_tag WHERE is_preferred = 1)")
+
+    base_query += " GROUP BY j.id ORDER BY j.id DESC LIMIT %d" % limit
+
+    jobs = db(base_query, filterdict, allowed_users)
+
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
              job.hazard_calculation_id, job.size_mb, job.host,
-             job.start_time, job.relevant)
+             job.start_time, job.relevant, job.tags)
             for job in jobs]
 
 
