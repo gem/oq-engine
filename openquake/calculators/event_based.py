@@ -763,6 +763,11 @@ class EventBasedCalculator(base.HazardCalculator):
                             'you may want to set a minimum_intensity')
         elif oq.minimum_intensity:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
+            sec_imts = {sec.split('_')[1] for sec in oq.sec_imts} & set(
+                oq.minimum_intensity)
+            if sec_imts:
+                logging.warning(f'Discarding GMFs associated to {sec_imts=} '
+                                'i.e. getting wrong seismic risk')
         else:
             logging.info('min_iml=%s', oq.min_iml)
         self.offset = 0

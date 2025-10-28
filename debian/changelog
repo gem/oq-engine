@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Filtering GMFs associated to low secondary intensities to make
+    secondary peril calculations faster and using less disk space
   * gzipped the _rates dataset, saving up to 4x the disk space required in
     classical calculations, as well as doubling the speed of the postclassical
 
