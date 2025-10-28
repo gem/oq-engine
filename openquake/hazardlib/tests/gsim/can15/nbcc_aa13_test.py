@@ -42,6 +42,8 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
                      ses_seed=42,
                      sites=[(-123, 48), (-123, 48.5)],
                      reference_vs30_value="760",
+                     sec_imts=[],
+                     minimum_intensity={},
                      maximum_distance=IntegrationDistance.new('200'),
                      imtls={'PGA': [0], 'SA(0.1)': [0], 'SA(0.2)': [0]})
         inp = read_input(param)
