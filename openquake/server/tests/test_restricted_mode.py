@@ -5,11 +5,15 @@ from openquake.engine.engine import create_jobs
 from openquake.server.tests.views_test import get_or_create_user
 
 
-class ShareJobTestCase(django.test.TestCase):
+class RestrictedModeTestCase(django.test.TestCase):
 
     @classmethod
     def post(cls, path, data=None):
         return cls.c.post('/v1/calc/%s' % path, data)
+
+    @classmethod
+    def get(cls, path):
+        return cls.c.get('/v1/calc/%s' % path)
 
     @classmethod
     def setUpClass(cls):
@@ -133,3 +137,46 @@ class ShareJobTestCase(django.test.TestCase):
 
         self.c.login(username=self.user1.username, password=self.password1)
         self.remove_calc(job.calc_id)
+
+    # TEST TAGGING
+    def test_tagging_job(self):
+        job_dic0 = dict(calculation_mode='event_based',
+                        description='test_tagging_first_job')
+        job_dic1 = dict(calculation_mode='event_based',
+                        description='test_tagging_second_job')
+        jobs = create_jobs([job_dic0, job_dic1], user_name=self.user2.username)
+        for job in jobs:
+            db("UPDATE job SET ?D WHERE id=?x",
+               {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+
+        tag_name = 'first_tag'
+        for job in jobs:
+            # add the same tag to the two jobs
+            ret = self.get(f'{job.calc_id}/add_tag/{tag_name}')
+            self.assertEqual(ret.status_code, 200)
+            self.assertIn(f'The tag {tag_name} was added to job {job.calc_id}',
+                          ret.content.decode('utf8'))
+            # set the first job as preferred
+            ret = self.get(f'{job.calc_id}/set_preferred_job_for_tag/{tag_name}')
+            self.assertEqual(ret.status_code, 200)
+            # when setting the second job as preferred, the preferred flag should be
+            # reset for all jobs sharing that tag and the flag should be set to the
+            # second job without raising errors
+            self.assertIn(f'Job {job.calc_id} was set as preferred for tag {tag_name}',
+                          ret.content.decode('utf8'))
+
+        # get the preferred job for the tag
+        ret = self.get(f'get_preferred_job_for_tag/{tag_name}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertEqual(ret.json()['job_id'], jobs[1].calc_id)
+
+        # remove the first_tag from the first job
+        ret = self.get(f'{jobs[0].calc_id}/remove_tag/first_tag')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn(f'Tag first_tag was removed from job {jobs[0].calc_id}',
+                      ret.content.decode('utf8'))
+
+        # delete the jobs
+        for job in jobs:
+            self.remove_calc(job.calc_id)

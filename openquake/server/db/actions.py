@@ -26,6 +26,7 @@ from openquake.server import __file__ as server_path
 from openquake.server.db.schema.upgrades import upgrader
 from openquake.server.db import upgrade_manager
 from openquake.commonlib.dbapi import NotFound
+from openquake.commonlib.logs import get_job_info
 from openquake.calculators.export import DISPLAY_NAME
 
 UTC = timezone.utc
@@ -593,17 +594,14 @@ def share_job(db, job_id, share):
                        f' from "{initial_status}" to "{new_status}"'}
 
 
-def add_tag_to_job(db, job_id, tag_name, is_preferred=0):
+def add_tag_to_job(db, job_id, tag_name):
     try:
         db(f"INSERT INTO job_tag (job_id, tag, is_preferred)"
-           f" VALUES ({job_id}, '{tag_name}', {is_preferred});")
+           f" VALUES ({job_id}, '{tag_name}', 0);")
     except Exception as exc:
         return {'error': str(exc)}
     else:
-        msg = f'Job {job_id} is tagged as {tag_name}'
-        if is_preferred:
-            msg += ' and marked as preferred'
-        return {'success': msg}
+        return {'success': f'The tag {tag_name} was added to job {job_id}'}
 
 
 def remove_tag_from_job(db, job_id, tag_name):
@@ -616,28 +614,32 @@ def remove_tag_from_job(db, job_id, tag_name):
 
 
 def set_preferred_job_for_tag(db, job_id, tag_name):
-    db(f"""
-BEGIN TRANSACTION;
-
-UPDATE job_tag
-SET is_preferred = 0
-WHERE tag = '{tag_name}' AND is_preferred = 1;
-
-INSERT INTO job_tag (job_id, tag, is_preferred)
-VALUES ({job_id}, '{tag_name}', 1)
-ON CONFLICT DO NOTHING;
-
-COMMIT;
-    """)
+    try:
+        db("BEGIN TRANSACTION;")
+        db(f"UPDATE job_tag SET is_preferred = 0"
+           f" WHERE tag = '{tag_name}' AND is_preferred = 1;")
+        db(f"INSERT INTO job_tag (job_id, tag, is_preferred)"
+           f" VALUES ({job_id}, '{tag_name}', 1) ON CONFLICT DO NOTHING;")
+        db("COMMIT;")
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Job {job_id} was set as preferred for tag {tag_name}'}
 
 
 def get_preferred_job_for_tag(db, tag_name):
-    db(f"""
+    try:
+        ret = db(f"""
 SELECT j.*
-FROM jobs AS j
+FROM job AS j
 JOIN job_tag jt ON j.id = jt.job_id
 WHERE jt.tag = '{tag_name}' AND jt.is_preferred = 1;
-    """)
+        """)
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        assert len(ret) < 2, f'Unexpected multiple preferred jobs for tag {tag_name}'
+        return {'success': 'ok', 'job_id': ret[0].id}
 
 
 def update_parent_child(db, parent_child):

@@ -652,11 +652,11 @@ def check_db_response(resp):
         return JsonResponse({'error': f'Unexpected response: {resp}'}, status=500)
 
 
-def add_tag_to_job(user_level, calc_id, tag_name, is_preferred=0):
+def add_tag_to_job(user_level, calc_id, tag_name):
     if user_level < 2:
         return HttpResponseForbidden()
     try:
-        resp = logs.dbcmd('add_tag_to_job', calc_id, tag_name, is_preferred)
+        resp = logs.dbcmd('add_tag_to_job', calc_id, tag_name)
     except dbapi.NotFound:
         return HttpResponseNotFound()
     return check_db_response(resp)
@@ -677,6 +677,16 @@ def set_preferred_job_for_tag(user_level, calc_id, tag_name):
         return HttpResponseForbidden()
     try:
         resp = logs.dbcmd('set_preferred_job_for_tag', calc_id, tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def get_preferred_job_for_tag(user_level, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('get_preferred_job_for_tag', tag_name)
     except dbapi.NotFound:
         return HttpResponseNotFound()
     return check_db_response(resp)
@@ -2190,13 +2200,12 @@ def on_same_fs(request):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def calc_add_tag(request, calc_id, tag_name, is_preferred=False):
+def calc_add_tag(request, calc_id, tag_name):
     """
-    Assign to the calculation of given `calc_id` a tag named `tag_name` and optionally
-    set/unset it as preferred if `is_preferred` is specified (default False)
+    Assign to the calculation of given `calc_id` a tag named `tag_name`
     """
     user_level = get_user_level(request)
-    return add_tag_to_job(user_level, calc_id, tag_name, int(is_preferred))
+    return add_tag_to_job(user_level, calc_id, tag_name)
 
 
 @csrf_exempt
@@ -2219,6 +2228,17 @@ def calc_set_preferred_for_tag(request, calc_id, tag_name):
     """
     user_level = get_user_level(request)
     return set_preferred_job_for_tag(user_level, calc_id, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_get_preferred_for_tag(request, tag_name):
+    """
+    Get the calculation marked as the preferred one for the given `tag_name`
+    """
+    user_level = get_user_level(request)
+    return get_preferred_job_for_tag(user_level, tag_name)
 
 
 @require_http_methods(['GET'])
