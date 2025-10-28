@@ -473,9 +473,6 @@ max:
   Example: *max = true*.
   Default: False
 
-max_blocks:
-  INTERNAL. Used in classical calculations
-
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
@@ -1087,7 +1084,6 @@ class OqParam(valid.ParamSet):
     maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_blocks = valid.Param(valid.positiveint, 100)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)

@@ -262,7 +262,7 @@ class ClassicalTestCase(CalculatorTestCase):
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], 4)
-        self.assertEqual(data['tiles'], 1)
+        self.assertEqual(data['tiles'], 10)
         self.assertEqual(data['blocks'], 2)
 
     def test_case_22_bis(self):
@@ -284,7 +284,7 @@ class ClassicalTestCase(CalculatorTestCase):
         data = self.calc.datastore['source_groups']
         self.assertTrue(data.attrs['tiling'])
         self.assertEqual(data['gsims'], 4)
-        self.assertEqual(data['tiles'], 1)
+        self.assertEqual(data['tiles'], 10)
         self.assertEqual(data['blocks'], 2)
 
     def test_case_23(self):  # filtering away on TRT

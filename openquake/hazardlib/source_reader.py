@@ -785,14 +785,11 @@ class CompositeSourceModel:
         G = len(cmaker.gsims)
         splits = G * mb_per_gsim / max_mb
         hint = sg.weight / max_weight
+        tiles = max(hint, splits)
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
-            tiles = max(hint, splits)
         else:
-            # if hint > max_blocks generate max_blocks and more tiles
-            blocks = list(general.split_in_blocks(
-                sg, min(hint, oq.max_blocks), lambda s: s.weight))
-            tiles = max(hint / oq.max_blocks * splits, splits)
+            blocks = list(general.split_in_blocks(sg, hint, lambda s: s.weight))
         tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
