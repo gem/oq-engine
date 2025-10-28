@@ -645,7 +645,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # save the rates and performs some checks
         oq = self.oqparam
         if self.rmap.size_mb:
-            logging.info('Processing %s', self.rmap)
+            logging.info('Saving %s', self.rmap)
 
         def genargs():
             for g, j in self.rmap.jid.items():
