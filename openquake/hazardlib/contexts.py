@@ -1631,8 +1631,14 @@ class RmapMaker(object):
             pnemap = self._make_src_mutex()
         if self.cluster:
             with self.cmaker.clu_mon:
+                MINFLOAT = 1.4E-45  # minimum 32 bit float
                 probs = F32(self.tom.get_probability_n_occurrences(
                     self.tom.occurrence_rate, numpy.arange(20)))
+                # the probs are usually very small, like
+                # [9.9999881e-01, 1.2000586e-06, 7.2007114e-13, ,,,]
+                # they rapidly go below the minimum 32 bit float, so
+                # the length of the loop can be reduced (i.e. from 20 to 7)
+                probs = probs[probs > MINFLOAT]
                 array = numpy.full(pnemap.shape, probs[0], dtype=F32)
                 for nocc, probn in enumerate(probs[1:], 1):
                     array += pnemap.array ** nocc * probn
