@@ -788,8 +788,14 @@ class CompositeSourceModel:
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
             tiles = max(hint, splits)
+        elif hint > 100:
+            # double the tiles and reduce by half the blocks (less transfer)
+            blocks = list(general.split_in_blocks(
+                sg, hint / 2, lambda s: s.weight))
+            tiles = splits * 2
         else:
-            blocks = list(general.split_in_blocks(sg, hint, lambda s: s.weight))
+            blocks = list(general.split_in_blocks(
+                sg, hint, lambda s: s.weight))
             tiles = splits
         tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
