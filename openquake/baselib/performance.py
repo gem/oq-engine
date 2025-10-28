@@ -510,9 +510,10 @@ def get_slices(uint32s):
     :param uint32s: a sequence of uint32 integers (with repetitions)
     :returns: a dict integer -> [(start, stop), ...]
 
-    >>> from pprint import pprint
-    >>> pprint(get_slices(numpy.uint32([0, 0, 3, 3, 3, 2, 2, 0])))
-    {0: [(0, 2), (7, 8)], 2: [(5, 7)], 3: [(2, 5)]}
+    >>> slices = get_slices(numpy.uint32([0, 0, 3, 3, 3, 2, 2, 0]))
+    >>> slices
+    {0: array([[0, 2],
+           [7, 8]]), 3: array([[2, 5]]), 2: array([[5, 7]])}
     """
     if len(uint32s) == 0:
         return {}
@@ -521,7 +522,7 @@ def get_slices(uint32s):
         if idx not in indices:
             indices[idx] = []
         indices[idx].append((start, stop))
-    return indices
+    return {int(i): numpy.array(indices[i]) for i in indices}
 
 
 # this is used in split_array and it may dominate the performance
