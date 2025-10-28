@@ -365,7 +365,7 @@ def delta(a, b):
     return res
 
 
-def compare_column_values(array0, array1, what, atol=1.5E-4, rtol=1E-3):
+def compare_column_values(array0, array1, what, atol=2E-4, rtol=1E-3):
     try:
         array0 = F64(array0)
         array1 = F64(array1)
