@@ -70,7 +70,6 @@ def classical(group, sitecol, cmaker):
         for grp in group[1:]:
             res = RmapMaker(cmaker, sitecol, grp).make()
             dic['rmap'].array += res['rmap'].array
-            dic['cfactor'] += res['cfactor']
             dic['source_data'] += res['source_data']
             dic['dparam_mb'] += cmaker.dparam_mb
             dic['source_mb'] += cmaker.source_mb
