@@ -321,8 +321,8 @@ class GmfComputer(object):
         # remove the rows with all zero values
         df = df[ok]
 
-        # remove the rows with low intensity secondary perils
-        # to save storage space
+        # remove the rows with low intensity secondary perils to save
+        # storage space (i.e. the computed seismic risk will be wrong)
         minimum = self.cmaker.oq.minimum_intensity
         for sec_imt in self.cmaker.oq.sec_imts:
             _col, imt = sec_imt.split('_')
