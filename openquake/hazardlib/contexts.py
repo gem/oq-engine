@@ -207,6 +207,8 @@ class Oq(object):
     use_rates = False
     with_betw_ratio = None
     infer_occur_rates = False
+    minimum_intensity = {}
+    sec_imts = []
     inputs = ()
 
     def __init__(self, **hparams):
