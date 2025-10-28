@@ -638,8 +638,12 @@ WHERE jt.tag = '{tag_name}' AND jt.is_preferred = 1;
     except Exception as exc:
         return {'error': str(exc)}
     else:
-        assert len(ret) < 2, f'Unexpected multiple preferred jobs for tag {tag_name}'
-        return {'success': 'ok', 'job_id': ret[0].id}
+        if len(ret) == 0:
+            return {'success': 'ok', 'job_id': None}
+        elif len(ret) == 1:
+            return {'success': 'ok', 'job_id': ret[0].id}
+        else:
+            return {'error': f'Unexpected multiple preferred jobs for tag {tag_name}'}
 
 
 def update_parent_child(db, parent_child):

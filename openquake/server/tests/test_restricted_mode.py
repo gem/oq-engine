@@ -171,11 +171,16 @@ class RestrictedModeTestCase(django.test.TestCase):
         self.assertEqual(ret.status_code, 200)
         self.assertEqual(ret.json()['job_id'], jobs[1].calc_id)
 
-        # remove the first_tag from the first job
-        ret = self.get(f'{jobs[0].calc_id}/remove_tag/first_tag')
+        # remove the first_tag from the second job
+        ret = self.get(f'{jobs[1].calc_id}/remove_tag/first_tag')
         self.assertEqual(ret.status_code, 200)
-        self.assertIn(f'Tag first_tag was removed from job {jobs[0].calc_id}',
+        self.assertIn(f'Tag first_tag was removed from job {jobs[1].calc_id}',
                       ret.content.decode('utf8'))
+
+        # get the preferred job for the tag
+        ret = self.get(f'get_preferred_job_for_tag/{tag_name}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIsNone(ret.json()['job_id'])
 
         # delete the jobs
         for job in jobs:
