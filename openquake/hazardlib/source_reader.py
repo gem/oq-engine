@@ -555,7 +555,7 @@ def collect_atomic(allargs):
     for gid, tgetters in tilegetters_.items():
         for tgetter in tgetters:
             out.append((cmaker_[gid], [tgetter], [U16(blocks_[gid])], extra))
-    logging.info('Collapsed %d atomic groups into %d', len(allargs), len(out))
+    logging.info('Collapsed %d atomic tasks into %d', len(allargs), len(out))
     return out
 
 

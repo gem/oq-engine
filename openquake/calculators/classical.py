@@ -137,6 +137,7 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
     cmaker.init_monitoring(monitor)
     with dstore:
         if isinstance(sources, numpy.ndarray):
+            assert extra['atomic']
             # read the grp_ids from the datastore
             arr = dstore.getitem('_csm')[sources]
             sources = [pickle.loads(zlib.decompress(a.tobytes())) for a in arr]
