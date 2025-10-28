@@ -1318,6 +1318,7 @@ class ContextMaker(object):
         src.nsites = len(sites)
         t0 = time.time()
         ctxs = list(self.get_ctx_iter(src, sites, step=5))  # reduced
+        self.get_mean_stds(ctxs, split_by_mag=False)
         src.dt = time.time() - t0
         if not ctxs:
             return eps, 0
@@ -1326,15 +1327,6 @@ class ContextMaker(object):
                   self.num_rups * srcfilter.multiplier)
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
-        if src.code in b'NX':  # increase weight
-            weight *= 10.
-        elif src.code == b'S':  # needed for SAM
-            weight *= 2
-        if len(srcfilter.sitecol) < 100 and src.code in b'NXFSC':  # few sites
-            weight *= 10  # make fault sources much heavier
-        elif len(sites) > 100:  # many sites, raise the weight for many gsims
-            # important for USA 2023
-            weight *= (1 + len(self.gsims) // 5)
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter):
