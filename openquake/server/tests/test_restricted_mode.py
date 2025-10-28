@@ -155,20 +155,22 @@ class RestrictedModeTestCase(django.test.TestCase):
 
         # generate a random tag name, 10 characters long
         first_tag = random_string(10)
+        second_tag = random_string(10)
         for job in jobs:
-            # add the same tag to the two jobs
-            ret = self.get(f'{job.calc_id}/add_tag/{first_tag}')
-            self.assertEqual(ret.status_code, 200)
-            self.assertIn(f'The tag {first_tag} was added to job {job.calc_id}',
-                          ret.content.decode('utf8'))
-            # set the first job as preferred
-            ret = self.get(f'{job.calc_id}/set_preferred_job_for_tag/{first_tag}')
-            self.assertEqual(ret.status_code, 200)
-            # when setting the second job as preferred, the preferred flag should be
-            # reset for all jobs sharing that tag and the flag should be set to the
-            # second job without raising errors
-            self.assertIn(f'Job {job.calc_id} was set as preferred for tag {first_tag}',
-                          ret.content.decode('utf8'))
+            for tag in [first_tag, second_tag]:
+                # add the same tag to the two jobs
+                ret = self.get(f'{job.calc_id}/add_tag/{tag}')
+                self.assertEqual(ret.status_code, 200)
+                self.assertIn(f'The tag {tag} was added to job {job.calc_id}',
+                              ret.content.decode('utf8'))
+                # set the first job as preferred
+                ret = self.get(f'{job.calc_id}/set_preferred_job_for_tag/{tag}')
+                self.assertEqual(ret.status_code, 200)
+                # when setting the second job as preferred, the preferred flag should
+                # be reset for all jobs sharing that tag and the flag should be set to
+                # the second job without raising errors
+                self.assertIn(f'Job {job.calc_id} was set as preferred for tag {tag}',
+                              ret.content.decode('utf8'))
 
         # get the preferred job for the tag
         ret = self.get(f'get_preferred_job_for_tag/{first_tag}')
