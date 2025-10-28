@@ -555,7 +555,7 @@ def collect_atomic(allargs):
     for gid, tgetters in tilegetters_.items():
         for tgetter in tgetters:
             out.append((cmaker_[gid], [tgetter], [U16(blocks_[gid])], extra))
-    logging.info('Collapsed %d atomic groups into %d', len(allargs), len(out))
+    logging.info('Collapsed %d atomic tasks into %d', len(allargs), len(out))
     return out
 
 
@@ -788,11 +788,15 @@ class CompositeSourceModel:
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
             tiles = max(hint, splits)
-        else:
-            # if hint > max_blocks generate max_blocks and more tiles
+        elif hint > oq.max_blocks:
+            # double the tiles and reduce by half the blocks (less transfer)
             blocks = list(general.split_in_blocks(
-                sg, min(hint, oq.max_blocks), lambda s: s.weight))
-            tiles = max(hint / oq.max_blocks * splits, splits)
+                sg, hint / 2, lambda s: s.weight))
+            tiles = splits * 2
+        else:
+            blocks = list(general.split_in_blocks(
+                sg, hint, lambda s: s.weight))
+            tiles = splits
         tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,
