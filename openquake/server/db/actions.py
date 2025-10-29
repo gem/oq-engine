@@ -541,13 +541,23 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
+    tags_query = """
+    GROUP_CONCAT(
+        CASE
+            WHEN t.is_preferred = 1 THEN t.tag || '★'
+            ELSE t.tag
+        END,
+        ', '
+    ) AS tags
+    """
+
     base_query = (
-        "SELECT j.*, GROUP_CONCAT(t.tag, ', ') AS tags "
+        "SELECT j.*, %s"
         "FROM job AS j "
         "LEFT JOIN job_tag AS t ON j.id = t.job_id "
         "WHERE j.status != 'deleted' "
         "AND ((?A AND %s AND %s) OR j.status = 'shared')"
-    ) % (users_filter, time_filter)
+    ) % (tags_query, users_filter, time_filter)
 
     if preferred_only:
         base_query += (
