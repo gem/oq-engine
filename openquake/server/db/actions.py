@@ -542,7 +542,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         users_filter = 1
 
     base_query = (
-        "SELECT j.*, GROUP_CONCAT(t.tag) AS tags "
+        "SELECT j.*, GROUP_CONCAT(t.tag, ', ') AS tags "
         "FROM job AS j "
         "LEFT JOIN job_tag AS t ON j.id = t.job_id "
         "WHERE j.status != 'deleted' "
