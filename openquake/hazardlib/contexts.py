@@ -1328,7 +1328,7 @@ class ContextMaker(object):
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code in b'NX':  # increase weight
             weight *= 10.
-        elif src.code == b'S':  # needed for SAM
+        elif src.code in b'SX':  # needed for SAM
             weight *= 2
         if len(srcfilter.sitecol) < 100 and src.code in b'NXFSC':
             # if the full sitecol is small, make fault sources much heavier
