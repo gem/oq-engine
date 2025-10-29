@@ -1330,11 +1330,12 @@ class ContextMaker(object):
             weight *= 10.
         elif src.code == b'S':  # needed for SAM
             weight *= 2
-        if len(srcfilter.sitecol) < 100 and src.code in b'NXFSC':  # few sites
-            weight *= 10  # make fault sources much heavier
-        elif len(sites) > 100:  # many sites, raise the weight for many gsims
-            # important for USA 2023
-            weight *= (1 + len(self.gsims) // 5)
+        if len(srcfilter.sitecol) < 100 and src.code in b'NXFSC':
+            # if the full sitecol is small, make fault sources much heavier
+            weight *= 10
+        else:
+            # many sites, raise the weight for many gsims (for USA 2023)
+            weight *= (1 + len(self.gsims) / 5)
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter):

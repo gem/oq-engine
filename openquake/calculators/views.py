@@ -789,16 +789,18 @@ def view_task_hazard(token, dstore):
         sd = sdata[sdata.taskno == taskno]
         acc = AccumDict(accum=numpy.zeros(5))
         for src_id, nsites, esites, nrupts, weight, ctimes in zip(
-                sd.src_id, sd.nsites, sd.esites, sd.nrupts, sd.weight, sd.ctimes):
+                sd.src_id, sd.nsites, sd.esites, sd.nrupts,
+                sd.weight, sd.ctimes):
             acc[basename(src_id, ';:.')] += numpy.array(
                 [nsites, esites, nrupts, weight, ctimes])
         df = pandas.DataFrame(dict(src_id=list(acc)))
-        for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
+        for i, name in enumerate(
+                ['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
             df[name] = [arr[i] for arr in acc.values()]
         df = df.sort_values('ctimes').set_index('src_id')
         time = df.ctimes.sum()
         weight = df.weight.sum()
-        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df
+        msg = f'{taskno=:d}, {weight=:.0f}, {time=:.0f}s\n%s' % df
         return msg
     else:
         msg = ''
