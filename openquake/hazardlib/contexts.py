@@ -1325,7 +1325,7 @@ class ContextMaker(object):
         esites = (lenctx * src.num_ruptures /
                   self.num_rups * srcfilter.multiplier)
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * src.num_ruptures / self.num_rups
+        weight = src.dt * (src.num_ruptures / self.num_rups)
         if src.code in b'NSX':  # increase weight
             weight *= 10.
         if len(srcfilter.sitecol) < 100:
@@ -1513,10 +1513,11 @@ class RmapMaker(object):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
-        # to avoid running OOM in multifault sources when building
-        # the dparam cache, we split the sites in tiles
         tiles = [sites]
         if src.code == b'F':
+            # to avoid running OOM in multifault sources when building
+            # the dparam cache, we split the sites in tiles;
+            # this is ESSENTIAL for the USA 2023 model
             # tested in oq-risk-tests/test/classical/usa_ucerf
             tiles = sites.split_in_tiles(len(sites) // 2000)
         for tile in tiles:
@@ -1526,7 +1527,7 @@ class RmapMaker(object):
                     with self.cmaker.delta_mon:
                         delta = self.cmaker.deltagetter(src.id)
                         ctx.occurrence_rate += delta[ctx.rup_id]
-                if self.fewsites:  # keep rupdata in memory (before collapse)
+                if self.fewsites:  # keep rupdata in memory
                     if self.src_mutex:
                         # needed for Disaggregator.init
                         ctx.src_id = valid.fragmentno(src)
