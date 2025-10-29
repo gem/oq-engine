@@ -647,6 +647,17 @@ def set_preferred_job_for_tag(db, job_id, tag_name):
         return {'success': f'Job {job_id} was set as preferred for tag {tag_name}'}
 
 
+def unset_preferred_job_for_tag(db, tag_name):
+    try:
+        db(f"""
+           UPDATE job_tag SET is_preferred = 0
+           WHERE tag = '{tag_name}' AND is_preferred = 1;""")
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {tag_name} has no preferred job now'}
+
+
 def get_preferred_job_for_tag(db, tag_name):
     try:
         ret = db(f"""

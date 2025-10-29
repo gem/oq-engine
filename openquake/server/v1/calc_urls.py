@@ -42,8 +42,11 @@ urlpatterns = [
     path('<int:calc_id>/add_tag/<str:tag_name>', views.calc_add_tag),
     path('<int:calc_id>/remove_tag/<str:tag_name>', views.calc_remove_tag),
     path('<int:calc_id>/set_preferred_job_for_tag/<str:tag_name>',
-         views.calc_set_preferred_for_tag),
-    path('get_preferred_job_for_tag/<str:tag_name>', views.calc_get_preferred_for_tag),
+         views.calc_set_preferred_job_for_tag),
+    path('unset_preferred_job_for_tag/<str:tag_name>',
+         views.calc_unset_preferred_job_for_tag),
+    path('get_preferred_job_for_tag/<str:tag_name>',
+         views.calc_get_preferred_job_for_tag),
 ]
 if settings.APPLICATION_MODE == 'AELO':
     urlpatterns.extend([

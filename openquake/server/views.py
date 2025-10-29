@@ -684,6 +684,16 @@ def set_preferred_job_for_tag(user_level, calc_id, tag_name):
     return check_db_response(resp)
 
 
+def unset_preferred_job_for_tag(user_level, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('unset_preferred_job_for_tag', tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
 def get_preferred_job_for_tag(tag_name):
     try:
         resp = logs.dbcmd('get_preferred_job_for_tag', tag_name)
@@ -2222,7 +2232,7 @@ def calc_remove_tag(request, calc_id, tag_name):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def calc_set_preferred_for_tag(request, calc_id, tag_name):
+def calc_set_preferred_job_for_tag(request, calc_id, tag_name):
     """
     Set the calculation of given `calc_id` as the preferred one for tag `tag_name`
     """
@@ -2233,7 +2243,18 @@ def calc_set_preferred_for_tag(request, calc_id, tag_name):
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['GET'])
-def calc_get_preferred_for_tag(request, tag_name):
+def calc_unset_preferred_job_for_tag(request, tag_name):
+    """
+    Unset the preferred job for tag `tag_name`
+    """
+    user_level = get_user_level(request)
+    return unset_preferred_job_for_tag(user_level, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_get_preferred_job_for_tag(request, tag_name):
     """
     Get the id of the calculation marked as the preferred one for the given `tag_name`
     """

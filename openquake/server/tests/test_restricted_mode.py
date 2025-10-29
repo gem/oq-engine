@@ -196,6 +196,13 @@ class RestrictedModeTestCase(django.test.TestCase):
         # it is a bit more complex, involving a query on job_tag for each
         self.assertGreater(n_all_jobs, n_preferred_jobs)
 
+        # unset the preferred job for the first tag
+        ret = self.get(f'unset_preferred_job_for_tag/{first_tag}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn('success', ret.json())
+        self.assertIn(f'Tag {first_tag} has no preferred job now',
+                      ret.json()['success'])
+
         # try to re-add the same first_tag to the second job
         ret = self.get(f'{jobs[1].calc_id}/add_tag/{first_tag}')
         self.assertEqual(ret.status_code, 403)
