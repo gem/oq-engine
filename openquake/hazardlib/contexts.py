@@ -207,6 +207,8 @@ class Oq(object):
     use_rates = False
     with_betw_ratio = None
     infer_occur_rates = False
+    minimum_intensity = {}
+    sec_imts = []
     inputs = ()
 
     def __init__(self, **hparams):
@@ -687,7 +689,7 @@ class ContextMaker(object):
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building dparam', measuremem=False)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
-        self.clu_mon = monitor('cluster loop', measuremem=True)
+        self.clu_mon = monitor('cluster loop', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
         self.out_no = getattr(monitor, 'out_no', self.task_no)
         self.cfactor = numpy.zeros(2)
@@ -1303,7 +1305,7 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .01 * EPS if src.code == 'S' else EPS  # needed for EUR
+        eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
             return (0, 0) if src.code in b'pP' else (eps, 0)
@@ -1323,16 +1325,15 @@ class ContextMaker(object):
         esites = (lenctx * src.num_ruptures /
                   self.num_rups * srcfilter.multiplier)
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * src.num_ruptures / self.num_rups
-        if src.code in b'NX':  # increase weight
-            weight *= 5.
-        elif src.code == b'S':  # needed for SAM
-            weight *= 2
-        if len(srcfilter.sitecol) < 100 and src.code in b'NFSC':  # few sites
-            weight *= 10  # make fault sources much heavier
-        elif len(sites) > 100:  # many sites, raise the weight for many gsims
-            # important for USA 2023
-            weight *= (1 + len(self.gsims) // 5)
+        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
+        if src.code in b'NSX':  # increase weight
+            weight *= 10.
+        if len(srcfilter.sitecol) < 100:
+            # if the full sitecol is small, make fault sources much heavier
+            weight *= 10
+        else:
+            # many sites, raise the weight (needed for USA 2023)
+            weight *= (1 + len(self.gsims) / 5)
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter):
@@ -1512,13 +1513,13 @@ class RmapMaker(object):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
-        # to avoid running OOM in multifault sources when building
-        # the dparam cache, we split the sites in tiles
         tiles = [sites]
         if src.code == b'F':
+            # to avoid running OOM in multifault sources when building
+            # the dparam cache, we split the sites in tiles;
+            # this is ESSENTIAL for the USA 2023 model
             # tested in oq-risk-tests/test/classical/usa_ucerf
-            if len(sites) >= 2000:
-                tiles = sites.split_in_tiles(len(sites) // 1000)
+            tiles = sites.split_in_tiles(len(sites) // 2000)
         for tile in tiles:
             for ctx in self.cmaker.get_ctx_iter(src, tile):
                 if self.cmaker.deltagetter:
@@ -1526,7 +1527,7 @@ class RmapMaker(object):
                     with self.cmaker.delta_mon:
                         delta = self.cmaker.deltagetter(src.id)
                         ctx.occurrence_rate += delta[ctx.rup_id]
-                if self.fewsites:  # keep rupdata in memory (before collapse)
+                if self.fewsites:  # keep rupdata in memory
                     if self.src_mutex:
                         # needed for Disaggregator.init
                         ctx.src_id = valid.fragmentno(src)
@@ -1631,8 +1632,14 @@ class RmapMaker(object):
             pnemap = self._make_src_mutex()
         if self.cluster:
             with self.cmaker.clu_mon:
+                MINFLOAT = 1.4E-45  # minimum 32 bit float
                 probs = F32(self.tom.get_probability_n_occurrences(
                     self.tom.occurrence_rate, numpy.arange(20)))
+                # the probs are usually very small, like
+                # [9.9999881e-01, 1.2000586e-06, 7.2007114e-13, ,,,]
+                # they rapidly go below the minimum 32 bit float, so
+                # the length of the loop can be reduced (i.e. from 20 to 7)
+                probs = probs[probs > MINFLOAT]
                 array = numpy.full(pnemap.shape, probs[0], dtype=F32)
                 for nocc, probn in enumerate(probs[1:], 1):
                     array += pnemap.array ** nocc * probn

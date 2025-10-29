@@ -938,6 +938,7 @@ def check_min_mag(sources, minimum_magnitude):
     """
     Raise an error if all sources are below the minimum_magnitude
     """
+    assert sources
     ok = 0
     for src in sources:
         min_mag = getdefault(minimum_magnitude, src.tectonic_region_type)

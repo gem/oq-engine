@@ -118,6 +118,41 @@ jobs:
           pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_public_mode.py
 
+  server_restricted_mode:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04]
+        python-version: ["3.11"]
+    env:
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+      OQ_APPLICATION_MODE: RESTRICTED
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python  ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          if [[ $FROM_FORK == "true" ]]; then
+            python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+          else
+            python install.py devel --version=$GITHUB_HEAD_REF
+          fi
+      - name: Actualize 'default' templates for email notifications
+        run: |
+          for file in openquake/server/templates/registration/*.default.tmpl; do
+              cp -- "$file" "${file%.default.tmpl}"
+          done
+      - name: Server 'RESTRICTED' mode tests
+        run: |
+          source ~/openquake/bin/activate
+          oq engine --upgrade-db
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pytest -v openquake/server/tests/test_restricted_mode.py
+
   server_read_only_mode:
     runs-on: ${{ matrix.os }}
     strategy:
