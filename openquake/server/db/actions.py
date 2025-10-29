@@ -511,15 +511,15 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     filterdict = {}
 
     if id is not None:
-        filterdict['id'] = id
+        filterdict['j.id'] = id
 
     if 'calculation_mode' in request_get_dict:
-        filterdict['calculation_mode'] = request_get_dict.get(
+        filterdict['j.calculation_mode'] = request_get_dict.get(
             'calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
-        filterdict['is_running'] = valid.boolean(is_running)
+        filterdict['j.is_running'] = valid.boolean(is_running)
 
     if 'limit' in request_get_dict:
         limit = int(request_get_dict.get('limit'))
