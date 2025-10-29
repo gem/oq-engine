@@ -1305,7 +1305,7 @@ class ContextMaker(object):
         :param srcfilter: a SourceFilter instance
         :returns: (weight, estimate_sites)
         """
-        eps = .01 * EPS if src.code in b'SX' else EPS  # needed for EUR, USA
+        eps = .1 * EPS if src.code in b'NSX' else EPS  # needed for EUR, USA
         src.dt = 0
         if src.nsites == 0:  # was discarded by the prefiltering
             return (0, 0) if src.code in b'pP' else (eps, 0)
@@ -1326,10 +1326,8 @@ class ContextMaker(object):
                   self.num_rups * srcfilter.multiplier)
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * src.num_ruptures / self.num_rups
-        if src.code in b'NX':  # increase weight
+        if src.code in b'NSX':  # increase weight
             weight *= 10.
-        elif src.code in b'S':  # needed for SAM
-            weight *= 5
         if len(srcfilter.sitecol) < 100 and src.code in b'NXFSC':
             # if the full sitecol is small, make fault sources much heavier
             weight *= 10
