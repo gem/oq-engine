@@ -56,6 +56,7 @@
           <th style="width: 100px;">User</th>
           <th style="width: 100px;">Calculation</th>
           <th style="width: 280px;">Description</th>
+          <th style="width: 100px;">Tags</th>
           <th style="width: 100px;">Start time</th>
           <th style="width: 70px;">Status</th>
           <th style="width: 150px;">Action</th>
@@ -69,6 +70,7 @@
           <td><%= calc.get('owner') %></td>
           <td><%= calc.get('calculation_mode') %></td>
           <td><%= calc.get('description') %></td>
+          <td><%= calc.get('tags') %></td>
           <td><%= calc.get('start_time') %></td>
           <td>
             <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('status') == 'shared' || calc.get('is_running') == true) { %>
