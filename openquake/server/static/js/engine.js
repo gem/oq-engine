@@ -610,6 +610,16 @@ function capitalizeFirstLetter(val) {
     /* classic event management */
     $(document).ready(
         function () {
+            $('input#list_preferred_only').change(function() {
+                listPreferredOnly = $(this).is(':checked');
+                if (listPreferredOnly) {
+                    calculations.url = gem_oq_server_url + "/v1/calc/list?preferred_only=1";
+                } else {
+                    calculations.url = gem_oq_server_url + "/v1/calc/list";
+                }
+                calculations.fetch({reset: true});
+            });
+
             calculation_table = new CalculationTable({ calculations: calculations });
             calculations.fetch({reset: true});
             setTimer();
