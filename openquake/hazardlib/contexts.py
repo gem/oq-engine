@@ -1334,7 +1334,7 @@ class ContextMaker(object):
             # if the full sitecol is small, make fault sources much heavier
             weight *= 10
         else:
-            # many sites, raise the weight for many gsims (for USA 2023)
+            # many sites or psources, raise the weight (needed for USA 2023)
             weight *= (1 + len(self.gsims) / 5)
         return max(weight, eps), int(esites)
 
