@@ -82,7 +82,9 @@ def form(value):
     '-1.2'
     """
     if isinstance(value, FLOAT + INT):
-        if value <= 0:
+        if not numpy.isfinite(value):
+            return str(value)
+        elif value <= 0:
             return str(value)
         elif value < .001:
             return '%.3E' % value
@@ -90,8 +92,6 @@ def form(value):
             return '%.4f' % value
         elif value > 1000:
             return '{:_d}'.format(int(round(value)))
-        elif numpy.isnan(value):
-            return 'NaN'
         else:  # in the range 10-1000
             return str(round(value, 1))
     elif isinstance(value, bytes):
