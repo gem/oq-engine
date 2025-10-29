@@ -30,4 +30,23 @@ class AbrahamsonBhasin2020TestCase(BaseGSIMTestCase):
     def test_all(self):
         self.check('AB20/General.csv',
                    max_discrep_percentage=0.2,
+                   std_discrep_percentage=0.1,
+                   gmpe={'Lin2009': {}})
+
+class AbrahamsonBhasin2020PGATestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AbrahamsonBhasin2020PGA
+
+    def test_all(self):
+        self.check('AB20/PGAbased.csv',
+                   max_discrep_percentage=0.2,
+                   std_discrep_percentage=0.1,
+                   gmpe={'Lin2009': {}})
+
+class AbrahamsonBhasin2020SA1TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = AbrahamsonBhasin2020SA1
+
+    def test_all(self):
+        self.check('AB20/SA1based.csv',
+                   max_discrep_percentage=0.2,
+                   std_discrep_percentage=0.1,
                    gmpe={'Lin2009': {}})

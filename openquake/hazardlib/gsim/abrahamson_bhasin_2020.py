@@ -43,7 +43,7 @@ AB20_COEFFS = {
         "tau_1": 0.12, "tau_2": 0.26, "sigma_1": 0.34, "sigma_2": 0.49,
     },
     "sa1_based": {
-        "a1": 4.80, "a2": 0.82, "a3": 0.55, "a4": 0.27, "a5": -0.054,
+        "a1": 4.80, "a2": 0.82, "a3": 0.55, "a4": 0.27, "a5": 0.054,
         "a6": -0.382, "a7": -0.21, "a8": 0.0, "phi_1": 0.28, "phi_2": 0.38,
         "tau_1": 0.12, "tau_2": 0.17, "sigma_1": 0.30, "sigma_2": 0.42,
     }
@@ -54,25 +54,11 @@ M1 = 5.0
 M2 = 7.0
 
 
-def _get_tref(mag):
+def _get_tref(ctx):
     """
     Magnitude-dependent conditioning period Tref (Table 3.1).
-    Accepts: scalar Mw, tuple/array-like, or a context (uses ctx.mag).
-    Returns a scalar float Tref.
     """
-    # If a context was passed, use its mag
-    mag = getattr(mag, "mag", mag)
-
-    # Convert to ndarray; handle structured (record) inputs by picking a numeric field
-    m = np.asarray(mag)
-    if getattr(m, "dtype", None) is not None and getattr(m.dtype, "fields", None):
-        for name in ("mag", "rup_mag", "Mw", "M"):
-            if name in m.dtype.names:
-                m = m[name]
-                break
-
-    # Collapse to a single float (first element if array/tuple)
-    mval = float(np.asarray(m, dtype=float).flat[0])
+    mval = float(np.asarray(ctx.mag).flat[0])
 
     bins  = np.array([3.5, 4.5, 5.5, 6.5, 7.5, 8.5], dtype=float)
     trefs = np.array([0.20, 0.28, 0.40, 0.95, 1.40, 2.80], dtype=float)
@@ -197,6 +183,10 @@ class AbrahamsonBhasin2020(GMPE):
         self.c = AB20_COEFFS[kind]
         self.kind = kind
         self.last_tref = None
+
+        for attr in ("REQUIRES_SITES_PARAMETERS", "REQUIRES_RUPTURE_PARAMETERS", "REQUIRES_DISTANCES"):
+            setattr(self, attr,
+                    set(getattr(self, attr, ())) | set(getattr(self.gmpe, attr, ())))
 
     def compute(self, ctx: np.recarray, imts: list,
                 mean: np.ndarray, sig: np.ndarray, tau: np.ndarray, phi: np.ndarray):
