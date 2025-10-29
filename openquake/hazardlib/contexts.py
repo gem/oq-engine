@@ -1325,7 +1325,7 @@ class ContextMaker(object):
         esites = (lenctx * src.num_ruptures /
                   self.num_rups * srcfilter.multiplier)
         # NB: num_rups is set by get_ctx_iter
-        weight = src.dt * (src.num_ruptures / self.num_rups)
+        weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
         if src.code in b'NSX':  # increase weight
             weight *= 10.
         if len(srcfilter.sitecol) < 100:
