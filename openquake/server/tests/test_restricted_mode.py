@@ -1,7 +1,6 @@
 import django
-import random
-import string
 from django.test import Client
+from openquake.commonlib import logs
 from openquake.commonlib.dbapi import db
 from openquake.engine.engine import create_jobs
 from openquake.server.tests.views_test import get_or_create_user, random_string
@@ -153,7 +152,15 @@ class RestrictedModeTestCase(django.test.TestCase):
                {'status': 'complete', 'is_running': 0}, job.calc_id)
         self.c.login(username=self.user2.username, password=self.password2)
 
-        # generate a random tag name, 10 characters long
+        # try to add a tag with a blank name
+        tag_name = ''
+        ret = self.get(f'{jobs[0].calc_id}/add_tag/{tag_name}')
+        self.assertEqual(ret.status_code, 404)
+        ret = logs.dbcmd('add_tag_to_job', jobs[0].calc_id, tag_name)
+        self.assertIn('error', ret)
+        self.assertIn("CHECK constraint failed: LENGTH(tag) > 0", ret['error'])
+
+        # generate random tag names, 10 characters long
         first_tag = random_string(10)
         second_tag = random_string(10)
         for job in jobs:
