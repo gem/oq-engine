@@ -618,13 +618,13 @@ class ClassicalCalculator(base.HazardCalculator):
     def _execute_tiling(self, sgs, ds):
         allargs = []
         n_out = []
-        for cmaker, tgetters, [block], extra in self.csm.split_atomic(
+        for cmaker, tgetters, [block], ex in self.csm.split_atomic(
                 self.cmdict, self.sitecol, self.max_weight,
                 self.num_chunks, tiling=True):
             if isinstance(block, int):
                 block = [block]
             for tgetter in tgetters:
-                allargs.append((block, tgetter, cmaker, extra['num_chunks'], ds))
+                allargs.append((block, tgetter, cmaker, ex['num_chunks'], ds))
                 n_out.append(1)
         logging.warning('This is a tiling calculation with '
                         '%d tasks, min_tiles=%d, max_tiles=%d',
