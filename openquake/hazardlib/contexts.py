@@ -1329,7 +1329,7 @@ class ContextMaker(object):
         if src.code in b'NX':  # increase weight
             weight *= 10.
         elif src.code in b'S':  # needed for SAM
-            weight *= 2
+            weight *= 5
         if len(srcfilter.sitecol) < 100 and src.code in b'NXFSC':
             # if the full sitecol is small, make fault sources much heavier
             weight *= 10
