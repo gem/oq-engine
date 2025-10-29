@@ -330,7 +330,7 @@ def view_full_lt(token, dstore):
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
-    df['slow_factor'] = df.calc_time / df.weight
+    df['heavy_factor'] = df.weight / df.calc_time
     del df['grp_id'], df['trti'], df['mutex_weight']
     return df
 
