@@ -1328,7 +1328,7 @@ class ContextMaker(object):
         weight = src.dt * src.num_ruptures / self.num_rups
         if src.code in b'NSX':  # increase weight
             weight *= 10.
-        if len(srcfilter.sitecol) < 100 and src.code in b'NXFSC':
+        if len(srcfilter.sitecol) < 100:
             # if the full sitecol is small, make fault sources much heavier
             weight *= 10
         else:
@@ -1513,18 +1513,25 @@ class RmapMaker(object):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
-        for ctx in self.cmaker.get_ctx_iter(src, sites):
-            if self.cmaker.deltagetter:
-                # adjust occurrence rates in case of aftershocks
-                with self.cmaker.delta_mon:
-                    delta = self.cmaker.deltagetter(src.id)
-                    ctx.occurrence_rate += delta[ctx.rup_id]
-            if self.fewsites:  # keep rupdata in memory (before collapse)
-                if self.src_mutex:
-                    # needed for Disaggregator.init
-                    ctx.src_id = valid.fragmentno(src)
-                self.rupdata.append(ctx)
-            yield ctx
+        # to avoid running OOM in multifault sources when building
+        # the dparam cache, we split the sites in tiles
+        tiles = [sites]
+        if src.code == b'F':
+            # tested in oq-risk-tests/test/classical/usa_ucerf
+            tiles = sites.split_in_tiles(len(sites) // 2000)
+        for tile in tiles:
+            for ctx in self.cmaker.get_ctx_iter(src, tile):
+                if self.cmaker.deltagetter:
+                    # adjust occurrence rates in case of aftershocks
+                    with self.cmaker.delta_mon:
+                        delta = self.cmaker.deltagetter(src.id)
+                        ctx.occurrence_rate += delta[ctx.rup_id]
+                if self.fewsites:  # keep rupdata in memory (before collapse)
+                    if self.src_mutex:
+                        # needed for Disaggregator.init
+                        ctx.src_id = valid.fragmentno(src)
+                    self.rupdata.append(ctx)
+                yield ctx
 
     def _make_src_indep(self):
         # sources with the same ID
