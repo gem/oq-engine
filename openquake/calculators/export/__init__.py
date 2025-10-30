@@ -95,6 +95,12 @@ AGGRISK_FIELD_DESCRIPTION = {
     'injured': 'Number of injured people',
     'affectedpop': ('Number of people living in buildings '
                     'with moderate or higher damage'),
+    'value': 'Value',
+    'loss_type': 'Loss type',
+    'lossmea': 'Mean',
+    'q50': 'Median',
+    'q05': '5th percentile',
+    'q95': '95th percentile',
 }
 
 EXPOSURE_FIELD_DESCRIPTION = {
