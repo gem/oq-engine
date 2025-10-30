@@ -1519,7 +1519,7 @@ class RmapMaker(object):
             # the dparam cache, we split the sites in tiles;
             # this is ESSENTIAL for the USA 2023 model
             # tested in oq-risk-tests/test/classical/usa_ucerf
-            tiles = sites.split_in_tiles(len(sites) // 2000)
+            tiles = sites.split_in_tiles(len(sites) // 5000)
         for tile in tiles:
             for ctx in self.cmaker.get_ctx_iter(src, tile):
                 if self.cmaker.deltagetter:
