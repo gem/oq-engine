@@ -165,6 +165,13 @@ def _get_base_url(request):
     return base_url
 
 
+def get_bool_param(request, name, default=False):
+    val = request.GET.get(name)
+    if val is None:
+        return default
+    return str(val).lower() in ('1', 'true', 'yes', '')
+
+
 def store(request_files, ini, calc_id):
     """
     Store the uploaded files in calc_dir and select the job file by looking
@@ -2086,6 +2093,7 @@ def can_extract(request, resource):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
+    summarize = get_bool_param(request, 'summarize')
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
@@ -2113,8 +2121,18 @@ def extract_html_table(request, calc_id, name):
             display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
         else:
             display_name = ''
-        table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
+        if summarize and name == 'aggrisk_tags':
+            table_header.append(display_name)
+        else:
+            table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
     table_contents = table.to_numpy()
+    if summarize and name == 'aggrisk_tags':  # the impact table
+        table_header = table_header[1:-1]
+        # keep only rows with '*total*' and discard first and last columns (ID and
+        # NAME)
+        table_contents = table_contents[table_contents[:, 0] == '*total*'][:, 1:-1]
+        for key, value in AGGRISK_FIELD_DESCRIPTION.items():
+            table_contents[table_contents == key] = value
     return render(request, 'engine/show_table.html',
                   {'table_name': table_name,
                    'table_header': table_header,
