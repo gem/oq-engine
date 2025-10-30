@@ -2121,6 +2121,7 @@ def extract_html_table(request, calc_id, name):
             display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
         else:
             display_name = ''
+        # avoiding to show the internal short names when showing the summary table
         if summarize and name == 'aggrisk_tags':
             table_header.append(display_name)
         else:
