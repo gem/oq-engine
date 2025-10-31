@@ -49,8 +49,9 @@
 | case_75 | Tests calculation with multi-fault source                                                              |
 | case_76 | Tests for Canada SHM6                                                                                  |
 | case_77 | Tests Modifiable GMPE with Tabular GMM                                                                 |
-| case_82 | tests two mps, only one with reqv that should collapse points					   |
-| case_83 | Tests non-ergodic path effect modifications for Zhao et al. 2016 GMM                                   |      
+| case_82 | tests two mps, only one with reqv that should collapse points					                       |
+| case_83 | Tests non-ergodic path effect modifications for Zhao et al. 2016 GMM                                   |
+| case_85 | Tests conditional gmm MacedoEtAl2019SInter for computation of arias intensity                          |      
 | case_87 | Tests execution of NGAEastUSGSGMPE with Chapman and Guo (2021) coastal plains site amp model           |
 | case_88 | Tests execution of AtkinsonMacias2009 GMM with BA08 site term specified as input argument              |
 | case_89 | Tests execution of site model with non-measured (-999) z1pt0 and z2pt5 and basin-param using GMMs      |
