@@ -104,7 +104,6 @@ def afes_matrix_from_dstore(dstore, imtstr: str, atype: str, info: bool=False,
         A triple with the intensity measure levels, the annual frequencies of
         exceedance and the weights of the realisations.
     """
-    assert len(dstore['sitecol/sids']) == 1
 
     # Intensity measure levels
     oqp = dstore['oqparam']

@@ -255,6 +255,7 @@ class Analysis:
                 # I - IMTs
                 # L - IMLs
                 poes[key] = dstore['hcurves-rlzs'][:,:,imti,:]
+                breakpoint()
             elif atype == 'mde':
                 # Read disagg results. Matrix shape is 7D
                 binc, poes[key], _, shapes = afes_from(

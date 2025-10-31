@@ -35,12 +35,13 @@ import configparser
 from typing import Union
 from openquake.baselib import sap
 from openquake.baselib import hdf5
+from openquake._unc.sites import get_site_indexes
 from openquake._unc.analysis import Analysis, rlz_groups
-from openquake._unc.processing.sampling import sampling
-from openquake._unc.processing.convolution import convolution
+from openquake._unc.processing.by_sampling import sampling
+from openquake._unc.processing.by_convolution import convolution
 
 
-def prepare(fname: str, atype: str, imtstr: str=None):
+def prepare(fname: str, atype: str, imtstr: str = None):
     """
     Prepare the information needed for the analysis.
 
@@ -54,14 +55,7 @@ def prepare(fname: str, atype: str, imtstr: str=None):
         The string defining the IMT considered in this analysis
     :returns:
         A tuple with the following four elements:
-            - ssets: A list of sets. Each set contains the IDs of sources
-                belonging to it.
-            - usets: A list of sets. Each set contains the IDs of correlated
-                branchsets.
-            - grp_curves: a dictionary of dictionaries. The keys at the first
-                level are the IDs of the correlated branches. The keys at the
-                second level are the IDs of the sources. The values are the
-                indexes of the realisations.
+            - groups: dictionary (unc, srcid) -> groups of realizations
             - an01: an instance of :class:`openquake._unc.analysis.Analysis`
     """
 
@@ -85,7 +79,7 @@ def prepare(fname: str, atype: str, imtstr: str=None):
     return groups, an01
 
 
-def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
+def propagate(fname_config: Union[str, dict], calc_type: str = 'hazard_curves',
               **kwargs):
     """
     Given a configuration file, this code returns either a set of realizations
@@ -145,7 +139,7 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
     if kwargs.get('override_folder_out', None) is not None:
         folder_out = kwargs['override_folder_out']
 
-    # create folder_out if needed
+    # Create folder_out (if needed)
     pathlib.Path(folder_out).mkdir(parents=True, exist_ok=True)
 
     # Define the type of analysis
@@ -163,19 +157,58 @@ def propagate(fname_config: Union[str, dict], calc_type: str='hazard_curves',
     if nsam is not None:
         nsam = int(nsam)
 
-    # Figure folder
+    # Create the figure folder (if needed)
     fig_folder = os.path.join(folder_out, "figs")
     pathlib.Path(fig_folder).mkdir(parents=True, exist_ok=True)
 
-    # Preparing required info
+    # Prepare required info
     grps, an01 = prepare(fname, atype, imt)
 
+    # Get the site indexes. Depending on the site we might need to consider
+    # contributions from different sources. `site_indexes` is a dictionary
+    # with key the site index and value a list of the source IDs contributing
+    # to the hazard at that site.
+    sites_indexes = get_site_indexes(an01)
+
+    # Processing the logic tree. The results we get are: frequency histograms
+    # for the intensity levels considered.
     if analysis_type == 'convolution':
-        # getting the frequency histograms
-        # for the intensity levels considered
-        logging.info("Running convolution")
-        h = convolution(an01, grps, imt, atype, res)
-        return h, an01
+
+        if len(sites_indexes) == 1:
+
+            # Get the frequency histograms for the intensity levels considered
+            logging.info("Running convolution")
+            h = convolution(an01, grps, imt, atype, res)
+            return h, an01
+
+        else:
+
+            for site_idx in sorted(sites_indexes):
+
+                print(site_idx)
+                if len(sites_indexes[site_idx]) == 1:
+                    continue
+
+                # Select the groups of correlated uncertainties. Could be
+                # moved to a separate function
+                tgrps = {}
+                for key in grps:
+                    if key[1] in sites_indexes[site_idx]:
+                        tgrps[key] = grps[key]
+
+                # Get the frequency histograms for the intensity levels
+                # considered. When only one source controls the hazard there
+                # aren't additional operations required
+                logging.info("Running convolution")
+                h = convolution(
+                    an01,
+                    tgrps,
+                    imt,
+                    atype,
+                    res,
+                    site_index=site_idx,
+                    sources_ids=sites_indexes[site_idx]
+                )
 
     elif analysis_type == 'sampling':
         logging.info("Running sampling")

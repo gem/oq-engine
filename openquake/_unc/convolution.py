@@ -36,8 +36,8 @@ TOLERANCE = 1e-6
 class HistoGroup:
     """
     A container of histograms (some of them can be None).
- 
-    :param pmfs: list of histogram arrays (can contain None) 
+
+    :param pmfs: list of histogram arrays (can contain None)
     :param minpow: list of minimum powers (can contain None)
     :param numpow: list of number of powers (can contain None)
     :param normalized: if True, each histogram must be normalized
