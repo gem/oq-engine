@@ -536,6 +536,12 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if 'preferred_only' in request_get_dict:
         preferred_only = int(request_get_dict.get('preferred_only'))
 
+    filter_by_tag = 0
+    if 'filter_by_tag' in request_get_dict:
+        filter_by_tag = request_get_dict.get('filter_by_tag')
+        if not filter_by_tag:
+            filter_by_tag = 0
+
     if user_acl_on:
         users_filter = "user_name IN (?X)"
     else:
@@ -562,6 +568,10 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if preferred_only:
         base_query += (
             " AND j.id IN (SELECT job_id FROM job_tag WHERE is_preferred = 1)")
+
+    if filter_by_tag and filter_by_tag != '0':
+        base_query += (
+            f" AND j.id IN (SELECT job_id FROM job_tag WHERE tag = '{filter_by_tag}')")
 
     base_query += " GROUP BY j.id ORDER BY j.id DESC LIMIT %d" % limit
 

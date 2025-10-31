@@ -505,6 +505,8 @@ def calc_list(request, id=None):
     can be accessed. This is called several times by the Javascript.
     If 'preferred_only' is specified in the GET parameters, only jobs set as
     preferred for a tag are listed.
+    If 'filter_by_tag' is specified in the GET parameters, only jobs associated to the
+    given tag are listed.
 
     Responses are in JSON.
     """
