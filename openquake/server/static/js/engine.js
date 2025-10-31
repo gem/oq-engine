@@ -424,7 +424,10 @@ function capitalizeFirstLetter(val) {
     }
 
     function setTimer() {
-        refresh_calcs = setInterval(function () { calculations.fetch({reset: true}) }, 3000);
+        refresh_calcs = setInterval(function () {
+            refresh_tag_selector();
+            calculations.fetch({reset: true})
+        }, 3000);
     }
 
     function closeTimer() {
@@ -607,17 +610,51 @@ function capitalizeFirstLetter(val) {
         $('#strike').val(nodal_plane.strike);
     }
 
+    function set_calc_list_params() {
+        list_preferred_only = $('input#list_preferred_only').is(':checked');
+        filter_by_tag = $('select#tag_selector').val();
+        const base_url = gem_oq_server_url + "/v1/calc/list";
+        let params = {};
+        if (list_preferred_only) {
+            params['preferred_only'] = '1';
+        }
+        if (filter_by_tag) {
+            params['filter_by_tag'] = filter_by_tag;
+        }
+        const query = $.param(params);
+        const full_url = query ? `${base_url}?${query}` : base_url;
+        calculations.url = full_url;
+        calculations.fetch({reset: true});
+    }
+
+    function refresh_tag_selector() {
+        $.getJSON('/v1/calc/list_tags', function(resp) {
+            const $dropdown = $('#tag_selector');
+            const selected_tag = $dropdown.val();
+            $dropdown.empty();
+            $dropdown.append('<option value="">All tags</option>');
+            $.each(resp.tags, function(_, tag) {
+                const safeTag = $('<div>').text(tag).html(); // escape HTML
+                $dropdown.append(`<option value="${safeTag}">${safeTag}</option>`);
+            });
+            // Try to restore previous selection if still available
+            if (selected_tag && resp.tags.includes(selected_tag)) {
+                $dropdown.val(selected_tag);
+            }
+        }).fail(function(jqXHR, textStatus, errorThrown) {
+            console.error('Error fetching tags:', textStatus, errorThrown);
+        });
+    }
+
     /* classic event management */
     $(document).ready(
         function () {
+            refresh_tag_selector();
             $('input#list_preferred_only').change(function() {
-                listPreferredOnly = $(this).is(':checked');
-                if (listPreferredOnly) {
-                    calculations.url = gem_oq_server_url + "/v1/calc/list?preferred_only=1";
-                } else {
-                    calculations.url = gem_oq_server_url + "/v1/calc/list";
-                }
-                calculations.fetch({reset: true});
+                set_calc_list_params();
+            });
+            $('select#tag_selector').change(function() {
+                set_calc_list_params();
             });
 
             calculation_table = new CalculationTable({ calculations: calculations });
