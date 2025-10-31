@@ -179,6 +179,12 @@ class RestrictedModeTestCase(django.test.TestCase):
                 self.assertIn(f'Job {job.calc_id} was set as preferred for tag {tag}',
                               ret.content.decode('utf8'))
 
+        # list all the available tags
+        ret = self.get('list_tags')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn(first_tag, ret.json()['tags'])
+        self.assertIn(second_tag, ret.json()['tags'])
+
         # get the preferred job for the tag
         ret = self.get(f'get_preferred_job_for_tag/{first_tag}')
         self.assertEqual(ret.status_code, 200)

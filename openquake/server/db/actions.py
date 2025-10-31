@@ -687,6 +687,12 @@ WHERE jt.tag = '{tag_name}' AND jt.is_preferred = 1;
             return {'error': f'Unexpected multiple preferred jobs for tag {tag_name}'}
 
 
+def list_tags(db):
+    rows = db("SELECT DISTINCT tag FROM job_tag ORDER BY tag;")
+    tags = [row.tag for row in rows]
+    return {'success': 'ok', 'tags': tags}
+
+
 def update_parent_child(db, parent_child):
     """
     Set hazard_calculation_id (parent) on a job_id (child)

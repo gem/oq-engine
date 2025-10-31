@@ -702,6 +702,14 @@ def get_preferred_job_for_tag(tag_name):
     return check_db_response(resp)
 
 
+def list_tags():
+    try:
+        resp = logs.dbcmd('list_tags')
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
 @csrf_exempt
 @cross_domain_ajax
 @require_http_methods(['POST'])
@@ -2259,6 +2267,16 @@ def calc_get_preferred_job_for_tag(request, tag_name):
     Get the id of the calculation marked as the preferred one for the given `tag_name`
     """
     return get_preferred_job_for_tag(tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_list_tags(request):
+    """
+    List all the available tags
+    """
+    return list_tags()
 
 
 @require_http_methods(['GET'])
