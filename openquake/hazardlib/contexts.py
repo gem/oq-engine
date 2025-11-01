@@ -1327,13 +1327,9 @@ class ContextMaker(object):
         # NB: num_rups is set by get_ctx_iter
         weight = src.dt * (src.num_ruptures / self.num_rups) ** 1.5
         if src.code in b'NSX':  # increase weight
-            weight *= 10.
-        if len(srcfilter.sitecol) < 100:
-            # if the full sitecol is small, make fault sources much heavier
-            weight *= 10
-        else:
-            # many sites, raise the weight (needed for USA 2023)
-            weight *= (1 + len(self.gsims) / 5)
+            weight *= 12.
+        # raise the weight according to the gsims (needed for USA 2023)
+        weight *= (1 + len(self.gsims) / 5)
         return max(weight, eps), int(esites)
 
     def set_weight(self, sources, srcfilter):
