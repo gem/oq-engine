@@ -2132,10 +2132,19 @@ def extract_html_table(request, calc_id, name):
         # keep only rows with '*total*' and discard first and last columns (ID and
         # NAME)
         table_contents = table_contents[table_contents[:, 0] == '*total*'][:, 1:-1]
+        rows_to_sum = {'structural', 'nonstructural', 'contents'}
+        mask = numpy.isin(table_contents[:, 0], list(rows_to_sum))
+        summed = numpy.sum(table_contents[mask, 1:].astype(float), axis=0)
+        economic_loss_row = numpy.concatenate(([numpy.str_('economic')], summed))
+        remaining = table_contents[~mask]
+        table_contents = numpy.vstack([remaining, economic_loss_row])
         for key, value in AGGRISK_FIELD_DESCRIPTION.items():
             table_contents[table_contents == key] = value
     return render(request, 'engine/show_table.html',
-                  {'table_name': table_name,
+                  {'calc_id': calc_id,
+                   'is_summary': summarize,
+                   'internal_name': name,
+                   'table_name': table_name,
                    'table_header': table_header,
                    'table_contents': table_contents})
 

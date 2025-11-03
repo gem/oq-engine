@@ -88,6 +88,7 @@ AGGRISK_FIELD_DESCRIPTION = {
     'contents': 'Contents loss (USD)',
     'nonstructural': 'Nonstructural loss (USD)',
     'structural': 'Structural loss (USD)',
+    'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
     'area': 'Floor area lost (m2)',
     'number': 'Buildings beyond repair',
