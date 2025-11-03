@@ -31,6 +31,7 @@ import signal
 import zlib
 import re
 import psutil
+from pathlib import Path
 from threading import Event
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -840,6 +841,20 @@ def aelo_callback(
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
 
 
+def is_inside_directory(file_path, directory):
+    directory = Path(directory).resolve()
+
+    if isinstance(file_path, (list, tuple)):
+        return all(is_inside_directory(p, directory) for p in file_path)
+
+    file_path = Path(file_path).resolve()
+    try:
+        file_path.relative_to(directory)
+        return True
+    except ValueError:
+        return False
+
+
 def impact_callback(
         job_id, params, job_owner_email, outputs_uri, exc=None, warnings=None):
     if not job_owner_email:
@@ -906,6 +921,15 @@ def impact_callback(
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n{outputs_uri}')
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
+    # delete all input files that are stored in the temporary directory
+    temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
+    for input_file in params['inputs']:
+        input_fname = params['inputs'][input_file]
+        if is_inside_directory(input_fname, temp_dir):
+            try:
+                os.remove(input_fname)
+            except Exception:
+                logging.error(f'Unable to delete temporary file "{input_fname}"')
 
 
 @csrf_exempt
