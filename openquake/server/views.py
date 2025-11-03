@@ -841,10 +841,6 @@ def aelo_callback(
 
 def is_inside_directory(file_path, directory):
     directory = Path(directory).resolve()
-
-    if isinstance(file_path, (list, tuple)):
-        return all(is_inside_directory(p, directory) for p in file_path)
-
     file_path = Path(file_path).resolve()
     try:
         file_path.relative_to(directory)
@@ -919,15 +915,27 @@ def impact_callback(
         subject = f'Job {job_id} finished correctly'
         body += (f'Please find the results here:\n{outputs_uri}')
     EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
+
     # delete all input files that are stored in the temporary directory
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     for input_file in params['inputs']:
+        if input_file == 'exposure':
+            continue
         input_fname = params['inputs'][input_file]
         if is_inside_directory(input_fname, temp_dir):
-            try:
-                os.remove(input_fname)
-            except Exception:
-                logging.error(f'Unable to delete temporary file "{input_fname}"')
+            os.remove(input_fname)
+    # TODO: check why some redundant items are saved into the datastore
+    for key in ['mmi_file', 'rupture_from_usgs']:
+        if key in params:
+            filename = params[key]
+            if is_inside_directory(filename, temp_dir):
+                os.remove(filename)
+    if 'shakemap_uri' in params:
+        shakemap_uri = ast.literal_eval(params['shakemap_uri'])
+        if 'fname' in shakemap_uri:
+            os.remove(shakemap_uri['fname'])
+    job_dir = parallel.scratch_dir(job_id)
+    shutil.rmtree(job_dir)
 
 
 @csrf_exempt
@@ -964,6 +972,11 @@ def impact_get_rupture_data(request):
     if request.user.level < 2 and 'warning_msg' in rupdic:
         # we don't want to show the warning to level 1 users
         del rupdic['warning_msg']
+    # delete temporary files that were used to plot the maps
+    for key in ['mmi_file']:
+        if key in rupdic:
+            fname = rupdic[key]
+            os.remove(fname)
     return JsonResponse(rupdic, status=200)
 
 

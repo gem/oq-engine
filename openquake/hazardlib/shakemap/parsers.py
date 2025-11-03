@@ -442,6 +442,8 @@ def convert_to_oq_xml(input_json_file, output_xml_file):
     if geometry_type == "Point":
         # TODO: as soon as OQ will be able to handle xml files with Point sources,
         # convert also this to xml
+        # remove the temporary xml file, that will not be used
+        os.remove(output_xml_file)
         return input_json_file
         add_point_elements(nrml, metadata, coordinates)
     elif geometry_type == "MultiPolygon":
@@ -458,6 +460,8 @@ def convert_to_oq_xml(input_json_file, output_xml_file):
     # Write the pretty-printed XML to the output file
     with open(output_xml_file, "w", encoding="utf-8") as f:
         f.write(pretty_xml)
+    # remove the json file, that will not be used
+    os.remove(input_json_file)
     return output_xml_file
 
 
