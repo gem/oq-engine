@@ -2132,6 +2132,7 @@ def extract_html_table(request, calc_id, name):
         # keep only rows with '*total*' and discard first and last columns (ID and
         # NAME)
         table_contents = table_contents[table_contents[:, 0] == '*total*'][:, 1:-1]
+        # replace the following rows with their sum (economic loss)
         rows_to_sum = {'structural', 'nonstructural', 'contents'}
         mask = numpy.isin(table_contents[:, 0], list(rows_to_sum))
         summed = numpy.sum(table_contents[mask, 1:].astype(float), axis=0)
