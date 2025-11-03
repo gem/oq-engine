@@ -27,7 +27,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, case_9, case_10, case_11, case_12,
+    case_6a, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
     occupants, case_master, case_shakemap, case_shapefile, reinsurance,
     conditioned)
 
@@ -260,6 +260,15 @@ class ScenarioRiskTestCase(CalculatorTestCase):
     def test_case_12(self):
         # testing affected, injured
         out = self.run_calc(case_12.__file__,  'job.ini', exports='csv')
+        for fname in out[('aggrisk', 'csv')]:
+            self.assertEqualFiles(
+                'expected/%s' % strip_calc_id(fname), fname)
+        [fname] = out[('avg_losses-rlzs', 'csv')]
+        self.assertEqualFiles('expected/avg_losses.csv', fname)
+
+    def test_case_13(self):
+        # testing Youd gsim, with primary IMT LSD
+        out = self.run_calc(case_13.__file__,  'job.ini', exports='csv')
         for fname in out[('aggrisk', 'csv')]:
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)

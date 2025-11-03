@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
+
+  <exposureModel category="buildings" id="exposure" taxonomySource="GEM taxonomy">
+    <description>exposure model</description>
+
+    <conversions>
+      <costTypes>
+        <costType name="structural" type="aggregated" unit="USD"/>
+      </costTypes>
+    </conversions>
+
+  <exposureFields>
+    <field oq="id" input="ASSET_ID" />
+    <field oq="lon" input="LONGITUDE" />
+    <field oq="lat" input="LATITUDE" />
+    <field oq="taxonomy" input="TAXONOMY" />
+    <field oq="number" input="BUILDINGS" />
+    <field oq="structural" input="COST_STRUCTURAL_USD" />
+  </exposureFields>
+
+    <tagNames>ID_0 NAME_0 ID_1 NAME_1 ID_2 NAME_2 ID_3 NAME_3 CITY_NAME</tagNames>
+    <assets>
+      test_exposure.csv 
+    </assets>
+  </exposureModel>
+
+</nrml>

@@ -308,7 +308,7 @@ def JMA():
 
 # secondary IMTs
 sec_imts = '''ASH LAVA LAHAR PYRO
-Disp DispProb LiqProb LiqOccur LSE PGDMax LSD PGDGeomMean LsProb
+Disp DispProb LiqProb LiqOccur LSE PGDMax PGDGeomMean LsProb
 '''.split()
 for sec in sec_imts:
     assert '_' not in sec, sec
