@@ -1725,7 +1725,9 @@ class OqParam(valid.ParamSet):
         seco_imts = {sec_imt.split('_')[1] for sec_imt in self.sec_imts}
         risk_imts = set(self.risk_imtls)
         for imt in risk_imts - seco_imts:
-            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI')):
+            # LSD is considered a primary IMT because it is directly
+            # computed by two GMPEs, Youd and Zang, Zhao
+            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI', 'LSD')):
                 pass  # ground shaking IMT
             else:
                 raise ValueError(f'The risk functions contain {imt} which is '

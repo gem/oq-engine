@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Turned LSD into a primary IMT, so that the Youd and ZhangZhao GMPE
+    can be used
+
   [Lana Todorovic]
   * Fixed the Macedo2019 GMPE with underlying GMPEs requiring extra parameters
     (like the KuehnEtAl2020SInter requiring ztor)
