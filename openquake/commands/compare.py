@@ -365,17 +365,38 @@ def delta(a, b):
     return res
 
 
-def compare_column_values(array0, array1, what, atol=2E-4, rtol=1E-3):
+def to_float(float_like):
+    """
+    Convert strings containing numbers to floats or raise a ValueError
+    """
+    out = []
+    for fl in float_like:
+        if isinstance(fl, str):
+            if fl.startswith('<'):  # i.e. '<0.005'
+                fl = fl[1:]
+            out.append(float(fl))
+        else:
+            out.append(float(fl))
+    return F64(out)
+
+
+def compare_column_values(array0, array1, what, atol=1E-4, rtol=1E-3):
+    """
+    Compare arrays of floats or strings, used to compare the ASCE files
+
+    >>> a0, a1 = ['<0.005', '0.0450'], ['<0.005', '0.0451']
+    >>> compare_column_values(a0, a1, 'test')
+    True
+    """
     try:
-        array0 = F64(array0)
-        array1 = F64(array1)
+        array0 = to_float(array0)
+        array1 = to_float(array1)
     except ValueError:
         diff_idxs = numpy.where(array0 != array1)[0]
     else:
         diff = numpy.abs(array0 - array1)
         diff_idxs = numpy.where(diff > atol + (array0+array1)/2 * rtol)[0]
     if len(diff_idxs) == 0:
-        print(f'The column {what} is okay')
         return True
     print(f"There are {len(diff_idxs)} different elements "
           f"in the '{what}' column:")
