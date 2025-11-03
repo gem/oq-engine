@@ -215,6 +215,7 @@ class VulnerabilityFunction(object):
         :param str distribution_name: The probabilistic distribution
             related to this function.
         """
+        assert len(imls) > 1, (imt, imls)
         self.id = vf_id
         self.imt = imt
         self._check_vulnerability_data(
