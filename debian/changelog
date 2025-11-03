@@ -1,3 +1,7 @@
+  [Lana Todorovic]
+  * Fixed the Macedo2019 GMPE with underlying GMPEs requiring extra parameters
+    (like the KuehnEtAl2020SInter requiring ztor)
+
   [Michele Simionato]
   * Filtering GMFs associated to low secondary intensities to make
     secondary peril calculations faster and using less disk space
