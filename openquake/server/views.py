@@ -195,20 +195,18 @@ def store(request_files, ini, calc_id):
     return inifiles[0]
 
 
-def stream_response(fname, content_type, exportname=''):
+def stream_response(fname, content_type, exportname='', tmpdir=''):
     """
     Stream a file stored in a temporary directory via Django
     """
-    ext = os.path.splitext(fname)[-1]
     exportname = exportname or os.path.basename(fname)
-    tmpdir = os.path.dirname(fname)
     stream = FileWrapper(open(fname, 'rb'))  # 'b' is needed on Windows
     response = FileResponse(stream, content_type=content_type)
     response['Content-Disposition'] = 'attachment; filename=%s' % exportname
     response['Content-Length'] = str(os.path.getsize(fname))
-    stream.close = lambda: (
-        FileWrapper.close(stream),
-        os.remove(fname) if ext == '.npz' else shutil.rmtree(tmpdir))
+    stream.close = lambda: (FileWrapper.close(stream), os.remove(fname))
+    if tmpdir:
+        shutil.rmtree(tmpdir)
     return response
 
 
@@ -1511,10 +1509,12 @@ def calc_result(request, result_id):
         exported = core.export_from_db(
             (ds_key, export_type), job_id, datadir, tmpdir)
     except DataStoreExportError as exc:
+        shutil.rmtree(tmpdir)
         # TODO: there should be a better error page
         return HttpResponse(content='%s: %s' % (exc.__class__.__name__, exc),
                             content_type='text/plain', status=500)
     if not exported:
+        shutil.rmtree(tmpdir)
         # Throw back a 404 if the exact export parameters are not supported
         return HttpResponseNotFound(
             'Nothing to export for export_type=%s, %s' % (export_type, ds_key))
@@ -1530,7 +1530,7 @@ def calc_result(request, result_id):
             export_type, DEFAULT_CONTENT_TYPE)
 
     fname = 'output-%s-%s' % (result_id, os.path.basename(exported))
-    return stream_response(exported, content_type, fname)
+    return stream_response(exported, content_type, fname, tmpdir)
 
 
 @cross_domain_ajax
@@ -1635,7 +1635,7 @@ def extract(request, calc_id, what):
             content_type='text/plain', status=500)
 
     # stream the data back
-    return stream_response(fname, ZIP)
+    return stream_response(fname, ZIP, temp_dir)
 
 
 @cross_domain_ajax
@@ -1717,7 +1717,7 @@ def calc_zip(request, job_id):
     tmpdir = tempfile.mkdtemp(dir=temp_dir)
     archname = f'job_{job_id}.zip'
     zipfiles(exported, os.path.join(tmpdir, archname))
-    return stream_response(os.path.join(tmpdir, archname), ZIP)
+    return stream_response(os.path.join(tmpdir, archname), ZIP, tmpdir)
 
 
 def web_engine(request, **kwargs):
