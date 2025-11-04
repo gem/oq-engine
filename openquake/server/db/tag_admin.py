@@ -17,8 +17,18 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from django.contrib import admin
-from openquake.server.db.models import Job, JobTag
 from openquake.server.db.tag_site import tag_admin_site
+
+
+def get_job_models():
+    """
+    Lazy import to avoid AppRegistryNotReady during Sphinx autodoc
+    """
+    from openquake.server.db.models import Job, JobTag
+    return Job, JobTag
+
+
+Job, JobTag = get_job_models()
 
 
 @admin.register(Job, site=tag_admin_site)

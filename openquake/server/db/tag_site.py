@@ -20,8 +20,8 @@ from django.contrib.admin import AdminSite
 
 
 class TagAdminSite(AdminSite):
-    site_header = "Tag Management"
-    site_title = "Tag Management"
+    site_header = "Job Tags Management"
+    site_title = "Job Tags Management"
     index_title = "Manage Job Tags"
 
     def has_permission(self, request):
