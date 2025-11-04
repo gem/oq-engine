@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in classical_risk with nontrivial weights in the
+    taxonomy mapping
   * Removed the ebrisk calculation mode, since it can be replaced
     with event_based_risk with ground_motion_fields = false
   * Turned LSD into a primary IMT, so that the Youd and ZhangZhao GMPE

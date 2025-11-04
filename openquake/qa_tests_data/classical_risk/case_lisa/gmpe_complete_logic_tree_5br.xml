@@ -1,0 +1,1093 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="ESHM20 Logic Tree - 5 Stress Branch"
+    >
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Shallow Default"
+        branchSetID="Shallow_Def"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="Shallow_Default_VLowStress_FastAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+			sigma_mu_epsilon = -2.85697000
+			c3_epsilon = -1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_VLowStress_CentralAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = -2.85697000
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0074991600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_VLowStress_SlowAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = -2.85697000
+c3_epsilon = 1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_LowStress_FastAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = -1.35563000
+c3_epsilon = -1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_LowStress_CentralAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = -1.35563000
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1479052800
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_LowStress_SlowAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = -1.35563000
+c3_epsilon = 1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_MidStress_FastAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+c3_epsilon = -1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0890644400
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_MidStress_CentralAtt"
+            >
+                <uncertaintyModel>
+                    KothaEtAl2020ESHM20
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.3551911200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_MidStress_SlowAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+c3_epsilon = 1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0890644400
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_HighStress_FastAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = 1.35563000
+c3_epsilon = -1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_HighStress_CentralAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = 1.35563000
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1479052800
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_HighStress_SlowAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = 1.35563000
+c3_epsilon = 1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_VHighStress_FastAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = 2.85697000
+c3_epsilon = -1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_VHighStress_CentralAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = 2.85697000
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0074991600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="Shallow_Default_VHighStress_SlowAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = 2.85697000
+c3_epsilon = 1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Craton"
+        branchSetID="CratonModel"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="CRParamVLowLowSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=-2.856970
+site_epsilon=-1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0015043360
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamVLowMidSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=-2.856970
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0059993280
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamVLowHighSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=-2.856970
+site_epsilon=1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0015043360
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamLowLowSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=-1.355630
+site_epsilon=-1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0296698880
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamLowMidSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=-1.355630
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1183242240
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamLowHighSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=-1.355630
+site_epsilon=1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0296698880
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamMidLowSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+site_epsilon=-1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0712515520
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamMidMidSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.2841528960
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamMidHighSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+site_epsilon=1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0712515520
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamHighLowSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=1.355630
+site_epsilon=-1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0296698880
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamHighMidSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=1.355630
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1183242240
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamHighHighSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=1.355630
+site_epsilon=1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0296698880
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamVHighLowSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=2.856970
+site_epsilon=-1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0015043360
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamVHighMidSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=2.856970
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0059993280
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRParamVHighHighSite"
+            >
+                <uncertaintyModel>
+                    [ESHM20Craton]
+epsilon=2.856970
+site_epsilon=1.732051
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0015043360
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRBackboneShalP1SCentralAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = 1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0444888000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRBackboneShalP1SSlowAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+sigma_mu_epsilon = 1.73205100
+c3_epsilon = 1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0887112000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRBackboneShal0SCentralAtt"
+            >
+                <uncertaintyModel>
+                    KothaEtAl2020ESHM20
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0223112000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="CRBackboneShal0SSlowAtt"
+            >
+                <uncertaintyModel>
+                    [KothaEtAl2020ESHM20]
+c3_epsilon = 1.73205100
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0444888000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Subduction Interface"
+        branchSetID="BCHydroSubIF"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="SUB_IFVLowStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = -2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFVLowStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+sigma_mu_epsilon = -2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0074991600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFVLowStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = -2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFLowStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = -1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFLowStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+sigma_mu_epsilon = -1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1479052800
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFLowStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = -1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFMidStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = -0.001500
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0890644400
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFMidStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.3551911200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFMidStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = 0.001500
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0890644400
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFHighStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = 1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFHighStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+sigma_mu_epsilon = 1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1479052800
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFHighStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = 1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFVHighStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = 2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFVHighStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+sigma_mu_epsilon = 2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0074991600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_IFVHighStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SInter]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = 2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Subduction Inslab"
+        branchSetID="BCHydroSubIS"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="SUB_ISVLowStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = -2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISVLowStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+sigma_mu_epsilon = -2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0074991600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISVLowStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = -2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISLowStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = -1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISLowStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+sigma_mu_epsilon = -1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1479052800
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISLowStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = -1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISMidStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0890644400
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISMidStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.3551911200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISMidStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0890644400
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISHighStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = 1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISHighStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+sigma_mu_epsilon = 1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1479052800
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISHighStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = 1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0370873600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISVHighStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = 2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISVHighStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+sigma_mu_epsilon = 2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0074991600
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="SUB_ISVHighStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = 2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0018804200
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Non-Subduction Deep"
+        branchSetID="BCHydroSubVrancea"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="VranceaVLowStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = -2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0022520000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaVLowStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+sigma_mu_epsilon = -2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0067560000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaVLowStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = -2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0022520000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaLowStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = -1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0444160000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaLowStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+sigma_mu_epsilon = -1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1332480000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaLowStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = -1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0444160000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaMidStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1066640000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaMidStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.3199920000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaMidStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1066640000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaHighStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = 1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0444160000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaHighStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+sigma_mu_epsilon = 1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.1332480000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaHighStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = 1.355630
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0444160000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaVHighStressFastAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = -0.001500
+sigma_mu_epsilon = 2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0022520000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaVHighStressCentralAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+sigma_mu_epsilon = 2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0067560000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="VranceaVHighStressSlowAtt"
+            >
+                <uncertaintyModel>
+                    [BCHydroESHM20SSlab]
+theta6_adjustment = 0.001500
+sigma_mu_epsilon = 2.856970
+faba_taper_model = "SFunc"
+a = -100.00
+b = 100.00
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.0022520000
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+
+        <logicTreeBranchSet
+        branchSetID="Volcanic"
+        applyToTectonicRegionType="Volcanic"
+        uncertaintyType="gmpeModel"
+		>
+        <logicTreeBranch branchID="b61">
+        <uncertaintyModel>LanzanoLuzi2019shallow</uncertaintyModel>
+
+        <uncertaintyWeight>1.0</uncertaintyWeight>
+        </logicTreeBranch>
+        </logicTreeBranchSet>
+
+    </logicTree>
+</nrml>
