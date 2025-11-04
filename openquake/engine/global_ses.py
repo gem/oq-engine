@@ -131,8 +131,8 @@ def main(mosaic_dir, out, models='ALL', *,
         with hdf5.File(out, 'w') as h5:
             h5['models'] = models
             h5['model_trt_gsim_weight'] = numpy.array(rows, dt)
-        jobs = engine.run_jobs(
-            engine.create_jobs(job_inis, log_level=logging.WARN))
+        jobs = engine.create_jobs(job_inis, log_level=logging.WARN)
+        engine.run_jobs(jobs, concurrent_jobs=min(len(jobs), 3))
         fnames = [datastore.read(job.calc_id).filename for job in jobs]
         logging.warning(f'Saving {out}')
         with hdf5.File(out, 'a') as h5:
