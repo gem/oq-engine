@@ -1238,12 +1238,15 @@ class SourceConverter(RuptureConverter):
         sg = SourceGroup(trt, min_mag=self.minimum_magnitude)
         sg.temporal_occurrence_model = self.get_tom(node)
         sg.name = node.attrib.get('name')
-        # Set attributes related to occurrence
-        sg.src_interdep = node.attrib.get('src_interdep', 'indep')
-        sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
-        sg.grp_probability = node.attrib.get('grp_probability', 1)
         # Set the cluster attribute
         sg.cluster = node.attrib.get('cluster') == 'true'
+        # Set attributes related to occurrence
+        sg.src_interdep = node.attrib.get('src_interdep', None)
+        sg.rup_interdep = node.attrib.get('rup_interdep', None)
+        if sg.cluster is False:
+            sg.src_interdep = node.attrib.get('src_interdep', 'indep')
+            sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
+        sg.grp_probability = node.attrib.get('grp_probability', 1)
         # Filter admitted cases
         # 1. The source group is a cluster. In this case the cluster must have
         #    the attributes required to define its occurrence in time.
@@ -1276,6 +1279,9 @@ class SourceConverter(RuptureConverter):
         if sg and sg.src_interdep == 'mutex':
             # sg can be empty if source_id is specified and it is different
             # from any source in sg
+            if srcs_weights is None:
+                raise ValueError(
+                    'Please make sure that `srcs_weights` is defined')
             if len(node) and len(srcs_weights) != len(node):
                 raise ValueError(
                     'There are %d srcs_weights but %d source(s) in %s'
@@ -1285,7 +1291,7 @@ class SourceConverter(RuptureConverter):
                 for src, sw in zip(sg, srcs_weights):
                     if ':' not in src.source_id:
                         raise NameError('You must use the colon convention '
-                                        'with mutex sources')
+                                        'with mutex sources e.g. src:01')
                     src.mutex_weight = sw
                     tot += sw
                 numpy.testing.assert_allclose(

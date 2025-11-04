@@ -856,6 +856,7 @@ class ClassicalTestCase(CalculatorTestCase):
                       calculation_mode='event_based',
                       ground_motion_fields='false')
         rups = self.calc.datastore['ruptures'][()]
+        rups.sort(order='id')
         tbl = text_table(rups[['source_id', 'n_occ', 'mag']], ext='org')
         self.assertEqualFiles('expected/rups.org', general.gettemp(tbl))
 
