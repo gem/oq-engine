@@ -82,12 +82,28 @@ if Job and JobTag:
         job_description.short_description = "Job Description"
 
         def get_search_results(self, request, queryset, search_term):
+            """
+            Extend the default search to include both job descriptions and job IDs.
+            """
             queryset, use_distinct = super().get_search_results(
                 request, queryset, search_term)
+
             if search_term:
-                job_ids = Job.objects.filter(
-                    description__icontains=search_term).values_list("id", flat=True)
-                queryset |= self.model.objects.filter(job_id__in=job_ids)
+                from django.db.models import Q
+
+                # If the term is numeric, try matching job ID directly
+                job_filter = Q(description__icontains=search_term)
+                if search_term.isdigit():
+                    job_filter |= Q(id=int(search_term))
+
+                # Find matching Job IDs
+                Job = self.model._meta.get_field("job").remote_field.model
+                job_ids = list(Job.objects.filter(job_filter).values_list(
+                    "id", flat=True))
+
+                if job_ids:
+                    queryset |= self.model.objects.filter(job_id__in=job_ids)
+
             return queryset, use_distinct
 
         def has_module_permission(self, request):
