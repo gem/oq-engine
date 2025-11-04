@@ -33,4 +33,4 @@ class TagAdminSite(AdminSite):
         return False
 
 
-tag_admin_site = TagAdminSite(name="tag_admin")
+tag_admin_site = TagAdminSite(name="tagadmin")
