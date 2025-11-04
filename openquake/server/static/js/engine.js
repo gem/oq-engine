@@ -629,6 +629,11 @@ function capitalizeFirstLetter(val) {
 
     function refresh_tag_selector() {
         $.getJSON('/v1/calc/list_tags', function(resp) {
+            if (resp.tags.length == 0) {
+                $("div#tag-filters").hide();
+            } else {
+                $("div#tag-filters").show();
+            }
             const $dropdown = $('#tag_selector');
             const selected_tag = $dropdown.val();
             $dropdown.empty();
