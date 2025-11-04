@@ -509,13 +509,14 @@ def install(inst, version, from_fork):
                 os_info['VERSION_ID'] == '13'):
                 print("Fix for python 3.11 and Debian 13")
                 patchelf_ret, _ = subprocess.getstatusoutput('patchelf --help')
-                if patchelf_ret != 0:
-                    sys.exit("'patchelf' command not found, please install it and"
-                             " run engine installation again")
+                if patchelf_ret == 0:
+                    subprocess.run([os.environ['SHELL'], '-c', 'patchelf --clear-execstack'
+                                    ' %s/lib/python3.11/site-packages/onnxruntime'
+                                    '/capi/*.so' % inst.VENV])
+                else:
+                    print("WARNING: 'patchelf' command not found, please install it and"
+                          " run engine installation again")
 
-                subprocess.run([os.environ['SHELL'], '-c', 'patchelf --clear-execstack'
-                                ' %s/lib/python3.11/site-packages/onnxruntime'
-                                '/capi/*.so' % inst.VENV])
         except OSError:
             print("INFO: linux distribution not detected.")
 
