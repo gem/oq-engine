@@ -17,88 +17,95 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from django.contrib import admin
+from django.apps import apps
 from openquake.server.db.tag_site import tag_admin_site
 
 
-def get_job_models():
+def get_models():
     """
-    Lazy import to avoid AppRegistryNotReady during Sphinx autodoc
+    Lazy model getter that only resolves models once Django apps are ready.
+    Returns (Job, JobTag).
     """
-    from openquake.server.db.models import Job, JobTag
-    return Job, JobTag
+    try:
+        Job = apps.get_model("db", "Job")
+        JobTag = apps.get_model("db", "JobTag")
+        return Job, JobTag
+    except (LookupError, Exception):
+        return None, None
 
 
-Job, JobTag = get_job_models()
+Job, JobTag = get_models()
 
 
-@admin.register(Job, site=tag_admin_site)
-class JobAdmin(admin.ModelAdmin):
-    search_fields = ["description"]
-    list_display = ["id", "description"]
+if Job and JobTag:
 
-    # Not even superusers should be able to alter the Job table through this admin
-    # interface, but superusers and level 2 users should have permission to visualize
-    # them in the JobTag admin interface
+    @admin.register(Job, site=tag_admin_site)
+    class JobAdmin(admin.ModelAdmin):
+        search_fields = ["description"]
+        list_display = ["id", "description"]
 
-    def has_view_permission(self, request, obj=None):
-        user = request.user
-        if user.is_active and user.is_authenticated and request.user.is_superuser:
-            return True
-        if user.is_active and user.is_authenticated and user.level >= 2:
-            return True
-        return False
+        # Not even superusers should be able to alter the Job table through this admin
+        # interface, but superusers and level 2 users should have permission to
+        # visualize them in the JobTag admin interface
 
-    def has_add_permission(self, request):
-        return False
+        def has_view_permission(self, request, obj=None):
+            user = request.user
+            if user.is_active and user.is_authenticated and request.user.is_superuser:
+                return True
+            if user.is_active and user.is_authenticated and user.level >= 2:
+                return True
+            return False
 
-    def has_change_permission(self, request, obj=None):
-        return False
+        def has_add_permission(self, request):
+            return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
+        def has_change_permission(self, request, obj=None):
+            return False
 
+        def has_delete_permission(self, request, obj=None):
+            return False
 
-@admin.register(JobTag, site=tag_admin_site)
-class JobTagAdmin(admin.ModelAdmin):
-    list_display = ('job_display', 'tag', 'is_preferred')
-    list_filter = ('is_preferred',)
-    search_fields = ('tag',)
-    autocomplete_fields = ["job"]
+    @admin.register(JobTag, site=tag_admin_site)
+    class JobTagAdmin(admin.ModelAdmin):
+        list_display = ('job_display', 'tag', 'is_preferred')
+        list_filter = ('is_preferred',)
+        search_fields = ('tag',)
+        autocomplete_fields = ["job"]
 
-    def job_display(self, obj):
-        return str(obj.job)
-    job_display.short_description = "Job"
+        def job_display(self, obj):
+            return str(obj.job)
+        job_display.short_description = "Job"
 
-    def job_description(self, obj):
-        return obj.job_description
-    job_description.admin_order_field = "job_id"
-    job_description.short_description = "Job Description"
+        def job_description(self, obj):
+            return obj.job_description
+        job_description.admin_order_field = "job_id"
+        job_description.short_description = "Job Description"
 
-    def get_search_results(self, request, queryset, search_term):
-        queryset, use_distinct = super().get_search_results(
-            request, queryset, search_term)
-        if search_term:
-            job_ids = Job.objects.filter(
-                description__icontains=search_term).values_list("id", flat=True)
-            queryset |= self.model.objects.filter(job_id__in=job_ids)
-        return queryset, use_distinct
+        def get_search_results(self, request, queryset, search_term):
+            queryset, use_distinct = super().get_search_results(
+                request, queryset, search_term)
+            if search_term:
+                job_ids = Job.objects.filter(
+                    description__icontains=search_term).values_list("id", flat=True)
+                queryset |= self.model.objects.filter(job_id__in=job_ids)
+            return queryset, use_distinct
 
-    def has_module_permission(self, request):
-        user = request.user
-        if user.is_active and user.is_authenticated and request.user.is_superuser:
-            return True
-        if user.is_active and user.is_authenticated and user.level >= 2:
-            return True
-        return False
+        def has_module_permission(self, request):
+            user = request.user
+            if user.is_active and user.is_authenticated and request.user.is_superuser:
+                return True
+            if user.is_active and user.is_authenticated and user.level >= 2:
+                return True
+            return False
 
-    def has_view_permission(self, request, obj=None):
-        return self.has_module_permission(request)
+        def has_view_permission(self, request, obj=None):
+            return self.has_module_permission(request)
 
-    def has_add_permission(self, request):
-        return self.has_module_permission(request)
+        def has_add_permission(self, request):
+            return self.has_module_permission(request)
 
-    def has_change_permission(self, request, obj=None):
-        return self.has_module_permission(request)
+        def has_change_permission(self, request, obj=None):
+            return self.has_module_permission(request)
 
-    def has_delete_permission(self, request, obj=None):
-        return self.has_module_permission(request)
+        def has_delete_permission(self, request, obj=None):
+            return self.has_module_permission(request)
