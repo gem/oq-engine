@@ -2133,8 +2133,8 @@ def extract_html_table(request, calc_id, name):
         # NAME)
         table_contents = table_contents[table_contents[:, 0] == '*total*'][:, 1:-1]
         # replace the following rows with their sum (economic loss)
-        rows_to_sum = {'structural', 'nonstructural', 'contents'}
-        mask = numpy.isin(table_contents[:, 0], list(rows_to_sum))
+        rows_to_sum = ['structural', 'nonstructural', 'contents']
+        mask = numpy.isin(table_contents[:, 0], rows_to_sum)
         summed = numpy.sum(table_contents[mask, 1:].astype(float), axis=0)
         economic_loss_row = numpy.concatenate(([numpy.str_('economic')], summed))
         remaining = table_contents[~mask]
