@@ -16,10 +16,36 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from django.db import connection
 from django.contrib import admin
-from openquake.server.db.models import JobTag
+from openquake.server.db.models import Job, JobTag
 from openquake.server.db.tag_site import tag_admin_site
+
+
+@admin.register(Job, site=tag_admin_site)
+class JobAdmin(admin.ModelAdmin):
+    search_fields = ["description"]
+    list_display = ["id", "description"]
+
+    # Not even superusers should be able to alter the Job table through this admin
+    # interface, but superusers and level 2 users should have permission to visualize
+    # them in the JobTag admin interface
+
+    def has_view_permission(self, request, obj=None):
+        user = request.user
+        if user.is_active and user.is_authenticated and request.user.is_superuser:
+            return True
+        if user.is_active and user.is_authenticated and user.level >= 2:
+            return True
+        return False
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(JobTag, site=tag_admin_site)
@@ -39,23 +65,12 @@ class JobTagAdmin(admin.ModelAdmin):
     job_description.short_description = "Job Description"
 
     def get_search_results(self, request, queryset, search_term):
-        """
-        Extend the default search to include job descriptions from the job table.
-        """
         queryset, use_distinct = super().get_search_results(
             request, queryset, search_term)
-
         if search_term:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT id FROM job WHERE description LIKE %s",
-                    [f"%{search_term}%"],
-                )
-                job_ids = [row[0] for row in cursor.fetchall()]
-
-            if job_ids:
-                queryset |= self.model.objects.filter(job_id__in=job_ids)
-
+            job_ids = Job.objects.filter(
+                description__icontains=search_term).values_list("id", flat=True)
+            queryset |= self.model.objects.filter(job_id__in=job_ids)
         return queryset, use_distinct
 
     def has_module_permission(self, request):
