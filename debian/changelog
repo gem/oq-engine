@@ -3,6 +3,7 @@
     can be used
 
   [Lana Todorovic]
+  * Added Abrahamson and Bhasin (2020) GMPE
   * Fixed the Macedo2019 GMPE with underlying GMPEs requiring extra parameters
     (like the KuehnEtAl2020SInter requiring ztor)
 
