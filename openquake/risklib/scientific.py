@@ -352,6 +352,8 @@ class VulnerabilityFunction(object):
                 covs.append(self.covs[i])
                 previous_mlr = mlr
 
+        if len(mlrs) == 1:
+            raise ValueError(f'The mean loss ratios for {self.id} are constant!')
         return self.__class__(
             self.id, self.imt, imls, mlrs, covs, self.distribution_name)
 
@@ -1698,8 +1700,11 @@ class RiskComputer(dict):
                     # computing the average dataframe for event_based_risk/case_8
                     out[lt] = _agg(outs, weights[peril, lt])
                 elif len(outs) > 1:
-                    # for oq-risk-tests/test/event_based_damage/inputs/cali/job.ini
-                    out[lt] = numpy.average(outs, weights=weights[peril, lt], axis=0)
+                    # tested in case_lisa with a composite array 'loss', 'poe'
+                    out[lt] = outs[0]
+                    poes = numpy.sum([out['poe'] * wei for out, wei in zip(
+                        outs, weights[peril, lt])])
+                    out[lt]['poe'] = poes
                 else:
                     out[lt] = outs[0]
             if hasattr(haz, 'eid'):  # event based
