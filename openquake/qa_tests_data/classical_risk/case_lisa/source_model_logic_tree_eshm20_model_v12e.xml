@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <logicTree logicTreeID="lt1">
+      <logicTreeBranchSet branchSetID="bs1" uncertaintyType="sourceModel">
+        <logicTreeBranch branchID="fs_SRU_MA">
+          <uncertaintyModel>
+            source_models/fsm_v09/fs_ver09e_model_aGR_SRU_MA_fMthr.xml
+          </uncertaintyModel>
+          <uncertaintyWeight>1</uncertaintyWeight>
+        </logicTreeBranch>
+      </logicTreeBranchSet>
+    </logicTree>
+</nrml>

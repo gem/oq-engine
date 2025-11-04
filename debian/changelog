@@ -1,6 +1,10 @@
   [Michele Simionato]
-  * Removed the obsolete ebrisk calculator, since it can be replaced
-    with ground_motion_fields = false
+  * Raised an early error if the vulnerability functions are not
+    strictly increasing
+  * Fixed a bug in classical_risk with nontrivial weights in the
+    taxonomy mapping
+  * Removed the ebrisk calculation mode, since it can be replaced
+    with event_based_risk with ground_motion_fields = false
   * Turned LSD into a primary IMT, so that the Youd and ZhangZhao GMPE
     can be used
 

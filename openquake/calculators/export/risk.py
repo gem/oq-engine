@@ -761,6 +761,11 @@ def export_vulnerability_xml(dstore):
     return dic
 
 
+@export.add(('vulnerability', 'xml'))
+def export_vuln_xml(ekey, dstore):
+    return export_vulnerability_xml(dstore).values()
+
+
 def export_assetcol_csv(ekey, dstore):
     assetcol = dstore['assetcol']
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
