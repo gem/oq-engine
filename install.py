@@ -506,15 +506,16 @@ def install(inst, version, from_fork):
             os_info = platform.freedesktop_os_release()
             if (sys.version_info[:2] == (3, 11) and
                 os_info['ID'] == 'debian' and
-                os_info['VERSION_ID'] in ['12', '13']):
-                print("Fix for python 3.11 and Debian 12 or 13")
-                readelf_ret, _ = subprocess.getstatusoutput('readelf --help')
-                if readelf_ret != 0:
-                    sys.exit("'readelf' command not found, please install it and"
+                os_info['VERSION_ID'] == '13'):
+                print("Fix for python 3.11 and Debian 13")
+                patchelf_ret, _ = subprocess.getstatusoutput('patchelf --help')
+                if patchelf_ret != 0:
+                    sys.exit("'patchelf' command not found, please install it and"
                              " run engine installation again")
 
-                subprocess.run(['patchelf', '--clear-execstack',
-                                "%s/lib/python3.11/site-packages/onnxruntime/capi/*.so" % inst.VENV])
+                subprocess.run([os.environ['SHELL'], '-c', 'patchelf --clear-execstack'
+                                ' %s/lib/python3.11/site-packages/onnxruntime'
+                                '/capi/*.so' % inst.VENV])
         except OSError:
             print("INFO: linux distribution not detected.")
 
