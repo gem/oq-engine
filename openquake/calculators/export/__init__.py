@@ -24,6 +24,8 @@ from openquake.baselib.writers import write_csv
 DISPLAY_NAME = {
     'asce07': 'ASCE 7 Parameters',
     'asce41': 'ASCE 41 Parameters',
+    'asce41_sa_final': 'ASCE41 BSE Spectra',
+    'spectra_asce41': 'ASCE41 Calculations',
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
     'job': 'job.zip',
     'asset_risk': 'Exposure + Risk',
@@ -88,6 +90,7 @@ AGGRISK_FIELD_DESCRIPTION = {
     'contents': 'Contents loss (USD)',
     'nonstructural': 'Nonstructural loss (USD)',
     'structural': 'Structural loss (USD)',
+    'economic': 'Economic loss (USD)',
     'occupants': 'Fatalities',
     'area': 'Floor area lost (m2)',
     'number': 'Buildings beyond repair',
@@ -95,6 +98,12 @@ AGGRISK_FIELD_DESCRIPTION = {
     'injured': 'Number of injured people',
     'affectedpop': ('Number of people living in buildings '
                     'with moderate or higher damage'),
+    'value': 'Value',
+    'loss_type': 'Loss type',
+    'lossmea': 'Mean',
+    'q50': 'Median',
+    'q05': '5th percentile',
+    'q95': '95th percentile',
 }
 
 EXPOSURE_FIELD_DESCRIPTION = {

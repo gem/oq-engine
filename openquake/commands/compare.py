@@ -386,7 +386,6 @@ def compare_column_values(array0, array1, what, atol=1E-4, rtol=1E-3):
 
     >>> a0, a1 = ['<0.005', '0.0450'], ['<0.005', '0.0451']
     >>> compare_column_values(a0, a1, 'test')
-    The column test is okay
     True
     """
     try:
@@ -398,7 +397,6 @@ def compare_column_values(array0, array1, what, atol=1E-4, rtol=1E-3):
         diff = numpy.abs(array0 - array1)
         diff_idxs = numpy.where(diff > atol + (array0+array1)/2 * rtol)[0]
     if len(diff_idxs) == 0:
-        print(f'The column {what} is okay')
         return True
     print(f"There are {len(diff_idxs)} different elements "
           f"in the '{what}' column:")

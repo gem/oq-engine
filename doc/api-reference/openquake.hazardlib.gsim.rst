@@ -30,6 +30,14 @@ abrahamson_2018
     :undoc-members:
     :show-inheritance:
 
+abrahamson_bhasin_2020
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.abrahamson_bhasin_2020
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 abrahamson_gulerce_2020
 -----------------------------------------------
 

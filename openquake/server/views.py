@@ -165,6 +165,13 @@ def _get_base_url(request):
     return base_url
 
 
+def get_bool_param(request, name, default=False):
+    val = request.GET.get(name)
+    if val is None:
+        return default
+    return str(val).lower() in ('1', 'true', 'yes', '')
+
+
 def store(request_files, ini, calc_id):
     """
     Store the uploaded files in calc_dir and select the job file by looking
@@ -1268,6 +1275,19 @@ def aelo_validate(request):
     except Exception as exc:
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
+    if site_class is not None and site_class != 'custom':
+        valid_vs30 = oqvalidation.SITE_CLASSES[site_class]['vs30']
+        if isinstance(valid_vs30, list):
+            expected_vs30 = ' '.join([str(float(value)) for value in valid_vs30])
+        else:
+            expected_vs30 = str(float(valid_vs30))
+        if vs30 != expected_vs30:
+            # NOTE: this should never happen when using the web form, but it could
+            # happen calling the 'aelo_run' API endpoint programmatically
+            err_msg = (f'For site class {site_class} the expected Vs30 is'
+                       f' {expected_vs30} instead of {vs30}')
+            validation_errs[AELO_FORM_LABELS['vs30']] = err_msg
+            invalid_inputs.append('vs30')
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -1289,8 +1309,8 @@ def aelo_run(request):
     Run an AELO calculation.
 
     :param request:
-        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid,
-        asce_version
+        a `django.http.HttpRequest` object containing lon, lat, siteid, asce_version,
+        site_class, vs30
     """
     res = aelo_validate(request)
     if isinstance(res, HttpResponse):  # error
@@ -1800,49 +1820,47 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     if job is None:
         return HttpResponseNotFound()
-    avg_gmf = []
-    disagg_by_src = []
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    kwargs = dict(calc_id=calc_id, size_mb=size_mb)
+    pngs = dict(hmaps=False)
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
-            hmaps = any([k.startswith('hmap') for k in ds['png']])
-            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
-            assets = 'assets.png' in ds['png']
-            hcurves = 'hcurves.png' in ds['png']
-            # NOTE: remove "and 'All' in k" to show the individual plots
-            disagg_by_src = [k for k in ds['png']
-                             if k.startswith('disagg_by_src-') and 'All' in k]
-            mce = 'mce.png' in ds['png']
-            mce_spectra = 'mce_spectra.png' in ds['png']
-        else:
-            hmaps = assets = hcurves = mce = mce_spectra = False
-    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    lon = lat = site_name = asce_version_full = calc_aelo_version = None
-    site_class_display_name = None
+            pngs['hmaps'] = any([k.startswith('hmap') for k in ds['png']])
+            if application_mode == 'ARISTOTLE':
+                pngs['avg_gmf'] = [
+                    k for k in ds['png'] if k.startswith('avg_gmf-')]
+                pngs['assets'] = 'assets.png' in ds['png']
+            if application_mode == 'AELO':
+                pngs['hcurves'] = 'hcurves.png' in ds['png']
+                # NOTE: remove "and 'All' in k" to show the individual plots
+                pngs['disagg_by_src'] = [
+                    k for k in ds['png']
+                    if k.startswith('disagg_by_src-') and 'All' in k]
+                pngs['mce'] = 'mce.png' in ds['png']
+                pngs['mce_spectra'] = 'mce_spectra.png' in ds['png']
+    kwargs['pngs'] = pngs
     if application_mode == 'AELO':
-        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
-        site_class_display_name = get_site_class_display_name(ds)
-        site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
+        # e.g. [[-61.071, 14.686, 0.0]]
+        kwargs['lon'], kwargs['lat'] = ds['oqparam'].sites[0][:2]
+        kwargs['site_class'] = get_site_class_display_name(ds)
+        # e.g. 'AELO for CCA'->'CCA'
+        kwargs['site_name'] = ds['oqparam'].description[9:]
         try:
             asce_version = ds['oqparam'].asce_version
         except AttributeError:
             # for backwards compatibility on old calculations
             asce_version = oqvalidation.OqParam.asce_version.default
+        kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
         try:
-            calc_aelo_version = ds.get_attr('/', 'aelo_version')
+            kwargs['calc_aelo_version'] = ds.get_attr('/', 'aelo_version')
         except KeyError:
-            calc_aelo_version = '1.0.0'
-        asce_version_full = oqvalidation.ASCE_VERSIONS[asce_version]
-    return render(request, "engine/get_outputs.html",
-                  dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
-                       avg_gmf=avg_gmf, assets=assets, hcurves=hcurves,
-                       disagg_by_src=disagg_by_src,
-                       mce=mce, mce_spectra=mce_spectra,
-                       calc_aelo_version=calc_aelo_version,
-                       asce_version=asce_version_full,
-                       lon=lon, lat=lat, site_class=site_class_display_name,
-                       site_name=site_name)
-                  )
+            kwargs['calc_aelo_version'] = '1.0.0'
+        kwargs['asce_version'] = oqvalidation.ASCE_VERSIONS[asce_version]
+        kwargs['notes'], kwargs['warnings'] = get_aelo_notes_and_warnings(ds)
+    elif application_mode == 'ARISTOTLE':
+        kwargs['warnings'] = get_aristotle_warnings(ds)
+    return render(request, "engine/get_outputs.html", kwargs)
 
 
 def is_model_preliminary(ds):
@@ -1895,15 +1913,50 @@ def group_keys_by_value(d):
     return result
 
 
+def get_aelo_notes_and_warnings(ds):
+    notifications = numpy.array([], dtype=notification_dtype)
+    sid_to_vs30 = {}
+    notes = {}
+    warnings = {}
+    if is_model_preliminary(ds):
+        # sid -1 means it is not associated to a specific site
+        preliminary_model_warning = numpy.array([
+            (-1, b'warning', b'preliminary_model',
+                PRELIMINARY_MODEL_WARNING_MSG.encode('utf8'))],
+            dtype=notification_dtype)
+        notifications = numpy.concatenate(
+            (notifications, preliminary_model_warning))
+        sid_to_vs30.update({-1: ''})  # warning about preliminary model
+    if 'notifications' in ds:
+        notifications = numpy.concatenate((notifications, ds['notifications']))
+        sitecol = ds['sitecol']
+        # NOTE: the variable name 'site' is already used
+        sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
+        for notification in notifications:
+            vs30 = sid_to_vs30[notification['sid']]
+            if notification['level'] == b'info':
+                notes[vs30] = notification['description'].decode('utf8')
+            elif notification['level'] == b'warning':
+                warnings[vs30] = notification['description'].decode('utf8')
+        notes = group_keys_by_value(notes)
+        warnings = group_keys_by_value(warnings)
+        # NOTE: we decided to avoid specifying which vs30 values are relevant with
+        # respect to the notifications (either for notes and warnings)
+    notes_str = '\n'.join([note for note in notes.values()])
+    warnings_str = '\n'.join([warning for warning in warnings.values()])
+    return notes_str, warnings_str
+
+
 # this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce07 = asce41 = site = governing_mce = None
+    asce07 = asce41 = None
     asce07_with_units = {}
     asce41_with_units = {}
+    notes_str = warnings_str = ''
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         try:
             asce_version = ds['oqparam'].asce_version
@@ -1964,48 +2017,19 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce41_with_units[key] = value
                 else:
                     asce41_with_units[key + ' (g)'] = get_disp_val(value)
+        pngs = {}
         if 'png' in ds:
-            site = 'site.png' in ds['png']
-            governing_mce = 'governing_mce.png' in ds['png']
+            pngs['site'] = 'site.png' in ds['png']
+            pngs['governing_mce'] = 'governing_mce.png' in ds['png']
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         site_class_str = get_site_class_display_name(ds)
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
-        notifications = numpy.array([], dtype=notification_dtype)
-        sid_to_vs30 = {}
-        if is_model_preliminary(ds):
-            # sid -1 means it is not associated to a specific site
-            preliminary_model_warning = numpy.array([
-                (-1, b'warning', b'preliminary_model',
-                 PRELIMINARY_MODEL_WARNING_MSG.encode('utf8'))],
-                dtype=notification_dtype)
-            notifications = numpy.concatenate(
-                (notifications, preliminary_model_warning))
-            sid_to_vs30.update({-1: ''})  # warning about preliminary model
-        sitecol = ds['sitecol']
-        if 'notifications' in ds:
-            notifications = numpy.concatenate((notifications, ds['notifications']))
-            # NOTE: the variable name 'site' is already used
-            sid_to_vs30.update({site_item.id: site_item.vs30 for site_item in sitecol})
-        notes = {}
-        warnings = {}
-        for notification in notifications:
-            vs30 = sid_to_vs30[notification['sid']]
-            if notification['level'] == b'info':
-                notes[vs30] = notification['description'].decode('utf8')
-            elif notification['level'] == b'warning':
-                warnings[vs30] = notification['description'].decode('utf8')
-        notes = group_keys_by_value(notes)
-        warnings = group_keys_by_value(warnings)
-        # NOTE: we decided to avoid specifying which vs30 values are relevant with
-        # respect to the notifications (either for notes and warnings)
-        notes_str = '\n'.join([note for note in notes.values()])
-        warnings_str = '\n'.join([warning for warning in warnings.values()])
+        notes_str, warnings_str = get_aelo_notes_and_warnings(ds)
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, site_class=site_class_str,
-                       site_name=site_name, site=site,
-                       governing_mce=governing_mce,
+                       site_name=site_name, pngs=pngs,
                        calc_aelo_version=calc_aelo_version,
                        asce_version=oqvalidation.ASCE_VERSIONS[asce_version],
                        warnings=warnings_str, notes=notes_str))
@@ -2034,6 +2058,13 @@ def determine_precision(weights):
     return max_decimal_places
 
 
+def get_aristotle_warnings(ds):
+    warnings = None
+    if 'warnings' in ds:
+        warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
+    return warnings
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_impact(request, calc_id):
@@ -2046,7 +2077,7 @@ def web_engine_get_outputs_impact(request, calc_id):
     local_timestamp_str = None
     time_job_after_event = None
     time_job_after_event_str = None
-    warnings = None
+    pngs = {}
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         try:
             losses = views.view('aggrisk', ds)
@@ -2065,23 +2096,15 @@ def web_engine_get_outputs_impact(request, calc_id):
                 for field in losses.dtype.names]
             weights_precision = determine_precision(losses['weight'])
         if 'png' in ds:
-            avg_gmf = [k for k in ds['png'] if k.startswith('avg_gmf-')]
-            assets = 'assets.png' in ds['png']
-        else:
-            assets = False
-            avg_gmf = []
+            pngs['avg_gmf'] = [k for k in ds['png'] if k.startswith('avg_gmf-')]
+            pngs['assets'] = 'assets.png' in ds['png']
         oqparam = ds['oqparam']
         if hasattr(oqparam, 'local_timestamp'):
             local_timestamp_str = (
                 oqparam.local_timestamp if oqparam.local_timestamp != 'None'
                 else None)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    if 'warnings' in ds:
-        ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
-        if warnings is None:
-            warnings = ds_warnings
-        else:
-            warnings += '\n' + ds_warnings
+    warnings = get_aristotle_warnings(ds)
     mmi_tags = 'mmi_tags' in ds
     # NOTE: aggrisk_tags is not available as an attribute of the datastore
     try:
@@ -2105,7 +2128,7 @@ def web_engine_get_outputs_impact(request, calc_id):
                        size_mb=size_mb, losses=losses,
                        losses_header=losses_header,
                        weights_precision=weights_precision,
-                       avg_gmf=avg_gmf, assets=assets,
+                       pngs=pngs,
                        warnings=warnings, mmi_tags=mmi_tags,
                        aggrisk_tags=aggrisk_tags)
                   )
@@ -2156,6 +2179,7 @@ def can_extract(request, resource):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def extract_html_table(request, calc_id, name):
+    summarize = get_bool_param(request, 'summarize')
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
         return HttpResponseNotFound()
@@ -2183,10 +2207,31 @@ def extract_html_table(request, calc_id, name):
             display_name = EXPOSURE_FIELD_DESCRIPTION[short_name]
         else:
             display_name = ''
-        table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
+        # avoiding to show the internal short names when showing the summary table
+        if summarize and name == 'aggrisk_tags':
+            table_header.append(display_name)
+        else:
+            table_header.append(f'{short_name}<br><br><i>{display_name}</i>')
     table_contents = table.to_numpy()
+    if summarize and name == 'aggrisk_tags':  # the impact table
+        table_header = table_header[1:-1]
+        # keep only rows with '*total*' and discard first and last columns (ID and
+        # NAME)
+        table_contents = table_contents[table_contents[:, 0] == '*total*'][:, 1:-1]
+        # replace the following rows with their sum (economic loss)
+        rows_to_sum = ['structural', 'nonstructural', 'contents']
+        mask = numpy.isin(table_contents[:, 0], rows_to_sum)
+        summed = numpy.sum(table_contents[mask, 1:].astype(float), axis=0)
+        economic_loss_row = numpy.concatenate(([numpy.str_('economic')], summed))
+        remaining = table_contents[~mask]
+        table_contents = numpy.vstack([remaining, economic_loss_row])
+        for key, value in AGGRISK_FIELD_DESCRIPTION.items():
+            table_contents[table_contents == key] = value
     return render(request, 'engine/show_table.html',
-                  {'table_name': table_name,
+                  {'calc_id': calc_id,
+                   'is_summary': summarize,
+                   'internal_name': name,
+                   'table_name': table_name,
                    'table_header': table_header,
                    'table_contents': table_contents})
 

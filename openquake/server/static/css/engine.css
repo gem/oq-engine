@@ -424,6 +424,10 @@ tr.asce_output {
     margin-bottom: 3px;
 }
 
+#summary-btn {
+    margin-top: 10px;
+}
+
 .outputs-general-btns-left,
 .outputs-general-btns-center,
 .outputs-general-btns-right {
