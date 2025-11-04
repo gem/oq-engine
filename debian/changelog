@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Raised an early error if the vulnerability functions are not
+    strictly increasing
   * Fixed a bug in classical_risk with nontrivial weights in the
     taxonomy mapping
   * Removed the ebrisk calculation mode, since it can be replaced

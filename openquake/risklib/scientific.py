@@ -352,6 +352,8 @@ class VulnerabilityFunction(object):
                 covs.append(self.covs[i])
                 previous_mlr = mlr
 
+        if len(mlrs) == 1:
+            raise ValueError(f'The mean loss ratios for {self.id} are constant!')
         return self.__class__(
             self.id, self.imt, imls, mlrs, covs, self.distribution_name)
 
