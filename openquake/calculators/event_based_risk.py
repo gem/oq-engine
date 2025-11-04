@@ -366,7 +366,7 @@ def fast_add(avg_losses, row, col, data, X):
         avg_losses[r, lti, rlz] += d
 
 
-@base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
+@base.calculators.add('scenario_risk', 'event_based_risk')
 class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     """
     Event based risk calculator generating event loss tables
@@ -374,7 +374,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     core_task = ebrisk
     is_stochastic = True
     precalc = 'event_based'
-    accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
+    accept_precalc = ['scenario', 'event_based', 'event_based_risk']
 
     def save_tmp(self, monitor):
         """
@@ -415,8 +415,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def pre_execute(self):
         oq = self.oqparam
-        if oq.calculation_mode == 'ebrisk':
-            oq.ground_motion_fields = False
         parent = self.datastore.parent
         if parent:
             self.datastore['full_lt'] = parent['full_lt']
@@ -499,7 +497,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         self.gmf_bytes = 0
-        if oq.calculation_mode == 'ebrisk' or 'gmf_data' not in self.datastore:
+        if not oq.ground_motion_fields or 'gmf_data' not in self.datastore:
             # start from ruptures
             if (oq.ground_motion_fields and
                     'gsim_logic_tree' not in oq.inputs and

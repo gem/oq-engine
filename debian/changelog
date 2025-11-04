@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Removed the obsolete ebrisk calculator, since it can be replaced
+    with ground_motion_fields = false
   * Turned LSD into a primary IMT, so that the Youd and ZhangZhao GMPE
     can be used
 
