@@ -1719,6 +1719,7 @@ def create_risk_by_event(calc):
                          L=len(oq.loss_types), limit_states=dmgs)
 
 
+# used in the POINT project (openquake._unc)
 class DstoreCache:
     """
     Datastore cache based on a file called 'ini_hdf5.csv'

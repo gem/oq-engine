@@ -64,8 +64,7 @@ import os
 import logging
 import numpy
 from openquake.baselib import performance, sap, hdf5
-from openquake.hazardlib import gsim_lt
-from openquake.commonlib import readinput, datastore
+from openquake.commonlib import datastore
 from openquake.calculators import base
 from openquake.engine import engine
 
@@ -75,33 +74,18 @@ ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 '''.split())
 
-dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
-
 
 def read_job_inis(mosaic_dir, INPUTS):
     out = []
     rows = []
     for model in INPUTS.pop('models'):
         fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
-        dic = readinput.get_params(fname)
-        del dic['intensity_measure_types_and_levels']
-        dic.update(INPUTS)
-        if 'truncation_level' not in dic:  # CAN
-            dic['truncation_level'] = '5'
-        if model in ("KOR", "JPN"):
-            dic['investigation_time'] = '50'
-            dic['ses_per_logic_tree_path'] = str(
-                int(dic['ses_per_logic_tree_path']) // 50)
-        dic['mosaic_model'] = model
-        gslt = gsim_lt.GsimLogicTree(dic['inputs']['gsim_logic_tree'])
-        for trt, gsims in gslt.values.items():
-            for gsim in gsims:
-                q = (model, trt, gsim._toml, gsim.weight['default'])
-                rows.append(q)
+        dic, rs = engine.read_ini(fname)
         out.append(dic)
+        rows.extend(rs)
     return out, rows
 
-
+    
 def main(mosaic_dir, out, models='ALL', *,
          number_of_logic_tree_samples:int=2000,
          ses_per_logic_tree_path:int=50, minimum_magnitude:float=5):

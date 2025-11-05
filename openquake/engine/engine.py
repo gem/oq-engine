@@ -44,7 +44,9 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
-from openquake.baselib import parallel, general, config, slurm, workerpool as w
+from openquake.baselib import (
+    parallel, general, config, slurm, workerpool as w, hdf5)
+from openquake.hazardlib import gsim_lt
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
 from openquake.calculators import base
@@ -62,6 +64,8 @@ _PPID = os.getppid()  # the controlling terminal PID
 GET_JOBS = '''--- executing or submitted
 SELECT * FROM job WHERE status IN ('executing', 'submitted')
 AND host=?x AND is_running=1 AND pid > 0 ORDER BY id'''
+
+dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
 def get_zmq_ports():
@@ -168,6 +172,52 @@ def poll_queue(job_id, poll_time):
                 break
 
 
+
+def read_ini(fname, model, INPUTS={}):
+    """
+    :returns: (job_dic, gsim_rows)
+    """
+    dic = readinput.get_params(fname)
+    del dic['intensity_measure_types_and_levels']
+    dic.update(INPUTS)
+    if 'truncation_level' not in dic:  # CAN
+        dic['truncation_level'] = '5'
+    if model in ("KOR", "JPN"):
+        dic['investigation_time'] = '50'
+        dic['ses_per_logic_tree_path'] = str(
+            int(dic['ses_per_logic_tree_path']) // 50)
+    dic['mosaic_model'] = model
+    gslt = gsim_lt.GsimLogicTree(dic['inputs']['gsim_logic_tree'])
+    rows = []
+    for trt, gsims in gslt.values.items():
+        for gsim in gsims:
+            q = (model, trt, gsim._toml, gsim.weight['default'])
+            rows.append(q)
+    return dic, rows
+
+
+def fix_ruptures_hdf5(oq):
+    """
+    If we have `rupture_model_file = ses.ini|ses.hdf5`
+    and ses.hdf5 does not exist, then generate it from ses.ini
+    and replace oq.inputs['rupture_model'] with 'basedir/ses.hdf5'
+    """
+    job_ini, out = oq.ruptures_hdf5.split('|')
+    if not os.path.exists(out):
+        dic, rows = read_ini(job_ini, '???')
+        with logs.init(dic) as job:
+            calc = run_calc(job)
+        fname = calc.datastore.filename
+        logging.warning(f'Saving {out}')
+        with hdf5.File(out, 'w') as h5:
+            h5['oqparam'] = calc.oqparam
+            h5['models'] = ['???']
+            h5['model_trt_gsim_weight'] = numpy.array(rows, dt)
+            base.import_sites_hdf5(h5, [fname])
+            base.import_ruptures_hdf5(h5, [fname])
+    oq.inputs['rupture_model'] = out
+
+
 def run_calc(log):
     """
     Run a calculation.
@@ -187,6 +237,8 @@ def run_calc(log):
                          'some memory', used_mem)
             time.sleep(5)
         oqparam = log.get_oqparam()
+        if '|' in oqparam.ruptures_hdf5:
+            fix_ruptures_hdf5(oqparam)
         calc = base.calculators(oqparam, log.calc_id)
         try:
             hostname = socket.gethostname()
