@@ -458,6 +458,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
         base.create_risk_by_event(self)
+        if oq.ruptures_hdf5:
+            smap = event_based.starmap_from_rups_hdf5(
+                oq, self.sitecol, ebrisk, self.datastore)
+            self.save_tmp(smap.monitor)
+            smap.reduce(self.agg_dicts)
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
 
@@ -508,12 +513,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
-            if oq.ruptures_hdf5:
-                smap = event_based.starmap_from_rups_hdf5(
-                    oq, self.sitecol, ebrisk, self.datastore)
-                self.save_tmp(smap.monitor)
-                smap.reduce(self.agg_dicts)
-            else:
+            if not oq.ruptures_hdf5:
                 full_lt = self.datastore['full_lt']
                 smap = event_based.starmap_from_rups(
                     ebrisk, oq, full_lt, self.sitecol, self.datastore,

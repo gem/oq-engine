@@ -2214,6 +2214,8 @@ class OqParam(valid.ParamSet):
         """
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
+            if self.ruptures_hdf5:
+                self.collect_rlzs = True
         if self.job_type == 'hazard':
             return True
 
