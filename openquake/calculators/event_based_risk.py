@@ -428,10 +428,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                      if self.datastore.ppath else None)
         oq.hdf5path = self.datastore.filename
         oq.parentdir = parentdir
-        logging.info(
-            'There are {:_d} ruptures and {:_d} events'.format(
-                len(self.datastore['ruptures']),
-                len(self.datastore['events'])))
+        if 'events' in self.datastore:
+            logging.info(
+                'There are {:_d} ruptures and {:_d} events'.format(
+                    len(self.datastore['ruptures']),
+                    len(self.datastore['events'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         set_oqparam(oq, self.assetcol, self.datastore)
@@ -507,17 +508,23 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
-            full_lt = self.datastore['full_lt']
-            smap = event_based.starmap_from_rups(
-                ebrisk, oq, full_lt, self.sitecol, self.datastore,
-                self.save_tmp)
-            smap.reduce(self.agg_dicts)
-            if self.gmf_bytes == 0:
-                raise RuntimeError(
-                    'No GMFs were generated, perhaps they were '
-                    'all below the minimum_intensity threshold')
-            logging.info(
-                'Produced %s of GMFs', general.humansize(self.gmf_bytes))
+            if oq.ruptures_hdf5:
+                smap = event_based.starmap_from_rups_hdf5(
+                    oq, self.sitecol, ebrisk, self.datastore)
+                self.save_tmp(smap.monitor)
+                smap.reduce(self.agg_dicts)
+            else:
+                full_lt = self.datastore['full_lt']
+                smap = event_based.starmap_from_rups(
+                    ebrisk, oq, full_lt, self.sitecol, self.datastore,
+                    self.save_tmp)
+                smap.reduce(self.agg_dicts)
+                if self.gmf_bytes == 0:
+                    raise RuntimeError(
+                        'No GMFs were generated, perhaps they were '
+                        'all below the minimum_intensity threshold')
+                logging.info(
+                    'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
             smap = starmap_from_gmfs(ebr_from_gmfs, oq, self.datastore,
                                      self._monitor)

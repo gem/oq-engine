@@ -302,7 +302,7 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def starmap_from_rups_hdf5(oq, sitecol, dstore):
+def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
     """
     :returns: a Starmap instance sending event_based tasks
     """
@@ -332,7 +332,7 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
     extra = sitecol.array.dtype.names
     manysites = len(sitecol) > oq.max_sites_disagg
     dstore.swmr_on()
-    smap = parallel.Starmap(event_based, h5=dstore.hdf5)
+    smap = parallel.Starmap(taskfunc, h5=dstore.hdf5)
     for (model, trt_smr), rups in rups_dic.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
@@ -346,7 +346,6 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
                 logging.info('%s: sending %d ruptures', model, len(block))
             args = block, cmaker, sitecol, (None, None), ruptures_hdf5
             smap.submit(args)
-    logging.info('Computing the GMFs')
     return smap
 
 
@@ -635,6 +634,8 @@ class EventBasedCalculator(base.HazardCalculator):
         self.store_source_info(source_data)
         self.store_rlz_info(eff_ruptures)
         imp = RuptureImporter(self.datastore)
+        if self.sitecol:
+            self.datastore['sitecol'] = self.sitecol
         with self.monitor('saving ruptures and events'):
             imp.import_rups_events(self.datastore.getitem('ruptures')[()])
 
@@ -747,6 +748,9 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
+        if oq.ruptures_hdf5 and oq.calculation_mode == 'event_based_risk':
+            # we are in event_based_risk, do nothing here
+            return {}
         dstore = self.datastore
         if oq.impact and oq.shakemap_uri:
             # when calling `oqi usgs_id`
@@ -814,7 +818,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # event_based in parallel
         if oq.ruptures_hdf5:
-            smap = starmap_from_rups_hdf5(oq, self.sitecol, dstore)
+            smap = starmap_from_rups_hdf5(
+                oq, self.sitecol, event_based, dstore)
         else:
             smap = starmap_from_rups(
                 event_based, oq, self.full_lt, self.sitecol, dstore)
