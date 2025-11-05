@@ -514,8 +514,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         filterdict['id'] = id
 
     if 'calculation_mode' in request_get_dict:
-        filterdict['calculation_mode'] = request_get_dict.get(
-            'calculation_mode')
+        filterdict['calculation_mode'] = request_get_dict.get('calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
@@ -528,7 +527,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
 
     if 'start_time' in request_get_dict:
         # assume an ISO date string
-        time_filter = "start_time >= '%s'" % request_get_dict.get('start_time')
+        start_time = request_get_dict.get('start_time')
+        time_filter = f"start_time >= '{start_time}'"
     else:
         time_filter = 1
 
@@ -537,9 +537,20 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s AND status != '
-              "'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
-              % (users_filter, time_filter, limit), filterdict, allowed_users)
+    if 'user_name_like' in request_get_dict:
+        # avoiding SQL syntax issues if the input contains quotes
+        user_name_like = request_get_dict.get('user_name_like').replace("'", "''")
+        user_name_like_filter = f"user_name LIKE '%{user_name_like}%'"
+    else:
+        user_name_like_filter = 1
+
+    query = (
+        f"SELECT * FROM job "
+        f"WHERE ?A AND {users_filter} AND {time_filter} AND {user_name_like_filter} "
+        f"AND status != 'deleted' OR status == 'shared' "
+        f"ORDER BY id DESC LIMIT {limit}"
+    )
+    jobs = db(query, filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
              job.hazard_calculation_id, job.size_mb, job.host,
