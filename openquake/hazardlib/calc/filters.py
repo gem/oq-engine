@@ -334,7 +334,6 @@ def split_source(src):
 def close_ruptures(ruptures, sites, dist=800.):
     """
     :returns: array of ruptures close to the sites
-    """    
     hypos = ruptures['hypo']
     kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
     ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))

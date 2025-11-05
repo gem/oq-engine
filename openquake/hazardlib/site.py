@@ -22,6 +22,7 @@ Module :mod:`openquake.hazardlib.site` defines :class:`Site`.
 
 import numpy
 import pandas
+from h3.api.numpy_int import geo_to_h3, h3_to_geo
 from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib import hdf5, general
@@ -33,6 +34,7 @@ from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
+F32 = numpy.float32
 F64 = numpy.float64
 ampcode_dt = (numpy.bytes_, 4)
 param = dict(
@@ -891,6 +893,16 @@ class SiteCollection(object):
         out.sort(order='num_sites')
         return out
 
+    def lower_res(self, res=2):
+        """
+        Collapse together points within the same hexagon (with an
+        edge of 84 km for res=2, the default).
+        """
+        hexes = {geo_to_h3(lat, lon, res)
+                 for lon, lat in zip(self.lons, self.lats)}
+        latlons = F32([h3_to_geo(h) for h in hexes])  # shape (N, 2)
+        return self.from_points(latlons[:, 1], latlons[:, 0])
+        
     def geohash(self, length):
         """
         :param length: length of the geohash in the range 1..8
@@ -964,8 +976,9 @@ def check_all_equal(mosaic_model, dicts, *keys):
     for key in keys:
         for dic in dicts[1:]:
             if dic[key] != dic0[key]:
-                raise RuntimeError('Inconsistent key %s!=%s while processing %s',
-                                   dic[key], dic0[key], mosaic_model)
+                raise RuntimeError(
+                    'Inconsistent key %s!=%s while processing %s',
+                    dic[key], dic0[key], mosaic_model)
 
 
 def merge_without_dupl(array1, array2, uniquefield):

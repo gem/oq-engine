@@ -162,9 +162,9 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
             SiteCollection.from_points(
                 lons, lats, None, SiteModelParam(), req_params)
 
-
+        
 class SiteCollectionFilterTestCase(unittest.TestCase):
-    SITES = [
+    SITES = SiteCollection([
         Site(location=Point(10, 20, 30), vs30=1.2, vs30measured=True,
              z1pt0=3, z2pt5=5),
         Site(location=Point(11, 12, 13), vs30=55.4, vs30measured=False,
@@ -172,17 +172,16 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         Site(location=Point(0, 2, 0), vs30=2, vs30measured=True,
              z1pt0=9, z2pt5=17),
         Site(location=Point(1, 1, 3), vs30=4, vs30measured=False,
-             z1pt0=22, z2pt5=11)
-    ]
+             z1pt0=22, z2pt5=11)  # 4 sites
+    ])
 
     def test_split(self):
         # splitting in more tiles than sites
-        col = SiteCollection(self.SITES)  # 4 sites
-        tiles = col.split(5)
+        tiles = self.SITES.split(5)
         self.assertEqual(len(tiles), 4)
 
     def test_filter(self):
-        col = SiteCollection(self.SITES)
+        col = self.SITES
         filtered = col.filter(numpy.array([True, False, True, False]))
         arreq = numpy.testing.assert_array_equal
         arreq(filtered.vs30, [1.2, 2])
@@ -213,17 +212,17 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         os.remove(fpath)
 
     def test_filter_all_out(self):
-        col = SiteCollection(self.SITES)
+        col = self.SITES
         filtered = col.filter(numpy.zeros(len(self.SITES), bool))
         self.assertIs(filtered, None)
 
     def test_filter_all_in(self):
-        col = SiteCollection(self.SITES)
+        col = self.SITES
         filtered = col.filter(numpy.ones(len(self.SITES), bool))
         self.assertIs(filtered, col)
 
     def test_double_filter(self):
-        col = SiteCollection(self.SITES)
+        col = self.SITES
         filtered = col.filter(numpy.array([True, False, True, True]))
         filtered2 = filtered.filter(numpy.array([False, True, False]))
         arreq = numpy.testing.assert_array_equal
@@ -239,19 +238,23 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
 
     def test_within_region(self):
         region = wkt.loads('POLYGON((0 0, 9 0, 9 9, 0 9, 0 0))')
-        col = SiteCollection(self.SITES)
-        reducedcol = col.within(region)
+        reducedcol = self.SITES.within(region)
         # point (10, 20) is out, point (11, 12) is out, point (0, 2)
         # is on the boundary i.e. out, (1, 1) is in
         self.assertEqual(len(reducedcol), 1)
 
     def test_reduce(self):
-        col = SiteCollection(self.SITES)
+        col = self.SITES
         self.assertEqual(len(col.reduce(1)), 1)
         self.assertEqual(len(col.reduce(2)), 2)
         self.assertEqual(len(col.reduce(3)), 4)
 
+    def test_lower_res(self):
+        # collapsing together two point on the same hexagon
+        small = self.SITES.lower_res()
+        self.assertEqual(len(small), 3)
 
+        
 class WithinBBoxTestCase(unittest.TestCase):
     # to understand this test case it is ESSENTIAL to plot sites and
     # bounding boxes; the code in plot_sites.py can get you started
