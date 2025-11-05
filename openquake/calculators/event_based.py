@@ -318,13 +318,10 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
                 rlzs_by_gsim[model, trt_smr] = rbg
         dstore['full_lt'] = full_lt  # saving the last lt (hackish)
         r.copy('events', dstore.hdf5) # saving the events
-        manysites = len(sitecol) > oq.max_sites_disagg
-        if manysites:
-            logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
-            rups = r['ruptures'][:]
-        else:
-            logging.info('Selecting the ruptures close to the sites')
-            rups = close_ruptures(r['ruptures'][:], sitecol)
+        logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
+        rups = r['ruptures'][:]
+        rups = close_ruptures(rups, sitecol)
+        logging.info(f'Selected {len(rups):,d} ruptures close to the sites')
         dstore['ruptures'] = rups
         R = full_lt.num_samples
         dstore['weights'] = numpy.ones(R) / R
@@ -333,6 +330,7 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{maxw=}')
     extra = sitecol.array.dtype.names
+    manysites = len(sitecol) > oq.max_sites_disagg
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
     for (model, trt_smr), rups in rups_dic.items():
