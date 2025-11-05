@@ -41,8 +41,8 @@ def _get_stddevs(C):
 
 def _compute_base_term(C):
     """
-    Returns the base coefficient of the GMPE, which for interface events
-    is just the coefficient a1 (adjusted regionally)
+    Returns the base coefficient of the GMPE, which for interface-overlying
+    events is just the coefficient a1 (adjusted regionally)
     """
     return C["Tetha1"]
 
@@ -105,7 +105,7 @@ class ArtetaEtAl2023_Vs30(GMPE):
     of natural period of HVRSR and mean value of P*
     """
 
-    #: Supported tectonic region type is subduction interface
+    #: Supported tectonic region type is ASCR
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
@@ -127,11 +127,10 @@ class ArtetaEtAl2023_Vs30(GMPE):
     #: Site amplification is dependent only upon Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
-    #: Required rupture parameters are only magnitude for the interface model
+    #: Required rupture parameters are only mag and hypo depth for ASCR model
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    #: Required distance measure is closest distance to rupture, for
-    #: interface events
+    #: Required distance measures are hypocentral and volcanic for ASCR model
     REQUIRES_DISTANCES = {'rhypo', 'rvolc'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -237,7 +236,7 @@ class ArtetaEtAl2023(ArtetaEtAl2023_Vs30):
     Soil term depends of natural perod and peak value of HVRSR spectra
     """
 
-    #: Supported tectonic region type is subduction interface
+    #: Supported tectonic region type is ASCR
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
@@ -259,11 +258,10 @@ class ArtetaEtAl2023(ArtetaEtAl2023_Vs30):
     #: Site amplification is dependent on the period and amplitude of HVRSR spectra
     REQUIRES_SITES_PARAMETERS = {'THV', 'PHV'}
 
-    #: Required rupture parameters are only magnitude for the interface model
+    #: Required rupture parameters are only mag and hypo depth for ASCR model
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
 
-    #: Required distance measure is closest distance to rupture, for
-    #: interface events
+    #: Required distance measures are hypocentral and volcanic for ASCR model
     REQUIRES_DISTANCES = {'rhypo', 'rvolc'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
