@@ -530,11 +530,16 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         filterdict['user_name LIKE'] = name_pattern
 
     if user_acl_on:
-        filterdict['user_name IN'] = allowed_users
+        filterdict['user_name IN (?X)'] = allowed_users
 
     limit = int(request_get_dict.get('limit', 100))
     offset = int(request_get_dict.get('offset', 0))
+    allowed_sort_fields = [
+        'id', 'start_time', 'user_name', 'calculation_mode', 'status', 'description',
+        'size_mb']
     order_by = request_get_dict.get('order_by', 'id')
+    if order_by not in allowed_sort_fields:
+        order_by = 'id'
     order_dir = request_get_dict.get('order_dir', 'DESC').upper()
     if order_dir not in ('ASC', 'DESC'):
         order_dir = 'DESC'
