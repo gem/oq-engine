@@ -41,8 +41,7 @@ def _get_stddevs(C):
 
 def _compute_base_term(C):
     """
-    Returns the base coefficient of the GMPE, which for interface-overlying
-    events is just the coefficient a1 (adjusted regionally)
+    Returns the base coefficient of the GMPE.
     """
     return C["Tetha1"]
 
