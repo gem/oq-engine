@@ -50,9 +50,8 @@ if Job and JobTag:
 
         def has_view_permission(self, request, obj=None):
             user = request.user
-            if user.is_active and user.is_authenticated and request.user.is_superuser:
-                return True
-            if user.is_active and user.is_authenticated and user.level >= 2:
+            if user.is_active and user.is_authenticated and (
+                    user.is_superuser or user.level >= 2):
                 return True
             return False
 
@@ -108,9 +107,9 @@ if Job and JobTag:
 
         def has_module_permission(self, request):
             user = request.user
-            if user.is_active and user.is_authenticated and request.user.is_superuser:
-                return True
-            if user.is_active and user.is_authenticated and user.level >= 2:
+            user = request.user
+            if user.is_active and user.is_authenticated and (
+                    user.is_superuser or user.level >= 2):
                 return True
             return False
 

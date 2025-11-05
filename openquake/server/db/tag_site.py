@@ -26,9 +26,8 @@ class TagAdminSite(AdminSite):
 
     def has_permission(self, request):
         user = request.user
-        if user.is_active and user.is_authenticated and request.user.is_superuser:
-            return True
-        if user.is_active and user.is_authenticated and user.level >= 2:
+        if user.is_active and user.is_authenticated and (
+                user.is_superuser or user.level >= 2):
             return True
         return False
 
