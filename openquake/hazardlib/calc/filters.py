@@ -344,7 +344,9 @@ def close_ruptures(ruptures, sitecol, magdist=(
     sites = sitecol.lower_res()
     mags = ruptures['mag']
     hypos = ruptures['hypo']
+    kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
     ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
+    all_sids = kr.query_ball_tree(ks, dist, eps=.1)
     out = []
     for (mag1, dist1), (mag2, dist2) in zip(magdist[:-1], magdist[1:]):
         ok = (mags >= mag1) & (mags < mag2)

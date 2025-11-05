@@ -902,7 +902,7 @@ class SiteCollection(object):
                  for lon, lat in zip(self.lons, self.lats)}
         latlons = F32([h3_to_geo(h) for h in hexes])  # shape (N, 2)
         return self.from_points(latlons[:, 1], latlons[:, 0])
-        
+
     def geohash(self, length):
         """
         :param length: length of the geohash in the range 1..8

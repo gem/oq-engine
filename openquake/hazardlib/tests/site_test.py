@@ -162,7 +162,7 @@ class SiteCollectionCreationTestCase(unittest.TestCase):
             SiteCollection.from_points(
                 lons, lats, None, SiteModelParam(), req_params)
 
-        
+
 class SiteCollectionFilterTestCase(unittest.TestCase):
     SITES = SiteCollection([
         Site(location=Point(10, 20, 30), vs30=1.2, vs30measured=True,
@@ -254,7 +254,7 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         small = self.SITES.lower_res()
         self.assertEqual(len(small), 3)
 
-        
+
 class WithinBBoxTestCase(unittest.TestCase):
     # to understand this test case it is ESSENTIAL to plot sites and
     # bounding boxes; the code in plot_sites.py can get you started
