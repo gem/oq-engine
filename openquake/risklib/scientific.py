@@ -1700,11 +1700,16 @@ class RiskComputer(dict):
                     # computing the average dataframe for event_based_risk/case_8
                     out[lt] = _agg(outs, weights[peril, lt])
                 elif len(outs) > 1:
-                    # tested in case_lisa with a composite array 'loss', 'poe'
-                    out[lt] = outs[0]
-                    poes = numpy.sum([out['poe'] * wei for out, wei in zip(
-                        outs, weights[peril, lt])])
-                    out[lt]['poe'] = poes
+                    if outs[0].dtype.names:
+                        # tested in case_lisa with a composite array 'loss', 'poe'
+                        out[lt] = outs[0]
+                        poes = numpy.sum([out['poe'] * wei for out, wei in zip(
+                            outs, weights[peril, lt])])
+                        out[lt]['poe'] = poes
+                    else:
+                        # for oq-risk-tests test_ebd
+                        out[lt] = numpy.average(
+                            outs, weights=weights[peril, lt], axis=0)
                 else:
                     out[lt] = outs[0]
             if hasattr(haz, 'eid'):  # event based
