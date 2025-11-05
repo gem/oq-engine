@@ -105,8 +105,6 @@ def build_hcurves(dstore):
         min_ = gmf_df[sec_imt].min() + 1E-10  # to ensure min_ > 0
         max_ = gmf_df[sec_imt].max() + 2E-10  # to ensure max_ > min_
         imtls[sec_imt] = valid.logscale(min_, max_, L1)
-    dstore['all_imtls'] = imtls
-    dstore['all_imtls'].attrs['imts'] = ' '.join(imtls)
     hc_mon = performance.Monitor('building hazard curves', measuremem=False,
                                  h5=dstore)
     hcurves = {}
@@ -320,13 +318,10 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
                 rlzs_by_gsim[model, trt_smr] = rbg
         dstore['full_lt'] = full_lt  # saving the last lt (hackish)
         r.copy('events', dstore.hdf5) # saving the events
-        manysites = len(sitecol) > oq.max_sites_disagg
-        if manysites:
-            logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
-            rups = r['ruptures'][:]
-        else:
-            logging.info('Selecting the ruptures close to the sites')
-            rups = close_ruptures(r['ruptures'][:], sitecol)
+        logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
+        rups = r['ruptures'][:]
+        rups = close_ruptures(rups, sitecol)
+        logging.info(f'Selected {len(rups):,d} ruptures close to the sites')
         dstore['ruptures'] = rups
         R = full_lt.num_samples
         dstore['weights'] = numpy.ones(R) / R
@@ -335,6 +330,7 @@ def starmap_from_rups_hdf5(oq, sitecol, dstore):
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{maxw=}')
     extra = sitecol.array.dtype.names
+    manysites = len(sitecol) > oq.max_sites_disagg
     dstore.swmr_on()
     smap = parallel.Starmap(event_based, h5=dstore.hdf5)
     for (model, trt_smr), rups in rups_dic.items():
@@ -765,6 +761,12 @@ class EventBasedCalculator(base.HazardCalculator):
                             'you may want to set a minimum_intensity')
         elif oq.minimum_intensity:
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
+            sec_imts = {sec.split('_')[1] for sec in oq.sec_imts} & set(
+                oq.minimum_intensity)
+            if sec_imts:
+                logging.warning(
+                    f'Discarding GMFs associated to low {sec_imts=}'
+                    ' i.e. getting wrong seismic risk')
         else:
             logging.info('min_iml=%s', oq.min_iml)
         self.offset = 0

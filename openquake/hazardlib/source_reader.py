@@ -447,6 +447,11 @@ def _build_groups(full_lt, smdict):
                     (value, common, rlz.value))
             src_groups.extend(extra)
         for src_group in src_groups:
+            # an example of bsetvalues is in LogicTreeCase2ClassicalPSHA:
+            # (<abGRAbsolute(3, applyToSources=['first'])>, (4.6, 1.1))
+            # (<abGRAbsolute(3, applyToSources=['second'])>, (3.3, 1.0))
+            # (<maxMagGRAbsolute(3, applyToSources=['first'])>, 7.0)
+            # (<maxMagGRAbsolute(3, applyToSources=['second'])>, 7.5)
             sg = apply_uncertainties(bset_values, src_group)
             full_lt.set_trt_smr(sg, smr=rlz.ordinal)
             for src in sg:
@@ -531,6 +536,29 @@ def _get_csm(full_lt, groups, event_based):
     return CompositeSourceModel(full_lt, src_groups)
 
 
+def collect_atomic(allargs):
+    """
+    Generates tasks arguments from atomic groups
+    """
+    if not allargs:
+        return []
+    blocks_ = general.AccumDict(accum=[])
+    tilegetters_ = {}
+    cmaker_ = {}
+    for cmaker, tilegetters, blocks, extra in allargs:
+        gid = tuple(cmaker.gid)
+        tilegetters_[gid] = tilegetters
+        blocks_[gid].extend(blocks)
+        cmaker_[gid] = cmaker
+    out = []
+    extra = dict(atomic=1, blocks=1, num_chunks=extra['num_chunks'])
+    for gid, tgetters in tilegetters_.items():
+        for tgetter in tgetters:
+            out.append((cmaker_[gid], [tgetter], [U16(blocks_[gid])], extra))
+    logging.info('Collapsed %d atomic tasks into %d', len(allargs), len(out))
+    return out
+
+
 class CompositeSourceModel:
     """
     :param full_lt:
@@ -576,7 +604,7 @@ class CompositeSourceModel:
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
     def get_cmakers(self, oq):
-        return get_cmakers(self.trt_smrs(), self.full_lt, oq)
+        return get_cmakers(self.get_trt_smrs(), self.full_lt, oq)
 
     def get_sources(self, atomic=None):
         """
@@ -710,6 +738,17 @@ class CompositeSourceModel:
                      format(int(tot_weight), int(max_weight), len(srcs)))
         return max_weight
 
+    def split_atomic(self, cmdict, sitecol, max_weight, num_chunks, tiling):
+        atomic = []
+        non_atomic = []
+        for cmaker, tilegetters, blocks, extra in self.split(
+            cmdict, sitecol, max_weight, num_chunks, tiling):
+            if extra['atomic']:
+                atomic.append((cmaker, tilegetters, blocks, extra))
+            else:
+                non_atomic.append((cmaker, tilegetters, blocks, extra))
+        return collect_atomic(atomic) + non_atomic
+
     def split(self, cmdict, sitecol, max_weight, num_chunks=1, tiling=False):
         """
         :yields: (cmaker, tilegetters, blocks, splits) for each source group
@@ -749,11 +788,15 @@ class CompositeSourceModel:
         if sg.atomic or tiling:
             blocks = [sg.grp_id]
             tiles = max(hint, splits)
-        else:
-            # if hint > max_blocks generate max_blocks and more tiles
+        elif hint > oq.max_blocks:
+            # double the tiles and reduce by half the blocks (less transfer)
             blocks = list(general.split_in_blocks(
-                sg, min(hint, oq.max_blocks), lambda s: s.weight))
-            tiles = max(hint / oq.max_blocks * splits, splits)
+                sg, hint / 2, lambda s: s.weight))
+            tiles = splits * 2
+        else:
+            blocks = list(general.split_in_blocks(
+                sg, hint, lambda s: s.weight))
+            tiles = splits
         tilegetters = list(sitecol.split(tiles, oq.max_sites_disagg))
         extra = dict(codes=sg.codes,
                      num_chunks=num_chunks,

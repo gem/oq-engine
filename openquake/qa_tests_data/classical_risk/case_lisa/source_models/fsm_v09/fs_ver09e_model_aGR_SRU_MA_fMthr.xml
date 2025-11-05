@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <sourceModel name="fs_model_eshm20_ver09e_var_Mthr">
+
+        <simpleFaultSource id="ALCF00C" name="ALCF00CT" tectonicRegion="Shallow Default">
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+           20.387311 39.91227 
+ 20.340951 39.939075
+ 20.299809 39.970505
+ 20.266344 40.006906
+ 20.242934 40.047662
+ 20.219521 40.088422
+ 20.195124 40.128848
+ 20.159911 40.164314
+ 20.124692 40.199788
+ 20.089466 40.235268
+ 20.056077 40.27178 
+ 20.032577 40.312537
+ 20.009139 40.353319
+ 19.986303 40.394305
+ 19.964738 40.435691
+ 19.942033 40.476727
+ 19.917638 40.517202
+ 19.894397 40.558073
+ 19.871932 40.599198
+ 19.851931 40.641055
+ 19.832407 40.683043
+ 19.814477 40.725442
+ 19.798856 40.768364
+ 19.782097 40.811041
+ 19.761345 40.852704
+ 19.737855 40.893531
+ 19.714468 40.934397
+ 19.69373  40.976075
+ 19.675016 41.018426
+                    </gml:posList>
+                </gml:LineString>
+                <dip>37.0</dip>
+                <upperSeismoDepth>5.0</upperSeismoDepth>
+                <lowerSeismoDepth>25.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>Leonard2014_Interplate</magScaleRel>
+            <ruptAspectRatio>2.49</ruptAspectRatio>
+          <truncGutenbergRichterMFD aValue="3.4953"   bValue="0.941"  minMag="6.7"  maxMag="7.9"/>
+            <rake>90.0</rake>
+        </simpleFaultSource>
+
+    </sourceModel>
+</nrml>

@@ -19,8 +19,6 @@
 import logging
 import numpy
 from openquake.baselib import sap
-from openquake.hazardlib.calc.hazard_curve import classical
-from openquake.hazardlib.map_array import MapArray
 from openquake.hazardlib.contexts import get_cmakers
 
 F32 = numpy.float32
@@ -53,30 +51,16 @@ def to_probs(rates, itime=1):
     return 1. - numpy.exp(- rates * itime)
 
 
-def calc_rmap(src_groups, full_lt, sitecol, oq):
+def get_rmap(src_groups, full_lt, sitecol, oq):
     """
     :returns: a MapArray of rates with shape (N, L, Gt)
     """
     oq.use_rates = True
     oq.disagg_by_src = False
-    L = oq.imtls.size
     all_trt_smrs = [sg[0].trt_smrs for sg in src_groups]
     cmakers = get_cmakers(all_trt_smrs, full_lt, oq)
-    Gt = sum(len(cm.gsims) for cm in cmakers)
-    logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
-                 len(sitecol), oq.imtls.size, Gt)
-    rmap = MapArray(sitecol.sids, L, Gt).fill(0)
-    ctxs = []
-    for group, cmaker in zip(src_groups, cmakers.to_array()):
-        dic = classical(group, sitecol, cmaker)
-        data = dic['rup_data']
-        if len(data) == 0:  # the group was filtered away
-            # happens in ClassicalTestCase::test_case_06 -
-            ctxs.append([])
-        else:
-            ctxs.append(numpy.concatenate(data).view(numpy.recarray))
-        rmap += dic['rmap']  # tested in logictree/case_05
-    return rmap, ctxs, cmakers
+    rmap = cmakers.get_rmap(src_groups, sitecol)
+    return rmap, cmakers
 
 
 def calc_mean_rates(rmap, gweights, wget, imtls):
@@ -108,7 +92,7 @@ def calc_mcurves(src_groups, sitecol, full_lt, oq):
     :returns: an array of shape (N, M, L1)
     """
     assert oq.use_rates
-    rmap, _, cmakers = calc_rmap(src_groups, full_lt, sitecol, oq)
+    rmap, cmakers = get_rmap(src_groups, full_lt, sitecol, oq)
     gweights = numpy.concatenate([cm.wei for cm in cmakers])
     rates = (rmap.array @ gweights).reshape(len(sitecol), len(oq.imtls), -1)
     return to_probs(rates)
@@ -126,7 +110,7 @@ def main(job_ini):
     csm = readinput.get_composite_source_model(oq)
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
-    rmap, _ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
+    rmap, cmakers = get_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
     gws = numpy.concatenate([cm.wei for cm in cmakers])
     rates = calc_mean_rates(rmap, gws, csm.full_lt.gsim_lt.wget, oq.imtls)
     N, _M, L1 = rates.shape

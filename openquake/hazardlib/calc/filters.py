@@ -331,19 +331,34 @@ def split_source(src):
     return splits
 
 
-def close_ruptures(ruptures, sites, dist=800.):
+# NB: this is absurdly fast because of KDTree and because
+# the SiteCollection is reduced to large hexagons via h3
+def close_ruptures(ruptures, sitecol, magdist=(
+                   (5., 100.), (6., 200.), (7., 300.),
+                   (8., 400.), (9., 600.), (11., 999.))):
     """
-    :returns: array of ruptures close to the sites
-    """    
+    :param ruptures: an array of rupture records
+    :param sitecol: a SiteCollection instance
+    :returns: the ruptures close to the sites
+    """
+    sites = sitecol.lower_res()
+    mags = ruptures['mag']
     hypos = ruptures['hypo']
     kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
     ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
-    all_sids = kr.query_ball_tree(ks, dist, eps=.1)
     out = []
-    for r, sids in enumerate(all_sids):
-        if sids:
-            ruptures[r]['nsites'] = len(sids)
-            out.append(ruptures[r])
+    for (mag1, dist1), (mag2, dist2) in zip(magdist[:-1], magdist[1:]):
+        ok = (mags >= mag1) & (mags < mag2)
+        if ok.sum() == 0:  # no ruptures in this magnitude range
+            continue
+        rups = ruptures[ok]
+        kr = KDTree(spherical_to_cartesian(
+            hypos[ok, 0], hypos[ok, 1], hypos[ok, 2]))
+        all_sids = kr.query_ball_tree(ks, dist1, eps=.1)
+        for r, sids in enumerate(all_sids):
+            if sids:
+                rups[r]['nsites'] = len(sids)
+                out.append(rups[r])
     return numpy.array(out)
 
 

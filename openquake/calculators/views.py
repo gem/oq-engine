@@ -82,7 +82,9 @@ def form(value):
     '-1.2'
     """
     if isinstance(value, FLOAT + INT):
-        if value <= 0:
+        if not numpy.isfinite(value):
+            return str(value)
+        elif value <= 0:
             return str(value)
         elif value < .001:
             return '%.3E' % value
@@ -90,8 +92,6 @@ def form(value):
             return '%.4f' % value
         elif value > 1000:
             return '{:_d}'.format(int(round(value)))
-        elif numpy.isnan(value):
-            return 'NaN'
         else:  # in the range 10-1000
             return str(round(value, 1))
     elif isinstance(value, bytes):
@@ -330,7 +330,7 @@ def view_full_lt(token, dstore):
 def view_eff_ruptures(token, dstore):
     info = dstore.read_df('source_info', 'source_id')
     df = info.groupby('code').sum()
-    df['slow_factor'] = df.calc_time / df.weight
+    df['heavy_factor'] = df.weight / df.calc_time
     del df['grp_id'], df['trti'], df['mutex_weight']
     return df
 
@@ -789,16 +789,18 @@ def view_task_hazard(token, dstore):
         sd = sdata[sdata.taskno == taskno]
         acc = AccumDict(accum=numpy.zeros(5))
         for src_id, nsites, esites, nrupts, weight, ctimes in zip(
-                sd.src_id, sd.nsites, sd.esites, sd.nrupts, sd.weight, sd.ctimes):
+                sd.src_id, sd.nsites, sd.esites, sd.nrupts,
+                sd.weight, sd.ctimes):
             acc[basename(src_id, ';:.')] += numpy.array(
                 [nsites, esites, nrupts, weight, ctimes])
         df = pandas.DataFrame(dict(src_id=list(acc)))
-        for i, name in enumerate(['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
+        for i, name in enumerate(
+                ['nsites', 'esites', 'nrupts', 'weight', 'ctimes']):
             df[name] = [arr[i] for arr in acc.values()]
         df = df.sort_values('ctimes').set_index('src_id')
         time = df.ctimes.sum()
         weight = df.weight.sum()
-        msg = f'{taskno=}, {weight=}, {time=}s\n%s' % df
+        msg = f'{taskno=:d}, {weight=:.0f}, {time=:.0f}s\n%s' % df
         return msg
     else:
         msg = ''

@@ -885,8 +885,7 @@ U32 = numpy.uint32
 U64 = numpy.uint64
 F32 = numpy.float32
 F64 = numpy.float64
-ALL_CALCULATORS = ['aftershock',
-                   'classical_risk',
+ALL_CALCULATORS = ['classical_risk',
                    'classical_damage',
                    'classical',
                    'custom',
@@ -1563,8 +1562,7 @@ class OqParam(valid.ParamSet):
                 imts.add(im.string)
 
         for gsim in gsims:
-            if (hasattr(gsim, 'weight') or
-                    self.calculation_mode == 'aftershock'):
+            if hasattr(gsim, 'weight'):
                 continue  # disable the check
             restrict_imts = gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES
             if restrict_imts:
@@ -1725,7 +1723,9 @@ class OqParam(valid.ParamSet):
         seco_imts = {sec_imt.split('_')[1] for sec_imt in self.sec_imts}
         risk_imts = set(self.risk_imtls)
         for imt in risk_imts - seco_imts:
-            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI')):
+            # LSD is considered a primary IMT because it is directly
+            # computed by two GMPEs, Youd and Zang, Zhao
+            if imt.startswith(('PGA', 'PGV', 'SA', 'MMI', 'LSD')):
                 pass  # ground shaking IMT
             else:
                 raise ValueError(f'The risk functions contain {imt} which is '
@@ -2063,7 +2063,7 @@ class OqParam(valid.ParamSet):
         one of sites, sites_csv, hazard_curves_csv, region is set.
         You did set more than one, or nothing.
         """
-        if self.calculation_mode in ('preclassical', 'aftershock'):
+        if self.calculation_mode == 'preclassical':
             return True  # disable the check
         if 'hazard_curves' in self.inputs and (
                 self.sites is not None or 'site_model' in self.inputs):

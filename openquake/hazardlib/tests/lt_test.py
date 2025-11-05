@@ -142,6 +142,7 @@ class CollapseTestCase(unittest.TestCase):
             weights.append(weight)
         for i, src in enumerate(srcs):
             src.id = i
+            src.num_ruptures = src.count_ruptures()
         time_span = srcs[0].temporal_occurrence_model.time_span
         idist = calc.filters.IntegrationDistance.new('200')
         params = dict(imtls=self.imtls, truncation_level2=2,

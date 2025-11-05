@@ -171,29 +171,26 @@ def store_tiles(dstore, csm, sitecol, cmakers):
         [('grp_id', U16), ('gsims', U16), ('tiles', U16), ('blocks', U16),
          ('max_mb', F32), ('weight', F32), ('codes', '<S8'), ('trt', '<S32')])
 
-    # determine light groups and tiling
-    light = cmakers.inverse[data['grp_id'][data['blocks'] == 1]]
+    # determine if to use tiling
     req_gb, trt_rlzs = getters.get_pmaps_gb(dstore, csm.full_lt)
-    mem_gb = req_gb - sum(len(cmakers[inv].gsims) * fac / 1024
-                          for inv in numpy.unique(light))
-    if len(light):
-        logging.info('mem_gb = %.2f with %d light groups out of %d',
-                     mem_gb, len(light), len(data))
-    else:
-        logging.info('Required mem_gb = %.2f', req_gb)
     max_gb = float(config.memory.pmap_max_gb or parallel.num_cores/8)
-    regular = (mem_gb < max_gb or oq.disagg_by_src or
+    regular = (req_gb < max_gb or oq.disagg_by_src or
                N < oq.max_sites_disagg or oq.tile_spec)
     if oq.tiling is None:
         tiling = not regular
     else:
         tiling = oq.tiling
 
-    # store source_groups
-    dstore.create_dset('source_groups', data,
-                       attrs=dict(req_gb=req_gb, mem_gb=mem_gb, tiling=tiling))
+    if tiling:
+        logging.info('Not requiring mem_gb = %.2f', req_gb)
+    else:
+        logging.info('Requiring mem_gb = %.2f', req_gb)
     if req_gb >= 30 and not config.directory.custom_tmp:
         logging.info('We suggest to set custom_tmp')
+
+    # store source_groups
+    dstore.create_dset('source_groups', data,
+                       attrs=dict(req_gb=req_gb, mem_gb=req_gb, tiling=tiling))
     return req_gb, max_weight, trt_rlzs
 
 
@@ -228,7 +225,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         logging.info('Building cmakers')
-        trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
+        trt_smrs = csm.get_trt_smrs()
         self.cmakers = get_cmakers(trt_smrs, csm.full_lt, oq)
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         sites = csm.sitecol if csm.sitecol else None

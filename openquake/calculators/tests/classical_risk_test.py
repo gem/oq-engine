@@ -17,7 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.qa_tests_data.classical_risk import (
-    case_2, case_3, case_4, case_5, case_master)
+    case_2, case_3, case_4, case_5, case_lisa, case_master)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 from openquake.baselib import InvalidFile
@@ -93,6 +93,15 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         fnames = export(('avg_losses-rlzs', 'csv'), self.calc.datastore)
         assert len(fnames) == 4  # there are 4 realizations
         self.assertEqualFiles('expected/avg_losses-000.csv', fnames[0])
+
+    def test_case_lisa(self):
+        # testing average(outs) with len(outs) > 1
+        self.run_calc(case_lisa.__file__, 'job_haz.ini,job_risk.ini')
+        fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                                  fname, delta=1E-5)
+
 
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')

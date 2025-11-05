@@ -700,7 +700,8 @@ def collect_std(disaggs, Ma, D, M, G):
             zeros = sig[:, :, m, g] == 0
             if zeros.any():
                 magi, dsti = numpy.where(~zeros)
-                sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
+                if len(magi) and len(dsti):
+                    sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
     return sig
 
 

@@ -329,9 +329,9 @@ class File(h5py.File):
     >>> f = File('/tmp/x.h5', 'w')
     >>> f['dic'] = dict(a=dict(x=1, y=2), b=3)
     >>> dic = f['dic']
-    >>> dic['a']['x'][()]
+    >>> int(dic['a']['x'][()])
     1
-    >>> dic['b'][()]
+    >>> int(dic['b'][()])
     3
     >>> f.close()
     """

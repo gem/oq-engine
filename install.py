@@ -500,6 +500,7 @@ def install(inst, version, from_fork):
         oqreal = "%s\\Scripts\\oq" % inst.VENV
     else:
         oqreal = "%s/bin/oq" % inst.VENV
+
     print("Compiling python/numba modules")
     subprocess.run([oqreal, "--version"])  # compile numba
 

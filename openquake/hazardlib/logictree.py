@@ -123,7 +123,7 @@ def get_trt_by_src(source_model_file, source_id=''):
                 # disagg/case_12
                 src_id = src_id.split(':')[0]  # colon convention
                 if source_id:
-                    if source_id == src_id:
+                    if src_id.startswith(source_id):
                         trt_by_src[src_id] = trt
                 else:
                     trt_by_src[src_id] = trt
@@ -131,7 +131,7 @@ def get_trt_by_src(source_model_file, source_id=''):
         for src in node.fromstring(xml)[0]:
             src_id = src.attrib['id'].split(':')[0]  # colon convention
             if source_id:
-                if source_id == src_id:
+                if src_id.startswith(source_id):
                     trt_by_src[src_id] = src.attrib['tectonicRegion']
             else:
                 trt_by_src[src_id] = src.attrib['tectonicRegion']
@@ -1007,7 +1007,7 @@ class LtRealization(object):
     a GSIM realization.
     """
     # NB: for EUR, with 302_990_625 realizations, the usage of __slots__
-    # save little memory, from 95.3 GB down to 81.0 GB
+    # saves little memory, from 95.3 GB down to 81.0 GB
     __slots__ = ['ordinal', 'sm_lt_path', 'gsim_rlz', 'weight']
 
     def __init__(self, ordinal, sm_lt_path, gsim_rlz, weight):

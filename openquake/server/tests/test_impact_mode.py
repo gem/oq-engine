@@ -21,40 +21,22 @@ import os
 import sys
 import json
 import tempfile
-import string
-import unittest
-import secrets
 import numpy
 import pandas
 from io import BytesIO
 
 import django
+from django.apps import apps
 from django.test import Client, override_settings
 from django.conf import settings
 from django.http import HttpResponseNotFound
-from django.contrib.auth.models import Permission
 from openquake.baselib import config
 from openquake.baselib.general import gettemp
-from openquake.commonlib.dbapi import db
 from openquake.commonlib.logs import dbcmd
 from openquake.commonlib.readinput import loadnpz
-from openquake.engine.engine import create_jobs
-
-# NOTE: before importing User or any other model, django.setup() is needed,
-#       otherwise it would raise:
-#       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+from openquake.server.tests.views_test import get_or_create_user
 
 CALC_RUN_TIMEOUT = 60
-
-
-django.setup()
-try:
-    from django.contrib.auth.models import User, Group, Permission  # noqa
-except RuntimeError:
-    # Django tests are meant to be run with the command
-    # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
-    # ./openquake/server/manage.py test tests.views_test
-    raise unittest.SkipTest('Authentication not configured')
 
 
 def get_email_content(directory, search_string):
@@ -67,23 +49,6 @@ def get_email_content(directory, search_string):
                     return content
     raise FileNotFoundError(
         f'No email was found containing the string {search_string}')
-
-
-def get_or_create_user(level):
-    # creating/getting a user of the given level
-    # and returning the user object and its plain password
-    username = f'django-test-user-level-{level}'
-    email = f'django-test-user-level-{level}@email.test'
-    password = ''.join((secrets.choice(
-        string.ascii_letters + string.digits + string.punctuation)
-        for i in range(8)))
-    user, created = User.objects.get_or_create(username=username, email=email)
-    if created:
-        user.set_password(password)
-    user.save()
-    user.profile.level = level
-    user.profile.save()
-    return user, password  # user.password is the hashed password instead
 
 
 def check_email(job_id, expected_error):
@@ -117,7 +82,7 @@ def check_email(job_id, expected_error):
         assert f'engine/{job_id}/outputs_impact' in email_content
 
 
-class EngineServerTestCase(django.test.TestCase):
+class ImpactModeTestCase(django.test.TestCase):
     datadir = os.path.join(os.path.dirname(__file__), 'data')
 
     # general utilities
@@ -182,6 +147,8 @@ class EngineServerTestCase(django.test.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        Group = apps.get_model('auth', 'Group')
+        Permission = apps.get_model('auth', 'Permission')
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
@@ -265,6 +232,11 @@ class EngineServerTestCase(django.test.TestCase):
         losses_by_site = numpy.load(BytesIO(content))
         pandas.DataFrame.from_dict(
             {item: losses_by_site[item] for item in losses_by_site})
+        ret = self.get('%s/extract/losses_by_location' % job_id)
+        content = self.get_response_content(ret)
+        losses_by_location = numpy.load(BytesIO(content))
+        pandas.DataFrame.from_dict(
+            {item: losses_by_location[item] for item in losses_by_location})
 
         # check that users can download hidden outputs only if their level is at
         # least 2 or if they have the can_view_exposure permission
@@ -274,6 +246,9 @@ class EngineServerTestCase(django.test.TestCase):
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_exposure they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
 
         # level 1 users with the can_view_exposure permission can see the exposure
         self.user1.groups.add(self.users_who_can_view_exposure)
@@ -282,6 +257,9 @@ class EngineServerTestCase(django.test.TestCase):
         [download_url] = [res['url'] for res in results if res['type'] == 'exposure']
         download_exposure_url = download_url
         ret = self.c.get(download_url)
+        self.assertEqual(ret.status_code, 200)
+        # ...and with can_view_exposure they can extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
         self.assertEqual(ret.status_code, 200)
 
         # level 2 users without the show_exposure group can see the exposure
@@ -298,6 +276,9 @@ class EngineServerTestCase(django.test.TestCase):
         [exposure_url] = [res['url'] for res in results if res['type'] == 'exposure']
         ret = self.c.get(exposure_url)
         self.assertEqual(ret.status_code, 200)
+        # ...and even without can_view_exposure they can extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 200)
 
         # level 0 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 0
@@ -311,6 +292,9 @@ class EngineServerTestCase(django.test.TestCase):
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_exposure they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
 
         # level 1 users without the can_view_exposure permission can't see the exposure
         self.user1.profile.level = 1
@@ -324,6 +308,9 @@ class EngineServerTestCase(django.test.TestCase):
         results = json.loads(ret.content.decode('utf8'))
         exposure_urls = [res['url'] for res in results if res['type'] == 'exposure']
         self.assertEqual(len(exposure_urls), 0)
+        # ...and without can_view_exposure they can't extract the assetcol
+        ret = self.c.get(f'/v1/calc/{job_id}/extract/assetcol')
+        self.assertEqual(ret.status_code, 403)
 
         ret = self.post('%s/remove' % job_id)
         if ret.status_code != 200:
@@ -421,133 +408,3 @@ class EngineServerTestCase(django.test.TestCase):
         self.assertIn('station_data_file', resp)
         self.assertIn('n_stations', resp)
         self.assertIsNone(resp['station_data_issue'])
-
-
-class ShareJobTestCase(django.test.TestCase):
-
-    @classmethod
-    def post(cls, path, data=None):
-        return cls.c.post('/v1/calc/%s' % path, data)
-
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.user0, cls.password0 = get_or_create_user(0)  # level 0
-        cls.user1, cls.password1 = get_or_create_user(1)  # level 1
-        cls.user2, cls.password2 = get_or_create_user(2)  # level 2
-        cls.c = Client()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.user0.delete()
-        cls.user1.delete()
-        cls.user2.delete()
-        super().tearDownClass()
-
-    def remove_calc(self, calc_id):
-        ret = self.post('%s/remove' % calc_id)
-        if ret.status_code != 200:
-            raise RuntimeError(
-                'Unable to remove job %s:\n%s' % (calc_id, ret))
-
-    def test_share_complete_job(self):
-        job_dic = dict(calculation_mode='event_based',
-                       description='test_share_complete_job')
-        [job] = create_jobs([job_dic], user_name=self.user2.username)
-        db("UPDATE job SET ?D WHERE id=?x",
-           {'status': 'complete', 'is_running': 0}, job.calc_id)
-        self.c.login(username=self.user2.username, password=self.password2)
-        ret = self.post(f'{job.calc_id}/share')
-        self.assertEqual(ret.json(),
-                         {'success': f'The status of calculation {job.calc_id} was'
-                                     f' changed from "complete" to "shared"'})
-        self.remove_calc(job.calc_id)
-
-    def test_share_incomplete_job(self):
-        job_dic = dict(calculation_mode='event_based',
-                       description='test_share_incomplete_job')
-        [job] = create_jobs([job_dic], user_name=self.user2.username)
-        db("UPDATE job SET ?D WHERE id=?x",
-           {'status': 'created', 'is_running': 1}, job.calc_id)
-        self.c.login(username=self.user2.username, password=self.password2)
-        ret = self.post(f'{job.calc_id}/share')
-        self.assertEqual(ret.json(),
-                         {'error': f'Can not share calculation {job.calc_id} from'
-                                   f' status "created"'})
-        db("UPDATE job SET ?D WHERE id=?x",
-           {'status': 'failed', 'is_running': 0}, job.calc_id)
-        self.remove_calc(job.calc_id)
-
-    def test_share_shared_job(self):
-        job_dic = dict(calculation_mode='event_based',
-                       description='test_share_shared_job')
-        [job] = create_jobs([job_dic], user_name=self.user2.username)
-        db("UPDATE job SET ?D WHERE id=?x",
-           {'status': 'shared', 'is_running': 0}, job.calc_id)
-        self.c.login(username=self.user2.username, password=self.password2)
-        ret = self.post(f'{job.calc_id}/share')
-        self.assertEqual(ret.json(),
-                         {'success': f'Calculation {job.calc_id} was already shared'})
-        self.remove_calc(job.calc_id)
-
-    def test_unshare_complete_job(self):
-        job_dic = dict(calculation_mode='event_based',
-                       description='test_unshare_complete_job')
-        [job] = create_jobs([job_dic], user_name=self.user2.username)
-        db("UPDATE job SET ?D WHERE id=?x",
-           {'status': 'complete', 'is_running': 0}, job.calc_id)
-        self.c.login(username=self.user2.username, password=self.password2)
-        ret = self.post(f'{job.calc_id}/unshare')
-        self.assertEqual(ret.json(),
-                         {'success': f'Calculation {job.calc_id} was already complete'})
-        self.remove_calc(job.calc_id)
-
-    def test_unshare_incomplete_job(self):
-        job_dic = dict(calculation_mode='event_based',
-                       description='test_unshare_incomplete_job')
-        [job] = create_jobs([job_dic], user_name=self.user2.username)
-        db("UPDATE job SET ?D WHERE id=?x",
-           {'status': 'created', 'is_running': 1}, job.calc_id)
-        self.c.login(username=self.user2.username, password=self.password2)
-        ret = self.post(f'{job.calc_id}/unshare')
-        self.assertEqual(ret.json(),
-                         {'error': f'Can not force the status of calculation'
-                                   f' {job.calc_id} from "created" to "complete"'})
-        db("UPDATE job SET ?D WHERE id=?x",
-           {'status': 'failed', 'is_running': 0}, job.calc_id)
-        self.remove_calc(job.calc_id)
-
-    def test_unshare_shared_job(self):
-        job_dic = dict(calculation_mode='event_based',
-                       description='test_unshare_job')
-        [job] = create_jobs([job_dic], user_name=self.user2.username)
-        db("UPDATE job SET ?D WHERE id=?x",
-           {'status': 'shared', 'is_running': 0}, job.calc_id)
-        self.c.login(username=self.user2.username, password=self.password2)
-        ret = self.post(f'{job.calc_id}/unshare')
-        self.assertEqual(ret.json(),
-                         {'success': f'The status of calculation {job.calc_id} was'
-                                     f' changed from "shared" to "complete"'})
-        self.remove_calc(job.calc_id)
-
-    def test_share_or_unshare_user_level_below_2(self):
-        job_dic = dict(calculation_mode='event_based',
-                       description='test_unshare_job_levels_below_2')
-        [job] = create_jobs([job_dic], user_name=self.user1.username)
-        db("UPDATE job SET ?D WHERE id=?x",
-           {'status': 'complete', 'is_running': 0}, job.calc_id)
-
-        self.c.login(username=self.user1.username, password=self.password1)
-        ret = self.post(f'{job.calc_id}/share')
-        self.assertEqual(ret.status_code, 403)
-        ret = self.post(f'{job.calc_id}/unshare')
-        self.assertEqual(ret.status_code, 403)
-
-        self.c.login(username=self.user0.username, password=self.password0)
-        ret = self.post(f'{job.calc_id}/share')
-        self.assertEqual(ret.status_code, 403)
-        ret = self.post(f'{job.calc_id}/unshare')
-        self.assertEqual(ret.status_code, 403)
-
-        self.c.login(username=self.user1.username, password=self.password1)
-        self.remove_calc(job.calc_id)
