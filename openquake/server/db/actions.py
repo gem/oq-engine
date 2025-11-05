@@ -514,38 +514,35 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         filterdict['j.id'] = id
 
     if 'calculation_mode' in request_get_dict:
-        filterdict['j.calculation_mode'] = request_get_dict.get(
-            'calculation_mode')
+        filterdict['j.calculation_mode'] = request_get_dict.get('calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
         filterdict['j.is_running'] = valid.boolean(is_running)
 
-    if 'limit' in request_get_dict:
-        limit = int(request_get_dict.get('limit'))
-    else:
-        limit = 100
+    limit = int(request_get_dict.get('limit', 100))
 
     if 'start_time' in request_get_dict:
         # assume an ISO date string
-        time_filter = "start_time >= '%s'" % request_get_dict.get('start_time')
+        start_time = request_get_dict.get('start_time')
+        time_filter = f"j.start_time >= '{start_time}'"
     else:
         time_filter = 1
 
-    preferred_only = 0
-    if 'preferred_only' in request_get_dict:
-        preferred_only = int(request_get_dict.get('preferred_only'))
-
-    filter_by_tag = 0
-    if 'filter_by_tag' in request_get_dict:
-        filter_by_tag = request_get_dict.get('filter_by_tag')
-        if not filter_by_tag:
-            filter_by_tag = 0
+    preferred_only = int(request_get_dict.get('preferred_only', 0))
+    filter_by_tag = request_get_dict.get('filter_by_tag', 0)
 
     if user_acl_on:
         users_filter = "user_name IN (?X)"
     else:
         users_filter = 1
+
+    if 'user_name_like' in request_get_dict:
+        # avoiding SQL syntax issues if the input contains quotes
+        user_name_like = request_get_dict.get('user_name_like').replace("'", "''")
+        user_name_like_filter = f"j.user_name LIKE '%{user_name_like}%'"
+    else:
+        user_name_like_filter = 1
 
     tags_query = """
     GROUP_CONCAT(
@@ -558,12 +555,14 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     """
 
     base_query = (
-        "SELECT j.*, %s"
-        "FROM job AS j "
-        "LEFT JOIN job_tag AS t ON j.id = t.job_id "
-        "WHERE j.status != 'deleted' "
-        "AND ((?A AND %s AND %s) OR j.status = 'shared')"
-    ) % (tags_query, users_filter, time_filter)
+        f"SELECT j.*, {tags_query}"
+        f"FROM job AS j "
+        f"LEFT JOIN job_tag AS t ON j.id = t.job_id "
+        f"WHERE j.status != 'deleted' "
+        f"AND ((?A AND {users_filter} AND {time_filter} AND {time_filter} "
+        f"AND {user_name_like_filter}) "
+        f"OR j.status = 'shared')"
+    )
 
     if preferred_only:
         base_query += (
