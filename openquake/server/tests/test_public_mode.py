@@ -104,11 +104,11 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
         # make it call db.actions.get_calcs with most parameters, to make sure it does
         # not raise exceptions when making the query
-        resp = self.get('list?user_name_like=%test%&is_running=1'
-                        '&calculation_mode=event_based'
-                        '&order_by=description&order_dir=ASC'
-                        '&limit=1&offset=1&include_shared=1')
-        self.assertEqual(resp.status_code, 200)
+        list_url = ('list?user_name_like=%test%&is_running=1'
+                    '&calculation_mode=event_based'
+                    '&order_by=description&order_dir=ASC'
+                    '&limit=1&offset=1&include_shared=1')
+        self.assertIsInstance(self.get(list_url), list)
 
         extract_url = '/v1/calc/%s/extract/' % job_id
 
