@@ -1922,8 +1922,9 @@ class OqParam(valid.ParamSet):
     @property
     def ruptures_hdf5(self):
         if ('rupture_model' in self.inputs and
-                self.inputs['rupture_model'].endswith('.hdf5')):
+                self.inputs['rupture_model'].endswith(('.hdf5', '.ini'))):
             return self.inputs['rupture_model']
+        return ''
 
     @property
     def impact(self):
