@@ -108,7 +108,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
                         '&calculation_mode=event_based'
                         '&order_by=description&order_dir=ASC'
                         '&limit=1&offset=1&include_shared=1')
-        self.assertEqual(resp.staus_code, 200)
+        self.assertEqual(resp.status_code, 200)
 
         extract_url = '/v1/calc/%s/extract/' % job_id
 
