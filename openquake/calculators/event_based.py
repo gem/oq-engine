@@ -302,6 +302,19 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
+def gen_model_lt(h5):
+    """
+    :yields: (model, full_lt) pairs
+    """
+    full_lt = h5['full_lt']
+    if hasattr(full_lt, 'gsim_lt'):
+        yield '???', full_lt
+    else:
+        # full_lt is a h5py group
+        for model in full_lt:
+            yield model, h5[f'full_lt/{model}']
+
+
 def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
     """
     :returns: a Starmap instance sending event_based tasks
@@ -310,8 +323,7 @@ def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
     trts = {}
     rlzs_by_gsim = {}
     with hdf5.File(ruptures_hdf5) as r:
-        for model in r['full_lt']:
-            full_lt = r[f'full_lt/{model}']
+        for model, full_lt in gen_model_lt(r):
             trts[model] = full_lt.trts
             logging.info('Building rlzs_by_gsim for %s', model)
             for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
