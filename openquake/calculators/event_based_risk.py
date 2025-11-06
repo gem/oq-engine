@@ -459,12 +459,16 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                             'minimum_asset_loss')
         base.create_risk_by_event(self)
         if oq.ruptures_hdf5:
+            with hdf5.File(oq.ruptures_hdf5) as h5:
+                self.rlzs = h5['events']['rlz_id']
+            self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
             smap = event_based.starmap_from_rups_hdf5(
                 oq, self.sitecol, ebrisk, self.datastore)
             self.save_tmp(smap.monitor)
             smap.reduce(self.agg_dicts)
-        self.rlzs = self.datastore['events']['rlz_id']
-        self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
+        else:
+            self.rlzs = self.datastore['events']['rlz_id']
+            self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
 
         if oq.avg_losses:
             self.create_avg_losses()
