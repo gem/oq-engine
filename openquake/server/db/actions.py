@@ -530,7 +530,9 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         filterdict['user_name LIKE'] = name_pattern
 
     if user_acl_on:
-        filterdict['user_name IN (?X)'] = allowed_users
+        users_filter = "user_name IN (?X)"
+    else:
+        users_filter = 1
 
     limit = int(request_get_dict.get('limit', 100))
     offset = int(request_get_dict.get('offset', 0))
@@ -544,7 +546,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if order_dir not in ('ASC', 'DESC'):
         order_dir = 'DESC'
 
-    where_clause = "?A AND status != 'deleted'"
+    where_clause = f"?A AND {users_filter} AND status != 'deleted'"
     if include_shared:
         where_clause += " OR status == 'shared'"
     query = (
@@ -553,7 +555,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         f" ORDER BY {order_by} {order_dir}"
         f" LIMIT ?x OFFSET ?x"
     )
-    jobs = db(query, filterdict, limit, offset)
+    jobs = db(query, filterdict, allowed_users, limit, offset)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
              job.hazard_calculation_id, job.size_mb, job.host,
