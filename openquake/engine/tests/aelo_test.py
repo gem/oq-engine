@@ -50,12 +50,12 @@ EXPECTED_asce7_22 = [
      1.13155, 0.906292, 0.664615, 0.487139, 0.374017, 0.351059,
      0.371102, 0.345053, 0.264844]]
 ASCE07_16 = ['0.50000', '1.50000', 'Very High', '0.60000', 'Very High']
-ASCE07_22 = ['0.50000', '1.50000', '1.35', '0.9','Very High', 
+ASCE07_22 = ['0.50000', '1.50000', '1.35000', '0.90000','Very High', 
              '0.60000', '0.60000', '0.40000', 'Very High']
 ASCE41_17 = [1.50000, 1.28283, 1.00000, 0.75094, 0.60000, 0.60000,
-             0.40000, 0.40000, 0]
+             0.40000, 0.40000, 'd1gs2']
 ASCE41_23 = [1.35000, 1.25952, 0.90000, 0.73729, 0.60000, 0.60000,
-             0.40000, 0.40000, 0]
+             0.40000, 0.40000, '9fzyq']
 
 
 def test_PAC():
@@ -191,21 +191,22 @@ def test_CCA_asce7_22():
         # check asce07 exporter
         [fname] = export(('asce07', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        for got, exp in zip(df.value.to_numpy(), ASCE07_22):
-            try:
-                aac(float(got), float(exp), rtol=1E-2)
-            except ValueError:
-                numpy.testing.assert_equal(got, exp)
+        numpy.testing.assert_equal(df.value.to_numpy(), ASCE07_22)
+        #for got, exp in zip(df.value.to_numpy(), ASCE07_22):
+        #    try:
+        #        aac(float(got), float(exp), rtol=1E-2)
+        #    except ValueError:
+        #        numpy.testing.assert_equal(got, exp)
 
         # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-
-        for got, exp in zip(df.value.to_numpy(), ASCE41_23):
-            try:
-                aac(float(got), float(exp), rtol=1E-2)
-            except ValueError:
-                numpy.testing.assert_equal(got, exp)
+        numpy.testing.assert_equal(df.value.to_numpy(), ASCE41_23)
+        #for got, exp in zip(df.value.to_numpy(), ASCE41_23):
+        #    try:
+        #        aac(float(got), float(exp), rtol=1E-2)
+        #    except ValueError:
+        #        numpy.testing.assert_equal(got, exp)
  
 
 def test_WAF():

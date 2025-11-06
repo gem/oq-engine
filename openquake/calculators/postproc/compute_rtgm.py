@@ -452,13 +452,22 @@ class MCEGetter:
 
 
 def find_max(df, key, custom_site_key):
+    """
+    This function find all calculation related to one site and derives 
+    the MCE or asce41 spectra. In case of default site class these correspond
+    to the max for each period among site classes C, CD and D. 
+    Following the USGS approach, the spectra are rounded: this ensures 
+    consistency between the output spectra and the derived ASCE7 and ASCE41
+    parameters.
+    """
+
     df['temp'] = df[key].fillna(float('-inf'))
     idx = df.groupby([custom_site_key, 'period'])['temp'].idxmax()
     out_max = df.loc[idx]
+    out_spectrum = [smart_round(o) for o in out_max[key]]
     out = {'period': out_max['period'].values,
-           key: out_max[key].values,
+           key: out_spectrum,
            'custom_site_id': out_max[custom_site_key].values}
-    breakpoint()
     return pd.DataFrame(out)
     
 
@@ -522,20 +531,26 @@ def get_seismicity_class(mce_site, vs30):
         if vs30 == 760:
             sa02 = mce_site[mce_site.period==0.2]['SaM'].iloc[0]
             sa10 = mce_site[mce_site.period==1.0]['SaM'].iloc[0]
-            Ss_seismicity = (
-                "Low" if sa02 < 0.25 else
-                "Moderate" if sa02 < 0.5 else
-                "Moderately High" if sa02 < 1.0 else
-                "High" if sa02 < 1.5 else
-                "Very High"
-            )
-            S1_seismicity = (
-                "Low" if sa10 < 0.1 else
-                "Moderate" if sa10 < 0.2 else
-                "Moderately High" if sa10 < 0.4 else
-                "High" if sa10 < 0.6 else
-                "Very High"
-            )
+            if isinstance(sa02, str):
+                Ss_seismicity = "n.a."
+            else:
+                Ss_seismicity = (
+                    "Low" if float(sa02) < 0.25 else
+                    "Moderate" if float(sa02) < 0.5 else
+                    "Moderately High" if float(sa02) < 1.0 else
+                    "High" if float(sa02) < 1.5 else
+                    "Very High"
+                )
+            if isinstance(sa10, str):
+                S1_seismicity = "n.a."
+            else: 
+                S1_seismicity = (
+                    "Low" if float(sa10) < 0.1 else
+                    "Moderate" if float(sa10) < 0.2 else
+                    "Moderately High" if float(sa10) < 0.4 else
+                    "High" if float(sa10) < 0.6 else
+                    "Very High"
+                )
         else:
             Ss_seismicity = "n.a."
             S1_seismicity = "n.a."
@@ -554,20 +569,23 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
     period_mce = mce_site["period"]
     mce = mce_site.SaM
     Ss_seismicity, S1_seismicity = get_seismicity_class(mce_site, vs30)
-    if mce_site[mce_site.period==0]['SaM'].iloc[0] < min(oq.imtls['PGA']):
+    mce_0 = mce_site[mce_site.period==0]['SaM'].iloc[0]
+    mce_02 = mce_site[mce_site.period==0.2]['SaM'].iloc[0]
+    mce_1 = mce_site[mce_site.period==1]['SaM'].iloc[0]
+    if mce_0 == 'n.a.' or mce_0 < min(oq.imtls['PGA']):
         pga_out = '<' + str(min(oq.imtls['PGA']))
     else:
-        pga_out = mce_site[mce_site.period==0]['SaM'].iloc[0]
+        pga_out = mce_0
             
-    if mce_site[mce_site.period==0.2]['SaM'].iloc[0] < min(oq.imtls['SA(0.2)']):
+    if mce_02 == 'n.a.' or mce_02 < min(oq.imtls['SA(0.2)']):
         sa02_out = '<' + str(min(oq.imtls['SA(0.2)']))
     else:
-        sa02_out = mce_site[mce_site.period==0.2]['SaM'].iloc[0]
+        sa02_out = mce_02
             
-    if mce_site[mce_site.period==1.0]['SaM'].iloc[0] < min(oq.imtls['SA(1.0)']):
+    if mce_1 == 'n.a.'  or mce_1 < min(oq.imtls['SA(1.0)']):
         sa1_out = '<' + str(min(oq.imtls['SA(1.0)']))
     else:
-        sa1_out = mce_site[mce_site.period==1.0]['SaM'].iloc[0]
+        sa1_out = mce_1
             
     if ASCE_version == 'ASCE7-16':
 
@@ -622,7 +640,7 @@ def smart_round(number):
     Round the ASCE values (if they are floats)
     """
     if isinstance(number, pd.Series):
-        return round(float(number.iloc[0]), ASCE_DECIMALS)
+        return round(float(number.iloc[0]), ASCE_DECIMALS)   
     elif isinstance(number, str):
         return number
     elif np.isnan(number):
@@ -710,8 +728,8 @@ def get_params(asce_version, vs30, asce_sa, ASCE_DECIMALS):
 
 
 def asce41_17(sa_data, ASCE_DECIMALS):
-    period02 = sa_data[sa_data['period'] == 0.2]
-    period1 = sa_data[sa_data['period'] == 1.0]
+    period02 = sa_data[sa_data['period'] == 0.2].iloc[0]
+    period1 = sa_data[sa_data['period'] == 1.0].iloc[0]
     return {
         "BSE2N_Ss": smart_round(period02['BSE2N']),
         "BSE2E_Ss": smart_round(period02["BSE2E"]),
@@ -748,7 +766,6 @@ def asce41_23(sa_data, Vs30, ASCE_DECIMALS):
     else:
         design_BSE1E = calc_sds_and_sd1(
             sa_data['period'], sa_data['BSE1E'], Vs30)
-
     return {
         'BSE2N_Sxs': smart_round(design_BSE2N[2]),
         'BSE2E_Sxs': smart_round(design_BSE2E[2]),
@@ -790,6 +807,7 @@ def compute_max_sa_asce41(dstore,keys_asce41):
             asce41_out = out
         else: 
             asce41_out[key] = out[key]
+    asce41_out = asce41_out[[*asce41_out.columns.drop('custom_site_id'), 'custom_site_id']]
     logging.info(asce41_out)
     return asce41_out
 
@@ -949,9 +967,10 @@ def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
         mce_df_site = mce_df[mce_df['custom_site_id'] == csi]['MCE']
         # get single valuecs
         # Get the spectra for this site
-        uhs_asce41 = get_spectra(dstore, s, csi, mce_df_site, facts)    
+        uhs_asce41 = get_spectra(dstore, s, csi, mce_df_site, facts) 
         # Convert to DataFrame and reset index
         df_out = pd.DataFrame(uhs_asce41).reset_index(drop=True)
+        
         sa_asce41.append(df_out)
         #logging.info(f'{df_out=}')  # optional
         
@@ -964,9 +983,9 @@ def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
     # 2) compute max of asce41 spectra for default site class:
     keys_asce41 = ['BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475']
     asce41_spectra = compute_max_sa_asce41(dstore, keys_asce41)
-    asce41_spectra.columns = [
-        'period', 'BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475',
-        'custom_site_id']
+    #asce41_spectra.columns = [
+        #'period', 'BSE2N', 'BSE2E', 'BSE1N', 'BSE1E', 'uhs_475',
+        #'custom_site_id']
     dstore.create_df('asce41_sa_final', asce41_spectra)
 
     # 3) compute asce41 parameters:
@@ -981,6 +1000,7 @@ def compute_asce41(dstore, mce_dfs, sitecol, facts, locs, custom_ids,
         else:
             result = get_zero_hazard_asce41(ASCE_version)
         result['custom_site_id'] = custom_id
+        
         asce41[s] = result
 
     return asce41
