@@ -173,9 +173,8 @@ def fix_ruptures_hdf5(oq):
     ini = os.path.join(oq.base_path, oq.ruptures_hdf5)
     h5path = ini[:-3] + 'hdf5'
     if not os.path.exists(h5path):
-        log, dstore = datastore.create_job_dstore(ini=ini)
-        with log, dstore:
-            calc = calculators(log.get_oqparam(), dstore.calc_id)
+        with logs.init(ini) as log:
+            calc = calculators(log.get_oqparam(), log.calc_id)
             calc.run()
         shutil.copy(calc.datastore.filename, h5path)
     oq.inputs['rupture_model'] = h5path
