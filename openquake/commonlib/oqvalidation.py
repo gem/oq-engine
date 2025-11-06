@@ -1436,6 +1436,8 @@ class OqParam(valid.ParamSet):
         if 'event_based' in self.calculation_mode:
             if self.ruptures_hdf5 and not self.minimum_intensity:
                 self.raise_invalid('missing minimum_intensity')
+            if self.ruptures_hdf5 and not self.number_of_logic_tree_samples:
+                self.raise_invalie('use sampling!')
 
             if self.ps_grid_spacing:
                 logging.warning('ps_grid_spacing is ignored in event_based '
@@ -2214,6 +2216,8 @@ class OqParam(valid.ParamSet):
         """
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
+            if self.ruptures_hdf5:
+                self.collect_rlzs = True
         if self.job_type == 'hazard':
             return True
 
