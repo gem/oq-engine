@@ -197,7 +197,9 @@ class EventBasedTestCase(CalculatorTestCase):
     def test_case_1_from_ses(self):
         self.run_calc(case_1.__file__, 'job_from_ses.ini')
         f = self.calc.oqparam.inputs['rupture_model']
-        breakpoint()
+        assert f.endswith('job_ses.hdf5'), f
+        self.assertEqual(len(self.calc.datastore['events']), 4906)
+
         
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',

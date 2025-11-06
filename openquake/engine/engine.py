@@ -24,7 +24,6 @@ import re
 import sys
 import json
 import time
-import shutil
 import pickle
 import socket
 import signal
@@ -169,22 +168,6 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-# this is useful when testing the "hazard/risk from SES" feature
-def fix_ruptures_hdf5(oq):
-    """
-    If we have `rupture_model_file = ses.ini` in the job.ini
-    and ses.hdf5 does not exist, generates it from ses.ini
-    and replace oq.inputs['rupture_model'] with 'base_path/ses.hdf5'
-    """
-    ini = os.path.join(oq.base_path, oq.ruptures_hdf5)
-    h5path = ini[:-3] + 'hdf5'
-    if not os.path.exists(h5path):
-        with logs.init(ini) as log:
-            calc = run_calc(log)
-        shutil.copy(calc.datastore.filename, h5path)
-    oq.inputs['rupture_model'] = h5path
-
-
 def run_calc(log):
     """
     Run a calculation.
@@ -204,8 +187,6 @@ def run_calc(log):
                          'some memory', used_mem)
             time.sleep(5)
         oqparam = log.get_oqparam()
-        if oqparam.ruptures_hdf5.endswith('.ini'):
-            fix_ruptures_hdf5(oqparam)
         calc = base.calculators(oqparam, log.calc_id)
         try:
             hostname = socket.gethostname()
