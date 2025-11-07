@@ -504,8 +504,9 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     :param id:
         if given, extract only the specified calculation
     :returns:
-        list of tuples (job_id, user_name, job_status, calculation_mode,
-                        job_is_running, job_description, host)
+        list of tuples (id, user_name, status, calculation_mode, is_running,
+                        description, pid, hazard_calculation_id, size_mb,
+                        host, start_time, relevant)
     """
     # helper to get job+calculation data from the oq-engine database
     filterdict = {}
@@ -514,17 +515,16 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         filterdict['id'] = id
 
     if 'calculation_mode' in request_get_dict:
-        filterdict['calculation_mode'] = request_get_dict.get(
-            'calculation_mode')
+        filterdict['calculation_mode'] = request_get_dict.get('calculation_mode')
 
     if 'is_running' in request_get_dict:
-        is_running = request_get_dict.get('is_running')
-        filterdict['is_running'] = valid.boolean(is_running)
+        filterdict['is_running'] = valid.boolean(request_get_dict.get('is_running'))
 
-    if 'limit' in request_get_dict:
-        limit = int(request_get_dict.get('limit'))
-    else:
-        limit = 100
+    if 'user_name_like' in request_get_dict:
+        name_pattern = request_get_dict.get('user_name_like').strip()
+        filterdict['user_name LIKE'] = name_pattern
+
+    include_shared = valid.boolean(request_get_dict.get('include_shared', 1))
 
     if 'start_time' in request_get_dict:
         # assume an ISO date string
@@ -537,9 +537,29 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s AND status != '
-              "'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
-              % (users_filter, time_filter, limit), filterdict, allowed_users)
+    limit = int(request_get_dict.get('limit', 100))
+    offset = int(request_get_dict.get('offset', 0))
+    allowed_sort_fields = [
+        'id', 'start_time', 'user_name', 'calculation_mode', 'status', 'description',
+        'size_mb']
+    order_by = request_get_dict.get('order_by', 'id')
+    if order_by not in allowed_sort_fields:
+        order_by = 'id'
+    order_dir = request_get_dict.get('order_dir', 'DESC').upper()
+    if order_dir not in ('ASC', 'DESC'):
+        order_dir = 'DESC'
+
+    where_clause = f"(?A AND {users_filter} AND {time_filter}"
+    if include_shared:
+        where_clause += " OR status == 'shared'"
+    where_clause += ") AND status != 'deleted'"
+    query = (
+        f"SELECT * FROM job"
+        f" WHERE {where_clause}"
+        f" ORDER BY {order_by} {order_dir}"
+        f" LIMIT {limit} OFFSET {offset}"
+    )
+    jobs = db(query, filterdict, allowed_users)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
              job.hazard_calculation_id, job.size_mb, job.host,
