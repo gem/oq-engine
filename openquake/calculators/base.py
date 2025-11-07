@@ -171,13 +171,7 @@ def fix_ruptures_hdf5(oq):
     and replace oq.inputs['rupture_model'] with 'base_path/ses.hdf5'
     """
     ini = os.path.join(oq.base_path, oq.ruptures_hdf5)
-    h5path = ini[:-3] + 'hdf5'
-    if not os.path.exists(h5path):
-        with logs.init(ini) as log:
-            calc = calculators(log.get_oqparam(), log.calc_id)
-            calc.run()
-        shutil.copy(calc.datastore.filename, h5path)
-    oq.inputs['rupture_model'] = h5path
+    oq.inputs['rupture_model'] = dcache.get(ini).filename
 
 
 class BaseCalculator(metaclass=abc.ABCMeta):
@@ -1400,7 +1394,8 @@ def _getset_attrs(oq):
                 num_events.append(len(f['events']))
             num_sites.append(len(f['sitecol']))
     return dict(effective_time=attrs.get('effective_time'),
-                num_events=num_events, num_sites=num_sites, imts=list(oq.imtls))
+                num_events=num_events, num_sites=num_sites,
+                imts=list(oq.imtls))
 
 
 def import_sites_hdf5(dstore, fnames):
