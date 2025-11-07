@@ -555,13 +555,13 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         order_dir = 'DESC'
 
     tags_query = """
-    GROUP_CONCAT(
-        CASE
-            WHEN t.is_preferred = 1 THEN t.tag || '★'
-            ELSE t.tag
-        END,
-        ', '
-    ) AS tags
+GROUP_CONCAT(
+    CASE
+        WHEN t.is_preferred = 1 THEN t.tag || '★'
+        ELSE t.tag
+    END,
+    ', '
+) AS tags
     """
 
     where_clause = f"(?A AND {users_filter} AND {time_filter}"
@@ -579,17 +579,17 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     # NOTE: GROUP BY j.id returns one row per job (identified by j.id), even if that
     # job has multiple tags, combining its tags into a single field using GROUP_CONCAT
 
-    base_query = (
-        f"SELECT j.*, {tags_query} "
-        f"FROM job AS j "
-        f"LEFT JOIN job_tag AS t ON j.id = t.job_id "
-        f"WHERE {where_clause} "
-        f"GROUP BY j.id "
-        f"ORDER BY {order_by} {order_dir} "
-        f"LIMIT {limit} OFFSET {offset}"
-    )
+    query = f"""
+SELECT j.*, {tags_query}
+FROM job AS j
+LEFT JOIN job_tag AS t ON j.id = t.job_id
+WHERE {where_clause}
+GROUP BY j.id
+ORDER BY {order_by} {order_dir}
+LIMIT {limit} OFFSET {offset}
+    """
 
-    jobs = db(base_query, filterdict, allowed_users)
+    jobs = db(query, filterdict, allowed_users)
 
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
