@@ -75,6 +75,8 @@ from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
 
+from papers import run_scenario_calc_from_ses_rupture
+
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
 
@@ -802,6 +804,16 @@ def calc_run_ini(request):
         response_data = logs.get_job_info(job_id)
         status = 200
     return JsonResponse(response_data, status=status)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def calc_run_scenario_calc_from_ses_rupture(request, rup_id):
+    notify_to = request.POST.get('notify_to')
+    username = request.POST.get('job_owner') or utils.get_username(request)
+
+    return run_scenario_calc_from_ses_rupture(int(rup_id), notify_to, username)
 
 
 def aelo_callback(

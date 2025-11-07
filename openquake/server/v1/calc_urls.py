@@ -67,3 +67,10 @@ elif settings.APPLICATION_MODE != 'READ_ONLY':
         re_path(r'^run_ini$', views.calc_run_ini),
         re_path(r'^validate_zip$', views.validate_zip),
     ])
+
+# PAPERS entrypoints
+urlpatterns.extend([
+    re_path(r'^run_scenario_calc_from_ses_rupture/(?P<rup_id>[0-9]+)$',
+            views.calc_run_scenario_calc_from_ses_rupture)
+])
+
