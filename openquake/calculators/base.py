@@ -90,7 +90,7 @@ def get_aelo_changelog():
             dic[k].append(v)
     df = pandas.DataFrame(dic)
     df = df.drop(columns=['private'])
-    df = df.applymap(
+    df = df.map(
         lambda x: (x.replace('\n', '<br>').lstrip('<br>')
                    if isinstance(x, str) else x))
     df.columns = df.columns.str.upper()
