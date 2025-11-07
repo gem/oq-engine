@@ -504,8 +504,9 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     :param id:
         if given, extract only the specified calculation
     :returns:
-        list of tuples (job_id, user_name, job_status, calculation_mode,
-                        job_is_running, job_description, host)
+        list of tuples (id, user_name, status, calculation_mode, is_running,
+                        description, pid, hazard_calculation_id, size_mb,
+                        host, start_time, relevant)
     """
     # helper to get job+calculation data from the oq-engine database
     filterdict = {}
@@ -520,7 +521,11 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         is_running = request_get_dict.get('is_running')
         filterdict['j.is_running'] = valid.boolean(is_running)
 
-    limit = int(request_get_dict.get('limit', 100))
+    if 'user_name_like' in request_get_dict:
+        name_pattern = request_get_dict.get('user_name_like').strip()
+        filterdict['user_name LIKE'] = name_pattern
+
+    include_shared = valid.boolean(request_get_dict.get('include_shared', 1))
 
     if 'start_time' in request_get_dict:
         # assume an ISO date string
@@ -537,12 +542,17 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     else:
         users_filter = 1
 
-    if 'user_name_like' in request_get_dict:
-        # avoiding SQL syntax issues if the input contains quotes
-        user_name_like = request_get_dict.get('user_name_like').replace("'", "''")
-        user_name_like_filter = f"j.user_name LIKE '%{user_name_like}%'"
-    else:
-        user_name_like_filter = 1
+    limit = int(request_get_dict.get('limit', 100))
+    offset = int(request_get_dict.get('offset', 0))
+    allowed_sort_fields = [
+        'id', 'start_time', 'user_name', 'calculation_mode', 'status', 'description',
+        'size_mb']
+    order_by = request_get_dict.get('order_by', 'id')
+    if order_by not in allowed_sort_fields:
+        order_by = 'id'
+    order_dir = request_get_dict.get('order_dir', 'DESC').upper()
+    if order_dir not in ('ASC', 'DESC'):
+        order_dir = 'DESC'
 
     tags_query = """
     GROUP_CONCAT(
@@ -554,25 +564,30 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     ) AS tags
     """
 
-    base_query = (
-        f"SELECT j.*, {tags_query}"
-        f"FROM job AS j "
-        f"LEFT JOIN job_tag AS t ON j.id = t.job_id "
-        f"WHERE j.status != 'deleted' "
-        f"AND ((?A AND {users_filter} AND {time_filter} AND {time_filter} "
-        f"AND {user_name_like_filter}) "
-        f"OR j.status = 'shared')"
-    )
-
+    where_clause = f"(?A AND {users_filter} AND {time_filter}"
+    if include_shared:
+        where_clause += " OR j.status == 'shared'"
+    where_clause += ") AND j.status != 'deleted'"
     if preferred_only:
-        base_query += (
+        where_clause += (
             " AND j.id IN (SELECT job_id FROM job_tag WHERE is_preferred = 1)")
 
     if filter_by_tag and filter_by_tag != '0':
-        base_query += (
-            f" AND j.id IN (SELECT job_id FROM job_tag WHERE tag = '{filter_by_tag}')")
+        where_clause += " AND j.id IN (SELECT job_id FROM job_tag WHERE tag = ?)"
+        filterdict['tag'] = filter_by_tag
 
-    base_query += " GROUP BY j.id ORDER BY j.id DESC LIMIT %d" % limit
+    # NOTE: GROUP BY j.id returns one row per job (identified by j.id), even if that
+    # job has multiple tags, combining its tags into a single field using GROUP_CONCAT
+
+    base_query = (
+        f"SELECT j.*, {tags_query} "
+        f"FROM job AS j "
+        f"LEFT JOIN job_tag AS t ON j.id = t.job_id "
+        f"WHERE {where_clause} "
+        f"GROUP BY j.id "
+        f"ORDER BY {order_by} {order_dir} "
+        f"LIMIT {limit} OFFSET {offset}"
+    )
 
     jobs = db(base_query, filterdict, allowed_users)
 
