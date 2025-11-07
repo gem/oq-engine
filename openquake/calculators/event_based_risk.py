@@ -408,7 +408,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         monitor.save('rlz_id', self.rlzs)
         try:
             ws = self.datastore['weights'][:]
-        except KeyError:  # from_ses
+        except KeyError:  # not needed in from ses
             pass
         else:
             monitor.save('weights', ws)

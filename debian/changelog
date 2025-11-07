@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Implemented event_based_risk from ses.hdf5
   * Optimized the rupture prefiltering when starting from a SES
   * Raised an early error if the vulnerability functions are not
     strictly increasing
