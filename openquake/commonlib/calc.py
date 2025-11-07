@@ -297,7 +297,9 @@ class RuptureImporter(object):
                 ok, = numpy.where(events['rlz_id'] == r)
                 extra['year'][ok] = rng.choice(etime, len(ok)) + r * etime + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
-        self.datastore['events'] = util.compose_arrays(events, extra)
+        self.datastore.create_dset(
+            'events', util.compose_arrays(events, extra))
+        self.datastore.flush()
 
     def check_overflow(self, E):
         """

@@ -447,7 +447,10 @@ agg_id
                               delta=4E-4)
 
         self.check_case_master()
-        
+
+    def test_from_ses(self):
+        self.run_calc(case_master.__file__, 'job_risk.ini')
+
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'

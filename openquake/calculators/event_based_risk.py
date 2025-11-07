@@ -406,7 +406,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
-        monitor.save('weights', self.datastore['weights'][:])
+        try:
+            ws = self.datastore['weights'][:]
+        except KeyError:  # not needed in from ses
+            pass
+        else:
+            monitor.save('weights', ws)
         if oq.K:
             aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
@@ -428,10 +433,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                      if self.datastore.ppath else None)
         oq.hdf5path = self.datastore.filename
         oq.parentdir = parentdir
-        logging.info(
-            'There are {:_d} ruptures and {:_d} events'.format(
-                len(self.datastore['ruptures']),
-                len(self.datastore['events'])))
+        if 'events' in self.datastore:
+            logging.info(
+                'There are {:_d} ruptures and {:_d} events'.format(
+                    len(self.datastore['ruptures']),
+                    len(self.datastore['events'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         set_oqparam(oq, self.assetcol, self.datastore)
@@ -457,11 +463,22 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
         base.create_risk_by_event(self)
-        self.rlzs = self.datastore['events']['rlz_id']
-        self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
-
-        if oq.avg_losses:
-            self.create_avg_losses()
+        self.gmf_bytes = 0
+        if oq.ruptures_hdf5:
+            with hdf5.File(oq.ruptures_hdf5) as h5:
+                self.rlzs = h5['events']['rlz_id']
+            self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
+            self.save_tmp(self._monitor)
+            smap = event_based.starmap_from_rups_hdf5(
+                oq, self.sitecol, ebrisk, self.datastore)
+            if oq.avg_losses:
+                self.create_avg_losses()
+            smap.reduce(self.agg_dicts)
+        else:
+            self.rlzs = self.datastore['events']['rlz_id']
+            self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
+            if oq.avg_losses:
+                self.create_avg_losses()
         alt_nbytes = 4 * self.E * L
         if alt_nbytes / (oq.concurrent_tasks or 1) > TWO32:
             raise RuntimeError('The risk_by_event is too big to be transfer'
@@ -496,7 +513,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         Compute risk from GMFs or ruptures depending on what is stored
         """
         oq = self.oqparam
-        self.gmf_bytes = 0
         if not oq.ground_motion_fields or 'gmf_data' not in self.datastore:
             # start from ruptures
             if (oq.ground_motion_fields and
@@ -507,17 +523,18 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
-            full_lt = self.datastore['full_lt']
-            smap = event_based.starmap_from_rups(
-                ebrisk, oq, full_lt, self.sitecol, self.datastore,
-                self.save_tmp)
-            smap.reduce(self.agg_dicts)
-            if self.gmf_bytes == 0:
-                raise RuntimeError(
-                    'No GMFs were generated, perhaps they were '
-                    'all below the minimum_intensity threshold')
-            logging.info(
-                'Produced %s of GMFs', general.humansize(self.gmf_bytes))
+            if not oq.ruptures_hdf5:
+                full_lt = self.datastore['full_lt']
+                smap = event_based.starmap_from_rups(
+                    ebrisk, oq, full_lt, self.sitecol, self.datastore,
+                    self.save_tmp)
+                smap.reduce(self.agg_dicts)
+                if self.gmf_bytes == 0:
+                    raise RuntimeError(
+                        'No GMFs were generated, perhaps they were '
+                        'all below the minimum_intensity threshold')
+                logging.info(
+                    'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
             smap = starmap_from_gmfs(ebr_from_gmfs, oq, self.datastore,
                                      self._monitor)
