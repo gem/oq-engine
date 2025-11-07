@@ -75,7 +75,7 @@ from django.http import FileResponse
 from django.urls import reverse
 from wsgiref.util import FileWrapper
 
-from papers import run_scenario_calc_from_ses_rupture
+from openquake.server.papers import run_scenario_calc_from_ses_rupture
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
