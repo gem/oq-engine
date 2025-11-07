@@ -531,9 +531,10 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     include_shared = valid.boolean(request_get_dict.get('include_shared', 1))
 
     if 'start_time' in request_get_dict:
-        # assume an ISO date string FIXME
+        # assume an ISO date string
         start_time = request_get_dict.get('start_time')
-        time_filter = f"j.start_time >= '{start_time}'"
+        time_filter = "j.start_time >= ?x"
+        query_params.append(start_time)
     else:
         time_filter = 1
 
