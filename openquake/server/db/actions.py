@@ -509,6 +509,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
                         host, start_time, relevant)
     """
     # helper to get job+calculation data from the oq-engine database
+    query_params = []
     filterdict = {}
 
     if id is not None:
@@ -525,10 +526,12 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         name_pattern = request_get_dict.get('user_name_like').strip()
         filterdict['user_name LIKE'] = name_pattern
 
+    query_params.append(filterdict)
+
     include_shared = valid.boolean(request_get_dict.get('include_shared', 1))
 
     if 'start_time' in request_get_dict:
-        # assume an ISO date string
+        # assume an ISO date string FIXME
         start_time = request_get_dict.get('start_time')
         time_filter = f"j.start_time >= '{start_time}'"
     else:
@@ -539,6 +542,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
 
     if user_acl_on:
         users_filter = "user_name IN (?X)"
+        query_params.append(allowed_users)
     else:
         users_filter = 1
 
@@ -573,9 +577,9 @@ GROUP_CONCAT(
             " AND j.id IN (SELECT job_id FROM job_tag WHERE is_preferred = 1)")
 
     if filter_by_tag and filter_by_tag != '0':
-        # FIXME: use '?' to escape the user-inserted string
         where_clause += (
-            f" AND j.id IN (SELECT job_id FROM job_tag WHERE tag = '{filter_by_tag}')")
+            " AND j.id IN (SELECT job_id FROM job_tag WHERE tag = ?x)")
+        query_params.append(filter_by_tag)
 
     # NOTE: GROUP BY j.id returns one row per job (identified by j.id), even if that
     # job has multiple tags, combining its tags into a single field using GROUP_CONCAT
@@ -590,7 +594,7 @@ ORDER BY {order_by} {order_dir}
 LIMIT {limit} OFFSET {offset}
     """
 
-    jobs = db(query, filterdict, allowed_users)
+    jobs = db(query, *query_params)
 
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
