@@ -130,7 +130,7 @@ jobs:
          cd /__w/oq-engine/oq-engine/openquake/engine/
          runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py migrate'
          sleep 1
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/pkgs/test_event_based_risk_inputs_bc.zip'
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/eb_risk_demo.zip'
          curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
          curl --fail -I -L -X GET http://127.0.0.1:8800/engine/1/outputs
          echo -n "Test Standalone Tools pages"
