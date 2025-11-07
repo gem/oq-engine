@@ -323,20 +323,20 @@ def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
     trts = {}
     rlzs_by_gsim = {}
     with hdf5.File(ruptures_hdf5) as r:
+        dstore.create_dset('events', r['events'][:]) # saving the events
         for model, full_lt in gen_model_lt(r):
             trts[model] = full_lt.trts
             logging.info('Building rlzs_by_gsim for %s', model)
             for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
                 rlzs_by_gsim[model, trt_smr] = rbg
-        dstore['full_lt'] = full_lt  # saving the last lt (hackish)
-        r.copy('events', dstore.hdf5) # saving the events
         logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
         rups = r['ruptures'][:]
-        rups = close_ruptures(rups, sitecol)
-        logging.info(f'Selected {len(rups):,d} ruptures close to the sites')
-        dstore['ruptures'] = rups
-        R = full_lt.num_samples
-        dstore['weights'] = numpy.ones(R) / R
+    rups = close_ruptures(rups, sitecol)
+    logging.info(f'Selected {len(rups):,d} ruptures close to the sites')
+    dstore['ruptures'] = rups
+    dstore['full_lt'] = full_lt  # saving the last lt (hackish)
+    R = full_lt.num_samples
+    dstore['weights'] = numpy.ones(R) / R
     rups_dic = group_array(rups, 'model', 'trt_smr')
     totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
