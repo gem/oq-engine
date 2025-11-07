@@ -406,7 +406,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
-        monitor.save('weights', self.datastore['weights'][:])
+        try:
+            ws = self.datastore['weights'][:]
+        except KeyError:  # from_ses
+            pass
+        else:
+            monitor.save('weights', ws)
         if oq.K:
             aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
@@ -463,9 +468,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             with hdf5.File(oq.ruptures_hdf5) as h5:
                 self.rlzs = h5['events']['rlz_id']
             self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
+            self.save_tmp(self._monitor)
             smap = event_based.starmap_from_rups_hdf5(
                 oq, self.sitecol, ebrisk, self.datastore)
-            self.save_tmp(smap.monitor)
             if oq.avg_losses:
                 self.create_avg_losses()
             smap.reduce(self.agg_dicts)

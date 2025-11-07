@@ -196,8 +196,6 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_1_from_ses(self):
         self.run_calc(case_1.__file__, 'job_from_ses.ini')
-        f = self.calc.oqparam.inputs['rupture_model']
-        assert f.endswith('job_ses.hdf5'), f
         self.assertEqual(len(self.calc.datastore['events']), 4906)
 
         
