@@ -569,14 +569,13 @@ GROUP_CONCAT(
 ) AS tags
     """
 
-    where_clause = f"(?A AND {users_filter} AND {time_filter}"
+    where_clause = f"(?A AND {users_filter}"
     if include_shared:
         where_clause += " OR j.status == 'shared'"
-    where_clause += ") AND j.status != 'deleted'"
+    where_clause += f") AND {time_filter} AND j.status != 'deleted'"
     if preferred_only:
         where_clause += (
             " AND j.id IN (SELECT job_id FROM job_tag WHERE is_preferred = 1)")
-
     if filter_by_tag and filter_by_tag != '0':
         where_clause += (
             " AND j.id IN (SELECT job_id FROM job_tag WHERE tag = ?x)")
