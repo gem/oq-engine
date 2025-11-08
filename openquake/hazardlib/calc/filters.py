@@ -331,17 +331,21 @@ def split_source(src):
     return splits
 
 
-# NB: this is absurdly fast because of KDTree and because
-# the SiteCollection is reduced to large hexagons via h3
-def close_ruptures(ruptures, sitecol, magdist=(
+# NB: this is fast because of KDTree and the magdist
+# NB: the magdist here is hard-coded and independent from oq
+def close_ruptures(ruptures, sitecol, assetcol=None, magdist=(
                    (5., 100.), (6., 200.), (7., 300.),
-                   (8., 400.), (9., 600.), (11., 999.))):
+                   (8., 400.), (9., 700.), (11., 1000.))):
     """
     :param ruptures: an array of rupture records
     :param sitecol: a SiteCollection instance
+    :param assetcol: an AssetCollection or None
     :returns: the ruptures close to the sites
     """
-    sites = sitecol.lower_res()
+    if assetcol:
+        sids, counts = numpy.unique(assetcol.array['site_id'], return_counts=1)
+        num_assets = dict(zip(sids, counts))
+    sites = sitecol #.lower_res()
     mags = ruptures['mag']
     hypos = ruptures['hypo']
     kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))

@@ -315,7 +315,7 @@ def gen_model_lt(h5):
             yield model, h5[f'full_lt/{model}']
 
 
-def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
+def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
     """
     :returns: a Starmap instance sending event_based tasks
     """
@@ -331,9 +331,9 @@ def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
                 rlzs_by_gsim[model, trt_smr] = rbg
         logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
         rups = r['ruptures'][:]
-    rups = close_ruptures(rups, sitecol)
+    rups = close_ruptures(rups, sitecol, assetcol)
     logging.info(f'Selected {len(rups):,d} ruptures close to the sites')
-    dstore['ruptures'] = rups
+    dstore['ruptures'] = rups  # dset may already exists
     dstore['full_lt'] = full_lt  # saving the last lt (hackish)
     R = full_lt.num_samples
     dstore['weights'] = numpy.ones(R) / R
@@ -831,7 +831,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # event_based in parallel
         if oq.ruptures_hdf5:
             smap = starmap_from_rups_hdf5(
-                oq, self.sitecol, event_based, dstore)
+                oq, self.sitecol, None, event_based, dstore)
         else:
             smap = starmap_from_rups(
                 event_based, oq, self.full_lt, self.sitecol, dstore)
