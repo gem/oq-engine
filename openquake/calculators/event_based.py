@@ -66,13 +66,9 @@ TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
-
 def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
-    if isinstance(rup, numpy.ndarray):
-        nsites = numpy.clip(rup['nsites'], 1., numpy.inf)
-        return numpy.ceil(nsites / 100.)
-    return math.ceil((rup['nsites'] or 1) / 100.)
+    return 1 + rup['nsites'] // 100
 
 # ######################## hcurves_from_gmfs ############################ #
 

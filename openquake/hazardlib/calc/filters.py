@@ -361,8 +361,12 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=(
         all_sids = kr.query_ball_tree(ks, dist1, eps=.1)
         for r, sids in enumerate(all_sids):
             if sids:
-                rups[r]['nsites'] = len(sids)
-                out.append(rups[r])
+                rup = rups[r]
+                if assetcol:
+                    rup['nsites'] = sum(num_assets[sid] for sid in sids)
+                else:
+                    rup['nsites'] = len(sids)
+                out.append(rup)
     return numpy.array(out)
 
 
