@@ -22,7 +22,7 @@ import shapely
 import logging
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl
-from openquake.calculators.getters import get_ebrupture
+from openquake.calculators.getters import get_ebrupture, get_ebruptures
 from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes, add_rupture,
     adjust_limits, auto_limits)
@@ -33,7 +33,6 @@ def main(calc_id: int = -1, site_model=False,
     """
     Plot the sites, the assets and also rupture and stations if available
     """
-
     # NB: matplotlib is imported inside since it is a costly import
     import matplotlib.pyplot as p
     from openquake.hmtk.plotting.patch import PolygonPatch
@@ -92,17 +91,21 @@ def main(calc_id: int = -1, site_model=False,
                              facecolors='none')
         else:
             kw_params = dict(label='all stations', c='brown')
-        # NOTE: we might filter out the stations that were considered, and plot only
-        # the discarded ones, but the output looks similar if we plot all stations
-        # here, then overlap them with plotting the considered ones on top
-        p.scatter(stations['lon'], stations['lat'], marker='D', s=markersize_site_model,
+        # NOTE: we might filter out the stations that were considered, and plot
+        # only the discarded ones, but the output looks similar if we plot all
+        # stations here, then overlap them with plotting the considered ones
+        # on top
+        p.scatter(stations['lon'], stations['lat'], marker='D',
+                  s=markersize_site_model,
                   **kw_params)
         if 'stations_considered' in dstore:
             # NOTE: overlapping the used ones on top of the full set
             stations_considered = dstore['stations_considered']
             if len(stations_considered) > 0:
-                p.scatter(stations_considered['lon'], stations_considered['lat'],
-                          marker='D', c='brown', label='considered stations',
+                p.scatter(stations_considered['lon'],
+                          stations_considered['lat'],
+                          marker='D', c='brown',
+                          label='considered stations',
                           s=markersize_site_model)
     if oq.rupture_xml or oq.rupture_dict:
         use_shakemap = dstore['oqparam'].shakemap_uri
@@ -122,6 +125,11 @@ def main(calc_id: int = -1, site_model=False,
         else:
             p.scatter(xlon, xlat, marker='*', color='orange',
                       label='hypocenter', alpha=.5)
+    elif 'ruptures' in dstore:
+        hypos = dstore['ruptures']['hypo']
+        xlon, xlat = hypos[:, 0], hypos[:, 1]
+        p.scatter(xlon, xlat, marker='*', color='orange',
+                  label='hypocenter', alpha=.5)
     else:
         xlon, xlat = [], []
 
@@ -136,7 +144,8 @@ def main(calc_id: int = -1, site_model=False,
     adjust_limits(ax, xlim, ylim, padding=3)
 
     country_iso_codes = get_country_iso_codes(calc_id, assetcol)
-    legend_params = dict(loc='upper left', bbox_to_anchor=(1.05, 1.0), borderaxespad=0.)
+    legend_params = dict(loc='upper left', bbox_to_anchor=(1.05, 1.0),
+                         borderaxespad=0.)
     if country_iso_codes is not None:
         # NOTE: use following lines to add custom items without changing title
         # ax.plot([], [], ' ', label=country_iso_codes)
