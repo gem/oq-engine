@@ -335,7 +335,7 @@ def split_source(src):
 # NB: the magdist here is hard-coded and independent from oq
 def close_ruptures(ruptures, sitecol, assetcol=None, magdist=(
                    (5., 100.), (6., 200.), (7., 300.),
-                   (8., 400.), (9., 700.), (11., 1000.))):
+                   (8., 400.), (9., 700.), (11., 1200.))):
     """
     :param ruptures: an array of rupture records
     :param sitecol: a SiteCollection instance
