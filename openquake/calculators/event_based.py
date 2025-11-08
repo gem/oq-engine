@@ -338,7 +338,6 @@ def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{maxw=}')
     extra = sitecol.array.dtype.names
-    manysites = len(sitecol) > oq.max_sites_disagg
     dstore.swmr_on()
     smap = parallel.Starmap(taskfunc, h5=dstore.hdf5)
     for (model, trt_smr), rups in rups_dic.items():
@@ -349,9 +348,9 @@ def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        logging.info('%s: sending %d ruptures for trt_smr=%d',
+                     model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
-            if manysites:
-                logging.info('%s: sending %d ruptures', model, len(block))
             args = block, cmaker, sitecol, (None, None), ruptures_hdf5
             smap.submit(args)
     return smap
