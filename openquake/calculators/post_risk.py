@@ -621,7 +621,7 @@ class PostRiskCalculator(base.RiskCalculator):
         if not ok:  # the hazard is to small
             return
         oq = self.oqparam
-        if 'risk' in oq.calculation_mode:
+        if 'risk' in oq.calculation_mode and oq.investigation_time:
             self.datastore['oqparam'] = oq
             for ln in self.oqparam.loss_types:
                 li = scientific.LOSSID[ln]
