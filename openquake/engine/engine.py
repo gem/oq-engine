@@ -316,8 +316,8 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
-         notify_to):
+def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
+    dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.now(UTC)}
@@ -341,10 +341,6 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
             else:
                 args = [(ctx,) for ctx in jobctxs]
             parallel.multispawn(run_calc, args, concurrent_jobs)
-        elif concurrent_jobs > 1:
-            with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
-                parallel.multispawn(
-                    run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -407,8 +403,13 @@ def run_jobs(jobctxs, concurrent_jobs=1, nodes=1, sbatch=False,
             for job in jobctxs:
                 logs.dbcmd('finish', job.calc_id, 'aborted')
             raise
-    _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
-         notify_to)
+    if concurrent_jobs > 1:
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
+            _run(jobctxs, job_id, nodes, sbatch, precalc,
+                 concurrent_jobs, notify_to)
+    else:
+        _run(jobctxs, job_id, nodes, sbatch, precalc,
+             concurrent_jobs, notify_to)
     return jobctxs
 
 
