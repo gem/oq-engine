@@ -340,7 +340,7 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
                 args = [(ctx,) for ctx in jobctxs[1:]]
             else:
                 args = [(ctx,) for ctx in jobctxs]
-            parallel.multispawn(run_calc, args, concurrent_jobs or 1)
+            parallel.multispawn(run_calc, args, concurrent_jobs)
         elif concurrent_jobs > 1:
             with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
                 parallel.multispawn(
@@ -357,7 +357,7 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
             stop_workers(job_id)
 
 
-def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
+def run_jobs(jobctxs, concurrent_jobs=1, nodes=1, sbatch=False,
              precalc=False, notify_to=None):
     """
     Run jobs using the specified config file and other options.
@@ -365,7 +365,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
     :param jobctxs:
         List of LogContexts
     :param concurrent_jobs:
-        How many jobs to run concurrently (default num_cores/4)
+        How many jobs to run concurrently (default 1)
     """
     dist = parallel.oq_distribute()
     if dist == 'slurm':
