@@ -341,7 +341,7 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
             else:
                 args = [(ctx,) for ctx in jobctxs]
             parallel.multispawn(run_calc, args, concurrent_jobs or 1)
-        elif concurrent_jobs:
+        elif concurrent_jobs > 1:
             with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
                 parallel.multispawn(
                     run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
