@@ -31,6 +31,7 @@ import getpass
 import logging
 import platform
 import functools
+from unittest import mock
 from os.path import getsize
 from datetime import datetime, timezone
 import psutil
@@ -341,12 +342,9 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
                 args = [(ctx,) for ctx in jobctxs]
             parallel.multispawn(run_calc, args, concurrent_jobs or 1)
         elif concurrent_jobs:
-            nc = 1 + parallel.num_cores // concurrent_jobs
-            logging.warning('Using %d pools of %d cores each',
-                            concurrent_jobs, nc)
-            os.environ['OQ_NUM_CORES'] = str(nc)
-            parallel.multispawn(
-                run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
+            with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
+                parallel.multispawn(
+                    run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
