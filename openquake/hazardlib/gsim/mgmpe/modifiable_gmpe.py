@@ -416,9 +416,6 @@ class ModifiableGMPE(GMPE):
         if 'ceus2020_site_term' in self.params:
 
             # Arrays for storing results
-            ref = np.zeros_like(mean)
-            tmp = np.zeros_like(sig)
-
             ref = np.zeros((1, len(sig[0, :])))
             tmp = np.zeros((1, len(sig[0, :])))
 
