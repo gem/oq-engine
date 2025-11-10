@@ -248,15 +248,11 @@ class _Replacer(object):
         for name in sorted(arg):
             self.sargs.append(name)
             value = arg[name]
-
             if value is None:
                 ls.append('{} IS NULL')
             else:
                 self.xargs.append(value)
-                if name.endswith((' LIKE', ' NOT LIKE')):
-                    ls.append('{} ' + self.ph)
-                else:
-                    ls.append('{}=' + self.ph)
+                ls.append('{}=' + self.ph)
         return sep.join(ls)
 
     def match(self, m_templ):
