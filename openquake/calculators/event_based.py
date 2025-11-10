@@ -66,13 +66,11 @@ TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
-
 def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
-    if isinstance(rup, numpy.ndarray):
-        nsites = numpy.clip(rup['nsites'], 1., numpy.inf)
-        return numpy.ceil(nsites / 100.)
-    return math.ceil((rup['nsites'] or 1) / 100.)
+    # NB: if there was an assetcol, nsites is actually the number of affected
+    # assets, as set by close_ruptures
+    return 1 + rup['nsites'] // 100
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -315,7 +313,7 @@ def gen_model_lt(h5):
             yield model, h5[f'full_lt/{model}']
 
 
-def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
+def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
     """
     :returns: a Starmap instance sending event_based tasks
     """
@@ -331,9 +329,9 @@ def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
                 rlzs_by_gsim[model, trt_smr] = rbg
         logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
         rups = r['ruptures'][:]
-    rups = close_ruptures(rups, sitecol)
+    rups = close_ruptures(rups, sitecol, assetcol)
     logging.info(f'Selected {len(rups):,d} ruptures close to the sites')
-    dstore['ruptures'] = rups
+    dstore['ruptures'] = rups  # dset may already exists
     dstore['full_lt'] = full_lt  # saving the last lt (hackish)
     R = full_lt.num_samples
     dstore['weights'] = numpy.ones(R) / R
@@ -342,7 +340,6 @@ def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{maxw=}')
     extra = sitecol.array.dtype.names
-    manysites = len(sitecol) > oq.max_sites_disagg
     dstore.swmr_on()
     smap = parallel.Starmap(taskfunc, h5=dstore.hdf5)
     for (model, trt_smr), rups in rups_dic.items():
@@ -353,9 +350,9 @@ def starmap_from_rups_hdf5(oq, sitecol, taskfunc, dstore):
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        logging.info('%s: sending %d ruptures for trt_smr=%d',
+                     model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
-            if manysites:
-                logging.info('%s: sending %d ruptures', model, len(block))
             args = block, cmaker, sitecol, (None, None), ruptures_hdf5
             smap.submit(args)
     return smap
@@ -831,7 +828,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # event_based in parallel
         if oq.ruptures_hdf5:
             smap = starmap_from_rups_hdf5(
-                oq, self.sitecol, event_based, dstore)
+                oq, self.sitecol, None, event_based, dstore)
         else:
             smap = starmap_from_rups(
                 event_based, oq, self.full_lt, self.sitecol, dstore)

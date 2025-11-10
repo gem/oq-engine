@@ -470,7 +470,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
             self.save_tmp(self._monitor)
             smap = event_based.starmap_from_rups_hdf5(
-                oq, self.sitecol, ebrisk, self.datastore)
+                oq, self.sitecol, self.assetcol, ebrisk, self.datastore)
             if oq.avg_losses:
                 self.create_avg_losses()
             smap.reduce(self.agg_dicts)
