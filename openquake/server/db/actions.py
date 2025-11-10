@@ -526,17 +526,6 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
 
     include_shared = valid.boolean(request_get_dict.get('include_shared', 1))
 
-    if 'start_time' in request_get_dict:
-        # assume an ISO date string
-        start_time = request_get_dict.get('start_time')
-        time_filter = "j.start_time >= ?x"
-        query_params.append(start_time)
-    else:
-        time_filter = 1
-
-    preferred_only = int(request_get_dict.get('preferred_only', 0))
-    filter_by_tag = request_get_dict.get('filter_by_tag', 0)
-
     if user_acl_on:
         users_filter = "user_name IN (?X)"
         query_params.append(allowed_users)
@@ -549,6 +538,17 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         query_params.append(name_pattern)
     else:
         user_name_like_filter = 1
+
+    if 'start_time' in request_get_dict:
+        # assume an ISO date string
+        start_time = request_get_dict.get('start_time')
+        time_filter = "j.start_time >= ?x"
+        query_params.append(start_time)
+    else:
+        time_filter = 1
+
+    preferred_only = int(request_get_dict.get('preferred_only', 0))
+    filter_by_tag = request_get_dict.get('filter_by_tag', 0)
 
     limit = int(request_get_dict.get('limit', 100))
     offset = int(request_get_dict.get('offset', 0))
