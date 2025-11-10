@@ -1,5 +1,5 @@
 import django
-import time
+from datetime import datetime, timedelta
 from django.test import Client
 from openquake.commonlib import logs
 from openquake.commonlib.dbapi import db
@@ -343,35 +343,36 @@ class RestrictedModeTestCase(django.test.TestCase):
         [older_job] = create_jobs([job_defs[0]], user_name=self.user2.username)
         db("UPDATE job SET ?D WHERE id=?x",
            {'status': 'complete', 'is_running': 0}, older_job.calc_id)
-        # ensure time gap between jobs
-        time.sleep(2)
         [newer_job] = create_jobs([job_defs[1]], user_name=self.user2.username)
         db("UPDATE job SET ?D WHERE id=?x",
            {'status': 'complete', 'is_running': 0}, newer_job.calc_id)
-
-        # get their timestamps
         rows = db("SELECT id, start_time FROM job WHERE id IN (?X)",
                   [older_job.calc_id, newer_job.calc_id])
+
+        # change the older timestamp to be one day older
         times = {r.id: r.start_time for r in rows}
         newer_ts = times[newer_job.calc_id]
+        older_start_time = (datetime.utcnow() - timedelta(days=1)).isoformat()
+        db("UPDATE job SET start_time=?x WHERE id=?x",
+           older_start_time, older_job.calc_id)
 
         self.c.login(username=self.user2.username, password=self.password2)
+
+        # without filtering by start time, the list should include both
         ret_all = self.get('list', include_shared='0')
         self.assertEqual(ret_all.status_code, 200)
         ids_all = {j['id'] for j in ret_all.json()}
         self.assertIn(older_job.calc_id, ids_all)
         self.assertIn(newer_job.calc_id, ids_all)
 
-        iso_start_time = newer_ts.isoformat()[:10]  # FIXME
-        ret = self.get('list', start_time=iso_start_time, include_shared='0')
+        # filtering by start time, the list should include only the newer job
+        filter_date = newer_ts.date().isoformat()
+        ret = self.get('list', start_time=filter_date)
         self.assertEqual(ret.status_code, 200)
         filtered_jobs = ret.json()
         ids_filtered = {j['id'] for j in filtered_jobs}
-
         self.assertIn(newer_job.calc_id, ids_filtered)
-        # FIXME
-        # self.assertNotIn(older_job.calc_id, ids_filtered)
-        self.assertGreaterEqual(len(filtered_jobs), 1)
+        self.assertNotIn(older_job.calc_id, ids_filtered)
 
         for job in [older_job, newer_job]:
             self.remove_calc(job.calc_id)

@@ -550,6 +550,21 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     preferred_only = int(request_get_dict.get('preferred_only', 0))
     filter_by_tag = request_get_dict.get('filter_by_tag', 0)
 
+    if 'user_name_like' in request_get_dict:
+        name_pattern = request_get_dict.get('user_name_like').strip()
+        user_name_like_filter = "user_name LIKE ?x"
+        query_params.append(name_pattern)
+    else:
+        user_name_like_filter = 1
+
+    if 'start_time' in request_get_dict:
+        # assume an ISO date string
+        start_time = request_get_dict.get('start_time')
+        time_filter = "start_time >= ?x"
+        query_params.append(start_time)
+    else:
+        time_filter = 1
+
     limit = int(request_get_dict.get('limit', 100))
     offset = int(request_get_dict.get('offset', 0))
     allowed_sort_fields = [
@@ -572,7 +587,7 @@ GROUP_CONCAT(
 ) AS tags
     """
 
-    where_clause = f"(?A AND {users_filter} AND {user_name_like_filter}"
+    where_clause = f"?A AND ({users_filter} AND {user_name_like_filter}"
     if include_shared:
         where_clause += " OR j.status == 'shared'"
     where_clause += f") AND {time_filter} AND j.status != 'deleted'"
