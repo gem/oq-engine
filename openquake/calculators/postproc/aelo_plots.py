@@ -18,7 +18,6 @@
 import io
 import os
 import numpy
-import json
 import matplotlib as mpl
 from scipy import interpolate
 from openquake.commonlib import readinput
@@ -338,30 +337,32 @@ def plot_governing_mce(dstore, update_dstore=False):
     # governing_mce_sam = governing_mce_df['SaM']
     mce = governing_mce_df['SaM']
 
+    fig.suptitle("Governing $MCE_r$", fontsize=15, fontweight='bold', y=0.97)
+
     ax1.plot(governing_mce_period[1:], mce[1:], 'black',
-             label='Governing $MCE_r$', linewidth=2, linestyle='-')
+             linewidth=2, linestyle='-')
 
     ax1.set_xscale('log')
     ax1.set_yscale('log')
 
     ax1.set_ylabel('Spectral Acceleration (g)', fontsize=13)
     ax1.set_xlabel('Period (s)', fontsize=13)
-    ax1.legend(loc="lower left", fontsize=11)
     ax1.grid(which='both', linestyle='--', linewidth=0.5, alpha=0.7)
     ax1.minorticks_on()
+    ax1.set_title("Log–log scale", fontsize=12, pad=8)
 
     plt.rcParams.update({'font.size': 15})
 
     ax2.plot(governing_mce_period[1:], mce[1:], 'black',
-             label='Governing $MCE_r$', linewidth=2, linestyle='-')
+             linewidth=2, linestyle='-')
     # plt.ylim([0.01, upperlim + 0.2])
     ax2.grid('both')
     ax2.set_ylabel('Spectral Acceleration (g)', fontsize=13)
     ax2.set_xlabel('Period (s)', fontsize=13)
-    ax2.legend(loc="lower left", fontsize='11')
     ax2.set_xlim([0, 2.0])
     ax2.set_xscale('linear')
     ax2.set_yscale('linear')
+    ax2.set_title("Linear–linear scale", fontsize=12, pad=8)
 
     # add user guide message as a footer, centered below the x-axis
     message = 'See WebUI User Guide for complete explanation of plot contents.'
