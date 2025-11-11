@@ -31,6 +31,7 @@ import getpass
 import logging
 import platform
 import functools
+from unittest import mock
 from os.path import getsize
 from datetime import datetime, timezone
 import psutil
@@ -315,8 +316,8 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
-         notify_to):
+def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
+    dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.now(UTC)}
@@ -339,14 +340,7 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
                 args = [(ctx,) for ctx in jobctxs[1:]]
             else:
                 args = [(ctx,) for ctx in jobctxs]
-            parallel.multispawn(run_calc, args, concurrent_jobs or 1)
-        elif concurrent_jobs:
-            nc = 1 + parallel.num_cores // concurrent_jobs
-            logging.warning('Using %d pools of %d cores each',
-                            concurrent_jobs, nc)
-            os.environ['OQ_NUM_CORES'] = str(nc)
-            parallel.multispawn(
-                run_calc, [(ctx,) for ctx in jobctxs], concurrent_jobs)
+            parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -359,7 +353,7 @@ def _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
             stop_workers(job_id)
 
 
-def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
+def run_jobs(jobctxs, concurrent_jobs=1, nodes=1, sbatch=False,
              precalc=False, notify_to=None):
     """
     Run jobs using the specified config file and other options.
@@ -367,7 +361,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
     :param jobctxs:
         List of LogContexts
     :param concurrent_jobs:
-        How many jobs to run concurrently (default num_cores/4)
+        How many jobs to run concurrently (default 1)
     """
     dist = parallel.oq_distribute()
     if dist == 'slurm':
@@ -409,8 +403,13 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
             for job in jobctxs:
                 logs.dbcmd('finish', job.calc_id, 'aborted')
             raise
-    _run(jobctxs, dist, job_id, nodes, sbatch, precalc, concurrent_jobs,
-         notify_to)
+    if concurrent_jobs > 1:
+        with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
+            _run(jobctxs, job_id, nodes, sbatch, precalc,
+                 concurrent_jobs, notify_to)
+    else:
+        _run(jobctxs, job_id, nodes, sbatch, precalc,
+             concurrent_jobs, notify_to)
     return jobctxs
 
 
