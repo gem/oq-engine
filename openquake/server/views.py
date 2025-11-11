@@ -115,10 +115,12 @@ AELO_FORM_LABELS = {
     'asce_version': 'ASCE standards',
 }
 
+AELO_VALID_VS30_RANGE = [150, 3000]  # FIXME: change validity range
+
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': 'float [150 - 3000]',
+    'vs30': f'float {AELO_VALID_VS30_RANGE}',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE standards',
 }
@@ -1158,7 +1160,7 @@ def impact_run_with_shakemap(request):
 def aelo_validate(request):
     validation_errs = {}
     invalid_inputs = []
-    validate_vs30 = valid.FloatRange(150, 3000, 'vs30')
+    validate_vs30 = valid.FloatRange(*AELO_VALID_VS30_RANGE, 'vs30')
     try:
         lon = valid.longitude(request.POST.get('lon'))
     except Exception as exc:
