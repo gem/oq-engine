@@ -509,6 +509,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
                         host, start_time, relevant)
     """
     # helper to get job+calculation data from the oq-engine database
+    query_params = []
     filterdict = {}
 
     if id is not None:
@@ -520,22 +521,30 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if 'is_running' in request_get_dict:
         filterdict['is_running'] = valid.boolean(request_get_dict.get('is_running'))
 
-    if 'user_name_like' in request_get_dict:
-        name_pattern = request_get_dict.get('user_name_like').strip()
-        filterdict['user_name LIKE'] = name_pattern
+    query_params.append(filterdict)
 
     include_shared = valid.boolean(request_get_dict.get('include_shared', 1))
 
-    if 'start_time' in request_get_dict:
-        # assume an ISO date string
-        time_filter = "start_time >= '%s'" % request_get_dict.get('start_time')
-    else:
-        time_filter = 1
-
     if user_acl_on:
         users_filter = "user_name IN (?X)"
+        query_params.append(allowed_users)
     else:
         users_filter = 1
+
+    if 'user_name_like' in request_get_dict:
+        name_pattern = request_get_dict.get('user_name_like').strip()
+        user_name_like_filter = "user_name LIKE ?x"
+        query_params.append(name_pattern)
+    else:
+        user_name_like_filter = 1
+
+    if 'start_time' in request_get_dict:
+        # assume an ISO date string
+        start_time = request_get_dict.get('start_time')
+        time_filter = "start_time >= ?x"
+        query_params.append(start_time)
+    else:
+        time_filter = 1
 
     limit = int(request_get_dict.get('limit', 100))
     offset = int(request_get_dict.get('offset', 0))
@@ -549,17 +558,17 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     if order_dir not in ('ASC', 'DESC'):
         order_dir = 'DESC'
 
-    where_clause = f"(?A AND {users_filter} AND {time_filter}"
+    where_clause = f"?A AND ({users_filter} AND {user_name_like_filter}"
     if include_shared:
         where_clause += " OR status == 'shared'"
-    where_clause += ") AND status != 'deleted'"
+    where_clause += f") AND {time_filter} AND status != 'deleted'"
     query = (
         f"SELECT * FROM job"
         f" WHERE {where_clause}"
         f" ORDER BY {order_by} {order_dir}"
         f" LIMIT {limit} OFFSET {offset}"
     )
-    jobs = db(query, filterdict, allowed_users)
+    jobs = db(query, *query_params)
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
              job.hazard_calculation_id, job.size_mb, job.host,
