@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Removed the BASE33489 hack and made the first branch of the source
+    model logic tree regular, with a single letter abbreviation
+
   [Paolo Tormene]
   * When running a job via the WebUI it is possible to select multiple input
     files or a single .zip file
