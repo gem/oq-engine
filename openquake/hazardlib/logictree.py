@@ -289,12 +289,8 @@ def shorten(path_tuple, shortener, kind):
         if key[0] == '.':  # dummy branch
             chars.append('.')
         else:
-            if kind == 'smlt' and bsno == 0:
-                # shortener[key] has the form 2-letters+number
-                chars.append(shortener[key][:2])
-            else:
-                # shortener[key] has the form letter+number
-                chars.append(shortener[key][0])
+            # shortener[key] has the form letter+number
+            chars.append(shortener[key][0])
     return ''.join(chars)
 
 
