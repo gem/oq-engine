@@ -8,18 +8,46 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
-              <h2>{{ site_name }}, Lat: {{ lat }}, Lon: {{ lon }}, Site Class: {{ site_class }}, {{ asce_version }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}</h2>
-              {% if warnings %}
-              <div id="warnings-box" class="alert alert-warning" style=>
-                  WARNING: {{ warnings }}
-              </div>
-              {% endif %}
-              {% if notes %}
-              <div id="notes-box" class="alert alert-info" style=>
-                  NOTE: {{ notes }}
-              </div>
-              {% endif %}
-              <div id="my-outputs" class="well"></div>
+            <h2>Outputs for calculation {{ calc_id }}</h2>
+            <div class="table-responsive" style="max-width:100%; margin-bottom: 1em;">
+              <table class="table table-bordered table-sm table-striped" style="width:auto;">
+              <thead>
+                <tr>
+                <th>Site name</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Site class</th>
+                <th>ASCE version</th>
+                {% if calc_aelo_version is not None %}
+                <th>AELO version</th>
+                {% endif %}
+                </tr>
+              </thead>
+              <tbody>
+                  <tr>
+                  <td>{{ site_name }}</td>
+                  <td>{{ lat }}</td>
+                  <td>{{ lon }}</td>
+                  <td>{{ site_class }}</td>
+                  <td>{{ asce_version }}</td>
+                  {% if calc_aelo_version is not None %}
+                  <td>{{ calc_aelo_version }}</td>
+                  {% endif %}
+                  </tr>
+              </tbody>
+              </table>
+            </div>
+            {% if warnings %}
+            <div id="warnings-box" class="alert alert-warning" style=>
+                WARNING: {{ warnings }}
+            </div>
+            {% endif %}
+            {% if notes %}
+            <div id="notes-box" class="alert alert-info" style=>
+                NOTE: {{ notes }}
+            </div>
+            {% endif %}
+            <div id="my-outputs" class="well"></div>
             <div class="outputs-general-btns-left">
               <div id="to-full-outputs">
                 <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs" class="btn btn-sm">
