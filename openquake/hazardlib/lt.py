@@ -839,6 +839,8 @@ class Realization(object):
 
 def add_path(bset, bsno, brno, num_prev, tot, paths):
     base = BASE183
+    if brno + len(bset.branches) >= len(BASE183):
+        brno = 0
     for br in bset.branches:
         br.short_id = base[brno]
         path = ['*'] * tot
