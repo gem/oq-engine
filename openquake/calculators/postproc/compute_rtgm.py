@@ -137,7 +137,7 @@ def get_DLLs(job_imts, vs30):
         soil_class_asce = 'E'
 
     D = DLL_df[soil_class_asce]
-    imt_table = DLL_df.imt
+    imt_table = DLL_df.imt 
 
     T_table = np.array([from_string(imt).period for imt in DLL_df.imt])
     T_job = [from_string(imt).period for imt in job_imts]
