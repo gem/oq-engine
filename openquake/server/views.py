@@ -115,7 +115,7 @@ AELO_FORM_LABELS = {
     'asce_version': 'ASCE standards',
 }
 
-AELO_VALID_VS30_RANGE = [150, 3000]  # FIXME: change validity range
+AELO_VALID_VS30_RANGE = [150, 1525]
 
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
