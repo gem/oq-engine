@@ -270,5 +270,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     def test_aelo_site_classes(self):
         resp = self.c.get('/v1/aelo_site_classes')
         resp = json.loads(resp.content.decode('utf8'))
-        self.assertEqual(resp['default'],
+        self.assertEqual(resp['ASCE7-22']['default'],
                          {'display_name': 'Default', 'vs30': [260, 365, 530]})
+        self.assertEqual(resp['ASCE7-22']['BC'],
+                         {'display_name': 'BC - Soft rock', 'vs30': 760})
+        self.assertEqual(resp['ASCE7-16']['BC'],
+                         {'display_name': 'B-C boundary', 'vs30': 760})
