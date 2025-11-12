@@ -527,7 +527,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     include_shared = valid.boolean(request_get_dict.get('include_shared', 1))
 
     if user_acl_on:
-        users_filter = "user_name IN (?X)"
+        users_filter = "j.user_name IN (?X)"
         query_params.append(allowed_users)
     else:
         users_filter = 1
@@ -550,21 +550,6 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     preferred_only = int(request_get_dict.get('preferred_only', 0))
     filter_by_tag = request_get_dict.get('filter_by_tag', 0)
 
-    if 'user_name_like' in request_get_dict:
-        name_pattern = request_get_dict.get('user_name_like').strip()
-        user_name_like_filter = "user_name LIKE ?x"
-        query_params.append(name_pattern)
-    else:
-        user_name_like_filter = 1
-
-    if 'start_time' in request_get_dict:
-        # assume an ISO date string
-        start_time = request_get_dict.get('start_time')
-        time_filter = "start_time >= ?x"
-        query_params.append(start_time)
-    else:
-        time_filter = 1
-
     limit = int(request_get_dict.get('limit', 100))
     offset = int(request_get_dict.get('offset', 0))
     allowed_sort_fields = [
@@ -572,7 +557,7 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
         'size_mb']
     order_by = request_get_dict.get('order_by', 'id')
     if order_by not in allowed_sort_fields:
-        order_by = 'id'
+        order_by = 'j.id'
     order_dir = request_get_dict.get('order_dir', 'DESC').upper()
     if order_dir not in ('ASC', 'DESC'):
         order_dir = 'DESC'
