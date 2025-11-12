@@ -289,6 +289,7 @@ def plot_mce_spectra(dstore, site_idx=0, update_dstore=False):
     ax1.set_xlabel('Period (s)', fontsize=13)
     ax1.legend(loc="lower left", fontsize='11')
     ax1.set_xlim([min(T[1:]), max(T)])
+    ax1.set_title("ASCE 7 $MCE_r$ Details (logarithmic scale)", fontsize=12, pad=8)
 
     plt.rcParams.update({'font.size': 15})
     ax2.plot(T[1:], DLL[1:], 'kx', markersize=8, label='DLL', linewidth=1,
@@ -311,6 +312,7 @@ def plot_mce_spectra(dstore, site_idx=0, update_dstore=False):
     ax1.set_yscale('log')
     ax2.set_xscale('linear')
     ax2.set_yscale('linear')
+    ax2.set_title("ASCE 7 $MCE_r$ Details (linear scale)", fontsize=12, pad=8)
 
     # add user guide message
     message = 'See WebUI User Guide for complete explanation of plot contents.'
