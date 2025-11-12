@@ -40,7 +40,7 @@ from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import (
-    cached_property, groupby, group_array, AccumDict, BASE183, BASE33489)
+    cached_property, groupby, group_array, AccumDict, BASE183)
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
@@ -54,7 +54,6 @@ U32 = numpy.uint32
 I32 = numpy.int32
 F32 = numpy.float32
 TWO24 = 2 ** 24
-ONE_LETTER_BASE = True
 
 rlz_dt = numpy.dtype([
     ('ordinal', U32),
@@ -290,12 +289,8 @@ def shorten(path_tuple, shortener, kind):
         if key[0] == '.':  # dummy branch
             chars.append('.')
         else:
-            if kind == 'smlt' and bsno == 0:
-                # shortener[key] has the form 2-letters+number
-                chars.append(shortener[key][:2])
-            else:
-                # shortener[key] has the form letter+number
-                chars.append(shortener[key][0])
+            # shortener[key] has the form letter+number
+            chars.append(shortener[key][0])
     return ''.join(chars)
 
 
@@ -596,17 +591,7 @@ class SourceModelLogicTree(object):
         values = []
         bsno = len(self.branchsets)
         zeros = []
-        # NB: because the engine lacks the ability to apply correlated
-        # uncertainties to all the sources in a source model, people build
-        # spurious source models in preprocessing; for instance EDF/CEA have 4
-        # real source models which are extended to 400 source models; this is
-        # bad, since the required disk space is 100x larger, the read time is
-        # 100x larger copying the files is an issue, etc.
-        # To stop people to commit such abuses there is a limit of 183
-        # branches; however, you can actually raise the limit to 33489 branches
-        # by commenting/uncommenting the two lines below, if you really need
-        maxlen = 183
-        # maxlen=183 if bsno else 33489  # sourceModel branchset can be longer
+        maxlen = len(BASE183)
         if self.branchID == '' and len(branches) > maxlen:
             msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
                    'you should split it, see https://docs.openquake.org/'
@@ -653,9 +638,7 @@ class SourceModelLogicTree(object):
                 branch = Branch(branch_id, value, weight, bs_id)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
-            # use two-letter abbrev for the first branchset (sourceModel)
-            base = BASE183 if ONE_LETTER_BASE or bsno else BASE33489
-            self.shortener[branch_id] = keyno(branch_id, bsno, brno, base)
+            self.shortener[branch_id] = keyno(branch_id, bsno, brno, BASE183)
             weight_sum += weight
         if zeros:
             branch = Branch(zero_id, '', sum(zeros), bs_id)
@@ -970,9 +953,8 @@ class SourceModelLogicTree(object):
                     uvalue = row['uvalue']  # not really deserializable :-(
                 br = Branch(row['branch'], uvalue, float(row['weight']), bsid)
                 self.branches[br.branch_id] = br
-                base = BASE33489 if utype == 'sourceModel' else BASE183
                 self.shortener[br.branch_id] = keyno(
-                    br.branch_id, ordinal, no, base)
+                    br.branch_id, ordinal, no, BASE183)
                 bset.branches.append(br)
             bsets.append(bset)
         CompositeLogicTree(bsets)  # perform attach_to_branches

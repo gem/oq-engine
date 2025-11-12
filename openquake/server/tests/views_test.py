@@ -22,10 +22,15 @@ import json
 import time
 import string
 import secrets
+import random
 import django
 from django.contrib.auth import get_user_model
 from openquake.baselib.general import gettemp
 from openquake.commonlib.readinput import loadnpz
+
+
+def random_string(length=10):
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
 
 def get_or_create_user(level):
