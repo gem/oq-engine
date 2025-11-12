@@ -8,31 +8,23 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
-            <h2>Outputs for calculation {{ calc_id }}</h2>
+            <h2>Outputs for {{ site_name }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}</h2>
             <div class="table-responsive" style="max-width:100%; margin-bottom: 1em;">
               <table class="table table-bordered table-sm table-striped" style="width:auto;">
               <thead>
                 <tr>
-                <th>Site name</th>
                 <th>Latitude</th>
                 <th>Longitude</th>
+                <th>ASCE standards</th>
                 <th>Site class</th>
-                <th>ASCE version</th>
-                {% if calc_aelo_version is not None %}
-                <th>AELO version</th>
-                {% endif %}
                 </tr>
               </thead>
               <tbody>
                   <tr>
-                  <td>{{ site_name }}</td>
                   <td>{{ lat }}</td>
                   <td>{{ lon }}</td>
-                  <td>{{ site_class }}</td>
                   <td>{{ asce_version }}</td>
-                  {% if calc_aelo_version is not None %}
-                  <td>{{ calc_aelo_version }}</td>
-                  {% endif %}
+                  <td>{{ site_class }}</td>
                   </tr>
               </tbody>
               </table>
