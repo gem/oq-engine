@@ -63,7 +63,7 @@
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
-        <tr class= <%= ['asce07', 'asce41'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %> >
+        <tr class= <%= ['asce07', 'asce41', 'asce41_sa_final', 'mce_governing'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %> >
           <td><%= output.get('id') || 'New' %></td>
           <td>
             <%= output.get('name') %>
