@@ -61,9 +61,6 @@ BASE183 = ("ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmno"
            "pqrstuvwxyz{|}!#$%&'()*+-/0123456789:;<=>?@¡¢"
            "£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑ"
            "ÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ")
-BASE33489 = []  # built in 0.003 seconds
-for a, b in itertools.product(BASE183, BASE183):
-    BASE33489.append(a + b)
 mp = multiprocessing.get_context('spawn')
 
 

@@ -86,10 +86,10 @@ unc
         # These are the patterns for the first uncertainty and source 'b'.
         # Overall the SSC LT for source 'b' contains 4 branchsets and the
         # correlated uncertainty is the third one.
-        self.assertEqual(patterns[0]['b'], ['...A.~.', '...B.~.'])
+        self.assertEqual(patterns[0]['b'], ['..A.~.', '..B.~.'])
 
         # Checking the patterns for the GMC
-        expected = ['.....~A', '.....~B', '.....~C', '.....~D']
+        expected = ['....~A', '....~B', '....~C', '....~D']
         self.assertEqual(patterns[1]['b'], expected)
 
     def test_rlz_groups(self):
