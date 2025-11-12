@@ -193,7 +193,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(len(self.calc.datastore['ruptures']), 2)
         [fname] = export(('events', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/events.csv', fname)
-
+        
     def test_minimum_intensity(self):
         out = self.run_calc(case_2.__file__, 'job.ini', exports='csv',
                             minimum_intensity='0.2')
@@ -309,12 +309,12 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_7.__file__, 'job.ini', exports='csv')
         aw = extract(self.calc.datastore, 'realizations')
         dic = countby(aw.array, 'branch_path')
-        self.assertEqual({b'AA~A': 308,  # w = .6 * .5 = .30
-                          b'AA~B': 173,  # w = .6 * .3 = .18
-                          b'AA~C': 119,  # w = .6 * .2 = .12
-                          b'AB~A': 192,  # w = .4 * .5 = .20
-                          b'AB~B': 127,  # w = .4 * .3 = .12
-                          b'AB~C': 81},  # w = .4 * .2 = .08
+        self.assertEqual({b'A~A': 308,  # w = .6 * .5 = .30
+                          b'A~B': 173,  # w = .6 * .3 = .18
+                          b'A~C': 119,  # w = .6 * .2 = .12
+                          b'B~A': 192,  # w = .4 * .5 = .20
+                          b'B~B': 127,  # w = .4 * .3 = .12
+                          b'B~C': 81},  # w = .4 * .2 = .08
                          dic)
 
         fnames = out['hcurves', 'csv']
