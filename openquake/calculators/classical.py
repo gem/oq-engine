@@ -451,7 +451,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def init_poes(self):
         oq = self.oqparam
-        full_lt_by_label = read_full_lt_by_label(self.datastore)
+        full_lt_by_label = read_full_lt_by_label(self.datastore, self.full_lt)
         trt_smrs = self.datastore['trt_smrs'][:]
         self.cmdict = {label: get_cmakers(trt_smrs, full_lt, oq)
                        for label, full_lt in full_lt_by_label.items()}
