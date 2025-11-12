@@ -19,6 +19,7 @@
 import os
 import logging
 from openquake.baselib import performance, general, python3compat
+from openquake.hazardlib import nrml
 from openquake.commonlib import readinput, datastore
 
 
@@ -30,11 +31,39 @@ def get_dupl(src_ids):
     return dupl
 
 
-def main(calc_id: int):
+def reduce_to_one_source(sm_dir):
+    """
+    Find all source models in the given directory, create a new directory
+    and put in it all source models reduced to a single source per source
+    model.
+    """
+    new = sm_dir + '_red'
+    assert os.path.exists(sm_dir)
+    if not os.path.exists(new):
+        os.makedirs(new)
+    for cwd, dirs, files in os.walk(sm_dir):
+        for fname in files:
+            if fname.endswith('.xml'):  # assume source model file
+                inp = os.path.join(cwd, fname)
+                out = inp.replace(sm_dir, new)
+                root = nrml.read(inp)
+                first_grp = root[0][0]
+                if first_grp.nodes:  # has sources
+                    first_grp.nodes = [first_grp[0]]
+                with open(out, 'wb') as f:
+                    nrml.write(root, f)
+                logging.info('Stored %s', out)
+
+
+def main(what):
     """
     Reduce the source model of the given (pre)calculation by discarding all
     sources that do not contribute to the hazard.
     """
+    try:
+        calc_id  = int(what)
+    except ValueError:
+        return reduce_to_one_source(what)
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
     with datastore.read(calc_id) as dstore:
@@ -63,4 +92,4 @@ def main(calc_id: int):
     print(mon)
 
 
-main.calc_id = 'calculation ID'
+main.what = 'calculation ID or directory'
