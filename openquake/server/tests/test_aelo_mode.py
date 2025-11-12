@@ -219,7 +219,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         params = dict(lon='-86', lat='12', vs30='-800', siteid='CCA_SITE')
         self.aelo_invalid_input(params, 'vs30 -800.0 is smaller than the minimum (150)')
         params = dict(lon='-86', lat='12', vs30='4000', siteid='CCA_SITE')
-        self.aelo_invalid_input(params, 'vs30 4000.0 is bigger than the maximum (1525)')
+        self.aelo_invalid_input(params, 'vs30 4000.0 is bigger than the maximum (3000)')
 
     def test_aelo_invalid_siteid(self):
         siteid = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
