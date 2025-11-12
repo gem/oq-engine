@@ -373,16 +373,17 @@ class MapGetter(object):
         return means
 
 
-def get_ebruptures(dstore):
+def get_ebruptures(dstore, model=''):
     """
     Extract EBRuptures from the datastore
     """
     ebrs = []
-    trts = list(dstore['full_lt/gsim_lt'].values)
+    trts = list(dstore[f'full_lt/{model}/gsim_lt'].values)
     if 'trt_smr_start_stop' in dstore:  # regular case
         for trt_smr, start, stop in dstore['trt_smr_start_stop']:
             trt = trts[trt_smr // TWO24]
             for proxy in get_proxies(dstore.filename, slice(start, stop)):
+                print(proxy)
                 ebrs.append(proxy.to_ebr(trt))
     else:  # OQImpact calculations, I have no test for this :-(
         for proxy in get_proxies(dstore.filename, slice(None)):
@@ -390,7 +391,7 @@ def get_ebruptures(dstore):
     return ebrs
 
 
-def get_ebrupture(dstore, rup_id):  # used in show rupture
+def get_ebrupture(dstore, rup_id, model=''):  # used in show rupture
     """
     This is EXTREMELY inefficient, since it reads all ruptures.
     NB: it assumes rup_is is unique
@@ -401,7 +402,7 @@ def get_ebrupture(dstore, rup_id):  # used in show rupture
     if len(idxs) == 0:
         raise ValueError(f"Missing {rup_id=}")
     [rec] = rups[idxs]
-    trts = dstore.getitem('full_lt').attrs['trts']
+    trts = dstore.getitem(f'full_lt/{model}').attrs['trts']
     trt = trts[rec['trt_smr'] // TWO24]
     geom = rupgeoms[rec['geom_id']]
     return get_ebr(rec, geom, trt)
