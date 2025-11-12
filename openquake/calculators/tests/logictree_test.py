@@ -670,8 +670,8 @@ hazard_uhs-std.csv
 
         # check the reduction from 10 to 2 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        exp = [b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A', b'AAA~A',
-               b'AAA~A', b'AB.~A', b'AB.~A', b'AB.~A']
+        exp = [b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A', b'AA~A',
+               b'AA~A', b'B.~A', b'B.~A', b'B.~A']
         ae(rlzs['branch_path'], exp)
         aac(rlzs['weight'], [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
 

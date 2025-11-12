@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: extended reduce_sm to reduce the source models to a single source
   * Implemented event_based_risk from ses.hdf5
   * Optimized the rupture prefiltering when starting from a SES
   * Raised an early error if the vulnerability functions are not
@@ -115,7 +116,7 @@
   * Extended the aggregation by `site_id` to multiple tags
   * Fixed an extract bug in disagg-traditional with realizations
   * Fixed a bug with the quantiles in event_based_damage
-  * Improved loggin the progress in event based risk
+  * Improved logging the progress in event based risk
   * Reduced slow tasks in the USA model
   * Added output `mce_default` in AELO calculations
   * Extended `oq export_mean_disagg_by_src` to multiple sites
