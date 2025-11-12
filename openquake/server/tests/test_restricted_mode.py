@@ -196,14 +196,14 @@ class RestrictedModeTestCase(django.test.TestCase):
         self.assertEqual(ret.status_code, 200)
         n_all_jobs = len(ret.json())
         # list only the preferred jobs
-        ret = self.get('list?preferred_only=1')
+        ret = self.get('list', preferred_only=1)
         self.assertEqual(ret.status_code, 200)
         n_preferred_jobs = len(ret.json())
         # NOTE: we might want to check that all the listed jobs are not preferred, but
         # it is a bit more complex, involving a query on job_tag for each
         self.assertGreater(n_all_jobs, n_preferred_jobs)
         # list only jobs that have the first tag
-        ret = self.get(f'list?filter_by_tag={first_tag}')
+        ret = self.get('list', filter_by_tag=first_tag)
         self.assertEqual(ret.status_code, 200)
         # check that the query is not returning any job that doesn't have the first tag
         returned_jobs = ret.json()
