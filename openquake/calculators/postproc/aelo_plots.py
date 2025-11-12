@@ -337,8 +337,6 @@ def plot_governing_mce(dstore, update_dstore=False):
     # governing_mce_sam = governing_mce_df['SaM']
     mce = governing_mce_df['SaM']
 
-    fig.suptitle("Governing $MCE_r$", fontsize=15, fontweight='bold', y=0.97)
-
     ax1.plot(governing_mce_period[1:], mce[1:], 'black',
              linewidth=2, linestyle='-')
 
@@ -349,7 +347,7 @@ def plot_governing_mce(dstore, update_dstore=False):
     ax1.set_xlabel('Period (s)', fontsize=13)
     ax1.grid(which='both', linestyle='--', linewidth=0.5, alpha=0.7)
     ax1.minorticks_on()
-    ax1.set_title("Log–log scale", fontsize=12, pad=8)
+    ax1.set_title("ASCE 7 $MCE_r$ Spectrum (logarithmic scale)", fontsize=12, pad=8)
 
     plt.rcParams.update({'font.size': 15})
 
@@ -362,7 +360,7 @@ def plot_governing_mce(dstore, update_dstore=False):
     ax2.set_xlim([0, 2.0])
     ax2.set_xscale('linear')
     ax2.set_yscale('linear')
-    ax2.set_title("Linear–linear scale", fontsize=12, pad=8)
+    ax2.set_title("ASCE 7 $MCE_r$ Spectrum (linear scale)", fontsize=12, pad=8)
 
     # add user guide message as a footer, centered below the x-axis
     message = 'See WebUI User Guide for complete explanation of plot contents.'
