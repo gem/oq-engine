@@ -389,7 +389,7 @@ def run_jobs(jobctxs, concurrent_jobs=1, nodes=1, sbatch=False,
                         prev_version = f.attrs['engine_version']
                         if prev_version != version:
                             # here the logger is not initialized yet
-                            print('Starting from a hazard (%d) computed with'
+                            print('Starting from a hazard (%s) computed with'
                                   ' an obsolete version of the engine: %s' %
                                   (hc_id, prev_version))
     if dist == 'slurm' and sbatch:
