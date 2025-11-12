@@ -24,7 +24,7 @@ from openquake.baselib.writers import write_csv
 DISPLAY_NAME = {
     'asce07': 'ASCE 7 Parameters',
     'asce41': 'ASCE 41 Parameters',
-    'asce41_sa_final': 'ASCE41 BSE Spectra',
+    'asce41_sa_final': 'ASCE 41 Response Spectrum',
     'spectra_asce41': 'ASCE41 Calculations',
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
     'job': 'job.zip',
@@ -55,7 +55,7 @@ DISPLAY_NAME = {
     'bcr-stats': 'Benefit Cost Ratios Statistics',
     'cs-stats': 'Mean Conditional Spectra',
     'mce': 'MCE calculations',
-    'mce_governing': 'ASCE7: MCEr SRAs',
+    'mce_governing': 'ASCE7 MCEr Response Spectrum',
     'median_spectra': 'Median Spectra per Site and PoE',
     'median_spectrum_disagg': 'Median Spectrum Disaggregation',
     'mmi_tags': 'Exposure grouped by Admin1 and MMI',
