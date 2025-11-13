@@ -237,7 +237,7 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
 
     MCEr_det = [dic['PGA'], dic['Ss'], dic['S1']]
-    if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
+    if any([val in ['n.a.', '<0.005'] for val in MCEr_det]):  # hazard is lower than DLLs
         plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
     else:
         plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
