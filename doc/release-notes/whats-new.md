@@ -14,7 +14,9 @@ The major changes are in multifault sources (relevant for the USA,
 China, Japan and New Zealand models), in secondary perils (i.e. liquefaction
 and landslides) and in the script generating the global stochastic
 event set from the GEM hazard models. Finally, we optimized the
-memory consumption in scenario calculations, both conditioned and not.
+memory consumption in scenario calculations (both conditioned and not)
+and in large event based risk calculations, that were running out
+of memory due to the large data transfer in the average losses.
 
 A detailed summary is given below.
 
@@ -339,12 +341,12 @@ Secondary perils
 ----------------
 
 The secondary peril implementation is still experimental and this
-releases contains a great deal of changes (see
+release contains a great deal of changes (see
 https://github.com/gem/oq-engine/pull/10254) plus a new feature: it is
 now possible to generate the equivalent of hazard curves and maps for
 secondary IMTs.
 
-Many new models wered added, many were fixed, some model names very
+Many new models were added, many were fixed, some model names were
 changed. Calculations using the old names will fail with a clear error
 message suggesting to the user the new names.
 
