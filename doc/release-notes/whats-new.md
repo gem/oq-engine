@@ -127,7 +127,7 @@ models to consider and the effective time parameters.  Moreover, we
 documented it. It is not considered experimental anymore.
 
 We also worked at avoiding out of memory errors in calculations
-starting from the global SES; the performance, however, is still bad
+starting from the global SES; the performance, however, is still not ideal
 and further work will be required. Moreover, you cannot run risk
 calculations directly from the global SES yet.
 
