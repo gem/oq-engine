@@ -18,6 +18,7 @@
 import io
 import os
 import numpy
+import json
 import matplotlib as mpl
 from scipy import interpolate
 from openquake.commonlib import readinput
@@ -217,6 +218,8 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     imtls = dinfo['imtls']
     plt = import_plt()
     MCEr = dstore.read_df('mce_governing').SaM.to_numpy()
+    js = dstore['asce07'][site_idx].decode('utf8')
+    dic = json.loads(js)
     T = [from_string(imt).period for imt in imtls]
 
     limit_det = [0.5, 1.5, 0.6]
@@ -233,6 +236,16 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
 
+    MCEr_det = [dic['PGA'], dic['Ss'], dic['S1']]
+    if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
+        plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
+    else:
+        plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
+                 linewidth=3)
+        plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
+                 label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
+        plt.ylim(
+            [0, numpy.max([rtgm_probmce,  MCEr, MCEr_det, limit_det]) + 0.2])
     plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
                 linewidth=2, facecolors='none', edgecolors='r')
     plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
@@ -245,9 +258,17 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     plt.xlim([-0.02, 1.2])
 
     # add user guide message
-    # FIXME: the message is not being displayed
-    message = 'See WebUI User Guide for complete explanation of plot contents.'
-    # plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85)
+    fig = plt.gcf()
+    fig.subplots_adjust(bottom=0.22)  # add extra space at bottom
+    plt.text(
+        0.5, -0.25,
+        'See WebUI User Guide for complete explanation of plot contents.',
+        fontsize='small',
+        color='black',
+        alpha=0.85,
+        ha='center',  # center horizontally
+        transform=plt.gca().transAxes
+    )
 
     if update_dstore:
         bio = io.BytesIO()
