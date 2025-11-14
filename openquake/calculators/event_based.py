@@ -331,7 +331,7 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
             for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
                 rlzs_by_gsim[model, trt_smr] = rbg
     filrups = close_ruptures(rups, sitecol, assetcol)
-    logging.info(f'Selected {len(rups):_d} ruptures close to the sites')
+    logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
     rups_dic = group_array(filrups, 'model', 'trt_smr')
     totw = sum(rup_weight(filrups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
