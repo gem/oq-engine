@@ -107,7 +107,8 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         list_url = ('list?user_name_like=%test%&is_running=1'
                     '&calculation_mode=event_based'
                     '&order_by=description&order_dir=ASC'
-                    '&limit=1&offset=1&include_shared=1')
+                    '&limit=1&offset=1&include_shared=1'
+                    '&start_time=2022-01-01')
         self.assertIsInstance(self.get(list_url), list)
 
         extract_url = '/v1/calc/%s/extract/' % job_id

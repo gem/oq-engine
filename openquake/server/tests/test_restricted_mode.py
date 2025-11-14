@@ -1,9 +1,10 @@
 import django
 from datetime import datetime, timedelta
 from django.test import Client
+from openquake.commonlib import logs
 from openquake.commonlib.dbapi import db
 from openquake.engine.engine import create_jobs
-from openquake.server.tests.views_test import get_or_create_user
+from openquake.server.tests.views_test import get_or_create_user, random_string
 
 
 class RestrictedModeTestCase(django.test.TestCase):
@@ -140,6 +141,104 @@ class RestrictedModeTestCase(django.test.TestCase):
         self.c.login(username=self.user1.username, password=self.password1)
         self.remove_calc(job.calc_id)
 
+    # TEST TAGGING
+    def test_tagging_job(self):
+        job_dic0 = dict(calculation_mode='event_based',
+                        description='test_tagging_first_job')
+        job_dic1 = dict(calculation_mode='event_based',
+                        description='test_tagging_second_job')
+        jobs = create_jobs([job_dic0, job_dic1], user_name=self.user2.username)
+        for job in jobs:
+            db("UPDATE job SET ?D WHERE id=?x",
+               {'status': 'complete', 'is_running': 0}, job.calc_id)
+        self.c.login(username=self.user2.username, password=self.password2)
+
+        # try to add a tag with a blank name
+        tag_name = ''
+        ret = self.get(f'{jobs[0].calc_id}/add_tag/{tag_name}')
+        self.assertEqual(ret.status_code, 404)
+        ret = logs.dbcmd('add_tag_to_job', jobs[0].calc_id, tag_name)
+        self.assertIn('error', ret)
+        self.assertIn("CHECK constraint failed: LENGTH(tag) > 0", ret['error'])
+
+        # generate random tag names, 10 characters long
+        first_tag = random_string(10)
+        second_tag = random_string(10)
+        for job in jobs:
+            for tag in [first_tag, second_tag]:
+                # add the same tag to the two jobs
+                ret = self.get(f'{job.calc_id}/add_tag/{tag}')
+                self.assertEqual(ret.status_code, 200)
+                self.assertIn(f'The tag {tag} was added to job {job.calc_id}',
+                              ret.content.decode('utf8'))
+                # set the first job as preferred
+                ret = self.get(f'{job.calc_id}/set_preferred_job_for_tag/{tag}')
+                self.assertEqual(ret.status_code, 200)
+                # when setting the second job as preferred, the preferred flag should
+                # be reset for all jobs sharing that tag and the flag should be set to
+                # the second job without raising errors
+                self.assertIn(f'Job {job.calc_id} was set as preferred for tag {tag}',
+                              ret.content.decode('utf8'))
+
+        # list all the available tags
+        ret = self.get('list_tags')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn(first_tag, ret.json()['tags'])
+        self.assertIn(second_tag, ret.json()['tags'])
+
+        # get the preferred job for the tag
+        ret = self.get(f'get_preferred_job_for_tag/{first_tag}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertEqual(ret.json()['job_id'], jobs[1].calc_id)
+
+        # list all jobs (preferred and not preferred)
+        ret = self.get('list')
+        self.assertEqual(ret.status_code, 200)
+        n_all_jobs = len(ret.json())
+        # list only the preferred jobs
+        ret = self.get('list', preferred_only=1)
+        self.assertEqual(ret.status_code, 200)
+        n_preferred_jobs = len(ret.json())
+        # NOTE: we might want to check that all the listed jobs are not preferred, but
+        # it is a bit more complex, involving a query on job_tag for each
+        self.assertGreater(n_all_jobs, n_preferred_jobs)
+        # list only jobs that have the first tag
+        ret = self.get('list', filter_by_tag=first_tag)
+        self.assertEqual(ret.status_code, 200)
+        # check that the query is not returning any job that doesn't have the first tag
+        returned_jobs = ret.json()
+        expected_jobs = [job for job in ret.json() if first_tag in job['tags']]
+        self.assertGreater(len(returned_jobs), 0)
+        self.assertEqual(len(returned_jobs), len(expected_jobs))
+
+        # unset the preferred job for the first tag
+        ret = self.get(f'unset_preferred_job_for_tag/{first_tag}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn('success', ret.json())
+        self.assertIn(f'Tag {first_tag} has no preferred job now',
+                      ret.json()['success'])
+
+        # try to re-add the same first_tag to the second job
+        ret = self.get(f'{jobs[1].calc_id}/add_tag/{first_tag}')
+        self.assertEqual(ret.status_code, 403)
+        self.assertIn('error', ret.json())
+        self.assertIn("UNIQUE constraint failed", ret.json()['error'])
+
+        # remove the first_tag from the second job
+        ret = self.get(f'{jobs[1].calc_id}/remove_tag/{first_tag}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn(f'Tag {first_tag} was removed from job {jobs[1].calc_id}',
+                      ret.content.decode('utf8'))
+
+        # get the preferred job for the tag
+        ret = self.get(f'get_preferred_job_for_tag/{first_tag}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIsNone(ret.json()['job_id'])
+
+        # delete the jobs
+        for job in jobs:
+            self.remove_calc(job.calc_id)
+
     def test_calc_list(self):
         """
         Create jobs with different parameters and test that /v1/calc/list
@@ -162,6 +261,11 @@ class RestrictedModeTestCase(django.test.TestCase):
         db("UPDATE job SET ?D WHERE id=?x",
            {'status': 'shared', 'is_running': 0}, job4.calc_id)
 
+        # tag job1 and make it preferred
+        first_tag = random_string(8)
+        logs.dbcmd('add_tag_to_job', job1.calc_id, first_tag)
+        logs.dbcmd('set_preferred_job_for_tag', job1.calc_id, first_tag)
+
         self.c.login(username=self.user2.username, password=self.password2)
 
         ret = self.get('list', limit=-1)
@@ -181,6 +285,16 @@ class RestrictedModeTestCase(django.test.TestCase):
         ret = self.get('list', is_running='1', include_shared=0)
         self.assertEqual(ret.status_code, 200)
         self.assertTrue(all(j['is_running'] for j in ret.json()))
+
+        ret = self.get('list', preferred_only='1', include_shared=0)
+        self.assertEqual(ret.status_code, 200)
+        jobs = ret.json()
+        self.assertTrue(any([job['tags'].endswith('★') for job in jobs]))
+        self.assertIn(first_tag, jobs[0]['tags'])
+
+        ret = self.get('list', filter_by_tag=first_tag, include_shared=0)
+        self.assertEqual(ret.status_code, 200)
+        self.assertTrue(all(first_tag in j['tags'] for j in ret.json()))
 
         ret = self.get('list', user_name_like='user2', include_shared=0)
         self.assertEqual(ret.status_code, 200)

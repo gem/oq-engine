@@ -513,6 +513,10 @@ def calc_list(request, id=None):
     Get a list of calculations and report their id, status, calculation_mode,
     is_running, description, and a url where more detailed information
     can be accessed. This is called several times by the Javascript.
+    If 'preferred_only' is specified in the GET parameters, only jobs set as
+    preferred for a tag are listed.
+    If 'filter_by_tag' is specified in the GET parameters, only jobs associated to the
+    given tag are listed.
 
     Responses are in JSON.
     """
@@ -527,7 +531,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id, size_mb, host, start_time, relevant) in calc_data:
+         parent_id, size_mb, host, start_time, relevant, tags) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
@@ -546,7 +550,7 @@ def calc_list(request, id=None):
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
                  parent_id=parent_id, abortable=abortable, size_mb=size_mb,
-                 start_time=start_time_str, relevant=relevant))
+                 start_time=start_time_str, relevant=relevant, tags=tags))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -650,6 +654,72 @@ def get_user_level(request):
         # NOTE: when authentication is not required, the user interface
         # can assume the user to have the maximum level
         return 2
+
+
+def check_db_response(resp):
+    if 'success' in resp:
+        return JsonResponse(resp, status=200)
+    elif 'error' in resp:
+        logging.error(resp['error'])
+        return JsonResponse(resp, status=403)
+    else:
+        return JsonResponse({'error': f'Unexpected response: {resp}'}, status=500)
+
+
+def add_tag_to_job(user_level, calc_id, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('add_tag_to_job', calc_id, tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def remove_tag_from_job(user_level, calc_id, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('remove_tag_from_job', calc_id, tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def set_preferred_job_for_tag(user_level, calc_id, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('set_preferred_job_for_tag', calc_id, tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def unset_preferred_job_for_tag(user_level, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('unset_preferred_job_for_tag', tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def get_preferred_job_for_tag(tag_name):
+    try:
+        resp = logs.dbcmd('get_preferred_job_for_tag', tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def list_tags():
+    try:
+        resp = logs.dbcmd('list_tags')
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
 
 
 @csrf_exempt
@@ -2194,6 +2264,70 @@ def on_same_fs(request):
         pass
 
     return JsonResponse({'success': False}, status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_add_tag(request, calc_id, tag_name):
+    """
+    Assign to the calculation of given `calc_id` a tag named `tag_name`
+    """
+    user_level = get_user_level(request)
+    return add_tag_to_job(user_level, calc_id, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_remove_tag(request, calc_id, tag_name):
+    """
+    Remove the tag named `tag_name` from the calculation of given `calc_id`
+    """
+    user_level = get_user_level(request)
+    return remove_tag_from_job(user_level, calc_id, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_set_preferred_job_for_tag(request, calc_id, tag_name):
+    """
+    Set the calculation of given `calc_id` as the preferred one for tag `tag_name`
+    """
+    user_level = get_user_level(request)
+    return set_preferred_job_for_tag(user_level, calc_id, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_unset_preferred_job_for_tag(request, tag_name):
+    """
+    Unset the preferred job for tag `tag_name`
+    """
+    user_level = get_user_level(request)
+    return unset_preferred_job_for_tag(user_level, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_get_preferred_job_for_tag(request, tag_name):
+    """
+    Get the id of the calculation marked as the preferred one for the given `tag_name`
+    """
+    return get_preferred_job_for_tag(tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_list_tags(request):
+    """
+    List all the available tags
+    """
+    return list_tags()
 
 
 @require_http_methods(['GET'])
