@@ -37,20 +37,25 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.site import Site, SiteCollection
 
 from django.http import JsonResponse
+from django.conf import settings
+
 # (
 #    HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
 #    HttpResponseForbidden, )
 
 
 # Base path
-BASE = os.path.abspath("/home/nastasi/git/PAPERS/Earthquake_Scenarios/Hypothetical_Events")
+BASE = os.path.abspath(
+    os.path.join(
+        getattr(settings, 'PAPERS_BASEPATH', '/opt/openquake'),
+        'Earthquake_Scenarios/Hypothetical_Events'))
 
 # oqdata path
 OQDATA = get_datadir()
 
 """DEFAULT INPUTS - ANY OF THESE COULD BE OVERWRITTEN IF THE USER WISHES THROUGH THE DASHBOARD"""
 # unused from engine
-RUP_ID = 6667936727154 # ID attribute of the rupture in the ses hdf5 - will be obtained from the dashboard
+# RUP_ID = 6667936727154 # ID attribute of the rupture in the ses hdf5 - will be obtained from the dashboard
 
 # Hazard inputs
 HAZARD_ONLY = False # Median hazard only if True
