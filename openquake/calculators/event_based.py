@@ -313,7 +313,8 @@ def gen_model_lt(h5):
             yield model, h5[f'full_lt/{model}']
 
 
-def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5):
+def get_rups_args(oq, sitecol, assetcol, station_data_sites,
+                  ruptures_hdf5):
     trts = {}
     rlzs_by_gsim = {}
     extra = sitecol.array.dtype.names
@@ -343,7 +344,8 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5):
         logging.info('%s: sending %d ruptures for trt_smr=%d',
                      model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
-            args = block, cmaker, sitecol, (None, None), ruptures_hdf5
+            args = (block, cmaker, sitecol, station_data_sites,
+                    ruptures_hdf5)
             allargs.append(args)
     return rups, full_lt, allargs
 
@@ -356,7 +358,7 @@ def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
     with hdf5.File(ruptures_hdf5) as r:
         dstore.create_dset('events', r['events'][:]) # saving the events
     rups, full_lt,  allargs = get_rups_args(
-        oq, sitecol, assetcol, ruptures_hdf5)
+        oq, sitecol, assetcol, (None, None), ruptures_hdf5)
     dstore['ruptures'] = rups  # dset may already exists
     dstore['full_lt'] = full_lt  # saving the last lt (hackish)
     R = full_lt.num_samples
