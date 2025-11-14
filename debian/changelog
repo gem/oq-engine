@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Added the possibility to assign tags to jobs and to set a job as the
+    "preferred" one for a tag
+
   [Michele Simionato]
   * Internal: extended reduce_sm to reduce the source models to a single source
   * Implemented event_based_risk from ses.hdf5
