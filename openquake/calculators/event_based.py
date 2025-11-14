@@ -332,7 +332,7 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5):
     logging.info(f'Selected {len(rups):_d} ruptures close to the sites')
     rups_dic = group_array(rups, 'model', 'trt_smr')
     totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
-    maxw = totw / (oq.concurrent_tasks or 1)
+    maxw = round(totw / (oq.concurrent_tasks or 1))
     logging.info(f'{maxw=}')
     allargs = []
     for (model, trt_smr), rups in rups_dic.items():
