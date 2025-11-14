@@ -321,7 +321,6 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
     """
     trts = {}
     rlzs_by_gsim = {}
-    extra = sitecol.array.dtype.names
     with hdf5.File(ruptures_hdf5) as r:
         rups = r['ruptures'][:]
         logging.info(f'Read {len(rups):_d} ruptures')
@@ -333,7 +332,7 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
     filrups = close_ruptures(rups, sitecol, assetcol)
     logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
     rups_dic = group_array(filrups, 'model', 'trt_smr')
-    totw = sum(rup_weight(filrups).sum() for rups in rups_dic.values())
+    totw = rup_weight(filrups).sum()
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
     allargs = []
@@ -343,7 +342,7 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
         mags = numpy.unique(numpy.round(rups['mag'], 2))
         oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
-                              oq, extraparams=extra)
+                              oq, extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         logging.info('%s: sending %d ruptures for trt_smr=%d',
                      model, len(rups), trt_smr)
