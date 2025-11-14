@@ -353,9 +353,10 @@ def ebrisk(rups, cmaker, sitecol, stations, dstore, monitor):
                 loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
                 dic = _event_based_risk(
                     gmf_df, assdic, loss2, loss3, crmodel, monitor)
-                dic['avg'] = build_avg(loss3, oq.A, R*X)
-                dic['alt'] = build_alt(loss2, xtypes)
-                yield dic
+                if loss2:  # has been populated
+                    dic['avg'] = build_avg(loss3, oq.A, R*X)
+                    dic['alt'] = build_alt(loss2, xtypes)
+                    yield dic
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
