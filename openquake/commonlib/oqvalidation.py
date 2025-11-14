@@ -915,16 +915,21 @@ ASCE_VERSIONS = {'ASCE7-16': 'ASCE 7-16 & 41-17',
                  'ASCE7-22': 'ASCE 7-22 & 41-23'}
 
 SITE_CLASSES = {
-    'A': {'display_name': 'A - Hard Rock', 'vs30': 1500},
-    'B': {'display_name': 'B - Rock', 'vs30': 1080},
-    'BC': {'display_name': 'BC', 'vs30': 760},
-    'C': {'display_name': 'C - Very Dense Soil and Soft Rock', 'vs30': 530},
-    'CD': {'display_name': 'CD', 'vs30': 365},
-    'D': {'display_name': 'D - Stiff Soil', 'vs30': 260},
-    'DE': {'display_name': 'DE', 'vs30': 185},
-    'E': {'display_name': 'E - Soft Clay Soil', 'vs30': 150},
-    'default': {'display_name': 'Default', 'vs30': [260, 365, 530]},
-    'custom': {'display_name': 'Specify Vs30', 'vs30': None},
+    'ASCE7-16': {
+        'BC': {'display_name': 'B-C boundary', 'vs30': 760},
+    },
+    'ASCE7-22': {
+        'A': {'display_name': 'A - Hard rock', 'vs30': 1500},
+        'B': {'display_name': 'B - Medium hard rock', 'vs30': 1080},
+        'BC': {'display_name': 'BC - Soft rock', 'vs30': 760},
+        'C': {'display_name': 'C - Very dense sand or hard clay', 'vs30': 530},
+        'CD': {'display_name': 'CD - Dense sand or ery stiff clay', 'vs30': 365},
+        'D': {'display_name': 'D - Medium dense sand or stiff clay', 'vs30': 260},
+        'DE': {'display_name': 'DE - Loose sand or medium stiff clay', 'vs30': 185},
+        'E': {'display_name': 'E - Very loose sand or soft clay', 'vs30': 150},
+        'default': {'display_name': 'Default', 'vs30': [260, 365, 530]},
+        'custom': {'display_name': 'Specify Vs30', 'vs30': None},
+    },
 }
 
 
@@ -1150,7 +1155,7 @@ class OqParam(valid.ParamSet):
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
     site_class = valid.Param(
-        valid.NoneOr(valid.Choice(*SITE_CLASSES)), None)
+        valid.NoneOr(valid.Choice(*SITE_CLASSES['ASCE7-22'])), None)
     site_labels = valid.Param(valid.uint8dict, {})
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     tile_spec = valid.Param(valid.tile_spec, None)

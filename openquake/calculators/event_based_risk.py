@@ -325,9 +325,9 @@ def _expand3(arrayN3, maxsize):
     return U32(out)
 
 
-def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
+def ebrisk(rups, cmaker, sitecol, stations, dstore, monitor):
     """
-    :param proxies: list of RuptureProxies with the same trt_smr
+    :param rups: list of ruptures with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
     :param stations: empty pair or (station_data, station_sitecol)
     :param monitor: a Monitor instance
@@ -344,8 +344,7 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
     assdic = read_assdic(slice(None), monitor)
-    for block in general.block_splitter(
-            proxies, 20_000, event_based.rup_weight):
+    for block in general.block_splitter(rups, 20_000, event_based.rup_weight):
         for dic in event_based.event_based(
                 block, cmaker, sitecol, stations, dstore, monitor):
             if len(dic['gmfdata']):
@@ -354,9 +353,10 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
                 loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
                 dic = _event_based_risk(
                     gmf_df, assdic, loss2, loss3, crmodel, monitor)
-                dic['avg'] = build_avg(loss3, oq.A, R*X)
-                dic['alt'] = build_alt(loss2, xtypes)
-                yield dic
+                if loss2:  # has been populated
+                    dic['avg'] = build_avg(loss3, oq.A, R*X)
+                    dic['alt'] = build_alt(loss2, xtypes)
+                    yield dic
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")

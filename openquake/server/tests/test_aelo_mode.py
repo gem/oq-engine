@@ -219,7 +219,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         params = dict(lon='-86', lat='12', vs30='-800', siteid='CCA_SITE')
         self.aelo_invalid_input(params, 'vs30 -800.0 is smaller than the minimum (150)')
         params = dict(lon='-86', lat='12', vs30='4000', siteid='CCA_SITE')
-        self.aelo_invalid_input(params, 'vs30 4000.0 is bigger than the maximum (3000)')
+        self.aelo_invalid_input(params, 'vs30 4000.0 is bigger than the maximum (1525)')
 
     def test_aelo_invalid_siteid(self):
         siteid = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
@@ -270,5 +270,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     def test_aelo_site_classes(self):
         resp = self.c.get('/v1/aelo_site_classes')
         resp = json.loads(resp.content.decode('utf8'))
-        self.assertEqual(resp['default'],
+        self.assertEqual(resp['ASCE7-22']['default'],
                          {'display_name': 'Default', 'vs30': [260, 365, 530]})
+        self.assertEqual(resp['ASCE7-22']['BC'],
+                         {'display_name': 'BC - Soft rock', 'vs30': 760})
+        self.assertEqual(resp['ASCE7-16']['BC'],
+                         {'display_name': 'B-C boundary', 'vs30': 760})

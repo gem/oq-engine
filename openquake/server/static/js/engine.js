@@ -726,6 +726,7 @@ function capitalizeFirstLetter(val) {
                     dataType: "json",
                     success: function(data) {
                         site_classes = data;
+                        $('#asce_version').trigger('change');
                     },
                     error: function(xhr, status, error) {
                         console.error("Error loading site classes:", error);
@@ -737,6 +738,7 @@ function capitalizeFirstLetter(val) {
             $('select#site_class').on('change', function() {
                 const site_class = $(this).val();
                 const $input_vs30 = $('input#vs30');
+                const asce_version = $("#asce_version").val();
                 if (site_class === 'custom') {
                     $input_vs30.prop('disabled', false);
                     $input_vs30.val('');
@@ -747,7 +749,7 @@ function capitalizeFirstLetter(val) {
                         $input_vs30.val('');
                         $input_vs30.attr('placeholder', '');
                     } else {
-                        $input_vs30.val(site_classes[site_class]['vs30']);
+                        $input_vs30.val(site_classes[asce_version][site_class]['vs30']);
                         $input_vs30.attr('placeholder', vs30_original_placeholder);
                     }
                 }
@@ -759,14 +761,16 @@ function capitalizeFirstLetter(val) {
                 const $input_vs30 = $('input#vs30');
                 $site_class_select.empty();
                 if (asce_version === 'ASCE7-16') {
-                    $site_class_select.append($('<option>', {value: PRESELECTED_SITE_CLASS, text: PRESELECTED_SITE_CLASS}));
-                    $input_vs30.val(site_classes[PRESELECTED_SITE_CLASS]['vs30']);
+                    $site_class_select.append($('<option>', {
+                        value: PRESELECTED_SITE_CLASS,
+                        text: site_classes[asce_version][PRESELECTED_SITE_CLASS]['display_name']}));
+                    $input_vs30.val(site_classes[asce_version][PRESELECTED_SITE_CLASS]['vs30']);
                 } else if (asce_version === 'ASCE7-22') {
-                    for (const site_class of Object.keys(site_classes)) {
+                    for (const site_class of Object.keys(site_classes[asce_version])) {
                         $site_class_select.append(
                             $("<option>", {
                                 value: site_class,
-                                text: site_classes[site_class]['display_name'],
+                                text: site_classes[asce_version][site_class]['display_name'],
                                 selected: site_class === PRESELECTED_SITE_CLASS
                             })
                         );
@@ -782,7 +786,7 @@ function capitalizeFirstLetter(val) {
                         $input_vs30.val('');
                     } else {
                         const site_class = $site_class_select.val();
-                        $input_vs30.val(site_classes[site_class]['vs30']);
+                        $input_vs30.val(site_classes[asce_version][site_class]['vs30']);
                     }
                 }
             });
@@ -790,12 +794,13 @@ function capitalizeFirstLetter(val) {
             // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
             $("#aelo_run_form").submit(function (event) {
                 $('#submit_aelo_calc').prop('disabled', true);
-                var site_class = $('select#site_class').val();
+                const site_class = $('select#site_class').val();
+                const asce_version = $("#asce_version").val();
                 var vs30;
                 if (site_class === 'custom') {
                     vs30 = $("input#vs30").val();
                 } else {
-                    vs30 = site_classes[site_class]['vs30'];
+                    vs30 = site_classes[asce_version][site_class]['vs30'];
                     if (Array.isArray(vs30)) { // the default site class has 3 Vs30 values
                         vs30 = vs30.join(' ');
                     } else {
@@ -806,7 +811,7 @@ function capitalizeFirstLetter(val) {
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
                     siteid: $("#siteid").val(),
-                    asce_version: $("#asce_version").val(),
+                    asce_version: asce_version,
                     site_class: site_class,
                     vs30: vs30
                 };

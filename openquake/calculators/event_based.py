@@ -70,7 +70,7 @@ def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
     # NB: if there was an assetcol, nsites is actually the number of affected
     # assets, as set by close_ruptures
-    return 1 + rup['nsites'] // 100
+    return rup['n_occ'] * (1 + rup['nsites'] // 1000)
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -300,61 +300,75 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def gen_model_lt(h5):
+def get_model_lts(h5):
     """
-    :yields: (model, full_lt) pairs
+    :returns: (model, full_lt) pairs
     """
+    out = []
     full_lt = h5['full_lt']
     if hasattr(full_lt, 'gsim_lt'):
-        yield '???', full_lt
+        out.append(('???', full_lt))
     else:
         # full_lt is a h5py group
         for model in full_lt:
-            yield model, h5[f'full_lt/{model}']
+            out.append((model, h5[f'full_lt/{model}']))
+    return out
 
 
-def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
+def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
     """
-    :returns: a Starmap instance sending event_based tasks
+    :returns: (prefiltered ruptures, starmap arguments)
     """
-    ruptures_hdf5 = oq.inputs['rupture_model']
     trts = {}
     rlzs_by_gsim = {}
     with hdf5.File(ruptures_hdf5) as r:
-        dstore.create_dset('events', r['events'][:]) # saving the events
-        for model, full_lt in gen_model_lt(r):
+        rups = r['ruptures'][:]
+        logging.info(f'Read {len(rups):_d} ruptures')
+        for model, full_lt in model_lts or get_model_lts(r):
             trts[model] = full_lt.trts
             logging.info('Building rlzs_by_gsim for %s', model)
             for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
                 rlzs_by_gsim[model, trt_smr] = rbg
-        logging.info('Reading {:_d} ruptures'.format(len(r['ruptures'])))
-        rups = r['ruptures'][:]
-    rups = close_ruptures(rups, sitecol, assetcol)
-    logging.info(f'Selected {len(rups):,d} ruptures close to the sites')
-    dstore['ruptures'] = rups  # dset may already exists
-    dstore['full_lt'] = full_lt  # saving the last lt (hackish)
-    R = full_lt.num_samples
-    dstore['weights'] = numpy.ones(R) / R
-    rups_dic = group_array(rups, 'model', 'trt_smr')
-    totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
+    filrups = close_ruptures(rups, sitecol, assetcol)
+    logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
+    rups_dic = group_array(filrups, 'model', 'trt_smr')
+    totw = rup_weight(filrups).sum()
     maxw = totw / (oq.concurrent_tasks or 1)
-    logging.info(f'{maxw=}')
-    extra = sitecol.array.dtype.names
-    dstore.swmr_on()
-    smap = parallel.Starmap(taskfunc, h5=dstore.hdf5)
+    logging.info(f'{round(maxw)=}')
+    allargs = []
     for (model, trt_smr), rups in rups_dic.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
         mags = numpy.unique(numpy.round(rups['mag'], 2))
         oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
-                              oq, extraparams=extra)
+                              oq, extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         logging.info('%s: sending %d ruptures for trt_smr=%d',
                      model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
-            args = block, cmaker, sitecol, (None, None), ruptures_hdf5
-            smap.submit(args)
+            args = (block, cmaker, sitecol, (None, None), ruptures_hdf5)
+            allargs.append(args)
+    return filrups, allargs
+
+
+# tested in test_from_ses
+def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
+    """
+    :returns: a Starmap instance sending event_based tasks
+    """
+    ruptures_hdf5 = oq.inputs['rupture_model']
+    with hdf5.File(ruptures_hdf5) as r:
+        model_lts = get_model_lts(r)
+        dstore['full_lt'] = model_lts[-1][1]  # last logic tree
+        dstore.create_dset('events', r['events'][:])  # saving the events
+    rups, allargs = get_rups_args(oq, sitecol, assetcol,
+                                  ruptures_hdf5, model_lts)
+    dstore['ruptures'] = rups  # dset already exists
+    R = oq.number_of_logic_tree_samples
+    dstore['weights'] = numpy.ones(R) / R
+    dstore.swmr_on()
+    smap = parallel.Starmap(taskfunc, allargs, h5=dstore.hdf5)
     return smap
 
 

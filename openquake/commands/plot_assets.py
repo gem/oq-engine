@@ -22,7 +22,7 @@ import shapely
 import logging
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl
-from openquake.calculators.getters import get_ebrupture, get_ebruptures
+from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes, add_rupture,
     adjust_limits, auto_limits)
