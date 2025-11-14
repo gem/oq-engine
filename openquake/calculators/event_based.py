@@ -70,7 +70,7 @@ def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
     # NB: if there was an assetcol, nsites is actually the number of affected
     # assets, as set by close_ruptures
-    return 1 + rup['nsites'] // 100
+    return rup['n_occ'] * (1 + rup['nsites'] // 1000)
 
 # ######################## hcurves_from_gmfs ############################ #
 
