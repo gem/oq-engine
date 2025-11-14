@@ -330,10 +330,10 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
             logging.info('Building rlzs_by_gsim for %s', model)
             for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
                 rlzs_by_gsim[model, trt_smr] = rbg
-    rups = close_ruptures(rups, sitecol, assetcol)
+    filrups = close_ruptures(rups, sitecol, assetcol)
     logging.info(f'Selected {len(rups):_d} ruptures close to the sites')
-    rups_dic = group_array(rups, 'model', 'trt_smr')
-    totw = sum(rup_weight(rups).sum() for rups in rups_dic.values())
+    rups_dic = group_array(filrups, 'model', 'trt_smr')
+    totw = sum(rup_weight(filrups).sum() for rups in rups_dic.values())
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
     allargs = []
@@ -350,7 +350,7 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
             args = (block, cmaker, sitecol, (None, None), ruptures_hdf5)
             allargs.append(args)
-    return rups, allargs
+    return filrups, allargs
 
 
 # tested in test_from_ses
