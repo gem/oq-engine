@@ -313,8 +313,10 @@ def gen_model_lt(h5):
             yield model, h5[f'full_lt/{model}']
 
 
-def get_rups_args(oq, sitecol, assetcol, station_data_sites,
-                  ruptures_hdf5):
+def get_rups_args(oq, sitecol, assetcol, station_data_sites, ruptures_hdf5):
+    """
+    :returns: (prefiltered ruptures, starmap arguments)
+    """
     trts = {}
     rlzs_by_gsim = {}
     extra = sitecol.array.dtype.names
@@ -347,7 +349,7 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
             args = (block, cmaker, sitecol, station_data_sites,
                     ruptures_hdf5)
             allargs.append(args)
-    return rups, full_lt, allargs
+    return rups, allargs
 
 
 def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
@@ -357,11 +359,10 @@ def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
     ruptures_hdf5 = oq.inputs['rupture_model']
     with hdf5.File(ruptures_hdf5) as r:
         dstore.create_dset('events', r['events'][:]) # saving the events
-    rups, full_lt,  allargs = get_rups_args(
+    rups, allargs = get_rups_args(
         oq, sitecol, assetcol, (None, None), ruptures_hdf5)
     dstore['ruptures'] = rups  # dset may already exists
-    dstore['full_lt'] = full_lt  # saving the last lt (hackish)
-    R = full_lt.num_samples
+    R = oq.number_of_logic_tree_samples
     dstore['weights'] = numpy.ones(R) / R
     dstore.swmr_on()
     smap = parallel.Starmap(taskfunc, allargs, h5=dstore.hdf5)
