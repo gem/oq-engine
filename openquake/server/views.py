@@ -218,9 +218,9 @@ def stream_response(fname, content_type, exportname=''):
     return response
 
 
-def infer_site_class(vs30):
+def infer_site_class(asce_version, vs30):
     # used for old jobs for which the site class was not saved into the datastore
-    site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES.items()
+    site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES[asce_version].items()
                           if v['vs30'] == vs30]
     if site_class_matches:
         site_class = site_class_matches[0]
@@ -232,27 +232,28 @@ def infer_site_class(vs30):
 def get_site_class_display_name(ds):
     vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
     site_class = ds['oqparam'].site_class
+    asce_version = ds['oqparam'].asce_version
     if site_class is not None:
         if site_class == 'custom':
             vs30 = vs30_in[0]
             site_class_display_name = f'Vs30 = {vs30}m/s'
         else:
             site_class_display_name = oqvalidation.SITE_CLASSES[
-                site_class]['display_name']
+                asce_version][site_class]['display_name']
     else:  # old calculations without site_class in the datastore
         if hasattr(vs30_in, '__len__'):
             if len(vs30_in) == 1:
                 [vs30_in] = vs30_in
-                site_class = infer_site_class(vs30_in)
+                site_class = infer_site_class(asce_version, vs30_in)
             else:
                 site_class = 'default'
         else:  # in old calculations, vs30_in was a float
-            site_class = infer_site_class(vs30_in)
+            site_class = infer_site_class(asce_version, vs30_in)
         if site_class == 'custom':
             site_class_display_name = f'Vs30 = {vs30_in}m/s'
         else:
             site_class_display_name = oqvalidation.SITE_CLASSES[
-                site_class]['display_name']
+                asce_version][site_class]['display_name']
     return site_class_display_name
 
 
@@ -823,12 +824,13 @@ def aelo_callback(
     site_class = inputs['site_class']
     vs30s = inputs['vs30'].split()
     vs30 = vs30s[0] if site_class != 'default' else 'default'
+    asce_version = oqvalidation.ASCE_VERSIONS[inputs['asce_version']]
     if site_class is None or site_class == 'custom':
         site_class_vs30_str = f'Site Class: Vs30 = {vs30}m/s'
     else:
-        site_class_display_name = oqvalidation.SITE_CLASSES[site_class]['display_name']
+        site_class_display_name = oqvalidation.SITE_CLASSES[
+            asce_version][site_class]['display_name']
         site_class_vs30_str = f'Site Class: {site_class_display_name}'
-    asce_version = oqvalidation.ASCE_VERSIONS[inputs['asce_version']]
     aelo_version = base.get_aelo_version()
     body = (f"Site name: {siteid}\n"
             f"Latitude: {lat}, Longitude: {lon}\n"
@@ -1206,7 +1208,7 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     if site_class is not None and site_class != 'custom':
-        valid_vs30 = oqvalidation.SITE_CLASSES[site_class]['vs30']
+        valid_vs30 = oqvalidation.SITE_CLASSES[asce_version][site_class]['vs30']
         if isinstance(valid_vs30, list):
             expected_vs30 = ' '.join([str(float(value)) for value in valid_vs30])
         else:

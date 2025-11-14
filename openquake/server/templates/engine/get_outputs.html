@@ -10,7 +10,27 @@
         <div id="oq-body-wrapper">
           <div class="span12">
             {% if application_mode == 'AELO' %}
-            <h2>{{ site_name }}, Lat: {{ lat }}, Lon: {{ lon }}, Site Class: {{ site_class }}, {{ asce_version }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}</h2>
+            <h2>Outputs for {{ site_name }}{% if calc_aelo_version is not None %}, AELO version: {{ calc_aelo_version }}{% endif %}</h2>
+            <div class="table-responsive" style="max-width:100%; margin-bottom: 1em;">
+              <table class="table table-bordered table-sm table-striped" style="width:auto;">
+              <thead>
+                <tr>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>ASCE standards</th>
+                <th>Site class</th>
+                </tr>
+              </thead>
+              <tbody>
+                  <tr>
+                  <td>{{ lat }}</td>
+                  <td>{{ lon }}</td>
+                  <td>{{ asce_version }}</td>
+                  <td>{{ site_class }}</td>
+                  </tr>
+              </tbody>
+              </table>
+            </div>
             {% else %}
             <h2>Outputs from calculation {{ calc_id }}</h2>
             {% endif %}
