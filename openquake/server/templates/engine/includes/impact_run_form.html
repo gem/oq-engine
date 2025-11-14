@@ -21,6 +21,9 @@
                     <option value="transit">Transit</option>
                 </select>
               </div>
+              <div class="impact_form_row impact_time_grp">
+                <label class="impact_time_grp" for"no_uncertainty"><input type="checkbox" id="no_uncertainty" value="no" class="impact_time_grp"> {{ impact_form_labels.no_uncertainty }}</label>
+              </div>
               <div class="impact_form_row">
                 <label for"maximum_distance">{{ impact_form_labels.maximum_distance }}</label>
                 <input class="impact-input" type="text" id="maximum_distance" name="maximum_distance" placeholder="{{ impact_form_placeholders.maximum_distance }}" value="{{ impact_form_defaults.maximum_distance }}" {% if user_level < 2 %}disabled{% endif %}/>

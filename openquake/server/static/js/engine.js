@@ -589,6 +589,7 @@ function capitalizeFirstLetter(val) {
             $select.empty();
         }
         $('#time_event').val(impact_form_defaults['time_event']);
+        $('#no_uncertainty').prop('checked', false);
         $('#rupture-map').hide();
         $('#shakemap-image-row').hide();
     }
@@ -911,6 +912,29 @@ function capitalizeFirstLetter(val) {
                         $('input[name="impact_approach"]').prop('disabled', false);
                         set_retrieve_data_btn_txt('initial');
                     });
+                }
+            });
+
+            $('input#no_uncertainty').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#number_of_ground_motion_fields').val('1');
+                    $('#truncation_level').val('0')
+                } else {
+                    $('#number_of_ground_motion_fields').val(
+                        impact_form_defaults.number_of_ground_motion_fields);
+                    $('#truncation_level').val(impact_form_defaults.truncation_level)
+                }
+            });
+
+            $('input#number_of_ground_motion_fields').on('input', function() {
+                if ($(this).val() != '1') {
+                    $('input#no_uncertainty').prop('checked', false);
+                }
+            });
+
+            $('input#truncation_level').on('input', function() {
+                if ($(this).val() != '0') {
+                    $('input#no_uncertainty').prop('checked', false);
                 }
             });
 

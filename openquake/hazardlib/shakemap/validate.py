@@ -152,6 +152,7 @@ IMPACT_FORM_LABELS = {
     'nodal_plane': 'Nodal plane',
     'msr': 'Magnitude scaling relationship',
     'description': 'Description',
+    'no_uncertainty': 'No uncertainty',
 }
 
 IMPACT_FORM_PLACEHOLDERS = {
