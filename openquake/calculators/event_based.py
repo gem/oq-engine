@@ -313,7 +313,7 @@ def gen_model_lt(h5):
             yield model, h5[f'full_lt/{model}']
 
 
-def get_rups_args(oq, sitecol, assetcol, station_data_sites, ruptures_hdf5):
+def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5):
     """
     :returns: (prefiltered ruptures, starmap arguments)
     """
@@ -346,8 +346,7 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites, ruptures_hdf5):
         logging.info('%s: sending %d ruptures for trt_smr=%d',
                      model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
-            args = (block, cmaker, sitecol, station_data_sites,
-                    ruptures_hdf5)
+            args = (block, cmaker, sitecol, (None, None), ruptures_hdf5)
             allargs.append(args)
     return rups, allargs
 
@@ -360,8 +359,7 @@ def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
     ruptures_hdf5 = oq.inputs['rupture_model']
     with hdf5.File(ruptures_hdf5) as r:
         dstore.create_dset('events', r['events'][:])  # saving the events
-    rups, allargs = get_rups_args(
-        oq, sitecol, assetcol, (None, None), ruptures_hdf5)
+    rups, allargs = get_rups_args(oq, sitecol, assetcol, ruptures_hdf5)
     dstore['ruptures'] = rups  # dset already exists
     R = oq.number_of_logic_tree_samples
     dstore['weights'] = numpy.ones(R) / R
