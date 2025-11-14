@@ -300,7 +300,7 @@ def filter_stations(station_df, complete, rup, maxdist):
     return station_data, station_sites
 
 
-def get_model_lt(h5):
+def get_model_lts(h5):
     """
     :returns: (model, full_lt) pairs
     """
@@ -315,7 +315,7 @@ def get_model_lt(h5):
     return out
 
 
-def get_rups_args(oq, sitecol, assetcol, model_lts, ruptures_hdf5):
+def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
     """
     :returns: (prefiltered ruptures, starmap arguments)
     """
@@ -325,7 +325,7 @@ def get_rups_args(oq, sitecol, assetcol, model_lts, ruptures_hdf5):
     with hdf5.File(ruptures_hdf5) as r:
         rups = r['ruptures'][:]
         logging.info(f'Read {len(rups):_d} ruptures')
-        for model, full_lt in model_lts:
+        for model, full_lt in model_lts or get_model_lts(r):
             trts[model] = full_lt.trts
             logging.info('Building rlzs_by_gsim for %s', model)
             for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
@@ -360,11 +360,11 @@ def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
     """
     ruptures_hdf5 = oq.inputs['rupture_model']
     with hdf5.File(ruptures_hdf5) as r:
-        model_lts = get_model_lt(r)
+        model_lts = get_model_lts(r)
         dstore['full_lt'] = model_lts[-1][1]  # last logic tree
         dstore.create_dset('events', r['events'][:])  # saving the events
-    rups, allargs = get_rups_args(oq, sitecol, assetcol, model_lts,
-                                  ruptures_hdf5)
+    rups, allargs = get_rups_args(oq, sitecol, assetcol,
+                                  ruptures_hdf5, model_lts)
     dstore['ruptures'] = rups  # dset already exists
     R = oq.number_of_logic_tree_samples
     dstore['weights'] = numpy.ones(R) / R

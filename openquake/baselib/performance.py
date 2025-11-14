@@ -338,6 +338,8 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
+        if h5.mode == 'r':  # don't write
+            return
         data = self.get_data()
         if len(data):
             hdf5.extend(h5['performance_data'], data)
