@@ -1335,8 +1335,10 @@ def view_delta_loss(token, dstore):
         dic = dict(even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
         return pandas.DataFrame(dic)
     num_events = len(dstore['events'])
-    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
-        dstore['weights'])
+    # NB: in risk_from_ses oq.investigation_time can be None,
+    # while risk_investigation_time is mandatory
+    itime = oq.investigation_time or oq.risk_investigation_time
+    efftime = itime * oq.ses_per_logic_tree_path * len(dstore['weights'])
     periods = return_periods(efftime, num_events)[1:-1]
     losses0 = df.loss[df.index % 2 == 0]
     losses1 = df.loss.loc[df.index % 2 == 1]
