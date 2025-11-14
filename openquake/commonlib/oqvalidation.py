@@ -1063,7 +1063,7 @@ class OqParam(valid.ParamSet):
     ground_motion_correlation_params = valid.Param(valid.dictionary, {})
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
-    hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
+    hazard_calculation_id = valid.Param(valid.NoneOr(valid.calculation), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
