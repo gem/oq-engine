@@ -169,8 +169,13 @@ def fix_hc_id(oq):
     and ses.hdf5 does not exist, generates it from ses.ini
     and replace oq.inputs['rupture_model'] with 'base_path/ses.hdf5'
     """
-    haz_ini = os.path.join(oq.base_path, oq.hazard_calculation_id)
-    oq.hazard_calculation_id = dcache.get(haz_ini).calc_id
+    path = os.path.join(oq.base_path, oq.hazard_calculation_id)
+    if path.endswith('.hdf5'):
+        oq.hazard_calculation_id = path
+    elif path.endswith('.ini'):
+        oq.hazard_calculation_id = dcache.get(path).calc_id
+    else:
+        raise NotImplementedError(f'hc={path}')
 
 
 class BaseCalculator(metaclass=abc.ABCMeta):
@@ -1773,7 +1778,10 @@ def run_calc(job_ini, **kw):
     """
     with logs.init(job_ini) as log:
         log.params.update(kw)
-        calc = calculators(log.get_oqparam(), log.calc_id)
+        oq = log.get_oqparam()
+        if isinstance(oq.hazard_calculation_id, str):
+            fix_hc_id(oq)
+        calc = calculators(oq, log.calc_id)
         calc.run()
         return calc
 

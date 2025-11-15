@@ -46,19 +46,25 @@ def check(dstore, fnames):
 def setup_module():
     global_ses.MODELS = ['EUR', 'MIE']
     fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
-    dstore = base.run_calc(path('job.ini')).datastore
+    dstore = base.run_calc(
+        path('job.ini'), hazard_calculation_id='rups.hdf5'
+    ).datastore
     check(dstore, fnames)
 
 
 def test_sites():  # 6 sites
-    dstore = base.run_calc(path('job_sites.ini')).datastore
+    dstore = base.run_calc(
+        path('job_sites.ini'), hazard_calculation_id='rups.hdf5'
+    ).datastore
     gmvs = dstore['avg_gmf'][0, :, 0]
     aac(gmvs, [0.0201735, 0.0202367, 0.0203708,
                0.0202335, 0.0202477, 0.0202308], atol=1E-6)
 
 
 def test_site_model():  # 5 sites
-    dstore = base.run_calc(path('job_sm.ini')).datastore
+    dstore = base.run_calc(
+        path('job_sm.ini'), hazard_calculation_id='rups.hdf5'
+    ).datastore
     gmvs = dstore['avg_gmf'][0, :, 0]
     aac(gmvs, [0.020281, 0.020274, 0.020219,
                0.020302, 0.020263], atol=1E-6)
