@@ -675,9 +675,6 @@ def get_site_collection(oqparam, h5=None):
     """
     if h5 and 'sitecol' in h5:
         return h5['sitecol']
-    if oqparam.ruptures_hdf5:
-        with hdf5.File(oqparam.ruptures_hdf5) as r:
-            rup_sitecol = r['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         if oqparam.calculation_mode != 'preclassical':
@@ -694,18 +691,7 @@ def get_site_collection(oqparam, h5=None):
             req_site_params = set()   # no parameters are required
         else:
             req_site_params = oqparam.req_site_params
-        if oqparam.ruptures_hdf5 and not _vs30(oqparam.inputs):
-            assoc_dist = (oqparam.region_grid_spacing * 1.414
-                          if oqparam.region_grid_spacing else 10)
-            # 10 km is around the grid spacing used in the mosaic
-            sc = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, mesh.depths, oqparam, req_site_params)
-            logging.info('Associating the mesh to the site parameters')
-            sitecol, _array, _discarded = geo.utils.assoc(
-                sc, rup_sitecol, assoc_dist, 'filter')
-            sitecol.make_complete()
-            return _get_sitecol(sitecol, exp, oqparam, h5)
-        elif h5 and 'site_model' in h5:
+        if h5 and 'site_model' in h5:
             sm = h5['site_model'][:]
         elif oqparam.impact and (
                     not oqparam.infrastructure_connectivity_analysis):

@@ -134,7 +134,11 @@ class CalculatorTestCase(unittest.TestCase):
             else testfile
         params = readinput.get_params(os.path.join(self.testdir, job_ini), kw)
         log = logs.init(params)
-        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        oq = log.get_oqparam()
+        if (isinstance(oq.hazard_calculation_id, str) and
+                oq.hazard_calculation_id.endswith('.ini')):
+            base.fix_hc_id(oq)
+        calc = base.calculators(oq, log.calc_id)
         calc.test_mode = True
         return calc
 

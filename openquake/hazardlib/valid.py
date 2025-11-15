@@ -168,6 +168,19 @@ def _fix_toml(v):
     return v
 
 
+def calculation(value):
+    """
+    Convert a string into an integer calculation ID
+    or return it as it is if it ends with .ini or .hdf5
+    """
+    try:
+        return int(value)
+    except ValueError:
+        if not value.endswith(('.ini', '.hdf5')):
+            raise ValueError(value)
+        return value
+
+
 # more tests are in tests/valid_test.py
 def gsim(value, basedir=''):
     """

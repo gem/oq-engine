@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import io
-import math
 import time
 import os.path
 import logging
@@ -357,8 +356,8 @@ def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
     """
     :returns: a Starmap instance sending event_based tasks
     """
-    ruptures_hdf5 = oq.inputs['rupture_model']
-    with hdf5.File(ruptures_hdf5) as r:
+    ruptures_hdf5 = oq.hazard_calculation_id
+    with hdf5.File(oq.hazard_calculation_id) as r:
         model_lts = get_model_lts(r)
         dstore['full_lt'] = model_lts[-1][1]  # last logic tree
         dstore.create_dset('events', r['events'][:])  # saving the events
@@ -468,8 +467,6 @@ def set_mags(oq, dstore):
         oq.mags_by_trt = {
             trt: python3compat.decode(dset[:])
             for trt, dset in dstore['source_mags'].items()}
-    elif oq.ruptures_hdf5:
-        pass
     elif 'ruptures' in dstore:
         # scenario
         trts = dstore['full_lt'].trts
@@ -771,9 +768,9 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
-        if oq.ruptures_hdf5 and oq.calculation_mode == 'event_based_risk':
-            # we are in event_based_risk, do nothing here
-            return {}
+        # if we are in event_based_risk, do nothing
+        #if oq.calculation_mode == 'event_based_risk':
+        #    return {}
         dstore = self.datastore
         if oq.impact and oq.shakemap_uri:
             # when calling `oqi usgs_id`
@@ -819,9 +816,6 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore['full_lt'] = fake  # needed to expose the outputs
             dstore['weights'] = [1.]
             return {}
-        elif oq.ruptures_hdf5:
-            with hdf5.File(oq.ruptures_hdf5) as r:
-                E = len(r['events'])
         else:  # scenario
             if 'rupture_model' in oq.inputs or oq.rupture_dict:
                 self._read_scenario_ruptures()
@@ -840,12 +834,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        if oq.ruptures_hdf5:
-            smap = starmap_from_rups_hdf5(
-                oq, self.sitecol, None, event_based, dstore)
-        else:
-            smap = starmap_from_rups(
-                event_based, oq, self.full_lt, self.sitecol, dstore)
+        smap = starmap_from_rups(
+            event_based, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc
@@ -909,8 +899,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # check seed dependency unless the number of GMFs is huge
         imt0 = list(oq.imtls)[0]
         size = self.datastore.getsize(f'gmf_data/{imt0}')
-        if 'gmf_data' in self.datastore and size < 4E9 and not oq.ruptures_hdf5:
-            # TODO: check why there is an error for ruptures_hdf5
+        if 'gmf_data' in self.datastore and size < 4E9:
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
             logging.info(msg)
