@@ -1058,7 +1058,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore.create_df('station_data', self.station_data)
             oq.observed_imts = self.observed_imts
 
-        if hasattr(self, 'sitecol') and self.sitecol and not oq.hazard_calculation_id:
+        if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs or oq.impact:
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
