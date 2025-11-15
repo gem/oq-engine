@@ -383,10 +383,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         if numpy.isnan(vs30).any():
             raise ValueError('The vs30 is NaN, missing site model '
                              'or site parameter')
-    if oq.calculation_mode == 'scenario':
-        set_mags(oq, dstore)
-
     proxy = RuptureProxy(dstore['ruptures'][0])
+
     if "station_data" in oq.inputs:
         trt = full_lt.trts[0]
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
