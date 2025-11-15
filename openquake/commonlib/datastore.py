@@ -61,13 +61,12 @@ def _read(calc_id, datadir, mode, haz_id=None):
     if isinstance(calc_id, int):
         # look in the db
         job = dbcmd('get_job', calc_id)
-        jid = job.id
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
-            dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
+            dbcmd('update_job', calc_id, {'hazard_calculation_id': haz_id})
             hc_id = haz_id
-        if hc_id and hc_id != jid:
+        if hc_id and hc_id != calc_id:
             hc = dbcmd('get_job', hc_id)
             if hc:
                 ppath = hc.ds_calc_dir + '.hdf5'
