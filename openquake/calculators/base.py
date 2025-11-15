@@ -583,13 +583,6 @@ class HazardCalculator(BaseCalculator):
             self.check_consequences()
         self.check_overflow()  # check if self.sitecol is too large
 
-        if ('amplification' in oq.inputs and
-                oq.amplification_method == 'kernel'):
-            logging.info('Reading %s', oq.inputs['amplification'])
-            df = AmplFunction.read_df(oq.inputs['amplification'])
-            check_amplification(df, self.sitecol)
-            self.af = AmplFunction.from_dframe(df)
-
         if (oq.calculation_mode == 'disaggregation' and
                 oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
