@@ -138,7 +138,7 @@ def main(mosaic_dir, out, models='ALL', *,
         with hdf5.File(out, 'a') as h5:
             base.import_sites_hdf5(h5, fnames)
             base.import_ruptures_hdf5(h5, fnames)
-            h5['/'].attrs.update(INPUTS)
+            h5['oqparam'] = jobs[0].get_oqparam()
     print(mon)
     return fnames
 
