@@ -331,6 +331,8 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
                 rlzs_by_gsim[model, trt_smr] = rbg
     filrups = close_ruptures(rups, sitecol, assetcol)
     logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
+    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
+                 filrups['nsites'].mean(), filrups['nsites'].max())
     rups_dic = group_array(filrups, 'model', 'trt_smr')
     totw = rup_weight(filrups).sum()
     maxw = totw / (oq.concurrent_tasks or 1)
@@ -389,8 +391,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         set_mags(oq, dstore)
     rups = dstore['ruptures'][:]
     logging.info('Reading {:_d} ruptures'.format(len(rups)))
-    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
-                 rups['nsites'].mean(), rups['nsites'].max())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
         trt = full_lt.trts[0]
@@ -435,9 +435,12 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
         save_tmp(smap.monitor)
-
+    if station_data is not None:
+        if parallel.oq_distribute() in ('zmq', 'slurm'):
+            logging.error('Conditioned scenarios are not meant to be run'
+                          ' on a cluster')
+        smap.share(mea=mea, tau=tau, phi=phi)
     # NB: for conditioned scenarios we are looping on a single trt
-    toml_gsims = []
     for trt_smr, start, stop in dstore['trt_smr_start_stop']:
         proxies = allproxies[start:stop]
         trt = full_lt.trts[trt_smr // TWO24]
@@ -445,18 +448,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        for gsim in rlzs_by_gsim:
-            toml_gsims.append(gsim._toml)
-        if station_data is not None:
-            if parallel.oq_distribute() in ('zmq', 'slurm'):
-                logging.error('Conditioned scenarios are not meant to be run'
-                              ' on a cluster')
-            smap.share(mea=mea, tau=tau, phi=phi)
         # producing slightly less than concurrent_tasks thanks to the 1.02
         for block in block_splitter(proxies, maxw * 1.02, rup_weight):
             args = block, cmaker, sitecol, (station_data, station_sites), dstore
             smap.submit(args)
-    dstore['gsims'] = numpy.array(toml_gsims)
     return smap
 
 
