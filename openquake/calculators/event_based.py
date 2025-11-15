@@ -245,7 +245,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
     return dic
 
 
-def event_based(proxies, cmaker, sitecol, stations, hdf5path, monitor):
+def event_based(rups, cmaker, sitecol, stations, hdf5path, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -259,7 +259,7 @@ def event_based(proxies, cmaker, sitecol, stations, hdf5path, monitor):
     with rmon:
         srcfilter = SourceFilter(
             sitecol.complete, oq.maximum_distance(cmaker.trt))
-        proxies = get_proxies(hdf5path, proxies)
+        proxies = get_proxies(hdf5path, rups)
     for block in block_splitter(proxies, 20_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
