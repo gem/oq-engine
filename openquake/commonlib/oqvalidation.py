@@ -1439,11 +1439,6 @@ class OqParam(valid.ParamSet):
 
         # checks for event_based
         if 'event_based' in self.calculation_mode:
-            if self.ruptures_hdf5 and not self.minimum_intensity:
-                self.raise_invalid('missing minimum_intensity')
-            if self.ruptures_hdf5 and not self.number_of_logic_tree_samples:
-                self.raise_invalie('use sampling!')
-
             if self.ps_grid_spacing:
                 logging.warning('ps_grid_spacing is ignored in event_based '
                                 'calculations')
@@ -1497,7 +1492,7 @@ class OqParam(valid.ParamSet):
         if any
         """
         from openquake.commonlib import datastore  # avoid circular import
-        if self.hazard_calculation_id:
+        if isinstance(self.hazard_calculation_id, int):
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
             if not self.total_losses:
@@ -1507,7 +1502,7 @@ class OqParam(valid.ParamSet):
         # set all_cost_types
         # rt has the form 'groundshaking/vulnerability/structural', ...
         costtypes = set(rt.split('/')[2] for rt in self.risk_files)
-        if not costtypes and self.hazard_calculation_id:
+        if not costtypes and isinstance(self.hazard_calculation_id, int):
             try:
                 self._risk_files = rfs = get_risk_files(self._parent.inputs)
                 costtypes = set(rt.split('/')[2] for rt in rfs)
@@ -1925,13 +1920,6 @@ class OqParam(valid.ParamSet):
                 self.inputs['rupture_model'].endswith('.xml'))
 
     @property
-    def ruptures_hdf5(self):
-        if ('rupture_model' in self.inputs and
-                self.inputs['rupture_model'].endswith(('.hdf5', '.ini'))):
-            return self.inputs['rupture_model']
-        return ''
-
-    @property
     def impact(self):
         """
         Return True if we are in OQImpact mode, i.e. there is an HDF5
@@ -2222,8 +2210,6 @@ class OqParam(valid.ParamSet):
         """
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
-            if self.ruptures_hdf5:
-                self.collect_rlzs = True
         if self.job_type == 'hazard':
             return True
 
@@ -2237,11 +2223,11 @@ class OqParam(valid.ParamSet):
             return True
         elif self.collect_rlzs is False:
             return True
-        elif self.hazard_calculation_id:
-            n = self._parent.number_of_logic_tree_samples
-            if n and n != self.number_of_logic_tree_samples:
-                raise ValueError('Please specify number_of_logic_tree_samples'
-                                 '=%d' % n)
+        #elif self.hazard_calculation_id:
+        #    n = self._parent.number_of_logic_tree_samples
+        #    if n and n != self.number_of_logic_tree_samples:
+        #        raise ValueError('Please specify number_of_logic_tree_samples'
+        #                         '=%d' % n)
         hstats = list(self.hazard_stats())
         if hstats and hstats != ['mean']:
             self.raise_invalid(
