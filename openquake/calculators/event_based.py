@@ -333,12 +333,15 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
     totw = rup_weight(filrups).sum()
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
+
+    # computing mags_by_trt, essential for oq-risk-tests:case_canada
+    # NB: must be done before instantiating the ContextMaker
+    mags = [magstr(mag) for mag in numpy.unique(numpy.round(filrups['mag'], 2))]
+    oq.mags_by_trt = {trt: mags for trt in trts}
     allargs = []
     for (model, trt_smr), rups in rups_dic.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
-        mags = numpy.unique(numpy.round(rups['mag'], 2))
-        oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
