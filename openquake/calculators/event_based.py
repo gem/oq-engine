@@ -336,12 +336,14 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
 
     # computing mags_by_trt, essential for oq-risk-tests:case_canada
     # NB: must be done before instantiating the ContextMaker
-    mags = [magstr(mag) for mag in numpy.unique(numpy.round(filrups['mag'], 2))]
-    oq.mags_by_trt = {trt: mags for trt in trts}
     allargs = []
+    oq.mags_by_trt = AccumDict(accum=set())
     for (model, trt_smr), rups in rups_dic.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
+        mags = [magstr(mag) for mag in numpy.unique(
+            numpy.round(rups['mag'], 2))]
+        oq.mags_by_trt[trt].update(mags)
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
@@ -350,6 +352,8 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
             args = (block, cmaker, sitecol, station_data_sites, dstore.filename)
             allargs.append(args)
+    for trt, mags in oq.mags_by_trt.items():
+        oq.mags_by_trt[trt] = sorted(mags)
     return filrups, allargs
 
 
