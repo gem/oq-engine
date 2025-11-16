@@ -245,7 +245,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
     return dic
 
 
-def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
+def event_based(rups, cmaker, sitecol, stations, hdf5path, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -259,14 +259,7 @@ def event_based(proxies, cmaker, sitecol, stations, dstore, monitor):
     with rmon:
         srcfilter = SourceFilter(
             sitecol.complete, oq.maximum_distance(cmaker.trt))
-        if isinstance(dstore, str):
-            # when passing ruptures.hdf5
-            proxies = get_proxies(dstore, proxies)
-        else:
-            with dstore:
-                dset = dstore['rupgeoms']
-                for proxy in proxies:
-                    proxy.geom = dset[proxy['geom_id']]
+        proxies = get_proxies(hdf5path, rups)
     for block in block_splitter(proxies, 20_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
@@ -314,23 +307,28 @@ def get_model_lts(h5):
             out.append((model, h5[f'full_lt/{model}']))
     return out
 
-
-def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
+    
+def get_rups_args(oq, sitecol, assetcol, station_data_sites,
+                  dstore, model_lts=()):
     """
     :returns: (prefiltered ruptures, starmap arguments)
     """
     trts = {}
     rlzs_by_gsim = {}
-    with hdf5.File(ruptures_hdf5) as r:
-        rups = r['ruptures'][:]
-        logging.info(f'Read {len(rups):_d} ruptures')
-        for model, full_lt in model_lts or get_model_lts(r):
-            trts[model] = full_lt.trts
-            logging.info('Building rlzs_by_gsim for %s', model)
-            for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
-                rlzs_by_gsim[model, trt_smr] = rbg
-    filrups = close_ruptures(rups, sitecol, assetcol)
+    rups = dstore['ruptures'][:]
+    logging.info(f'Read {len(rups):_d} ruptures')
+    for model, full_lt in model_lts or get_model_lts(dstore):
+        trts[model] = full_lt.trts
+        logging.info('Building rlzs_by_gsim for %s', model)
+        for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
+            rlzs_by_gsim[model, trt_smr] = rbg
+    if assetcol:
+        filrups = close_ruptures(rups, sitecol, assetcol)
+    else:
+        filrups = rups
     logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
+    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
+                 filrups['nsites'].mean(), filrups['nsites'].max())
     rups_dic = group_array(filrups, 'model', 'trt_smr')
     totw = rup_weight(filrups).sum()
     maxw = totw / (oq.concurrent_tasks or 1)
@@ -347,7 +345,7 @@ def get_rups_args(oq, sitecol, assetcol, ruptures_hdf5, model_lts=()):
         logging.info('%s: sending %d ruptures for trt_smr=%d',
                      model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
-            args = (block, cmaker, sitecol, (None, None), ruptures_hdf5)
+            args = (block, cmaker, sitecol, station_data_sites, dstore.filename)
             allargs.append(args)
     return filrups, allargs
 
@@ -362,8 +360,8 @@ def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
         model_lts = get_model_lts(r)
         dstore['full_lt'] = model_lts[-1][1]  # last logic tree
         dstore.create_dset('events', r['events'][:])  # saving the events
-    rups, allargs = get_rups_args(oq, sitecol, assetcol,
-                                  ruptures_hdf5, model_lts)
+        rups, allargs = get_rups_args(oq, sitecol, assetcol, (None, None),
+                                      r, model_lts)
     dstore['ruptures'] = rups  # dset already exists
     R = oq.number_of_logic_tree_samples
     dstore['weights'] = numpy.ones(R) / R
@@ -385,15 +383,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         if numpy.isnan(vs30).any():
             raise ValueError('The vs30 is NaN, missing site model '
                              'or site parameter')
-    set_mags(oq, dstore)
-    rups = dstore['ruptures'][:]
-    logging.info('Reading {:_d} ruptures'.format(len(rups)))
-    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
-                 rups['nsites'].mean(), rups['nsites'].max())
-    allproxies = [RuptureProxy(rec) for rec in rups]
+    proxy = RuptureProxy(dstore['ruptures'][0])
+
     if "station_data" in oq.inputs:
         trt = full_lt.trts[0]
-        proxy = allproxies[0]
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
         rup = proxy.to_ebr(trt).rupture
         station_df = dstore.read_df('station_data', 'site_id')
@@ -405,9 +398,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     else:
         station_data, station_sites = None, None
 
-    maxw = sum(rup_weight(p) for p in allproxies) / (
-        oq.concurrent_tasks or 1)
-    logging.info('maxw = {:_d}'.format(round(maxw)))
     if station_data is not None:
         # assume scenario with a single true rupture
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
@@ -430,32 +420,19 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         del proxy.geom  # to reduce data transfer
 
+    rups, allargs = get_rups_args(
+        oq, sitecol, None, (station_data, station_sites), dstore)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
         save_tmp(smap.monitor)
-
-    # NB: for conditioned scenarios we are looping on a single trt
-    toml_gsims = []
-    for trt_smr, start, stop in dstore['trt_smr_start_stop']:
-        proxies = allproxies[start:stop]
-        trt = full_lt.trts[trt_smr // TWO24]
-        extra = sitecol.array.dtype.names
-        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
-        cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        for gsim in rlzs_by_gsim:
-            toml_gsims.append(gsim._toml)
-        if station_data is not None:
-            if parallel.oq_distribute() in ('zmq', 'slurm'):
-                logging.error('Conditioned scenarios are not meant to be run'
-                              ' on a cluster')
-            smap.share(mea=mea, tau=tau, phi=phi)
-        # producing slightly less than concurrent_tasks thanks to the 1.02
-        for block in block_splitter(proxies, maxw * 1.02, rup_weight):
-            args = block, cmaker, sitecol, (station_data, station_sites), dstore
-            smap.submit(args)
-    dstore['gsims'] = numpy.array(toml_gsims)
+    if station_data is not None:
+        if parallel.oq_distribute() in ('zmq', 'slurm'):
+            logging.error('Conditioned scenarios are not meant to be run'
+                          ' on a cluster')
+        smap.share(mea=mea, tau=tau, phi=phi)
+    for args in allargs:
+        smap.submit(args)
     return smap
 
 
