@@ -631,7 +631,7 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
 
         # make sure starting from ruptures without logic tree is possible
-        self.run_calc(case_30.__file__, 'job.ini', sites='-123 49',
+        self.run_calc(case_30.__file__, 'job.ini', sites='-124 51',
                       ground_motion_fields='true',
                       intensity_measure_types='PGA',
                       gsim_logic_tree_file='',

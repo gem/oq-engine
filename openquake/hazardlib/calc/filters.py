@@ -334,7 +334,7 @@ def split_source(src):
 # NB: this is fast because of KDTree and the magdist
 # NB: the magdist here is hard-coded and independent from oq
 def close_ruptures(ruptures, sitecol, assetcol=None, magdist=(
-                   (5., 100.), (6., 200.), (7., 300.),
+                   (2, 5), (5., 100.), (6., 200.), (7., 300.),
                    (8., 400.), (9., 700.), (11., 1200.))):
     """
     :param ruptures: an array of rupture records
@@ -358,7 +358,7 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=(
         rups = ruptures[ok]
         kr = KDTree(spherical_to_cartesian(
             hypos[ok, 0], hypos[ok, 1], hypos[ok, 2]))
-        all_sids = kr.query_ball_tree(ks, dist1, eps=.1)
+        all_sids = kr.query_ball_tree(ks, dist2, eps=.1)
         for r, sids in enumerate(all_sids):
             if sids:
                 rup = rups[r]

@@ -322,9 +322,9 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
         logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
             rlzs_by_gsim[model, trt_smr] = rbg
-    if assetcol:
-        filrups = close_ruptures(rups, sitecol, assetcol)
-    else:
+    filrups = close_ruptures(rups, sitecol, assetcol)
+    assert len(filrups), 'There are no ruptures close to the sites'
+    if not assetcol:
         filrups = rups
     logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
     logging.info('Affected sites ~%.0f per rupture, max=%.0f',
