@@ -2165,20 +2165,16 @@ def download_aggrisk(request, calc_id):
     return response
 
 
-def is_extractable(resource):
-    return any(resource == allowed
-               or resource.startswith(allowed + "/")
-               or resource.startswith(allowed + ".")
-               for allowed in EXTRACTABLE_RESOURCES)
-
-
 def can_extract(request, resource):
     try:
         user = request.user
     except AttributeError:
         # without authentication
         return True
-    if (is_extractable(resource)
+    if (any(resource == allowed
+            or resource.startswith(allowed + "/")
+            or resource.startswith(allowed + ".")
+            for allowed in EXTRACTABLE_RESOURCES)
             or user.level >= 2
             or user.has_perm(f'auth.can_view_{resource}')):
         return True
