@@ -1728,6 +1728,21 @@ def create_risk_by_event(calc):
                          L=len(oq.loss_types), limit_states=dmgs)
 
 
+def get_model_lts(h5):
+    """
+    :returns: (model, full_lt) pairs
+    """
+    out = []
+    full_lt = h5['full_lt']
+    if hasattr(full_lt, 'gsim_lt'):
+        out.append(('???', full_lt))
+    else:
+        # full_lt is a h5py group
+        for model in full_lt:
+            out.append((model, h5[f'full_lt/{model}']))
+    return out
+
+
 # used in openquake._unc
 class DstoreCache:
     """
@@ -1794,7 +1809,8 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    rlzs = dstore['full_lt'].rlzs
+    _, full_lt = get_model_lts(dstore)[-1]
+    rlzs = full_lt.rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5
