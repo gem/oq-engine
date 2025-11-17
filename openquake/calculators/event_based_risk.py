@@ -506,6 +506,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if not oq.ground_motion_fields or 'gmf_data' not in self.datastore:
             # start from ruptures
             if (oq.ground_motion_fields and
+                    not oq.hazard_calculation_id and
                     'gsim_logic_tree' not in oq.inputs and
                     oq.gsim == '[FromFile]'):
                 raise InvalidFile('%s: missing gsim or gsim_logic_tree_file'
