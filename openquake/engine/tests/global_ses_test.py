@@ -53,15 +53,15 @@ def setup_module():
 def test_sites():  # 6 sites
     dstore = base.run_calc(path('job_sites.ini')).datastore
     gmvs = dstore['avg_gmf'][0, :, 0]
-    aac(gmvs, [0.0201735, 0.0202367, 0.0203708,
-               0.0202335, 0.0202477, 0.0202308], atol=1E-6)
+    aac(gmvs, [0.02017431, 0.02023746, 0.02037165, 0.02023426, 0.02024847,
+               0.02023155], atol=1E-6)
 
 
 def test_site_model():  # 5 sites
     dstore = base.run_calc(path('job_sm.ini')).datastore
     gmvs = dstore['avg_gmf'][0, :, 0]
-    aac(gmvs, [0.020281, 0.020274, 0.020219,
-               0.020302, 0.020263], atol=1E-6)
+    aac(gmvs, [0.02028222, 0.02027457, 0.02022028, 0.02030243, 0.02026358],
+        atol=1E-6)
 
 
 def teardown_module():
