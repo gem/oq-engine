@@ -1,7 +1,7 @@
 Release notes v3.24
 ===================
 
-Version 3.24 is the culmination of 9 months of work involving over 500
+Version 3.24 is the culmination of 9 months of work involving around 510
 pull requests. It is aimed at users wanting the latest features, bug
 fixes and maximum performance. Users valuing stability may want to
 stay with the LTS release instead (currently at version 3.23.3).
@@ -13,7 +13,7 @@ https://github.com/gem/oq-engine/blob/engine-3.24/debian/changelog
 The major changes are in multifault sources (relevant for the USA,
 China, Japan and New Zealand models), in secondary perils (i.e. liquefaction
 and landslides) and in the script generating the global stochastic
-event set from the GEM hazard models. Finally, we optimized the
+event set from the GEM hazard models. Moreover, we optimized the
 memory consumption in scenario calculations (both conditioned and not)
 and in large event based risk calculations, that were running out
 of memory due to the large data transfer in the average losses.
@@ -47,7 +47,7 @@ parameter `config.memory.max_multi_fault_ruptures`.
 We added checks for missing hdf5 files when reading nonparametric and
 multifault ruptures, so that the user gets clear error messges.
 
-We added a parsing check in pointlike sources, the depths in the
+We added a parsing check in pointlike sources, that is the depths in the
 hypodepth distribution must be within the `upper_seismogenic_depth`
 and the `lower_seismogenic_depth`.
 
@@ -63,32 +63,28 @@ source with ID "NewMadrid".
 Classical calculations
 ------------------------
 
-Then there was a substantial amount of work to support the USA (2023)
+There was a substantial amount of work to support the USA (2023)
 model. While the model is not supported yet - it will require engine
 v3.25 - all of the required GMMs have been added to hazardlib.
 
 Moreover, there were multiple improvements in the management of
 clusters of sources (like the NewMadrid cluster) that now are a lot
-more efficient, both computationally, in terms of memory consumption
-and in terms of data transfer. Even estimating their weight in the
-preclassical phase is much faster. Most of all, the disk space
-consumption has been reduced by one order of magnitude.
+more efficient: computationally, in terms of memory consumption and in
+terms of data transfer. Even estimating the weight of cluster sources
+in the preclassical phase is much faster. Most of all, the disk space
+consumption has been reduced by one order of magnitude for USA.
 
-We also fixed the "OverflowError: Python integer out of bounds for uint32"
+We fixed the "OverflowError: Python integer out of bounds for uint32"
 happening when saving the `source_info` table due to the size of the model. 
 
-Far away point sources (as determined by the preclassical phase) and
+Far away point sources (as determined by the preclassical phase) are
 not transferred anymore, thus improving performance and
-reducing data transfer and slow tasks. We also slightly optimized
-the preclassical phase in the case of point sources when using
-the ps_grid_spacing approximation.
+reducing data transfer and slow tasks.
 
-Now we save the source model read times in the datastore, so that it
-is possible to determine if a source model is particularly slow to
-parse.
-
-We changed slightly the ps_grid_spacing approximation so that the numbers
-are slightly different. This will help towards implementing additional
+We optimized the preclassical phase in the case of point sources when
+using the ps_grid_spacing approximation. We also changed slightly the
+logic of the approximation so that the numbers are slightly
+different. This will help towards implementing additional
 optimizations in future engine releases.
 
 We removed the parameter `reference_backarc` since it was not used.
@@ -99,7 +95,7 @@ Event based calculations
 We added a parameter `max_sites_correl` with default 1000 to stop
 users trying to compute correlated GMFs with too many sites, resulting
 in serious out of memory situations.  The parameter does not affect
-scenario calculations.
+scenario calculations, only event based ones.
 
 We made the job.ini parameters `minimum_intensity` and
 `minimum_magnitude` mandatory in the case of event based calculations
@@ -108,28 +104,29 @@ users forgetting to set such parameters and running calculations
 much larger than needed.
 
 We introduced a parameter `config.memory.gmf_data_rows` to make it impossible
-to compute hazard curves from excessively large datasets (this happens
-when the user forgets to remove `hazard_curves_from_gmfs` which is
-meant to be used only for few sites).
+to compute hazard curves from excessively large datasets: this happened
+when the user forgot to remove `hazard_curves_from_gmfs` which is
+meant to be used only for few sites.
 
 We exposed the output `avg_gmf` that before was internal. Moreover, we
-extended it to consider secondary IMTs.  `avg_gmf` is computed and
-stored only in small calculations.  The controllining parameter in the
-`job.ini` file is called `gmf_max_gb`, with a default value of 0.1,
-meaning that `avg_gmf` is computed and stored only if `gmf_data`
-contains less than 102.4 MB of data. You can raise the parameter but
-then the calculation will become slower.
+extended it to consider secondary IMTs. Notice that `avg_gmf` is
+computed and stored only in small calculations.  The controllining
+parameter in the `job.ini` file is called `gmf_max_gb`, with a default
+value of 0.1, meaning that `avg_gmf` is computed and stored only if
+`gmf_data` contains less than 102.4 MB of data. You can raise the
+parameter but then the calculation will become slower.
 
 We improved the script `global_ses.py`, which is able to generate a
 global (or partial) Stochastic Event Set starting from the hazard
-models in the GEM mosaic. In particular it is possible to pass the
-models to consider and the effective time parameters.  Moreover, we
-documented it. It is not considered experimental anymore.
+models in the GEM mosaic. In particular it now is possible to pass the
+models to consider and various parameters.  Moreover, we documented
+it. It is not considered experimental anymore.
 
 We also worked at avoiding out of memory errors in calculations
 starting from the global SES; the performance, however, is still not ideal
 and further work will be required. Moreover, you cannot run risk
-calculations directly from the global SES yet.
+calculations directly from the global SES without storing intermediate
+ground motion fields first.
 
 Scenario calculations
 ----------------------
@@ -139,7 +136,7 @@ discarding the sites outside the integration distance from the
 rupture.
 
 We futher reduced the memory consumption in conditioned GMFs calculations
-by using shared memory to store the distance matrices.
+by using shared memory to keep the distance matrices.
 
 We fixed the issue of small negative damages due to rounding errors
 in some scenario damage calculations.
@@ -193,8 +190,8 @@ using Machine Learning techniques, i.e. the onnxruntime library. Such
 library at the moment is optional, i.e. if missing you can run everything
 else except this GMM.
 
-Graeme Weatherill contributed an implementation of
-the MacedoEtAl2019SInter/SSlab conditional GMPE.
+Graeme Weatherill contributed an implementation of the
+MacedoEtAl2019SInter/SSlab conditional GMPE.
 
 Baran Güryuva contributed the EMME24 backbone GMMs for crustal
 earthquakes.
@@ -219,12 +216,14 @@ redundant.
 logic trees
 ------------
 
-We extended the check on number_of_logic_tree_samples to all
-calculators and not only to event_based.
+We improved the library to generate logic tree files (`hazardlib.lt.build`).
+In particular we used it to generate the logic tree for the Drouet
+calculation for France using 4 blocks of 100 branches each, thus
+avoiding the limit of 183 branches per branchset.
 
 We added a new uncertainty `abMaxMagAbsolute` to change three
-parameters of the Gutenberg Richter MFD
-at the same time (`aValue`, `bValue` and `MaxMax`).
+parameters of the Gutenberg Richter MFD at the same time (`aValue`,
+`bValue` and `MaxMax`).
 
 We added a new uncertainty `areaSourceGeometryAbsolute` and then
 two seismogenic depth uncertainties (upper and lower) to
@@ -233,18 +232,19 @@ pointlike sources.
 We extended the check on duplicated branches to the source model
 logic tree.
 
-We improved the library to generate logic tree files (`hazardlib.lt.build`).
-
-If the source model logic tree is trivial (i.e. with a single branch)
-it is possible to not specify it and just set the
-`source_model_file` parameter.
+We extended the check on number_of_logic_tree_samples to all
+calculators and not only to event_based.
 
 We changed the realization string representation regular, i.e.
 the first branch of the source model logic tree regular uses
 a single letter abbreviation, all the other branches.
 
-We fixed a couple of bugs in `oq show rlz`: it was not working
+We fixed two small bugs in `oq show rlz`: it was not working
 for a couple of tests (case_12 and case_68).
+
+If the source model logic tree is trivial (i.e. with a single branch)
+it is possible to not specify it and just set the
+`source_model_file` parameter.
 
 Finally, we included in the engine repository a private `_unc` package
 containing a prototype implementation of the POINT (Propagation Of
@@ -264,8 +264,9 @@ disk space now that the exposure files are getting large.
 We made the USA exposure parsing 10x faster by fixing
 `get_taxidx` that was performing redundant operations.
 
-Missing columns in the exposure.csv files (with respect to the fields
-declared in exposure.xml) are now automatically filled with 'No_tag'.
+Missing columns in the exposure.csv files - missing with respect to
+the fields declared in the exposure.xml file - are now automatically
+filled with 'No_tag'.
 
 We added an experimental option to aggregate the exposure: multiple
 assets on the same hazard site and with the same taxonomy are
@@ -322,12 +323,11 @@ There is also an exporter for the vulnerability functions and one for
 the job.zip file: the latter, however, is still experimental and known
 not to work in some cases.
 
-We added an extractor for `losses_by_location`, which is
-aggregating the assets of the assets on the same location (NB:
-the asset locations are not necessarily the same as the hazard sites,
-which are usually on a coarser grid).
+We added an extractor for `losses_by_location`, which is aggregating
+the assets on the same location (i.e. not necessarily on the the
+hazard sites).
 
-We are now gzipping the avg_losses datasets, thus reducing the disk
+We are gzipping the avg_losses datasets, thus reducing the disk
 space occupation by 2-3 times. This is important in large
 scenario calculations.
 
@@ -343,7 +343,7 @@ Secondary perils
 The secondary peril implementation is still experimental and this
 release contains a great deal of changes (see
 https://github.com/gem/oq-engine/pull/10254) plus a new feature: it is
-now possible to generate the equivalent of hazard curves and maps for
+possible to generate the equivalent of hazard curves and maps for
 secondary IMTs.
 
 Many new models were added, many were fixed, some model names were
@@ -355,8 +355,8 @@ In the case of landslides we renamed the `job.ini` parameter
 we discarded displacement values below 1E-4 to avoid wasting
 disk space.
 
-We fixed the unit of measure for the slope parameter (m/m)
-when computing the landaslide peril.
+We fixed the unit of measure for the slope parameter (m/m) when
+computing the landaslide peril.
 
 There were two important fixes to the TodorovicSilva2022NonParametric
 model: first, we solved the `NameError: Missing liquefaction:LiqProb
@@ -380,9 +380,10 @@ sec_peril_params = [{"ASH": "ash_fall.csv", "LAHAR": "lahar-geom.csv",
 The plan for the future is to replace the `multi_risk` calculator with
 a regular `scenario_risk`.
 
-We changed the storage of secondary IMTs inside `gmf_data`
-to keep the secondary peril class as prefix as prefix in the column name:
-this makes it possible to manage multiple perils within a single computation.
+We changed the storage of secondary intensity measure types (IMTs)
+inside `gmf_data` to keep the secondary peril class as a prefix in the
+column name: this makes it possible to manage multiple perils within a
+single computation.
 
 Each secondary peril subclass has now a `peril` attribute
 pointing to `landslide` or `liquefaction`.
@@ -395,7 +396,7 @@ typos.
 If there are secondary IMTs not covered by the risk function an
 error is raised, since it is impossible to compute the secondary peril.
 
-Finally, we added a demo called InfrastructureMultiPeril to showcase
+We added a demo called InfrastructureMultiPeril to showcase
 a Multi-Peril risk calculator using a small infrastructure
 network with four nodes and four edges.
 
@@ -417,9 +418,8 @@ failed with a numpy error. This is now fixed.
 We fixed `getters.get_ebruptures` to work also for scenario calculations.
 
 Some corporate users have no permission to write on their Windows
-temporary directory and they could not run the demos. We worked
-around this issue by removing the check on the `export_dir`.
-You can still export by using the `oq engine --export-outputs`
+temporary directory and they could not run the demos. We worked around
+this issue.  You can still export by using the `oq engine --export-outputs`
 command and by passing to it the path to a writeable directory.
 
 `hcurves-rlzs` and `hmaps-rlzs` were created in single site calculations
@@ -459,7 +459,7 @@ We extended `oq engine --delete-calculation` to remove both
 `calc_XXX.hdf5` and `calc_XXX_tmp.hdf5` when deleting a job.
 
 We extended `oq importcalc calc_hdf5` to also import calculation files
-outside oqdata by moving them inside oqdata.
+outside oqdata by moving them inside oqdata first.
 
 WebUI
 -----
@@ -476,7 +476,8 @@ files have been already run (in that case we return the associated job_id)
 or not (in that case we return 0). This was required by the PAPERS project.
 
 We added a private endpoint `/v1/calc/run_ini` to run calculations starting
-from a remote .ini file, assuming the client knows its full path name.
+from a remote .ini file, assuming the client knows its full path name,
+again fro the PAPERS project.
 
 We made the hidden outputs (i.e. exposure and job_zip) visible and
 downloadable only for users of level 2 or when the WebUI
@@ -485,8 +486,8 @@ authentication is disabled.
 We made it possible to select multiple input files (and not only a
 single zip file) when running a job via the WebUI.
 
-Now we do not show in the WebUI the jobs that have the `relevant` flat
-set to false. This is a way to hide jobs without removing them.
+We do not show anymore in the WebUI the jobs that have the `relevant`
+flat set to false. This is a way to hide jobs without removing them.
 
 IT
 ---
