@@ -475,22 +475,19 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def create_avg_losses(self):
         oq = self.oqparam
-        samples = oq.number_of_logic_tree_samples
-        if samples:
-            ws = numpy.ones(samples, dtype=U32) / samples
-        else:
-            ws = self.datastore['weights']
-        R = 1 if oq.collect_rlzs else len(ws)
+        R0 = oq.number_of_logic_tree_samples or len(
+            self.datastore['weights'])
+        R = 1 if oq.collect_rlzs else R0
         S = len(oq.hazard_stats())
         fix_investigation_time(oq, self.datastore)
         if oq.collect_rlzs:
             if oq.investigation_time:  # event_based
-                self.avg_ratio = numpy.array([oq.time_ratio / len(ws)])
+                self.avg_ratio = numpy.array([oq.time_ratio / R0])
             else:  # scenario
                 self.avg_ratio = numpy.array([1. / self.num_events.sum()])
         else:
             if oq.investigation_time:  # event_based
-                self.avg_ratio = numpy.array([oq.time_ratio] * len(ws))
+                self.avg_ratio = numpy.array([oq.time_ratio] * R0)
             else:  # scenario
                 self.avg_ratio = 1. / self.num_events
         self.avg_losses = numpy.zeros((self.A, self.X, R), F32)
