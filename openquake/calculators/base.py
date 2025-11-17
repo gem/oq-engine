@@ -142,6 +142,18 @@ def get_stats(seq):
     return numpy.array(tup, stats_dt)
 
 
+def get_weights(oq, dstore):
+    """
+    :returns: float32 array of realization weights
+    """
+    samples = oq.number_of_logic_tree_samples
+    if samples:
+        weights = numpy.ones(samples, dtype=F32)/samples
+    else:
+        weights = dstore['weights'][:]
+    return weights
+
+
 class InvalidCalculationID(Exception):
     """
     Raised when running a post-calculation on top of an incompatible

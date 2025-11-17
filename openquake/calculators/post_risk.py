@@ -155,7 +155,7 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     :returns: a LossCurvesMapsBuilder instance or a Mock object for scenarios
     """
     assert oq.investigation_time
-    weights = dstore['weights'][()]
+    weights = base.get_weights(oq, dstore)
     haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
         len(weights) if oq.collect_rlzs else 1)
     if oq.collect_rlzs:
@@ -312,11 +312,7 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     Compute the aggrisk DataFrame with columns agg_id, rlz_id, loss_id, loss
     """
     L = len(oq.loss_types)
-    samples = oq.number_of_logic_tree_samples
-    if samples:
-        weights = numpy.ones(samples, dtype=F32)/samples
-    else:
-        weights = self.datastore['weights'][:]
+    weights = base.get_weights(oq, dstore)
     if oq.investigation_time:  # event based
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs

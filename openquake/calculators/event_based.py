@@ -843,11 +843,7 @@ class EventBasedCalculator(base.HazardCalculator):
             return
 
         rlzs = self.datastore['events'][:]['rlz_id']
-        samples = self.oqparam.number_of_logic_tree_samples
-        if samples:
-            self.weights = numpy.ones(len(rlzs), dtype=F32) / samples
-        else:
-            self.weights = self.datastore['weights'][:][rlzs]
+        self.weights = base.get_weights(self.oqparam, self.datastore)[rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)

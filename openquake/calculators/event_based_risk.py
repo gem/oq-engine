@@ -595,11 +595,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         s = oq.hazard_stats()
         if s:
             _statnames, statfuncs = zip(*s.items())
-            samples = oq.number_of_logic_tree_samples
-            if samples:
-                weights = numpy.ones(samples, dtype=F32)/samples
-            else:
-                weights = self.datastore['weights'][:]
+            weights = base.get_weights(oq, self.datastore)
         if oq.avg_losses:
             R = self.avg_losses.shape[2]
             for li, lt in enumerate(self.xtypes):
