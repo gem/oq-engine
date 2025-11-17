@@ -475,7 +475,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def create_avg_losses(self):
         oq = self.oqparam
-        ws = self.datastore['weights']
+        samples = oq.number_of_logic_tree_samples
+        if samples:
+            ws = numpy.ones(samples, dtype=U32) / samples
+        else:
+            ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
         S = len(oq.hazard_stats())
         fix_investigation_time(oq, self.datastore)
