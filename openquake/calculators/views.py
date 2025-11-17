@@ -46,7 +46,7 @@ from openquake.risklib.scientific import (
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
     get_ebrupture, MapGetter, get_pmaps_gb)
-from openquake.calculators.base import get_model_lts
+from openquake.calculators.base import get_model_lts, get_weights
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -1314,11 +1314,11 @@ def view_delta_loss(token, dstore):
         return {'delta': numpy.zeros(1),
                 'loss_types': view_loss_ids(token, dstore),
                 'error': f"There are only {len(df)} events for {loss_type=}"}
+    R = len(get_weights(oq, dstore))
     if oq.calculation_mode == 'scenario_risk':
         if oq.number_of_ground_motion_fields == 1:
             return {'delta': numpy.zeros(1),
                     'error': 'number_of_ground_motion_fields=1'}
-        R = len(dstore['weights'])
         df['rlz_id'] = dstore['events']['rlz_id'][df.index]
         c0, c1 = numpy.zeros(R), numpy.zeros(R)
         for r in range(R):
@@ -1331,7 +1331,7 @@ def view_delta_loss(token, dstore):
     # NB: in risk_from_ses oq.investigation_time can be None,
     # while risk_investigation_time is mandatory
     itime = oq.investigation_time or oq.risk_investigation_time
-    efftime = itime * oq.ses_per_logic_tree_path * len(dstore['weights'])
+    efftime = itime * oq.ses_per_logic_tree_path * R
     periods = return_periods(efftime, num_events)[1:-1]
     losses0 = df.loss[df.index % 2 == 0]
     losses1 = df.loss.loc[df.index % 2 == 1]
