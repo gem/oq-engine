@@ -514,8 +514,12 @@ def view_portfolio_loss(token, dstore):
         else:
             dset = dstore[f'avg_losses-rlzs/{lt}']
             A, R = dset.shape
-            weights = dstore['weights'][:]
-            tot = dset[:].sum(axis=0) @ weights
+            if R == 1:
+                # when collect_rlzs is True
+                tot = dset[:].sum()
+            else:
+                weights = dstore['weights'][:]
+                tot = dset[:].sum(axis=0) @ weights
         avgs.append(tot)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
