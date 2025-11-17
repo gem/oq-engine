@@ -502,33 +502,25 @@ def view_portfolio_losses(token, dstore):
 def view_portfolio_loss(token, dstore):
     """
     The mean portfolio loss for each loss type,
-    extracted from the event loss table.
+    extracted from the average losses.
     """
     oq = dstore['oqparam']
-    K = dstore['risk_by_event'].attrs.get('K', 0)
-    alt_df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
-    weights = dstore['weights'][:]
-    rlzs = dstore['events']['rlz_id']
-    E = len(rlzs)
-    R = len(weights)
-    ws = weights[rlzs]
+    stats = 'avg_losses-stats' in dstore
     avgs = []
-    attrs = dstore['gmf_data'].attrs
-    itime = attrs['investigation_time']
-    etime = attrs['effective_time']
-    if itime:
-        freq = (oq.risk_investigation_time or itime) * E / etime
-    else:
-        freq = 1 / R
-    for ln in oq.loss_types:
-        df = alt_df[alt_df.loss_id == LOSSID[ln]]
-        eids = df.pop('event_id').to_numpy()
-        if (eids >= E).any():  # reduced events
-            assert len(set(ws)) == 1, 'Weights must be all equal'
-            weights = ws[:len(eids)]
+    for lt in oq.loss_types:
+        if stats:
+            idx = list(oq.hazard_stats()).index('mean')
+            tot = dstore[f'avg_losses-stats/{lt}'][:, idx].sum()
         else:
-            weights = ws[eids]
-        avgs.append(weights @ df.loss.to_numpy() / ws.sum() * freq)
+            dset = dstore[f'avg_losses-rlzs/{lt}']
+            A, R = dset.shape
+            if R == 1:
+                # when collect_rlzs is True
+                tot = dset[:].sum()
+            else:
+                weights = dstore['weights'][:]
+                tot = dset[:].sum(axis=0) @ weights
+        avgs.append(tot)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 

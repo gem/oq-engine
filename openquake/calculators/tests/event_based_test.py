@@ -386,13 +386,13 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # checking mea_tau_phi
         df = self.calc.datastore.read_df('mea_tau_phi')
-        ae(len(df.rup_id.unique()), 12)
+        ae(len(df.rup_id.unique()), 1)
         ae(sorted(df.site_id.unique()), [101, 108])
-        ae(sorted(df.gsim_id.unique()), [0, 1, 3])
+        ae(sorted(df.gsim_id.unique()), [3])
         ae(sorted(df.imt_id.unique()), [0, 1, 2])
-        ae(len(df.mea.unique()), 54)
-        ae(len(df.tau.unique()), 7)
-        ae(len(df.phi.unique()), 7)
+        ae(len(df.mea.unique()), 6)
+        ae(len(df.tau.unique()), 3)
+        ae(len(df.phi.unique()), 3)
 
     def test_case_17(self):  # oversampling
         # also, grp-00 does not produce ruptures
