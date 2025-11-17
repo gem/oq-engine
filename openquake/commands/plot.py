@@ -556,11 +556,13 @@ def make_figure_ebruptures(extractors, what):
     # NB: matplotlib is imported inside since it is a costly import
     plt = import_plt()
     [ex] = extractors
+    sitecol = ex.get('sitecol')
     hypo = ex.get(what)['hypo']
     _fig, ax = plt.subplots()
     add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     ax.grid(True)
-    ax.scatter(hypo[:, 0], hypo[:, 1])
+    ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5)
+    ax.scatter(hypo[:, 0], hypo[:, 1], marker='*')
     ax.set_title('%d ruptures' % len(hypo))
     return plt
 

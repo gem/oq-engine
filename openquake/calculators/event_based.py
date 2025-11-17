@@ -321,23 +321,30 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
         logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
             rlzs_by_gsim[model, trt_smr] = rbg
-    if assetcol:
+    if len(sitecol) > oq.max_sites_disagg:
         filrups = close_ruptures(rups, sitecol, assetcol)
+        logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
     else:
+        # don't filter if there are few sites (i.e. in tests)
         filrups = rups
-    logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
+    assert len(filrups), 'There are no ruptures close to the sites'
     logging.info('Affected sites ~%.0f per rupture, max=%.0f',
                  filrups['nsites'].mean(), filrups['nsites'].max())
     rups_dic = group_array(filrups, 'model', 'trt_smr')
     totw = rup_weight(filrups).sum()
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
+
+    # computing mags_by_trt, essential for oq-risk-tests:case_canada
+    # NB: must be done before instantiating the ContextMaker
     allargs = []
+    oq.mags_by_trt = AccumDict(accum=set())
     for (model, trt_smr), rups in rups_dic.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
-        mags = numpy.unique(numpy.round(rups['mag'], 2))
-        oq.mags_by_trt = {trt: [magstr(mag) for mag in mags]}
+        mags = [magstr(mag) for mag in numpy.unique(
+            numpy.round(rups['mag'], 2))]
+        oq.mags_by_trt[trt].update(mags)
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
@@ -346,6 +353,8 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
             args = (block, cmaker, sitecol, station_data_sites, dstore.filename)
             allargs.append(args)
+    for trt, mags in oq.mags_by_trt.items():
+        oq.mags_by_trt[trt] = sorted(mags)
     return filrups, allargs
 
 
