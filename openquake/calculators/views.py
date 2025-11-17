@@ -46,6 +46,7 @@ from openquake.risklib.scientific import (
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
     get_ebrupture, MapGetter, get_pmaps_gb)
+from openquake.calculators.base import get_model_lts
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -898,7 +899,7 @@ def binning_error(values, eids, nbins=10):
 
 class GmpeExtractor(object):
     def __init__(self, dstore):
-        full_lt = dstore['full_lt']
+        _, full_lt = get_model_lts(dstore)[-1]
         self.trt_by = full_lt.trt_by
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()

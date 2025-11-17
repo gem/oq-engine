@@ -1063,7 +1063,7 @@ class OqParam(valid.ParamSet):
     ground_motion_correlation_params = valid.Param(valid.dictionary, {})
     ground_motion_fields = valid.Param(valid.boolean, True)
     gsim = valid.Param(valid.utf8, '[FromFile]')
-    hazard_calculation_id = valid.Param(valid.NoneOr(valid.positiveint), None)
+    hazard_calculation_id = valid.Param(valid.NoneOr(valid.calculation), None)
     hazard_curves_from_gmfs = valid.Param(valid.boolean, False)
     hazard_maps = valid.Param(valid.boolean, False)
     horiz_comp_to_geom_mean = valid.Param(valid.boolean, False)
@@ -1442,7 +1442,7 @@ class OqParam(valid.ParamSet):
             if self.ruptures_hdf5 and not self.minimum_intensity:
                 self.raise_invalid('missing minimum_intensity')
             if self.ruptures_hdf5 and not self.number_of_logic_tree_samples:
-                self.raise_invalie('use sampling!')
+                self.raise_invalid('use sampling!')
 
             if self.ps_grid_spacing:
                 logging.warning('ps_grid_spacing is ignored in event_based '
@@ -1497,7 +1497,7 @@ class OqParam(valid.ParamSet):
         if any
         """
         from openquake.commonlib import datastore  # avoid circular import
-        if self.hazard_calculation_id:
+        if isinstance(self.hazard_calculation_id, int):
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
             if not self.total_losses:
@@ -1507,7 +1507,7 @@ class OqParam(valid.ParamSet):
         # set all_cost_types
         # rt has the form 'groundshaking/vulnerability/structural', ...
         costtypes = set(rt.split('/')[2] for rt in self.risk_files)
-        if not costtypes and self.hazard_calculation_id:
+        if not costtypes and isinstance(self.hazard_calculation_id, int):
             try:
                 self._risk_files = rfs = get_risk_files(self._parent.inputs)
                 costtypes = set(rt.split('/')[2] for rt in rfs)

@@ -292,21 +292,6 @@ def filter_stations(station_df, complete, rup, maxdist):
                          ns - len(station_data), ns, maxdist)
     return station_data, station_sites
 
-
-def get_model_lts(h5):
-    """
-    :returns: (model, full_lt) pairs
-    """
-    out = []
-    full_lt = h5['full_lt']
-    if hasattr(full_lt, 'gsim_lt'):
-        out.append(('???', full_lt))
-    else:
-        # full_lt is a h5py group
-        for model in full_lt:
-            out.append((model, h5[f'full_lt/{model}']))
-    return out
-
     
 def get_rups_args(oq, sitecol, assetcol, station_data_sites,
                   dstore, model_lts=()):
@@ -317,7 +302,7 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
     rlzs_by_gsim = {}
     rups = dstore['ruptures'][:]
     logging.info(f'Read {len(rups):_d} ruptures')
-    for model, full_lt in model_lts or get_model_lts(dstore):
+    for model, full_lt in model_lts or base.get_model_lts(dstore):
         trts[model] = full_lt.trts
         logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
@@ -366,7 +351,7 @@ def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
     """
     ruptures_hdf5 = oq.inputs['rupture_model']
     with hdf5.File(ruptures_hdf5) as r:
-        model_lts = get_model_lts(r)
+        model_lts = base.get_model_lts(r)
         dstore['full_lt'] = model_lts[-1][1]  # last logic tree
         dstore.create_dset('events', r['events'][:])  # saving the events
         rups, allargs = get_rups_args(oq, sitecol, assetcol, (None, None),
@@ -785,8 +770,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
-            self.full_lt = dstore.parent['full_lt'].init()
-            set_mags(oq, dstore)
+            _, self.full_lt = base.get_model_lts(dstore.parent)[0]
         elif hasattr(self, 'csm'):  # from sources
             set_mags(oq, dstore)
             self.build_events_from_sources()
@@ -854,7 +838,11 @@ class EventBasedCalculator(base.HazardCalculator):
             return
 
         rlzs = self.datastore['events'][:]['rlz_id']
-        self.weights = self.datastore['weights'][:][rlzs]
+        samples = self.oqparam.number_of_logic_tree_samples
+        if samples:
+            self.weights = numpy.ones(len(rlzs), dtype=F32) / samples
+        else:
+            self.weights = self.datastore['weights'][:][rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)
