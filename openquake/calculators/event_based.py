@@ -771,7 +771,6 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
             _, self.full_lt = base.get_model_lts(dstore.parent)[0]
-            # set_mags(oq, dstore)
         elif hasattr(self, 'csm'):  # from sources
             set_mags(oq, dstore)
             self.build_events_from_sources()
@@ -841,7 +840,7 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs = self.datastore['events'][:]['rlz_id']
         samples = self.oqparam.number_of_logic_tree_samples
         if samples:
-            self.weights = numpy.ones(len(rlzs)) / samples
+            self.weights = numpy.ones(len(rlzs), dtype=F32) / samples
         else:
             self.weights = self.datastore['weights'][:][rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
