@@ -47,7 +47,7 @@ def fix_investigation_time(oq, dstore):
     If starting from GMFs, fix oq.investigation_time.
     :returns: the number of hazard realizations
     """
-    R = len(dstore['weights'])
+    R = oq.number_of_logic_tree_samples or len(dstore['weights'])
     if 'gmfs' in oq.inputs and not oq.investigation_time:
         attrs = dstore['gmf_data'].attrs
         inv_time = attrs['investigation_time']
