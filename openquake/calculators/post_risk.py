@@ -312,7 +312,11 @@ def compute_aggrisk(dstore, oq, rbe_df, num_events, agg_ids):
     Compute the aggrisk DataFrame with columns agg_id, rlz_id, loss_id, loss
     """
     L = len(oq.loss_types)
-    weights = dstore['weights'][:]
+    samples = oq.number_of_logic_tree_samples
+    if samples:
+        weights = numpy.ones(samples, dtype=F32)/samples
+    else:
+        weights = self.datastore['weights'][:]
     if oq.investigation_time:  # event based
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
