@@ -28,6 +28,7 @@ import pandas
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import hdf5, writers
 from openquake.baselib.python3compat import decode
+from openquake.calculators import base
 from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
@@ -232,7 +233,7 @@ def export_hcurves_csv(ekey, dstore):
 
     oq = dstore['oqparam']
     info = get_info(dstore)
-    R = dstore['full_lt'].get_num_paths()
+    R = len(base.get_weights(oq, dstore))
     sitecol = dstore['sitecol']
     sitemesh = get_sites(sitecol)
     key, kind, fmt = get_kkf(ekey)
