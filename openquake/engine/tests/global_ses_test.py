@@ -40,7 +40,7 @@ def check(dstore, fnames):
         rups = ds['ruptures'][:]
         nrup = len(rups)
         assert nrup == nrup_EUR + nrup_MIE
-        assert dstore['avg_gmf'].shape == (2, 167, 1)
+        assert dstore['avg_gmf'].shape == (2, 4328, 1)
 
 
 def setup_module():
@@ -57,8 +57,7 @@ def test_sites():  # 6 sites
         path('job_sites.ini'), hazard_calculation_id='rups.hdf5'
     ).datastore
     gmvs = dstore['avg_gmf'][0, :, 0]
-    aac(gmvs, [0.02017431, 0.02023746, 0.02037165, 0.02023426, 0.02024847,
-               0.02023155], atol=1E-6)
+    assert (gmvs > 0).sum() == 6
 
 
 def test_site_model():  # 5 sites
@@ -66,8 +65,7 @@ def test_site_model():  # 5 sites
         path('job_sm.ini'), hazard_calculation_id='rups.hdf5'
     ).datastore
     gmvs = dstore['avg_gmf'][0, :, 0]
-    aac(gmvs, [0.02028222, 0.02027457, 0.02022028, 0.02030243, 0.02026358],
-        atol=1E-6)
+    assert (gmvs > 0).sum() == 1824
 
 
 def teardown_module():

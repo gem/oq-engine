@@ -83,7 +83,7 @@ def build_hcurves(dstore):
     oq = dstore['oqparam']
     # compute and save statistics; this is done in process and can
     # be very slow if there are thousands of realizations
-    weights = dstore['weights'][:]
+    weights = base.get_weights(oq, dstore)
     sitecol = dstore['sitecol']
     # NB: in the future we may want to save to individual hazard
     # curves if oq.individual_rlzs is set; for the moment we
