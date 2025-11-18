@@ -60,12 +60,12 @@ def test_sites():  # 6 sites
     assert (gmvs > 0).sum() == 6
 
 
-def test_site_model():  # 5 sites
+def test_site_model():  # 6 sites
     dstore = base.run_calc(
         path('job_sm.ini'), hazard_calculation_id='rups.hdf5'
     ).datastore
     gmvs = dstore['avg_gmf'][0, :, 0]
-    assert (gmvs > 0).sum() == 1824
+    assert (gmvs > 0).sum() == 6
 
 
 def teardown_module():
