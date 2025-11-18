@@ -62,8 +62,7 @@ HAZARD_ONLY = False # Median hazard only if True
 GMM_LT = os.path.join(BASE, "inputs", "PAPERS_gmc.xml")
 SITE_MODEL = os.path.join(BASE, "..", "Vs30", "site_model_ITA_025_adjusted.csv")
 IMTS_RISK = 'PGA, SA(0.3), SA(0.6), SA(1.0)'
-# INTEGRATION_DISTANCE = 150
-INTEGRATION_DISTANCE = 20
+INTEGRATION_DISTANCE = getattr(settings, 'PAPERS_HYPO_RUPT_INTEGRATION_DISTANCE', 150)
 TRUNCATION = 3
 NGMFS = 250
 
