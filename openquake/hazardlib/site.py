@@ -505,8 +505,7 @@ class SiteCollection(object):
         if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
-        indices = numpy.uint32(indices)
-        new.array = self.array[indices]
+        new.array = self.complete.array[indices]
         new.complete = self.complete
         return new
 
