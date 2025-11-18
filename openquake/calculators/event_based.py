@@ -361,26 +361,6 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
     return filrups, allargs
 
 
-# tested in test_from_ses
-def starmap_from_rups_hdf5(oq, sitecol, assetcol, taskfunc, dstore):
-    """
-    :returns: a Starmap instance sending event_based tasks
-    """
-    ruptures_hdf5 = oq.hazard_calculation_id
-    with hdf5.File(oq.hazard_calculation_id) as r:
-        model_lts = get_model_lts(r)
-        dstore['full_lt'] = model_lts[-1][1]  # last logic tree
-        dstore.create_dset('events', r['events'][:])  # saving the events
-        rups, allargs = get_rups_args(oq, sitecol, assetcol, (None, None),
-                                      r, model_lts)
-    dstore['ruptures'] = rups  # dset already exists
-    R = oq.number_of_logic_tree_samples
-    dstore['weights'] = numpy.ones(R) / R
-    dstore.swmr_on()
-    smap = parallel.Starmap(taskfunc, allargs, h5=dstore.hdf5)
-    return smap
-
-
 # NB: save_tmp is passed in event_based_risk
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     """
