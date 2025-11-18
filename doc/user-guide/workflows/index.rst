@@ -23,7 +23,7 @@ Risk Calculators
 
 The seismic risk results are calculated using the OpenQuake engine risk library, an open-source suite of tools for seismic risk 
 assessment and loss estimation. This library is written in the Python programming language and available in the form of 
-a “developers” release at the following location: `gem/oq-engine <https://github.com/gem/oq-engine/tree/master/openquake/risklib>`_.
+a “developers” release at the following location: `gem/oq-engine <https://github.com/gem/oq-engine/tree/engine-3.24/openquake/risklib>`_.
 
 The risk component of the OpenQuake engine can compute both scenario-based and probabilistic seismic damage and risk 
 using various approaches. The following types of analysis are currently supported:

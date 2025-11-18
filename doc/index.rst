@@ -115,7 +115,7 @@ maintenance, support, updates, enhancements, or modifications.
 Thanks
 ******
 
-See the list of `contributors <https://github.com/gem/oq-engine/blob/master/CONTRIBUTORS.txt>`_
+See the list of `contributors <https://github.com/gem/oq-engine/blob/engine-3.24/CONTRIBUTORS.txt>`_
 and `sponsors <https://github.com/gem/oq-engine#thanks>`_.
 
 

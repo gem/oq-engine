@@ -210,7 +210,7 @@ Here is an example of use in the logic tree file::
 
 Here *set_between_epsilon* is simply shifting the mean with the formula *mean -> mean + epsilon_tau * inter_event*. In 
 the future ``ModifiableGMPE`` will likely grow more methods. If you want to understand how it works you should look at 
-the source code: `gem/oq-engine <https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py>`_
+the source code: `gem/oq-engine <https://github.com/gem/oq-engine/blob/engine-3.24/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py>`_
 
 In engine 3.21 we added a helper function `valid.modified_gsim`
 to modify a GMPE. Internally it is creating a `ModifiableGMPE` instance,

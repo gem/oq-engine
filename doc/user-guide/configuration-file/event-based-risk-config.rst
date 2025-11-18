@@ -389,7 +389,7 @@ uncertainty of the results in the asset loss table, in the column “variance”
 
 in terms of the variance of each asset for the event and intensity level in consideration, extracted from the asset 
 loss and the coefficients of variation. People interested in the details should look at the implementation in 
-`gem/oq-engine <https://github.com/gem/oq-engine/blob/master/openquake/risklib/scientific.py>`_.
+`gem/oq-engine <https://github.com/gem/oq-engine/blob/engine-3.24/openquake/risklib/scientific.py>`_.
 
 ****************************************
 Additional exceedance probability curves

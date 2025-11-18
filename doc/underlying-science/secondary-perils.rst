@@ -12,7 +12,7 @@ the incorporation is a work in progress.
 In what follows, we provide a brief overview of the implemented models, preceded by general considerations on the 
 spatial resolution at which these analyses are typically conducted. For more in-depth information on the geospatial 
 models, we recommend referring to the original studies. Additionally, we offer corresponding demonstration analyses, 
-which can be found in the  `demos section <https://github.com/gem/oq-engine/tree/master/demos>`_) of our GitHub 
+which can be found in the  `demos section <https://github.com/gem/oq-engine/tree/engine-3.24/demos>`_) of our GitHub 
 repository. We encourage users to check them out and and familiarize themselves with the required inputs for performing
 liquefaction or landslide assessment. We also provide tools to extract relevant information from digital elevation data
 and its derivatives, which are often given as rasters.

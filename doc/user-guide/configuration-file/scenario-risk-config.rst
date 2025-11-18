@@ -239,8 +239,8 @@ Ground Motion Fields csv file with their latitude and longitude coordinates.::
 	[fragility]
 	structural_fragility_file = structural_fragility_model.xml
 
-- ``gmfs_csv``: a parameter used to define the path to the Ground Motion Fields file in the csv format. This file must define Ground Motion Fields for all of the intensity measure types used in the Fragility Model. (`Download an example file here <https://github.com/gem/oq-engine/raw/master/doc/manual/input_scenario_gmfs.csv>`__).
-- ``sites_csv``: a parameter used to define the path to the sites file in the csv format. This file must define site id, longitude, and latitude for all of the sites for the Ground Motion Fields file provided using the gmfs_csv parameter. (`Download an example file here <https://github.com/gem/oq-engine/raw/master/doc/manual/input_scenario_sites.csv>`_).
+- ``gmfs_csv``: a parameter used to define the path to the Ground Motion Fields file in the csv format. This file must define Ground Motion Fields for all of the intensity measure types used in the Fragility Model. (`Download an example file here <https://github.com/gem/oq-engine/raw/engine-3.24/doc/manual/input_scenario_gmfs.csv>`__).
+- ``sites_csv``: a parameter used to define the path to the sites file in the csv format. This file must define site id, longitude, and latitude for all of the sites for the Ground Motion Fields file provided using the gmfs_csv parameter. (`Download an example file here <https://github.com/gem/oq-engine/raw/engine-3.24/doc/manual/input_scenario_sites.csv>`_).
 
 The above calculation(s) can be run using the command line::
 

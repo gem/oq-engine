@@ -31,7 +31,7 @@ This is the list of demos which illustrate how to use the OpenQuake engine for v
 - ScenarioLiquefaction
 - SimpleFaultSourceClassicalPSHA
 
-The demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/hazard>`__. Feel free to run such examples and to play with the inputs and the outputs.
+The demo files are available `here <https://github.com/gem/oq-engine/tree/engine-3.24/demos/hazard>`__. Feel free to run such examples and to play with the inputs and the outputs.
 
 ********************
 Classical PSHA Demos
@@ -558,7 +558,7 @@ Demos for the Risk Module
 
 The following sections describe the set of demos that have been compiled to demonstrate some of the features and usage of 
 the risk calculators of the OpenQuake engine. These demos can be found in a public repository on GitHub at the following 
-link: `gem/oq-engine <https://github.com/gem/oq-engine/tree/master/demos/risk>`_.
+link: `gem/oq-engine <https://github.com/gem/oq-engine/tree/engine-3.24/demos/risk>`_.
 
 These examples are purely demonstrative and are not intended to represent accurately the seismicity, vulnerability or 
 exposure characteristics of the region selected, but simply to provide example input files that can be used as a starting 
@@ -582,7 +582,7 @@ probabilistic seismic damage and risk analyses:
 - ScenarioDamage
 - ScenarioRisk
 
-The documentation for the **bold** analysis cases is a work in progress. However, the demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/risk>`__.
+The documentation for the **bold** analysis cases is a work in progress. However, the demo files are available `here <https://github.com/gem/oq-engine/tree/engine-3.24/demos/risk>`__.
 
 These seven demos use Nepal as the region of interest. An example Exposure Model has been developed for this region, 
 comprising 9,063 assets distributed amongst 2,221 locations (due to the existence of more than one asset at the same 

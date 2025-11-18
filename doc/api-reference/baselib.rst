@@ -26,7 +26,7 @@ $ pip install openquake.engine
 ```
 
 or in several other ways, see
-https://github.com/gem/oq-engine/blob/master/README.md
+https://github.com/gem/oq-engine/blob/engine-3.24/README.md
 
 License
 -------

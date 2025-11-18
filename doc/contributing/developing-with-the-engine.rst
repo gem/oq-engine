@@ -155,7 +155,7 @@ The relevant code is something like this:
       run_risk(strikes=[0, 90, 180])
 
 Notice that this documentation can get out of sync with the code. The version
-which is tested and guaranteed to run is the one at https://github.com/gem/oq-engine/blob/master/demos/risk/ScenarioRisk/sensitivity.py, which also sets the environment
+which is tested and guaranteed to run is the one at https://github.com/gem/oq-engine/blob/engine-3.24/demos/risk/ScenarioRisk/sensitivity.py, which also sets the environment
 variable OQ_DISTRIBUTE to ``zmq``. This is the easiest way to parallelize the jobs,
 which makes sense since in this case the jobs are small.
 

@@ -95,7 +95,7 @@ html_theme_options = {
         # "version_match": (
         #     "development" if it_is_master is True else '.'.join(
         #         version.split('.')[0:2])
-        "version_match": "master"
+        "version_match": "3.24"
     },
     "navbar_center": ["navbar-nav"],
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
