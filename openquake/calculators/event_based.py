@@ -86,6 +86,8 @@ def build_hcurves(dstore):
     # be very slow if there are thousands of realizations
     weights = dstore['weights'][:]
     sitecol = dstore['sitecol']
+    if dstore.parent:
+        sitecol.complete = dstore.parent['sitecol']
     # NB: in the future we may want to save to individual hazard
     # curves if oq.individual_rlzs is set; for the moment we
     # save the statistical curves only
@@ -114,9 +116,10 @@ def build_hcurves(dstore):
     pmaps = {r: MapArray(sitecol.sids, L1*C, 1).fill(0)
              for r in range(R)}
     slc = {imt: slice(m * L1, m * L1 + L1) for m, imt in enumerate(imtls)}
+    sid2idx = {sid: i for i, sid in enumerate(sitecol.sids)}
     for key, poes in hcurves.items():
         r, sid, imt = str2rsi(key)
-        array = pmaps[r].array[sid, slc[imt], 0]
+        array = pmaps[r].array[sid2idx[sid], slc[imt], 0]
         array[:] = 1. - (1. - array) * (1. - poes)
     pmaps = [p.reshape(N, C, L1) for p in pmaps.values()]
     if oq.individual_rlzs:
