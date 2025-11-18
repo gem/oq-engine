@@ -73,6 +73,7 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
 
+ASSOC_DIST = 8  # acceptable distance to associate the site params to the site
 USER = getpass.getuser()
 MB = 1024 ** 2
 
@@ -934,8 +935,9 @@ class HazardCalculator(BaseCalculator):
             # NB: this is tested in event_based case_27 and case_31
             child = readinput.get_site_collection(oq, self.datastore.hdf5)
             assoc_dist = (oq.region_grid_spacing * 1.414
-                          if oq.region_grid_spacing else 5)  # Graeme's 5km
+                          if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
+            # this is called by mosaic_for_ses/job_sites.csv
             self.sitecol, _array, _discarded = geo.utils.assoc(
                 child, haz_sitecol, assoc_dist, 'filter')
             self.datastore['sitecol'] = self.sitecol
@@ -1078,7 +1080,7 @@ class HazardCalculator(BaseCalculator):
         if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs or oq.impact:
                 assoc_dist = (oq.region_grid_spacing * 1.414
-                              if oq.region_grid_spacing else 5)  # Graeme's 5km
+                              if oq.region_grid_spacing else ASSOC_DIST)
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
                 if oq.prefer_global_site_params and not numpy.isnan(
                         oq.reference_vs30_value):
