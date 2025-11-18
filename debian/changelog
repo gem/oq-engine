@@ -1,3 +1,5 @@
+python3-oq-engine (3.24.0-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Removed the BASE33489 hack and made the first branch of the source
     model logic tree regular, with a single letter abbreviation
@@ -321,6 +323,8 @@
   [Christopher Brooks]
   * Fixed modified_gsim (valid.py) to work with more complex
     GMMs (e.g. NGAEast GMPE Tables) + added a unit test
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 18 Nov 2025 09:06:09 +0000
 
 python3-oq-engine (3.23.0-1~xenial01) xenial; urgency=low
 
