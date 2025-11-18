@@ -21,6 +21,7 @@ import getpass
 import logging
 from openquake.baselib import config
 from openquake.baselib.general import safeprint
+from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
@@ -88,7 +89,7 @@ def main(
         make_html_report=None,
         run=None,
         delete_calculation: int = None,
-        hazard_calculation_id: int = None,
+        hazard_calculation_id: valid.calculation = None,
         list_outputs: int = None,
         show_log=None,
         export_output=None,
