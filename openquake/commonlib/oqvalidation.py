@@ -1496,7 +1496,7 @@ class OqParam(valid.ParamSet):
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
             if not self.total_losses:
-                self.total_losses = self._parent.total_losses
+                self.total_losses = self._parent.total_losses            
         else:
             self._parent = None
         # set all_cost_types
@@ -2223,11 +2223,11 @@ class OqParam(valid.ParamSet):
             return True
         elif self.collect_rlzs is False:
             return True
-        #elif self.hazard_calculation_id:
-        #    n = self._parent.number_of_logic_tree_samples
-        #    if n and n != self.number_of_logic_tree_samples:
-        #        raise ValueError('Please specify number_of_logic_tree_samples'
-        #                         '=%d' % n)
+        elif self._parent:
+            n = self._parent.number_of_logic_tree_samples
+            if n and n != self.number_of_logic_tree_samples:
+                raise ValueError('Please specify number_of_logic_tree_samples'
+                                 '=%d' % n)
         hstats = list(self.hazard_stats())
         if hstats and hstats != ['mean']:
             self.raise_invalid(

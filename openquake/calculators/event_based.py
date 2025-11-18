@@ -737,9 +737,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
-        # if we are in event_based_risk, do nothing
-        #if oq.calculation_mode == 'event_based_risk':
-        #    return {}
         dstore = self.datastore
         if oq.impact and oq.shakemap_uri:
             # when calling `oqi usgs_id`
