@@ -1086,6 +1086,9 @@ class HazardCalculator(BaseCalculator):
                 else:
                     # use the site model parameters
                     self.sitecol.assoc(sm, assoc_dist)
+                    if 'station_data' in oq.inputs:
+                        # the complete sitecol is required
+                        self.sitecol.complete.assoc(sm, assoc_dist)
 
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5

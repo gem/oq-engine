@@ -256,8 +256,8 @@ def event_based(rups, cmaker, sitecol, stations, hdf5path, monitor):
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
     with rmon:
-        srcfilter = SourceFilter(
-            sitecol.complete, oq.maximum_distance(cmaker.trt))
+        sites = sitecol if stations[0] is None else sitecol.complete
+        srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
         proxies = get_proxies(hdf5path, rups)
     for block in block_splitter(proxies, 20_000, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,

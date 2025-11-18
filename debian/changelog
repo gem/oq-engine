@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Using the filtered site collection in event based (thus changing numbers)
   * Implemented rupture prefiltering for scenario and event based calculators
 
   [Paolo Tormene]
