@@ -561,9 +561,9 @@ class SourceFilter(object):
         if not hasattr(self, 'kdt'):
             self.kdt = KDTree(self.sitecol.xyz)
         xyz = spherical_to_cartesian(lon, lat, dep)
-        sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
-        sids.sort()  # for cross-platform consistency
-        return sids
+        ids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
+        ids.sort()  # for cross-platform consistency
+        return self.sitecol.sids[ids]  # works also for filtered sitecol
 
     def filter(self, sources):
         """
