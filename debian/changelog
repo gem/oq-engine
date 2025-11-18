@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Using the filtered site collection in event based (thus changing numbers)
+  * Using the filtered site collection, thus changing numbers in OQImpact
   * Implemented rupture prefiltering for scenario and event based calculators
 
   [Paolo Tormene]

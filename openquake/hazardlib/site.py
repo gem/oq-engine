@@ -494,19 +494,18 @@ class SiteCollection(object):
         if 'z2pt5' in req_site_params:
             self._set('z2pt5', oq.reference_depth_to_2pt5km_per_sec)
 
-    def filtered(self, indices):
+    def filtered(self, sids):
         """
-        :param indices:
-           a subset of indices in the range [0 .. tot_sites - 1]
+        :param sids:
+           a subset of sids in the range [0 .. tot_sites - 1]
         :returns:
-           a filtered SiteCollection instance if `indices` is a proper subset
-           of the available indices, otherwise returns the full SiteCollection
+           a filtered SiteCollection instance if `sids` is a proper subset
+           of the available sids, otherwise returns the full SiteCollection
         """
-        if indices is None or len(indices) == len(self):
+        if sids is None or len(sids) == len(self):
             return self
         new = object.__new__(self.__class__)
-        indices = numpy.uint32(indices)
-        new.array = self.array[indices]
+        new.array = self.complete.array[sids]
         new.complete = self.complete
         return new
 
@@ -788,7 +787,7 @@ class SiteCollection(object):
             return None
         # extract indices of Trues from the mask
         indices, = mask.nonzero()
-        return self.filtered(indices)
+        return self.filtered(self.sids[indices])
 
     def assoc(self, site_model, assoc_dist, ignore=()):
         """
