@@ -189,36 +189,61 @@ class AbrahamsonBhasin2020(GMPE):
                     set(getattr(self, attr, ())) | set(getattr(self.gmpe, attr, ())))
 
     def compute(self, ctx: np.recarray, imts: list,
-                mean: np.ndarray, sig: np.ndarray, tau: np.ndarray, phi: np.ndarray):
-        if self.kind == "general":
-            tref = _get_tref(ctx)
-            self.last_tref = tref
-            cond_imt = SA(tref)
-        elif self.kind == "pga-based":
-            cond_imt = PGA()
-        else: 
-            cond_imt = SA(1.0)
+                mean: np.ndarray, sig: np.ndarray,
+                tau: np.ndarray, phi: np.ndarray):
 
-        key = str(cond_imt)
+        non_pgv = [(i, imt) for i, imt in enumerate(imts)
+                   if str(imt) != "PGV"]
 
-        mean_gms, sigma_gms, tau_gms, phi_gms = get_mean_stds(
-            self.gmpe, ctx, {cond_imt}, return_dicts=True
-        )
+        if non_pgv:
+            non_pgv_imts = [imt for _, imt in non_pgv]
+            base_mean, base_sig, base_tau, base_phi = get_mean_stds(
+                self.gmpe, ctx, non_pgv_imts
+            )
+            for j, (i, _) in enumerate(non_pgv):
+                mean[i] = base_mean[j]
+                sig[i]  = base_sig[j]
+                tau[i]  = base_tau[j]
+                phi[i]  = base_phi[j]
 
-        lnpgv = get_mean_conditional_pgv(self.c, ctx, mean_gms, key)
-        sigma_pgv, tau_pgv, phi_pgv = get_standard_deviations(
-            self.c, ctx, sigma_gms=sigma_gms, tau_gms=tau_gms, phi_gms=phi_gms, imt_key=key
-        )
+        for i, imt in enumerate(imts):
+            if str(imt) != "PGV":
+                continue
 
-        mean[0] = lnpgv
-        sig[0]  += sigma_pgv
-        tau[0]  += tau_pgv
-        phi[0]  += phi_pgv
+            if self.kind == "general":
+                tref = _get_tref(ctx)
+                self.last_tref = tref
+                cond_imt = SA(tref)
+            elif self.kind == "pga-based":
+                cond_imt = PGA()
+            else:
+                cond_imt = SA(1.0)
+
+            key = str(cond_imt)
+
+            mean_gms, sigma_gms, tau_gms, phi_gms = get_mean_stds(
+                self.gmpe, ctx, {cond_imt}, return_dicts=True
+            )
+
+            lnpgv = get_mean_conditional_pgv(self.c, ctx, mean_gms, key)
+            sigma_pgv, tau_pgv, phi_pgv = get_standard_deviations(
+                self.c, ctx,
+                sigma_gms=sigma_gms,
+                tau_gms=tau_gms,
+                phi_gms=phi_gms,
+                imt_key=key,
+            )
+
+            mean[i] = lnpgv
+            sig[i]  = sigma_pgv
+            tau[i]  = tau_pgv
+            phi[i]  = phi_pgv
 
 
 class AbrahamsonBhasin2020PGA(AbrahamsonBhasin2020):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
+
     def __init__(self, **gmpe_dict):
         super().__init__(kind="pga-based", **gmpe_dict)
 
@@ -226,6 +251,6 @@ class AbrahamsonBhasin2020PGA(AbrahamsonBhasin2020):
 class AbrahamsonBhasin2020SA1(AbrahamsonBhasin2020):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGV}
+
     def __init__(self, **gmpe_dict):
         super().__init__(kind="sa1_based", **gmpe_dict)
-    
