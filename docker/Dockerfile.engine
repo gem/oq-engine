@@ -16,7 +16,7 @@ FROM python:3.12.6-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 RUN useradd -m -u 1000 -s /bin/bash openquake
-RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev libexpat1
+RUN apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
 ARG oq_branch
 # Create venv
 ENV VIRTUAL_ENV=/opt/openquake
