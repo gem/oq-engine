@@ -69,7 +69,7 @@ def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
     # NB: if there was an assetcol, nsites is actually the number of affected
     # assets, as set by close_ruptures
-    return rup['n_occ'] * (1 + rup['nsites'] // 1000)
+    return rup['n_occ'] * (1 + rup['nsites'] // 100)
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -175,6 +175,7 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
     if len(sids) == 0:  # filtered away
         raise FarAwayRupture
 
+    filtered = srcfilter.sitecol.complete.filtered
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
@@ -183,8 +184,8 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
         if stations.any():
             station_sids = sids[stations]
             return ConditionedGmfComputer(
-                ebr, srcfilter.sitecol.filtered(sids),
-                srcfilter.sitecol.filtered(station_sids),
+                ebr, filtered(sids),
+                filtered(station_sids),
                 station_data.loc[station_sids],
                 oq.observed_imts,
                 cmaker, oq.correl_model, oq.cross_correl,
@@ -195,7 +196,7 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
             logging.warning('There are no stations!')
 
     return GmfComputer(
-        ebr, srcfilter.sitecol.filtered(sids), cmaker,
+        ebr, filtered(sids), cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 
@@ -247,7 +248,7 @@ def _event_based(proxies, cmaker, stations, srcfilter, shr,
     return dic
 
 
-def event_based(rups, cmaker, sitecol, stations, hdf5path, monitor):
+def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -259,7 +260,12 @@ def event_based(rups, cmaker, sitecol, stations, hdf5path, monitor):
     umon = monitor('updating gmfs', measuremem=False)
     cmaker.scenario = 'scenario' in oq.calculation_mode
     with rmon:
-        sites = sitecol if stations[0] is None else sitecol.complete
+        with hdf5.File(hdf5path) as f:
+            try:
+                complete = f['complete']  # the current dstore
+            except KeyError:
+                complete = f['sitecol']  # the parent dstore
+        sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
         proxies = get_proxies(hdf5path, rups)
     for block in block_splitter(proxies, 20_000, rup_weight):
@@ -354,7 +360,8 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
         logging.info('%s: sending %d ruptures for trt_smr=%d',
                      model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
-            args = (block, cmaker, sitecol, station_data_sites, dstore.filename)
+            args = (block, cmaker, sitecol.sids, station_data_sites,
+                    dstore.filename)
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
@@ -510,7 +517,7 @@ class EventBasedCalculator(base.HazardCalculator):
     """
     core_task = event_based
     is_stochastic = True
-    accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
+    accept_precalc = ['event_based', 'event_based_risk']
 
     def init(self):
         if self.oqparam.cross_correl.__class__.__name__ == 'GodaAtkinson2009':

@@ -157,7 +157,7 @@ def main(
         sys.exit(outdated)
 
     # hazard or hazard+risk
-    if hazard_calculation_id:
+    if isinstance(hazard_calculation_id, int):
         hc_id = get_job_id(hazard_calculation_id, user_name)
     else:
         hc_id = None
@@ -166,11 +166,16 @@ def main(
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        jobs = create_jobs(job_inis, log_level, log_file, user_name, hc_id)
+        jobs = create_jobs(job_inis, log_level, log_file, user_name,
+                           hc_id or hazard_calculation_id)
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
-        run_jobs(jobs, nodes=nodes, sbatch=True, precalc=not multi)
+        parallel = len(jobs) > 1 and (multi or hazard_calculation_id)
+        # run the jobs in parallel
+        concurrent_jobs = 4 if parallel else 1
+        run_jobs(jobs, concurrent_jobs, nodes, sbatch=True,
+                 precalc=not parallel)
 
     # hazard
     elif list_hazard_calculations:

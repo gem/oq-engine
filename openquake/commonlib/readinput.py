@@ -1264,7 +1264,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, inp_types=(), h5=None):
     if oqparam.aggregate_exposure:
         A = len(assetcol)
         assetcol = assetcol.agg_by_site()
-        logging.info(f'Aggregated {A} assets -> {len(assetcol)} assets')
+        logging.info(f'Aggregated {A:_d} assets -> {len(assetcol):_d} assets')
 
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy

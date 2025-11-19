@@ -1,5 +1,5 @@
 ---
-name: Build Image Latest for Docker 
+name: Build Image Latest for Docker
 on:
   workflow_dispatch:
     inputs:
@@ -8,7 +8,7 @@ on:
         default: latest
         required: true
       git-ref:
-        description: Git Ref 
+        description: Git Ref
         default: master
         required: true
 
@@ -43,7 +43,7 @@ jobs:
           docker image ls
       - name: Run calcs on single docker
         run: |
-          time docker run openquake/engine:latest "oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true""
+          time docker run openquake/engine:latest "oq engine --run "https://github.com/gem/oq-engine/blob/${{ github.event.inputs.git-ref }}/openquake/server/tests/data/classical.zip?raw=true""
       - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
