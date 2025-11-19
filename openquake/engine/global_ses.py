@@ -78,7 +78,21 @@ CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
-def read_job_inis(inis, models, INPUTS):
+def read_job_inis(inis, INPUTS):
+    """
+    Read the job.ini file, associate each to the corresponding model in
+    the mosaic and return a list of quartets `model_trt_gsim_weight`.
+    """
+    models = []
+    for ini in inis:
+        for model in MODELS:
+            if model in ini:
+                models.append(model)
+    assert len(inis) == len(models), (inis, models)
+    if 'KOR' in models or 'JPN' in models:
+        if int(INPUTS['ses_per_logic_tree_path']) % 50:
+            raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
+
     out = []
     rows = []
     for ini, model in zip(inis, models):
@@ -108,20 +122,10 @@ def main(mosaic_dir, out, models='ALL', *,
     Storing global SES
     """
     if models == 'ALL':
-        models = MODELS
         inis = [os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
-                for model in models]
+                for model in MODELS]
     else:
         inis = models.split(',')
-        models = []
-        for ini in inis:
-            for model in MODELS:
-                if model in ini:
-                    models.append(model)
-        assert len(inis) == len(models), (inis, models)
-    if 'KOR' in models or 'JPN' in models:
-        if ses_per_logic_tree_path % 50:
-            raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
     INPUTS = dict(
         calculation_mode='event_based',
         number_of_logic_tree_samples= str(number_of_logic_tree_samples),
@@ -130,12 +134,11 @@ def main(mosaic_dir, out, models='ALL', *,
         ground_motion_fields='false')
     if minimum_magnitude:
         INPUTS['minimum_magnitude'] = str(minimum_magnitude)
-    job_inis, rows = read_job_inis(inis, models, INPUTS)
+    job_dics, rows = read_job_inis(inis, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
-            h5['models'] = models
             h5['model_trt_gsim_weight'] = numpy.array(rows, dt)
-        jobs = engine.create_jobs(job_inis, log_level=logging.WARN)
+        jobs = engine.create_jobs(job_dics, log_level=logging.WARN)
         engine.run_jobs(jobs, concurrent_jobs=min(len(jobs), 3))
         fnames = [datastore.read(job.calc_id).filename for job in jobs]
         logging.warning(f'Saving {out}')
