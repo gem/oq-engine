@@ -327,7 +327,9 @@ def log_completed(jobctxs, sec):
     """
     tot = 0
     for jobctx in jobctxs:
-        job_ini = os.path.basename(jobctx.params['inputs']['job_ini'])
+        job_ini = os.path.basename(
+            jobctx.params['inputs'].get('job_ini', '<in-memory>'))
+        # <in-memory> happens for sensitivity.py in run-demos.sh
         job = logs.dbcmd('get_job', jobctx.calc_id)
         path = job.ds_calc_dir + '.hdf5'
         size = getsize(path)
