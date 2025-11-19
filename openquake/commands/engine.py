@@ -166,7 +166,8 @@ def main(
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        jobs = create_jobs(job_inis, log_level, log_file, user_name, hc_id)
+        jobs = create_jobs(job_inis, log_level, log_file, user_name,
+                           hazard_calculation_id)
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
