@@ -327,7 +327,7 @@ def log_completed(jobctxs):
     """
     tot = 0
     for jobctx in jobctxs:
-        job_ini = jobctx.params['inputs']['job_ini']
+        job_ini = os.path.basename(jobctx.params['inputs']['job_ini'])
         job = logs.dbcmd('get_job', jobctx.calc_id)
         path = job.ds_calc_dir + '.hdf5'
         size = getsize(path)
