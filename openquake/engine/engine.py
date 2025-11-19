@@ -321,7 +321,7 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def log_completed(jobctxs):
+def log_completed(jobctxs, sec):
     """
     Log information about the generated HDF5 files
     """
@@ -334,10 +334,11 @@ def log_completed(jobctxs):
         logging.info(f'#{job.id} {job_ini} [{job.status}] '
                      f'{general.humansize(size)}')
         tot += size
-    logging.info(f'Total storage {general.humansize(tot)}')
+    logging.info(f'Generated {general.humansize(tot)} in {sec:_d} seconds')
 
 
 def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
+    t0 = time.time()
     dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
@@ -370,7 +371,7 @@ def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
         raise
     finally:
         if len(jobctxs) > 1:
-            log_completed(jobctxs)
+            log_completed(jobctxs, int(time.time() - t0))
         notify_job_complete(job_id, notify_to, exc)
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
