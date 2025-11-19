@@ -370,7 +370,7 @@ def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
         raise
     finally:
         if len(jobctxs) > 1:
-            log_completed([job.calc_id for job in jobctxs])
+            log_completed(jobctxs)
         notify_job_complete(job_id, notify_to, exc)
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
