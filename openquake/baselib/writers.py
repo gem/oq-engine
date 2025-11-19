@@ -268,5 +268,5 @@ if __name__ == '__main__':  # pretty print of NRML files
     for fname in nrmlfiles:
         node = nrml.read(fname)
         shutil.copy(fname, fname + '.bak')
-        with open(fname, 'w') as out:
+        with open(fname, 'w', encoding='utf8') as out:
             nrml.write(list(node), out)
