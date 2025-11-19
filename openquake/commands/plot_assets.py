@@ -66,7 +66,7 @@ def main(calc_id: int = -1, site_model=False,
                   label='site model', s=markersize_site_model)
 
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green',
-              label='assets', s=markersize_assets, alpha=.2)
+              label='assets', s=markersize_assets, alpha=.5)
     if not assets_only:
         p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black',
                   label='sites', s=markersize_sitecol)
