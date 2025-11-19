@@ -78,13 +78,12 @@ CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
-def read_job_inis(mosaic_dir, INPUTS):
+def read_job_inis(inis, models, INPUTS):
     out = []
     rows = []
-    for model in INPUTS.pop('models'):
-        fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
-        dic = readinput.get_params(fname)
-        del dic['intensity_measure_types_and_levels']
+    for ini, model in zip(inis, models):
+        dic = readinput.get_params(ini)
+        dic.pop('intensity_measure_types_and_levels', None)
         dic.update(INPUTS)
         if 'truncation_level' not in dic:  # CAN
             dic['truncation_level'] = '5'
@@ -110,10 +109,16 @@ def main(mosaic_dir, out, models='ALL', *,
     """
     if models == 'ALL':
         models = MODELS
+        inis = [os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
+                for model in models]
     else:
-        models = models.split(',')
-        for model in models:
-            assert model in MODELS, model
+        inis = models.split(',')
+        models = []
+        for ini in inis:
+            for model in MODELS:
+                if model in ini:
+                    models.append(model)
+        assert len(inis) == len(models), (inis, models)
     if 'KOR' in models or 'JPN' in models:
         if ses_per_logic_tree_path % 50:
             raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
@@ -122,11 +127,10 @@ def main(mosaic_dir, out, models='ALL', *,
         number_of_logic_tree_samples= str(number_of_logic_tree_samples),
         ses_per_logic_tree_path = str(ses_per_logic_tree_path),
         investigation_time='1',
-        ground_motion_fields='false',
-        models=models)
+        ground_motion_fields='false')
     if minimum_magnitude:
         INPUTS['minimum_magnitude'] = str(minimum_magnitude)
-    job_inis, rows = read_job_inis(mosaic_dir, INPUTS)
+    job_inis, rows = read_job_inis(inis, models, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
             h5['models'] = models
