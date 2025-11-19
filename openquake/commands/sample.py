@@ -81,7 +81,6 @@ def main(fname, reduction_factor: valid.probability,
     This is a debugging utility to reduce large computations to small ones.
     """
     if fname.endswith('.json'):  # used to sample the USGS stations
-        # TODO check whether it is appropriate to assume UTF8 for .json here
         with open(fname, encoding='utf-8-sig') as f:
             data = json.load(f)
         data['features'] = general.random_filter(data['features'], reduction_factor)
