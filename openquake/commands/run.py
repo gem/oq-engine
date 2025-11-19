@@ -128,7 +128,7 @@ def main(job_ini,
                        {'calculation_mode': dic['calculation_mode']})
     jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name, host=host)
     job_id = jobs[0].calc_id
-    run_jobs(jobs, nodes=nodes, precalc=True)
+    run_jobs(jobs, nodes=nodes)
     return job_id
 
 

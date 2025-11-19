@@ -172,7 +172,9 @@ def main(
             job.params.update(pars)
             job.params['exports'] = exports
         parallel = multi or hazard_calculation_id  # run the jobs in parallel
-        run_jobs(jobs, nodes=nodes, sbatch=True, precalc=not parallel)
+        concurrent_jobs = 4 if parallel else 1
+        run_jobs(jobs, concurrent_jobs, nodes, sbatch=True,
+                 precalc=not parallel)
 
     # hazard
     elif list_hazard_calculations:

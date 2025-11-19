@@ -321,6 +321,21 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
+def log_completed(job_ids):
+    """
+    Log information about the generated HDF5 files
+    """
+    tot = 0
+    for job_id in job_ids:
+        job = logs.dbcmd('get_job', job_id)
+        path = job.ds_calc_dir + '.hdf5'
+        size = getsize(path)
+        logging.info(f'Generated {path} [{job.status}] '
+                     f'{general.humansize(size)}')
+        tot += size
+    logging.info(f'Total storage {general.humansize(tot)}')
+
+
 def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
     dist = parallel.oq_distribute()
     for job in jobctxs:
@@ -353,6 +368,8 @@ def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
         exc = e
         raise
     finally:
+        if len(jobctxs) > 1:
+            log_completed([job.calc_id for job in jobctxs])
         notify_job_complete(job_id, notify_to, exc)
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
