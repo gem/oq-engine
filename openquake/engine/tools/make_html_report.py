@@ -131,6 +131,6 @@ def make_report(isodate='today'):
     page = make_tabs(tag_ids, tag_status, tag_contents) + (
         'Report last updated: %s' % datetime.now())
     fname = 'jobs-%s.html' % isodate
-    with open(fname, 'w') as f:
+    with open(fname, 'w', encoding='utf8') as f:
         f.write(PAGE_TEMPLATE % page)
     return fname
