@@ -293,6 +293,10 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(data['tiles'], 1)
         self.assertEqual(data['blocks'], 2)
 
+        gh = view('global_hazard', self.calc.datastore)
+        fname = general.gettemp(text_table(gh, ext='org'))
+        self.assertEqualFiles('expected/global_hazard.org', fname)
+
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
                               case_23.__file__, delta=1e-5)
