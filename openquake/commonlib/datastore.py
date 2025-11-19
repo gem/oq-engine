@@ -208,7 +208,7 @@ class DataStore(collections.abc.MutableMapping):
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
             hc_id = read_hc_id(self.hdf5)
-            if hc_id:
+            if isinstance(hc_id, int):
                 self.parent = read(hc_id)
         return self
 
