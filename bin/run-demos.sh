@@ -57,7 +57,7 @@ MPLBACKEND=Agg oq plot memory? -1
 oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
 
 echo "Testing ShakeMap calculator"
-oq run $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/pre-job.ini $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/job.ini
+oq engine --run $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/pre-job.ini $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/job.ini
 
 # run ebrisk
 oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv,hdf5

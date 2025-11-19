@@ -175,6 +175,7 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
     if len(sids) == 0:  # filtered away
         raise FarAwayRupture
 
+    filtered = srcfilter.sitecol.complete.filtered
     ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
 
@@ -183,8 +184,8 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
         if stations.any():
             station_sids = sids[stations]
             return ConditionedGmfComputer(
-                ebr, srcfilter.sitecol.filtered(sids),
-                srcfilter.sitecol.filtered(station_sids),
+                ebr, filtered(sids),
+                filtered(station_sids),
                 station_data.loc[station_sids],
                 oq.observed_imts,
                 cmaker, oq.correl_model, oq.cross_correl,
@@ -195,7 +196,7 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
             logging.warning('There are no stations!')
 
     return GmfComputer(
-        ebr, srcfilter.sitecol.filtered(sids), cmaker,
+        ebr, filtered(sids), cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 

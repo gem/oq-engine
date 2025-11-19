@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Extended the global_ses script to accepts job.ini files
+  * Implemented `oq engine --run job1.ini .. jobN.ini --hc parent.hdf5`
+  * Extended `--hc` to accept paths to datastore files
   * Using the filtered site collection, thus changing numbers in OQImpact
   * Implemented rupture prefiltering for scenario and event based calculators
 

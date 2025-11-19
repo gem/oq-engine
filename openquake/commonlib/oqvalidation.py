@@ -1492,7 +1492,8 @@ class OqParam(valid.ParamSet):
         if any
         """
         from openquake.commonlib import datastore  # avoid circular import
-        if isinstance(self.hazard_calculation_id, int):
+        if self.hazard_calculation_id and isinstance(
+                self.hazard_calculation_id, int):
             with datastore.read(self.hazard_calculation_id) as ds:
                 self._parent = ds['oqparam']
             if not self.total_losses:

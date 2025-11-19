@@ -27,6 +27,9 @@ from openquake.engine import global_ses
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
 RUP_HDF5 = os.path.join(MOSAIC_DIR, 'rups.hdf5')
 aac = numpy.testing.assert_allclose
+
+last_job = None
+
 def path(job_ini):
     return os.path.join(MOSAIC_DIR, job_ini)
 
@@ -53,17 +56,21 @@ def setup_module():
 
 
 def test_sites():  # 6 sites
+    global last_job
     dstore = base.run_calc(
         path('job_sites.ini'), hazard_calculation_id='rups.hdf5'
     ).datastore
+    last_job = dstore.calc_id
     gmvs = dstore['avg_gmf'][0, :, 0]
     assert (gmvs > 0).sum() == 6
 
 
 def test_site_model():  # 6 sites
+    global last_job
     dstore = base.run_calc(
         path('job_sm.ini'), hazard_calculation_id='rups.hdf5'
     ).datastore
+    last_job = dstore.calc_id
     gmvs = dstore['avg_gmf'][0, :, 0]
     assert (gmvs > 0).sum() == 6
 
@@ -71,3 +78,6 @@ def test_site_model():  # 6 sites
 def teardown_module():
     if os.path.exists(RUP_HDF5):
         os.remove(RUP_HDF5)
+    if last_job:
+        # make sure `read` works after rups.hdf5 has been removed
+        read(last_job)
