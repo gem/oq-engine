@@ -321,6 +321,22 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
+def log_completed(jobctxs):
+    """
+    Log information about the generated HDF5 files
+    """
+    tot = 0
+    for jobctx in jobctxs:
+        job_ini = os.path.basename(jobctx.params['inputs']['job_ini'])
+        job = logs.dbcmd('get_job', jobctx.calc_id)
+        path = job.ds_calc_dir + '.hdf5'
+        size = getsize(path)
+        logging.info(f'#{job.id} {job_ini} [{job.status}] '
+                     f'{general.humansize(size)}')
+        tot += size
+    logging.info(f'Total storage {general.humansize(tot)}')
+
+
 def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
     dist = parallel.oq_distribute()
     for job in jobctxs:
@@ -339,7 +355,7 @@ def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
                 pickle.dump(jobctxs, f)
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
-        elif len(jobctxs) > 1 and dist in ('zmq', 'slurm'):
+        elif len(jobctxs) > 1:
             if precalc:
                 run_calc(jobctxs[0])
                 args = [(ctx,) for ctx in jobctxs[1:]]
@@ -353,6 +369,8 @@ def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
         exc = e
         raise
     finally:
+        if len(jobctxs) > 1:
+            log_completed(jobctxs)
         notify_job_complete(job_id, notify_to, exc)
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
@@ -385,7 +403,7 @@ def run_jobs(jobctxs, concurrent_jobs=1, nodes=1, sbatch=False,
     else:
         for jobctx in jobctxs:
             hc_id = jobctx.params.get('hazard_calculation_id')
-            if hc_id:
+            if isinstance(hc_id, int):
                 job = logs.dbcmd('get_job', hc_id)
                 ppath = job.ds_calc_dir + '.hdf5'
                 if os.path.exists(ppath):
