@@ -331,7 +331,7 @@ def log_completed(jobctxs):
         job = logs.dbcmd('get_job', jobctx.calc_id)
         path = job.ds_calc_dir + '.hdf5'
         size = getsize(path)
-        logging.info(f'{job_ini} [{job.id}, {job.status}] '
+        logging.info(f'#{job.id} {job_ini} [{job.status}] '
                      f'{general.humansize(size)}')
         tot += size
     logging.info(f'Total storage {general.humansize(tot)}')
