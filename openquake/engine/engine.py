@@ -321,16 +321,17 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def log_completed(job_ids):
+def log_completed(jobctxs):
     """
     Log information about the generated HDF5 files
     """
     tot = 0
-    for job_id in job_ids:
-        job = logs.dbcmd('get_job', job_id)
+    for jobctx in jobctxs:
+        job_ini = jobctx.params['inputs']['job_ini']
+        job = logs.dbcmd('get_job', jobctx.calc_id)
         path = job.ds_calc_dir + '.hdf5'
         size = getsize(path)
-        logging.info(f'Generated {path} [{job.status}] '
+        logging.info(f'{job_ini} [{job.id}, {job.status}] '
                      f'{general.humansize(size)}')
         tot += size
     logging.info(f'Total storage {general.humansize(tot)}')
