@@ -43,6 +43,7 @@ jobs:
           docker build --build-arg oq_branch=master -t openquake/engine:nightly -f docker/Dockerfile.dev docker
           docker image ls
           time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
+          time docker run openquake/engine:nightly "oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true""
           echo " push image engine with tag nightly on docker hub "
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
           docker push openquake/engine:nightly
