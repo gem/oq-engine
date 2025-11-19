@@ -853,7 +853,7 @@ def export_job_zip(ekey, dstore):
     inputs['exposure'] = exposure_xml
     csv = extract(dstore, 'ruptures?slice=0&slice=1').array
     dest = dstore.export_path('rupture.csv')
-    with open(dest, 'w') as out:
+    with open(dest, 'w', encoding='utf8') as out:
         out.write(csv)
     inputs['rupture_model'] = dest
     if gsim_lt:

@@ -75,7 +75,7 @@ def print_stats(pr, fname):
     """
     Print the stats of a Profile instance
     """
-    with open(fname, 'w') as f:
+    with open(fname, 'w', encoding='utf8') as f:
         ps = pstats.Stats(pr, stream=f).sort_stats(pstats.SortKey.CUMULATIVE)
         ps.print_stats()
 
