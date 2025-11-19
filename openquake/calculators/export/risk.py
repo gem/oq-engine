@@ -815,12 +815,12 @@ def export_job_zip(ekey, dstore):
     edir = tempfile.mkdtemp(dir=config.directory.custom_tmp or tempfile.gettempdir())
     fnames = export_exposure(dstore, edir)
     job_ini = os.path.join(edir, 'job.ini')
-    with open(job_ini, 'w') as out:
+    with open(job_ini, 'w', encoding='utf8') as out:
         out.write(oq.to_ini(exposure='exposure.xml'))
     fnames.append(job_ini)
     csv = extract(dstore, 'ruptures?slice=0&slice=1').array
     dest = os.path.join(edir, 'rupture.csv')
-    with open(dest, 'w') as out:
+    with open(dest, 'w', encoding='utf8') as out:
         out.write(csv)
     fnames.append(dest)
     gsim_lt = dstore['full_lt'].gsim_lt

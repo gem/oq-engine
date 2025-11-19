@@ -167,7 +167,8 @@ class Comparator(object):
                 else:
                     rows['all'].append([sid, ex.calc_id] + list(cols))
         if files:
-            fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w')
+            fdict = {ex.calc_id: open('%s.txt' % ex.calc_id, 'w',
+                                      encoding='utf8')
                      for ex in self.extractors}
             for calc_id, f in fdict.items():
                 f.write(views.text_table(rows[calc_id], header, ext='org'))
