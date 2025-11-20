@@ -19,7 +19,7 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import config
+from openquake.baselib import config, parallel
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
@@ -171,9 +171,11 @@ def main(
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
-        parallel = len(jobs) > 1 and (multi or hazard_calculation_id)
-        # run the jobs in parallel
-        concurrent_jobs = 4 if parallel else 1
+
+        # possibly run the jobs in parallel
+        dist = parallel.oq_distribute()
+        concurrent_jobs = 4 if len(jobs) > 1 and dist != 'no' and (
+            multi or hazard_calculation_id) else 1
         run_jobs(jobs, concurrent_jobs, nodes, sbatch=True,
                  precalc=not parallel)
 
