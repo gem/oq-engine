@@ -339,7 +339,7 @@ def log_completed(jobctxs, sec):
     logging.info(f'Generated {general.humansize(tot)} in {sec:_d} seconds')
 
 
-def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
+def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
     t0 = time.time()
     dist = parallel.oq_distribute()
     for job in jobctxs:
@@ -358,12 +358,8 @@ def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
                 pickle.dump(jobctxs, f)
             w.WorkerMaster(job_id).send_jobs()
             print('oq engine --show-log %d to see the progress' % job_id)
-        elif len(jobctxs) > 1:
-            if precalc:
-                run_calc(jobctxs[0])
-                args = [(ctx,) for ctx in jobctxs[1:]]
-            else:
-                args = [(ctx,) for ctx in jobctxs]
+        elif concurrent_jobs > 1:
+            args = [(ctx,) for ctx in jobctxs]
             parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:
@@ -393,7 +389,6 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
     if not concurrent_jobs:
         concurrent_jobs = (parallel.num_cores // 8 or 1) if (
             len(jobctxs) > 1) and dist != 'no' and not precalc else 1
-    logging.info('Using %d concurrent_jobs', concurrent_jobs)
     if dist == 'slurm':
         # check the total number of required cores
         tot_cores = parallel.num_cores * nodes
@@ -435,10 +430,10 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
             raise
     if concurrent_jobs > 1:
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
-            _run(jobctxs, job_id, nodes, sbatch, precalc,
+            _run(jobctxs, job_id, nodes, sbatch,
                  concurrent_jobs, notify_to)
     else:
-        _run(jobctxs, job_id, nodes, sbatch, precalc,
+        _run(jobctxs, job_id, nodes, sbatch,
              concurrent_jobs, notify_to)
     return jobctxs
 
