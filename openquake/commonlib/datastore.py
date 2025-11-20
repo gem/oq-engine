@@ -55,27 +55,26 @@ def extract_calc_id_datadir(filename):
     return calc_id, datadir
 
 
-def _read(calc_id: int, datadir, mode, haz_id=None):
+def _read(calc_id, datadir, mode, haz_id=None):
     # low level function to read a datastore file
-    ddir = datadir or get_datadir()
     ppath = None
-    # look in the db
-    job = dbcmd('get_job', calc_id)
-    if job:
-        jid = job.id
+    if isinstance(calc_id, int):
+        # look in the db
+        job = dbcmd('get_job', calc_id)
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
-            dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
+            dbcmd('update_job', calc_id, {'hazard_calculation_id': haz_id})
             hc_id = haz_id
-        if hc_id and hc_id != jid:
+        if hc_id and hc_id != calc_id:
             hc = dbcmd('get_job', hc_id)
             if hc:
                 ppath = hc.ds_calc_dir + '.hdf5'
             else:
+                ddir = datadir or get_datadir()
                 ppath = os.path.join(ddir, 'calc_%d.hdf5' % hc_id)
-    else:  # when using oq run there is no job in the db
-        path = os.path.join(ddir, 'calc_%s.hdf5' % calc_id)
+    else:  # when calc_id is an .hdf5 path
+        path = calc_id
     return DataStore(path, ppath, mode)
 
 
@@ -98,7 +97,8 @@ def read(calc_id, mode='r', datadir=None, parentdir=None, read_parent=True):
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
         hc_id = None
-    if read_parent and hc_id:
+    if read_parent and isinstance(hc_id, int) or (
+            isinstance(hc_id, str) and os.path.exists(hc_id)):
         dstore.parent = _read(hc_id, datadir, mode='r')
         dstore.ppath = dstore.parent.filename
     return dstore.open(mode)
@@ -182,12 +182,8 @@ class DataStore(collections.abc.MutableMapping):
     def __init__(self, path, ppath=None, mode=None):
         self.filename = path
         self.ppath = ppath
-        self.calc_id, datadir = extract_calc_id_datadir(path)
-        self.tempname = self.filename[:-5] + '_tmp.hdf5'
-        if not os.path.exists(datadir) and mode != 'r':
-            os.makedirs(datadir)
         self.parent = ()  # can be set later
-        self.datadir = datadir
+        self.tempname = self.filename[:-5] + '_tmp.hdf5'
         self.mode = mode or ('r+' if os.path.exists(self.filename) else 'w')
         if self.mode == 'r' and not os.path.exists(self.filename):
             raise IOError('File not found: %s' % self.filename)
@@ -195,6 +191,13 @@ class DataStore(collections.abc.MutableMapping):
         self.open(self.mode)
         if mode != 'r':  # w, a or r+
             performance.init_performance(self.hdf5)
+        if 'calc_' in path:
+            self.calc_id, datadir = extract_calc_id_datadir(path)
+            if not os.path.exists(datadir) and mode != 'r':
+                os.makedirs(datadir)
+            self.datadir = datadir
+        else:
+            self.calc_id, self.datadir = None, None
 
     def open(self, mode):
         """
@@ -206,7 +209,7 @@ class DataStore(collections.abc.MutableMapping):
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
             hc_id = read_hc_id(self.hdf5)
-            if hc_id:
+            if isinstance(hc_id, int):
                 self.parent = read(hc_id)
         return self
 

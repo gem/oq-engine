@@ -16,6 +16,7 @@ is the OpenQuake Engine 3.23.
    :maxdepth: 1
 
    whats-new
+   whats-new-3.24
    whats-new-3.23
    whats-new-3.22
    whats-new-3.21

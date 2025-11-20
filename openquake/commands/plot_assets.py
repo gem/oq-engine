@@ -22,7 +22,7 @@ import shapely
 import logging
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl
-from openquake.calculators.getters import get_ebrupture, get_ebruptures
+from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.postproc.plots import (
     add_borders, get_assetcol, get_country_iso_codes, add_rupture,
     adjust_limits, auto_limits)
@@ -64,10 +64,9 @@ def main(calc_id: int = -1, site_model=False,
             sm_lons %= 360
         p.scatter(sm_lons, sm_lats, marker='.', color='orange',
                   label='site model', s=markersize_site_model)
-    # p.scatter(sitecol.complete.lons, sitecol.complete.lats, marker='.',
-    #           color='gray', label='grid')
+
     p.scatter(assetcol['lon'], assetcol['lat'], marker='.', color='green',
-              label='assets', s=markersize_assets)
+              label='assets', s=markersize_assets, alpha=.5)
     if not assets_only:
         p.scatter(sitecol.lons, sitecol.lats, marker='+', color='black',
                   label='sites', s=markersize_sitecol)
@@ -129,7 +128,7 @@ def main(calc_id: int = -1, site_model=False,
         hypos = dstore['ruptures']['hypo']
         xlon, xlat = hypos[:, 0], hypos[:, 1]
         p.scatter(xlon, xlat, marker='*', color='orange',
-                  label='hypocenter', alpha=.5)
+                  label='hypocenter', alpha=.1)
     else:
         xlon, xlat = [], []
 

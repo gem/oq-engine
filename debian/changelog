@@ -1,7 +1,17 @@
   [Michele Simionato]
+  * Extended the global_ses script to accepts job.ini files
+  * Implemented `oq engine --run job1.ini .. jobN.ini --hc parent.hdf5`
+  * Extended `--hc` to accept paths to datastore files
+  * Using the filtered site collection, thus changing numbers in OQImpact
+  * Implemented rupture prefiltering for scenario and event based calculators
+
+  [Paolo Tormene]
+  * Added the possibility to assign tags to jobs and to set a job as the
+    "preferred" one for a tag
+
+  [Michele Simionato]
   * Internal: extended reduce_sm to reduce the source models to a single source
   * Implemented event_based_risk from ses.hdf5
-  * Optimized the rupture prefiltering when starting from a SES
   * Raised an early error if the vulnerability functions are not
     strictly increasing
   * Fixed a bug in classical_risk with nontrivial weights in the

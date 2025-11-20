@@ -338,6 +338,9 @@ class Monitor(object):
         """
         Save the measurements on the performance file
         """
+        if getattr(h5, 'mode', 'r') == 'r':
+            # in AristotleParam h5 is replaced with a dictionary
+            return
         data = self.get_data()
         if len(data):
             hdf5.extend(h5['performance_data'], data)

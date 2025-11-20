@@ -40,6 +40,9 @@
                 {% if user.is_superuser %}
                 <li class="admin"><a href="{% url 'admin:index' %}">Admin</a></li>
                 {% endif %}
+                {% if user.is_superuser or user.level >= 2 %}
+                <li class="admin"><a href="{% url 'tagadmin:db_jobtag_changelist' %}">Manage tags</a></li>
+                {% endif %}
               </ul>
             </nav>
           </div> <!-- ./span10 -->

@@ -22,6 +22,7 @@ from django.urls import re_path, include, path
 from django.views.generic.base import RedirectView
 
 from openquake.server import views
+from openquake.server.db.tag_admin import tag_admin_site
 
 urlpatterns = []
 if settings.WEBUI:
@@ -161,6 +162,7 @@ else:
                 ' from one of the available templates.')
         urlpatterns += [
             re_path(r'^admin/', admin.site.urls),
+            re_path(r'^tagadmin/', tag_admin_site.urls),
             re_path(r'accounts/login/$',
                     LoginView.as_view(
                         template_name='account/login.html',
