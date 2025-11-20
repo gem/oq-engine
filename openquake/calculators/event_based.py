@@ -347,6 +347,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     rups = dstore['ruptures'][:]
     logging.info(f'Read {len(rups):_d} ruptures')
     if len(sitecol) > oq.max_sites_disagg:
+        # can manage 2 million sites in 13 minutes for IND
         filrups = close_ruptures(rups, sitecol, assetcol)
         logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
     else:
