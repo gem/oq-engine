@@ -517,8 +517,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                   % oq.inputs['job_ini'])
             full_lt = self.datastore['full_lt']
             smap = event_based.starmap_from_rups(
-                ebrisk, oq, full_lt, self.sitecol, self.datastore,
-                self.save_tmp)
+                ebrisk, oq, full_lt, self.sitecol, self.assetcol,
+                self.datastore, self.save_tmp)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(

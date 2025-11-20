@@ -339,13 +339,13 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     """
     trts = {}
     rlzs_by_gsim = {}
-    rups = dstore['ruptures'][:]
-    logging.info(f'Read {len(rups):_d} ruptures')
     for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
         logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
             rlzs_by_gsim[model, trt_smr] = rbg
+    rups = dstore['ruptures'][:]
+    logging.info(f'Read {len(rups):_d} ruptures')
     if len(sitecol) > oq.max_sites_disagg:
         filrups = close_ruptures(rups, sitecol, assetcol)
         logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
@@ -385,7 +385,8 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
 
 
 # NB: save_tmp is passed in event_based_risk
-def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
+def starmap_from_rups(func, oq, full_lt, sitecol, assetcol,
+                      dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
@@ -434,10 +435,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         del proxy.geom  # to reduce data transfer
 
-    try:
-        assetcol = dstore['assetcol']
-    except KeyError:
-        assetcol = None
     allargs = get_allargs(
         oq, sitecol, assetcol, (station_data, station_sites), dstore)
     assert len(allargs) < TWO16, len(allargs)
@@ -828,7 +825,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # event_based in parallel
         smap = starmap_from_rups(
-            event_based, oq, self.full_lt, self.sitecol, dstore)
+            event_based, oq, self.full_lt, self.sitecol,
+            getattr(self, 'assetcol', None), dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc
