@@ -315,7 +315,21 @@ def get_model_lts(h5):
             out.append((model, h5[f'full_lt/{model}']))
     return out
 
-    
+
+def get_args(dstore):
+    """
+    Get the arguments (rups, cmaker, sids, stations, hdf5path);
+    useful for debugging
+    """
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    try:
+        assetcol = dstore['assetcol']
+    except KeyError:
+        assetcol = None
+    return get_allargs(oq, sitecol, assetcol, (None, None), dstore)
+
+
 def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     """
     :returns: list of starmap arguments
