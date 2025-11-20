@@ -127,7 +127,9 @@ AELO_FORM_PLACEHOLDERS = {
 
 HIDDEN_OUTPUTS = ['exposure', 'job']
 EXTRACTABLE_RESOURCES = ['aggrisk_tags', 'mmi_tags', 'losses_by_site',
-                         'losses_by_asset', 'losses_by_location']
+                         'losses_by_asset', 'losses_by_location', 'oqparam',
+                         'composite_risk_model', 'realizations', 'events',
+                         'asset_tags', 'agg_losses']
 # NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
 #       datastore, and the can_view_exposure permission gives access both to the
 #       'exposure' output and to the 'assetcol' item in the datastore
@@ -2170,7 +2172,10 @@ def can_extract(request, resource):
     except AttributeError:
         # without authentication
         return True
-    if (resource in EXTRACTABLE_RESOURCES
+    if (any(resource == allowed
+            or resource.startswith(allowed + "/")
+            or resource.startswith(allowed + ".")
+            for allowed in EXTRACTABLE_RESOURCES)
             or user.level >= 2
             or user.has_perm(f'auth.can_view_{resource}')):
         return True
