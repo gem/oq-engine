@@ -316,16 +316,15 @@ def get_model_lts(h5):
     return out
 
     
-def get_rups_args(oq, sitecol, assetcol, station_data_sites,
-                  dstore, model_lts=()):
+def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     """
-    :returns: (prefiltered ruptures, starmap arguments)
+    :returns: list of starmap arguments
     """
     trts = {}
     rlzs_by_gsim = {}
     rups = dstore['ruptures'][:]
     logging.info(f'Read {len(rups):_d} ruptures')
-    for model, full_lt in model_lts or get_model_lts(dstore):
+    for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
         logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
@@ -365,7 +364,7 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
-    return filrups, allargs
+    return allargs
 
 
 # NB: save_tmp is passed in event_based_risk
@@ -418,7 +417,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         del proxy.geom  # to reduce data transfer
 
-    rups, allargs = get_rups_args(
+    allargs = get_allargs(
         oq, sitecol, None, (station_data, station_sites), dstore)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
