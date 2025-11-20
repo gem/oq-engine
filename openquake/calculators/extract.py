@@ -926,7 +926,7 @@ def extract_aggrisk_tags(dstore, what):
         if aggby == ['ID_2']:
             total['NAME_2'] = '*total*'
 
-        # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1 values
+        # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1
         out.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
         total.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
 
@@ -1597,13 +1597,12 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     full_lt = dstore['full_lt']
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_dic()
-    try:
-        tss = dstore['trt_smr_start_stop']
-    except KeyError:
+    allproxies = calc.get_proxies(dstore.filename, slice(None), min_mag)
+    if not allproxies:
         # when starting from GMFs there are no ruptures
         raise getters.NotFound
-    for trt_smr, start, stop in tss:
-        proxies = calc.get_proxies(dstore.filename, slice(start, stop), min_mag)
+    for trt_smr, proxies in general.groupby(
+            allproxies, lambda p: p.rec['trt_smr']).items():
         trt = full_lt.trts[trt_smr // TWO24]
         if 'source_mags' not in dstore:  # ruptures import from CSV
             mags = numpy.unique(dstore['ruptures']['mag'])

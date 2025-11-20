@@ -73,7 +73,7 @@ from openquake.engine import engine
 MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
-'''.split())
+OAT'''.split())
 
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
@@ -124,8 +124,11 @@ def main(what, out, *,
     if what.endswith('.ini'):
         inis = what.split(',')
     else:
-        inis = [os.path.join(what, model, 'in', 'job_vs30.ini')
-                for model in MODELS]
+        inis = []
+        for model in MODELS:
+            ini = os.path.join(what, model, 'in', 'job_vs30.ini')
+            if os.path.exists(ini):
+                inis.append(ini)
     INPUTS = dict(
         calculation_mode='event_based',
         number_of_logic_tree_samples= str(number_of_logic_tree_samples),

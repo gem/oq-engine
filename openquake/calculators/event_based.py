@@ -60,8 +60,10 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
+MAX_PROXIES = 1000
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
@@ -203,6 +205,7 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
 
 def _event_based(proxies, cmaker, stations, srcfilter, shr,
                  fmon, cmon, umon, mmon):
+    # consider at max MAX_PROXIES
     oq = cmaker.oq
     alldata = []
     sig_eps = []
@@ -268,7 +271,7 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
         proxies = get_proxies(hdf5path, rups)
-    for block in block_splitter(proxies, 20_000, rup_weight):
+    for block in block_splitter(proxies, MAX_PROXIES, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 
@@ -315,17 +318,30 @@ def get_model_lts(h5):
             out.append((model, h5[f'full_lt/{model}']))
     return out
 
-    
-def get_rups_args(oq, sitecol, assetcol, station_data_sites,
-                  dstore, model_lts=()):
+
+def get_args(dstore):
     """
-    :returns: (prefiltered ruptures, starmap arguments)
+    Get the arguments (rups, cmaker, sids, stations, hdf5path);
+    useful for debugging
+    """
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    try:
+        assetcol = dstore['assetcol']
+    except KeyError:
+        assetcol = None
+    return get_allargs(oq, sitecol, assetcol, (None, None), dstore)
+
+
+def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
+    """
+    :returns: list of starmap arguments
     """
     trts = {}
     rlzs_by_gsim = {}
     rups = dstore['ruptures'][:]
     logging.info(f'Read {len(rups):_d} ruptures')
-    for model, full_lt in model_lts or get_model_lts(dstore):
+    for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
         logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
@@ -365,7 +381,7 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
-    return filrups, allargs
+    return allargs
 
 
 # NB: save_tmp is passed in event_based_risk
@@ -418,8 +434,13 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         del proxy.geom  # to reduce data transfer
 
-    rups, allargs = get_rups_args(
-        oq, sitecol, None, (station_data, station_sites), dstore)
+    try:
+        assetcol = dstore['assetcol']
+    except KeyError:
+        assetcol = None
+    allargs = get_allargs(
+        oq, sitecol, assetcol, (station_data, station_sites), dstore)
+    assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:

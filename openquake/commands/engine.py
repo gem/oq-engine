@@ -174,7 +174,8 @@ def main(
 
         # possibly run the jobs in parallel
         dist = parallel.oq_distribute()
-        concurrent_jobs = 4 if len(jobs) > 1 and dist != 'no' and (
+        concurrent_jobs = (parallel.num_cores // 8 or 1) if (
+            len(jobs) > 1) and dist != 'no' and (
             multi or hazard_calculation_id) else 1
         run_jobs(jobs, concurrent_jobs, nodes, sbatch=True,
                  precalc=not parallel)

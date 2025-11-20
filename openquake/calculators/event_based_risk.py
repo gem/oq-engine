@@ -325,13 +325,15 @@ def _expand3(arrayN3, maxsize):
     return U32(out)
 
 
-def ebrisk(rups, cmaker, sids, stations, dstore, monitor):
+def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
     """
     :param rups: list of ruptures with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
+    :param sids: array of site indices
     :param stations: empty pair or (station_data, station_sitecol)
+    :param hdf5path: path to the ses.hdf5 file
     :param monitor: a Monitor instance
-    :returns: a dictionary of arrays
+    :yields: dictionaries with keys 'avg' and 'alt'
     """
     oq = cmaker.oq
     oq.ground_motion_fields = True
@@ -344,19 +346,18 @@ def ebrisk(rups, cmaker, sids, stations, dstore, monitor):
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
     assdic = read_assdic(slice(None), monitor)
-    for block in general.block_splitter(rups, 20_000, event_based.rup_weight):
-        for dic in event_based.event_based(
-                block, cmaker, sids, stations, dstore, monitor):
-            if len(dic['gmfdata']):
-                gmf_df = pandas.DataFrame(dic['gmfdata'])
-                loss3 = {'aids': [], 'bids': [], 'loss': []}
-                loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
-                dic = _event_based_risk(
-                    gmf_df, assdic, loss2, loss3, crmodel, monitor)
-                if loss2:  # has been populated
-                    dic['avg'] = build_avg(loss3, oq.A, R*X)
-                    dic['alt'] = build_alt(loss2, xtypes)
-                    yield dic
+    for dic in event_based.event_based(
+            rups, cmaker, sids, stations, hdf5path, monitor):
+        if len(dic['gmfdata']):
+            gmf_df = pandas.DataFrame(dic['gmfdata'])
+            loss3 = {'aids': [], 'bids': [], 'loss': []}
+            loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
+            dic = _event_based_risk(
+                gmf_df, assdic, loss2, loss3, crmodel, monitor)
+            if loss2:  # has been populated
+                dic['avg'] = build_avg(loss3, oq.A, R*X)
+                dic['alt'] = build_alt(loss2, xtypes)
+                yield dic
 
 
 @performance.compile("(f4[:,:,:], i4[:], i4[:], f4[:], i8)")
