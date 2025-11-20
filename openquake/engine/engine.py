@@ -390,8 +390,9 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
         How many jobs to run concurrently (default None)
     """
     dist = parallel.oq_distribute()
-    concurrent_jobs = (parallel.num_cores // 8 or 1) if (
-        len(jobctxs) > 1) and dist != 'no' and precalc else 1
+    if not concurrent_jobs:
+        concurrent_jobs = (parallel.num_cores // 8 or 1) if (
+            len(jobctxs) > 1) and dist != 'no' and not precalc else 1
     if dist == 'slurm':
         # check the total number of required cores
         tot_cores = parallel.num_cores * nodes
