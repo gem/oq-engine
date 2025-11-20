@@ -354,10 +354,13 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
         # don't filter if there are few sites (i.e. in tests)
         filrups = rups
     assert len(filrups), 'There are no ruptures close to the sites'
-    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
+    logging.info('Affected assets (or sites) ~%.0f per rupture, max=%.0f',
                  filrups['nsites'].mean(), filrups['nsites'].max())
-    rups_dic = group_array(filrups, 'model', 'trt_smr')
-    totw = rup_weight(filrups).sum()
+    pairs = numpy.unique(filrups[['model', 'trt_smr']])
+    totw = 0
+    for model, trt_smr in pairs:
+        ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
+        totw += rup_weight(filrups[ok]).sum()
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
 
@@ -365,7 +368,9 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     # NB: must be done before instantiating the ContextMaker
     allargs = []
     oq.mags_by_trt = AccumDict(accum=set())
-    for (model, trt_smr), rups in rups_dic.items():
+    for model, trt_smr in pairs:
+        rups = filrups[(filrups['model'] == model) &
+                       (filrups['trt_smr'] == trt_smr)]
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
         mags = [magstr(mag) for mag in numpy.unique(
