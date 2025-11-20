@@ -379,7 +379,7 @@ def _run(jobctxs, job_id, nodes, sbatch, precalc, concurrent_jobs, notify_to):
             stop_workers(job_id)
 
 
-def run_jobs(jobctxs, concurrent_jobs=1, nodes=1, sbatch=False,
+def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
              precalc=False, notify_to=None):
     """
     Run jobs using the specified config file and other options.
@@ -387,9 +387,11 @@ def run_jobs(jobctxs, concurrent_jobs=1, nodes=1, sbatch=False,
     :param jobctxs:
         List of LogContexts
     :param concurrent_jobs:
-        How many jobs to run concurrently (default 1)
+        How many jobs to run concurrently (default None)
     """
     dist = parallel.oq_distribute()
+    concurrent_jobs = (parallel.num_cores // 8 or 1) if (
+        len(jobctxs) > 1) and dist != 'no' and precalc else 1
     if dist == 'slurm':
         # check the total number of required cores
         tot_cores = parallel.num_cores * nodes

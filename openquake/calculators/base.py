@@ -40,7 +40,7 @@ import collections
 from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
-from openquake.baselib.performance import Monitor, idx_start_stop
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
     InvalidFile, geo, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree

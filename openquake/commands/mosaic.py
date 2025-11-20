@@ -118,8 +118,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    cj = min(parallel.num_cores, len(allparams)) // 4 or 1
-    engine.run_jobs(logctxs, concurrent_jobs=cj)
+    engine.run_jobs(logctxs)
     out = []
     count_errors = 0
     asce = {}
