@@ -1704,7 +1704,7 @@ class RiskComputer(dict):
                         # tested in case_lisa with a composite array 'loss', 'poe'
                         out[lt] = outs[0]
                         poes = numpy.sum([out['poe'] * wei for out, wei in zip(
-                            outs, weights[peril, lt])])
+                            outs, weights[peril, lt])], axis=0)
                         out[lt]['poe'] = poes
                     else:
                         # for oq-risk-tests test_ebd
