@@ -417,8 +417,12 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         del proxy.geom  # to reduce data transfer
 
+    try:
+        assetcol = dstore['assetcol']
+    except KeyError:
+        assetcol = None
     allargs = get_allargs(
-        oq, sitecol, None, (station_data, station_sites), dstore)
+        oq, sitecol, assetcol, (station_data, station_sites), dstore)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
