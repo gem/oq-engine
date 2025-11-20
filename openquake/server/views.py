@@ -1425,7 +1425,8 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
         kwargs = {}
         if notify_to is not None:
             kwargs['notify_to'] = notify_to
-        proc = mp.Process(target=engine.run_jobs, args=([job],), kwargs=kwargs)
+        proc = mp.Process(target=engine.run_jobs, args=([job], 1),
+                          kwargs=kwargs)
         proc.start()
         if config.webapi.calc_timeout:
             mp.Process(

@@ -19,7 +19,7 @@ import os
 import sys
 import getpass
 import logging
-from openquake.baselib import config, parallel
+from openquake.baselib import config
 from openquake.baselib.general import safeprint
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
@@ -83,7 +83,6 @@ def main(
         list_hazard_calculations=False,
         list_risk_calculations=False,
         delete_uncompleted_calculations=False,
-        multi=False,
         *,
         log_file=None,
         make_html_report=None,
@@ -173,12 +172,8 @@ def main(
             job.params['exports'] = exports
 
         # possibly run the jobs in parallel
-        dist = parallel.oq_distribute()
-        concurrent_jobs = (parallel.num_cores // 8 or 1) if (
-            len(jobs) > 1) and dist != 'no' and (
-            multi or hazard_calculation_id) else 1
-        run_jobs(jobs, concurrent_jobs, nodes, sbatch=True,
-                 precalc=not parallel)
+        run_jobs(jobs, nodes=nodes, sbatch=True,
+                 precalc=not hazard_calculation_id)
 
     # hazard
     elif list_hazard_calculations:
@@ -244,7 +239,6 @@ main.list_risk_calculations = dict(
     abbrev='--lrc', help='List risk calculation information')
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
-main.multi = 'Run multiple job.inis in parallel'
 
 # options
 main.log_file = dict(
