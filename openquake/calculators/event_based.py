@@ -60,6 +60,7 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
@@ -437,6 +438,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         assetcol = None
     allargs = get_allargs(
         oq, sitecol, assetcol, (station_data, station_sites), dstore)
+    assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
