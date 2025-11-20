@@ -269,7 +269,7 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
         proxies = get_proxies(hdf5path, rups)
-    for block in block_splitter(proxies, 20_000, rup_weight):
+    for block in block_splitter(proxies, 1000, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 
