@@ -363,7 +363,8 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
             if sids:
                 rup = rups[r]
                 if assetcol:
-                    rup['nsites'] = sum(num_assets[sid] for sid in sids)
+                    # NB: if there are stations num_assets[sid] can be empty
+                    rup['nsites'] = sum(num_assets.get(sid, 1) for sid in sids)
                 else:
                     rup['nsites'] = len(sids)
                 out.append(rup)
