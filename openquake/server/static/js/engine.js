@@ -806,7 +806,7 @@ constrained at this Vs30. In accordance with an ASCE 7-22
 supplement currently being proposed, it is recommended that the
 ground-motion spectra from this very low Vs30 be floored by those
 for Site Class D. In lieu of this conservative flooring, a
-site-specific hazard and/or site response could be warranted.`;
+site-specific hazard and site response could be warranted.`;
             function check_vs30_below_200() {
                 let value = parseFloat($("input#vs30").val());
                 if (value >= 200 || isNaN(value)) {

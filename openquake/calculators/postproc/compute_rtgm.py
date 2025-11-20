@@ -100,11 +100,13 @@ AELO_WARNINGS = {
         ' (e.g., Ss=0.11g and S1=0.04g).'
         ' For further information, please refer to the user manual.'),
     'vs30_below_200': (
-        'The Vs30 is less than 200 m/s. Some ground motion models are poorly'
+        'The results displayed below refer to site class %s and have not been'
+        ' floored as recommended by the ASCE7-22 supplement. The Vs30 is less'
+        ' than 200 m/s. Some ground motion models are poorly'
         ' constrained at this Vs30. In accordance with an ASCE 7-22 supplement'
         ' currently being proposed, it is recommended that the ground-motion'
         ' spectra from this very low Vs30 be floored by those for Site Class D.'
-        ' In lieu of this conservative flooring, a site-specific hazard and/or'
+        ' In lieu of this conservative flooring, a site-specific hazard and'
         ' site response could be warranted.'),
 }
 
@@ -1037,7 +1039,11 @@ def main(dstore, csm):
             # notifications for the same site
             notification_name = 'vs30_below_200'
             level = 'warning'
-            description = AELO_WARNINGS[notification_name]
+            if oq.site_class != 'custom':
+                site_class = oq.site_class
+            else:
+                site_class = f'Vs30 = {site.vs30} m/s'
+            description = AELO_WARNINGS[notification_name] % site_class
             logging.warning('(%.1f,%.1f) ' + description, loc.x, loc.y)
             notification_items.append(
                 (sid, level, notification_name, description))
