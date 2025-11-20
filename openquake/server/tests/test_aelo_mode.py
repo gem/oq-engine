@@ -137,7 +137,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                 self.assertIn(
                     f"Site name: {params['siteid']}\n"
                     f"Latitude: {params['lat']}, Longitude: {params['lon']}\n"
-                    f"Site Class: Vs30 = {params['vs30']}m/s\n"
+                    f"Site Class: Vs30 = {params['vs30']} m/s\n"
                     f"ASCE standard: {ASCE_VERSIONS[asce_version]}\n"
                     f"AELO version: {get_aelo_version()}\n\n", email_content)
                 if failure_reason:

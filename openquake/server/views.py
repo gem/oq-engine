@@ -238,7 +238,7 @@ def get_site_class_display_name(ds):
     if site_class is not None:
         if site_class == 'custom':
             vs30 = vs30_in[0]
-            site_class_display_name = f'Vs30 = {vs30}m/s'
+            site_class_display_name = f'Vs30 = {vs30} m/s'
         else:
             site_class_display_name = oqvalidation.SITE_CLASSES[
                 asce_version][site_class]['display_name']
@@ -252,7 +252,7 @@ def get_site_class_display_name(ds):
         else:  # in old calculations, vs30_in was a float
             site_class = infer_site_class(asce_version, vs30_in)
         if site_class == 'custom':
-            site_class_display_name = f'Vs30 = {vs30_in}m/s'
+            site_class_display_name = f'Vs30 = {vs30_in} m/s'
         else:
             site_class_display_name = oqvalidation.SITE_CLASSES[
                 asce_version][site_class]['display_name']
@@ -896,9 +896,10 @@ def aelo_callback(
     site_class = inputs['site_class']
     vs30s = inputs['vs30'].split()
     vs30 = vs30s[0] if site_class != 'default' else 'default'
-    asce_version = oqvalidation.ASCE_VERSIONS[inputs['asce_version']]
+    asce_version = inputs['asce_version']
+    asce_version_str = oqvalidation.ASCE_VERSIONS[asce_version]
     if site_class is None or site_class == 'custom':
-        site_class_vs30_str = f'Site Class: Vs30 = {vs30}m/s'
+        site_class_vs30_str = f'Site Class: Vs30 = {vs30} m/s'
     else:
         site_class_display_name = oqvalidation.SITE_CLASSES[
             asce_version][site_class]['display_name']
@@ -907,7 +908,7 @@ def aelo_callback(
     body = (f"Site name: {siteid}\n"
             f"Latitude: {lat}, Longitude: {lon}\n"
             f"{site_class_vs30_str}\n"
-            f"ASCE standard: {asce_version}\n"
+            f"ASCE standard: {asce_version_str}\n"
             f"AELO version: {aelo_version}\n\n")
     if warnings is not None:
         for warning in warnings:
