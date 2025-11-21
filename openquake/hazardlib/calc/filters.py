@@ -347,7 +347,7 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
         num_assets = dict(zip(sids, counts))
     if len(sitecol) > 1000:
         sites, orig_sids = sitecol.lower_res(5)
-        logging.info('Reducing %s->%s', sitecol, sites)
+        logging.info('Reducing %s->%d sites', sitecol, len(sites))
     else:
         sites, orig_sids = sitecol, [[sid] for sid in sitecol.sids]
     mags = numpy.round(ruptures['mag'], 1)
