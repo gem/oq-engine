@@ -439,7 +439,7 @@ class ScenarioTestCase(CalculatorTestCase):
         finally:
             os.rename(fname + '.bak', fname)
 
-    def test_case_34(self):
+    def test_case_36(self):
         # Conditional gmm
         self.run_calc(case_36.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
