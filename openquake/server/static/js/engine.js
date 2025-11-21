@@ -180,7 +180,7 @@ function capitalizeFirstLetter(val) {
               e.preventDefault();
               const calc_id = $(e.target).attr('data-calc-id');
               const calc_desc = $(e.target).attr('data-calc-desc');
-              showModal({
+              showConfirmationModal({
                 calc_id,
                 title: capitalizeFirstLetter(action) + ' calculation',
                 body: `Are you sure you want to ${action} calculation ${calc_id}?<br><em>"${calc_desc}"</em>`,
@@ -434,7 +434,7 @@ function capitalizeFirstLetter(val) {
         refresh_calcs = clearInterval(refresh_calcs);
     }
 
-    function showModal(title, message) {
+    function showNotificationModal(title, message) {
         $("#genericModalTitle").text(title);
         $("#genericModalBody").html(message);   // can accept HTML
         $("#genericModal").modal("show");
@@ -812,7 +812,7 @@ site-specific hazard and site response could be warranted.`;
                 if (value >= 200 || isNaN(value)) {
                     return;
                 }
-                showModal("WARNING", vs30_below_200_warning);
+                showNotificationModal("WARNING", vs30_below_200_warning);
             }
 
             let typingTimer = null;
@@ -1308,7 +1308,7 @@ site-specific hazard and site response could be warranted.`;
 })($, Backbone, _, gem_oq_server_url);
 
 
-function showModal({ id, title, body, confirmText = 'Yes', cancelText = 'No', confirmAction }) {
+function showConfirmationModal({ id, title, body, confirmText = 'Yes', cancelText = 'No', confirmAction }) {
   const modal = document.querySelector('#confirmModal');
   modal.querySelector('.modal-title').innerHTML = title;
   modal.querySelector('.modal-body-pre').innerHTML = body;
