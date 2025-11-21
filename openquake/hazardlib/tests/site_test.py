@@ -250,9 +250,10 @@ class SiteCollectionFilterTestCase(unittest.TestCase):
         self.assertEqual(len(col.reduce(3)), 4)
 
     def test_lower_res(self):
-        # collapsing together two point on the same hexagon
-        small = self.SITES.lower_res()
+        # collapsing together two points on the same hexagon
+        small, orig_sites = self.SITES.lower_res(2)
         self.assertEqual(len(small), 3)
+        numpy.testing.assert_equal(orig_sites, [[0], [1], [2, 3]])
 
 
 class WithinBBoxTestCase(unittest.TestCase):

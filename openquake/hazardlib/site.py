@@ -33,7 +33,8 @@ from openquake.hazardlib.geo.utils import (
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
-U32LIMIT = 2 ** 32
+TWO32 = 2 ** 32
+U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 ampcode_dt = (numpy.bytes_, 4)
@@ -386,7 +387,7 @@ class SiteCollection(object):
         :param req_site_params:
             a sequence of required site parameters, possibly empty
         """
-        assert len(lons) < U32LIMIT, len(lons)
+        assert len(lons) < TWO32, len(lons)
         if depths is None:
             depths = numpy.zeros(len(lons))
         assert len(lons) == len(lats) == len(depths), (len(lons), len(lats),
@@ -894,11 +895,17 @@ class SiteCollection(object):
         """
         Collapse together points within the same hexagon (with an
         edge of 84 km for res=2, the default).
+
+        :returns: (reduce sitecol, list of arrays orig_sids)
         """
-        hexes = {geo_to_h3(lat, lon, res)
-                 for lon, lat in zip(self.lons, self.lats)}
-        latlons = F32([h3_to_geo(h) for h in hexes])  # shape (N, 2)
-        return self.from_points(latlons[:, 1], latlons[:, 0])
+        sids_by_hex = general.AccumDict(accum=[])
+        for sid, lon, lat in zip(self.sids, self.lons, self.lats):
+            h = geo_to_h3(lat, lon, res)
+            sids_by_hex[h].append(sid)
+        # build an array of shape (N, 2)
+        latlons = F32([h3_to_geo(h) for h in sids_by_hex])
+        orig_sids = [U32(sids) for sids in sids_by_hex.values()]
+        return self.from_points(latlons[:, 1], latlons[:, 0]), orig_sids
 
     def geohash(self, length):
         """

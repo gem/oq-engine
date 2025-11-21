@@ -333,6 +333,8 @@ def split_source(src):
 
 # NB: this is fast because of KDTree and the magdist
 # NB: the magdist here is hard-coded and independent from oq
+# NB: sitecol.lower_res(5) is needed to save memory: for India
+# with 1.3M sites the filtering was taking 83 GB, now only 6 GB
 def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
         [(3, 0.), (4, 40.), (5., 100.), (6., 200.), (7., 300.),
          (8., 400.), (9., 700.), (11., 1200.)])):
@@ -345,10 +347,11 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
     if assetcol:
         sids, counts = numpy.unique(assetcol.array['site_id'], return_counts=1)
         num_assets = dict(zip(sids, counts))
-    sites = sitecol  #.lower_res()
+    sites, orig_sids = sitecol.lower_res(5)  # H3 edge of 10 km
+    if len(sites) < len(sitecol):
+        logging.info('Reducing %s->%d sites', sitecol, len(sites))
     mags = numpy.round(ruptures['mag'], 1)
     hypos = ruptures['hypo']
-    kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
     ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
     out = []
     for mag in F32(numpy.arange(3, 11, .1)):
@@ -356,6 +359,9 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
         if ok.sum() == 0:  # no ruptures in this magnitude range
             continue
         rups = ruptures[ok]
+        if len(ruptures) > 100_000:
+            logging.info('Considering %d ruptures of magnitude %s',
+                         ok.sum(), mag)
         kr = KDTree(spherical_to_cartesian(
             hypos[ok, 0], hypos[ok, 1], hypos[ok, 2]))
         all_sids = kr.query_ball_tree(ks, magdist(mag), eps=.1)
@@ -364,7 +370,9 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
                 rup = rups[r]
                 if assetcol:
                     # NB: if there are stations num_assets[sid] can be empty
-                    rup['nsites'] = sum(num_assets.get(sid, 1) for sid in sids)
+                    rup['nsites'] = sum(num_assets.get(s, 1)
+                                        for sid in sids
+                                        for s in orig_sids[sid])
                 else:
                     rup['nsites'] = len(sids)
                 out.append(rup)
