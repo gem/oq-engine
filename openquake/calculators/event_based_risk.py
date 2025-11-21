@@ -454,8 +454,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info('Transfering %s * %d per task in avg_losses',
                          general.humansize(A * 8 * R), ELT)
             if A * ELT * 8 > int(config.memory.avg_losses_max):
-                raise ValueError('For large exposures you must set '
-                                 'avg_losses=false')
+                logging.warning('For large exposures consider setting '
+                                'avg_losses=false')
             elif A * ELT * self.R * 8 > int(config.memory.avg_losses_max):
                 raise ValueError('For large exposures you must set '
                                  'collect_rlzs = true')
