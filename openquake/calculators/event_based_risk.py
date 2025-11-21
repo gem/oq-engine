@@ -196,7 +196,11 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
         dic = _event_based_risk(gmfdf, assdic, loss2, loss3, crmodel, monitor)
         dic['alt'] = build_alt(loss2, xtypes)
         yield dic
-    yield dict(avg=build_avg(loss3, oqparam.A, R*X))
+    avg_size = 0
+    for arrays in loss3.values():
+        for array in arrays:
+            avg_size += array.nbytes
+    yield dict(avg=build_avg(loss3, oqparam.A, R*X), avg_size=avg_size)
 
 
 def read_assdic(slc, monitor):
@@ -562,6 +566,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                     dset = self.datastore['risk_by_event/' + name]
                     hdf5.extend(dset, alt[name].to_numpy())
         if self.oqparam.avg_losses and 'avg' in dic:
+            logging.info('avg_size = %s', general.humansize(dic['avg_size']))
             # avg_losses are stored as coo matrices
             with self.monitor('saving avg_losses'):
                 coo = dic.pop('avg')
