@@ -351,7 +351,9 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     nsites = 0
     affected = 0
     acc = {}
-    for model, trt_smr in numpy.unique(allrups[['model', 'trt_smr']]):
+    pairs = numpy.unique(allrups[['model', 'trt_smr']])
+    logging.info('Filtering %d blocks of ruptures', len(pairs))
+    for model, trt_smr in pairs:
         ok = (allrups['model'] == model) & (allrups['trt_smr'] == trt_smr)
         if len(sitecol) > oq.max_sites_disagg:
             # can manage 2 million sites in 13 minutes for IND
