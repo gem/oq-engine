@@ -367,7 +367,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
             acc[model, trt_smr] = rups
             totw += rup_weight(rups).sum()
             nsites += rups['nsites'].sum()
-            affected = max(affected, rups['nsites'].sum())
+            affected = max(affected, rups['nsites'].max())
     assert totw, 'All ruptures have been filtered out'
     logging.info('Affected assets/sites ~%.0f per rupture, max=%.0f',
                  nsites / len(filrups), affected)
