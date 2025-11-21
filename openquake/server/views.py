@@ -127,8 +127,9 @@ AELO_FORM_PLACEHOLDERS = {
 
 HIDDEN_OUTPUTS = ['exposure', 'job']
 EXTRACTABLE_RESOURCES = [
-    'agg_losses',
+    'agg_curves',
     'agg_damages',
+    'agg_losses',
     'aggrisk_tags',
     'asset_tags',
     'composite_risk_model',
@@ -147,6 +148,7 @@ EXTRACTABLE_RESOURCES = [
     'oqparam',
     'realizations',
     'rupture_info',
+    'sitecol',
     'uhs',
 ]
 # NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
