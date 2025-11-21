@@ -898,7 +898,6 @@ class SiteCollection(object):
 
         :returns: (reduce sitecol, list of arrays orig_sids)
         """
-        assert len(self) > 1000, self
         sids_by_hex = general.AccumDict(accum=[])
         for sid, lon, lat in zip(self.sids, self.lons, self.lats):
             h = geo_to_h3(lat, lon, res)
