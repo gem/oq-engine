@@ -37,6 +37,7 @@ The code name for version 3.23 is **Bellamy**, in memory of the English seismolo
 
 The latest stable version is **OpenQuake Engine 3.24**. [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.24.html) [(branch)](https://github.com/gem/oq-engine/tree/engine-3.24)
 
+
 <!-- GEM END -->
 
 ## Documentation
