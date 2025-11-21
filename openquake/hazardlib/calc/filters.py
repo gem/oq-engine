@@ -349,6 +349,7 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
         sites, orig_sids = sitecol.lower_res()
     else:
         sites, orig_sids = sitecol, [[sid] for sid in sitecol.sids]
+        logging.info('Reducing %s->%s', sitecol, sites)
     mags = numpy.round(ruptures['mag'], 1)
     hypos = ruptures['hypo']
     kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
@@ -359,6 +360,9 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
         if ok.sum() == 0:  # no ruptures in this magnitude range
             continue
         rups = ruptures[ok]
+        if len(ruptures) > 100_000:
+            logging.info('Considering %d ruptures of magnitude %s',
+                         ok.sum(), mag)
         kr = KDTree(spherical_to_cartesian(
             hypos[ok, 0], hypos[ok, 1], hypos[ok, 2]))
         all_sids = kr.query_ball_tree(ks, magdist(mag), eps=.1)
