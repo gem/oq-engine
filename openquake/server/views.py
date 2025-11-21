@@ -126,10 +126,29 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 HIDDEN_OUTPUTS = ['exposure', 'job']
-EXTRACTABLE_RESOURCES = ['aggrisk_tags', 'mmi_tags', 'losses_by_site',
-                         'losses_by_asset', 'losses_by_location', 'oqparam',
-                         'composite_risk_model', 'realizations', 'events',
-                         'asset_tags', 'agg_losses']
+EXTRACTABLE_RESOURCES = [
+    'agg_losses',
+    'agg_damages',
+    'aggrisk_tags',
+    'asset_tags',
+    'composite_risk_model',
+    'damages-rlzs',
+    'damages-stats',
+    'disagg_layer',
+    'events',
+    'exposure_metadata',
+    'gmf_data',
+    'hcurves',
+    'hmaps',
+    'losses_by_asset',
+    'losses_by_location',
+    'losses_by_site',
+    'mmi_tags',
+    'oqparam',
+    'realizations',
+    'rupture_info',
+    'uhs',
+]
 # NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
 #       datastore, and the can_view_exposure permission gives access both to the
 #       'exposure' output and to the 'assetcol' item in the datastore
