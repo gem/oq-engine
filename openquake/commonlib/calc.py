@@ -423,18 +423,6 @@ def split(sbe, max_gmvs_chunk):
         yield numpy.array(recs, sbe[0].dtype)
 
 
-def count_outputs(eids, sbe, maxw, weight,
-                  size=int(config.memory.max_gmvs_chunk)):
-    """
-    Count the alt and avg outputs for each task
-    """
-    tot = 0
-    for blk in general.block_splitter(sbe, maxw, weight):
-        alts = list(split(blk, size))
-        tot += len(alts) + 1  # 1 avg output, multiple alt outputs
-    return tot
-
-
 def get_slices(sbe, data, num_assets):
     """
     :returns: a list of triple (start, stop, weight)
@@ -493,15 +481,10 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     maxw = slices['weight'].sum() // ct or 1.
     logging.info('maxw = {:_d}'.format(int(maxw)))
     w = operator.itemgetter('weight')
-    if oq.calculation_mode == 'event_based_risk':
-        expected_outputs = count_outputs(data['eid'], slices, maxw, w)
-        logging.info('Expected outputs = %d', expected_outputs)
     dstore.swmr_on()
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
         maxweight=maxw, weight=w, h5=dstore.hdf5)
-    if oq.calculation_mode == 'event_based_risk':
-        smap.expected_outputs = expected_outputs
     return smap
 
 

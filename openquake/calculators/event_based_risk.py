@@ -174,29 +174,27 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
         xtypes.append('claim')
     assdic = read_assdic(slice(None), monitor)
     loss3 = {'aids': [], 'bids': [], 'loss': []}
-    for sbe in split(slice_by_event, int(config.memory.max_gmvs_chunk)):
-        loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
-        s0, s1 = sbe[0]['start'], sbe[-1]['stop']
-        with dstore:
-            haz_sids = dstore['gmf_data/sid'][s0:s1]
-        idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
-        if len(idx) == 0:
-            yield {}
-            continue
-        with dstore, monitor('reading GMFs', measuremem=True):
-            start, stop = idx.min(), idx.max() + 1
-            gmfdic = {}
-            for col in gmfcols:
-                if col == 'sid':
-                    gmfdic[col] = haz_sids[idx]
-                else:
-                    dset = dstore['gmf_data/' + col]
-                    gmfdic[col] = dset[s0+start:s0+stop][idx - start]
-        gmfdf = pandas.DataFrame(gmfdic)  # few MB
-        dic = _event_based_risk(gmfdf, assdic, loss2, loss3, crmodel, monitor)
-        dic['alt'] = build_alt(loss2, xtypes)
-        yield dic
-    yield dict(avg=build_avg(loss3, oqparam.A, R*X))
+    loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
+    s0, s1 = slice_by_event[0]['start'], slice_by_event[-1]['stop']
+    with dstore:
+        haz_sids = dstore['gmf_data/sid'][s0:s1]
+    idx, = numpy.where(numpy.isin(haz_sids, risk_sids))
+    if len(idx) == 0:
+        return {}
+    with dstore, monitor('reading GMFs', measuremem=True):
+        start, stop = idx.min(), idx.max() + 1
+        gmfdic = {}
+        for col in gmfcols:
+            if col == 'sid':
+                gmfdic[col] = haz_sids[idx]
+            else:
+                dset = dstore['gmf_data/' + col]
+                gmfdic[col] = dset[s0+start:s0+stop][idx - start]
+    gmfdf = pandas.DataFrame(gmfdic)  # few MB
+    dic = _event_based_risk(gmfdf, assdic, loss2, loss3, crmodel, monitor)
+    dic['alt'] = build_alt(loss2, xtypes)
+    dic['avg'] = build_avg(loss3, oqparam.A, R*X)
+    return dic
 
 
 def read_assdic(slc, monitor):
