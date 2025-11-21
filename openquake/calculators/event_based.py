@@ -344,20 +344,33 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
         logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
             rlzs_by_gsim[model, trt_smr] = rbg
-    rups = dstore['ruptures'][:]
-    logging.info(f'Read {len(rups):_d} ruptures')
+    allrups = dstore['ruptures'][:]
+    logging.info(f'Read {len(allrups):_d} ruptures')
+
+    # NB: it is faster to filter a huge number of ruptures
+    # upfront rather than looping on each (model, trt_smr)
     if len(sitecol) > oq.max_sites_disagg:
         # can manage 2 million sites in 13 minutes for IND
-        filrups = close_ruptures(rups, sitecol, assetcol)
-        logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
+        filrups = close_ruptures(allrups, sitecol, assetcol)
+        logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
-        # don't filter if there are few sites (i.e. in tests)
-        filrups = rups
-    assert len(filrups), 'There are no ruptures close to the sites'
-    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
-                 filrups['nsites'].mean(), filrups['nsites'].max())
-    rups_dic = group_array(filrups, 'model', 'trt_smr')
-    totw = rup_weight(filrups).sum()
+        filrups = allrups
+    totw = 0
+    nsites = 0
+    affected = 0
+    acc = {}
+    pairs = numpy.unique(allrups[['model', 'trt_smr']])
+    for model, trt_smr in pairs:
+        ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
+        rups = filrups[ok]
+        if len(rups):
+            acc[model, trt_smr] = rups
+            totw += rup_weight(rups).sum()
+            nsites += rups['nsites'].sum()
+            affected = max(affected, rups['nsites'].max())
+    assert totw, 'All ruptures have been filtered out'
+    logging.info('Affected assets/sites ~%.0f per rupture, max=%.0f',
+                 nsites / len(filrups), affected)
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
 
@@ -365,7 +378,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     # NB: must be done before instantiating the ContextMaker
     allargs = []
     oq.mags_by_trt = AccumDict(accum=set())
-    for (model, trt_smr), rups in rups_dic.items():
+    for (model, trt_smr), rups in acc.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
         mags = [magstr(mag) for mag in numpy.unique(
@@ -436,8 +449,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, assetcol,
         mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         del proxy.geom  # to reduce data transfer
 
-    allargs = get_allargs(
-        oq, sitecol, assetcol, (station_data, station_sites), dstore)
+    with performance.Monitor(
+            'building arguments', measuremem=True, h5=dstore.hdf5):
+        allargs = get_allargs(
+            oq, sitecol, assetcol, (station_data, station_sites), dstore)
     assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)

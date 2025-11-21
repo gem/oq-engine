@@ -85,7 +85,7 @@ def zip_job(job_ini, archive_zip='', risk_ini='', oq=None, log=logging.info):
     if risk_ini:
         risk_ini = os.path.normpath(os.path.abspath(risk_ini))
         oqr = readinput.get_oqparam(
-            risk_ini, kw=dict(hazard_calculation_id=1), validate=False)
+            risk_ini, kw=dict(hazard_calculation_id=-1), validate=False)
         del oqr.inputs['job_ini']
         oq.inputs.update(oqr.inputs)
         oq.shakemap_uri.update(oqr.shakemap_uri)
