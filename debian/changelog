@@ -1,4 +1,9 @@
+  [Anirudh Rao]
+  * Add missing axis argument in recent bugfix in classical_risk 
+    with nontrivial weights in the taxonomy mapping
+
   [Michele Simionato]
+  * Added command `oq ses` to generate a merged stochastic event set
   * Extended the global_ses script to accepts job.ini files
   * Implemented `oq engine --run job1.ini .. jobN.ini --hc parent.hdf5`
   * Extended `--hc` to accept paths to datastore files

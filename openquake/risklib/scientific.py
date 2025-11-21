@@ -1697,14 +1697,14 @@ class RiskComputer(dict):
                 if len(outs) == 0:  # can happen for nonstructural_ins
                     continue
                 elif len(outs) > 1 and hasattr(outs[0], 'loss'):
-                    # computing the average dataframe for event_based_risk/case_8
+                    # computing average dataframe for event_based_risk/case_8
                     out[lt] = _agg(outs, weights[peril, lt])
                 elif len(outs) > 1:
                     if outs[0].dtype.names:
-                        # tested in case_lisa with a composite array 'loss', 'poe'
+                        # tested case_lisa with a composite array 'loss', 'poe'
                         out[lt] = outs[0]
                         poes = numpy.sum([out['poe'] * wei for out, wei in zip(
-                            outs, weights[peril, lt])])
+                            outs, weights[peril, lt])], axis=0)
                         out[lt]['poe'] = poes
                     else:
                         # for oq-risk-tests test_ebd

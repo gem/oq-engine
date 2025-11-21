@@ -40,7 +40,7 @@ import collections
 from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
-from openquake.baselib.performance import Monitor, idx_start_stop
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
     InvalidFile, geo, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
@@ -1460,8 +1460,6 @@ def import_ruptures_hdf5(h5, fnames):
     ruptures = numpy.array(rups, dtype=rups[0].dtype)
     ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
     h5.create_dataset('ruptures', data=ruptures, compression='gzip')
-    h5.create_dataset(
-        'trt_smr_start_stop', data=idx_start_stop(ruptures['trt_smr']))
 
 
 def import_gmfs_hdf5(dstore, oq):

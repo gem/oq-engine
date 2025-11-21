@@ -171,11 +171,10 @@ def main(
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
-        parallel = len(jobs) > 1 and (multi or hazard_calculation_id)
-        # run the jobs in parallel
-        concurrent_jobs = 4 if parallel else 1
-        run_jobs(jobs, concurrent_jobs, nodes, sbatch=True,
-                 precalc=not parallel)
+
+        # possibly run the jobs in parallel
+        run_jobs(jobs, nodes=nodes, sbatch=True,
+                 precalc=False if multi else not hazard_calculation_id)
 
     # hazard
     elif list_hazard_calculations:
@@ -241,7 +240,7 @@ main.list_risk_calculations = dict(
     abbrev='--lrc', help='List risk calculation information')
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
-main.multi = 'Run multiple job.inis in parallel'
+main.multi = 'Run multiple job.inis (usually scenarios) in parallel'
 
 # options
 main.log_file = dict(

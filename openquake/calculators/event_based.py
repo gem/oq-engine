@@ -60,8 +60,10 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
+MAX_PROXIES = 1000
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
@@ -203,6 +205,7 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
 
 def _event_based(proxies, cmaker, stations, srcfilter, shr,
                  fmon, cmon, umon, mmon):
+    # consider at max MAX_PROXIES
     oq = cmaker.oq
     alldata = []
     sig_eps = []
@@ -268,7 +271,7 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
         proxies = get_proxies(hdf5path, rups)
-    for block in block_splitter(proxies, 20_000, rup_weight):
+    for block in block_splitter(proxies, MAX_PROXIES, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 
@@ -315,32 +318,59 @@ def get_model_lts(h5):
             out.append((model, h5[f'full_lt/{model}']))
     return out
 
-    
-def get_rups_args(oq, sitecol, assetcol, station_data_sites,
-                  dstore, model_lts=()):
+
+def get_args(dstore):
     """
-    :returns: (prefiltered ruptures, starmap arguments)
+    Get the arguments (rups, cmaker, sids, stations, hdf5path);
+    useful for debugging
+    """
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    try:
+        assetcol = dstore['assetcol']
+    except KeyError:
+        assetcol = None
+    return get_allargs(oq, sitecol, assetcol, (None, None), dstore)
+
+
+def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
+    """
+    :returns: list of starmap arguments
     """
     trts = {}
     rlzs_by_gsim = {}
-    rups = dstore['ruptures'][:]
-    logging.info(f'Read {len(rups):_d} ruptures')
-    for model, full_lt in model_lts or get_model_lts(dstore):
+    for model, full_lt in get_model_lts(dstore):
         trts[model] = full_lt.trts
         logging.info('Building rlzs_by_gsim for %s', model)
         for trt_smr, rbg in full_lt.get_rlzs_by_gsim_dic().items():
             rlzs_by_gsim[model, trt_smr] = rbg
+    allrups = dstore['ruptures'][:]
+    logging.info(f'Read {len(allrups):_d} ruptures')
+
+    # NB: it is faster to filter a huge number of ruptures
+    # upfront rather than looping on each (model, trt_smr)
     if len(sitecol) > oq.max_sites_disagg:
-        filrups = close_ruptures(rups, sitecol, assetcol)
-        logging.info(f'Selected {len(filrups):_d} ruptures close to the sites')
+        # can manage 2 million sites in 13 minutes for IND
+        filrups = close_ruptures(allrups, sitecol, assetcol)
+        logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
-        # don't filter if there are few sites (i.e. in tests)
-        filrups = rups
-    assert len(filrups), 'There are no ruptures close to the sites'
-    logging.info('Affected sites ~%.0f per rupture, max=%.0f',
-                 filrups['nsites'].mean(), filrups['nsites'].max())
-    rups_dic = group_array(filrups, 'model', 'trt_smr')
-    totw = rup_weight(filrups).sum()
+        filrups = allrups
+    totw = 0
+    nsites = 0
+    affected = 0
+    acc = {}
+    pairs = numpy.unique(allrups[['model', 'trt_smr']])
+    for model, trt_smr in pairs:
+        ok = (filrups['model'] == model) & (filrups['trt_smr'] == trt_smr)
+        rups = filrups[ok]
+        if len(rups):
+            acc[model, trt_smr] = rups
+            totw += rup_weight(rups).sum()
+            nsites += rups['nsites'].sum()
+            affected = max(affected, rups['nsites'].max())
+    assert totw, 'All ruptures have been filtered out'
+    logging.info('Affected assets/sites ~%.0f per rupture, max=%.0f',
+                 nsites / len(filrups), affected)
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
 
@@ -348,7 +378,7 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
     # NB: must be done before instantiating the ContextMaker
     allargs = []
     oq.mags_by_trt = AccumDict(accum=set())
-    for (model, trt_smr), rups in rups_dic.items():
+    for (model, trt_smr), rups in acc.items():
         model = model.decode('ascii')
         trt = trts[model][trt_smr // TWO24]
         mags = [magstr(mag) for mag in numpy.unique(
@@ -365,11 +395,12 @@ def get_rups_args(oq, sitecol, assetcol, station_data_sites,
             allargs.append(args)
     for trt, mags in oq.mags_by_trt.items():
         oq.mags_by_trt[trt] = sorted(mags)
-    return filrups, allargs
+    return allargs
 
 
 # NB: save_tmp is passed in event_based_risk
-def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
+def starmap_from_rups(func, oq, full_lt, sitecol, assetcol,
+                      dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
@@ -418,8 +449,11 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         mea, tau, phi = computer.get_mea_tau_phi(dstore.hdf5)
         del proxy.geom  # to reduce data transfer
 
-    rups, allargs = get_rups_args(
-        oq, sitecol, None, (station_data, station_sites), dstore)
+    with performance.Monitor(
+            'building arguments', measuremem=True, h5=dstore.hdf5):
+        allargs = get_allargs(
+            oq, sitecol, assetcol, (station_data, station_sites), dstore)
+    assert len(allargs) < TWO16, len(allargs)
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:
@@ -807,7 +841,8 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # event_based in parallel
         smap = starmap_from_rups(
-            event_based, oq, self.full_lt, self.sitecol, dstore)
+            event_based, oq, self.full_lt, self.sitecol,
+            getattr(self, 'assetcol', None), dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc

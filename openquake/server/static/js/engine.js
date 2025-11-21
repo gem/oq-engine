@@ -434,6 +434,12 @@ function capitalizeFirstLetter(val) {
         refresh_calcs = clearInterval(refresh_calcs);
     }
 
+    function showModal(title, message) {
+        $("#genericModalTitle").text(title);
+        $("#genericModalBody").html(message);   // can accept HTML
+        $("#genericModal").modal("show");
+    }
+
     function use_shakemap() {
         approach_selector = $('input[name="impact_approach"]');
         if (approach_selector.length > 0) {
@@ -752,6 +758,7 @@ function capitalizeFirstLetter(val) {
                     } else {
                         $input_vs30.val(site_classes[asce_version][site_class]['vs30']);
                         $input_vs30.attr('placeholder', vs30_original_placeholder);
+                        check_vs30_below_200();
                     }
                 }
             });
@@ -788,8 +795,32 @@ function capitalizeFirstLetter(val) {
                     } else {
                         const site_class = $site_class_select.val();
                         $input_vs30.val(site_classes[asce_version][site_class]['vs30']);
+                        check_vs30_below_200();
                     }
                 }
+            });
+
+            const vs30_below_200_warning = `
+The Vs30 is less than 200 m/s. Some ground motion models are poorly
+constrained at this Vs30. In accordance with an ASCE 7-22
+supplement currently being proposed, it is recommended that the
+ground-motion spectra from this very low Vs30 be floored by those
+for Site Class D. In lieu of this conservative flooring, a
+site-specific hazard and site response could be warranted.`;
+            function check_vs30_below_200() {
+                let value = parseFloat($("input#vs30").val());
+                if (value >= 200 || isNaN(value)) {
+                    return;
+                }
+                showModal("WARNING", vs30_below_200_warning);
+            }
+
+            let typingTimer = null;
+            const DONE_TYPING_DELAY = 600;  // ms
+            $("input#vs30").on("input", function () {
+                clearTimeout(typingTimer);
+                // Start a new timer; validation happens only after user stops typing
+                typingTimer = setTimeout(check_vs30_below_200, DONE_TYPING_DELAY);
             });
 
             // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
