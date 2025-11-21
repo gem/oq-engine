@@ -345,7 +345,10 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
     if assetcol:
         sids, counts = numpy.unique(assetcol.array['site_id'], return_counts=1)
         num_assets = dict(zip(sids, counts))
-    sites = sitecol  #.lower_res()
+    if len(sitecol) > 1000:
+        sites, orig_sids = sitecol.lower_res()
+    else:
+        sites, orig_sids = sitecol, [[sid] for sid in sitecol.sids]
     mags = numpy.round(ruptures['mag'], 1)
     hypos = ruptures['hypo']
     kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
@@ -364,7 +367,9 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
                 rup = rups[r]
                 if assetcol:
                     # NB: if there are stations num_assets[sid] can be empty
-                    rup['nsites'] = sum(num_assets.get(sid, 1) for sid in sids)
+                    rup['nsites'] = sum(num_assets.get(s, 1)
+                                        for sid in sids
+                                        for s in orig_sids[sid])
                 else:
                     rup['nsites'] = len(sids)
                 out.append(rup)
