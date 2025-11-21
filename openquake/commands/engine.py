@@ -83,6 +83,7 @@ def main(
         list_hazard_calculations=False,
         list_risk_calculations=False,
         delete_uncompleted_calculations=False,
+        multi=False,
         *,
         log_file=None,
         make_html_report=None,
@@ -173,7 +174,7 @@ def main(
 
         # possibly run the jobs in parallel
         run_jobs(jobs, nodes=nodes, sbatch=True,
-                 precalc=not hazard_calculation_id)
+                 precalc=False if multi else not hazard_calculation_id)
 
     # hazard
     elif list_hazard_calculations:
@@ -239,6 +240,7 @@ main.list_risk_calculations = dict(
     abbrev='--lrc', help='List risk calculation information')
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
+main.multi = 'Run multiple job.inis (usually scenarios) in parallel'
 
 # options
 main.log_file = dict(
