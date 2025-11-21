@@ -21,8 +21,8 @@ import re
 import sys
 from setuptools import setup, find_packages
 
-if sys.version_info < (3, 10):
-    sys.exit('Sorry, Python < 3.10 is not supported')
+if sys.version_info < (3, 11):
+    sys.exit('Sorry, Python < 3.11 is not supported')
 
 
 def get_version():

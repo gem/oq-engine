@@ -25,7 +25,7 @@ from openquake.qa_tests_data.scenario import (
     case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
     case_26, case_27, case_28, case_29, case_30, case_31, case_32, case_33,
-    case_34, case_35)
+    case_34, case_35, case_36)
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
@@ -227,11 +227,11 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_20.__file__, 'job.ini',
                       gsim_logic_tree_file='epsilon_tau.xml')
         aae(old.sig_inter_PGA.unique(), 0.3501)
-        aae(old.eps_inter_PGA.mean(), 0.027470892)
+        aae(old.eps_inter_PGA.mean(), 0.027470896)
         # `set_between_epsilon` sets `sig_inter` to zero
         new = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
         aae(new.sig_inter_PGA.unique(), 0)
-        aae(new.eps_inter_PGA.mean(), 0.027470892)
+        aae(new.eps_inter_PGA.mean(), 0.027470896)
 
     def test_case_21_stations(self):
         # conditioned gmfs
@@ -438,3 +438,9 @@ class ScenarioTestCase(CalculatorTestCase):
             print(gsim_lt)
         finally:
             os.rename(fname + '.bak', fname)
+
+    def test_case_36(self):
+        # Conditional gmm
+        self.run_calc(case_36.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)

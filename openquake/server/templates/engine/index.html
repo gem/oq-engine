@@ -33,6 +33,16 @@
           {% endif %}
           <div class="span12">
             <h2>List of calculations{% if server_name %} from {{ server_name }}{% endif %}</h2>
+            <div id="tag-filters">
+                <label for="list_preferred_only">
+                    <input type="checkbox" id="list_preferred_only" name="list_preferred_only">
+                    List preferred calculations only
+                </label>
+                <label for="tag_selector">Filter by tag:</label>
+                <select id="tag_selector" class="form-control" style="width: 200px;">
+                    <option value="">All tags</option>
+                </select>
+            </div>
             <div id="my-calculations" class="well"></div>
           </div>
         </div>
@@ -50,6 +60,7 @@
           <th style="width: 100px;">User</th>
           <th style="width: 100px;">Calculation</th>
           <th style="width: 280px;">Description</th>
+          <th style="width: 100px;">Tags</th>
           <th style="width: 100px;">Start time</th>
           <th style="width: 70px;">Status</th>
           <th style="width: 150px;">Action</th>
@@ -63,6 +74,7 @@
           <td><%= calc.get('owner') %></td>
           <td><%= calc.get('calculation_mode') %></td>
           <td><%= calc.get('description') %></td>
+          <td><%= calc.get('tags') %></td>
           <td><%= calc.get('start_time') %></td>
           <td>
             <% if (calc.get('status') == 'created' || calc.get('status') == 'complete' || calc.get('status') == 'shared' || calc.get('is_running') == true) { %>
@@ -130,6 +142,19 @@
           <button type="button" class="btn btn-secondary btn-cancel" onclick="closeModal()">No</button>
         </div>
       </div>
+    </div>
+  </div>
+  <!-- Generic modal -->
+  <div id="genericModal" class="modal hide fade">
+    <div class="modal-header">
+      <a class="close" data-dismiss="modal">×</a>
+      <h3 id="genericModalTitle">Message</h3>
+    </div>
+    <div class="modal-body" id="genericModalBody">
+      <!-- dynamic text goes here -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-dismiss="modal">OK</button>
     </div>
   </div>
   {% endblock templates %}

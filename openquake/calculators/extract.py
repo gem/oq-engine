@@ -43,7 +43,7 @@ from openquake.hazardlib.source import rupture
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore
-from openquake.calculators import getters
+from openquake.calculators import base, getters
 
 U16 = numpy.uint16
 U32 = numpy.uint32
@@ -77,7 +77,7 @@ def get_info(dstore):
     stats = {stat: s for s, stat in enumerate(oq.hazard_stats())}
     loss_types = {lt: li for li, lt in enumerate(oq.loss_dt().names)}
     imt = {imt: i for i, imt in enumerate(oq.imtls)}
-    num_rlzs = len(dstore['weights'])
+    num_rlzs = len(base.get_weights(oq, dstore))
     return dict(stats=stats, num_rlzs=num_rlzs, loss_types=loss_types,
                 imtls=oq.imtls, investigation_time=oq.investigation_time,
                 poes=oq.poes, imt=imt, uhs_dt=oq.uhs_dt(),
@@ -869,7 +869,7 @@ def extract_aggrisk_tags(dstore, what):
     Aggregates risk by tag. Use it as /extract/aggrisk_tags?
     """
     oq = dstore['oqparam']
-    ws = dstore['weights'][:]
+    ws = base.get_weights(oq, dstore)
     aggrdf = dstore.read_df('aggrisk')
     aggrdf.loss *= ws[aggrdf.rlz_id]
     del aggrdf['rlz_id']
@@ -926,7 +926,7 @@ def extract_aggrisk_tags(dstore, what):
         if aggby == ['ID_2']:
             total['NAME_2'] = '*total*'
 
-        # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1 values
+        # NOTE: when admin2 is not available, ID_2 and NAME_2 store the admin1
         out.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
         total.rename(columns={'ID_2': 'ID', 'NAME_2': 'NAME'}, inplace=True)
 
@@ -1277,7 +1277,7 @@ def extract_mfd(dstore, what):
     Example: http://127.0.0.1:8800/v1/calc/30/extract/event_based_mfd?
     """
     oq = dstore['oqparam']
-    R = len(dstore['weights'])
+    R = len(base.get_weights(oq, dstore))
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     rup_df = dstore.read_df('ruptures', 'id')[
         ['mag', 'n_occ', 'occurrence_rate']]
@@ -1412,7 +1412,7 @@ def extract_disagg(dstore, what):
     attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
     rlzs = dstore['best_rlzs'][sid]
     if spec == 'rlzs':
-        weights = dstore['weights'][:][rlzs]
+        weights = base.get_weights(oq, dstore)[rlzs]
         weights /= weights.sum()  # normalize to 1
         attrs['weights'] = weights.tolist()
     extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
@@ -1597,13 +1597,12 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     full_lt = dstore['full_lt']
     rlzs_by_gsim = full_lt.get_rlzs_by_gsim_dic()
-    try:
-        tss = dstore['trt_smr_start_stop']
-    except KeyError:
+    allproxies = calc.get_proxies(dstore.filename, slice(None), min_mag)
+    if not allproxies:
         # when starting from GMFs there are no ruptures
         raise getters.NotFound
-    for trt_smr, start, stop in tss:
-        proxies = calc.get_proxies(dstore.filename, slice(start, stop), min_mag)
+    for trt_smr, proxies in general.groupby(
+            allproxies, lambda p: p.rec['trt_smr']).items():
         trt = full_lt.trts[trt_smr // TWO24]
         if 'source_mags' not in dstore:  # ruptures import from CSV
             mags = numpy.unique(dstore['ruptures']['mag'])
@@ -1748,7 +1747,7 @@ def extract_risk_stats(dstore, what):
     del df['loss_id']
     kfields = [f for f in df.columns if f in {
         'agg_id', 'loss_type', 'return_period'}]
-    weights = dstore['weights'][:]
+    weights = base.get_weights(oq, dstore)
     return calc_stats(df, kfields, stats, weights)
 
 

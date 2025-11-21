@@ -325,13 +325,15 @@ def _expand3(arrayN3, maxsize):
     return U32(out)
 
 
-def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
+def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
     """
-    :param proxies: list of RuptureProxies with the same trt_smr
+    :param rups: list of ruptures with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
+    :param sids: array of site indices
     :param stations: empty pair or (station_data, station_sitecol)
+    :param hdf5path: path to the ses.hdf5 file
     :param monitor: a Monitor instance
-    :returns: a dictionary of arrays
+    :yields: dictionaries with keys 'avg' and 'alt'
     """
     oq = cmaker.oq
     oq.ground_motion_fields = True
@@ -344,16 +346,15 @@ def ebrisk(proxies, cmaker, sitecol, stations, dstore, monitor):
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
     assdic = read_assdic(slice(None), monitor)
-    for block in general.block_splitter(
-            proxies, 20_000, event_based.rup_weight):
-        for dic in event_based.event_based(
-                block, cmaker, sitecol, stations, dstore, monitor):
-            if len(dic['gmfdata']):
-                gmf_df = pandas.DataFrame(dic['gmfdata'])
-                loss3 = {'aids': [], 'bids': [], 'loss': []}
-                loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
-                dic = _event_based_risk(
-                    gmf_df, assdic, loss2, loss3, crmodel, monitor)
+    for dic in event_based.event_based(
+            rups, cmaker, sids, stations, hdf5path, monitor):
+        if len(dic['gmfdata']):
+            gmf_df = pandas.DataFrame(dic['gmfdata'])
+            loss3 = {'aids': [], 'bids': [], 'loss': []}
+            loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
+            dic = _event_based_risk(
+                gmf_df, assdic, loss2, loss3, crmodel, monitor)
+            if loss2:  # has been populated
                 dic['avg'] = build_avg(loss3, oq.A, R*X)
                 dic['alt'] = build_alt(loss2, xtypes)
                 yield dic
@@ -406,7 +407,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
-        monitor.save('weights', self.datastore['weights'][:])
+        try:
+            ws = self.datastore['weights'][:]
+        except KeyError:  # not needed in from ses
+            pass
+        else:
+            monitor.save('weights', ws)
         if oq.K:
             aggids, _ = self.assetcol.build_aggids(oq.aggregate_by)
         else:
@@ -428,10 +434,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                      if self.datastore.ppath else None)
         oq.hdf5path = self.datastore.filename
         oq.parentdir = parentdir
-        logging.info(
-            'There are {:_d} ruptures and {:_d} events'.format(
-                len(self.datastore['ruptures']),
-                len(self.datastore['events'])))
+        if 'events' in self.datastore:
+            logging.info(
+                'There are {:_d} ruptures and {:_d} events'.format(
+                    len(self.datastore['ruptures']),
+                    len(self.datastore['events'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
         self.datastore.swmr_on()
         set_oqparam(oq, self.assetcol, self.datastore)
@@ -447,8 +454,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info('Transfering %s * %d per task in avg_losses',
                          general.humansize(A * 8 * R), ELT)
             if A * ELT * 8 > int(config.memory.avg_losses_max):
-                raise ValueError('For large exposures you must set '
-                                 'avg_losses=false')
+                logging.warning('For large exposures consider setting '
+                                'avg_losses=false')
             elif A * ELT * self.R * 8 > int(config.memory.avg_losses_max):
                 raise ValueError('For large exposures you must set '
                                  'collect_rlzs = true')
@@ -457,9 +464,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.warning('The calculation is really big; consider setting '
                             'minimum_asset_loss')
         base.create_risk_by_event(self)
+        self.gmf_bytes = 0
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
-
         if oq.avg_losses:
             self.create_avg_losses()
         alt_nbytes = 4 * self.E * L
@@ -469,18 +476,19 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
     def create_avg_losses(self):
         oq = self.oqparam
-        ws = self.datastore['weights']
-        R = 1 if oq.collect_rlzs else len(ws)
+        R0 = oq.number_of_logic_tree_samples or len(
+            self.datastore['weights'])
+        R = 1 if oq.collect_rlzs else R0
         S = len(oq.hazard_stats())
         fix_investigation_time(oq, self.datastore)
         if oq.collect_rlzs:
             if oq.investigation_time:  # event_based
-                self.avg_ratio = numpy.array([oq.time_ratio / len(ws)])
+                self.avg_ratio = numpy.array([oq.time_ratio / R0])
             else:  # scenario
                 self.avg_ratio = numpy.array([1. / self.num_events.sum()])
         else:
             if oq.investigation_time:  # event_based
-                self.avg_ratio = numpy.array([oq.time_ratio] * len(ws))
+                self.avg_ratio = numpy.array([oq.time_ratio] * R0)
             else:  # scenario
                 self.avg_ratio = 1. / self.num_events
         self.avg_losses = numpy.zeros((self.A, self.X, R), F32)
@@ -496,10 +504,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         Compute risk from GMFs or ruptures depending on what is stored
         """
         oq = self.oqparam
-        self.gmf_bytes = 0
         if not oq.ground_motion_fields or 'gmf_data' not in self.datastore:
             # start from ruptures
             if (oq.ground_motion_fields and
+                    not oq.hazard_calculation_id and
                     'gsim_logic_tree' not in oq.inputs and
                     oq.gsim == '[FromFile]'):
                 raise InvalidFile('%s: missing gsim or gsim_logic_tree_file'
@@ -509,8 +517,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                   % oq.inputs['job_ini'])
             full_lt = self.datastore['full_lt']
             smap = event_based.starmap_from_rups(
-                ebrisk, oq, full_lt, self.sitecol, self.datastore,
-                self.save_tmp)
+                ebrisk, oq, full_lt, self.sitecol, self.assetcol,
+                self.datastore, self.save_tmp)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(
@@ -588,7 +596,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         s = oq.hazard_stats()
         if s:
             _statnames, statfuncs = zip(*s.items())
-            weights = self.datastore['weights'][:]
+            weights = base.get_weights(oq, self.datastore)
         if oq.avg_losses:
             R = self.avg_losses.shape[2]
             for li, lt in enumerate(self.xtypes):

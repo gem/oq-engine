@@ -504,46 +504,105 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     :param id:
         if given, extract only the specified calculation
     :returns:
-        list of tuples (job_id, user_name, job_status, calculation_mode,
-                        job_is_running, job_description, host)
+        list of tuples (id, user_name, status, calculation_mode, is_running,
+                        description, pid, hazard_calculation_id, size_mb,
+                        host, start_time, relevant)
     """
     # helper to get job+calculation data from the oq-engine database
+    query_params = []
     filterdict = {}
 
     if id is not None:
-        filterdict['id'] = id
+        filterdict['j.id'] = id
 
     if 'calculation_mode' in request_get_dict:
-        filterdict['calculation_mode'] = request_get_dict.get(
-            'calculation_mode')
+        filterdict['j.calculation_mode'] = request_get_dict.get('calculation_mode')
 
     if 'is_running' in request_get_dict:
         is_running = request_get_dict.get('is_running')
-        filterdict['is_running'] = valid.boolean(is_running)
+        filterdict['j.is_running'] = valid.boolean(is_running)
 
-    if 'limit' in request_get_dict:
-        limit = int(request_get_dict.get('limit'))
-    else:
-        limit = 100
+    query_params.append(filterdict)
 
-    if 'start_time' in request_get_dict:
-        # assume an ISO date string
-        time_filter = "start_time >= '%s'" % request_get_dict.get('start_time')
-    else:
-        time_filter = 1
+    include_shared = valid.boolean(request_get_dict.get('include_shared', 1))
 
     if user_acl_on:
-        users_filter = "user_name IN (?X)"
+        users_filter = "j.user_name IN (?X)"
+        query_params.append(allowed_users)
     else:
         users_filter = 1
 
-    jobs = db('SELECT * FROM job WHERE ?A AND %s AND %s AND status != '
-              "'deleted' OR status == 'shared' ORDER BY id DESC LIMIT %d"
-              % (users_filter, time_filter, limit), filterdict, allowed_users)
+    if 'user_name_like' in request_get_dict:
+        name_pattern = request_get_dict.get('user_name_like').strip()
+        user_name_like_filter = "j.user_name LIKE ?x"
+        query_params.append(name_pattern)
+    else:
+        user_name_like_filter = 1
+
+    if 'start_time' in request_get_dict:
+        # assume an ISO date string
+        start_time = request_get_dict.get('start_time')
+        time_filter = "j.start_time >= ?x"
+        query_params.append(start_time)
+    else:
+        time_filter = 1
+
+    preferred_only = int(request_get_dict.get('preferred_only', 0))
+    filter_by_tag = request_get_dict.get('filter_by_tag', 0)
+
+    limit = int(request_get_dict.get('limit', 100))
+    offset = int(request_get_dict.get('offset', 0))
+    allowed_sort_fields = [
+        'id', 'start_time', 'user_name', 'calculation_mode', 'status', 'description',
+        'size_mb']
+    order_by = request_get_dict.get('order_by', 'id')
+    if order_by not in allowed_sort_fields:
+        order_by = 'j.id'
+    order_dir = request_get_dict.get('order_dir', 'DESC').upper()
+    if order_dir not in ('ASC', 'DESC'):
+        order_dir = 'DESC'
+
+    tags_query = """
+GROUP_CONCAT(
+    CASE
+        WHEN t.is_preferred = 1 THEN t.tag || '★'
+        ELSE t.tag
+    END,
+    ', '
+) AS tags
+    """
+
+    where_clause = f"?A AND ({users_filter} AND {user_name_like_filter}"
+    if include_shared:
+        where_clause += " OR j.status == 'shared'"
+    where_clause += f") AND {time_filter} AND j.status != 'deleted'"
+    if preferred_only:
+        where_clause += (
+            " AND j.id IN (SELECT job_id FROM job_tag WHERE is_preferred = 1)")
+    if filter_by_tag and filter_by_tag != '0':
+        where_clause += (
+            " AND j.id IN (SELECT job_id FROM job_tag WHERE tag = ?x)")
+        query_params.append(filter_by_tag)
+
+    # NOTE: GROUP BY j.id returns one row per job (identified by j.id), even if that
+    # job has multiple tags, combining its tags into a single field using GROUP_CONCAT
+
+    query = f"""
+SELECT j.*, {tags_query}
+FROM job AS j
+LEFT JOIN job_tag AS t ON j.id = t.job_id
+WHERE {where_clause}
+GROUP BY j.id
+ORDER BY {order_by} {order_dir}
+LIMIT {limit} OFFSET {offset}
+    """
+
+    jobs = db(query, *query_params)
+
     return [(job.id, job.user_name, job.status, job.calculation_mode,
              job.is_running, job.description, job.pid,
              job.hazard_calculation_id, job.size_mb, job.host,
-             job.start_time, job.relevant)
+             job.start_time, job.relevant, job.tags)
             for job in jobs]
 
 
@@ -591,6 +650,83 @@ def share_job(db, job_id, share):
                 f' from "{initial_status}" to "{new_status}"'}
     return {'success': f'The status of calculation {job_id} was changed'
                        f' from "{initial_status}" to "{new_status}"'}
+
+
+def add_tag_to_job(db, job_id, tag_name):
+    try:
+        db("INSERT INTO job_tag (job_id, tag, is_preferred) VALUES (?x, ?x, 0)",
+           job_id, tag_name)
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'The tag {tag_name} was added to job {job_id}'}
+
+
+def remove_tag_from_job(db, job_id, tag_name):
+    try:
+        db("DELETE FROM job_tag WHERE job_id = ?x AND tag = ?x",
+           job_id, tag_name)
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {tag_name} was removed from job {job_id}'}
+
+
+def set_preferred_job_for_tag(db, job_id, tag_name):
+    try:
+        db("BEGIN")
+        db("""
+UPDATE job_tag SET is_preferred = 0
+WHERE tag = ?x AND is_preferred = 1
+           """, tag_name)
+        db("""
+INSERT INTO job_tag (job_id, tag, is_preferred)
+VALUES (?x, ?x, 1)
+ON CONFLICT(job_id, tag) DO UPDATE
+SET is_preferred = 1
+           """, job_id, tag_name)
+        db("COMMIT")
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Job {job_id} was set as preferred for tag {tag_name}'}
+
+
+def unset_preferred_job_for_tag(db, tag_name):
+    try:
+        db("""
+UPDATE job_tag SET is_preferred = 0
+WHERE tag = ?x AND is_preferred = 1
+           """, tag_name)
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {tag_name} has no preferred job now'}
+
+
+def get_preferred_job_for_tag(db, tag_name):
+    try:
+        ret = db("""
+SELECT j.*
+FROM job AS j
+JOIN job_tag jt ON j.id = jt.job_id
+WHERE jt.tag = ?x AND jt.is_preferred = 1
+        """, tag_name)
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        if len(ret) == 0:
+            return {'success': 'ok', 'job_id': None}
+        elif len(ret) == 1:
+            return {'success': 'ok', 'job_id': ret[0].id}
+        else:
+            return {'error': f'Unexpected multiple preferred jobs for tag {tag_name}'}
+
+
+def list_tags(db):
+    rows = db("SELECT DISTINCT tag FROM job_tag ORDER BY tag")
+    tags = [row.tag for row in rows]
+    return {'success': 'ok', 'tags': tags}
 
 
 def update_parent_child(db, parent_child):

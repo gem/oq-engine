@@ -115,17 +115,40 @@ AELO_FORM_LABELS = {
     'asce_version': 'ASCE standards',
 }
 
+AELO_VALID_VS30_RANGE = [150, 1525]
+
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'max. 5 decimals',
     'lat': 'max. 5 decimals',
-    'vs30': 'float [150 - 3000]',
+    'vs30': f'float {AELO_VALID_VS30_RANGE}',
     'siteid': f'max. {settings.MAX_AELO_SITE_NAME_LEN} characters',
     'asce_version': 'ASCE standards',
 }
 
 HIDDEN_OUTPUTS = ['exposure', 'job']
-EXTRACTABLE_RESOURCES = ['aggrisk_tags', 'mmi_tags', 'losses_by_site',
-                         'losses_by_asset', 'losses_by_location']
+EXTRACTABLE_RESOURCES = [
+    'agg_losses',
+    'agg_damages',
+    'aggrisk_tags',
+    'asset_tags',
+    'composite_risk_model',
+    'damages-rlzs',
+    'damages-stats',
+    'disagg_layer',
+    'events',
+    'exposure_metadata',
+    'gmf_data',
+    'hcurves',
+    'hmaps',
+    'losses_by_asset',
+    'losses_by_location',
+    'losses_by_site',
+    'mmi_tags',
+    'oqparam',
+    'realizations',
+    'rupture_info',
+    'uhs',
+]
 # NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
 #       datastore, and the can_view_exposure permission gives access both to the
 #       'exposure' output and to the 'assetcol' item in the datastore
@@ -218,9 +241,9 @@ def stream_response(fname, content_type, exportname=''):
     return response
 
 
-def infer_site_class(vs30):
+def infer_site_class(asce_version, vs30):
     # used for old jobs for which the site class was not saved into the datastore
-    site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES.items()
+    site_class_matches = [k for k, v in oqvalidation.SITE_CLASSES[asce_version].items()
                           if v['vs30'] == vs30]
     if site_class_matches:
         site_class = site_class_matches[0]
@@ -232,27 +255,28 @@ def infer_site_class(vs30):
 def get_site_class_display_name(ds):
     vs30_in = ds['oqparam'].override_vs30  # e.g. 760.0
     site_class = ds['oqparam'].site_class
+    asce_version = ds['oqparam'].asce_version
     if site_class is not None:
         if site_class == 'custom':
             vs30 = vs30_in[0]
-            site_class_display_name = f'Vs30 = {vs30}m/s'
+            site_class_display_name = f'Vs30 = {vs30} m/s'
         else:
             site_class_display_name = oqvalidation.SITE_CLASSES[
-                site_class]['display_name']
+                asce_version][site_class]['display_name']
     else:  # old calculations without site_class in the datastore
         if hasattr(vs30_in, '__len__'):
             if len(vs30_in) == 1:
                 [vs30_in] = vs30_in
-                site_class = infer_site_class(vs30_in)
+                site_class = infer_site_class(asce_version, vs30_in)
             else:
                 site_class = 'default'
         else:  # in old calculations, vs30_in was a float
-            site_class = infer_site_class(vs30_in)
+            site_class = infer_site_class(asce_version, vs30_in)
         if site_class == 'custom':
-            site_class_display_name = f'Vs30 = {vs30_in}m/s'
+            site_class_display_name = f'Vs30 = {vs30_in} m/s'
         else:
             site_class_display_name = oqvalidation.SITE_CLASSES[
-                site_class]['display_name']
+                asce_version][site_class]['display_name']
     return site_class_display_name
 
 
@@ -510,6 +534,10 @@ def calc_list(request, id=None):
     Get a list of calculations and report their id, status, calculation_mode,
     is_running, description, and a url where more detailed information
     can be accessed. This is called several times by the Javascript.
+    If 'preferred_only' is specified in the GET parameters, only jobs set as
+    preferred for a tag are listed.
+    If 'filter_by_tag' is specified in the GET parameters, only jobs associated to the
+    given tag are listed.
 
     Responses are in JSON.
     """
@@ -524,7 +552,7 @@ def calc_list(request, id=None):
     response_data = []
     username = psutil.Process(os.getpid()).username()
     for (hc_id, owner, status, calculation_mode, is_running, desc, pid,
-         parent_id, size_mb, host, start_time, relevant) in calc_data:
+         parent_id, size_mb, host, start_time, relevant, tags) in calc_data:
         if host:
             owner += '@' + host.split('.')[0]
         url = urljoin(base_url, 'v1/calc/%d' % hc_id)
@@ -543,7 +571,7 @@ def calc_list(request, id=None):
                  calculation_mode=calculation_mode, status=status,
                  is_running=bool(is_running), description=desc, url=url,
                  parent_id=parent_id, abortable=abortable, size_mb=size_mb,
-                 start_time=start_time_str, relevant=relevant))
+                 start_time=start_time_str, relevant=relevant, tags=tags))
 
     # if id is specified the related dictionary is returned instead the list
     if id is not None:
@@ -647,6 +675,72 @@ def get_user_level(request):
         # NOTE: when authentication is not required, the user interface
         # can assume the user to have the maximum level
         return 2
+
+
+def check_db_response(resp):
+    if 'success' in resp:
+        return JsonResponse(resp, status=200)
+    elif 'error' in resp:
+        logging.error(resp['error'])
+        return JsonResponse(resp, status=403)
+    else:
+        return JsonResponse({'error': f'Unexpected response: {resp}'}, status=500)
+
+
+def add_tag_to_job(user_level, calc_id, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('add_tag_to_job', calc_id, tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def remove_tag_from_job(user_level, calc_id, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('remove_tag_from_job', calc_id, tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def set_preferred_job_for_tag(user_level, calc_id, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('set_preferred_job_for_tag', calc_id, tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def unset_preferred_job_for_tag(user_level, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('unset_preferred_job_for_tag', tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def get_preferred_job_for_tag(tag_name):
+    try:
+        resp = logs.dbcmd('get_preferred_job_for_tag', tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def list_tags():
+    try:
+        resp = logs.dbcmd('list_tags')
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
 
 
 @csrf_exempt
@@ -823,18 +917,19 @@ def aelo_callback(
     site_class = inputs['site_class']
     vs30s = inputs['vs30'].split()
     vs30 = vs30s[0] if site_class != 'default' else 'default'
+    asce_version = inputs['asce_version']
+    asce_version_str = oqvalidation.ASCE_VERSIONS[asce_version]
     if site_class is None or site_class == 'custom':
-        site_class_vs30_str = f'Site Class: Vs30 = {vs30}m/s'
+        site_class_vs30_str = f'Site Class: Vs30 = {vs30} m/s'
     else:
         site_class_display_name = oqvalidation.SITE_CLASSES[
-            site_class]['display_name']
+            asce_version][site_class]['display_name']
         site_class_vs30_str = f'Site Class: {site_class_display_name}'
-    asce_version = oqvalidation.ASCE_VERSIONS[inputs['asce_version']]
     aelo_version = base.get_aelo_version()
     body = (f"Site name: {siteid}\n"
             f"Latitude: {lat}, Longitude: {lon}\n"
             f"{site_class_vs30_str}\n"
-            f"ASCE standard: {asce_version}\n"
+            f"ASCE standard: {asce_version_str}\n"
             f"AELO version: {aelo_version}\n\n")
     if warnings is not None:
         for warning in warnings:
@@ -1159,7 +1254,7 @@ def impact_run_with_shakemap(request):
 def aelo_validate(request):
     validation_errs = {}
     invalid_inputs = []
-    validate_vs30 = valid.FloatRange(150, 3000, 'vs30')
+    validate_vs30 = valid.FloatRange(*AELO_VALID_VS30_RANGE, 'vs30')
     try:
         lon = valid.longitude(request.POST.get('lon'))
     except Exception as exc:
@@ -1207,7 +1302,7 @@ def aelo_validate(request):
         validation_errs[AELO_FORM_LABELS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     if site_class is not None and site_class != 'custom':
-        valid_vs30 = oqvalidation.SITE_CLASSES[site_class]['vs30']
+        valid_vs30 = oqvalidation.SITE_CLASSES[asce_version][site_class]['vs30']
         if isinstance(valid_vs30, list):
             expected_vs30 = ' '.join([str(float(value)) for value in valid_vs30])
         else:
@@ -1349,7 +1444,8 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
         kwargs = {}
         if notify_to is not None:
             kwargs['notify_to'] = notify_to
-        proc = mp.Process(target=engine.run_jobs, args=([job],), kwargs=kwargs)
+        proc = mp.Process(target=engine.run_jobs, args=([job], 1),
+                          kwargs=kwargs)
         proc.start()
         if config.webapi.calc_timeout:
             mp.Process(
@@ -2096,7 +2192,10 @@ def can_extract(request, resource):
     except AttributeError:
         # without authentication
         return True
-    if (resource in EXTRACTABLE_RESOURCES
+    if (any(resource == allowed
+            or resource.startswith(allowed + "/")
+            or resource.startswith(allowed + ".")
+            for allowed in EXTRACTABLE_RESOURCES)
             or user.level >= 2
             or user.has_perm(f'auth.can_view_{resource}')):
         return True
@@ -2191,6 +2290,70 @@ def on_same_fs(request):
         pass
 
     return JsonResponse({'success': False}, status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_add_tag(request, calc_id, tag_name):
+    """
+    Assign to the calculation of given `calc_id` a tag named `tag_name`
+    """
+    user_level = get_user_level(request)
+    return add_tag_to_job(user_level, calc_id, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_remove_tag(request, calc_id, tag_name):
+    """
+    Remove the tag named `tag_name` from the calculation of given `calc_id`
+    """
+    user_level = get_user_level(request)
+    return remove_tag_from_job(user_level, calc_id, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_set_preferred_job_for_tag(request, calc_id, tag_name):
+    """
+    Set the calculation of given `calc_id` as the preferred one for tag `tag_name`
+    """
+    user_level = get_user_level(request)
+    return set_preferred_job_for_tag(user_level, calc_id, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_unset_preferred_job_for_tag(request, tag_name):
+    """
+    Unset the preferred job for tag `tag_name`
+    """
+    user_level = get_user_level(request)
+    return unset_preferred_job_for_tag(user_level, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_get_preferred_job_for_tag(request, tag_name):
+    """
+    Get the id of the calculation marked as the preferred one for the given `tag_name`
+    """
+    return get_preferred_job_for_tag(tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_list_tags(request):
+    """
+    List all the available tags
+    """
+    return list_tags()
 
 
 @require_http_methods(['GET'])

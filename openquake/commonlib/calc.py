@@ -166,8 +166,10 @@ def make_uhs(hmap, info):
     return uhs
 
 
-def get_proxies(filename, rup_array, min_mag=0):
+def get_proxies(filename, rup_array=slice(None), min_mag=0):
     """
+    :param filename: where the ruptures and geometries are stored
+    :param rup_array: an array of ruptures or a slice
     :returns: a list of RuptureProxies
     """
     proxies = []
@@ -230,7 +232,6 @@ class RuptureImporter(object):
         self.check_overflow(n_occ.sum())  # check the number of events
         rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         idx_start_stop = performance.idx_start_stop(rup_array['trt_smr'])
-        self.datastore.create_dset('trt_smr_start_stop', idx_start_stop)
         self._save_events(rup_array, idx_start_stop)
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
@@ -297,7 +298,9 @@ class RuptureImporter(object):
                 ok, = numpy.where(events['rlz_id'] == r)
                 extra['year'][ok] = rng.choice(etime, len(ok)) + r * etime + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
-        self.datastore['events'] = util.compose_arrays(events, extra)
+        self.datastore.create_dset(
+            'events', util.compose_arrays(events, extra))
+        self.datastore.flush()
 
     def check_overflow(self, E):
         """

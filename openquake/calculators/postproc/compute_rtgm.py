@@ -99,6 +99,15 @@ AELO_WARNINGS = {
         ' User may need to increase the values to user-specified minimums'
         ' (e.g., Ss=0.11g and S1=0.04g).'
         ' For further information, please refer to the user manual.'),
+    'vs30_below_200': (
+        'The results displayed below refer to site class %s and have not been'
+        ' floored as recommended by the ASCE7-22 supplement. The Vs30 is less'
+        ' than 200 m/s. Some ground motion models are poorly'
+        ' constrained at this Vs30. In accordance with an ASCE 7-22 supplement'
+        ' currently being proposed, it is recommended that the ground-motion'
+        ' spectra from this very low Vs30 be floored by those for Site Class D.'
+        ' In lieu of this conservative flooring, a site-specific hazard and'
+        ' site response could be warranted.'),
 }
 
 AELO_NOTES = {
@@ -265,7 +274,7 @@ def get_rtgm_notification(site, oq, sa02, sa10, DLLs, ASCE_version,
 
     if (rtgm_df.ProbMCE.to_numpy()[sa02] < 0.11) or \
             (rtgm_df.ProbMCE.to_numpy()[sa10] < 0.04):
-        return rtgm_df, 'below_min' 
+        return rtgm_df, 'below_min'
     elif (rtgm_df.ProbMCE < DLLs[site.id]).all():
         # do not disagg by rel sources
         return rtgm_df, 'only_prob_mce'
@@ -1051,6 +1060,20 @@ def main(dstore, csm):
             else:
                 raise NotImplementedError(
                     f'Unexpected notification name: {notification_name}')
+            notification_items.append(
+                (sid, level, notification_name, description))
+        if site.vs30 < 200:
+            # NOTE: process_sites assumes one warning per site. We could change that
+            # and move this into that function. Here I am avoiding to hide other
+            # notifications for the same site
+            notification_name = 'vs30_below_200'
+            level = 'warning'
+            if oq.site_class != 'custom':
+                site_class = oq.site_class
+            else:
+                site_class = f'Vs30 = {site.vs30} m/s'
+            description = AELO_WARNINGS[notification_name] % site_class
+            logging.warning('(%.1f,%.1f) ' + description, loc.x, loc.y)
             notification_items.append(
                 (sid, level, notification_name, description))
         if rtgm_df is not None:

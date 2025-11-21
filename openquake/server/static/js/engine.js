@@ -180,7 +180,7 @@ function capitalizeFirstLetter(val) {
               e.preventDefault();
               const calc_id = $(e.target).attr('data-calc-id');
               const calc_desc = $(e.target).attr('data-calc-desc');
-              showModal({
+              showConfirmationModal({
                 calc_id,
                 title: capitalizeFirstLetter(action) + ' calculation',
                 body: `Are you sure you want to ${action} calculation ${calc_id}?<br><em>"${calc_desc}"</em>`,
@@ -424,11 +424,20 @@ function capitalizeFirstLetter(val) {
     }
 
     function setTimer() {
-        refresh_calcs = setInterval(function () { calculations.fetch({reset: true}) }, 3000);
+        refresh_calcs = setInterval(function () {
+            refresh_tag_selector();
+            calculations.fetch({reset: true})
+        }, 3000);
     }
 
     function closeTimer() {
         refresh_calcs = clearInterval(refresh_calcs);
+    }
+
+    function showNotificationModal(title, message) {
+        $("#genericModalTitle").text(title);
+        $("#genericModalBody").html(message);   // can accept HTML
+        $("#genericModal").modal("show");
     }
 
     function use_shakemap() {
@@ -586,6 +595,7 @@ function capitalizeFirstLetter(val) {
             $select.empty();
         }
         $('#time_event').val(impact_form_defaults['time_event']);
+        $('#no_uncertainty').prop('checked', false);
         $('#rupture-map').hide();
         $('#shakemap-image-row').hide();
     }
@@ -607,9 +617,58 @@ function capitalizeFirstLetter(val) {
         $('#strike').val(nodal_plane.strike);
     }
 
+    function set_calc_list_params() {
+        list_preferred_only = $('input#list_preferred_only').is(':checked');
+        filter_by_tag = $('select#tag_selector').val();
+        const base_url = gem_oq_server_url + "/v1/calc/list";
+        let params = {};
+        if (list_preferred_only) {
+            params['preferred_only'] = '1';
+        }
+        if (filter_by_tag) {
+            params['filter_by_tag'] = filter_by_tag;
+        }
+        const query = $.param(params);
+        const full_url = query ? `${base_url}?${query}` : base_url;
+        calculations.url = full_url;
+        calculations.fetch({reset: true});
+    }
+
+    function refresh_tag_selector() {
+        $.getJSON('/v1/calc/list_tags', function(resp) {
+            if (resp.tags.length == 0) {
+                $("div#tag-filters").hide();
+            } else {
+                $("div#tag-filters").show();
+            }
+            const $dropdown = $('#tag_selector');
+            const selected_tag = $dropdown.val();
+            $dropdown.empty();
+            $dropdown.append('<option value="">All tags</option>');
+            $.each(resp.tags, function(_, tag) {
+                const safeTag = $('<div>').text(tag).html(); // escape HTML
+                $dropdown.append(`<option value="${safeTag}">${safeTag}</option>`);
+            });
+            // Try to restore previous selection if still available
+            if (selected_tag && resp.tags.includes(selected_tag)) {
+                $dropdown.val(selected_tag);
+            }
+        }).fail(function(jqXHR, textStatus, errorThrown) {
+            console.error('Error fetching tags:', textStatus, errorThrown);
+        });
+    }
+
     /* classic event management */
     $(document).ready(
         function () {
+            refresh_tag_selector();
+            $('input#list_preferred_only').change(function() {
+                set_calc_list_params();
+            });
+            $('select#tag_selector').change(function() {
+                set_calc_list_params();
+            });
+
             calculation_table = new CalculationTable({ calculations: calculations });
             calculations.fetch({reset: true});
             setTimer();
@@ -674,6 +733,7 @@ function capitalizeFirstLetter(val) {
                     dataType: "json",
                     success: function(data) {
                         site_classes = data;
+                        $('#asce_version').trigger('change');
                     },
                     error: function(xhr, status, error) {
                         console.error("Error loading site classes:", error);
@@ -685,6 +745,7 @@ function capitalizeFirstLetter(val) {
             $('select#site_class').on('change', function() {
                 const site_class = $(this).val();
                 const $input_vs30 = $('input#vs30');
+                const asce_version = $("#asce_version").val();
                 if (site_class === 'custom') {
                     $input_vs30.prop('disabled', false);
                     $input_vs30.val('');
@@ -695,8 +756,9 @@ function capitalizeFirstLetter(val) {
                         $input_vs30.val('');
                         $input_vs30.attr('placeholder', '');
                     } else {
-                        $input_vs30.val(site_classes[site_class]['vs30']);
+                        $input_vs30.val(site_classes[asce_version][site_class]['vs30']);
                         $input_vs30.attr('placeholder', vs30_original_placeholder);
+                        check_vs30_below_200();
                     }
                 }
             });
@@ -707,14 +769,16 @@ function capitalizeFirstLetter(val) {
                 const $input_vs30 = $('input#vs30');
                 $site_class_select.empty();
                 if (asce_version === 'ASCE7-16') {
-                    $site_class_select.append($('<option>', {value: PRESELECTED_SITE_CLASS, text: PRESELECTED_SITE_CLASS}));
-                    $input_vs30.val(site_classes[PRESELECTED_SITE_CLASS]['vs30']);
+                    $site_class_select.append($('<option>', {
+                        value: PRESELECTED_SITE_CLASS,
+                        text: site_classes[asce_version][PRESELECTED_SITE_CLASS]['display_name']}));
+                    $input_vs30.val(site_classes[asce_version][PRESELECTED_SITE_CLASS]['vs30']);
                 } else if (asce_version === 'ASCE7-22') {
-                    for (const site_class of Object.keys(site_classes)) {
+                    for (const site_class of Object.keys(site_classes[asce_version])) {
                         $site_class_select.append(
                             $("<option>", {
                                 value: site_class,
-                                text: site_classes[site_class]['display_name'],
+                                text: site_classes[asce_version][site_class]['display_name'],
                                 selected: site_class === PRESELECTED_SITE_CLASS
                             })
                         );
@@ -730,20 +794,45 @@ function capitalizeFirstLetter(val) {
                         $input_vs30.val('');
                     } else {
                         const site_class = $site_class_select.val();
-                        $input_vs30.val(site_classes[site_class]['vs30']);
+                        $input_vs30.val(site_classes[asce_version][site_class]['vs30']);
+                        check_vs30_below_200();
                     }
                 }
+            });
+
+            const vs30_below_200_warning = `
+The Vs30 is less than 200 m/s. Some ground motion models are poorly
+constrained at this Vs30. In accordance with an ASCE 7-22
+supplement currently being proposed, it is recommended that the
+ground-motion spectra from this very low Vs30 be floored by those
+for Site Class D. In lieu of this conservative flooring, a
+site-specific hazard and site response could be warranted.`;
+            function check_vs30_below_200() {
+                let value = parseFloat($("input#vs30").val());
+                if (value >= 200 || isNaN(value)) {
+                    return;
+                }
+                showNotificationModal("WARNING", vs30_below_200_warning);
+            }
+
+            let typingTimer = null;
+            const DONE_TYPING_DELAY = 600;  // ms
+            $("input#vs30").on("input", function () {
+                clearTimeout(typingTimer);
+                // Start a new timer; validation happens only after user stops typing
+                typingTimer = setTimeout(check_vs30_below_200, DONE_TYPING_DELAY);
             });
 
             // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
             $("#aelo_run_form").submit(function (event) {
                 $('#submit_aelo_calc').prop('disabled', true);
-                var site_class = $('select#site_class').val();
+                const site_class = $('select#site_class').val();
+                const asce_version = $("#asce_version").val();
                 var vs30;
                 if (site_class === 'custom') {
                     vs30 = $("input#vs30").val();
                 } else {
-                    vs30 = site_classes[site_class]['vs30'];
+                    vs30 = site_classes[asce_version][site_class]['vs30'];
                     if (Array.isArray(vs30)) { // the default site class has 3 Vs30 values
                         vs30 = vs30.join(' ');
                     } else {
@@ -754,7 +843,7 @@ function capitalizeFirstLetter(val) {
                     lon: $("#lon").val(),
                     lat: $("#lat").val(),
                     siteid: $("#siteid").val(),
-                    asce_version: $("#asce_version").val(),
+                    asce_version: asce_version,
                     site_class: site_class,
                     vs30: vs30
                 };
@@ -854,6 +943,29 @@ function capitalizeFirstLetter(val) {
                         $('input[name="impact_approach"]').prop('disabled', false);
                         set_retrieve_data_btn_txt('initial');
                     });
+                }
+            });
+
+            $('input#no_uncertainty').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#number_of_ground_motion_fields').val('1');
+                    $('#truncation_level').val('0')
+                } else {
+                    $('#number_of_ground_motion_fields').val(
+                        impact_form_defaults.number_of_ground_motion_fields);
+                    $('#truncation_level').val(impact_form_defaults.truncation_level)
+                }
+            });
+
+            $('input#number_of_ground_motion_fields').on('input', function() {
+                if ($(this).val() != '1') {
+                    $('input#no_uncertainty').prop('checked', false);
+                }
+            });
+
+            $('input#truncation_level').on('input', function() {
+                if ($(this).val() != '0') {
+                    $('input#no_uncertainty').prop('checked', false);
                 }
             });
 
@@ -1196,7 +1308,7 @@ function capitalizeFirstLetter(val) {
 })($, Backbone, _, gem_oq_server_url);
 
 
-function showModal({ id, title, body, confirmText = 'Yes', cancelText = 'No', confirmAction }) {
+function showConfirmationModal({ id, title, body, confirmText = 'Yes', cancelText = 'No', confirmAction }) {
   const modal = document.querySelector('#confirmModal');
   modal.querySelector('.modal-title').innerHTML = title;
   modal.querySelector('.modal-body-pre').innerHTML = body;

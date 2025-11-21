@@ -21,6 +21,7 @@ import getpass
 import logging
 from openquake.baselib import config
 from openquake.baselib.general import safeprint
+from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.engine.export import core
@@ -88,7 +89,7 @@ def main(
         make_html_report=None,
         run=None,
         delete_calculation: int = None,
-        hazard_calculation_id: int = None,
+        hazard_calculation_id: valid.calculation = None,
         list_outputs: int = None,
         show_log=None,
         export_output=None,
@@ -156,7 +157,7 @@ def main(
         sys.exit(outdated)
 
     # hazard or hazard+risk
-    if hazard_calculation_id:
+    if isinstance(hazard_calculation_id, int):
         hc_id = get_job_id(hazard_calculation_id, user_name)
     else:
         hc_id = None
@@ -165,11 +166,15 @@ def main(
         log_file = os.path.expanduser(log_file) \
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
-        jobs = create_jobs(job_inis, log_level, log_file, user_name, hc_id)
+        jobs = create_jobs(job_inis, log_level, log_file, user_name,
+                           hc_id or hazard_calculation_id)
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
-        run_jobs(jobs, nodes=nodes, sbatch=True, precalc=not multi)
+
+        # possibly run the jobs in parallel
+        run_jobs(jobs, nodes=nodes, sbatch=True,
+                 precalc=False if multi else not hazard_calculation_id)
 
     # hazard
     elif list_hazard_calculations:
@@ -235,7 +240,7 @@ main.list_risk_calculations = dict(
     abbrev='--lrc', help='List risk calculation information')
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
-main.multi = 'Run multiple job.inis in parallel'
+main.multi = 'Run multiple job.inis (usually scenarios) in parallel'
 
 # options
 main.log_file = dict(

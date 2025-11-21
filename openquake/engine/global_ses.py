@@ -73,18 +73,31 @@ from openquake.engine import engine
 MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
-'''.split())
+OAT'''.split())
 
 dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
 
 
-def read_job_inis(mosaic_dir, INPUTS):
+def read_job_inis(inis, INPUTS):
+    """
+    Read the job.ini file, associate each to the corresponding model in
+    the mosaic and return a list of quartets `model_trt_gsim_weight`.
+    """
+    models = []
+    for ini in inis:
+        for model in MODELS:
+            if model in ini:
+                models.append(model)
+    assert len(inis) == len(models), (inis, models)
+    if 'KOR' in models or 'JPN' in models:
+        if int(INPUTS['ses_per_logic_tree_path']) % 50:
+            raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
+
     out = []
     rows = []
-    for model in INPUTS.pop('models'):
-        fname = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
-        dic = readinput.get_params(fname)
-        del dic['intensity_measure_types_and_levels']
+    for ini, model in zip(inis, models):
+        dic = readinput.get_params(ini)
+        dic.pop('intensity_measure_types_and_levels', None)
         dic.update(INPUTS)
         if 'truncation_level' not in dic:  # CAN
             dic['truncation_level'] = '5'
@@ -102,49 +115,45 @@ def read_job_inis(mosaic_dir, INPUTS):
     return out, rows
 
 
-def main(mosaic_dir, out, models='ALL', *,
+def main(what, out, *,
          number_of_logic_tree_samples:int=2000,
          ses_per_logic_tree_path:int=50, minimum_magnitude:float=5):
     """
     Storing global SES
     """
-    if models == 'ALL':
-        models = MODELS
+    if what.endswith('.ini'):
+        inis = what.split(',')
     else:
-        models = models.split(',')
-        for model in models:
-            assert model in MODELS, model
-    if 'KOR' in models or 'JPN' in models:
-        if ses_per_logic_tree_path % 50:
-            raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
+        inis = []
+        for model in MODELS:
+            ini = os.path.join(what, model, 'in', 'job_vs30.ini')
+            if os.path.exists(ini):
+                inis.append(ini)
     INPUTS = dict(
         calculation_mode='event_based',
         number_of_logic_tree_samples= str(number_of_logic_tree_samples),
         ses_per_logic_tree_path = str(ses_per_logic_tree_path),
         investigation_time='1',
-        ground_motion_fields='false',
-        models=models)
+        ground_motion_fields='false')
     if minimum_magnitude:
         INPUTS['minimum_magnitude'] = str(minimum_magnitude)
-    job_inis, rows = read_job_inis(mosaic_dir, INPUTS)
+    job_dics, rows = read_job_inis(inis, INPUTS)
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
-            h5['models'] = models
             h5['model_trt_gsim_weight'] = numpy.array(rows, dt)
-        jobs = engine.create_jobs(job_inis, log_level=logging.WARN)
-        engine.run_jobs(jobs, concurrent_jobs=min(len(jobs), 3))
+        jobs = engine.create_jobs(job_dics, log_level=logging.WARN)
+        engine.run_jobs(jobs)
         fnames = [datastore.read(job.calc_id).filename for job in jobs]
         logging.warning(f'Saving {out}')
         with hdf5.File(out, 'a') as h5:
             base.import_sites_hdf5(h5, fnames)
             base.import_ruptures_hdf5(h5, fnames)
-            h5['/'].attrs.update(INPUTS)
+            h5['oqparam'] = jobs[0].get_oqparam()
     print(mon)
     return fnames
 
-main.mosaic_dir = 'Directory containing the hazard mosaic'
+main.what = 'Comma-separated job.ini files or mosaic directory'
 main.out = 'Output file'
-main.models = 'Models to consider (comma-separated)'
 main.number_of_logic_tree_samples = 'Number of samples'
 main.ses_per_logic_tree_path = 'Number of SES'
 main.minimum_magnitude = 'Discard ruptures below this magnitude'

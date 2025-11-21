@@ -331,34 +331,43 @@ def split_source(src):
     return splits
 
 
-# NB: this is absurdly fast because of KDTree and because
-# the SiteCollection is reduced to large hexagons via h3
-def close_ruptures(ruptures, sitecol, magdist=(
-                   (5., 100.), (6., 200.), (7., 300.),
-                   (8., 400.), (9., 600.), (11., 999.))):
+# NB: this is fast because of KDTree and the magdist
+# NB: the magdist here is hard-coded and independent from oq
+def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
+        [(3, 0.), (4, 40.), (5., 100.), (6., 200.), (7., 300.),
+         (8., 400.), (9., 700.), (11., 1200.)])):
     """
     :param ruptures: an array of rupture records
     :param sitecol: a SiteCollection instance
+    :param assetcol: an AssetCollection or None
     :returns: the ruptures close to the sites
     """
-    sites = sitecol.lower_res()
-    mags = ruptures['mag']
+    if assetcol:
+        sids, counts = numpy.unique(assetcol.array['site_id'], return_counts=1)
+        num_assets = dict(zip(sids, counts))
+    sites = sitecol  #.lower_res()
+    mags = numpy.round(ruptures['mag'], 1)
     hypos = ruptures['hypo']
     kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
     ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
     out = []
-    for (mag1, dist1), (mag2, dist2) in zip(magdist[:-1], magdist[1:]):
-        ok = (mags >= mag1) & (mags < mag2)
+    for mag in F32(numpy.arange(3, 11, .1)):
+        ok = mags == mag
         if ok.sum() == 0:  # no ruptures in this magnitude range
             continue
         rups = ruptures[ok]
         kr = KDTree(spherical_to_cartesian(
             hypos[ok, 0], hypos[ok, 1], hypos[ok, 2]))
-        all_sids = kr.query_ball_tree(ks, dist1, eps=.1)
+        all_sids = kr.query_ball_tree(ks, magdist(mag), eps=.1)
         for r, sids in enumerate(all_sids):
             if sids:
-                rups[r]['nsites'] = len(sids)
-                out.append(rups[r])
+                rup = rups[r]
+                if assetcol:
+                    # NB: if there are stations num_assets[sid] can be empty
+                    rup['nsites'] = sum(num_assets.get(sid, 1) for sid in sids)
+                else:
+                    rup['nsites'] = len(sids)
+                out.append(rup)
     return numpy.array(out)
 
 
@@ -553,9 +562,9 @@ class SourceFilter(object):
         if not hasattr(self, 'kdt'):
             self.kdt = KDTree(self.sitecol.xyz)
         xyz = spherical_to_cartesian(lon, lat, dep)
-        sids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
-        sids.sort()  # for cross-platform consistency
-        return sids
+        ids = U32(self.kdt.query_ball_point(xyz, dist, eps=.001))
+        ids.sort()  # for cross-platform consistency
+        return self.sitecol.sids[ids]  # works also for filtered sitecol
 
     def filter(self, sources):
         """

@@ -40,7 +40,7 @@ import collections
 from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
-from openquake.baselib.performance import Monitor, idx_start_stop
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import (
     InvalidFile, geo, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
@@ -73,6 +73,7 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
                         ('len', U16)])
 
+ASSOC_DIST = 8  # acceptable distance to associate the site params to the site
 USER = getpass.getuser()
 MB = 1024 ** 2
 
@@ -89,7 +90,7 @@ def get_aelo_changelog():
             dic[k].append(v)
     df = pandas.DataFrame(dic)
     df = df.drop(columns=['private'])
-    df = df.applymap(
+    df = df.map(
         lambda x: (x.replace('\n', '<br>').lstrip('<br>')
                    if isinstance(x, str) else x))
     df.columns = df.columns.str.upper()
@@ -142,6 +143,18 @@ def get_stats(seq):
     return numpy.array(tup, stats_dt)
 
 
+def get_weights(oq, dstore):
+    """
+    :returns: float32 array of realization weights
+    """
+    samples = oq.number_of_logic_tree_samples
+    if samples:
+        weights = numpy.ones(samples, dtype=F32)/samples
+    else:
+        weights = dstore['weights'][:]
+    return weights
+
+
 class InvalidCalculationID(Exception):
     """
     Raised when running a post-calculation on top of an incompatible
@@ -160,6 +173,22 @@ def set_array(longarray, shortarray):
     """
     longarray[:len(shortarray)] = shortarray
     longarray[len(shortarray):] = numpy.nan
+
+
+# this is useful when testing the "hazard/risk from SES" feature
+def fix_hc_id(oq):
+    """
+    If we have `rupture_model_file = ses.ini` in the job.ini
+    and ses.hdf5 does not exist, generates it from ses.ini
+    and replace oq.inputs['rupture_model'] with 'base_path/ses.hdf5'
+    """
+    path = os.path.join(oq.base_path, oq.hazard_calculation_id)
+    if path.endswith('.hdf5'):
+        oq.hazard_calculation_id = path
+    elif path.endswith('.ini'):
+        oq.hazard_calculation_id = dcache.get(path).calc_id
+    else:
+        raise NotImplementedError(f'hc={path}')
 
 
 class BaseCalculator(metaclass=abc.ABCMeta):
@@ -568,13 +597,6 @@ class HazardCalculator(BaseCalculator):
             self.check_consequences()
         self.check_overflow()  # check if self.sitecol is too large
 
-        if ('amplification' in oq.inputs and
-                oq.amplification_method == 'kernel'):
-            logging.info('Reading %s', oq.inputs['amplification'])
-            df = AmplFunction.read_df(oq.inputs['amplification'])
-            check_amplification(df, self.sitecol)
-            self.af = AmplFunction.from_dframe(df)
-
         if (oq.calculation_mode == 'disaggregation' and
                 oq.max_sites_disagg < len(self.sitecol)):
             raise ValueError(
@@ -913,8 +935,9 @@ class HazardCalculator(BaseCalculator):
             # NB: this is tested in event_based case_27 and case_31
             child = readinput.get_site_collection(oq, self.datastore.hdf5)
             assoc_dist = (oq.region_grid_spacing * 1.414
-                          if oq.region_grid_spacing else 5)  # Graeme's 5km
+                          if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
+            # this is called by mosaic_for_ses/job_sites.csv
             self.sitecol, _array, _discarded = geo.utils.assoc(
                 child, haz_sitecol, assoc_dist, 'filter')
             self.datastore['sitecol'] = self.sitecol
@@ -1054,10 +1077,10 @@ class HazardCalculator(BaseCalculator):
             self.datastore.create_df('station_data', self.station_data)
             oq.observed_imts = self.observed_imts
 
-        if hasattr(self, 'sitecol') and self.sitecol and not oq.ruptures_hdf5:
+        if hasattr(self, 'sitecol') and self.sitecol:
             if 'site_model' in oq.inputs or oq.impact:
                 assoc_dist = (oq.region_grid_spacing * 1.414
-                              if oq.region_grid_spacing else 5)  # Graeme's 5km
+                              if oq.region_grid_spacing else ASSOC_DIST)
                 sm = readinput.get_site_model(oq, self.datastore.hdf5)
                 if oq.prefer_global_site_params and not numpy.isnan(
                         oq.reference_vs30_value):
@@ -1065,6 +1088,9 @@ class HazardCalculator(BaseCalculator):
                 else:
                     # use the site model parameters
                     self.sitecol.assoc(sm, assoc_dist)
+                    if 'station_data' in oq.inputs:
+                        # the complete sitecol is required
+                        self.sitecol.complete.assoc(sm, assoc_dist)
 
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5
@@ -1378,7 +1404,8 @@ def _getset_attrs(oq):
                 num_events.append(len(f['events']))
             num_sites.append(len(f['sitecol']))
     return dict(effective_time=attrs.get('effective_time'),
-                num_events=num_events, num_sites=num_sites, imts=list(oq.imtls))
+                num_events=num_events, num_sites=num_sites,
+                imts=list(oq.imtls))
 
 
 def import_sites_hdf5(dstore, fnames):
@@ -1433,8 +1460,6 @@ def import_ruptures_hdf5(h5, fnames):
     ruptures = numpy.array(rups, dtype=rups[0].dtype)
     ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]
     h5.create_dataset('ruptures', data=ruptures, compression='gzip')
-    h5.create_dataset(
-        'trt_smr_start_stop', data=idx_start_stop(ruptures['trt_smr']))
 
 
 def import_gmfs_hdf5(dstore, oq):
@@ -1536,7 +1561,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None,
     Create and possibly populate the datasets in the gmf_data group
     """
     oq = dstore['oqparam']
-    if not R and 'full_lt' not in dstore:  # from shakemap
+    if R is None and 'full_lt' not in dstore:  # from shakemap
         dstore['full_lt'] = logictree.FullLogicTree.fake()
         store_events(dstore, E)
     R = R or dstore['full_lt'].get_num_paths()
@@ -1719,6 +1744,22 @@ def create_risk_by_event(calc):
                          L=len(oq.loss_types), limit_states=dmgs)
 
 
+def get_model_lts(h5):
+    """
+    :returns: (model, full_lt) pairs
+    """
+    out = []
+    full_lt = h5['full_lt']
+    if hasattr(full_lt, 'gsim_lt'):
+        out.append(('???', full_lt))
+    else:
+        # full_lt is a h5py group
+        for model in full_lt:
+            out.append((model, h5[f'full_lt/{model}']))
+    return out
+
+
+# used in openquake._unc
 class DstoreCache:
     """
     Datastore cache based on a file called 'ini_hdf5.csv'
@@ -1767,7 +1808,10 @@ def run_calc(job_ini, **kw):
     """
     with logs.init(job_ini) as log:
         log.params.update(kw)
-        calc = calculators(log.get_oqparam(), log.calc_id)
+        oq = log.get_oqparam()
+        if isinstance(oq.hazard_calculation_id, str):
+            fix_hc_id(oq)
+        calc = calculators(oq, log.calc_id)
         calc.run()
         return calc
 
@@ -1784,7 +1828,8 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
     calcmode = oq.calculation_mode
     dskeys = set(dstore) & exportable  # exportable datastore keys
     dskeys.add('fullreport')
-    rlzs = dstore['full_lt'].rlzs
+    _, full_lt = get_model_lts(dstore)[-1]
+    rlzs = full_lt.rlzs
     if len(rlzs) > 1:
         dskeys.add('realizations')
     hdf5 = dstore.hdf5

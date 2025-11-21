@@ -211,21 +211,45 @@ class MacedoEtAl2019SInter(GMPE):
             setattr(self, attr, 
                     set(getattr(self, attr, ())) | set(getattr(self.gmpe, attr, ())))
 
-    def compute(self, ctx: np.recarray, imts: list, mean: np.ndarray,
-                sig: np.ndarray, tau: np.ndarray, phi: np.ndarray):
-        """
-        Calculates the mean Arias Intensity and the standard deviations
-        """
-        # NB: there is a single IMT, Arias Intensity, i.e. imts == [IA]
-        me, si, ta, ph = get_mean_stds(
-            self.gmpe, ctx, self.REQUIRES_IMTS, return_dicts=True)
-        C = CONSTANTS[self.kind][self.region]
-        mean[0] = get_mean_conditional_arias_intensity(C, ctx, me)
-        sigma_m, tau_m, phi_m = get_standard_deviations(
-            C, self.kind, self.rho_pga_sa1, si, ta, ph)
-        sig[0] += sigma_m
-        tau[0] += tau_m
-        phi[0] += phi_m
+    def compute(self, ctx: np.recarray, imts: list,
+                mean: np.ndarray, sig: np.ndarray,
+                tau: np.ndarray, phi: np.ndarray):
+
+        non_ia = [(i, imt) for i, imt in enumerate(imts)
+                  if str(imt) != "IA"]
+
+        if non_ia:
+            non_ia_imts = [imt for _, imt in non_ia]
+
+            base_mean, base_sig, base_tau, base_phi = get_mean_stds(
+                self.gmpe, ctx, non_ia_imts
+            )
+
+            for j, (i, _) in enumerate(non_ia):
+                mean[i] = base_mean[j]
+                sig[i]  = base_sig[j]
+                tau[i]  = base_tau[j]
+                phi[i]  = base_phi[j]
+
+        for i, imt in enumerate(imts):
+            if str(imt) != "IA":
+                continue
+
+            me, si, ta, ph = get_mean_stds(
+                self.gmpe, ctx, self.REQUIRES_IMTS, return_dicts=True
+            )
+
+            C = CONSTANTS[self.kind][self.region]
+
+            ia_mean = get_mean_conditional_arias_intensity(C, ctx, me)
+            sigma_ia, tau_ia, phi_ia = get_standard_deviations(
+                C, self.kind, self.rho_pga_sa1, si, ta, ph
+            )
+
+            mean[i] = ia_mean
+            sig[i]  = sigma_ia
+            tau[i]  = tau_ia
+            phi[i]  = phi_ia
 
 
 class MacedoEtAl2019SSlab(MacedoEtAl2019SInter):

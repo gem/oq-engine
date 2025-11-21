@@ -506,7 +506,6 @@ class SiteCollection(object):
         if indices is None or len(indices) == len(self):
             return self
         new = object.__new__(self.__class__)
-        indices = numpy.uint32(indices)
         new.array = self.array[indices]
         new.complete = self.complete
         return new
@@ -810,16 +809,14 @@ class SiteCollection(object):
         :returns: the site model array reduced to the hazard sites
         """
         # NB: self != self.complete in the impact tests with stations
-        m1, m2 = site_model[['lon', 'lat']], self.complete[['lon', 'lat']]
+        m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(
-                site_model).assoc(self.complete, assoc_dist, 'warn')
+                site_model).assoc(self, assoc_dist, 'warn')
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
             ignore) - {'lon', 'lat', 'depth'}
         for name in ok:
-            vals = site_model[name]
-            self._set(name, vals[self.sids])
-            self.complete._set(name, vals)
+            self._set(name, site_model[name])
 
         # sanity check
         for param in self.req_site_params:

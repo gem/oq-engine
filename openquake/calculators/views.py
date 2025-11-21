@@ -46,6 +46,7 @@ from openquake.risklib.scientific import (
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.getters import (
     get_ebrupture, MapGetter, get_pmaps_gb)
+from openquake.calculators.base import get_model_lts, get_weights
 from openquake.calculators.extract import extract
 
 TWO24 = 2**24
@@ -502,33 +503,25 @@ def view_portfolio_losses(token, dstore):
 def view_portfolio_loss(token, dstore):
     """
     The mean portfolio loss for each loss type,
-    extracted from the event loss table.
+    extracted from the average losses.
     """
     oq = dstore['oqparam']
-    K = dstore['risk_by_event'].attrs.get('K', 0)
-    alt_df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
-    weights = dstore['weights'][:]
-    rlzs = dstore['events']['rlz_id']
-    E = len(rlzs)
-    R = len(weights)
-    ws = weights[rlzs]
+    stats = 'avg_losses-stats' in dstore
     avgs = []
-    attrs = dstore['gmf_data'].attrs
-    itime = attrs['investigation_time']
-    etime = attrs['effective_time']
-    if itime:
-        freq = (oq.risk_investigation_time or itime) * E / etime
-    else:
-        freq = 1 / R
-    for ln in oq.loss_types:
-        df = alt_df[alt_df.loss_id == LOSSID[ln]]
-        eids = df.pop('event_id').to_numpy()
-        if (eids >= E).any():  # reduced events
-            assert len(set(ws)) == 1, 'Weights must be all equal'
-            weights = ws[:len(eids)]
+    for lt in oq.loss_types:
+        if stats:
+            idx = list(oq.hazard_stats()).index('mean')
+            tot = dstore[f'avg_losses-stats/{lt}'][:, idx].sum()
         else:
-            weights = ws[eids]
-        avgs.append(weights @ df.loss.to_numpy() / ws.sum() * freq)
+            dset = dstore[f'avg_losses-rlzs/{lt}']
+            A, R = dset.shape
+            if R == 1:
+                # when collect_rlzs is True
+                tot = dset[:].sum()
+            else:
+                weights = dstore['weights'][:]
+                tot = dset[:].sum(axis=0) @ weights
+        avgs.append(tot)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
@@ -836,22 +829,9 @@ def view_task_ebrisk(token, dstore):
     idx = int(token.split(':')[1])
     task_info = get_array(dstore['task_info'][()], taskname=b'ebrisk')
     task_info.sort(order='duration')
-    info = task_info[idx]
-    times = get_array(dstore['gmf_info'][()], task_no=info['task_no'])
-    extra = times[['nsites', 'gmfbytes', 'dt']]
-    ds = dstore.parent if dstore.parent else dstore
-    rups = ds['ruptures']['id', 'code', 'n_occ', 'mag'][times['rup_id']]
-    codeset = set('code_%d' % code for code in numpy.unique(rups['code']))
-    tbl = text_table(util.compose_arrays(rups, extra))
-    codes = ['%s: %s' % it for it in ds.getitem('ruptures').attrs.items()
-             if it[0] in codeset]
-    msg = '%s\n%s\nHazard time for task %d: %d of %d s, ' % (
-        tbl, '\n'.join(codes), info['task_no'], extra['dt'].sum(),
-        info['duration'])
-    msg += 'gmfbytes=%s, w=%d' % (
-        humansize(extra['gmfbytes'].sum()),
-        (rups['n_occ'] * extra['nsites']).sum())
-    return msg
+    task_no = task_info[idx]['task_no']
+    info = task_info[task_info['task_no'] == task_no]
+    return info
 
 
 @view.add('global_hazard')
@@ -919,7 +899,7 @@ def binning_error(values, eids, nbins=10):
 
 class GmpeExtractor(object):
     def __init__(self, dstore):
-        full_lt = dstore['full_lt']
+        _, full_lt = get_model_lts(dstore)[-1]
         self.trt_by = full_lt.trt_by
         self.gsim_by_trt = full_lt.gsim_by_trt
         self.rlzs = full_lt.get_realizations()
@@ -1334,11 +1314,11 @@ def view_delta_loss(token, dstore):
         return {'delta': numpy.zeros(1),
                 'loss_types': view_loss_ids(token, dstore),
                 'error': f"There are only {len(df)} events for {loss_type=}"}
+    R = len(get_weights(oq, dstore))
     if oq.calculation_mode == 'scenario_risk':
         if oq.number_of_ground_motion_fields == 1:
             return {'delta': numpy.zeros(1),
                     'error': 'number_of_ground_motion_fields=1'}
-        R = len(dstore['weights'])
         df['rlz_id'] = dstore['events']['rlz_id'][df.index]
         c0, c1 = numpy.zeros(R), numpy.zeros(R)
         for r in range(R):
@@ -1348,8 +1328,10 @@ def view_delta_loss(token, dstore):
         dic = dict(even=c0, odd=c1, delta=numpy.abs(c0 - c1) / (c0 + c1))
         return pandas.DataFrame(dic)
     num_events = len(dstore['events'])
-    efftime = oq.investigation_time * oq.ses_per_logic_tree_path * len(
-        dstore['weights'])
+    # NB: in risk_from_ses oq.investigation_time can be None,
+    # while risk_investigation_time is mandatory
+    itime = oq.investigation_time or oq.risk_investigation_time
+    efftime = itime * oq.ses_per_logic_tree_path * R
     periods = return_periods(efftime, num_events)[1:-1]
     losses0 = df.loss[df.index % 2 == 0]
     losses1 = df.loss.loc[df.index % 2 == 1]

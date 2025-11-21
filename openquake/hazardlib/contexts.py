@@ -2058,13 +2058,13 @@ def read_cmakers(dstore, full_lt=None):
     return cmakers
 
 
-def read_full_lt_by_label(dstore):
+def read_full_lt_by_label(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
     :returns: a dictionary label -> full_lt
     """
     oq = dstore['oqparam']
-    full_lt = dstore['full_lt'].init()
+    full_lt = full_lt or dstore['full_lt'].init()
     attrs = vars(full_lt)
     dic = {'Default': full_lt}
     for label in oq.site_labels:
