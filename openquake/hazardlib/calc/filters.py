@@ -333,6 +333,8 @@ def split_source(src):
 
 # NB: this is fast because of KDTree and the magdist
 # NB: the magdist here is hard-coded and independent from oq
+# NB: sitecol.lower_res(5) is needed to save memory: for India
+# with 1.3M sites the filtering was taking 83 GB, now only 6 GB
 def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
         [(3, 0.), (4, 40.), (5., 100.), (6., 200.), (7., 300.),
          (8., 400.), (9., 700.), (11., 1200.)])):
