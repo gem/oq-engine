@@ -345,11 +345,9 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
     if assetcol:
         sids, counts = numpy.unique(assetcol.array['site_id'], return_counts=1)
         num_assets = dict(zip(sids, counts))
-    if len(sitecol) > 1000:
-        sites, orig_sids = sitecol.lower_res(5)  # H3 edge of 10 km
+    sites, orig_sids = sitecol.lower_res(5)  # H3 edge of 10 km
+    if len(sites) < len(sitecol):
         logging.info('Reducing %s->%d sites', sitecol, len(sites))
-    else:
-        sites, orig_sids = sitecol, [[sid] for sid in sitecol.sids]
     mags = numpy.round(ruptures['mag'], 1)
     hypos = ruptures['hypo']
     ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
