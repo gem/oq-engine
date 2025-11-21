@@ -352,7 +352,6 @@ def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
         logging.info('Reducing %s->%s', sitecol, sites)
     mags = numpy.round(ruptures['mag'], 1)
     hypos = ruptures['hypo']
-    kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
     ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
     out = []
     for mag in F32(numpy.arange(3, 11, .1)):
