@@ -352,7 +352,6 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     affected = 0
     acc = {}
     pairs = numpy.unique(allrups[['model', 'trt_smr']])
-    logging.info('Filtering %d blocks of ruptures', len(pairs))
     for model, trt_smr in pairs:
         ok = (allrups['model'] == model) & (allrups['trt_smr'] == trt_smr)
         if len(sitecol) > oq.max_sites_disagg:
@@ -360,6 +359,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
             filrups = close_ruptures(allrups[ok], sitecol, assetcol)
         else:
             filrups = allrups[ok]
+        logging.info(f'Filtered {len(filrups):_d} ruptures')
         if len(filrups):
             acc[model, trt_smr] = filrups
             totw += rup_weight(filrups).sum()
