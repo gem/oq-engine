@@ -347,6 +347,9 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     allrups = dstore['ruptures'][:]
     logging.info(f'Read {len(allrups):_d} ruptures')
     totw = 0
+    nrups = 0
+    nsites = 0
+    affected = 0
     acc = {}
     for model, trt_smr in numpy.unique(allrups[['model', 'trt_smr']]):
         ok = (allrups['model'] == model) & (allrups['trt_smr'] == trt_smr)
@@ -358,7 +361,13 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
         if len(filrups):
             acc[model, trt_smr] = filrups
             totw += rup_weight(filrups).sum()
+            nrups += len(filrups)
+            nsites += filrups['nsites'].sum()
+            affected = max(affected, filrups['nsites'].sum())
     assert totw, 'All ruptures have been filtered out'
+    logging.info(f'Selected {nrups:_d} ruptures close to the sites')
+    logging.info('Affected assets/sites ~%.0f per rupture, max=%.0f',
+                 nsites/nrups, affected)
     maxw = totw / (oq.concurrent_tasks or 1)
     logging.info(f'{round(maxw)=}')
 
