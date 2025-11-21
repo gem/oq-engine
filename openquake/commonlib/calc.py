@@ -412,17 +412,6 @@ def get_counts(idxs, N):
     return counts
 
 
-def split(sbe, max_gmvs_chunk):
-    """
-    :yield: blocks of slices by event
-    """
-    dic = general.AccumDict(accum=[])
-    for rec in sbe:
-        dic[rec['stop'] // max_gmvs_chunk].append(rec)
-    for recs in dic.values():
-        yield numpy.array(recs, sbe[0].dtype)
-
-
 def get_slices(sbe, data, num_assets):
     """
     :returns: a list of triple (start, stop, weight)

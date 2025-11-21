@@ -26,7 +26,7 @@ from scipy import sparse
 
 from openquake.baselib import hdf5, performance, general, python3compat, config
 from openquake.hazardlib import stats, InvalidFile
-from openquake.commonlib.calc import starmap_from_gmfs, split
+from openquake.commonlib.calc import starmap_from_gmfs
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
@@ -101,6 +101,10 @@ def debugprint(ln, asset_loss_table, adf):
 
 
 def build_avg(loss3, A, X):
+    """
+    Convert the three lists of arrays in `loss3` into a sparse matrix
+    of float32 of shape (A, X) (possibly empty)
+    """
     if loss3['aids']:
         aids = numpy.concatenate(loss3['aids'], dtype=U32)
         bids = numpy.concatenate(loss3['bids'], dtype=U32)

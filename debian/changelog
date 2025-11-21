@@ -1,5 +1,9 @@
+  [Michele Simionato]
+  * Simplified `ebr_from_gmfs`: now the only way to save memory is
+    to increase `concurrent_tasks`
+
   [Anirudh Rao]
-  * Add missing axis argument in recent bugfix in classical_risk 
+  * Add missing axis argument in recent bugfix in classical_risk
     with nontrivial weights in the taxonomy mapping
 
   [Michele Simionato]
