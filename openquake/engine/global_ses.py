@@ -141,7 +141,8 @@ def main(what, out, *,
     with performance.Monitor(measuremem=True) as mon:
         with hdf5.File(out, 'w') as h5:
             h5['model_trt_gsim_weight'] = numpy.array(rows, dt)
-        jobs = engine.create_jobs(job_dics, log_level=logging.WARN)
+        jobs = engine.create_jobs(job_dics, log_level=logging.WARN
+                                  if len(inis) > 1 else logging.INFO)
         engine.run_jobs(jobs)
         fnames = [datastore.read(job.calc_id).filename
                   for job in jobs if job.get_job().status == 'complete']
