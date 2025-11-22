@@ -162,11 +162,11 @@ def build_hcurves(dstore):
 
 # ######################## GMF calculator ############################ #
 
-def count_ruptures(src):
+def count_ruptures(srcs, monitor):
     """
-    Count the number of ruptures on a heavy source
+    Count the number of ruptures on heavy sources
     """
-    return {src.source_id: src.count_ruptures()}
+    return {src.source_id: src.count_ruptures() for src in srcs}
 
 
 def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
@@ -575,11 +575,15 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
         with self.monitor('counting ruptures', measuremem=True):
-            nrups = parallel.Starmap(  # weighting the heavy sources
-                count_ruptures, [(src,) for src in sources
-                                 if src.code in b'AMSC'],
-                h5=self.datastore.hdf5,
-                progress=logging.debug).reduce()
+            heavy_sources = [src for src in sources if src.code in b'ASC']
+            if heavy_sources:
+                nrups = parallel.Starmap.apply(  # weighting the heavy sources
+                    count_ruptures, (heavy_sources,),
+                    h5=self.datastore.hdf5,
+                    progress=logging.debug
+                ).reduce()
+            else:
+                nrups = {}
             # NB: multifault sources must be considered light to avoid a large
             # data transfer, even if .count_ruptures can be slow
             for src in sources:
