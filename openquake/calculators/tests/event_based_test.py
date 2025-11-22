@@ -422,7 +422,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 3)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 70)
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', fname)
 
@@ -548,7 +548,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # splitting ruptures + gmf1 + gmf2
         self.run_calc(case_27.__file__, 'job.ini',
                       ground_motion_fields="false")
-        self.assertEqual(len(self.calc.datastore['ruptures']), 15)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 17)
         hc_id = str(self.calc.datastore.calc_id)
 
         self.run_calc(case_27.__file__, 'job.ini', tile_spec="[1,2]",

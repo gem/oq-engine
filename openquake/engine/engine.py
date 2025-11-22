@@ -331,7 +331,10 @@ def log_completed(jobctxs, sec):
         # <in-memory> happens for sensitivity.py in run-demos.sh
         job = logs.dbcmd('get_job', jobctx.calc_id)
         path = job.ds_calc_dir + '.hdf5'
-        size = getsize(path)
+        try:
+            size = getsize(path)
+        except FileNotFoundError:  # file not generated
+            size = 0
         logging.info(f'#{job.id} {job_ini} [{job.status}] '
                      f'{general.humansize(size)}')
         tot += size

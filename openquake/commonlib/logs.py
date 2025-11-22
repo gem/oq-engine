@@ -263,6 +263,12 @@ class LogContext:
             return self.oqparam
         return readinput.get_oqparam(self.params, validate=validate)
 
+    def get_job(self):
+        """
+        :returns: the associated job record
+        """
+        return dbcmd("get_job", self.calc_id)
+
     def __enter__(self):
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
