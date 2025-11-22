@@ -75,13 +75,6 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model='???', model_geom=None):
         if srcfilter.integration_distance(rup.mag) == 0:
             continue
 
-        # apply distance filtering
-        nsites = 0
-        if srcfilter.sitecol is not None:
-            nsites = len(srcfilter.close_sids(rec, rup.tectonic_region_type))
-            if nsites == 0:
-                continue
-
         # apply model filtering if any (used in `oq mosaic sample_rups`)
         if model_geom and not shapely.contains_xy(
                 model_geom, hypo[0], hypo[1]):
@@ -90,7 +83,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model='???', model_geom=None):
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.id, ebrupture.seed, ebrupture.source_id,
                ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
-               rate, minlon, minlat, maxlon, maxlat, hypo, 0, nsites, 0, model)
+               rate, minlon, minlat, maxlon, maxlat, hypo, 0, 1, 0, model)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are
@@ -189,15 +182,12 @@ def sample_cluster(group, num_ses, ses_seed):
     return eb_ruptures
 
 
-# NB: there is postfiltering of the ruptures, which is more efficient
 def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
     """
     :param sources:
         a sequence of sources of the same group
     :param cmaker:
         a ContextMaker instance with ses_per_logic_tree_path, ses_seed
-    :param sitecol:
-        SiteCollection instance used for filtering (None for no filtering)
     :param monitor:
         monitor instance
     :yields:
