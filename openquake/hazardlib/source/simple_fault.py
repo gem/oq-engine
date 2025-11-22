@@ -215,7 +215,8 @@ class SimpleFaultSource(ParametricSeismicSource):
                 self.rupture_mesh_spacing)
         except Exception as exc:
             source_id = self.source_id
-            raise exc.__class__(f'in {source_id=}: {exc}') from exc
+            exc.args = (f'in {source_id=}: {exc.args[0]}',) + exc.args[1:]
+            raise
         whole_fault_mesh = whole_fault_surface.mesh
         mesh_rows, mesh_cols = whole_fault_mesh.shape
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
