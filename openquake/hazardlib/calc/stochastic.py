@@ -45,7 +45,7 @@ MAX_RUPTURES = 2000
 
 
 # this is really fast
-def get_rup_array(ebruptures, srcfilter=nofilter, model='???', model_geom=None):
+def get_rup_array(ebruptures, magdist, model='???', model_geom=None):
     """
     Convert a list of EBRuptures into a numpy composite array, by filtering
     out the ruptures far away from every site. If a shapely polygon is passed
@@ -72,7 +72,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter, model='???', model_geom=None):
         rec['model'] = model
 
         # apply magnitude filtering
-        if srcfilter.integration_distance(rup.mag) == 0:
+        if magdist(rup.mag) == 0:
             continue
 
         # apply model filtering if any (used in `oq mosaic sample_rups`)
@@ -195,11 +195,11 @@ def sample_ruptures(sources, cmaker, monitor=Monitor()):
     """
     model = getattr(cmaker, 'model', '???')
     model_geom = getattr(cmaker, 'model_geom', None)
-    srcfilter = SourceFilter(None, cmaker.maximum_distance)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     source_data = AccumDict(accum=[])
     # Compute and save stochastic event sets
     num_ses = cmaker.ses_per_logic_tree_path
+    magdist = cmaker.maximum_distance
     grp_id = sources[0].grp_id
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
@@ -221,7 +221,7 @@ def sample_ruptures(sources, cmaker, monitor=Monitor()):
         # Yield ruptures
         er = sum(src.num_ruptures for src in sources)
         dic = dict(
-            rup_array=get_rup_array(eb_ruptures, srcfilter, model, model_geom),
+            rup_array=get_rup_array(eb_ruptures, magdist, model, model_geom),
             source_data=source_data, eff_ruptures={grp_id: er})
         yield AccumDict(dic)
     else:
@@ -235,7 +235,7 @@ def sample_ruptures(sources, cmaker, monitor=Monitor()):
                 # yield partial result to avoid running out of memory
                 yield AccumDict(dict(
                     rup_array=get_rup_array(
-                        eb_ruptures, srcfilter, model, model_geom),
+                        eb_ruptures, magdist, model, model_geom),
                     source_data={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
@@ -250,7 +250,7 @@ def sample_ruptures(sources, cmaker, monitor=Monitor()):
             source_data['weight'].append(src.weight)
             source_data['taskno'].append(monitor.task_no)
         t0 = time.time()
-        rup_array = get_rup_array(eb_ruptures, srcfilter, model, model_geom)
+        rup_array = get_rup_array(eb_ruptures, magdist, model, model_geom)
         dt = time.time() - t0
         if len(rup_array):
             yield AccumDict(dict(rup_array=rup_array, source_data=source_data,
