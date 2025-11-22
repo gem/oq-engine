@@ -182,7 +182,7 @@ def sample_cluster(group, num_ses, ses_seed):
     return eb_ruptures
 
 
-def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
+def sample_ruptures(sources, cmaker, monitor=Monitor()):
     """
     :param sources:
         a sequence of sources of the same group
@@ -195,7 +195,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
     """
     model = getattr(cmaker, 'model', '???')
     model_geom = getattr(cmaker, 'model_geom', None)
-    srcfilter = SourceFilter(sitecol, cmaker.maximum_distance)
+    srcfilter = SourceFilter(None, cmaker.maximum_distance)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     source_data = AccumDict(accum=[])
     # Compute and save stochastic event sets

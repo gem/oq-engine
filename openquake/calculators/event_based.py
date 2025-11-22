@@ -602,7 +602,6 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        srcfilter = self.srcfilter
         if 'geometry' in oq.inputs:
             fname = oq.inputs['geometry']
             with fiona.open(fname) as f:
@@ -624,7 +623,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.mosaic_model or 'geometry' in oq.inputs:
                 cmaker.model_geom = model_geom
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, cmaker, srcfilter.sitecol))
+                allargs.append((src_group, cmaker))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
