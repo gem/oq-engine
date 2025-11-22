@@ -351,7 +351,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     # upfront rather than looping on each (model, trt_smr)
     if len(sitecol) > oq.max_sites_disagg:
         # can manage 2 million sites in 13 minutes for IND
-        filrups = close_ruptures(allrups, sitecol, assetcol)
+        filrups = close_ruptures(allrups, sitecol, assetcol, dstore.hdf5)
         logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
         filrups = allrups
