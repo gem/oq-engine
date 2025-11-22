@@ -162,11 +162,11 @@ def build_hcurves(dstore):
 
 # ######################## GMF calculator ############################ #
 
-def count_ruptures(src):
+def count_ruptures(srcs, monitor):
     """
-    Count the number of ruptures on a heavy source
+    Count the number of ruptures on heavy sources
     """
-    return {src.source_id: src.count_ruptures()}
+    return {src.source_id: src.count_ruptures() for src in srcs}
 
 
 def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
@@ -575,11 +575,15 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
         with self.monitor('counting ruptures', measuremem=True):
-            nrups = parallel.Starmap(  # weighting the heavy sources
-                count_ruptures, [(src,) for src in sources
-                                 if src.code in b'AMSC'],
-                h5=self.datastore.hdf5,
-                progress=logging.debug).reduce()
+            heavy_sources = [src for src in sources if src.code in b'ASC']
+            if heavy_sources:
+                nrups = parallel.Starmap.apply(  # weighting the heavy sources
+                    count_ruptures, (heavy_sources,),
+                    h5=self.datastore.hdf5,
+                    progress=logging.debug
+                ).reduce()
+            else:
+                nrups = {}
             # NB: multifault sources must be considered light to avoid a large
             # data transfer, even if .count_ruptures can be slow
             for src in sources:
@@ -602,7 +606,6 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        srcfilter = self.srcfilter
         if 'geometry' in oq.inputs:
             fname = oq.inputs['geometry']
             with fiona.open(fname) as f:
@@ -620,11 +623,14 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, rgb, oq)
             cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
             g_index += len(rgb)
-            cmaker.model = oq.mosaic_model or '???'
+            param = dict(model=oq.mosaic_model or '???')
             if oq.mosaic_model or 'geometry' in oq.inputs:
-                cmaker.model_geom = model_geom
+                param['model_geom'] = model_geom
+            param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
+            param['ses_seed'] = oq.ses_seed
+            param['magdist'] = cmaker.maximum_distance
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, cmaker, srcfilter.sitecol))
+                allargs.append((src_group, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
@@ -745,8 +751,7 @@ class EventBasedCalculator(base.HazardCalculator):
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0)]
                 ebrs[0].seed = oq.ses_seed
-            srcfilter = SourceFilter(self.sitecol, oq.maximum_distance(trt))
-            aw = get_rup_array(ebrs, srcfilter)
+            aw = get_rup_array(ebrs, oq.maximum_distance(trt))
             if len(aw) == 0:
                 raise RuntimeError(
                     'The rupture is too far from the sites! Please check the '

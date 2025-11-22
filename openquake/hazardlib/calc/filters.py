@@ -180,7 +180,7 @@ def floatdict(value):
     return value
 
 
-def magdepdist(pairs):
+def magdepdist(pairs=((MINMAG, 1000), (MAXMAG, 1000))):
     """
     :param pairs: a list of pairs [(mag, dist), ...]
     :returns: a scipy.interpolate.interp1d function

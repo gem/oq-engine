@@ -1,10 +1,14 @@
+  [Michele Simionato]
+  * Fixed `count_ruptures` producing more than 32768 tasks
+  * Removed distance filtering when sampling the ruptures
+
   [Paul Henshaw, Paolo Tormene]
   * Force use of utf8 encoding when writing non-binary files.
   * Update AreaSource demo to use UTF8 chars that are obviously not ASCII.
   * Use utf-8-sig when reading so as to handle BOM
 
   [Anirudh Rao]
-  * Add missing axis argument in recent bugfix in classical_risk 
+  * Add missing axis argument in recent bugfix in classical_risk
     with nontrivial weights in the taxonomy mapping
 
   [Michele Simionato]
