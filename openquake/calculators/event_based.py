@@ -619,11 +619,14 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, rgb, oq)
             cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
             g_index += len(rgb)
-            cmaker.model = oq.mosaic_model or '???'
+            param = dict(model=oq.mosaic_model or '???')
             if oq.mosaic_model or 'geometry' in oq.inputs:
-                cmaker.model_geom = model_geom
+                param['model_geom'] = model_geom
+            param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
+            param['ses_seed'] = oq.ses_seed
+            param['magdist'] = cmaker.maximum_distance
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, cmaker))
+                allargs.append((src_group, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)

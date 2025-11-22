@@ -182,30 +182,31 @@ def sample_cluster(group, num_ses, ses_seed):
     return eb_ruptures
 
 
-def sample_ruptures(sources, cmaker, monitor=Monitor()):
+def sample_ruptures(sources, param, monitor=Monitor()):
     """
     :param sources:
         a sequence of sources of the same group
-    :param cmaker:
-        a ContextMaker instance with ses_per_logic_tree_path, ses_seed
+    :param param:
+        a dictionary with ses_per_logic_tree_path, ses_seed,
+        magdist, model, model_geom
     :param monitor:
         monitor instance
     :yields:
         dictionaries with keys rup_array, source_data
     """
-    model = getattr(cmaker, 'model', '???')
-    model_geom = getattr(cmaker, 'model_geom', None)
+    model = param.get('model', '???')
+    model_geom = param.get('model_geom', None)
     # AccumDict of arrays with 3 elements nsites, nruptures, calc_time
     source_data = AccumDict(accum=[])
     # Compute and save stochastic event sets
-    num_ses = cmaker.ses_per_logic_tree_path
-    magdist = cmaker.maximum_distance
+    num_ses = param['ses_per_logic_tree_path']
+    magdist = param['magdist']
     grp_id = sources[0].grp_id
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
     if getattr(sources, 'atomic', False):
         t0 = time.time()
-        eb_ruptures = sample_cluster(sources, num_ses, cmaker.ses_seed)
+        eb_ruptures = sample_cluster(sources, num_ses, param['ses_seed'])
         dt = time.time() - t0
 
         # populate source_data
@@ -241,7 +242,7 @@ def sample_ruptures(sources, cmaker, monitor=Monitor()):
             samples = getattr(src, 'samples', 1)
             t0 = time.time()
             eb_ruptures.extend(
-                src.sample_ruptures(samples * num_ses, cmaker.ses_seed))
+                src.sample_ruptures(samples * num_ses, param['ses_seed']))
             dt = time.time() - t0
             source_data['src_id'].append(src.source_id)
             source_data['nsites'].append(src.nsites)
