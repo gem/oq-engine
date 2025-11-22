@@ -214,7 +214,8 @@ class SimpleFaultSource(ParametricSeismicSource):
                 self.lower_seismogenic_depth, self.dip,
                 self.rupture_mesh_spacing)
         except Exception as exc:
-            raise exc.__class__(f'{exc} in {self.source_id}') from exc
+            source_id = self.source_id
+            raise exc.__class__(f'in {source_id=}: {exc}') from exc
         whole_fault_mesh = whole_fault_surface.mesh
         mesh_rows, mesh_cols = whole_fault_mesh.shape
         fault_length = float((mesh_cols - 1) * self.rupture_mesh_spacing)
