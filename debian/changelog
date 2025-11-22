@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed `count_ruptures` producing more than 32768 tasks
   * Removed distance filtering when sampling the ruptures
 
   [Paul Henshaw, Paolo Tormene]
