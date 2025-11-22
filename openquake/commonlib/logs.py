@@ -221,7 +221,6 @@ class LogContext:
     Context manager managing the logging functionality
     """
     oqparam = None
-    exc = None
 
     def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, tag=''):
@@ -264,6 +263,12 @@ class LogContext:
             return self.oqparam
         return readinput.get_oqparam(self.params, validate=validate)
 
+    def get_job(self):
+        """
+        :returns: the associated job record
+        """
+        return dbcmd("get_job", self.calc_id)
+
     def __enter__(self):
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
@@ -289,7 +294,6 @@ class LogContext:
 
     def __exit__(self, etype, exc, tb):
         if tb:
-            self.exc = exc
             if etype is SystemExit:
                 dbcmd('finish', self.calc_id, 'aborted')
             else:
