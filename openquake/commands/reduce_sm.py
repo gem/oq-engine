@@ -51,16 +51,19 @@ def reduce_to_one_source(sm_dir):
         for fname in files:
             inp = os.path.join(cwd, fname)
             out = inp.replace(sm_dir, new)
-            if fname.endswith('.xml'):  # assume source model file
+            if fname.endswith(('_sections.xml', '.hdf5')):  # don't reduce
+                shutil.copy(inp, out)
+            elif fname.endswith('.xml'):  # assume source model file
                 root = nrml.read(inp)
                 first_grp = root[0][0]
                 if first_grp.nodes:  # has sources
+                    # (it can be empty when using extendModel)
                     first_grp.nodes = [first_grp[0]]
+                # discard other groups
+                root[0].nodes = [first_grp]
                 with open(out, 'wb') as f:
                     nrml.write(root, f)
-            elif fname.endswith('.hdf5'):  # don't reduce
-                shutil.copy(inp, out)
-            logging.info('Stored %s', out)
+                logging.info('Reduced %s', out)
 
 def main(what):
     """
