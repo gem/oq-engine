@@ -17,6 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import shutil
 import logging
 from openquake.baselib import performance, general, python3compat
 from openquake.hazardlib import nrml
@@ -42,18 +43,24 @@ def reduce_to_one_source(sm_dir):
     if not os.path.exists(new):
         os.makedirs(new)
     for cwd, dirs, files in os.walk(sm_dir):
+        cwdnew = cwd.replace(sm_dir, new)
+        for dir in dirs:
+            newdir = os.path.join(cwdnew, dir)
+            if not os.path.exists(newdir):
+                os.makedirs(newdir)
         for fname in files:
+            inp = os.path.join(cwd, fname)
+            out = inp.replace(sm_dir, new)
             if fname.endswith('.xml'):  # assume source model file
-                inp = os.path.join(cwd, fname)
-                out = inp.replace(sm_dir, new)
                 root = nrml.read(inp)
                 first_grp = root[0][0]
                 if first_grp.nodes:  # has sources
                     first_grp.nodes = [first_grp[0]]
                 with open(out, 'wb') as f:
                     nrml.write(root, f)
-                logging.info('Stored %s', out)
-
+            elif fname.endswith('.hdf5'):  # don't reduce
+                shutil.copy(inp, out)
+            logging.info('Stored %s', out)
 
 def main(what):
     """

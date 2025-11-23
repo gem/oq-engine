@@ -766,8 +766,6 @@ class CompositeSourceModel:
                     continue
                 if len(cmdict) > 1:  # has labels
                     sites = sitecol.filter(sitecol.ilabel == idx)
-                    if sites is not None:
-                        logging.info(f'{len(sites)=} for {label=}, {sg}')
                 else:
                     sites = sitecol
                 if sites:
