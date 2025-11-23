@@ -1278,9 +1278,6 @@ class FullLogicTree(object):
         """
         :returns: the complete list of LtRealizations
         """
-        if hasattr(self, '_rlzs'):
-            return self._rlzs
-
         num_samples = self.source_model_lt.num_samples
         if num_samples:  # sampling
             rlzs = numpy.empty(num_samples, object)
@@ -1310,8 +1307,7 @@ class FullLogicTree(object):
         if tot_weight != 1.:
             for rlz in rlzs:
                 rlz.weight = rlz.weight / tot_weight
-        self._rlzs = rlzs
-        return self._rlzs
+        return rlzs
 
     def _rlzs_by_gsim(self, trt_smr):
         # return dictionary gsim->rlzs
