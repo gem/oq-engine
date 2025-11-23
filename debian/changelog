@@ -1,5 +1,4 @@
   [Michele Simionato]
-  * Fixed `oq reduce_sm` in the case of multiple source groups
   * Fixed `count_ruptures` producing more than 32768 tasks
   * Removed distance filtering when sampling the ruptures
 
@@ -25,7 +24,7 @@
     "preferred" one for a tag
 
   [Michele Simionato]
-  * Internal: extended reduce_sm to reduce the source models to a single source
+  * Internal: extended `oq reduce_sm` to accept a source model directory
   * Implemented event_based_risk from ses.hdf5
   * Raised an early error if the vulnerability functions are not
     strictly increasing
