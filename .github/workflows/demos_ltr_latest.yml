@@ -9,7 +9,7 @@ on:
         required: true
   push:
     # TODO: it would be better to point to ltr and latest
-    branches: [ engine-3.16, engine-3.17, engine-3.18, engine-3.19, engine-3.20, engine-3.21, engine-3.22, engine-3.23 ]
+    branches: [ engine-3.16, engine-3.17, engine-3.18, engine-3.19, engine-3.20, engine-3.21, engine-3.22, engine-3.23, engine-3.24 ]
 jobs:
   demos:
     runs-on: ubuntu-latest
