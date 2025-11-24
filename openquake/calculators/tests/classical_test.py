@@ -149,15 +149,21 @@ class ClassicalTestCase(CalculatorTestCase):
         # the default logic tree has 3 realizations, one of zero weight
         aac(self.calc.datastore['weights'][:], [.5, .5, 0])
 
-        # check the mean hazard curves manually
         oq = self.calc.oqparam
         flt0, flt1, flt2 = contexts.read_full_lt_by_label(
             self.calc.datastore).values()
+        toml = [gsim._toml for gsim in flt2.get_rlzs_by_gsim_dic()[0]]
+        assert toml == [
+            '[NSHMP2014]\ngmpe_name = "BooreEtAl2014"\nsgn = 0',
+            '[NSHMP2014]\ngmpe_name = "CampbellBozorgnia2014"\nsgn = 0',
+            '[NSHMP2014]\ngmpe_name = "ChiouYoungs2014"\nsgn = 0']
         sitecol = self.calc.sitecol
         sites0 = sitecol.filter(sitecol.ilabel == 0)
         sites1 = sitecol.filter(sitecol.ilabel == 1)
         sites2 = sitecol.filter(sitecol.ilabel == 2)
         src_groups = self.calc.csm.src_groups
+
+        # check the mean hazard curves manually
         hcurve0 = calc.mean_rates.calc_mcurves(
             src_groups, sites0, flt0, oq)[0, 0]
         hcurve1 = calc.mean_rates.calc_mcurves(
