@@ -208,11 +208,10 @@ class RuptureImporter(object):
         except KeyError:  # missing sitecol
             self.N = 0
 
-    def get_eid_rlz(self, proxies, slc, rlzs_by_gsim, ordinal):
+    def get_eid_rlz(self, proxies, slc, rlzs, ordinal):
         """
         :returns: a composite array with the associations eid->rlz
         """
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         return {ordinal: get_events(proxies, rlzs, self.scenario)}
 
     def import_rups_events(self, rup_array):
@@ -263,7 +262,9 @@ class RuptureImporter(object):
         for i, (trt_smr, start, stop) in enumerate(idx_start_stop):
             slc = slice(start, stop)
             proxies = get_proxies(filename, rup_array[slc])
-            allargs.append((proxies, slc, rlzs_by_gsim[trt_smr], i))
+            rlzs = numpy.concatenate(
+                list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
+            allargs.append((proxies, slc, rlzs, i))
         acc = general.AccumDict()  # ordinal -> eid_rlz
         if len(events) < 1E5:
             for args in allargs:
