@@ -1456,6 +1456,7 @@ def import_ruptures_hdf5(h5, fnames):
             rups.extend(rup)
             if oq.mosaic_model and 'full_lt' in f:
                 h5[f'full_lt/{oq.mosaic_model}'] = f['full_lt']
+                h5[f'source_info/{oq.mosaic_model}'] = f['source_info'][:]
 
     ruptures = numpy.array(rups, dtype=rups[0].dtype)
     ruptures['e0'][1:] = ruptures['n_occ'].cumsum()[:-1]

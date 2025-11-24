@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Added `source_info` to the global SES file
+  * Optimized `_save_events` for large calculations over 100,000 events
+  * Parallelized the rupture prefiltering
   * Fixed `count_ruptures` producing more than 32768 tasks
   * Removed distance filtering when sampling the ruptures
 
