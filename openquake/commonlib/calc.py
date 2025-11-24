@@ -253,10 +253,10 @@ class RuptureImporter(object):
         filename = self.datastore.filename
         i = 0
         for trt_smr, start, stop in idx_start_stop:
-            proxies = get_proxies(filename, rup_array[start:stop])
+            #proxies = get_proxies(filename, rup_array[start:stop])
             rlzs = numpy.concatenate(
                 list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
-            records = get_events(proxies, rlzs, self.scenario)
+            records = get_events(rup_array[start:stop], rlzs, self.scenario)
             nr = len(records)
             events[i:i + nr] = records  # (id, rup_id, rlz_id)
             i += nr
