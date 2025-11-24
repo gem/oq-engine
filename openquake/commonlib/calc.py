@@ -257,21 +257,21 @@ class RuptureImporter(object):
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        iterargs = []
+        allargs = []
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
         filename = self.datastore.filename
         for i, (trt_smr, start, stop) in enumerate(idx_start_stop):
             slc = slice(start, stop)
             proxies = get_proxies(filename, rup_array[slc])
-            iterargs.append((proxies, slc, rlzs_by_gsim[trt_smr], i))
+            allargs.append((proxies, slc, rlzs_by_gsim[trt_smr], i))
         acc = general.AccumDict()  # ordinal -> eid_rlz
         if len(events) < 1E5:
-            for args in iterargs:
+            for args in allargs:
                 acc += self.get_eid_rlz(*args)
         else:
             self.datastore.swmr_on()  # before the Starmap
             for res in parallel.Starmap(
-                    self.get_eid_rlz, iterargs,
+                    self.get_eid_rlz, allargs,
                     h5=self.datastore,
                     progress=logging.debug):
                 acc += res
