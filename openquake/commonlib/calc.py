@@ -250,10 +250,8 @@ class RuptureImporter(object):
         # build the associations eid -> rlz; this is very fast:
         # I saw 30 million events associated in 1 minute!
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
-        filename = self.datastore.filename
         i = 0
         for trt_smr, start, stop in idx_start_stop:
-            #proxies = get_proxies(filename, rup_array[start:stop])
             rlzs = numpy.concatenate(
                 list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
             records = get_events(rup_array[start:stop], rlzs, self.scenario)
