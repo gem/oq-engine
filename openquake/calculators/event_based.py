@@ -351,7 +351,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     # upfront rather than looping on each (model, trt_smr)
     if len(sitecol) > oq.max_sites_disagg:
         # can manage 2 million sites in 13 minutes for IND
-        filrups = close_ruptures(allrups, sitecol, assetcol)
+        filrups = close_ruptures(allrups, sitecol, assetcol, dstore.hdf5)
         logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
         filrups = allrups
@@ -638,7 +638,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.nruptures = 0  # estimated classical ruptures within maxdist
         t0 = time.time()
         tot_ruptures = 0
-        filtered_ruptures = 0
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
@@ -649,7 +648,6 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(rup_array) == 0:
                 continue
             geom = rup_array.geom
-            filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:
@@ -660,8 +658,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
         t1 = time.time()
-        logging.info(f'Generated {filtered_ruptures}/{tot_ruptures} ruptures,'
-                     f' stored in {t1 - t0} seconds')
+        logging.info(f'Generated {tot_ruptures} ruptures in {t1 - t0} seconds')
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'effective investigation time is too short')

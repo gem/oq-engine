@@ -27,6 +27,7 @@ from openquake.engine import global_ses
 MOSAIC_DIR = os.path.dirname(mosaic_for_ses.__file__)
 RUP_HDF5 = os.path.join(MOSAIC_DIR, 'rups.hdf5')
 aac = numpy.testing.assert_allclose
+ae = numpy.testing.assert_equal
 
 last_job = None
 
@@ -53,6 +54,15 @@ def setup_module():
         path('job.ini'), hazard_calculation_id='rups.hdf5'
     ).datastore
     check(dstore, fnames)
+    ae(dstore['source_info/EUR']['source_id'],
+       [b'IF-CFS-0', b'IF-CFS-1', b'IF-CFS-2', b'IF-CFS-3'])
+    ae(dstore['source_info/MIE']['source_id'],
+       [b'DS-AS-AZEAS300', b'DS-AS-AZEAS301', b'DS-AS-IRNAS300',
+        b'DS-AS-IRNAS301', b'DS-AS-IRNAS302', b'DS-AS-PAKAS300',
+        b'IF-CFS-CYSD05', b'IF-CFS-GRID03', b'IF-CFS-TRID04',
+        b'SL-AS-GRIDAS08', b'SL-AS-PAKAS202', b'SL-AS-TRIDAS09',
+        b'SSC-mps-0', b'SSC-mps-1', b'SSC-mps-2', b'SSC-mps-3',
+        b'SSC-mps-4'])
 
 
 def test_sites():  # 6 sites
