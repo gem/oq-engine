@@ -27,7 +27,7 @@
     "preferred" one for a tag
 
   [Michele Simionato]
-  * Internal: extended reduce_sm to reduce the source models to a single source
+  * Internal: extended `oq reduce_sm` to accept a source model directory
   * Implemented event_based_risk from ses.hdf5
   * Raised an early error if the vulnerability functions are not
     strictly increasing
