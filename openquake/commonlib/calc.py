@@ -208,12 +208,6 @@ class RuptureImporter(object):
         except KeyError:  # missing sitecol
             self.N = 0
 
-    def get_eid_rlz(self, proxies, slc, rlzs, ordinal):
-        """
-        :returns: a composite array with the associations eid->rlz
-        """
-        return {ordinal: get_events(proxies, rlzs, self.scenario)}
-
     def import_rups_events(self, rup_array):
         """
         Import an array of ruptures and store the associated events.
@@ -256,33 +250,20 @@ class RuptureImporter(object):
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        allargs = []
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
         filename = self.datastore.filename
-        for i, (trt_smr, start, stop) in enumerate(idx_start_stop):
+        i = 0
+        for trt_smr, start, stop in idx_start_stop:
             slc = slice(start, stop)
             proxies = get_proxies(filename, rup_array[slc])
             rlzs = numpy.concatenate(
                 list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
-            allargs.append((proxies, slc, rlzs, i))
-        acc = general.AccumDict()  # ordinal -> eid_rlz
-        if len(events) < 1E5:
-            for args in allargs:
-                acc += self.get_eid_rlz(*args)
-        else:
-            self.datastore.swmr_on()  # before the Starmap
-            for res in parallel.Starmap(
-                    self.get_eid_rlz, allargs,
-                    h5=self.datastore,
-                    progress=logging.debug):
-                acc += res
-        i = 0
-        for ordinal, eid_rlz in sorted(acc.items()):
+            eid_rlz = get_events(proxies, rlzs, self.scenario)
             for er in eid_rlz:
                 events[i] = er
                 i += 1
-                if i >= TWO32:
-                    raise ValueError('There are more than %d events!' % i)
+            if i >= TWO32:
+                raise ValueError('There are more than %d events!' % i)
 
         # sanity check
         numpy.testing.assert_equal(events['id'], numpy.arange(E))
