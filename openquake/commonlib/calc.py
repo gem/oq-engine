@@ -242,28 +242,24 @@ class RuptureImporter(object):
         oq = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
+        assert E < TWO32, E
         events = numpy.zeros(E, rupture.events_dt)
-        # DRAMATIC! the event IDs will be overridden a few lines below,
-        # see the line events['id'] = numpy.arange(len(events))
 
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
-        # build the associations eid -> rlz sequentially or in parallel
-        # this is very fast: I saw 30 million events associated in 1 minute!
+        # build the associations eid -> rlz; this is very fast:
+        # I saw 30 million events associated in 1 minute!
         rlzs_by_gsim = self.full_lt.get_rlzs_by_gsim_dic()
         filename = self.datastore.filename
         i = 0
         for trt_smr, start, stop in idx_start_stop:
-            slc = slice(start, stop)
-            proxies = get_proxies(filename, rup_array[slc])
+            proxies = get_proxies(filename, rup_array[start:stop])
             rlzs = numpy.concatenate(
                 list(rlzs_by_gsim[trt_smr].values()), dtype=U32)
-            eid_rlz = get_events(proxies, rlzs, self.scenario)
-            for er in eid_rlz:
-                events[i] = er
-                i += 1
-            if i >= TWO32:
-                raise ValueError('There are more than %d events!' % i)
+            records = get_events(proxies, rlzs, self.scenario)
+            nr = len(records)
+            events[i:i + nr] = records  # (id, rup_id, rlz_id)
+            i += nr
 
         # sanity check
         numpy.testing.assert_equal(events['id'], numpy.arange(E))
