@@ -1,3 +1,5 @@
+python3-oq-engine (3.23.4-1~xenial01) xenial; urgency=low
+
   [Paul Henshaw, Paolo Tormene]
   * Force use of utf8 encoding when writing non-binary files.
   * Update AreaSource demo to use UTF8 chars that are obviously not ASCII.
@@ -6,6 +8,8 @@
   [Michele Simionato]
   * Backported the fix for small negative damages (https://github.com/gem/oq-engine/pull/10772)
   * Fixed the documentation about the installation directories
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Mon, 24 Nov 2025 14:40:35 +0000
 
 python3-oq-engine (3.23.3-1~xenial01) xenial; urgency=low
 
