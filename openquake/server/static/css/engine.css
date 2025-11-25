@@ -215,6 +215,11 @@ nav.main-nav ul li.admin{
    border-bottom: solid #ff0000 5px;
 }
 
+nav.main-nav ul li.manage-tags {
+   /* NOTE: currently using the same color for the 2 admin interfaces */
+   border-bottom: solid #ff0000 5px;
+}
+
 nav.main-nav ul li:hover{
     border-bottom: solid #fff 5px;
 }
