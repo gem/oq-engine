@@ -217,7 +217,7 @@ nav.main-nav ul li.admin{
 
 nav.main-nav ul li.manage-tags {
    /* NOTE: currently using the same color for the 2 admin interfaces */
-   border-bottom: solid #ff0000 5px;
+   border-bottom: solid #d60000 5px;
 }
 
 nav.main-nav ul li:hover{
@@ -236,6 +236,10 @@ nav.main-nav ul li.calc label{
 
 nav.main-nav ul li.tools {
    border-bottom: solid #eb737d 5px;
+}
+
+.nav-engine-items {
+    width: auto;
 }
 
 #license p{

@@ -28,6 +28,7 @@ from openquake.commonlib import datastore
 
 # optionally overridden in local_settings.py
 STANDALONE_APP_NAME_MAP = {}
+
 try:
     from openquakeplatform.settings import STANDALONE, STANDALONE_APPS
 except ImportError:
@@ -211,9 +212,9 @@ FILE_UPLOAD_TEMP_DIR = config.directory.custom_tmp or tempfile.gettempdir()
 SERVER_NAME = socket.gethostname()
 
 APPLICATION_MODES = [
-    'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY']
-
-APPLICATION_MODE = 'PUBLIC'
+    'PUBLIC', 'RESTRICTED', 'AELO', 'ARISTOTLE', 'READ_ONLY', 'TOOLS_ONLY'
+]
+APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', 'PUBLIC')
 
 IMPACT_DEFAULT_USGS_ID = 'us7000n7n8'  # loadable and convertible rupture
 # IMPACT_DEFAULT_USGS_ID = 'us6000jllz'  # loadable but with conversion err
