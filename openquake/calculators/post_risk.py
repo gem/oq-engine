@@ -202,7 +202,8 @@ def get_src_loss_table(dstore, loss_id):
     if len(alt) == 0:  # no losses for this loss type
         return [], ()
 
-    ws = dstore['weights'][:]
+    oq = dstore['oqparam']
+    ws = base.get_weights(oq, dstore)
     events = dstore['events'][:]
     ruptures = dstore['ruptures'][:]
     source_id = dstore['source_info']['source_id']
