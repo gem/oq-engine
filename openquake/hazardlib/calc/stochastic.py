@@ -26,7 +26,6 @@ import shapely
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, random_histogram
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib.calc.filters import nofilter, SourceFilter
 from openquake.hazardlib.source.rupture import (
     BaseRupture, EBRupture, rupture_dt)
 from openquake.hazardlib.geo.surface.base import to_geom_lons_lats
@@ -60,30 +59,27 @@ def get_rup_array(ebruptures, magdist, model='???', model_geom=None):
         rup = ebrupture.rupture
         geom, lons, lats = to_geom_lons_lats(rup.surface)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
-        rec = numpy.zeros(1, rupture_dt)[0]
-        rec['id'] = ebrupture.id
-        rec['seed'] = ebrupture.seed
-        rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
-        rec['minlat'] = minlat = numpy.nanmin(lats)
-        rec['maxlon'] = maxlon = numpy.nanmax(lons)
-        rec['maxlat'] = maxlat = numpy.nanmax(lats)
-        rec['mag'] = rup.mag
-        rec['hypo'] = hypo
-        rec['model'] = model
+        minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
+        minlat = numpy.nanmin(lats)
+        maxlon = numpy.nanmax(lons)
+        maxlat = numpy.nanmax(lats)
 
         # apply magnitude filtering
         if magdist(rup.mag) == 0:
             continue
 
-        # apply model filtering if any (used in `oq mosaic sample_rups`)
+        # mark the ruptures with hypocenter outside the mosaic model
         if model_geom and not shapely.contains_xy(
                 model_geom, hypo[0], hypo[1]):
-            continue
+            # tested in event_based/case_32
+            mmodel = '???'
+        else:
+            mmodel = model
 
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.id, ebrupture.seed, ebrupture.source_id,
                ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
-               rate, minlon, minlat, maxlon, maxlat, hypo, 0, 1, 0, model)
+               rate, minlon, minlat, maxlon, maxlat, hypo, 0, 1, 0, mmodel)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are

@@ -1453,7 +1453,12 @@ def import_ruptures_hdf5(h5, fnames):
             rup['id'] += offset
             rup['geom_id'] += offset
             offset += len(rup)
-            rups.extend(rup)
+            if oq.mosaic_model:
+                # keep only the ruptures in the model
+                model = oq.mosaic_model.encode('ascii')
+                rups.extend(rup[rup['model'] == model])
+            else:
+                rups.extend(rup)
             if oq.mosaic_model and 'full_lt' in f:
                 h5[f'full_lt/{oq.mosaic_model}'] = f['full_lt']
                 h5[f'source_info/{oq.mosaic_model}'] = f['source_info'][:]
