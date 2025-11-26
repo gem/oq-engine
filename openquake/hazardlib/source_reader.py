@@ -595,6 +595,28 @@ class CompositeSourceModel:
                     source_id = basename(src)
                     self.code[source_id] = src.code
 
+    def iter_sources(self, smr=None):
+        """
+        :param smr:
+            yields only the sources associated to the given source model
+            realization, or all realizations if smr is None (the default).
+        """
+        for grp in self.src_groups:
+            if smr is not None:
+                keep = any(trt_smr % TWO24 == smr for trt_smr in grp.trt_smrs)
+                if not keep:
+                    continue
+            yield from grp
+
+    def iter_ruptures(self, smr=None):
+        """
+        :param smr:
+            yields only the ruptures associated to the given source model
+            realization, or all realizations if smr is None (the default).
+        """
+        for src in self.iter_sources(smr):
+            yield from src.iter_ruptures()
+
     def get_trt_smrs(self):
         """
         :returns: an array of trt_smrs (to be stored as an hdf5.vuint32 array)

@@ -172,6 +172,18 @@ class LogicTreeTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+        # test csm.iter_sources and csm.iter_ruptures
+        csm = self.calc.datastore['_csm']
+        smr0, smr1, smr2 = self.calc.full_lt.sm_rlzs
+        source_ids = [src.source_id for src in csm.iter_sources()]
+        assert source_ids == ['2', '1', '3']
+
+        n0 = sum(1 for rup in csm.iter_ruptures(smr=0))
+        n1 = sum(1 for rup in csm.iter_ruptures(smr=1))
+        n2 = sum(1 for rup in csm.iter_ruptures(smr=2))
+        n = sum(1 for rup in csm.iter_ruptures())
+        assert n0 + n1 + n2 > n  # the same source appears in two sm_rlzs
+
     def test_case_08(self):
         self.assert_curves_ok(
             ['hazard_curve-smltp_b1_b2-gsimltp_b1.csv',
