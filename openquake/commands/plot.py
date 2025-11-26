@@ -557,13 +557,21 @@ def make_figure_ebruptures(extractors, what):
     plt = import_plt()
     [ex] = extractors
     sitecol = ex.get('sitecol')
-    hypo = ex.get(what)['hypo']
+    ebrs = ex.get(what)
+    out = ebrs['model'] == b'???'
+    in_ = ~out
     _fig, ax = plt.subplots()
     add_borders(ax, readinput.read_mosaic_df, buffer=0.)
     ax.grid(True)
-    ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5)
-    ax.scatter(hypo[:, 0], hypo[:, 1], marker='*')
-    ax.set_title('%d ruptures' % len(hypo))
+    ax.scatter(sitecol['lon'], sitecol['lat'], marker='.', alpha=.5,
+               label='sites')
+    hypo_in = ebrs[in_]['hypo']
+    ax.scatter(hypo_in[:, 0], hypo_in[:, 1], marker='*', label='ruptures in')
+    hypo_out = ebrs[out]['hypo']
+    ax.scatter(hypo_out[:, 0], hypo_out[:, 1], marker='x', label='ruptures out',
+               alpha=0.5)
+    ax.set_title('%d+%d ruptures' % (len(hypo_in), len(hypo_out)))
+    ax.legend()
     return plt
 
 
@@ -1238,7 +1246,7 @@ def plot_csv(fname):
 
 
 def main(what,
-         calc_id: int = -1,
+         calc_id: str = -1,
          others: int = [],
          *,
          save_to: str = None,
@@ -1248,6 +1256,9 @@ def main(what,
     """
     Generic plotter for local and remote calculations.
     """
+    if not calc_id.endswith('.hdf5'):
+        # assume calc_id is an integer
+        calc_id = int(calc_id)
     if what.endswith('.csv'):
         plot_csv(what)
         return
@@ -1314,7 +1325,7 @@ def main(what,
 
 
 main.what = 'what to extract (try examples)'
-main.calc_id = 'computation ID'
+main.calc_id = 'computation ID or .hdf5 file'
 main.others = dict(help='IDs of other computations', nargs='*')
 main.save_to = 'if passed, save the plot to file instead of showing it'
 main.webapi = 'if given, pass through the WebAPI'

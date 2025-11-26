@@ -35,12 +35,24 @@ def path(job_ini):
     return os.path.join(MOSAIC_DIR, job_ini)
 
 
+def count_rups(dstore, model):
+    arr = dstore['ruptures'][:]
+    return (arr['model'] == model.encode('ascii')).sum()
+
+
 def check(dstore, fnames):
     with hdf5.File(RUP_HDF5) as ds, \
          read(fnames[0]) as ds_EUR, \
          read(fnames[1]) as ds_MIE:
-        nrup_EUR = len(ds_EUR['ruptures'])
-        nrup_MIE = len(ds_MIE['ruptures'])
+
+        # count the ruptures outside the models
+        mie_out = count_rups(ds_MIE, '???')
+        assert mie_out == 66120
+        eur_out = count_rups(ds_EUR, '???')
+        assert eur_out == 12
+        
+        nrup_EUR = count_rups(ds_EUR, 'EUR')
+        nrup_MIE = count_rups(ds_MIE, 'MIE')
         rups = ds['ruptures'][:]
         nrup = len(rups)
         assert nrup == nrup_EUR + nrup_MIE
@@ -59,7 +71,7 @@ def setup_module():
     ae(dstore['source_info/MIE']['source_id'],
        [b'DS-AS-AZEAS300', b'DS-AS-AZEAS301', b'DS-AS-IRNAS300',
         b'DS-AS-IRNAS301', b'DS-AS-IRNAS302', b'DS-AS-PAKAS300',
-        b'IF-CFS-CYSD05', b'IF-CFS-GRID03', b'IF-CFS-TRID04',
+        b'IF-CFS-3', b'IF-CFS-CYSD05', b'IF-CFS-GRID03', b'IF-CFS-TRID04',
         b'SL-AS-GRIDAS08', b'SL-AS-PAKAS202', b'SL-AS-TRIDAS09',
         b'SSC-mps-0', b'SSC-mps-1', b'SSC-mps-2', b'SSC-mps-3',
         b'SSC-mps-4'])
