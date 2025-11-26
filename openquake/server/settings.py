@@ -340,6 +340,12 @@ if LOCKDOWN:
             0, 'django.contrib.auth.context_processors.auth')
         TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
 
+    if 'openquakeplatform.utils.oq_context_processor' in CONTEXT_PROCESSORS:
+        print('WARNING: OpenQuake Tools are not loaded because'
+              ' authentication is enabled.')
+        CONTEXT_PROCESSORS.remove('openquakeplatform.utils.oq_context_processor')
+        TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
+
     # do not log to file unless running through the webui
     if getpass.getuser() == WEBUI_USER:
         try:
