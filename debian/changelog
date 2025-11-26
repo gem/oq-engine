@@ -4,7 +4,8 @@
   * Optimized `_save_events` for large calculations over 100,000 events
   * Parallelized the rupture prefiltering
   * Fixed `count_ruptures` producing more than 32768 tasks
-  * Removed distance filtering when sampling the ruptures
+  * Removed the distance filtering when sampling the ruptures; removed also the
+    mosaic model filtering
 
   [Paul Henshaw, Paolo Tormene]
   * Force use of utf8 encoding when writing non-binary files.
@@ -17,7 +18,7 @@
 
   [Michele Simionato]
   * Added command `oq ses` to generate a merged stochastic event set
-  * Extended the global_ses script to accepts job.ini files
+  * Extended the global_ses script to accept job.ini files
   * Implemented `oq engine --run job1.ini .. jobN.ini --hc parent.hdf5`
   * Extended `--hc` to accept paths to datastore files
   * Using the filtered site collection, thus changing numbers in OQImpact
