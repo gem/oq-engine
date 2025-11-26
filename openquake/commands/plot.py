@@ -1256,7 +1256,7 @@ def main(what,
     """
     Generic plotter for local and remote calculations.
     """
-    if not calc_id.endswith('.hdf5'):
+    if isinstance(calc_id, str) and not calc_id.endswith('.hdf5'):
         # assume calc_id is an integer
         calc_id = int(calc_id)
     if what.endswith('.csv'):
