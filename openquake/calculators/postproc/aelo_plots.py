@@ -21,12 +21,11 @@ import numpy
 import json
 import matplotlib as mpl
 from scipy import interpolate
-from openquake.commonlib import readinput
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
 from openquake.calculators.postproc.plots import (
-    add_borders, adjust_limits, auto_limits)
+    adjust_limits, auto_limits, add_basemap)
 from PIL import Image
 
 ASCE_version = 'ASCE7-22'
@@ -578,7 +577,7 @@ def plot_sites(dstore, update_dstore=False):
     if len(sites) == 1:
         markersize = 30
         marker = 'x'
-        padding = 20
+        padding = 0.005
     elif len(sites) < 50:
         markersize = 1
         marker = 'o'
@@ -593,7 +592,9 @@ def plot_sites(dstore, update_dstore=False):
         padding = 0
     plt.scatter(lons, lats, c='black', marker=marker, s=markersize)
     xlim, ylim = auto_limits(ax)
-    add_borders(ax, readinput.read_countries_df, buffer=0.)
+    x_min, x_max = xlim
+    y_min, y_max = ylim
+    add_basemap(ax, x_min, y_min, x_max, y_max)
     adjust_limits(ax, xlim, ylim, padding=padding)
     if update_dstore:
         bio = io.BytesIO()
