@@ -798,7 +798,7 @@ You can visualize `sm_rlzs` for a given model as follows::
 The ``full_lt`` objects can be extracted from the datastore, one
 for each model. A Python script should get you started:
 
-.. python::
+.. code-block:: python
 
  from openquake.baselib import sap, hdf5
  TWO24 = 2 ** 24

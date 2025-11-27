@@ -571,7 +571,7 @@ The complete realizations can be obtained by not specifying ``applyToBranches``:
 You can serialize a logic tree built programmatically into an XML file
 with a call like this:
 
-.. python::
+.. code-block:: python
 
   with open('lt.xml', 'wb') as f:
       nrml.write([logictree.to_node()], f)
