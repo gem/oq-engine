@@ -177,11 +177,11 @@ class ClassicalTestCase(CalculatorTestCase):
         aac(hcurve1, pga1, rtol=2e-5)
         aac(hcurve2, pga2, rtol=2e-5)
 
-        # testing (over)sampling
+        # testing oversampling
         self.run_calc(case_06.__file__, 'job.ini',
                       number_of_logic_tree_samples='10')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/uhs.csv', fname)
+        self.assertEqualFiles('expected/uhs_sampling.csv', fname)
 
     def test_case_07(self):
         # make sure the Dummy GMPE works in event based too
