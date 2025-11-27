@@ -36,7 +36,7 @@ from openquake.baselib.general import (
     sqrscale)
 from openquake.baselib.performance import Monitor, split_array, kround0, compile
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import valid, imt as imt_module
+from openquake.hazardlib import valid, imt as imt_module, InvalidFile
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr, truncnorm_sf
@@ -1695,7 +1695,7 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock of a site collection used in the tests and in the SMT module of the OQ-MBTK
+# mock site collection used in the tests and in the SMT module of the OQ-MBTK
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
@@ -2061,16 +2061,34 @@ def read_cmakers(dstore, full_lt=None):
 def read_full_lt_by_label(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
+    :param full_lt: FullLogicTree instance; if None, it is read from the dstore
     :returns: a dictionary label -> full_lt
     """
     oq = dstore['oqparam']
     full_lt = full_lt or dstore['full_lt'].init()
+    glt = full_lt.gsim_lt
     attrs = vars(full_lt)
     dic = {'Default': full_lt}
     for label in oq.site_labels:
-        dic[label] = copy.copy(full_lt)
+        dic[label] = flt = copy.copy(full_lt)
         dic[label].__dict__.update(attrs)
+        dic[label]._rlzs_by = {}  # reset cache, tested in logictree/case_06
         dic[label].gsim_lt = dstore['gsim_lt' + label]
+
+        # all gsim logic trees in the dictionary must have the same
+        # trts and the same number of gsims per trt
+        exp = list(glt.values)
+        got = list(flt.gsim_lt.values)
+        if exp != got:
+            raise InvalidFile(
+                f'{oq.inputs["gsim_logic_tree"]}: expected {exp} got {got}')
+        for trt, gsims in full_lt.gsim_lt.values.items():
+            got = len(gsims)
+            exp = len(glt.values[trt])
+            if exp != got:
+                raise InvalidFile(
+                    f'{oq.inputs["gsim_logic_tree"]}: expected {exp} gsims '
+                    f'got {got} for {trt=}')
     return dic
 
 
