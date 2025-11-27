@@ -788,6 +788,13 @@ From the ``smr`` index one can extract the source model realization as follows::
 
   full_lt.sm_rlzs[smr]
 
+You can visualize `sm_rlzs` for a given model as follows::
+
+ $ oq show sm_rlzs:JPN ses.hdf5
+ | ordinal | lt_path | value               | samples | weight |
+ |---------+---------+---------------------+---------+--------|
+ | 0       | b11     | ['ssm/nied_50.xml'] | 2_000   | 1.0000 |
+
 The ``full_lt`` objects can be extracted from the datastore, one
 for each model. A Python script should get you started::
 
