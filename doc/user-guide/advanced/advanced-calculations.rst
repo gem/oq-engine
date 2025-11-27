@@ -581,7 +581,7 @@ version 3.25 the recommended way is to first generate a common stochastic
 event set and then run all calculations starting from it. In this way
 events and ruptures are consistent for all countries.
 
-You can compute the commin stochastic event set by running an event
+You can compute the common stochastic event set by running an event
 based calculation without specifying the sites and with the
 parameter ``ground_motion_fields`` set to false. Currently, one
 must specify a few global site parameters in the precalculation to
