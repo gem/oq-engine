@@ -2061,6 +2061,7 @@ def read_cmakers(dstore, full_lt=None):
 def read_full_lt_by_label(dstore, full_lt=None):
     """
     :param dstore: a DataStore-like object
+    :param full_lt: FullLogicTree instance; if None, it is read from the dstore
     :returns: a dictionary label -> full_lt
     """
     oq = dstore['oqparam']
@@ -2070,7 +2071,7 @@ def read_full_lt_by_label(dstore, full_lt=None):
     for label in oq.site_labels:
         dic[label] = copy.copy(full_lt)
         dic[label].__dict__.update(attrs)
-        dic[label]._rlzs_by = {}  # reset cache
+        dic[label]._rlzs_by = {}  # reset cache, tested in logictree/case_06
         dic[label].gsim_lt = dstore['gsim_lt' + label]
     return dic
 
