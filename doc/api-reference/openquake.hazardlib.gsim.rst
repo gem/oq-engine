@@ -824,10 +824,10 @@ jaimes_2020
     :undoc-members:
     :show-inheritance:
 
-Ji_Karimzadeh_Azores_Island_2025
+ji_karimzadeh_azores_island_2025
 ---------------------------------------------------
 
-.. automodule:: openquake.hazardlib.gsim.Ji_Karimzadeh_Azores_Island_2025
+.. automodule:: openquake.hazardlib.gsim.ji_karimzadeh_azores_island_2025
     :members:
     :undoc-members:
     :show-inheritance:
