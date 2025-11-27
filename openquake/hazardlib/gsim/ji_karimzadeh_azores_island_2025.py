@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2014-2025 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
 import numpy as np
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -10,9 +27,8 @@ class JiEtAl2025Azores(GMPE):
     """
     Implements the Ground Motion Model for the Azores Plateau (Portugal)
     developed by Ji et al. (2025) based on Simulated Scenario Earthquake Records.
-    The model is formulated for shallow seismic events ranging 
-    from magnitude Mw 5.0 to 6.8, Focal Depth 5–17 km, and RJB up to 150 km on bedrock sites. 
-
+    The model is formulated for shallow seismic events on bedrock sites 
+    (Vs30=760 m/s to 1000 m/s). 
     Reference:
     Ji Kun, Shaghayegh Karimzadeh, Saman Yaghmaei Sabegh, Ruibin Hou,
     Carvalho Alexandra, & Lourenço Paulo B.. (2025).
@@ -28,7 +44,8 @@ class JiEtAl2025Azores(GMPE):
     # Supported intensity measures: PGA, PGV, SA
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
-    # Component type: geometric mean (typical for simulated data if not explicitly stated)
+    #: Supported intensity measure component is the geometric mean of two
+    #: horizontal components
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
     # Supported standard deviation types: total, inter-event, intra-event
@@ -49,9 +66,10 @@ class JiEtAl2025Azores(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        Inputs:
-            ctx: context object containing mag, rjb, hypo_depth, etc.
-        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """        
         # Magnitude hinge points
         Mh1 = 5.5
         Mh2 = 6.5
@@ -132,3 +150,4 @@ pga   -4.96708915535545   0.672223287840007 -0.276989292236236  0.05835786211013
 4.0   -18.8048676186723   2.52038298090437  -0.516102686272828 -0.601695335234970  -0.842687684867223 0.130973662786576  -0.00122650853926933 0.400096989113447 0.104030327193461
 pgv   -3.32010242991311   1.12745819943232  -0.373893613834902 -0.112943647344538  -1.07977779174574  0.233118785856743  -0.00657639934690607 0.275714874417806  0.123356264698372
 """)
+
