@@ -1458,7 +1458,7 @@ def view_sm_rlzs(token, dstore):
     def row(rlz):
         value = ast.literal_eval(rlz.value.decode('utf8'))
         return (rlz.ordinal, '_'.join(rlz.lt_path),
-                 value, rlz.samples, rlz.weight)
+                value, rlz.samples, rlz.weight)
     return text_table(map(row, sm_rlzs), header, ext='org')
 
 
