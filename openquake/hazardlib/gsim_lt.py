@@ -214,8 +214,17 @@ class GsimLogicTree(object):
         """
         dic = {}
         for ltnode in nrml.read(fname).nodes:
-            dic[ltnode['logicTreeID']] = cls(
+            dic[ltnode['logicTreeID']] = glt = cls(
                 fname, tectonic_region_types, ltnode)
+        trts = list(glt.values)
+        num_gsims = {trt: len(gsims) for trt, gsims in glt.values.items()}
+        for glt in list(dic.values())[:-1]:
+            # all gsim logic trees in the dictionary must have the same
+            # trts and the same number of gsims per trt
+            assert list(glt.values) == trts
+            for trt, gsims in glt.values.items():
+                print(trt, len(gsims))
+                assert len(gsims) == num_gsims[trt]
         return dic
 
     @classmethod

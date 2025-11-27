@@ -1695,7 +1695,7 @@ class BaseContext(metaclass=abc.ABCMeta):
         return False
 
 
-# mock of a site collection used in the tests and in the SMT module of the OQ-MBTK
+# mock site collection used in the tests and in the SMT module of the OQ-MBTK
 class SitesContext(BaseContext):
     """
     Sites calculation context for ground shaking intensity models.
@@ -2070,6 +2070,7 @@ def read_full_lt_by_label(dstore, full_lt=None):
     for label in oq.site_labels:
         dic[label] = copy.copy(full_lt)
         dic[label].__dict__.update(attrs)
+        dic[label]._rlzs_by = {}  # reset cache
         dic[label].gsim_lt = dstore['gsim_lt' + label]
     return dic
 
