@@ -2009,11 +2009,11 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             asce07_key_mapping = {}
             if asce_version != 'ASCE7-16':
                 asce07_key_mapping = {
-                    'PGA': 'PGA_M',
+                    'PGA': 'PGAm',
                 }
             asce07_m = {asce07_key_mapping.get(k, k): v for k, v in asce07.items()}
             for key, value in asce07_m.items():
-                if key not in ('PGA_M', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
+                if key not in ('PGAm', 'PGA', 'Ss', 'S1', 'Sms', 'Sm1'):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value
