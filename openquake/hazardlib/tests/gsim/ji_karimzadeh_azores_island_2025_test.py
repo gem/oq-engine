@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.Ji_Karimzadeh_Azores_Island_2025 import JiEtAl2025Azores
+from openquake.hazardlib.gsim.ji_karimzadeh_azores_island_2025 import JiEtAl2025Azores
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -54,4 +54,5 @@ class JiEtAl2025AzoresTestCase(BaseGSIMTestCase):
          stdintra (Phi)
         """
         self.check('JI25/JI25_STD_INTRA.csv',
+
                    max_discrep_percentage=0.1)
