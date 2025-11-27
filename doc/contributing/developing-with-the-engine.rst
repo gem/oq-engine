@@ -117,7 +117,7 @@ scenario risk calculations starting for the same planar rupture, but with
 different values of the strike angle (0, 90 and 180 degrees).
 The relevant code is something like this:
 
-.. python:
+.. python::
 
   """Sensitivity of the risk from the strike parameter"""
   import os

@@ -216,7 +216,7 @@ In engine 3.21 we added a helper function `valid.modified_gsim`
 to modify a GMPE. Internally it is creating a `ModifiableGMPE` instance,
 but it is much simpler to use. An example is:
 
-.. python:
+.. python::
 
    >>> from openquake.hazardlib import valid
    >>> orig_gsim = valid.gsim('Lin2011foot')
