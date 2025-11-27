@@ -595,6 +595,21 @@ class CompositeSourceModel:
                     source_id = basename(src)
                     self.code[source_id] = src.code
 
+    def get_sources(self, smr=None):
+        """
+        :param smr:
+            yields only the sources associated to the given source model
+            realization, or all realizations if smr is None (the default).
+        """
+        srcs = []
+        for grp in self.src_groups:
+            if smr is not None:
+                keep = any(trt_smr % TWO24 == smr for trt_smr in grp.trt_smrs)
+                if not keep:
+                    continue
+            srcs.extend(grp)
+        return srcs
+
     def get_trt_smrs(self):
         """
         :returns: an array of trt_smrs (to be stored as an hdf5.vuint32 array)
@@ -604,23 +619,11 @@ class CompositeSourceModel:
         return [numpy.array(trt_smrs, numpy.uint32) for trt_smrs in keys]
 
     def get_cmakers(self, oq):
+        """
+        :param oq: the OqParam used to build the CompositeSourceModel
+        :returns: a ContextMakerSequence instance
+        """
         return get_cmakers(self.get_trt_smrs(), self.full_lt, oq)
-
-    def get_sources(self, atomic=None):
-        """
-        There are 3 options:
-
-        atomic == None => return all the sources (default)
-        atomic == True => return all the sources in atomic groups
-        atomic == True => return all the sources not in atomic groups
-        """
-        srcs = []
-        for src_group in self.src_groups:
-            if atomic is None:  # get all sources
-                srcs.extend(src_group)
-            elif atomic == src_group.atomic:
-                srcs.extend(src_group)
-        return srcs
 
     def get_basenames(self):
         """

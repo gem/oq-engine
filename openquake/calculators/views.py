@@ -1441,6 +1441,26 @@ def view_branchsets(token, dstore):
     return text_table(enumerate(map(repr, clt.branchsets)),
                       header=['bsno', 'bset'], ext='org')
 
+@view.add('sm_rlzs')
+def view_sm_rlzs(token, dstore):
+    """
+    Show the source model realizations. Works also on a ses.hdf5 file,
+    if you specify the mosaic model:
+
+    $ oq show sm_rlzs:JPN ses.hdf5
+    """
+    if ':' in token:
+        model = token.split(':')[1]
+        sm_rlzs = dstore[f'full_lt/{model}'].sm_rlzs
+    else:
+        sm_rlzs = dstore['full_lt'].sm_rlzs
+    header = ['ordinal', 'lt_path', 'value', 'samples', 'weight']
+    def row(rlz):
+        value = ast.literal_eval(rlz.value.decode('utf8'))
+        return (rlz.ordinal, '_'.join(rlz.lt_path),
+                value, rlz.samples, rlz.weight)
+    return text_table(map(row, sm_rlzs), header, ext='org')
+
 
 @view.add('rupture')
 def view_rupture(token, dstore):
