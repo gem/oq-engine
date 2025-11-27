@@ -26,6 +26,16 @@ from openquake.server.db.tag_admin import tag_admin_site
 
 urlpatterns = []
 if settings.WEBUI:
+    if settings.APPLICATION_MODE == 'TOOLS_ONLY':
+        urlpatterns += [
+            re_path(r'^$', RedirectView.as_view(
+                url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
+                permanent=True))]
+    else:
+        urlpatterns += [
+            re_path(r'^$', RedirectView.as_view(
+                url='%s/engine/' % settings.WEBUI_PATHPREFIX,
+                permanent=True))]
     urlpatterns += [
         re_path(r'^$', RedirectView.as_view(
             url='%s/engine/' % settings.WEBUI_PATHPREFIX,
