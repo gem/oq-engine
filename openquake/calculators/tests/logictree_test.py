@@ -172,17 +172,18 @@ class LogicTreeTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
 
-        # test csm.iter_sources and csm.iter_ruptures
-        csm = self.calc.datastore['_csm']
-        smr0, smr1, smr2 = self.calc.full_lt.sm_rlzs
-        source_ids = [src.source_id for src in csm.iter_sources()]
-        assert source_ids == ['2', '1', '3']
+        # test csm.get_sources; there are 3 source model realizations
+        fname = general.gettemp(view('sm_rlzs', self.calc.datastore))
+        self.assertEqualFiles('expected/sm_rlzs.org', fname)
 
-        n0 = sum(1 for rup in csm.iter_ruptures(smr=0))
-        n1 = sum(1 for rup in csm.iter_ruptures(smr=1))
-        n2 = sum(1 for rup in csm.iter_ruptures(smr=2))
-        n = sum(1 for rup in csm.iter_ruptures())
-        assert n0 + n1 + n2 > n  # the same source appears in two sm_rlzs
+        csm = self.calc.datastore['_csm']
+        source_ids = [src.source_id for src in csm.get_sources(0)]
+        assert source_ids == ['2', '1']
+        source_ids = [src.source_id for src in csm.get_sources(1)]
+        assert source_ids == ['1']
+        source_ids = [src.source_id for src in csm.get_sources(2)]
+        assert source_ids == ['3']
+        # NB: the same source '1' appears in two sm_rlzs
 
     def test_case_08(self):
         self.assert_curves_ok(
