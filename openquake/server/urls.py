@@ -81,16 +81,7 @@ if settings.WEBUI:
         urlpatterns.append(re_path(r'^%s/' % app_name, include(
             '%s.urls' % app, namespace='%s' % app_name)))
 
-if settings.APPLICATION_MODE == 'TOOLS_ONLY':
-    # TODO: check if we can remove this and replace the
-    #       else with "if settings.APPLICATION_MODE != 'TOOLS_ONLY:"
-    if settings.WEBUI:
-        urlpatterns += [
-            re_path(r'^$', RedirectView.as_view(
-                url='%s/ipt/' % settings.WEBUI_PATHPREFIX,
-                permanent=True)),
-        ]
-else:
+if settings.APPLICATION_MODE != 'TOOLS_ONLY':
     urlpatterns += [
         re_path(r'^v1/engine_version$', views.get_engine_version),
         re_path(r'^v1/engine_latest_version$',
