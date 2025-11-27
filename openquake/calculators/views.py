@@ -1441,6 +1441,18 @@ def view_branchsets(token, dstore):
     return text_table(enumerate(map(repr, clt.branchsets)),
                       header=['bsno', 'bset'], ext='org')
 
+@view.add('sm_rlzs')
+def view_sm_rlzs(token, dstore):
+    """
+    Show the source model realizations
+    """
+    sm_rlzs = dstore['full_lt'].sm_rlzs
+    header = ['ordinal', 'lt_path', 'value', 'samples', 'weight']
+    def row(rlz):
+        return (rlz.ordinal, '_'.join(rlz.lt_path),
+                rlz.value, rlz.samples, rlz.weight)
+    return text_table(map(row, sm_rlzs), header, ext='org')
+
 
 @view.add('rupture')
 def view_rupture(token, dstore):
