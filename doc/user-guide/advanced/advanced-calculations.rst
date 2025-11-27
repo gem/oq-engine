@@ -796,7 +796,7 @@ You can visualize `sm_rlzs` for a given model as follows::
  | 0       | b11     | ['ssm/nied_50.xml'] | 2_000   | 1.0000 |
 
 The ``full_lt`` objects can be extracted from the datastore, one
-for each model. A Python script should get you started::
+for each model. A Python script should get you started:
 
 .. python:
 
