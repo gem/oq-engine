@@ -223,7 +223,6 @@ class GsimLogicTree(object):
             # trts and the same number of gsims per trt
             assert list(glt.values) == trts
             for trt, gsims in glt.values.items():
-                print(trt, len(gsims))
                 assert len(gsims) == num_gsims[trt]
         return dic
 
