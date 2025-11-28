@@ -27,7 +27,7 @@ def path_to(model):
     return os.path.join(config.directory.mosaic_dir, model)
 
 
-def main(manifest_toml):
+def main(manifest_toml, concurrent_jobs=1):
     with open(manifest_toml, encoding='utf8') as f:
         manifest = toml.load(f)
     inis = []
@@ -43,7 +43,7 @@ def main(manifest_toml):
     print(f'Checked out the repositories in {dt:.0f} seconds')
     os.environ['OQ_SAMPLE_SITES'] = '.04'
     jobs = engine.create_jobs(inis, tag=manifest['Global']['description'])
-    engine.run_jobs(jobs, concurrent_jobs=1)
+    engine.run_jobs(jobs, concurrent_jobs)
 
 if __name__ == '__main__':
     sap.run(main)
