@@ -1619,7 +1619,7 @@ def calc_result(request, result_id):
     elif len(exported) > 1:
         # Building an archive so that there can be a single file download
         archname = ds_key + '-' + export_type + '.zip'
-        zipfiles(exported, os.path.join(tmpdir, archname))
+        zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
         exported = os.path.join(tmpdir, archname)
         content_type = EXPORT_CONTENT_TYPE_MAP.get(export_type, ZIP)
     else:  # single file
@@ -1814,7 +1814,7 @@ def calc_zip(request, job_id):
     temp_dir = config.directory.custom_tmp or tempfile.gettempdir()
     tmpdir = tempfile.mkdtemp(dir=temp_dir)
     archname = f'job_{job_id}.zip'
-    zipfiles(exported, os.path.join(tmpdir, archname))
+    zipfiles(exported, os.path.join(tmpdir, archname), cleanup=True)
     return stream_response(os.path.join(tmpdir, archname), ZIP)
 
 
