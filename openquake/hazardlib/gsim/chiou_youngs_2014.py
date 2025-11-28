@@ -395,9 +395,8 @@ def _get_delta_cm(conf, imt):
     Return the delta_cm parameter as defined by equation A19 in Boore et al.
     (2022) for the host-to-target region source-scaling adjustment. 
     """
-    # If the stress parameters are not defined at the instantiation level, the
-    # conf dictionary does not contain the source_function_table
-    source_function_table = conf.get('source_function_table', None)
+    # Get source function table
+    source_function_table = conf.get('source_function_table')
     
     # Get stress params
     stress_par_host = conf.get('stress_par_host')
