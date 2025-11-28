@@ -38,14 +38,17 @@ from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
 
 
-PATH_ADJ_TABLE = os.path.join(os.path.dirname(__file__), 'data', 'NGA', 'CY14',
-                              'path_adjustment_table_target_region_idaho.txt')
+SRC_ADJ_TABLE = os.path.join(os.path.dirname(__file__),'..', '..', 'gsim',
+                             'cy14_host_to_target', 'source_function_table.txt')
+PATH_ADJ_TABLE = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'gsim', 'cy14_host_to_target',
+    'path_adjustment_table_target_region_idaho_central_branch.txt')
 
 
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
     GSIM_CLASS = ChiouYoungs2014
 
-    # Test data were obtained from a tool given by the authorst
+    # Test data were obtained from a tool given by the authors
     # in tests/gsim/data/NGA/CY14
 
     def test_mean_hanging_wall_normal_slip(self):
@@ -200,8 +203,12 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         """
         # Create GMMs
         gmm_ori = ChiouYoungs2014()
-        gmm_adj_src = ChiouYoungs2014(stress_par_host=100, stress_par_target=120)
-        gmm_adj_all = ChiouYoungs2014(stress_par_host=100, stress_par_target=120,
+        gmm_adj_src = ChiouYoungs2014(stress_par_host=100,
+                                      stress_par_target=120,
+                                      source_function_tab=SRC_ADJ_TABLE,)
+        gmm_adj_all = ChiouYoungs2014(stress_par_host=100,
+                                      stress_par_target=120,
+                                      source_function_tab=SRC_ADJ_TABLE,
                                       delta_gamma_tab=PATH_ADJ_TABLE)
 
         # Settings

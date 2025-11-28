@@ -396,7 +396,7 @@ def _get_delta_cm(conf, imt):
     (2022) for the host-to-target region source-scaling adjustment. 
     """
     # Get source function table
-    source_function_table = conf.get('source_function_table', None)
+    source_function_table = conf.get('source_function_table')
     
     # Get stress params
     stress_par_host = conf.get('stress_par_host')
@@ -633,10 +633,16 @@ class ChiouYoungs2014(GMPE):
     :param stress_par_target:
         Stress parameter for the target-region in bars. Used in Boore et
         al. (2022) backbone methodology.
+    :param source_function_tab:
+        Path to file containing coefficients for host-to-target source
+        scaling as described in Boore et al. (2022) backbone paper. For
+        an example of the format required for this file look inside
+        `openquake.hazardlib.gsim.cy14_host_to_target`.
     :param delta_gamma_tab:
-        Filename containing path adjustments as described in Boore et al.
-        (2022) backbone paper. For an example of the format required for
-        this file see `openquake.hazardlib.tests.gsim.data.NGA.CY14`.
+        Path to file containing coefficients for host-to-target path
+        adjustments as described in Boore et al. (2022) backbone paper.
+        For an example of the format required for this file look inside
+        `openquake.hazardlib.gsim.cy14_host_to_target`.
     """
     adapted = False  # Overridden in acme_2019
 
@@ -671,8 +677,9 @@ class ChiouYoungs2014(GMPE):
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
         
     def __init__(self, region='CAL', sigma_mu_epsilon=0.0, use_hw=True,
-                 add_delta_c1=False, alpha_nm=1.0, stress_par_host=None,
-                 stress_par_target=None, delta_gamma_tab=None,
+                 add_delta_c1=False, alpha_nm=1.0,
+                 stress_par_host=None, stress_par_target=None,
+                 source_function_tab=None, delta_gamma_tab=None,
                  usgs_basin_scaling=False, cybershake_basin_adj=False):
 
         # set region
@@ -700,12 +707,7 @@ class ChiouYoungs2014(GMPE):
         # - S2RS            param
         # - chi             i.e. χFS2RS in equation 6
         if stress_par_target is not None:
-            cwd = pathlib.Path(__file__).parent.resolve()
-            # Hard-coded because we take host and target stress drops
-            # and scale using source function table
-            fname = os.path.join('cy14_host_to_target', 'source_function_table.txt') 
-            fpath = os.path.join(cwd, fname)
-            with open(fpath, encoding='utf8') as f:
+            with open(source_function_tab, encoding='utf8') as f:
                 tmp = f.read()
             self.conf['source_function_table'] = CoeffsTable(
                 sa_damping=5, table=tmp)
