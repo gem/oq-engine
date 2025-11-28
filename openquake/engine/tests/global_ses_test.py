@@ -46,10 +46,10 @@ def check(dstore, fnames):
          read(fnames[1]) as ds_MIE:
 
         # count the ruptures outside the models
-        mie_out = count_rups(ds_MIE, '???')
-        assert mie_out == 0
-        eur_out = count_rups(ds_EUR, '???')
-        assert eur_out == 0
+        mie_unknown = count_rups(ds_MIE, '???')
+        assert mie_unknown == 0
+        eur_unknown = count_rups(ds_EUR, '???')
+        assert eur_unknown == 0
         
         nrup_EUR = count_rups(ds_EUR, 'EUR')
         nrup_MIE = count_rups(ds_MIE, 'MIE')
