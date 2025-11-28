@@ -706,7 +706,8 @@ class ChiouYoungs2014(GMPE):
         # - S2FS            param
         # - S2RS            param
         # - chi             i.e. χFS2RS in equation 6
-        if stress_par_target is not None:
+        if source_function_tab is not None:
+            assert stress_par_host is not None and stress_par_target is not None
             with open(source_function_tab, encoding='utf8') as f:
                 tmp = f.read()
             self.conf['source_function_table'] = CoeffsTable(
