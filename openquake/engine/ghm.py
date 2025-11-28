@@ -41,7 +41,7 @@ def main(manifest_toml):
     dt = time.time() - t0
     print(f'Checked out the repositories in {dt:.0f} seconds')
     os.environ['OQ_SAMPLE_SITES'] = '.04'
-    jobs = engine.create_jobs(inis)
+    jobs = engine.create_jobs(inis, tag=manifest['Global']['description'])
     engine.run_jobs(jobs)
 
 if __name__ == '__main__':
