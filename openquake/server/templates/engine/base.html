@@ -25,14 +25,10 @@
           <div class="span3">
             <a href="{% url "index" %}"><span class="nav-logo" style="background: url({{ STATIC_URL }}img/oq-logo-engine.png) no-repeat;"></span></a>
           </div>
-          <div class="span10">
+          <div class="span10 nav-engine-items">
             <nav class="main-nav">
               <ul>
                 {% block nav-items %}
-                <li class="calc">
-                  <a href="{% url "index" %}">Back to Calculations</a>
-                </li>
-                {% endblock nav-items %}
                 {% if app_list %}
                 {# Take the first app in STANDALONE_APPS as landing page for tools #}
                 <li class="tools"><a href="{{ app_list.0.url }}">Tools</a></li>
@@ -41,8 +37,9 @@
                 <li class="admin"><a href="{% url 'admin:index' %}">Admin</a></li>
                 {% endif %}
                 {% if user.is_superuser or user.level >= 2 %}
-                <li class="admin"><a href="{% url 'tagadmin:db_jobtag_changelist' %}">Manage tags</a></li>
+                <li class="manage-tags"><a href="{% url 'tagadmin:db_jobtag_changelist' %}">Manage tags</a></li>
                 {% endif %}
+                {% endblock nav-items %}
               </ul>
             </nav>
           </div> <!-- ./span10 -->

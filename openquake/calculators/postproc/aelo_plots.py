@@ -213,43 +213,43 @@ def plot_governing_mce_asce_7_16(dstore, site_idx=0, update_dstore=False):
     :param dstore: the datastore
     :returns: image of governing MCE
     """
-    dinfo = get_info(dstore)
-    # get imls and imts, make arrays
-    imtls = dinfo['imtls']
     plt = import_plt()
-    MCEr = dstore.read_df('mce_governing').SaM.to_numpy()
-    js = dstore['asce07'][site_idx].decode('utf8')
-    dic = json.loads(js)
-    T = [from_string(imt).period for imt in imtls]
+    MCE_calc = dstore.read_df('mce', sel=dict(sid=site_idx))
+    imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
+    imts_idxs = numpy.where(numpy.isin(list(dstore['oqparam'].imtls), imts))[0]
+    T = [from_string(imt).period for imt in imts]
 
     limit_det = [0.5, 1.5, 0.6]
     # presenting as maximum component -> do not need conversion facts
     rtgm = dstore.read_df('rtgm', sel=dict(sid=site_idx))
     if (rtgm.RTGM == 0).all():
         return
-    rtgm_probmce = rtgm.ProbMCE.to_numpy()
+    MCEr_det = MCE_calc['DetMCE']
+    MCEr_prob = MCE_calc['ProbMCE']
+    MCEr = MCE_calc['MCE']
     plt.figure(figsize=(8, 6))
     plt.rcParams.update({'font.size': 15})
     plt.plot(T, limit_det, 'kx', markersize=15, label='DLL', linewidth=1)
-    plt.plot(T[0], rtgm_probmce[0], 'bX', markersize=12, label='$PGA_{2/50}$',
+    plt.plot(T[0], MCEr_prob[imts_idxs[0]], 'bX', markersize=12, label='$PGA_{2/50}$',
              linewidth=3)
-    plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
+    plt.plot(T[1:], MCEr_prob[imts_idxs[1:]], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
 
-    MCEr_det = [dic['PGA'], dic['Ss'], dic['S1']]
-    if any([val in ['n.a.', '<0.005'] for val in MCEr_det]):
+    if any([numpy.isnan(val) or val in ['n.a.', '<0.005'] for val in MCEr_det]):
         # hazard is lower than DLLs
-        plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
+        plt.ylim([0, numpy.max([MCEr_prob[imts_idxs], MCEr[imts_idxs],
+                                limit_det]) + 0.2])
     else:
-        plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
+        plt.plot(T[0], MCEr_det[imts_idxs[0]], 'c^', markersize=10, label='$PGA_{84th}$',
                  linewidth=3)
-        plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
+        plt.plot(T[1:], MCEr_det[imts_idxs[1:]], 'cd', markersize=10,
                  label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
         plt.ylim(
-            [0, numpy.max([rtgm_probmce,  MCEr, MCEr_det, limit_det]) + 0.2])
-    plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
+            [0, numpy.max([MCEr_prob[imts_idxs],  MCEr[imts_idxs], MCEr_det[imts_idxs],
+                           limit_det]) + 0.2])
+    plt.scatter(T[0], MCEr[imts_idxs[0]], s=200, label='Governing $MCE_G$',
                 linewidth=2, facecolors='none', edgecolors='r')
-    plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
+    plt.scatter(T[1:], MCEr[imts_idxs[1:]], s=200, marker='s',
                 label='Governing $MCE_R$', linewidth=2,
                 facecolors='none', edgecolors='r')
     plt.grid('both')
