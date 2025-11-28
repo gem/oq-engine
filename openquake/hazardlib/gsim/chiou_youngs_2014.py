@@ -395,8 +395,7 @@ def _get_delta_cm(conf, imt):
     Return the delta_cm parameter as defined by equation A19 in Boore et al.
     (2022) for the host-to-target region source-scaling adjustment. 
     """
-    # If the stress parameters are not defined at the instantiation level, the
-    # conf dictionary does not contain the source_function_table
+    # Get source function table
     source_function_table = conf.get('source_function_table', None)
     
     # Get stress params
@@ -636,7 +635,8 @@ class ChiouYoungs2014(GMPE):
         al. (2022) backbone methodology.
     :param delta_gamma_tab:
         Filename containing path adjustments as described in Boore et al.
-        (2022) backbone paper.
+        (2022) backbone paper. For an example of the format required for
+        this file see `openquake.hazardlib.tests.gsim.data.NGA.CY14`.
     """
     adapted = False  # Overridden in acme_2019
 
@@ -701,8 +701,9 @@ class ChiouYoungs2014(GMPE):
         # - chi             i.e. χFS2RS in equation 6
         if stress_par_target is not None:
             cwd = pathlib.Path(__file__).parent.resolve()
-            fname = os.path.join('chiou_youngs_2014',
-                                 'source_function_table.txt')
+            # Hard-coded because we take host and target stress drops
+            # and scale using source function table
+            fname = os.path.join('cy14_host_to_target', 'source_function_table.txt') 
             fpath = os.path.join(cwd, fname)
             with open(fpath, encoding='utf8') as f:
                 tmp = f.read()
