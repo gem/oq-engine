@@ -1,10 +1,29 @@
+  [Paolo Tormene]
+  * Fixed the management and layout/styling of navigation buttons in the
+    WebUI, with and without authentication
+  * Improved the default configuration of the TOOLS_ONLY WebUI application mode
+
+  [Michele Simionato]
+  * Supported site-specific gsim logic trees via `site_labels`
+  * Added `source_info` to the global SES file
+  * Optimized `_save_events` for large calculations over 100,000 events
+  * Parallelized the rupture prefiltering
+  * Fixed `count_ruptures` producing more than 32768 tasks
+  * Removed the distance filtering when sampling the ruptures; removed also the
+    mosaic model filtering
+
+  [Paul Henshaw, Paolo Tormene]
+  * Force use of utf8 encoding when writing non-binary files.
+  * Update AreaSource demo to use UTF8 chars that are obviously not ASCII.
+  * Use utf-8-sig when reading so as to handle BOM
+
   [Anirudh Rao]
-  * Add missing axis argument in recent bugfix in classical_risk 
+  * Add missing axis argument in recent bugfix in classical_risk
     with nontrivial weights in the taxonomy mapping
 
   [Michele Simionato]
   * Added command `oq ses` to generate a merged stochastic event set
-  * Extended the global_ses script to accepts job.ini files
+  * Extended the global_ses script to accept job.ini files
   * Implemented `oq engine --run job1.ini .. jobN.ini --hc parent.hdf5`
   * Extended `--hc` to accept paths to datastore files
   * Using the filtered site collection, thus changing numbers in OQImpact
@@ -15,7 +34,7 @@
     "preferred" one for a tag
 
   [Michele Simionato]
-  * Internal: extended reduce_sm to reduce the source models to a single source
+  * Internal: extended `oq reduce_sm` to accept a source model directory
   * Implemented event_based_risk from ses.hdf5
   * Raised an early error if the vulnerability functions are not
     strictly increasing

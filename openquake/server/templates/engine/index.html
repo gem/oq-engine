@@ -2,6 +2,7 @@
 {% load servertags %}
 
   {% block nav-items %}
+  {{ block.super }}
                 {% if application_mode != 'AELO' and application_mode != 'ARISTOTLE' and application_mode != 'READ_ONLY' %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"

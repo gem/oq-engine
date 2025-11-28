@@ -202,7 +202,8 @@ def get_src_loss_table(dstore, loss_id):
     if len(alt) == 0:  # no losses for this loss type
         return [], ()
 
-    ws = dstore['weights'][:]
+    oq = dstore['oqparam']
+    ws = base.get_weights(oq, dstore)
     events = dstore['events'][:]
     ruptures = dstore['ruptures'][:]
     source_id = dstore['source_info']['source_id']
@@ -580,7 +581,10 @@ class PostRiskCalculator(base.RiskCalculator):
                     eff_time)
                 return
         logging.info('Aggregating by %s', oq.aggregate_by)
-        if 'source_info' in self.datastore and 'risk' in oq.calculation_mode:
+        if ('source_info' in self.datastore and
+                hasattr(self.datastore['source_info'], 'shape') and
+                'risk' in oq.calculation_mode):
+            # NB: we are not computing src_loss_table in the global risk model
             logging.info('Building the src_loss_table')
             with self.monitor('src_loss_table', measuremem=True):
                 for loss_type in oq.loss_types:

@@ -25,10 +25,10 @@ import pandas
 from shapely import geometry
 from openquake.baselib import (
     config, hdf5, parallel, python3compat, performance)
-from openquake.baselib.general import (
-    AccumDict, humansize, block_splitter, group_array)
+from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -66,6 +66,7 @@ TWO32 = numpy.float64(2 ** 32)
 MAX_PROXIES = 1000
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
+
 
 def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
@@ -162,11 +163,11 @@ def build_hcurves(dstore):
 
 # ######################## GMF calculator ############################ #
 
-def count_ruptures(src):
+def count_ruptures(srcs, monitor):
     """
-    Count the number of ruptures on a heavy source
+    Count the number of ruptures on heavy sources
     """
-    return {src.source_id: src.count_ruptures()}
+    return {src.source_id: src.count_ruptures() for src in srcs}
 
 
 def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
@@ -351,7 +352,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     # upfront rather than looping on each (model, trt_smr)
     if len(sitecol) > oq.max_sites_disagg:
         # can manage 2 million sites in 13 minutes for IND
-        filrups = close_ruptures(allrups, sitecol, assetcol)
+        filrups = close_ruptures(allrups, sitecol, assetcol, dstore.hdf5)
         logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
         filrups = allrups
@@ -575,11 +576,15 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
         with self.monitor('counting ruptures', measuremem=True):
-            nrups = parallel.Starmap(  # weighting the heavy sources
-                count_ruptures, [(src,) for src in sources
-                                 if src.code in b'AMSC'],
-                h5=self.datastore.hdf5,
-                progress=logging.debug).reduce()
+            heavy_sources = [src for src in sources if src.code in b'ASC']
+            if heavy_sources:
+                nrups = parallel.Starmap.apply(  # weighting the heavy sources
+                    count_ruptures, (heavy_sources,),
+                    h5=self.datastore.hdf5,
+                    progress=logging.debug
+                ).reduce()
+            else:
+                nrups = {}
             # NB: multifault sources must be considered light to avoid a large
             # data transfer, even if .count_ruptures can be slow
             for src in sources:
@@ -602,15 +607,15 @@ class EventBasedCalculator(base.HazardCalculator):
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
         source_data = AccumDict(accum=[])
         allargs = []
-        srcfilter = self.srcfilter
         if 'geometry' in oq.inputs:
             fname = oq.inputs['geometry']
             with fiona.open(fname) as f:
-                model_geom = geometry.shape(f[0].geometry)
+                geom = geometry.shape(f[0].geometry)
+            mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
         elif oq.mosaic_model:  # 3-letter mosaic model
-            mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
-            mmodel = 'CAN' if oq.mosaic_model == 'CND' else oq.mosaic_model
-            model_geom = mosaic_df.loc[mmodel].geom
+            mosaic_df = readinput.read_mosaic_df(buffer=0)
+        else:
+            mosaic_df = ()
         logging.info('Building ruptures')
         g_index = 0
         for sg_id, sg in enumerate(self.csm.src_groups):
@@ -620,11 +625,12 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, rgb, oq)
             cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
             g_index += len(rgb)
-            cmaker.model = oq.mosaic_model or '???'
-            if oq.mosaic_model or 'geometry' in oq.inputs:
-                cmaker.model_geom = model_geom
+            param = {}
+            param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
+            param['ses_seed'] = oq.ses_seed
+            param['magdist'] = cmaker.maximum_distance
             for src_group in sg.split(maxweight):
-                allargs.append((src_group, cmaker, srcfilter.sitecol))
+                allargs.append((src_group, param))
         self.datastore.swmr_on()
         smap = parallel.Starmap(
             sample_ruptures, allargs, h5=self.datastore.hdf5)
@@ -632,7 +638,6 @@ class EventBasedCalculator(base.HazardCalculator):
         self.nruptures = 0  # estimated classical ruptures within maxdist
         t0 = time.time()
         tot_ruptures = 0
-        filtered_ruptures = 0
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
@@ -643,19 +648,19 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(rup_array) == 0:
                 continue
             geom = rup_array.geom
-            filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:
                 eff_ruptures += dic['eff_ruptures']
             with mon:
                 self.nruptures += len(rup_array)
+                if len(mosaic_df):
+                    rup_array['model'] = geolocate(rup_array['hypo'], mosaic_df)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
         t1 = time.time()
-        logging.info(f'Generated {filtered_ruptures}/{tot_ruptures} ruptures,'
-                     f' stored in {t1 - t0} seconds')
+        logging.info(f'Generated {tot_ruptures} ruptures in {t1 - t0} seconds')
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'effective investigation time is too short')
@@ -745,8 +750,7 @@ class EventBasedCalculator(base.HazardCalculator):
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0)]
                 ebrs[0].seed = oq.ses_seed
-            srcfilter = SourceFilter(self.sitecol, oq.maximum_distance(trt))
-            aw = get_rup_array(ebrs, srcfilter)
+            aw = get_rup_array(ebrs, oq.maximum_distance(trt))
             if len(aw) == 0:
                 raise RuntimeError(
                     'The rupture is too far from the sites! Please check the '

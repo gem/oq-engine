@@ -139,8 +139,9 @@ def classical(sources, tilegetters, cmaker, extra, dstore, monitor):
         if isinstance(sources, numpy.ndarray):
             assert extra['atomic']
             # read the grp_ids from the datastore
-            arr = dstore.getitem('_csm')[sources]
-            sources = [pickle.loads(zlib.decompress(a.tobytes())) for a in arr]
+            dset = dstore.getitem('_csm')
+            sources = [pickle.loads(zlib.decompress(dset[gid][:].tobytes()))
+                       for gid in sources]
         sitecol = dstore['sitecol'].complete  # super-fast
 
     # NB: disagg_by_src does not work with ilabel
@@ -189,8 +190,9 @@ def tiling(grp_ids, tilegetter, cmaker, num_chunks, dstore, monitor):
     """
     cmaker.init_monitoring(monitor)
     with dstore:
-        arr = dstore.getitem('_csm')[grp_ids]
-        groups = [pickle.loads(zlib.decompress(a.tobytes())) for a in arr]
+        dset = dstore.getitem('_csm')
+        groups = [pickle.loads(zlib.decompress(dset[gid][:].tobytes()))
+                  for gid in grp_ids]
         sitecol = dstore['sitecol'].complete  # super-fast
     group = groups[0] if len(groups) == 1 else groups
     result = hazclassical(group, tilegetter(sitecol, cmaker.ilabel), cmaker)

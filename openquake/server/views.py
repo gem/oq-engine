@@ -127,9 +127,12 @@ AELO_FORM_PLACEHOLDERS = {
 
 HIDDEN_OUTPUTS = ['exposure', 'job']
 EXTRACTABLE_RESOURCES = [
-    'agg_losses',
+    'agg_curves',
     'agg_damages',
+    'agg_losses',
+    'agg_risk',
     'aggrisk_tags',
+    'asset_risk',
     'asset_tags',
     'composite_risk_model',
     'damages-rlzs',
@@ -146,7 +149,9 @@ EXTRACTABLE_RESOURCES = [
     'mmi_tags',
     'oqparam',
     'realizations',
+    'risk_by_event',
     'rupture_info',
+    'sitecol',
     'uhs',
 ]
 # NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
@@ -1746,7 +1751,7 @@ def calc_datastore(request, job_id):
         of the requested artifact, if present, else throws a 404
     """
     user_level = get_user_level(request)
-    if user_level < 2:
+    if user_level < 2 and not settings.ALLOW_DATASTORE_DOWNLOAD:
         return HttpResponseForbidden()
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):

@@ -1,0 +1,5 @@
+| ordinal | lt_path | value                  | samples | weight |
+|---------+---------+------------------------+---------+--------|
+| 0       | b1      | ['source_model_1.xml'] | 402     | 0.4020 |
+| 1       | b2      | ['source_model_2.xml'] | 283     | 0.2830 |
+| 2       | b3      | ['source_model_3.xml'] | 315     | 0.3150 |

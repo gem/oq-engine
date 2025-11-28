@@ -27,6 +27,7 @@ from scipy.spatial import KDTree, distance
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
+from openquake.baselib.parallel import Starmap
 from openquake.hazardlib import site
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import (
@@ -180,7 +181,7 @@ def floatdict(value):
     return value
 
 
-def magdepdist(pairs):
+def magdepdist(pairs=((MINMAG, 1000), (MAXMAG, 1000))):
     """
     :param pairs: a list of pairs [(mag, dist), ...]
     :returns: a scipy.interpolate.interp1d function
@@ -331,44 +332,68 @@ def split_source(src):
     return splits
 
 
+def filter_rups(ruptures, sitetree, orig_sids, num_assets, dist, mon):
+    """
+    :param ruptures: array of ruptures with the same magnitude
+    :param sitetree: kdtree for the reduced sites
+    :param num_assets: dictionary site_id -> number of assets on that site
+    :param dist: integration distance at that magnitude
+    :returns: ruptures close to the global site collection
+    """
+    hypos = ruptures['hypo']
+    kr = KDTree(spherical_to_cartesian(
+        hypos[:, 0], hypos[:, 1], hypos[::, 2]))
+    all_sids = kr.query_ball_tree(sitetree, dist, eps=.1)
+    out = []
+    for r, sids in enumerate(all_sids):
+        if sids:
+            rup = ruptures[r]
+            # NB: if there are stations num_assets[sid] can be empty
+            rup['nsites'] = sum(num_assets.get(s, 1)
+                                for sid in sids
+                                for s in orig_sids[sid])
+            out.append(rup)
+    return numpy.array(out)
+
+
 # NB: this is fast because of KDTree and the magdist
 # NB: the magdist here is hard-coded and independent from oq
-def close_ruptures(ruptures, sitecol, assetcol=None, magdist=magdepdist(
+# NB: sitecol.lower_res(5) is needed to save memory: for India
+# with 1.3M sites the filtering was taking 83 GB, now only 6 GB
+def close_ruptures(ruptures, sitecol, assetcol=None, h5=None,
+                   magdist=magdepdist(
         [(3, 0.), (4, 40.), (5., 100.), (6., 200.), (7., 300.),
          (8., 400.), (9., 700.), (11., 1200.)])):
     """
     :param ruptures: an array of rupture records
     :param sitecol: a SiteCollection instance
     :param assetcol: an AssetCollection or None
+    :param h5: hdf5 where to save the performance info
     :returns: the ruptures close to the sites
     """
     if assetcol:
         sids, counts = numpy.unique(assetcol.array['site_id'], return_counts=1)
         num_assets = dict(zip(sids, counts))
-    sites = sitecol  #.lower_res()
+    else:
+        num_assets = {}
+    sites, orig_sids = sitecol.lower_res(5)  # H3 edge of 10 km
+    if len(sites) < len(sitecol):
+        logging.info('Reducing %s->%d sites', sitecol, len(sites))
     mags = numpy.round(ruptures['mag'], 1)
-    hypos = ruptures['hypo']
-    kr = KDTree(spherical_to_cartesian(hypos[:, 0], hypos[:, 1], hypos[:, 2]))
     ks = KDTree(spherical_to_cartesian(sites.lons, sites.lats, sites.depths))
-    out = []
+    smap = Starmap(filter_rups,
+                   distribute='no' if len(mags) < 1000 else None, h5=h5)
     for mag in F32(numpy.arange(3, 11, .1)):
         ok = mags == mag
         if ok.sum() == 0:  # no ruptures in this magnitude range
             continue
-        rups = ruptures[ok]
-        kr = KDTree(spherical_to_cartesian(
-            hypos[ok, 0], hypos[ok, 1], hypos[ok, 2]))
-        all_sids = kr.query_ball_tree(ks, magdist(mag), eps=.1)
-        for r, sids in enumerate(all_sids):
-            if sids:
-                rup = rups[r]
-                if assetcol:
-                    # NB: if there are stations num_assets[sid] can be empty
-                    rup['nsites'] = sum(num_assets.get(sid, 1) for sid in sids)
-                else:
-                    rup['nsites'] = len(sids)
-                out.append(rup)
-    return numpy.array(out)
+        smap.submit((ruptures[ok], ks, orig_sids, num_assets, magdist(mag)))
+        if len(ruptures) > 100_000:
+            logging.info('Considering %d ruptures of magnitude %s',
+                         ok.sum(), mag)
+    arrays = [arr for arr in smap if len(arr)]
+    assert arrays, "All ruptures have been prefiltered out!"
+    return numpy.concatenate(arrays, dtype=arrays[0].dtype)
 
 
 default = IntegrationDistance({'default': [(MINMAG, 1000), (MAXMAG, 1000)]})

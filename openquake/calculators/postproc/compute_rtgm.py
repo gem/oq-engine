@@ -622,7 +622,7 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
                 
         if vs30 == 760:
             asce07 = {
-                'PGA_M': pga_out,
+                'PGAm': pga_out,
                 'Ss': sa02_out, 'Sms': sms_out, 'Sds': sds_out,
                 'Ss_seismicity': Ss_seismicity,
                 'S1': sa1_out, 'Sm1': sm1_out, 'Sd1': sd1_out,
@@ -630,7 +630,7 @@ def asce07_output_new(sid, vs30, dstore, mce_site):
             }
         else:
             asce07 = {
-                'PGA_M': pga_out,
+                'PGAm': pga_out,
                 'Sms': sms_out, 'Sds': sds_out,
                 'Ss_seismicity': 'n.a.',
                 'Sm1': sm1_out, 'Sd1': sd1_out,
@@ -672,7 +672,7 @@ def get_zero_hazard_asce07(dstore,vs30):
     else:
         if vs30 == 760:
             asce07 = {
-                'PGA_M': na, 
+                'PGAm': na, 
                 'Ss': na, 'Sms': na, 'Sds': na,
                 'Ss_seismicity': 'Low',
                 'S1': na, 'Sm1': na, 'Sd1': na,
@@ -680,7 +680,7 @@ def get_zero_hazard_asce07(dstore,vs30):
             }
         else:
             asce07 = {
-                'PGA_M':na, 
+                'PGAm':na, 
                 'Sms': na, 'Sds': na,
                 'Ss_seismicity': na,
                 'Sm1': na, 'Sd1': na,

@@ -930,9 +930,9 @@ def geohash3(lons, lats):
 
 def geolocate(lonlats, geom_df, exclude=()):
     """
-    :param lonlats: array of shape (N, 2) of (lon, lat)
+    :param lonlats: array of shape (N, 2) or (N, 3)
     :param geom_df: DataFrame of geometries with a "code" field
-    :param exclude: List of codes to exclude from the results
+    :param exclude: list of codes to exclude from the results
     :returns: codes associated to the points
 
     NB: if the "code" field is not a primary key, i.e. there are
@@ -940,8 +940,11 @@ def geolocate(lonlats, geom_df, exclude=()):
     associates the code if at least one of the geometries matches
     """
     codes = numpy.array(['???'] * len(lonlats))
-    filtered_geom_df = geom_df[~geom_df['code'].isin(exclude)]
-    for code, df in filtered_geom_df.groupby('code'):
+    if exclude:
+        filtered_df = geom_df[~geom_df['code'].isin(exclude)]
+    else:
+        filtered_df = geom_df
+    for code, df in filtered_df.groupby('code'):
         ok = numpy.zeros(len(lonlats), bool)
         for geom in df.geom:
             ok |= contains_xy(geom, lonlats)

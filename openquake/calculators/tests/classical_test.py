@@ -149,15 +149,21 @@ class ClassicalTestCase(CalculatorTestCase):
         # the default logic tree has 3 realizations, one of zero weight
         aac(self.calc.datastore['weights'][:], [.5, .5, 0])
 
-        # check the mean hazard curves manually
         oq = self.calc.oqparam
         flt0, flt1, flt2 = contexts.read_full_lt_by_label(
             self.calc.datastore).values()
+        toml = [gsim._toml for gsim in flt2.get_rlzs_by_gsim_dic()[0]]
+        assert toml == [
+            '[NSHMP2014]\ngmpe_name = "BooreEtAl2014"\nsgn = 0',
+            '[NSHMP2014]\ngmpe_name = "CampbellBozorgnia2014"\nsgn = 0',
+            '[NSHMP2014]\ngmpe_name = "ChiouYoungs2014"\nsgn = 0']
         sitecol = self.calc.sitecol
         sites0 = sitecol.filter(sitecol.ilabel == 0)
         sites1 = sitecol.filter(sitecol.ilabel == 1)
         sites2 = sitecol.filter(sitecol.ilabel == 2)
         src_groups = self.calc.csm.src_groups
+
+        # check the mean hazard curves manually
         hcurve0 = calc.mean_rates.calc_mcurves(
             src_groups, sites0, flt0, oq)[0, 0]
         hcurve1 = calc.mean_rates.calc_mcurves(
@@ -171,11 +177,11 @@ class ClassicalTestCase(CalculatorTestCase):
         aac(hcurve1, pga1, rtol=2e-5)
         aac(hcurve2, pga2, rtol=2e-5)
 
-        # testing (over)sampling
+        # testing oversampling
         self.run_calc(case_06.__file__, 'job.ini',
                       number_of_logic_tree_samples='10')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/uhs.csv', fname)
+        self.assertEqualFiles('expected/uhs_sampling.csv', fname)
 
     def test_case_07(self):
         # make sure the Dummy GMPE works in event based too
@@ -790,6 +796,18 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_75_pre(self):
         # test preclassical without sites, as requested by Richard Styron
         self.run_calc(case_75.__file__, 'pre.ini')
+
+        # reset .msparams to emulate reading csm without preclassical
+        for src in self.calc.csm.get_sources():
+            if src.code == b'F':
+                delattr(src, 'msparams')
+        self.calc.csm.set_msparams()
+
+        # count the ruptures
+        nrup = 0
+        for src in self.calc.csm.get_sources():
+            nrup += sum(1 for rup in src.iter_ruptures())
+        self.assertEqual(nrup, 5)
 
     def test_case_76(self):
         # CanadaSHM6 GMPEs
