@@ -266,7 +266,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
         if len(job_inis) > 1:
             j0 = jobs[0].calc_id
             j1 = j0 + len(job_inis) - 1
-            logs.dbcmd('add_tag_to_job', job.calc_id, f'{tag}[{j0}-{j1}]')
+            logs.dbcmd('add_tag_to_job', job.calc_id, f'[{j0}-{j1}]{tag}')
         elif tag:
             logs.dbcmd('add_tag_to_job', job.calc_id, tag)
     check_directories(jobs[0].calc_id)
