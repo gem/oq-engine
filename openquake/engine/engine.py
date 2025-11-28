@@ -263,13 +263,12 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             dic = readinput.get_params(job_ini)
         job = logs.init(dic, None, log_level, log_file, user_name, hc_id, host)
         jobs.append(job)
-        if tag:
-            logs.dbcmd('add_tag_to_job', job.calc_id, tag)
-        elif len(job_inis) > 1:
-            # automatic tag
+        if len(job_inis) > 1:
             j0 = jobs[0].calc_id
             j1 = j0 + len(job_inis) - 1
-            logs.dbcmd('add_tag_to_job', job.calc_id, f'{j0}-{j1}')
+            logs.dbcmd('add_tag_to_job', job.calc_id, f'{tag}[{j0}-{j1}]')
+        elif tag:
+            logs.dbcmd('add_tag_to_job', job.calc_id, tag)
     check_directories(jobs[0].calc_id)
 
     return jobs
