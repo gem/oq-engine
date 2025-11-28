@@ -27,7 +27,7 @@ def path_to(model):
     return os.path.join(config.directory.mosaic_dir, model)
 
 
-def main(manifest_toml, concurrent_jobs=1):
+def main(manifest_toml, *, concurrent_jobs: int=1):
     with open(manifest_toml, encoding='utf8') as f:
         manifest = toml.load(f)
     inis = []
