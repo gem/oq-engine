@@ -576,129 +576,52 @@ and maximum probable losses for all countries in the world. Even if you
 are interested in a single country, you can still use this feature
 to compute risk profiles for each province in your country.
 
-However, the calculation of the risk profiles is tricky and there are
-actually several different ways to do it.
+However, the calculation of the risk profiles is tricky. Starting from
+version 3.25 the recommended way is to first generate a common stochastic
+event set and then run all calculations starting from it. In this way
+events and ruptures are consistent for all countries.
 
-1. The least-recommended way is to run independent calculations, one
-   for each country. The issue with this approach is that even if the
-   hazard model is the same for all the countries (say you are
-   interested in the 13 countries of South America), due to the nature
-   of event based calculations, different ruptures will be sampled in
-   different countries. In practice, when comparing Chile with Peru you will
-   see differences due to the fact that the random sampling picked
-   different ruptures in the two contries and not real differences. In
-   theory, the effect should disappear if the calculations have sufficiently
-   long investigation times, when all possible ruptures are sampled, 
-   but in practice, for finite investigation times there will always be 
-   different ruptures.
+You can compute the common stochastic event set by running an event
+based calculation without specifying the sites and with the
+parameter ``ground_motion_fields`` set to false. Currently, one
+must specify a few global site parameters in the precalculation to
+make the engine checker happy, but they will not be used since the
+ground motion fields will not be generated in the
+precalculation. The ground motion fields will be generated
+on-the-fly in the subsequent individual country calculations, but
+not stored in the file system.
 
-2. To avoid such issues, the country-specific calculations should
-   ideally all start from the same set of precomputed ruptures. You can
-   compute the whole stochastic event set by running an event based
-   calculation without specifying the sites and with the parameter
-   ``ground_motion_fields`` set to false. Currently, one must specify
-   a few global site parameters in the precalculation to make the
-   engine checker happy, but they will not be used since the
-   ground motion fields will not be generated in the
-   precalculation. The ground motion fields will be generated on-the-fly  
-   in the subsequent individual country calculations, but not stored 
-   in the file system. This approach is fine if you do not have a lot of disk
-   space at your disposal, but it is still inefficient since it is
-   quite prone to the slow tasks issue.
+Here are some tips on how to prepare the required job.ini files.
+To be concrete, let's consider the 13 countries of South America.
+You will have a hazard file to generate the Stochastic Event Set (SES)
+as follows::
 
-3. If you have plenty of disk space it is better to also generate the
-   ground motion fields in the precalculation, and then run the
-   contry-specific risk calculations starting from there. This is
-   particularly convenient if you foresee the need to run the risk
-   part of the calculations multiple times, while the hazard part remains
-   unchanged. Using a precomputed set of GMFs removes the need to rerun
-   the hazard part of the calculations each time. This workflow has
-   been particularly optimized since version 3.16 of the engine and it is
-   now quite efficient.
-
-4. If you have a really powerful machine, the simplest is to
-   run a single calculation considering all countries in a single
-   job.ini file. The risk profiles can be obtained by using the
-   ``aggregate_by`` and ``reaggregate_by`` parameters. This approach
-   can be much faster than the previous ones. However, approaches #2
-   and #3 are cloud-friendly and can be preferred if you have access
-   to cloud-computing resources, since then you can spawn a different
-   machine for each country and parallelize horizontally.
-
-Here are some tips on how to prepare the required job.ini files:
-
-When using approach #1 you will have 13 different files (in the example
-of South America) with a format like the following::
-
- $ cat job_Argentina.ini
- calculation_mode = event_based_risk
- source_model_logic_tree_file = ssmLT.xml
- gsim_logic_tree_file = gmmLTrisk.xml
- site_model_file = Site_model_Argentina.csv
- exposure_file = Exposure_Argentina.xml
- ...
- $ cat job_Bolivia.ini
- calculation_mode = event_based_risk
- source_model_logic_tree_file = ssmLT.xml
- gsim_logic_tree_file = gmmLTrisk.xml
- site_model_file = Site_model_Bolivia.csv
- exposure_file = Exposure_Bolivia.xml
- ...
-
-Notice that the ``source_model_logic_tree_file`` and ``gsim_logic_tree_file``
-will be the same for all countries since the hazard model is the same;
-the same sources will be read 13 times and the ruptures will be sampled
-and filtered 13 times. This is inefficient. Also, hazard parameters like
-
-::
-
- truncation_level = 3
- investigation_time = 1
- number_of_logic_tree_samples = 1000
- ses_per_logic_tree_path = 100
- maximum_distance = 300
-
-must be the same in all 13 files to ensure the consistency of the
-calculation. Ensuring this consistency can be prone to human error.
-
-When using approach #2 you will have 14 different files: 13 files for
-the individual countries and a special file for precomputing the ruptures::
-
- $ cat job_rup.ini 
+ $ cat job_SAM.ini 
  calculation_mode = event_based
  source_model_logic_tree_file = ssmLT.xml
  gsim_logic_tree_file = gmmLTrisk.xml
- reference_vs30_value = 760
- reference_depth_to_1pt0km_per_sec = 440
- ground_motion_fields = false
- ...
-
-The files for the individual countries will be as before, except for
-the parameter ``source_model_logic_tree_file`` which should be
-removed. That will avoid reading 13 times the same source model files,
-which are useless anyway, since the calculation now starts from
-precomputed ruptures. There are still a lot of repetitions in the
-files and the potential for making mistakes.
-
-Approach #3 is very similar to approach #2: the only differences will be
-in the initial file, the one used to precompute the GMFs. Obviously it
-will require setting ``ground_motion_fields = true``; moreover, it will
-require specifying the full site model as follows::
-
-  site_model_file =
+ site_model_file =
     Site_model_Argentina.csv
     Site_model_Bolivia.csv
     ...
+ ground_motion_fields = false
+ number_of_logic_samples = 2000
+ ses_per_logic_tree_path = 1
+ investigation_time = 50
+ truncation_level = 3
+ maximum_distance = 300
+
+Notice that the site model files will not be used directly, since there
+is no calculation of the GMFs involved in this phase. However, the
+site model files will be imported and then the subsequent risk calculations
+will be able to associate the exposure sites to the hazard sites and
+to use the closest site parameters.
 
 The engine will automatically concatenate the site model files for all
-13 countries and produce a single site collection. The site parameters
-will be extracted from such files, so the dummy global parameters
-``reference_vs30_value``, ``reference_depth_to_1pt0km_per_sec``, etc
-can be removed.
-
-It is FUNDAMENTAL FOR PERFORMANCE to have reasonable site model files,
-i.e. you should not compute the hazard at the location of every single asset,
-but rather you should use a variable-size grid fitting the exposure.
+13 countries and produce a single site collection. It is FUNDAMENTAL
+FOR PERFORMANCE to have reasonable site model files, i.e. you should
+not compute the hazard at the location of every single asset, but
+rather you should use a variable-size grid fitting the exposure.
 
 The engine provides a command ``oq prepare_site_model``
 which is meant to generate sensible site model files starting from
@@ -711,23 +634,24 @@ the section about the oq commands to see how to use it, or try
 For reference, we were able to compute the hazard for all of South
 America on a grid of half million sites and 1 million years of effective time
 in a few hours in a machine with 120 cores, generating half terabyte of GMFs.
-The difficult part is avoiding running out memory when running the risk
-calculation; huge progress in this direction was made in version 3.16 of
-the engine.
 
-Approach #4 is the best, when applicable, since there is only a single file,
-thus avoiding entirely the possibily of having inconsistent parameters
-in different files. It is also the faster approach, not to mention the
-most convenient one, since you have to manage a single calculation and
-not 13. That makes the task of managing any kind of post-processing a lot
-simpler. Unfortunately, it is also the option that requires more
-memory and it can be infeasable if the model is too large and you do not
-have enough computing resources. In that case your best bet might be to
-go back to options #2 or #3. If you have access to multiple small machines,
-approaches #2 and #3 can be more attractive than #4, since then you 
-can scale horizontally. If you decide to use approach #4, 
-in the single file you must specify the ``site_model_file`` as done in
-approach #3, and also the ``exposure_file`` as follows::
+Then you will have 13 different risk files with a format like the following::
+
+ $ cat job_Argentina.ini
+ calculation_mode = event_based_risk
+ exposure_file = Exposure_Argentina.xml
+ structural_vulnerability_file = vulnerability.xml
+ ...
+ $ cat job_Bolivia.ini
+ calculation_mode = event_based_risk
+ exposure_file = Exposure_Bolivia.xml
+ structural_vulnerability_file = vulnerability.xml
+ ...
+
+It should be mentioned that you are not forced to use a risk file
+for each contry. In theory you could run the entire South America
+in a single calculation, by simply specifying
+the ``exposure_file`` as follows::
 
  exposure_file =
    Exposure_Argentina.xml
@@ -738,14 +662,21 @@ The engine will automatically build a single asset collection for the
 entire continent of South America. In order to use this approach, you
 need to collect all the vulnerability functions in a single file and
 the taxonomy mapping file must cover the entire exposure for all
-countries.  Moreover, the exposure must contain the associations
-between asset<->country; in GEM's exposure models, this is typically
-encoded in a field called ``ID_0``. Then the aggregation by country
+countries. Moreover, the exposure must contain a field specifying
+the country (in GEM's exposure models, this is typically
+encoded in a field called ``ID_0``). Then the aggregation by country
 can be done with the option
 
 ::
 
    aggregate_by = ID_0
+
+There are however disadvantages of the single file approach:
+
+1. if only the exposure of a country change, and not the others, you
+   still have to recompute everything
+2. for continental scale calculations it is very likely to run out of memory,
+   so splitting by contry can be the only viable option.
 
 Sometimes, one is interested in finer aggregations, for instance by country
 and also by occupancy (Residential, Industrial or Commercial); then you have
@@ -765,50 +696,19 @@ a calculation, by spawning a subcalculation to compute the reaggregation.
 Without ``reaggregate_by`` the aggregation by country would be lost,
 since only the result of the finer aggregation would be stored.
 
-Single-line commands
---------------------
+Starting from version 3.25 the engine has a command `oq ses` that can
+be used to generate a Stochastic Event Set in HDF4 format, which then
+can be read by the risk calculators. In practice you can run the
+entire South America with two simple commands::
 
-When using approach #1 your can run all of the required calculations
-with the command::
+ $ oq ses job_SAM.csv SAM.hdf5  # generate the SAM.hdf5 file
+ $ oq engine --run job_Argentina.csv job_Bolivia.csv ... --hc SAM.hdf5
 
- $ oq engine --run job_Argentina.csv job_Bolivia.csv ...
-
-When using approach #2 your can run all of the required calculations
-with the command::
-
- $ oq engine --run job_rup.ini job_Argentina.csv job_Bolivia.csv ...
-
-When using approach #3 your can run all of the required calculations
-with the command::
-
- $ oq engine --run job_gmf.ini job_Argentina.csv job_Bolivia.csv ...
-
-When using approach #4 your can run all of the required calculations
-with the command::
-
- $ oq engine --run job_all.ini
-
-Here ``job_XXX.ini`` are the country specific configuration files,
-``job_rup.ini`` is the file generating the ruptures, ``job_rup.ini``
-is the file generating the ruptures, ``job_gmf.ini`` is the file
-generating the ground motion files and ``job_all.ini`` is the
-file encompassing all countries.
-
-Finally, if you have a file ``job_haz.ini`` generating the full GMFs,
-a file ``job_weak.ini`` generating the losses with a weak building code
-and a file ``job_strong.ini`` generating the losses with a strong building
-code, you can run the entire an analysis with a single command as follows::
-
- $ oq engine --run job_haz.ini job_weak.ini job_strong.ini
-
-This will generate three calculations and the GMFs will be reused.
-This is as efficient as possible for this kind of problem.
 
 Caveat: GMFs are split-dependent
 --------------------------------
 
-You should not expect the results of approach #4 to match exactly the
-results of approaches #3 or #2, since splitting a calculation by
+You should understand that splitting a calculation by
 countries is a tricky operation. In general, if you have a set of
 sites and you split it in disjoint subsets, and then you compute the
 ground motion fields for each subset, you will get different results
@@ -847,3 +747,74 @@ see similar results with and without splitting. But you will
 *never produce identical results*. Only the classical calculator does
 not depend on the splitting of the sites, for event based and scenario
 calculations there is no way out.
+
+Understanding the SES file
+--------------------------------------
+
+The command `oq ses` is able to take multiple hazard models and build
+a single file containing ruptures coming from all the model without
+double counting. There is clearly a risk of double counting if the
+same source is included in two different mosaic models and therefore
+the engine generates the same ruptures twice. However the ``oq ses``
+command is smart enough to discard duplicated ruptures.
+
+The generated ``ses.hdf5`` file contains all the ruptures from all
+the models into a single dataset which is a structured array.
+In particular there is a ``model`` field telling by which model
+each rupture was generated.
+
+There is also a field called ``trt_smr`` that contains information
+about the tectonic region type and the source model realization to
+which the rupture belongs. Extracting such information is a digestible
+format requires some work and knowledge of the internals of the engine.
+
+Here we will give an explanation. Let's start by saying that the engine
+has a limit of at most 256 tectonic region types, therefore 1 byte is
+enough to identify a tectonic region type. The engine has also a limit
+of 2^24 = 16,777,216 source model realizations, therefore 3 bytes are
+enough to identify uniquely a source model realization. Therefore with
+a 32 bit integer (4 bytes) we can identify uniquely both the tectonic
+region type and the source model realization. That 32 bit integer is
+called ``trt_smr`` and can be used to extract the ``trt`` index and
+the ``smr`` index as follows::
+
+  trt, smr = divmod(trt_smr, 2**24)
+
+From the ``trt`` index one can extract the tectonic region type as follows::
+
+   full_lt.trts[trt]
+
+From the ``smr`` index one can extract the source model realization as follows::
+
+  full_lt.sm_rlzs[smr]
+
+You can visualize `sm_rlzs` for a given model as follows::
+
+ $ oq show sm_rlzs:JPN ses.hdf5
+ | ordinal | lt_path | value               | samples | weight |
+ |---------+---------+---------------------+---------+--------|
+ | 0       | b11     | ['ssm/nied_50.xml'] | 2_000   | 1.0000 |
+
+The ``full_lt`` objects can be extracted from the datastore, one
+for each model. A Python script should get you started:
+
+.. code-block:: python
+
+ from openquake.baselib import sap, hdf5
+ TWO24 = 2 ** 24
+
+ def main(ses_hdf5):
+     """
+     Count the ruptures by model and TRT
+     """
+     with hdf5.File(ses_hdf5) as f:
+         ruptures = f['ruptures'][:]
+         for model in f['full_lt']:
+             full_lt = f['full_lt/' + model]
+             rups = ruptures[ruptures['model'] == model.encode('ascii')]
+             trt_indices = rups['trt_smr'] // TWO24
+             for i, trt in enumerate(full_lt.trts):
+                 print(model, trt, (trt_indices==i).sum())
+
+ if __name__ == '__main__':
+     sap.run(main)
