@@ -955,7 +955,7 @@ def view_extreme_gmvs(token, dstore):
             if ':' in token:
                 msg = str(exdf.set_index('rup'))
         return msg
-    return msg + '\nCould not extract extreme GMVs for ' + imt0
+    return msg
 
 
 @view.add('mean_rates')
