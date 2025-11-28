@@ -254,6 +254,10 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     except Exception:  # gaierror
         host = None
     jobs = []
+    if len(job_inis) > 1:  # create a tag
+        tag = '%d-%d'
+    else:
+        tag = ''
     for job_ini in job_inis:
         if isinstance(job_ini, dict):
             dic = job_ini
@@ -261,9 +265,14 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini)
-        jobs.append(logs.init(dic, None, log_level, log_file,
-                              user_name, hc_id, host))
+        job = logs.init(dic, None, log_level, log_file, user_name, hc_id, host)
+        jobs.append(job)
+        if tag:
+            j0 = jobs[0].calc_id
+            j1 = j0 + len(job_inis) - 1
+            logs.dbcmd('add_tag_to_job', job.calc_id, tag % (j0, j1))
     check_directories(jobs[0].calc_id)
+
     return jobs
 
 
