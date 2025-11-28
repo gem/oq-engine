@@ -42,7 +42,7 @@ def main(manifest_toml):
     print(f'Checked out the repositories in {dt:.0f} seconds')
     os.environ['OQ_SAMPLE_SITES'] = '.04'
     jobs = engine.create_jobs(inis, tag=manifest['Global']['description'])
-    engine.run_jobs(jobs)
+    engine.run_jobs(jobs, concurrent_jobs=1)
 
 if __name__ == '__main__':
     sap.run(main)
