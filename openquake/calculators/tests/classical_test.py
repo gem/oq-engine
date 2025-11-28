@@ -797,6 +797,18 @@ class ClassicalTestCase(CalculatorTestCase):
         # test preclassical without sites, as requested by Richard Styron
         self.run_calc(case_75.__file__, 'pre.ini')
 
+        # reset .msparams to emulate reading csm without preclassical
+        for src in self.calc.csm.get_sources():
+            if src.code == b'F':
+                delattr(src, 'msparams')
+        self.calc.csm.set_msparams()
+
+        # count the ruptures
+        nrup = 0
+        for src in self.calc.csm.get_sources():
+            nrup += sum(1 for rup in src.iter_ruptures())
+        self.assertEqual(nrup, 5)
+
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')

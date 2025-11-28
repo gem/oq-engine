@@ -708,6 +708,19 @@ class CompositeSourceModel:
                 # print(src, src.offset, offset)
             src_id += 1
 
+    def set_msparams(self):
+        """
+        Set the `.msparams` attribute on multifault sources, if any
+        """
+        for src in self.get_sources():
+            if src.code == b'F':
+                with hdf5.File(src.hdf5path, 'r') as h5:
+                    secparams = h5['secparams'][:]
+                break
+        for src in self.get_sources():
+            if src.code == b'F':
+                src.set_msparams(secparams)
+
     def get_msr_by_grp(self):
         """
         :returns: a dictionary grp_id -> MSR string
