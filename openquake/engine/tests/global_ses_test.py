@@ -47,15 +47,15 @@ def check(dstore, fnames):
 
         # count the ruptures outside the models
         mie_out = count_rups(ds_MIE, '???')
-        assert mie_out == 66120
+        assert mie_out == 0
         eur_out = count_rups(ds_EUR, '???')
-        assert eur_out == 12
+        assert eur_out == 0
         
         nrup_EUR = count_rups(ds_EUR, 'EUR')
         nrup_MIE = count_rups(ds_MIE, 'MIE')
         rups = ds['ruptures'][:]
         nrup = len(rups)
-        assert nrup == nrup_EUR + nrup_MIE
+        assert nrup == nrup_EUR + nrup_MIE  # no double counting
         assert dstore['avg_gmf'].shape == (2, 4328, 1)
 
 

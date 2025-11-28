@@ -25,10 +25,10 @@ import pandas
 from shapely import geometry
 from openquake.baselib import (
     config, hdf5, parallel, python3compat, performance)
-from openquake.baselib.general import (
-    AccumDict, humansize, block_splitter, group_array)
+from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib import valid, logictree, InvalidFile
 from openquake.hazardlib.geo.packager import fiona
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.map_array import MapArray, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -66,6 +66,7 @@ TWO32 = numpy.float64(2 ** 32)
 MAX_PROXIES = 1000
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
+
 
 def rup_weight(rup):
     # rup['nsites'] is 0 if the ruptures were generated without a sitecol
@@ -609,11 +610,12 @@ class EventBasedCalculator(base.HazardCalculator):
         if 'geometry' in oq.inputs:
             fname = oq.inputs['geometry']
             with fiona.open(fname) as f:
-                model_geom = geometry.shape(f[0].geometry)
+                geom = geometry.shape(f[0].geometry)
+            mosaic_df = pandas.DataFrame(dict(code=['???'], geom=[geom]))
         elif oq.mosaic_model:  # 3-letter mosaic model
-            mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
-            mmodel = 'CAN' if oq.mosaic_model == 'CND' else oq.mosaic_model
-            model_geom = mosaic_df.loc[mmodel].geom
+            mosaic_df = readinput.read_mosaic_df(buffer=0)
+        else:
+            mosaic_df = ()
         logging.info('Building ruptures')
         g_index = 0
         for sg_id, sg in enumerate(self.csm.src_groups):
@@ -623,9 +625,7 @@ class EventBasedCalculator(base.HazardCalculator):
             cmaker = ContextMaker(sg.trt, rgb, oq)
             cmaker.gid = numpy.arange(g_index, g_index + len(rgb))
             g_index += len(rgb)
-            param = dict(model=oq.mosaic_model or '???')
-            if oq.mosaic_model or 'geometry' in oq.inputs:
-                param['model_geom'] = model_geom
+            param = {}
             param['ses_per_logic_tree_path'] = oq.ses_per_logic_tree_path
             param['ses_seed'] = oq.ses_seed
             param['magdist'] = cmaker.maximum_distance
@@ -654,6 +654,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 eff_ruptures += dic['eff_ruptures']
             with mon:
                 self.nruptures += len(rup_array)
+                if len(mosaic_df):
+                    rup_array['model'] = geolocate(rup_array['hypo'], mosaic_df)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], geom)
