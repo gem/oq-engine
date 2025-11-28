@@ -338,6 +338,9 @@ def log_completed(jobctxs, sec):
         job_ini = jobctx.params['inputs'].get('job_ini', '<in-memory>')
         # <in-memory> happens for sensitivity.py in run-demos.sh
         job = logs.dbcmd('get_job', jobctx.calc_id)
+        if job.status != 'complete':
+            job.status = 'failed'
+            logs.dbcmd("set_status", job.id, 'failed')
         path = job.ds_calc_dir + '.hdf5'
         try:
             size = getsize(path)
