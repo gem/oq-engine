@@ -204,7 +204,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         # Create GMMs
         gmm_adj_src = ChiouYoungs2014(stress_par_host=100,
                                       stress_par_target=120,
-                                      source_function_tab=SRC_ADJ_TABLE,)
+                                      source_function_tab=SRC_ADJ_TABLE)
         gmm_adj_all = ChiouYoungs2014(stress_par_host=100,
                                       stress_par_target=120,
                                       source_function_tab=SRC_ADJ_TABLE,
