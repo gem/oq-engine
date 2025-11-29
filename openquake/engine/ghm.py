@@ -21,6 +21,7 @@ import time
 import toml
 from openquake.baselib import sap
 from openquake.baselib.gitwrapper import git
+from openquake.commonlib import readinput
 from openquake.engine import engine
 
 def read(manifest_toml):
@@ -34,7 +35,7 @@ def read(manifest_toml):
     for model, dic in manifest['Hazard'].items():
         repo = os.path.join(mosaic_dir, model)
         ini = dic.get('ini', 'job_vs30.ini')
-        inis.append(os.path.join(repo, 'in', ini))
+        inis.append(readinput.get_params(os.path.join(repo, 'in', ini)))
     manifest['mosaic_dir'] = mosaic_dir
     manifest['inis'] = inis
     return manifest
@@ -70,6 +71,9 @@ def run(manifest_toml, *, concurrent_jobs: int=1):
         os.environ['OQ_SAMPLE_SITES'] = str(ss)
     if ss := gl.get('sample_sources'):
         os.environ['OQ_SAMPLE_SOURCES'] = str(ss)
+    if cm := gl.get('calculation_mode'):
+        for ini in manifest['inis']:
+            ini['calculation_mode'] = cm
     jobs = engine.create_jobs(manifest['inis'], tag=gl['description'])
     engine.run_jobs(jobs, concurrent_jobs)
 
