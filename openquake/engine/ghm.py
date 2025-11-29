@@ -51,7 +51,7 @@ def checkout(manifest_toml):
     for model, dic in manifest['Hazard'].items():
         repo = os.path.join(manifest['mosaic_dir'], model)
         if change:
-            print(f'============================== {repo}')
+            print(f"Setting {repo} at {dic['checkout']}")
             git(repo, ['clean', '-f'])
             git(repo, ['reset', '--hard', dic['checkout']])
     dt = time.time() - t0
