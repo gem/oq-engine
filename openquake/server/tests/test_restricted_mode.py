@@ -1,3 +1,4 @@
+import sys
 import django
 from datetime import datetime, timedelta
 from django.test import Client
@@ -290,7 +291,8 @@ class RestrictedModeTestCase(django.test.TestCase):
         self.assertEqual(ret.status_code, 200)
         jobs = ret.json()
         tags = [job['tags'] for job in jobs]
-        assert any([tag.endswith('★') for tag in tags])
+        print(f'{tags=}', file=sys.stderr)
+        assert any(tag.endswith('★') for tag in tags)
         self.assertIn(first_tag, jobs[0]['tags'])
 
         ret = self.get('list', filter_by_tag=first_tag, include_shared=0)
