@@ -289,7 +289,8 @@ class RestrictedModeTestCase(django.test.TestCase):
         ret = self.get('list', preferred_only='1', include_shared=0)
         self.assertEqual(ret.status_code, 200)
         jobs = ret.json()
-        self.assertTrue(any([job['tags'].endswith('★') for job in jobs]))
+        tags = [job['tags'] for job in jobs]
+        assert any([tag.endswith('★') for tag in tags])
         self.assertIn(first_tag, jobs[0]['tags'])
 
         ret = self.get('list', filter_by_tag=first_tag, include_shared=0)
