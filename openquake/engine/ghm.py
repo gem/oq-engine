@@ -19,31 +19,43 @@
 import os
 import time
 import toml
-from openquake.baselib import sap, config
+from openquake.baselib import sap
 from openquake.baselib.gitwrapper import git
 from openquake.engine import engine
 
-def path_to(model):
-    return os.path.join(config.directory.mosaic_dir, model)
-
-
-def main(manifest_toml, *, concurrent_jobs: int=1):
+def read(manifest_toml):
     with open(manifest_toml, encoding='utf8') as f:
         manifest = toml.load(f)
+    manifest['Global']['mosaic_dir'] = os.path.dirname(manifest_toml)
+    return manifest
+
+
+def checkout(manifest_toml):
+    manifest = read(manifest_toml)
+    glob = manifest['Global']
     inis = []
     t0 = time.time()
     for model, dic in manifest['Hazard'].items():
-        repo = path_to(model)
-        print(f'============================== {repo}')
-        git(repo, ['clean', '-f'])
-        git(repo, ['reset', '--hard', dic['checkout']])
+        repo = os.path.join(glob['mosaic_dir'], model)
+        if 'oq-engine' not in repo:
+            print(f'============================== {repo}')
+            git(repo, ['clean', '-f'])
+            git(repo, ['reset', '--hard', dic['checkout']])
         ini = dic.get('ini', 'job_vs30.ini')
         inis.append(os.path.join(repo, 'in', ini))
     dt = time.time() - t0
     print(f'Checked out the repositories in {dt:.0f} seconds')
-    os.environ['OQ_SAMPLE_SITES'] = '.04'
+    return inis
+
+
+def run(manifest_toml, *, concurrent_jobs: int=1):
+    manifest, inis = checkout(manifest_toml)
+    ss = manifest['Global'].get('sample_sites')
+    if ss:
+        os.environ['OQ_SAMPLE_SITES'] = str(ss)
     jobs = engine.create_jobs(inis, tag=manifest['Global']['description'])
     engine.run_jobs(jobs, concurrent_jobs)
 
+
 if __name__ == '__main__':
-    sap.run(main)
+    sap.run(dict(checkout=checkout, run=run))
