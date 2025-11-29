@@ -7,7 +7,6 @@ Engine.checkout = "master"
 number_of_logic_tree_samples = 2000
 minimum_magnitude = 5
 
-
 [Hazard]
 EUR.checkout = "master"
 MIE.checkout = "master"
