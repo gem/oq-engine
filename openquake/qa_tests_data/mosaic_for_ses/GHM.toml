@@ -1,0 +1,13 @@
+[Global]
+description = "Pilot run"
+version = "v2025.0.0"
+Engine.checkout = "master"
+
+# SES global parameters
+number_of_logic_tree_samples = 2000
+minimum_magnitude = 5
+
+
+[Hazard]
+EUR.checkout = "master"
+MIE.checkout = "master"
