@@ -159,7 +159,7 @@ def _make_rupture():
     default_arguments = {
         'mag': 6.5,
         'rake': 180.,
-        'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
+        'tectonic_region_type': const.TRT.ACTIVE_SHALLOW_CRUST,
         'hypocenter': Point(28.709146553353872, 40.890863701462457, 11.0),
         'surface': SimpleFaultSurface.from_fault_data(
             fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
