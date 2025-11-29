@@ -35,7 +35,11 @@ def read(manifest_toml):
     for model, dic in manifest['Hazard'].items():
         repo = os.path.join(mosaic_dir, model)
         ini = dic.get('ini', 'job_vs30.ini')
-        inis.append(readinput.get_params(os.path.join(repo, 'in', ini)))
+        params = readinput.get_params(os.path.join(repo, 'in', ini))
+        if n := dic.get('number_of_logic_tree_samples') or manifest['Global'].get(
+                'number_of_logic_tree_samples'):
+            params['number_of_logic_tree_samples'] = str(n)
+        inis.append(params)
     manifest['mosaic_dir'] = mosaic_dir
     manifest['inis'] = inis
     return manifest
