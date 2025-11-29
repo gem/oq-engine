@@ -202,7 +202,6 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         the central branch (branch 3) values for use in these unit tests.
         """
         # Create GMMs
-        gmm_ori = ChiouYoungs2014()
         gmm_adj_src = ChiouYoungs2014(stress_par_host=100,
                                       stress_par_target=120,
                                       source_function_tab=SRC_ADJ_TABLE,)
@@ -222,11 +221,6 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         mags_str = [f'{r.mag:.2f}' for r in rups]
         oqp = {'imtls': {k: [] for k in [imt_str]}, 'mags': mags_str}
 
-        # ContextMaker for the ORIGINAL version of CY14
-        ctxm_ori = ContextMaker('fake', [gmm_ori], oqp)
-        ctxs_ori = list(ctxm_ori.get_ctx_iter(rups, SiteCollection([site1])))
-        ctxs_ori = ctxs_ori[0]
-
         # ContextMaker for the SOURCE ADJUSTED version of CY14
         ctxm_adj_src = ContextMaker('fake', [gmm_adj_src], oqp)
         ctxs_adj_src = list(ctxm_adj_src.get_ctx_iter(rups,
@@ -240,7 +234,6 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         ctxs_adj_all = ctxs_adj_all[0]
 
         # Compute mean values of ground motion
-        [_, _, _, _] = ctxm_ori.get_mean_stds([ctxs_ori])
         [mea_adj_src, _, _, _] = ctxm_adj_src.get_mean_stds([ctxs_adj_src])
         [mea_adj_all, _, _, _] = ctxm_adj_all.get_mean_stds([ctxs_adj_all])
 
@@ -258,7 +251,7 @@ class BooreEtAl2022Adjustments(BaseGSIMTestCase):
         self.assertAlmostEqual(delta_cm, expected_delta_cm, msg=msg)
 
         # Test stress scaling term
-        C = gmm_ori.COEFFS[imt]
+        C = gmm_adj_src.COEFFS[imt]
         scalf_adj = get_magnitude_scaling(C, ctxs_adj_all[0].mag, delta_cm)
         expected_scalf_adj = np.array([0.665226, 0.665226])
         msg = f"The value of the scaling factor {scalf_adj} is different \n"
