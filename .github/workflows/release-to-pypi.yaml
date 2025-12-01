@@ -12,12 +12,12 @@ on:
         description: Branch of gem/oq-engine repository
         default: master
         required: true
-      pypi-test:
+      pypi-prod:
         type: boolean
         description: Publish PyPI
         default: false
         required: true
-      pypi-prod:
+      pypi-test:
         type: boolean
         description: Publish TestPyPI
         default: false
