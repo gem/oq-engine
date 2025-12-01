@@ -271,7 +271,7 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
         proxies = get_proxies(hdf5path, rups)
     chunksize = int(config.memory.max_ruptures_chunk)
-    for block in block_splitter(proxies, chunksize, rup_weight):
+    for block in block_splitter(proxies, chunksize, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 
