@@ -13,12 +13,14 @@ on:
         default: master
         required: true
       pypi-test:
+        type: boolean
         description: Publish PyPI
-        default: 0
+        default: false
         required: true
       pypi-prod:
+        type: boolean
         description: Publish TestPyPI
-        default: 0
+        default: false
         required: true
 
 jobs:
@@ -51,7 +53,7 @@ jobs:
         BUILD_NUMBER: ${{ github.run_number }}
       run: |
         sed -i "s/version = get_version()/version = get_version() + '.dev${BUILD_NUMBER}'/g" setup.py
-      if: github.event.inputs.pypi-test == '1'
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }}
     - name: Install pypa/build
       run: |
         python3 -m pip install build --user
@@ -70,7 +72,7 @@ jobs:
     name: Publish Python 🐍 distribution 📦 to TestPyPI
     needs:
     - build
-    if: github.event.inputs.pypi-test == '1'
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }}
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -92,7 +94,7 @@ jobs:
     name: Publish Python 🐍 distribution 📦 to PyPI
     needs:
     - build
-    if: github.event.inputs.pypi-test == '1'
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-prod }}
     runs-on: ubuntu-latest
     environment:
       name: pypi
