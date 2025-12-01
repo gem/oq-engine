@@ -1,0 +1,94 @@
+---
+name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
+on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled '
+        required: false
+        default: false
+      git-ref:
+        description: Branch of gem/oq-engine repository
+        default: master
+        required: true
+      pypi-test:
+        description: Publish PyPI
+        default: 0
+        required: true
+      pypi-prod:
+        description: Publish TestPyPI
+        default: 0
+        required: true
+
+jobs:
+  build:
+    name: Build distribution 📦
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clone Repository (Latest)
+      uses: actions/checkout@v4
+      if: github.event.inputs.git-ref == ''
+    - name: Clone Repository (Custom Ref)
+      uses: actions/checkout@v4
+      if: github.event.inputs.git-ref != ''
+      with:
+        ref: ${{ github.event.inputs.git-ref }}
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install pypa/build
+      run: |
+        python3 -m pip install build --user
+    - name: Build a binary wheel and a source tarball
+      run: python3 -m build
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+
+  publish-to-testpypi:
+    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    needs:
+    - build
+    if: github.event.inputs.pypi-test == '1'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/openquake.engine
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+  publish-to-pypi:
+    name: Publish Python 🐍 distribution 📦 to PyPI
+    needs:
+    - build
+    if: github.event.inputs.pypi-test == '1'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/openquake.engine
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+
