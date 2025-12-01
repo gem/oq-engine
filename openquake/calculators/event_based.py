@@ -271,7 +271,7 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
         proxies = get_proxies(hdf5path, rups)
     chunksize = int(config.memory.max_ruptures_chunk)
-    for block in block_splitter(proxies, chunksize, lambda p: 1):
+    for block in block_splitter(proxies, chunksize, rup_weight):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 
@@ -350,7 +350,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     # NB: it is faster to filter a huge number of ruptures
     # upfront rather than looping on each (model, trt_smr)
     if len(sitecol) > oq.max_sites_disagg:
-        # can manage 2 million sites in 13 minutes for IND
+        # can manage 2 million sites in 2 minutes for IND
         filrups = close_ruptures(allrups, sitecol, assetcol, dstore.hdf5)
         logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
