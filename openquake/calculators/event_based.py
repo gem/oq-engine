@@ -63,7 +63,6 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
-MAX_PROXIES = 1000
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
@@ -206,7 +205,6 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
 
 def _event_based(proxies, cmaker, stations, srcfilter, shr,
                  fmon, cmon, umon, mmon):
-    # consider at max MAX_PROXIES
     oq = cmaker.oq
     alldata = []
     sig_eps = []
@@ -272,7 +270,8 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
         proxies = get_proxies(hdf5path, rups)
-    for block in block_splitter(proxies, MAX_PROXIES, lambda p: 1):
+    chunksize = int(config.memory.max_ruptures_chunk)
+    for block in block_splitter(proxies, chunksize, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 
