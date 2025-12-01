@@ -27,10 +27,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Setup debugging session
-      uses: mxschmitt/action-tmate@v3
-      timeout-minutes: 35
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
     - name: Clone Repository (Latest)
       uses: actions/checkout@v4
       if: github.event.inputs.git-ref == ''
@@ -43,6 +39,10 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.12"
+    - name: Setup debugging session
+      uses: mxschmitt/action-tmate@v3
+      timeout-minutes: 35
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
     # Append a devXY (where XY is the Jenkins build ID if destination is the testing repo
     # to make testing possible even if a same release version (i.e. 2.2.0)is already
     # on the test repo. Whe use devXY to be compliant with PEP440 (i.e. no git has allowed)
