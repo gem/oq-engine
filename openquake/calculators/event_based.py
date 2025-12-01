@@ -388,8 +388,8 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        logging.info('%s: sending %d ruptures for trt_smr=%d',
-                     model, len(rups), trt_smr)
+        logging.debug('%s: sending %d ruptures for trt_smr=%d',
+                      model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
             args = (block, cmaker, sitecol.sids, station_data_sites,
                     dstore.filename)
