@@ -816,6 +816,12 @@ def extract_agg_curves(dstore, what):
 
 
 def aggexp_tags(dstore):
+    """
+    Read agg_values and returns a datastore with fields like::
+
+            policy taxonomy  number  nonstructural  structural  area
+     agg_id
+    """
     oq = dstore['oqparam']
     if not oq.aggregate_by:
         raise InvalidFile(f'{dstore.filename}: missing aggregate_by')
