@@ -48,7 +48,7 @@ jobs:
     # on the test repo. Whe use devXY to be compliant with PEP440 (i.e. no git has allowed)
     - name: Append a devXY if the testing repo
       env:
-        BUILD_NUMBER: ${{github.run_number}}
+        BUILD_NUMBER: ${{ github.run_number }}
       run: |
         sed -i "s/version = get_version()/version = get_version() + 'dev${BUILD_NUMBER}'/g" setup.py
       if: github.event.inputs.pypi-test == '1'
@@ -56,7 +56,10 @@ jobs:
       run: |
         python3 -m pip install build --user
     - name: Build a binary wheel and a source tarball
-      run: python3 -m build
+      run: |
+        cp README.md README.no_abs.md
+        ./helpers/abs_readme.sh "${{ github.event.inputs.git-ref }}"
+        python3 -m build
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
@@ -104,4 +107,3 @@ jobs:
         path: dist/
     - name: Publish distribution 📦 to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-
