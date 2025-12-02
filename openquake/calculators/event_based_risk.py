@@ -405,8 +405,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         del adf['id']
         if 'ID_0' not in adf.columns:
             adf['ID_0'] = U32(0)
-        if 'ID_1' not in adf.columns:
-            adf['ID_1'] = U32(0)
         adf = adf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
         # NB: this is subtle! without the ordering by 'ordinal'
         # the asset dataframe will be ordered differently on AMD machines
