@@ -58,8 +58,10 @@ jobs:
           sleep 1
           # Perform migration after setup local_settings
           curl --fail -L -I -X GET http://127.0.0.1:8800
+          # Run all demos          
           cd $HOME/gh-venv/
-          oq engine --run  demos/hazard/ScenarioLiquefaction/job.ini
+          curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/master/bin/run-demos.sh
+          bash ./run-demos.sh demos
           # Run a calcs using https
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
           curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
