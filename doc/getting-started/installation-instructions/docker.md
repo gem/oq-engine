@@ -58,10 +58,10 @@ $ docker pull docker.io/openquake/engine[:TAG]
 This modality is recommended when only the [WebUI or the API server](server.md) is used (for example as the backend for the [OpenQuake QGIS plugin](https://plugins.qgis.org/plugins/svir/)).
 
 ```bash
-$ docker run --name <containername> -d -p 8800:8800 openquake/engine:nightly "oq webui start"
+$ docker run --name <containername> -d -p  -p 127.0.0.1:8800:8800  openquake/engine:nightly "oq webui start 0.0.0.0:8800 -s"
 ```
 
-Then you can connect to [http://localhost:8800](http://localhost:8800) to be able to access the [WebUI or the API server](server.md).
+Then you can connect to [http://127.0.0.1:8800](http://127.0.0.1:8800) to be able to access the [WebUI or the API server](server.md).
 
 You can stop and start again your container with the following commands:
 
@@ -78,7 +78,7 @@ $ docker start <containername>
 This modality provides the same features as the headless mode plus the ability to drive the OpenQuake Engine via the `oq` command on a terminal.
 
 ```bash
-$ docker run --name <containername> -t -i -p 8800:8800 openquake/engine:nightly bash
+$ docker run --name <containername> -t -i -p 127.0.0.1:8800:8800 openquake/engine:nightly bash
 ```
 
 The container prompt will appear, here you play with the `oq` [shell command](../running-calculations/unix.rst).
