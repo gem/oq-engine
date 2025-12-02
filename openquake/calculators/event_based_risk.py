@@ -203,7 +203,7 @@ def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
         countries = ["?"]  # assume a single contry
     for id0taxo, s0, s1 in monitor.read('start-stop'):
         if assdf is None:
-            # read the assets (ebrisk)
+            # read the assets for a single country, taxonomy (ebrisk)
             with ass_mon:
                 adf = monitor.read(
                     'assets', slc=slice(s0, s1)).set_index('ordinal')
@@ -338,6 +338,10 @@ def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
     R = len(weights)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
+    assdf = None
+    # NB: the assets are read more times than needed; this is on purpose;
+    # the slowdown is minor, while the memory saving is massive, since only
+    # one taxonomy at the time is read inside _event_based_risk
     for dic in event_based.event_based(
             rups, cmaker, sids, stations, hdf5path, monitor):
         if len(dic['gmfdata']):
@@ -345,7 +349,7 @@ def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
             loss3 = {'aids': [], 'bids': [], 'loss': []}
             loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
             dic = _event_based_risk(
-                gmf_df, None, loss2, loss3, crmodel, monitor)
+                gmf_df, assdf, loss2, loss3, crmodel, monitor)
             if loss2:  # has been populated
                 dic['avg'] = build_avg(loss3, oq.A, R*X)
                 dic['alt'] = build_alt(loss2, xtypes)
