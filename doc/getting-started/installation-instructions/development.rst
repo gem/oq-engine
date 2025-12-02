@@ -41,7 +41,35 @@ Please see instructions for the :doc:`Installing the OpenQuake Engine on MacOS <
 Windows
 -----
 
-Python version 3.12 is recommended but it also can used Python 3.11. The use of the official Python installer for Windows is mandatory and can be downloaded from: https://www.python.org/downloads/windows/
+Python version 3.12 is recommended but it also can used Python 3.11. The use of the official Python installer for Windows is mandatory.
+
+-------------------------
+1. Download Python
+-------------------------
+
+1. Open the official download page:
+
+   https://www.python.org/downloads/windows/
+
+2. Under **Stable Releases**, click **Download Python 3.12.x**.
+
+-------------------------
+2. Run the Installer
+-------------------------
+
+Locate the downloaded file (e.g., ``python-3.12.x-amd64.exe``) and double-click it.
+
+-----------------------------------------
+3. Enable PATH and Start Installation
+-----------------------------------------
+
+When the installer window appears:
+
+* Check **Add Python 3.12 to PATH**
+* Click **Install Now**
+
+
+The installation process may take a few minutes.
 
 Encoding
 --------
