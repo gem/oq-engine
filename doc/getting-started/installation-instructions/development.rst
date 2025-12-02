@@ -18,8 +18,7 @@ development <https://xkcd.com/844/>`__ are required.
 
 Some software prerequisites are needed to build the development
 environment. First of your you need a Python version supported by the
-engine. At the moment we recommend Python 3.11, which is the only
-version supported on Windows and macOS.
+engine. At the moment we recommend Python 3.12.
 
 **NB: Python 3.13 are not supported yet, so please do NOT install such
 versions**
@@ -36,8 +35,13 @@ but it also can used Python 3.11
 
 macOS
 -----
-
+Python version 3.12 is recommended but it also can used Python 3.11.
 Please see instructions for the :doc:`Installing the OpenQuake Engine on MacOS <macos>`
+
+Windows
+-----
+
+Python version 3.12 is recommended but it also can used Python 3.11. The use of the official Python installer for Windows is mandatory and can be downloaded from: https://www.python.org/downloads/windows/
 
 Encoding
 --------
@@ -81,11 +85,11 @@ Before using again the OpenQuake software the environment must be
 reloaded running ``source openquake/bin/activate``\ (assuming that it
 has been installed under ‘openquake’). For more information about
 *virtualenv*, see
-http://docs.python-guide.org/en/latest/dev/virtualenvs/.
+https://docs.python.org/3.12/library/venv.html.
 
 To load the virtual environment automatically at every login, add the
 following line at the bottom of your ``~/.bashrc`` (Linux) or
-``~/.profile`` (macOS):
+``~/.zshrc`` (macOS):
 
 .. code:: bash
 
@@ -97,14 +101,14 @@ You can also add a short-hand command to enable it:
 
    alias oqenv="source $HOME/openquake/bin/activate"
 
-Put it again at the bottom of ``~/.bashrc`` or ``~/.profile``; close and
+Put it again at the bottom of ``~/.bashrc`` or ``~/.zshrc``; close and
 re-open the terminal. You can now load your environment just typing
 ``oqenv``.
 
 It is also possible to run the ``oq`` command without the corresponding
 virtual environment loaded. Just run ``$HOME/openquake/bin/oq``; for
 convenience you can also add it as an ``alias`` in your ``~/.bashrc``
-(Linux) or ``~/.profile`` (macOS):
+(Linux) or ``~/.zshrc`` (macOS):
 
 .. code:: bash
 
