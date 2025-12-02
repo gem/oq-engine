@@ -12,7 +12,7 @@ Prerequisites
 -------------
 
 Knowledge of `Python <https://www.python.org/>`__ (and its `virtual
-environments <https://docs.python.org/3.11/tutorial/venv.html>`__),
+environments <https://docs.python.org/3.12/tutorial/venv.html>`__),
 `git <https://git-scm.com/>`__ and `software
 development <https://xkcd.com/844/>`__ are required.
 
@@ -21,18 +21,18 @@ environment. First of your you need a Python version supported by the
 engine. At the moment we recommend Python 3.11, which is the only
 version supported on Windows and macOS.
 
-**NB: Python 3.12 are not supported yet, so please do NOT install such
+**NB: Python 3.13 are not supported yet, so please do NOT install such
 versions**
 
-**NB: Python version below 3.9 are not supported , so please do NOT
+**NB: Python version below 3.11 are not supported , so please do NOT
 install such versions**
 
 Linux
 -----
 
 Please check the documentation of your distribution to install one of
-the supported version of Python. At the moment we recommend Python 3.11
-but it also can used Python 3.9 and 3.10
+the supported version of Python. At the moment we recommend Python 3.12
+but it also can used Python 3.11
 
 macOS
 -----
