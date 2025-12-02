@@ -172,7 +172,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
     xtypes = oqparam.ext_loss_types
     if oqparam.ideduc:
         xtypes.append('claim')
-    assdic = read_assdic(slice(None), monitor)
+    assdf = monitor.read('assets')
     loss3 = {'aids': [], 'bids': [], 'loss': []}
     for sbe in split(slice_by_event, int(config.memory.max_gmvs_chunk)):
         loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
@@ -193,22 +193,10 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
                     dset = dstore['gmf_data/' + col]
                     gmfdic[col] = dset[s0+start:s0+stop][idx - start]
         gmfdf = pandas.DataFrame(gmfdic)  # few MB
-        dic = _event_based_risk(gmfdf, assdic, loss2, loss3, crmodel, monitor)
+        dic = _event_based_risk(gmfdf, assdf, loss2, loss3, crmodel, monitor)
         dic['alt'] = build_alt(loss2, xtypes)
         yield dic
     yield dict(avg=build_avg(loss3, oqparam.A, R*X))
-
-
-def read_assdic(slc, monitor):
-    """
-    :param slc: slice object
-    :returns: dictionary col->array
-    """
-    with monitor('reading assets', measuremem=True):
-        # saving a lot of memory with respect to a simple read('assets')
-        cols = monitor.read_pdcolumns('assets').split()
-        assdic = {col: monitor.read('assets/' + col, slc) for col in cols}
-    return assdic
 
 
 def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
@@ -234,10 +222,10 @@ def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
     return dict(gmf_bytes=df.memory_usage().sum())
 
 
-def output_gen(df, assdic, crmodel, rng, monitor):
+def output_gen(df, assdf, crmodel, rng, monitor):
     """
     :param df: GMF dataframe (a slice of events)
-    :param assdic: a dictionary column name -> array
+    :param assdf: a DataFrame of assets or None in ebrisk
     :param crmodel: CompositeRiskModel instance
     :param rng: random number generator
     :param monitor: Monitor instance
@@ -245,10 +233,17 @@ def output_gen(df, assdic, crmodel, rng, monitor):
     """
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
+    ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
     monitor.ctime = 0
     for id0taxo, s0, s1 in monitor.read('start-stop'):
-        adf = pandas.DataFrame({col: assdic[col][s0:s1] for col in assdic})
+        if assdf is None:
+            # read the assets (ebrisk)
+            with ass_mon:
+                adf = monitor.read('assets', slc=slice(s0, s1))
+        else:
+            # filter the assets (event_based_risk)
+            adf = assdf[s0:s1]
         adf = adf.set_index('ordinal')
         country = crmodel.countries[id0taxo // TWO24]
         with fil_mon:
@@ -345,7 +340,6 @@ def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
     R = len(weights)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    assdic = read_assdic(slice(None), monitor)
     for dic in event_based.event_based(
             rups, cmaker, sids, stations, hdf5path, monitor):
         if len(dic['gmfdata']):
@@ -353,7 +347,7 @@ def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
             loss3 = {'aids': [], 'bids': [], 'loss': []}
             loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
             dic = _event_based_risk(
-                gmf_df, assdic, loss2, loss3, crmodel, monitor)
+                gmf_df, None, loss2, loss3, crmodel, monitor)
             if loss2:  # has been populated
                 dic['avg'] = build_avg(loss3, oq.A, R*X)
                 dic['alt'] = build_alt(loss2, xtypes)

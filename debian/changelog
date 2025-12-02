@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Saved memory in ebrisk, now most calculations can be run with 2 GB
+    of RAM per core
+
   [Paolo Tormene]
   * Fixed the management and layout/styling of navigation buttons in the
     WebUI, with and without authentication
