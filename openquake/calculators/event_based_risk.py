@@ -197,16 +197,23 @@ def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
     agg_mon = monitor('aggregating losses', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
+    try:
+        countries = monitor.read('countries')
+    except KeyError:  # no ID_0 in the exposure
+        countries = ["?"]
     for id0taxo, s0, s1 in monitor.read('start-stop'):
         if assdf is None:
             # read the assets (ebrisk)
             with ass_mon:
-                adf = monitor.read('assets', slc=slice(s0, s1))
+                adf = monitor.read(
+                    'assets', slc=slice(s0, s1)).set_index('ordinal')
         else:
             # filter the assets (event_based_risk)
-            adf = assdf[s0:s1]
-        adf = adf.set_index('ordinal')
-        country = crmodel.countries[id0taxo // TWO24]
+            adf = assdf[s0:s1].set_index('ordinal')
+
+        # passing the contry is crucial for impact_test,
+        # where the exposure contains multiple countries
+        country = countries[id0taxo // TWO24]
         with fil_mon:
             # *crucial* for the performance of the next step
             gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
@@ -379,10 +386,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # causing different losses
         monitor.save('assets', adf)
 
+        # crucial for impact_test
         if 'ID_0' in self.assetcol.tagnames:
-            self.crmodel.countries = self.assetcol.tagcol.ID_0
-        else:
-            self.crmodel.countries = ['?']
+            monitor.save('countries', self.assetcol.tagcol.ID_0)
 
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers by taxonomy
