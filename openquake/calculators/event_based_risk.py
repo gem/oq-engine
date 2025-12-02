@@ -101,6 +101,9 @@ def debugprint(ln, asset_loss_table, adf):
 
 
 def build_avg(loss3, A, X):
+    """
+    Build average losses as a sparse matrix of shape (A, X)
+    """
     if loss3['aids']:
         aids = numpy.concatenate(loss3['aids'], dtype=U32)
         bids = numpy.concatenate(loss3['bids'], dtype=U32)
@@ -112,6 +115,9 @@ def build_avg(loss3, A, X):
 
 
 def build_alt(loss2, xtypes):
+    """
+    Build aggregated loss table
+    """
     lis = range(len(xtypes))
     dic = general.AccumDict(accum=[])
     for ukey, arr in loss2.items():
@@ -125,31 +131,6 @@ def build_alt(loss2, xtypes):
                     dic[col].append(arr[li, c])
     fix_dtypes(dic)
     return pandas.DataFrame(dic)
-
-
-def aggreg(outputs, loss2, loss3, crmodel, K, aggids, rlz_id, xtypes, monitor):
-    oq = crmodel.oqparam
-    correl = int(oq.asset_correlation)
-    X = len(xtypes)
-    value_cols = ['variance', 'loss']
-    for out in outputs:
-        for li, ln in enumerate(xtypes):
-            if ln not in out or len(out[ln]) == 0:
-                continue
-            alt = out[ln]
-            if oq.avg_losses:  # fast
-                update(loss3, li, X, alt, rlz_id, oq.collect_rlzs)
-            if correl:  # use sigma^2 = (sum sigma_i)^2
-                alt['variance'] = numpy.sqrt(alt.variance)
-            eids = alt.eid.to_numpy() * TWO32  # U64
-            values = numpy.array([alt[col] for col in value_cols]).T
-            # aggregate all assets
-            fast_agg(eids + U64(K), values, correl, li, loss2)
-            if len(aggids):
-                # aggregate assets for each tag combination
-                aids = alt.aid.to_numpy()
-                for kids in aggids[:, aids]:
-                    fast_agg(eids + U64(kids), values, correl, li, loss2)
 
 
 def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
@@ -218,20 +199,60 @@ def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
     oq = crmodel.oqparam
     aggids = monitor.read('aggids')
     rlz_id = monitor.read('rlz_id')
-    xtypes = oq.ext_loss_types
-    if oq.ideduc:
-        xtypes.append('claim')
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
         rng = MultiEventRNG(oq.master_seed, df.eid.unique(),
                             int(oq.asset_correlation))
-    outgen = output_gen(df, assdic, crmodel, rng, monitor)
+    risk_mon = monitor('computing risk', measuremem=False)
+    fil_mon = monitor('filtering GMFs', measuremem=False)
+    sids = df.sid.to_numpy()
+    monitor.ctime = 0
     with monitor('aggregating losses', measuremem=True) as agg_mon:
-        aggreg(outgen, loss2, loss3, crmodel, oq.K,
-               aggids, rlz_id, xtypes, monitor)
+        for id1taxo, s0, s1 in monitor.read('start-stop'):            
+            adf = pandas.DataFrame({col: assdic[col][s0:s1] for col in assdic})
+            adf = adf.set_index('ordinal')
+            with fil_mon:
+                # *crucial* for the performance of the next step
+                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+            if len(gmf_df) == 0:  # common enough
+                continue
+            with risk_mon:
+                [out] = crmodel.get_outputs(
+                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+            monitor.ctime += fil_mon.dt + risk_mon.dt
+            aggreg(out, aggids, rlz_id, oq, loss2, loss3)
+
     agg_mon.duration -= monitor.ctime  # subtract the computing time
     return dict(gmf_bytes=df.memory_usage().sum())
+
+
+def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
+    """
+    Update loss2 and loss3
+    """
+    xtypes = oq.ext_loss_types
+    if oq.ideduc:
+        xtypes += ['claim']
+    correl = int(oq.asset_correlation)
+    value_cols = ['variance', 'loss']
+    for li, ln in enumerate(xtypes):
+        if ln not in out or len(out[ln]) == 0:
+            continue
+        alt = out[ln]
+        if oq.avg_losses:  # fast
+            update(loss3, li, len(xtypes), alt, rlz_id, oq.collect_rlzs)
+        if correl:  # use sigma^2 = (sum sigma_i)^2
+            alt['variance'] = numpy.sqrt(alt.variance)
+        eids = alt.eid.to_numpy() * TWO32  # U64
+        values = numpy.array([alt[col] for col in value_cols]).T
+        # aggregate all assets
+        fast_agg(eids + U64(oq.K), values, correl, li, loss2)
+        if len(aggids):
+            # aggregate assets for each tag combination
+            aids = alt.aid.to_numpy()
+            for kids in aggids[:, aids]:
+                fast_agg(eids + U64(kids), values, correl, li, loss2)
 
 
 def output_gen(df, assdic, crmodel, rng, monitor):
