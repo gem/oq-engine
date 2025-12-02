@@ -858,6 +858,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Compute and save avg_gmf, unless there are too many GMFs
         """
+        N = len(self.sitecol.complete)
         size = self.datastore.getsize('gmf_data')
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
@@ -866,10 +867,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 f'There are more than {humansize(maxsize)} of GMFs,'
                 ' not computing avg_gmf')
             return
-        elif self.N > 50_000:
+        elif N > 50_000:
             logging.warning(
-                f'There are too many sites ({self.N}), computing avg_gmf '
-                'will be really slow, you should reduce `gmf_max_gb`')
+                f'There are many sites ({N}), computing `avg_gmf` will'
+                'be really slow, you should reduce `gmf_max_gb`')
 
         rlzs = self.datastore['events'][:]['rlz_id']
         self.weights = base.get_weights(self.oqparam, self.datastore)[rlzs]
