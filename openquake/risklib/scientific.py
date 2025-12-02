@@ -1652,7 +1652,7 @@ class RiskComputer(dict):
     :param crm: a CompositeRiskModel
     :param asset_df: a DataFrame of assets with the same taxonomy
     """
-    def __init__(self, crm, taxidx):
+    def __init__(self, crm, taxidx, country_str='?'):
         oq = crm.oqparam
         self.D = len(crm.damage_states)
         self.P = len(crm.perils)
@@ -1663,12 +1663,13 @@ class RiskComputer(dict):
         tm = crm.tmap_df[crm.tmap_df.taxi == taxidx]
         for country, peril, riskid, weight in zip(
                 tm.country, tm.peril, tm.risk_id, tm.weight):
-            self[riskid] = crm._riskmodels[riskid]
-            if peril == '*':
-                for per in crm.perils:
-                    self.wdic[riskid, per] = weight
-            else:
-                self.wdic[riskid, peril] = weight
+            if country == '?' or country_str in country:
+                self[riskid] = crm._riskmodels[riskid]
+                if peril == '*':
+                    for per in crm.perils:
+                        self.wdic[riskid, per] = weight
+                else:
+                    self.wdic[riskid, peril] = weight
 
     def output(self, asset_df, haz, sec_losses=(), rndgen=None):
         """

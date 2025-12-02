@@ -153,7 +153,7 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
     xtypes = oqparam.ext_loss_types
     if oqparam.ideduc:
         xtypes.append('claim')
-    assdic = read_assdic(slice(None), monitor)
+    assdf = monitor.read('assets')
     loss3 = {'aids': [], 'bids': [], 'loss': []}
     for sbe in split(slice_by_event, int(config.memory.max_gmvs_chunk)):
         loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))  # u8idx->array
@@ -174,25 +174,13 @@ def ebr_from_gmfs(slice_by_event, oqparam, dstore, monitor):
                     dset = dstore['gmf_data/' + col]
                     gmfdic[col] = dset[s0+start:s0+stop][idx - start]
         gmfdf = pandas.DataFrame(gmfdic)  # few MB
-        dic = _event_based_risk(gmfdf, assdic, loss2, loss3, crmodel, monitor)
+        dic = _event_based_risk(gmfdf, assdf, loss2, loss3, crmodel, monitor)
         dic['alt'] = build_alt(loss2, xtypes)
         yield dic
     yield dict(avg=build_avg(loss3, oqparam.A, R*X))
 
 
-def read_assdic(slc, monitor):
-    """
-    :param slc: slice object
-    :returns: dictionary col->array
-    """
-    with monitor('reading assets', measuremem=True):
-        # saving a lot of memory with respect to a simple read('assets')
-        cols = monitor.read_pdcolumns('assets').split()
-        assdic = {col: monitor.read('assets/' + col, slc) for col in cols}
-    return assdic
-
-
-def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
+def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
     if os.environ.get('OQ_DEBUG_SITE'):
         print(df)
 
@@ -206,11 +194,19 @@ def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
                             int(oq.asset_correlation))
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
-    agg_mon = monitor('aggregating losses', measuremem=True)
+    agg_mon = monitor('aggregating losses', measuremem=False)
+    ass_mon = monitor('reading assets', measuremem=False)
     sids = df.sid.to_numpy()
     for id0taxo, s0, s1 in monitor.read('start-stop'):
-        adf = pandas.DataFrame({col: assdic[col][s0:s1] for col in assdic})
+        if assdf is None:
+            # read the assets (ebrisk)
+            with ass_mon:
+                adf = monitor.read('assets', slc=slice(s0, s1))
+        else:
+            # filter the assets (event_based_risk)
+            adf = assdf[s0:s1]
         adf = adf.set_index('ordinal')
+        country = crmodel.countries[id0taxo // TWO24]
         with fil_mon:
             # *crucial* for the performance of the next step
             gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
@@ -218,7 +214,7 @@ def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
             continue
         with risk_mon:
             [out] = crmodel.get_outputs(
-                adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
         with agg_mon:
             aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
@@ -251,34 +247,6 @@ def aggreg(out, aggids, rlz_id, oq, loss2, loss3):
             aids = alt.aid.to_numpy()
             for kids in aggids[:, aids]:
                 fast_agg(eids + U64(kids), values, correl, li, loss2)
-
-
-def output_gen(df, assdic, crmodel, rng, monitor):
-    """
-    :param df: GMF dataframe (a slice of events)
-    :param assdic: a dictionary column name -> array
-    :param crmodel: CompositeRiskModel instance
-    :param rng: random number generator
-    :param monitor: Monitor instance
-    :yields: one output per taxonomy and slice of events
-    """
-    risk_mon = monitor('computing risk', measuremem=False)
-    fil_mon = monitor('filtering GMFs', measuremem=False)
-    sids = df.sid.to_numpy()
-    monitor.ctime = 0
-    for id0taxo, s0, s1 in monitor.read('start-stop'):
-        adf = pandas.DataFrame({col: assdic[col][s0:s1] for col in assdic})
-        adf = adf.set_index('ordinal')
-        with fil_mon:
-            # *crucial* for the performance of the next step
-            gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
-        if len(gmf_df) == 0:  # common enough
-            continue
-        with risk_mon:
-            [out] = crmodel.get_outputs(
-                adf, gmf_df, crmodel.oqparam._sec_losses, rng)
-        monitor.ctime += fil_mon.dt + risk_mon.dt
-        yield out
 
 
 def _tot_loss_unit_consistency(units, total_losses, loss_types):
@@ -363,7 +331,6 @@ def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
     R = len(weights)
     with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
-    assdic = read_assdic(slice(None), monitor)
     for dic in event_based.event_based(
             rups, cmaker, sids, stations, hdf5path, monitor):
         if len(dic['gmfdata']):
@@ -371,7 +338,7 @@ def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
             loss3 = {'aids': [], 'bids': [], 'loss': []}
             loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
             dic = _event_based_risk(
-                gmf_df, assdic, loss2, loss3, crmodel, monitor)
+                gmf_df, None, loss2, loss3, crmodel, monitor)
             if loss2:  # has been populated
                 dic['avg'] = build_avg(loss3, oq.A, R*X)
                 dic['alt'] = build_alt(loss2, xtypes)
@@ -411,6 +378,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # with respect to Intel machines, depending on the machine, thus
         # causing different losses
         monitor.save('assets', adf)
+
+        if 'ID_0' in self.assetcol.tagnames:
+            self.crmodel.countries = self.assetcol.tagcol.ID_0
+        else:
+            self.crmodel.countries = ['?']
 
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers by taxonomy

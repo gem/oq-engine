@@ -902,7 +902,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         return self._riskmodels[taxo]
 
     def get_outputs(
-            self, asset_df, haz, sec_losses=(), rndgen=None):
+            self, asset_df, haz, sec_losses=(), rndgen=None, country='?'):
         """
         :param asset_df:
             a DataFrame of assets with the same taxonomy and country
@@ -918,7 +918,7 @@ class CompositeRiskModel(collections.abc.Mapping):
         # dic2 = rc2.todict()
         # _assert_equal(dic, dic2)
         [taxidx] = asset_df.taxonomy.unique()
-        rc = scientific.RiskComputer(self, taxidx)
+        rc = scientific.RiskComputer(self, taxidx, country)
         out = rc.output(asset_df, haz, sec_losses, rndgen)
         return list(out)
 
