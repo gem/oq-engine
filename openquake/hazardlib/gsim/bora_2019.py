@@ -27,10 +27,10 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import FAS, DRVT
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
-B_COEFFS = os.path.join(os.path.dirname(__file__),
+B_COEFFS = os.path.join(os.path.dirname(__file__), "bora_2019",
                           "bora_2019.csv")
 
-B_DVRT_COEFFS = os.path.join(os.path.dirname(__file__),
+B_DVRT_COEFFS = os.path.join(os.path.dirname(__file__), "bora_2019",
                           "bora_2019_DVRT.csv")
 
 CONSTANTS = {"r0": 1,
