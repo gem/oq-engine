@@ -1,5 +1,4 @@
   [Michele Simionato]
-  * By default, we are not computing `avg_gmf` when there are too many sites
   * Saved memory in ebrisk, now most calculations can be run with 2 GB
     of RAM per core
 
