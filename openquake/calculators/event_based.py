@@ -861,7 +861,9 @@ class EventBasedCalculator(base.HazardCalculator):
         size = self.datastore.getsize('gmf_data')
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
-        if size > maxsize or self.N > 50_000:
+        if self.N > 50_000:
+            logging.warning(f'Too many sites {self.N}, not computing avg_gmf')
+        if size > maxsize:
             logging.warning(
                 f'There are more than {humansize(maxsize)} of GMFs,'
                 ' not computing avg_gmf')
