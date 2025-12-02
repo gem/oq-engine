@@ -200,7 +200,7 @@ def _event_based_risk(df, assdf, loss2, loss3, crmodel, monitor):
     try:
         countries = monitor.read('countries')
     except KeyError:  # no ID_0 in the exposure
-        countries = ["?"]
+        countries = ["?"]  # assume a single contry
     for id0taxo, s0, s1 in monitor.read('start-stop'):
         if assdf is None:
             # read the assets (ebrisk)
