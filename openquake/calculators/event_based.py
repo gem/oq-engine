@@ -888,7 +888,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # really compute and store the avg_gmf
         M = len(self.oqparam.imtls)
         C = len(self.oqparam.all_imts())
-        avg_gmf = numpy.zeros((2, self.N, C), F32)
+        avg_gmf = numpy.zeros((2, N, C), F32)
         min_iml = numpy.ones(C) * 1E-10
         min_iml[:M] = self.oqparam.min_iml
         for sid, avgstd in compute_avg_gmf(
