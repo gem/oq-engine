@@ -208,7 +208,7 @@ def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
     fil_mon = monitor('filtering GMFs', measuremem=False)
     agg_mon = monitor('aggregating losses', measuremem=True)
     sids = df.sid.to_numpy()
-    for id1taxo, s0, s1 in monitor.read('start-stop'):
+    for id0taxo, s0, s1 in monitor.read('start-stop'):
         adf = pandas.DataFrame({col: assdic[col][s0:s1] for col in assdic})
         adf = adf.set_index('ordinal')
         with fil_mon:
@@ -403,9 +403,11 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         monitor.save('sids', self.sitecol.sids)
         adf = self.assetcol.to_dframe()
         del adf['id']
+        if 'ID_0' not in adf.columns:
+            adf['ID_0'] = U32(0)
         if 'ID_1' not in adf.columns:
             adf['ID_1'] = U32(0)
-        adf = adf.sort_values(['ID_1', 'taxonomy', 'ordinal'])
+        adf = adf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
         # NB: this is subtle! without the ordering by 'ordinal'
         # the asset dataframe will be ordered differently on AMD machines
         # with respect to Intel machines, depending on the machine, thus
@@ -414,9 +416,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
 
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers by taxonomy
-        id1taxo = TWO24 * adf.ID_1.to_numpy() + adf.taxonomy.to_numpy()
+        id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
         max_assets = int(config.memory.max_assets_chunk)
-        tss = _expand3(performance.idx_start_stop(id1taxo), max_assets)
+        tss = _expand3(performance.idx_start_stop(id0taxo), max_assets)
         monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
