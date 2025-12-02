@@ -30,7 +30,11 @@ from urllib.parse import quote_plus, unquote_plus
 import collections
 import json
 import toml
-import pandas
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    # hiding tz warning datetime.datetime.utcfromtimestamp() is deprecated
+    # (unfortunately also others)
+    import pandas
 import numpy
 import h5py
 from openquake.baselib import InvalidFile, general
