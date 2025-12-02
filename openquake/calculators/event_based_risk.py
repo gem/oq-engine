@@ -225,7 +225,7 @@ def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
 def output_gen(df, assdf, crmodel, rng, monitor):
     """
     :param df: GMF dataframe (a slice of events)
-    :param assdf: a DataFrame of assets
+    :param assdf: a DataFrame of assets or None in ebrisk
     :param crmodel: CompositeRiskModel instance
     :param rng: random number generator
     :param monitor: Monitor instance
@@ -237,13 +237,13 @@ def output_gen(df, assdf, crmodel, rng, monitor):
     sids = df.sid.to_numpy()
     monitor.ctime = 0
     for id0taxo, s0, s1 in monitor.read('start-stop'):
-        if len(assdf):
-            # already read in event_based_risk
-            adf = assdf[s0:s1]
-        else:
-            # to be read in ebrisk
+        if assdf is None:
+            # read the assets (ebrisk)
             with ass_mon:
                 adf = monitor.read('assets', slc=slice(s0, s1))
+        else:
+            # filter the assets (event_based_risk)
+            adf = assdf[s0:s1]
         adf = adf.set_index('ordinal')
         country = crmodel.countries[id0taxo // TWO24]
         with fil_mon:
@@ -347,7 +347,7 @@ def ebrisk(rups, cmaker, sids, stations, hdf5path, monitor):
             loss3 = {'aids': [], 'bids': [], 'loss': []}
             loss2 = general.AccumDict(accum=numpy.zeros((X, 2)))
             dic = _event_based_risk(
-                gmf_df, {}, loss2, loss3, crmodel, monitor)
+                gmf_df, None, loss2, loss3, crmodel, monitor)
             if loss2:  # has been populated
                 dic['avg'] = build_avg(loss3, oq.A, R*X)
                 dic['alt'] = build_alt(loss2, xtypes)
