@@ -13,9 +13,9 @@ For more information about operating system support (which includes Linux, macOS
 
 Each container includes:
 
-- Python 3.11 from official docker image
+- Python 3.12 from official docker image
 - Python dependencies (numpy, scipy, h5py...)
-- OpenQuake Engine and Hazardlib
+- OpenQuake Engine
 - The `oq` command line tool
 - The OpenQuake WebUI and API server (by default listening on port 8800)
 
@@ -36,7 +36,7 @@ $ docker pull docker.io/openquake/engine:nightly
 For each stable release (starting with 2.2) a container is published and tagged with its release version. This contains the stable release of the OpenQuake Engine and its software stack. For the last stable release is also available the latest tag
 
 ```bash
-$ docker pull docker.io/openquake/engine:3.16
+$ docker pull docker.io/openquake/engine:3.23
 ```
 ```bash
 $ docker pull docker.io/openquake/engine:latest
@@ -85,7 +85,7 @@ The container prompt will appear, here you play with the `oq` [shell command](..
 
 ```bash
 [openquake@b318358ee053 ~]$ oq --version
-3.20.0
+3.23.0
 ```
 
 After you have restarted you container (same commands as the headless mode) you can re-attach the container shell using:
