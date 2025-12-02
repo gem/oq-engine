@@ -19,7 +19,7 @@ RUN apt-get update &&  \
     apt-get install -y --no-install-recommends build-essential gcc git libcap-dev ssh dnsutils telnet netbase net-tools lsof tcpdump sudo strace time && \
     useradd -m -u 1000 -G sudo -s /bin/bash openquake && echo "openquake ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
 ARG oq_branch
-ENV LANG en_US.UTF-8
+ENV LANG=en_US.UTF-8
 WORKDIR /usr/src
 # Create venv
 ENV VIRTUAL_ENV=/opt/openquake
@@ -30,7 +30,7 @@ RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch
     cd oq-engine && pip --disable-pip-version-check install -e . -r requirements-py312-linux64.txt --no-warn-script-location
 #
 USER openquake
-ENV HOME /home/openquake
+ENV HOME=/home/openquake
 ENV LOCKDOWN=False
 #
 #ENV OQ_CONFIG_FILE /opt/openquake/openquake.cfg
