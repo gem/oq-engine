@@ -250,7 +250,6 @@ def output_gen(df, assdic, crmodel, rng, monitor):
     for id0taxo, s0, s1 in monitor.read('start-stop'):
         adf = pandas.DataFrame({col: assdic[col][s0:s1] for col in assdic})
         adf = adf.set_index('ordinal')
-        country = crmodel.countries[id0taxo // TWO24]
         with fil_mon:
             # *crucial* for the performance of the next step
             gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
@@ -258,7 +257,7 @@ def output_gen(df, assdic, crmodel, rng, monitor):
             continue
         with risk_mon:
             [out] = crmodel.get_outputs(
-                adf, gmf_df, crmodel.oqparam._sec_losses, rng, country)
+                adf, gmf_df, crmodel.oqparam._sec_losses, rng)
         monitor.ctime += fil_mon.dt + risk_mon.dt
         yield out
 
@@ -385,25 +384,20 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         monitor.save('sids', self.sitecol.sids)
         adf = self.assetcol.to_dframe()
         del adf['id']
-        if 'ID_0' not in adf.columns:
-            adf['ID_0'] = U32(0)
-        adf = adf.sort_values(['ID_0', 'taxonomy', 'ordinal'])
+        if 'ID_1' not in adf.columns:
+            adf['ID_1'] = U32(0)
+        adf = adf.sort_values(['ID_1', 'taxonomy', 'ordinal'])
         # NB: this is subtle! without the ordering by 'ordinal'
         # the asset dataframe will be ordered differently on AMD machines
         # with respect to Intel machines, depending on the machine, thus
         # causing different losses
         monitor.save('assets', adf)
 
-        if 'ID_0' in self.assetcol.tagnames:
-            self.crmodel.countries = self.assetcol.tagcol.ID_0
-        else:
-            self.crmodel.countries = ['?']
-
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers by taxonomy
-        id0taxo = TWO24 * adf.ID_0.to_numpy() + adf.taxonomy.to_numpy()
+        id1taxo = TWO24 * adf.ID_1.to_numpy() + adf.taxonomy.to_numpy()
         max_assets = int(config.memory.max_assets_chunk)
-        tss = _expand3(performance.idx_start_stop(id0taxo), max_assets)
+        tss = _expand3(performance.idx_start_stop(id1taxo), max_assets)
         monitor.save('start-stop', tss)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
