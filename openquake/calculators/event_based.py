@@ -861,7 +861,7 @@ class EventBasedCalculator(base.HazardCalculator):
         size = self.datastore.getsize('gmf_data')
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
-        if size > maxsize:
+        if size > maxsize or self.N > 50_000:
             logging.warning(
                 f'There are more than {humansize(maxsize)} of GMFs,'
                 ' not computing avg_gmf')
@@ -883,7 +883,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # really compute and store the avg_gmf
         M = len(self.oqparam.imtls)
         C = len(self.oqparam.all_imts())
-        avg_gmf = numpy.zeros((2, len(self.sitecol.complete), C), F32)
+        avg_gmf = numpy.zeros((2, self.N, C), F32)
         min_iml = numpy.ones(C) * 1E-10
         min_iml[:M] = self.oqparam.min_iml
         for sid, avgstd in compute_avg_gmf(
