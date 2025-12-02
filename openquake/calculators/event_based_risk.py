@@ -206,24 +206,22 @@ def _event_based_risk(df, assdic, loss2, loss3, crmodel, monitor):
                             int(oq.asset_correlation))
     risk_mon = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
+    agg_mon = monitor('aggregating losses', measuremem=True)
     sids = df.sid.to_numpy()
-    monitor.ctime = 0
-    with monitor('aggregating losses', measuremem=True) as agg_mon:
-        for id1taxo, s0, s1 in monitor.read('start-stop'):            
-            adf = pandas.DataFrame({col: assdic[col][s0:s1] for col in assdic})
-            adf = adf.set_index('ordinal')
-            with fil_mon:
-                # *crucial* for the performance of the next step
-                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
-            if len(gmf_df) == 0:  # common enough
-                continue
-            with risk_mon:
-                [out] = crmodel.get_outputs(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
-            monitor.ctime += fil_mon.dt + risk_mon.dt
+    for id1taxo, s0, s1 in monitor.read('start-stop'):
+        adf = pandas.DataFrame({col: assdic[col][s0:s1] for col in assdic})
+        adf = adf.set_index('ordinal')
+        with fil_mon:
+            # *crucial* for the performance of the next step
+            gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+        if len(gmf_df) == 0:  # common enough
+            continue
+        with risk_mon:
+            [out] = crmodel.get_outputs(
+                adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+        with agg_mon:
             aggreg(out, aggids, rlz_id, oq, loss2, loss3)
 
-    agg_mon.duration -= monitor.ctime  # subtract the computing time
     return dict(gmf_bytes=df.memory_usage().sum())
 
 
