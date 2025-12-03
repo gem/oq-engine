@@ -72,7 +72,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        config.directory['mosaic_dir'] = 'openquake/qa_tests_data/mosaic'
+        config.directory['mosaic_dir'] = ''
         try:
             cls.wait()
         finally:
