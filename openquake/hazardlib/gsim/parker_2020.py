@@ -41,7 +41,7 @@ SAT_REGIONS = [None, "Aleutian", "CAM_N", "CAM_S", "SA_N",
 
 BASINS = [None, "out", "Seattle"]
 
-EPI_ADJS = os.path.join(os.path.dirname(__file__),
+EPI_ADJS = os.path.join(os.path.dirname(__file__), "parker_2020",
                         "parker_2020_epi_adj_table.csv")
 
 CONSTANTS = {"b4": 0.1, "f3": 0.05, "Vb": 200,

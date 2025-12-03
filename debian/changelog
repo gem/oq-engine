@@ -1,12 +1,17 @@
   [Amirhossein Mohammadi]
   * Added Mohammadi2023Turkiye ML-based GSIM for Turkey.  
   
+  [Michele Simionato]
+  * Saved memory in ebrisk, now most calculations can be run with 2 GB
+    of RAM per core
+
   [Paolo Tormene]
   * Fixed the management and layout/styling of navigation buttons in the
     WebUI, with and without authentication
-  * Improved the default configuration of the TOOLS_ONLY WebUI application mode
+  * Improved the default configuration of the TOOLS_ONLY application mode
 
   [Michele Simionato]
+  * Added a `--tag` option to `oq engine --run` to tag jobs
   * Supported site-specific gsim logic trees via `site_labels`
   * Added `source_info` to the global SES file
   * Optimized `_save_events` for large calculations over 100,000 events

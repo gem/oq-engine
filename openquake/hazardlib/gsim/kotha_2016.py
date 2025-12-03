@@ -30,7 +30,8 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
-KOTHA_CSV = os.path.join(os.path.dirname(__file__), 'kotha_2016.csv')
+KOTHA_CSV = os.path.join(os.path.dirname(__file__), "kotha_2016", 
+                         'kotha_2016.csv')
 
 CONSTS = {"Mh": 6.75, "Mref": 5.5, "Rref": 1.0}
 

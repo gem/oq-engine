@@ -1,0 +1,111 @@
+---
+name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
+on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled '
+        required: false
+        default: false
+      git-ref:
+        description: Branch of gem/oq-engine repository
+        default: master
+        required: true
+      pypi-prod:
+        type: boolean
+        description: Publish PyPI
+        default: false
+        required: true
+      pypi-test:
+        type: boolean
+        description: Publish TestPyPI
+        default: false
+        required: true
+
+jobs:
+  build:
+    name: Build distribution 📦
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clone Repository (Latest)
+      uses: actions/checkout@v4
+      if: github.event.inputs.git-ref == ''
+    - name: Clone Repository (Custom Ref)
+      uses: actions/checkout@v4
+      if: github.event.inputs.git-ref != ''
+      with:
+        ref: ${{ github.event.inputs.git-ref }}
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Setup debugging session
+      uses: mxschmitt/action-tmate@v3
+      timeout-minutes: 35
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+    # Append a devXY (where XY is the Jenkins build ID if destination is the testing repo
+    # to make testing possible even if a same release version (i.e. 2.2.0)is already
+    # on the test repo. Whe use devXY to be compliant with PEP440 (i.e. no git has allowed)
+    - name: Append a devXY if the testing repo
+      env:
+        BUILD_NUMBER: ${{ github.run_number }}
+      run: |
+        sed -i "s/version = get_version()/version = get_version() + '.dev${BUILD_NUMBER}'/g" setup.py
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }}
+    - name: Install pypa/build
+      run: |
+        python3 -m pip install build --user
+    - name: Build a binary wheel and a source tarball
+      run: |
+        cp README.md README.no_abs.md
+        ./helpers/abs_readme.sh "${{ github.event.inputs.git-ref }}"
+        python3 -m build
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+
+  publish-to-testpypi:
+    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    needs:
+    - build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }}
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/openquake.engine
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+
+  publish-to-pypi:
+    name: Publish Python 🐍 distribution 📦 to PyPI
+    needs:
+    - build
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-prod }}
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/openquake.engine
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
