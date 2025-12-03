@@ -166,12 +166,28 @@ def pkg2dic(pkg):
     return dic
 
 
-def parser(funcdict, **kw):
+def cmddict(self):
     """
-    :param funcdict: a function or a nested dictionary of functions
+    :param self: an instance of a class with __subcommands__
+    :returns: a dictionary subcommand name -> bound method
+    """
+    dic = {}
+    for k in self.__subcommands__:
+        if not k.startswith('_'):
+            dic[k] = getattr(self, k)
+    return dic
+
+
+def parser(obj, **kw):
+    """
+    :param obj: a function or a nested dictionary of functions
     :param kw: keyword arguments passed to the underlying ArgumentParser
     :returns: the ArgumentParser instance
     """
+    if hasattr(obj, '__subcommands__'):
+        funcdict = cmddict(obj)
+    else:
+        funcdict = obj
     if isinstance(funcdict, dict):
         version = funcdict.pop('__version__', None)
     else:
@@ -205,25 +221,13 @@ def _run(parser, argv=None):
     return func(**dic)
 
 
-def methdict(self):
+def run(obj, argv=None, **parserkw):
     """
-    :param self: an instance with public methods
-    :returns: a dictionary method name -> bound method
-    """
-    dic = {}
-    for k in sorted(vars(self.__class__)):
-        if not k.startswith('_'):
-            dic[k] = getattr(self, k)
-    return dic
-
-
-def run(funcdict, argv=None, **parserkw):
-    """
-    :param funcdict: a function or a (nested) dictionary of functions
+    :param obj: a function or a (nested) dictionary of functions
     :param argv: a list of command-line arguments (if None, use sys.argv[1:])
     :param parserkw: arguments accepted by argparse.ArgumentParser
     """
-    return _run(parser(funcdict, **parserkw), argv)
+    return _run(parser(obj, **parserkw), argv)
 
 
 def runline(line, **parserkw):

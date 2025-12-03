@@ -48,6 +48,8 @@ def read(manifest_toml):
 
 
 class Command:
+    __subcommands__ = 'checkout help run'.split()
+
     def __init__(self, manifest_toml):
         self.man = read(manifest_toml)
 
@@ -87,7 +89,7 @@ class Command:
         """
         List the available subcommands
         """
-        print(f'Available subcommands: {", ".join(sap.methdict(self))}')
+        print(f'Available subcommands: {", ".join(self.__subcommands__)}')
 
 
 def main(manifest, sub, arg):
@@ -96,8 +98,7 @@ def main(manifest, sub, arg):
     configuration file (the manifest). You can get help with
     `oq use manifest.toml help`.
     """
-    cmd = Command(sys.argv[2])
-    sap.run(sap.methdict(cmd), sys.argv[3:])
+    sap.run(Command(sys.argv[2]), sys.argv[3:])
 main.manifest = 'Manifest file (.toml)'
 main.sub = 'Name of a subcommand'
 main.arg = dict(help='Argument of the subcommand (optional)', nargs='*')
