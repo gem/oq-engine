@@ -20,7 +20,7 @@ Some software prerequisites are needed to build the development
 environment. First of your you need a Python version supported by the
 engine. At the moment we recommend Python 3.12.
 
-**NB: Python 3.13 are not supported yet, so please do NOT install such
+**NB: Python 3.13 and later versions are not supported yet, so please do NOT install such
 versions**
 
 **NB: Python version below 3.11 are not supported , so please do NOT
@@ -30,18 +30,19 @@ Linux
 -----
 
 Please check the documentation of your distribution to install one of
-the supported version of Python. At the moment we recommend Python 3.12
-but it also can used Python 3.11
+the supported version of Python. At the moment we recommend Python version 3.12
+but Python 3.11 can also be used.
 
 macOS
 -----
-Python version 3.12 is recommended but it also can used Python 3.11.
+Python version 3.12 is recommended but Python 3.11 can also be used.
 Please see instructions for the :doc:`Installing the OpenQuake Engine on MacOS <macos>`
 
 Windows
 -----
 
-Python version 3.12 is recommended but it also can used Python 3.11. The use of the official Python installer for Windows is mandatory.
+Python version 3.12 is recommended but Python 3.11 can also be used.
+The use of the official Python installer for Windows is mandatory.
 
 -------------------------
 1. Download Python
