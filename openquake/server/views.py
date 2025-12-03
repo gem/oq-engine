@@ -1209,6 +1209,7 @@ def impact_run(request):
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
     if station_source is not None:
         params['station_source'] = station_source
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
@@ -1252,6 +1253,7 @@ def impact_run_with_shakemap(request):
         post, request.user, post['rupture_file'])
     if err:
         return JsonResponse(err, status=400 if 'invalid_inputs' in err else 500)
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
     response_data = create_impact_job(request, params)
     return JsonResponse(response_data, status=200)
 
@@ -1360,6 +1362,7 @@ def aelo_run(request):
                          'error_msg': str(exc)}
         logging.exception(str(exc))
         return JsonResponse(response_data, status=400)
+    params['export_dir'] = config.directory.custom_tmp or tempfile.gettempdir()
     [jobctx] = engine.create_jobs(
         [params],
         config.distribution.log_level, None, utils.get_username(request), None)
@@ -1418,7 +1421,9 @@ def submit_job(request_files, ini, username, hc_id, notify_to=None):
         else:  # called by calc_run_ini
             job_ini = ini
         job.oqparam = oq = readinput.get_oqparam(
-            job_ini, kw={'hazard_calculation_id': hc_id})
+            job_ini, kw={'hazard_calculation_id': hc_id,
+                         'export_dir': (config.directory.custom_tmp or
+                                        tempfile.gettempdir())})
         dic = dict(calculation_mode=oq.calculation_mode,
                    description=oq.description, hazard_calculation_id=hc_id)
         logs.dbcmd('update_job', job.calc_id, dic)
