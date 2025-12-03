@@ -34,7 +34,7 @@ class ServerConfig(AppConfig):
         #     registry is fully populated.
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
-        if os.environ.get('OQ_TEST_MODE'):
+        if os.environ.get('GITHUB_ACTIONS') or os.environ.get('OQ_TEST_MODE'):
             config.directory['mosaic_dir'] = 'openquake/qa_tests_data/mosaic'
 
         import openquake.server.signals  # NOQA
