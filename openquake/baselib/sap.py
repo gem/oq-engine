@@ -63,6 +63,8 @@ def _populate(parser, func):
     if argspec.varargs:
         raise TypeError('varargs in the signature of %s are not supported'
                         % func)
+    if argspec.args[0] == 'self':  # strip self
+        argspec.args[:] = argspec.args[1:]
     defaults = argspec.defaults or ()
     nodefaults = len(argspec.args) - len(defaults)
     alldefaults = (NODEFAULT,) * nodefaults + defaults
