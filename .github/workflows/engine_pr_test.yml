@@ -115,7 +115,7 @@ jobs:
            sleep 5 # wait for 5 seconds before check again
           done
           pytest -xs --doctest-modules --disable-warnings --color=yes openquake/commands openquake/engine
-          pip install pytest-env https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_public_mode.py
 
   server_restricted_mode:
@@ -150,7 +150,7 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          pip install pytest-env https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_restricted_mode.py
 
   server_read_only_mode:
@@ -180,7 +180,7 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           oq engine --upgrade-db
-          pip install pytest-env https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_read_only_mode.py
           pytest -m "not slow" -v openquake/_unc
 
@@ -219,7 +219,7 @@ jobs:
           ./openquake/server/manage.py migrate
           ./openquake/server/manage.py loaddata openquake/server/fixtures/0001_cookie_consent_required_plus_hide_cookie_bar.json
           ./openquake/server/manage.py collectstatic --noinput
-          pip install pytest-env https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_aelo_mode.py
 
   server_impact_mode:
@@ -261,5 +261,5 @@ jobs:
           oq engine --upgrade-db
           ./openquake/server/manage.py migrate
           touch ~/webui-access.log
-          pip install pytest-env https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
+          pip install https://wheelhouse.openquake.org/v3/py/pytest_django-4.9.0-py3-none-any.whl
           pytest -v openquake/server/tests/test_impact_mode.py
