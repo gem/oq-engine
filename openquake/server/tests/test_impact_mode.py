@@ -147,7 +147,7 @@ class ImpactModeTestCase(django.test.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        config.directory['mosaic_dir'] = 'openquake/qa_tests_data/mosaic'
+        # config.directory['mosaic_dir'] = 'openquake/qa_tests_data/mosaic'
         Group = apps.get_model('auth', 'Group')
         Permission = apps.get_model('auth', 'Permission')
         dbcmd('reset_is_running')  # cleanup stuck calculations
@@ -165,7 +165,7 @@ class ImpactModeTestCase(django.test.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        config.directory['mosaic_dir'] = ''
+        # config.directory['mosaic_dir'] = ''
         cls.user1.delete()
         super().tearDownClass()
 

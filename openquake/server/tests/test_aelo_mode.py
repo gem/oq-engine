@@ -52,7 +52,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        config.directory['mosaic_dir'] = 'openquake/qa_tests_data/mosaic'
+        # config.directory['mosaic_dir'] = 'openquake/qa_tests_data/mosaic'
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
@@ -72,7 +72,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        config.directory['mosaic_dir'] = ''
+        # config.directory['mosaic_dir'] = ''
         try:
             cls.wait()
         finally:
