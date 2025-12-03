@@ -44,8 +44,9 @@ jobs:
       - name: Test headless mode and run calcs on single docker
         run: |
           #Test LOCKDOWN
-          docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest "oq webui start 0.0.0.0:8800 -s"
           echo "Test WEBUI HEADLESS"
+          echo "docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest \"oq webui start 0.0.0.0:8800 -s\" "
+          docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest "oq webui start 0.0.0.0:8800 -s"
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z 127.0.0.1 8800; do
            sleep 5 # wait for 5 seconds before check again
