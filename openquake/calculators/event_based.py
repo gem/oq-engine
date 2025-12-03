@@ -63,7 +63,6 @@ F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
-MAX_PROXIES = 1000
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
@@ -206,7 +205,6 @@ def get_computer(cmaker, proxy, srcfilter, station_data, station_sitecol):
 
 def _event_based(proxies, cmaker, stations, srcfilter, shr,
                  fmon, cmon, umon, mmon):
-    # consider at max MAX_PROXIES
     oq = cmaker.oq
     alldata = []
     sig_eps = []
@@ -272,7 +270,8 @@ def event_based(rups, cmaker, sids, stations, hdf5path, monitor):
         sites = complete.filtered(sids) if stations[0] is None else complete
         srcfilter = SourceFilter(sites, oq.maximum_distance(cmaker.trt))
         proxies = get_proxies(hdf5path, rups)
-    for block in block_splitter(proxies, MAX_PROXIES, lambda p: 1):
+    chunksize = int(config.memory.max_ruptures_chunk)
+    for block in block_splitter(proxies, chunksize, lambda p: 1):
         yield _event_based(block, cmaker, stations, srcfilter,
                            monitor.shared, fmon, cmon, umon, mmon)
 
@@ -351,7 +350,7 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     # NB: it is faster to filter a huge number of ruptures
     # upfront rather than looping on each (model, trt_smr)
     if len(sitecol) > oq.max_sites_disagg:
-        # can manage 2 million sites in 13 minutes for IND
+        # can manage 2 million sites in 2 minutes for IND
         filrups = close_ruptures(allrups, sitecol, assetcol, dstore.hdf5)
         logging.info(f'Selected {len(filrups):_d} ruptures')
     else:
@@ -388,8 +387,8 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
         cmaker = ContextMaker(trt, rlzs_by_gsim[model, trt_smr],
                               oq, extraparams=sitecol.array.dtype.names)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        logging.info('%s: sending %d ruptures for trt_smr=%d',
-                     model, len(rups), trt_smr)
+        logging.debug('%s: sending %d ruptures for trt_smr=%d',
+                      model, len(rups), trt_smr)
         for block in block_splitter(rups, maxw * 1.02, rup_weight):
             args = (block, cmaker, sitecol.sids, station_data_sites,
                     dstore.filename)
@@ -859,7 +858,9 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         Compute and save avg_gmf, unless there are too many GMFs
         """
-        size = self.datastore.getsize('gmf_data')
+        N = len(self.sitecol.complete)
+        C = len(self.oqparam.all_imts())
+        size = N * C * 8
         maxsize = self.oqparam.gmf_max_gb * 1024 ** 3
         logging.info(f'Stored {humansize(size)} of GMFs')
         if size > maxsize:
@@ -867,6 +868,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 f'There are more than {humansize(maxsize)} of GMFs,'
                 ' not computing avg_gmf')
             return
+        elif N > 50_000:
+            logging.warning(
+                f'There are many sites ({N}), computing `avg_gmf` will'
+                'be really slow, you should reduce `gmf_max_gb`')
 
         rlzs = self.datastore['events'][:]['rlz_id']
         self.weights = base.get_weights(self.oqparam, self.datastore)[rlzs]
@@ -883,8 +888,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # really compute and store the avg_gmf
         M = len(self.oqparam.imtls)
-        C = len(self.oqparam.all_imts())
-        avg_gmf = numpy.zeros((2, len(self.sitecol.complete), C), F32)
+        avg_gmf = numpy.zeros((2, N, C), F32)
         min_iml = numpy.ones(C) * 1E-10
         min_iml[:M] = self.oqparam.min_iml
         for sid, avgstd in compute_avg_gmf(

@@ -42,6 +42,18 @@ jobs:
         run: |
           docker build --build-arg oq_branch=master -t openquake/engine:nightly -f docker/Dockerfile.dev docker
           docker image ls
+          #Test LOCKDOWN
+          echo "Test WEBUI HEADLESS"
+          echo "docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest \"oq webui start 0.0.0.0:8800 -s\" "
+          docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=nightly -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:nightly "oq webui start 0.0.0.0:8800 -s"
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z 127.0.0.1 8800; do
+           sleep 5 # wait for 5 seconds before check again
+          done
+          sleep 1
+          # Perform migration after setup local_settings
+          curl --fail -L -I -X GET http://127.0.0.1:8800
+          #Run calcs
           time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
           time docker run openquake/engine:nightly "oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true""
           echo " push image engine with tag nightly on docker hub "
@@ -58,7 +70,17 @@ jobs:
         run: |
           docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.dev docker
           docker image ls
-          #time docker run openquake/engine:$DOCKER_TAG "(oq dbserver start &) ; sleep 10 ; (oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true")"
+          #Test LOCKDOWN
+          echo "Test WEBUI HEADLESS"
+          echo "docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest \"oq webui start 0.0.0.0:8800 -s\" "
+          docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=nightly -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:nightly "oq webui start 0.0.0.0:8800 -s"
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z 127.0.0.1 8800; do
+           sleep 5 # wait for 5 seconds before check again
+          done
+          sleep 1
+          # Perform migration after setup local_settings
+          curl --fail -L -I -X GET http://127.0.0.1:8800
           time docker run openquake/engine:$DOCKER_TAG "(oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true")"
           echo " push image engine with tag nightly on ocker hub "
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
