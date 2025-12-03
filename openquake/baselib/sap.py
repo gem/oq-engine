@@ -166,18 +166,6 @@ def pkg2dic(pkg):
     return dic
 
 
-def cmddict(self):
-    """
-    :param self: an instance of a class with __subcommands__
-    :returns: a dictionary subcommand name -> bound method
-    """
-    dic = {}
-    for k in self.__subcommands__:
-        if not k.startswith('_'):
-            dic[k] = getattr(self, k)
-    return dic
-
-
 def parser(obj, **kw):
     """
     :param obj: a function or a nested dictionary of functions
@@ -185,7 +173,7 @@ def parser(obj, **kw):
     :returns: the ArgumentParser instance
     """
     if hasattr(obj, '__subcommands__'):
-        funcdict = cmddict(obj)
+        funcdict = {k: getattr(obj, k) for k in obj.__subcommands__}
     else:
         funcdict = obj
     if isinstance(funcdict, dict):
