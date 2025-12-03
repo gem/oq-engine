@@ -20,7 +20,6 @@ import os
 import sys
 import time
 import toml
-import inspect
 from openquake.baselib import sap
 from openquake.baselib.gitwrapper import git
 from openquake.commonlib import readinput
@@ -88,14 +87,7 @@ class Command:
         """
         List the available subcommands
         """
-        print(f'Available subcommands: {", ".join(self._dict())}')
-
-    def _dict(self):
-        dic = {}
-        for k in sorted(vars(self.__class__)):
-            if not k.startswith('_'):
-                dic[k] = getattr(self, k)
-        return dic
+        print(f'Available subcommands: {", ".join(sap.methdict(self))}')
 
 
 def main(manifest, sub, arg):
@@ -105,7 +97,7 @@ def main(manifest, sub, arg):
     `oq use manifest.toml help`.
     """
     cmd = Command(sys.argv[2])
-    sap.run(cmd._dict(), sys.argv[3:])
+    sap.run(sap.methdict(cmd), sys.argv[3:])
 main.manifest = 'Manifest file (.toml)'
 main.sub = 'Name of a subcommand'
 main.arg = dict(help='Argument of the subcommand (optional)', nargs='*')

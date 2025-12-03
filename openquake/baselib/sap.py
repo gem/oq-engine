@@ -205,9 +205,21 @@ def _run(parser, argv=None):
     return func(**dic)
 
 
+def methdict(self):
+    """
+    :param self: an instance with public methods
+    :returns: a dictionary method name -> bound method
+    """
+    dic = {}
+    for k in sorted(vars(self.__class__)):
+        if not k.startswith('_'):
+            dic[k] = getattr(self, k)
+    return dic
+
+
 def run(funcdict, argv=None, **parserkw):
     """
-    :param funcdict: a function or a nested dictionary of functions
+    :param funcdict: a function or a (nested) dictionary of functions
     :param argv: a list of command-line arguments (if None, use sys.argv[1:])
     :param parserkw: arguments accepted by argparse.ArgumentParser
     """
