@@ -649,7 +649,7 @@ def smart_round(number):
     Round the ASCE values (if they are floats)
     """
     if isinstance(number, pd.Series):
-        return round(float(number.iloc[0]), ASCE_DECIMALS)   
+        return round(float(number.iloc[0]), ASCE_DECIMALS)
     elif isinstance(number, str):
         return number
     elif np.isnan(number):
