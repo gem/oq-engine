@@ -305,15 +305,14 @@ def add(string, suffix, maxlen):
     Add a suffix to a string staying within the maxlen limit
 
     >>> add('pippo', ':xxx', 8)
-    'pipp:xxx'
+    'pippo:xx'
     >>> add('pippo', ':x', 8)
     'pippo:x'
     """
-    L = len(string)
-    assert L < maxlen, string
-    assert len(suffix) < maxlen, suffix
-    n = len(suffix)
-    return string[:maxlen-n] + suffix
+    n = len(string)
+    assert n < maxlen, string
+    assert len(suffix) <= maxlen, suffix
+    return string + suffix[:maxlen-n]
 
 
 class SiteCollection(object):
@@ -529,7 +528,7 @@ class SiteCollection(object):
         try:
             dt['custom_site_id']
         except KeyError:
-            new_csi = True
+            new_csi = True  # not already there
             dt = [('custom_site_id', site_param_dt['custom_site_id'])] + [
                 (n, dt[n]) for n in names]
             names.insert(0, 'custom_site_id')
@@ -558,10 +557,11 @@ class SiteCollection(object):
                 for name in names:
                     if name == 'custom_site_id' and new_csi:
                         # tested in classical/case_08
-                        rec[name] = add(f'{i}'.encode('ascii'), b':' + cl, 8)
+                        csi = f'{i}'.encode('ascii')
+                        rec[name] = add(csi[:5], b':' + cl, 8)
                     elif name == 'custom_site_id':
                         # tested in classical/case_38
-                        rec[name] = add(orig_rec[name], b':' + cl, 8)
+                        rec[name] = add(orig_rec[name][:5], b':' + cl, 8)
                     elif name == 'vs30':
                         rec[name] = vs30
                     elif name == 'sids':

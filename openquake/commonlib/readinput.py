@@ -749,16 +749,16 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
     # or AELO calculations
     if any(x in oqparam.calculation_mode
            for x in ('scenario', 'event_based', 'risk', 'damage')):
-        custom_site_id, size = True, 8
+        custom_site_id = True
     elif oqparam.postproc_func == 'compute_rtgm.main':
-        custom_site_id, size = True, 6
+        custom_site_id = True
     else:
         custom_site_id = False
     if custom_site_id:
-        sitecol.ensure_custom_site_id(size)
+        sitecol.ensure_custom_site_id(size=8)
         if sitecol is not sitecol.complete:
             # tested in scenario_risk/test_case_8
-            sitecol.complete.add_custom_site_id(size)
+            sitecol.complete.add_custom_site_id(size=8)
 
     debug_site(oqparam, sitecol)
     if h5:
