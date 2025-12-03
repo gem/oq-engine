@@ -902,7 +902,17 @@ def add_checksum(db, job_id, value):
         return jid
 
 
-def update_job_checksum(db, job_id, checksum):
+def delete_checksum(db, job_id):
+    """
+    :param db:
+        a :class:`openquake.commonlib.dbapi.Db` instance
+    :param job_id:
+        job ID
+    """
+    db('DELETE FROM checksum WHERE job_id=?x', job_id)
+
+
+def update_job_from_checksum(db, job_id, checksum):
     """
     :param db:
         a :class:`openquake.commonlib.dbapi.Db` instance
@@ -915,7 +925,7 @@ def update_job_checksum(db, job_id, checksum):
               job_id, checksum).lastrowid
 
 
-def get_checksum_from_job(db, job_id):
+def get_checksum(db, job_id):
     """
     :param db:
         a :class:`openquake.commonlib.dbapi.Db` instance
