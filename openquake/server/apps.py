@@ -80,10 +80,12 @@ class ServerConfig(AppConfig):
                         f'If APPLICATION_MODE is {settings.APPLICATION_MODE}'
                         f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
                         f' must all be defined')
+            '''  # should be moved later
             if not config.directory.mosaic_dir:
                 raise NameError(
                     f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
                     f'mosaic_dir must be specified in openquake.cfg')
+            '''
         if settings.LOCKDOWN and settings.APPLICATION_MODE == 'AELO':
             # NOTE: this might be needed also for ARISTOTLE
             aelo_changelog_path = os.path.join(
