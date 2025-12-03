@@ -34,10 +34,6 @@ class ServerConfig(AppConfig):
         #     registry is fully populated.
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
-
-        if os.environ.get('PYTEST_CURRENT_TEST'):  # inside pytest
-            config.directory['mosaic_dir'] = 'openquake/qa_tests_data/mosaic'
-
         import openquake.server.signals  # NOQA
         if settings.LOCKDOWN:
             import openquake.server.user_profile.signals  # NOQA
@@ -84,11 +80,13 @@ class ServerConfig(AppConfig):
                         f'If APPLICATION_MODE is {settings.APPLICATION_MODE}'
                         f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
                         f' must all be defined')
+            '''  # should be moved later
             if not config.directory.mosaic_dir:
                 raise NameError(
                     f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
                     f'mosaic_dir must be specified in openquake.cfg')
-
+            '''
+        '''
         if settings.LOCKDOWN and settings.APPLICATION_MODE == 'AELO':
             # NOTE: this might be needed also for ARISTOTLE
             aelo_changelog_path = os.path.join(
@@ -96,3 +94,4 @@ class ServerConfig(AppConfig):
             if not os.path.isfile(aelo_changelog_path):
                 raise FileNotFoundError(
                     f'{aelo_changelog_path} was not found!')
+        '''
