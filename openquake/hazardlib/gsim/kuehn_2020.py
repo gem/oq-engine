@@ -49,10 +49,11 @@ from openquake.hazardlib.gsim.utils_usgs_basin_scaling import \
 
 
 # Path to the within-model epistemic adjustment tables
-BASE_PATH = os.path.join(os.path.dirname(__file__), "kuehn_2020_tables")
+BASE_PATH = os.path.join(os.path.dirname(__file__), "kuehn_2020")
 
 # Path to the model coefficients
-KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020_coeffs.csv")
+KUEHN_COEFFS = os.path.join(os.path.dirname(__file__), "kuehn_2020",
+                            "kuehn_2020_coeffs.csv")
 
 # Regions: Global (GLO), Alaska (ALU), Cascadia (CAS), Seattle (SEA) 
 #          Central America & Mexico (CAM), Japan (JPN - ISO 3-letter code),

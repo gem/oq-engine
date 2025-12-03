@@ -30,7 +30,7 @@ from openquake.hazardlib.stats import compute_stats2
 from openquake.risklib import scientific
 from openquake.calculators.extract import (
     extract, sanitize, avglosses, aggexp_tags)
-from openquake.calculators import post_risk
+from openquake.calculators import base, post_risk
 from openquake.calculators.export import export, loss_curves
 from openquake.calculators.export.hazard import savez
 from openquake.commonlib.util import get_assets, compose_arrays
@@ -633,7 +633,7 @@ def export_aggcurves_csv(ekey, dstore):
     agg_values = assetcol.get_agg_values(oq.aggregate_by)
     aggids, aggtags = assetcol.build_aggids(oq.aggregate_by)
     E = len(dstore['events'])
-    R = len(dstore['weights'])
+    R = len(base.get_weights(oq, dstore))
     K = len(dstore['agg_values']) - 1
     dataf = dstore.read_df('aggcurves')
     consequences = [col for col in dataf.columns
