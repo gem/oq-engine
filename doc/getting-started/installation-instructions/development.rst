@@ -42,7 +42,8 @@ Windows
 -----
 
 Python version 3.12 is recommended but Python 3.11 can also be used.
-The use of the official Python installer for Windows is mandatory.
+Please install Python version using the official Python installer, using the instructions below. 
+Do NOT install using Microsoft Store.
 
 -------------------------
 1. Download Python
