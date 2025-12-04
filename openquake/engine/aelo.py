@@ -162,6 +162,7 @@ def main(lon: valid.longitude,
                   asce_version=asce_version, site_class=site_class)
     warnings = []
     if jobctx is None:
+        1/0  # FIXME
         # in  testing mode create a new job context
         config.directory.mosaic_dir = os.path.join(
             os.path.dirname(CDIR), 'qa_tests_data/mosaic')
