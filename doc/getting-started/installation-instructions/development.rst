@@ -39,10 +39,10 @@ Python version 3.12 is recommended but Python 3.11 can also be used.
 Please see instructions for the :doc:`Installing the OpenQuake Engine on MacOS <macos>`
 
 Windows
------
+-------
 
 Python version 3.12 is recommended but Python 3.11 can also be used.
-Please install Python version using the official Python installer, using the instructions below. 
+Please install Python version using the official Python installer, using the instructions below.
 Do NOT install using Microsoft Store.
 
 -------------------------
