@@ -1398,7 +1398,7 @@ def aelo_run(request):
     mp.Process(target=aelo.main, args=(
         lon, lat, vs30, siteid, asce_version, site_class, job_owner_email,
         outputs_uri_web,
-        jobctx, aelo_callback)).start()
+        jobctx, config.directory.mosaic_dir, aelo_callback)).start()
     return JsonResponse(response_data, status=200)
 
 
