@@ -754,8 +754,8 @@ def _get_sitecol(sitecol, exp, oqparam, h5):
             # tested in scenario_risk/test_case_8
             sitecol.complete.add_custom_site_id(size=8)
     elif oqparam.postproc_func == 'compute_rtgm.main':
-        assert len(oqparam.siteid) == len(sitecol), (
-            len(oqparam.siteid), len(sitecol))
+        if not oqparam.siteid:
+            raise InvalidFile(f"{oqparam.inputs['job_ini']}: missing siteid")
         sitecol.add_col('custom_site_id', 'S8', oqparam.siteid)
 
     debug_site(oqparam, sitecol)
