@@ -22,7 +22,7 @@ on:
         default: false
         required: true
   schedule:
-    - cron: "15 9 * * *"
+    - cron: "30 9 * * *"
 
 jobs:
   build:
@@ -54,7 +54,7 @@ jobs:
         BUILD_NUMBER: ${{ github.run_number }}
       run: |
         sed -i "s/version = get_version()/version = get_version() + '.dev${BUILD_NUMBER}'/g" setup.py
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }} || ${{ github.event_name == 'schedule' && inputs.pypi-test }}
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }} || ${{ github.event_name == 'schedule' }}
     - name: Install pypa/build
       run: |
         python3 -m pip install build --user
@@ -73,8 +73,7 @@ jobs:
     name: Publish Python 🐍 distribution 📦 to TestPyPI
     needs:
     - build
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }}
-    if: ${{ github.event_name == 'schedule' && inputs.pypi-test }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }} || ${{ github.event_name == 'schedule' }}
     runs-on: ubuntu-latest
     environment:
       name: testpypi
