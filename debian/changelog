@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * If the site parameters are more distant than ASSOC_DIST raise an error
+    and not a warning
   * Added parameter `siteid` in job.ini to specify the `custom_site_id`
   * Internal: extended baselib.sap to manage command classes
   * Saved memory in ebrisk, now most calculations can be run with 2 GB
