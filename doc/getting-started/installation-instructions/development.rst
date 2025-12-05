@@ -12,32 +12,66 @@ Prerequisites
 -------------
 
 Knowledge of `Python <https://www.python.org/>`__ (and its `virtual
-environments <https://docs.python.org/3.11/tutorial/venv.html>`__),
+environments <https://docs.python.org/3.12/tutorial/venv.html>`__),
 `git <https://git-scm.com/>`__ and `software
 development <https://xkcd.com/844/>`__ are required.
 
 Some software prerequisites are needed to build the development
 environment. First of your you need a Python version supported by the
-engine. At the moment we recommend Python 3.11, which is the only
-version supported on Windows and macOS.
+engine. At the moment we recommend Python 3.12.
 
-**NB: Python 3.12 are not supported yet, so please do NOT install such
+**NB: Python 3.13 and later versions are not supported yet, so please do NOT install such
 versions**
 
-**NB: Python version below 3.9 are not supported , so please do NOT
+**NB: Python version below 3.11 are not supported , so please do NOT
 install such versions**
 
 Linux
 -----
 
 Please check the documentation of your distribution to install one of
-the supported version of Python. At the moment we recommend Python 3.11
-but it also can used Python 3.9 and 3.10
+the supported version of Python. At the moment we recommend Python version 3.12
+but Python 3.11 can also be used.
 
 macOS
 -----
-
+Python version 3.12 is recommended but Python 3.11 can also be used.
 Please see instructions for the :doc:`Installing the OpenQuake Engine on MacOS <macos>`
+
+Windows
+-------
+
+Python version 3.12 is recommended but Python 3.11 can also be used.
+Please install Python version using the official Python installer, using the instructions below.
+Do NOT install using Microsoft Store.
+
+-------------------------
+1. Download Python
+-------------------------
+
+1. Open the official download page:
+
+   https://www.python.org/downloads/windows/
+
+2. Under **Stable Releases**, click **Download Python 3.12.x**.
+
+-------------------------
+2. Run the Installer
+-------------------------
+
+Locate the downloaded file (e.g., ``python-3.12.x-amd64.exe``) and double-click it.
+
+-----------------------------------------
+3. Enable PATH and Start Installation
+-----------------------------------------
+
+When the installer window appears:
+
+* Check **Add Python 3.12 to PATH**
+* Click **Install Now**
+
+
+The installation process may take a few minutes.
 
 Encoding
 --------
@@ -81,11 +115,11 @@ Before using again the OpenQuake software the environment must be
 reloaded running ``source openquake/bin/activate``\ (assuming that it
 has been installed under ‘openquake’). For more information about
 *virtualenv*, see
-http://docs.python-guide.org/en/latest/dev/virtualenvs/.
+https://docs.python.org/3.12/library/venv.html.
 
 To load the virtual environment automatically at every login, add the
 following line at the bottom of your ``~/.bashrc`` (Linux) or
-``~/.profile`` (macOS):
+``~/.zshrc`` (macOS):
 
 .. code:: bash
 
@@ -97,14 +131,14 @@ You can also add a short-hand command to enable it:
 
    alias oqenv="source $HOME/openquake/bin/activate"
 
-Put it again at the bottom of ``~/.bashrc`` or ``~/.profile``; close and
+Put it again at the bottom of ``~/.bashrc`` or ``~/.zshrc``; close and
 re-open the terminal. You can now load your environment just typing
 ``oqenv``.
 
 It is also possible to run the ``oq`` command without the corresponding
 virtual environment loaded. Just run ``$HOME/openquake/bin/oq``; for
 convenience you can also add it as an ``alias`` in your ``~/.bashrc``
-(Linux) or ``~/.profile`` (macOS):
+(Linux) or ``~/.zshrc`` (macOS):
 
 .. code:: bash
 
@@ -113,28 +147,16 @@ convenience you can also add it as an ``alias`` in your ``~/.bashrc``
 Multiple installations
 ----------------------
 
-If any other installation of the Engine exists on the same machine - like
-a system-wide installation made with packages - you should change the
-DbServer port from the default one (1908) to any other unused port.
+If multiple installations are required, it is recommended to use separate
+virtual environments to avoid dependency conflicts caused by differing package
+versions.
+This can be achieved by using install.py and specifying the corresponding venv
+directory to be used.
 
-If the two installations have the same structure of the database and
-the codebase is not that different (which is the normal case) everything will
-work even without changing the DbServer port.
+.. code:: bash
 
-However, in general using a DbServer started from a different installation
-could lead to unexpected behaviours and errors. To change
-the DbServer port the file ``openquake.cfg`` must be
-updated:
+   $ cd oq-engine && python3 install.py devel --venv VENV
 
-::
-
-   [dbserver]          |  [dbserver]
-   ## cut ##           |  ## cut ##
-   port = 1908         >  port = 1985
-   authkey = changeme  |  authkey = changeme
-   ## cut ##           |  ## cut ##
-
-The file should be put in your virtual environment.
 
 Running the tests
 -----------------
