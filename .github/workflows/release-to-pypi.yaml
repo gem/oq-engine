@@ -1,4 +1,3 @@
-ora cmq lo schedulo per le 10 cosi vediamo come si comporta ---
 name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 on:
   workflow_dispatch:
