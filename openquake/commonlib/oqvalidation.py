@@ -223,6 +223,11 @@ cross_correlation:
   Example: *cross_correlation = no*.
   Default: "yes"
 
+siteid:
+  Used in combination with sites to give a unique name to each site.
+  Example: *siteid = SITE1 SITE2*.
+  Default: empty tuple
+
 description:
   A string describing the calculation.
   Example: *description = Test calculation*.
@@ -1039,6 +1044,7 @@ class OqParam(valid.ParamSet):
     cross_correlation = valid.Param(valid.utf8_not_empty, 'yes')
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
+    siteid = valid.Param(valid.namelist, ())
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
@@ -1157,7 +1163,7 @@ class OqParam(valid.ParamSet):
     site_class = valid.Param(
         valid.NoneOr(valid.Choice(*SITE_CLASSES['ASCE7-22'])), None)
     site_labels = valid.Param(valid.uint8dict, {})
-    sites = valid.Param(valid.NoneOr(valid.coordinates), None)
+    sites = valid.Param(valid.coordinates, ())
     tile_spec = valid.Param(valid.tile_spec, None)
     tiling = valid.Param(valid.boolean, None)
     smlt_branch = valid.Param(valid.simple_id, '')
@@ -1248,6 +1254,7 @@ class OqParam(valid.ParamSet):
             del names_vals['_log']
         self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
+        self.check_siteid()
         hc0 = ('hazard_calculation_id' in names_vals and
                names_vals['hazard_calculation_id'] == 0)
         if hc0:
@@ -1427,7 +1434,7 @@ class OqParam(valid.ParamSet):
     def check_hazard(self):
         # check for GMFs from file
         if (self.inputs.get('gmfs', [''])[0].endswith('.csv')
-                and 'site_model' not in self.inputs and self.sites is None):
+                and 'site_model' not in self.inputs and not self.sites):
             self.raise_invalid('You forgot to specify a site_model')
 
         elif self.inputs.get('gmfs', [''])[0].endswith('.xml'):
@@ -1526,8 +1533,8 @@ class OqParam(valid.ParamSet):
             df = pandas.read_csv(self.inputs['post_loss_amplification'])
             check_increasing(df, 'return_period', 'pla_factor')
             if self.avg_losses:
-                self.raise_invalid(
-                    "you must set avg_losses=false with post_loss_amplification")
+                self.raise_invalid("you must set avg_losses=false with "
+                                   "post_loss_amplification")
 
     def check_gsims(self, gsims):
         """
@@ -1536,7 +1543,7 @@ class OqParam(valid.ParamSet):
         for gsim in gsims:
             self.req_site_params.update(gsim.REQUIRES_SITES_PARAMETERS)
 
-        has_sites = self.sites is not None or 'site_model' in self.inputs
+        has_sites = self.sites or 'site_model' in self.inputs
         if not has_sites:
             return
 
@@ -2063,9 +2070,9 @@ class OqParam(valid.ParamSet):
         if self.calculation_mode == 'preclassical':
             return True  # disable the check
         if 'hazard_curves' in self.inputs and (
-                self.sites is not None or 'site_model' in self.inputs):
+                self.sites or 'site_model' in self.inputs):
             return False
-        has_sites = self.sites is not None or 'site_model' in self.inputs
+        has_sites = self.sites or 'site_model' in self.inputs
         if not has_sites and not self.ground_motion_fields:
             # when generating only the ruptures you do not need the sites
             return True
@@ -2274,6 +2281,16 @@ class OqParam(valid.ParamSet):
             self.raise_invalid('%s: unknown loss type %s in reinsurance' % lt)
         if '+' in lt and not self.total_losses:
             self.raise_invalid('you forgot to set total_losses=%s' % lt)
+
+    def check_siteid(self):
+        """
+        The number of siteid does not match the number of sites {self.siteid}
+        {self.sites}
+        """
+        N = len(self.siteid)
+        if N and N != len(self.sites):
+            raise ValueError(f'There are {len(self.sites)} sites but '
+                             f'{self.siteid=}')
 
     def check_uniform_hazard_spectra(self):
         ok_imts = [imt for imt in self.imtls if imt == 'PGA' or

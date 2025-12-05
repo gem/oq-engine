@@ -53,9 +53,9 @@ ASCE07_16 = ['0.50000', '1.50000', 'Very High', '0.60000', 'Very High']
 ASCE07_22 = ['0.50000', '1.50000', '1.35000', '0.90000','Very High', 
              '0.60000', '0.60000', '0.40000', 'Very High']
 ASCE41_17 = ['1.50000', '1.28283', '1.00000', '0.75094', '0.60000', '0.60000',
-             '0.40000', '0.40000', 'd1gs2']
+             '0.40000', '0.40000', 'close']
 ASCE41_23 = ['1.35000', '1.25951', '0.90000', '0.73729', '0.60000', '0.60000',
-             '0.40000', '0.40000', 'd1gs2']
+             '0.40000', '0.40000', 'close']
 
 
 def test_PAC():
@@ -68,9 +68,9 @@ def test_PAC():
         lat = sites[1][1]
         lon2 = sites[0][0]
         lat2 = sites[0][1]
-        site = 'PAC first'
-        dic = dict(sites='%s %s, %s %s' % (lon, lat, lon2, lat2), site=site,
-                   vs30='760')
+        site = 'PAC-first PAC-second'
+        dic = dict(sites='%s %s, %s %s' % (lon, lat, lon2, lat2),
+                   siteid=site, vs30='760')
         log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
@@ -107,7 +107,7 @@ def test_PAC():
 def test_KOR():
     # another test with same name sources, no semicolon convention, sampling
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
-    dic = dict(sites='129 35.9', site='KOR-site', vs30='760')
+    dic = dict(sites='129 35.9', siteid='KOR-site', vs30='760')
     with logs.init(job_ini) as log:
         log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -126,7 +126,7 @@ def test_CCA():
     # RTGM under and over the deterministic limit for the CCA model
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
     for (site, lon, lat), expected in zip(SITES, EXPECTED_asce7_16):
-        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760')
+        dic = dict(sites='%s %s' % (lon, lat), siteid=site, vs30='760')
         with logs.init(job_ini) as log:
             log.params.update(get_params_from(
                 dic, MOSAIC_DIR, exclude=['USA']))
@@ -149,7 +149,8 @@ def test_CCA():
         numpy.testing.assert_equal(df.value.to_numpy(), ASCE41_17)
 
         # test no close ruptures
-        dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
+        dic = dict(sites='%s %s' % (-83.37, 15.15), siteid='wayfar',
+                   vs30='760')
         with logs.init(job_ini) as log:
             params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
             params['maximum_distance'] = '300'
@@ -175,8 +176,8 @@ def test_CCA_asce7_22():
     # RTGM under and over the deterministic limit for the CCA model
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
     for (site, lon, lat), expected in zip(SITES, EXPECTED_asce7_22):
-        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760',
-                   asce_version='ASCE7-22')
+        dic = dict(sites='%s %s' % (lon, lat), siteid=site,
+                   vs30='760', asce_version='ASCE7-22')
         with logs.init(job_ini) as log:
             log.params.update(get_params_from(
                 dic, MOSAIC_DIR, exclude=['USA']))
@@ -201,7 +202,7 @@ def test_CCA_asce7_22():
 def test_WAF():
     # test of site with very low hazard
     job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
-    dic = dict(sites='7.5 9', site='WAF-site', vs30='760')
+    dic = dict(sites='7.5 9', siteid='WAF-site', vs30='760')
     with logs.init(job_ini) as log:
         params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
         log.params.update(params)
@@ -224,7 +225,7 @@ def test_WAF():
 
         # test of site with very low hazard, but high enough to compute ASCE
         job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
-        dic = dict(sites='2.4 6.6', site='WAF-site', vs30='760')
+        dic = dict(sites='2.4 6.6', siteid='WAF-site', vs30='760')
         with logs.init(job_ini) as log:
             params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
             params['maximum_distance'] = '300'
@@ -251,7 +252,7 @@ def test_JPN():
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
     expected = os.path.join(MOSAIC_DIR, 'JPN/in/expected/uhs.csv')
     # testing the vs30 values corresponding to the "default" site class
-    dic = dict(sites='139 36', site='JPN-site', vs30='260 365 530',
+    dic = dict(sites='139 36', siteid='JPN-site', vs30='260 365 530',
                asce_version='ASCE7-22')
     with logs.init(job_ini) as log:
         params = get_params_from(dic, MOSAIC_DIR, exclude=['USA'])
@@ -305,7 +306,7 @@ def test_MFK():
         lon = sites[0][0]
         lat = sites[0][1]
         site = 'MFK'
-        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760')
+        dic = dict(sites='%s %s' % (lon, lat), siteid=site, vs30='760')
         log.params.update(get_params_from(dic, MOSAIC_DIR, (), job_ini))
         base.calculators(log.get_oqparam(), log.calc_id).run()
 
