@@ -1,4 +1,4 @@
----
+ora cmq lo schedulo per le 10 cosi vediamo come si comporta ---
 name: Publish Python 🐍 distribution 📦 to PyPI and TestPyPI
 on:
   workflow_dispatch:
@@ -22,6 +22,8 @@ on:
         description: Publish TestPyPI
         default: false
         required: true
+  schedule:
+    - cron: "0 9 * * *"
 
 jobs:
   build:
@@ -54,6 +56,7 @@ jobs:
       run: |
         sed -i "s/version = get_version()/version = get_version() + '.dev${BUILD_NUMBER}'/g" setup.py
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }}
+      if: ${{ github.event_name == 'schedule' && inputs.pypi-test }}
     - name: Install pypa/build
       run: |
         python3 -m pip install build --user
@@ -73,6 +76,7 @@ jobs:
     needs:
     - build
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }}
+    if: ${{ github.event_name == 'schedule' && inputs.pypi-test }}
     runs-on: ubuntu-latest
     environment:
       name: testpypi
