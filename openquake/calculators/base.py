@@ -74,6 +74,7 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('len', U16)])
 
 ASSOC_DIST = 8  # acceptable distance to associate the site params to the site
+# NB: event_based/case_27 is sensitive to ASSOC_DIST
 USER = getpass.getuser()
 MB = 1024 ** 2
 
@@ -1087,10 +1088,11 @@ class HazardCalculator(BaseCalculator):
                     self.sitecol.set_global_params(oq)
                 else:
                     # use the site model parameters
-                    self.sitecol.assoc(sm, assoc_dist)
+                    mode = 'warn' if oq.region_grid_spacing else 'strict'
+                    self.sitecol.assoc(sm, assoc_dist, mode)
                     if 'station_data' in oq.inputs:
                         # the complete sitecol is required
-                        self.sitecol.complete.assoc(sm, assoc_dist)
+                        self.sitecol.complete.assoc(sm, assoc_dist, mode)
 
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5

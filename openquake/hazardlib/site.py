@@ -801,7 +801,7 @@ class SiteCollection(object):
         indices, = mask.nonzero()
         return self.filtered(indices)
 
-    def assoc(self, site_model, assoc_dist, ignore=()):
+    def assoc(self, site_model, assoc_dist, mode, ignore=()):
         """
         Associate the `site_model` parameters to the sites.
         Log a warning if the site parameters are more distant than
@@ -813,7 +813,7 @@ class SiteCollection(object):
         m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
             _sitecol, site_model, _discarded = _GeographicObjects(
-                site_model).assoc(self, assoc_dist, 'warn')
+                site_model).assoc(self, assoc_dist, mode)
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
             ignore) - {'lon', 'lat', 'depth', 'custom_site_id'}
         for name in ok:
