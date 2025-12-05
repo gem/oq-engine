@@ -194,7 +194,6 @@ jobs:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
       OQ_APPLICATION_MODE: AELO
-      OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python  ${{ matrix.python-version }}
@@ -233,7 +232,6 @@ jobs:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
       OQ_APPLICATION_MODE: ARISTOTLE
-      OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python  ${{ matrix.python-version }}

@@ -23,6 +23,8 @@ from sqlite3 import OperationalError
 from openquake.baselib import config
 from openquake.server import dbserver, db
 
+oqdir = os.path.dirname(os.path.dirname(__file__))
+
 
 class ServerConfig(AppConfig):
     name = 'openquake.server'
@@ -34,6 +36,9 @@ class ServerConfig(AppConfig):
         #     registry is fully populated.
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
+        if settings.TEST or os.environ.get('GITHUB_ACTIONS'):
+            config.directory['mosaic_dir'] = f'{oqdir}/qa_tests_data/mosaic'
+
         import openquake.server.signals  # NOQA
         if settings.LOCKDOWN:
             import openquake.server.user_profile.signals  # NOQA

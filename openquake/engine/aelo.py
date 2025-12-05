@@ -146,6 +146,7 @@ def main(lon: valid.longitude,
          job_owner_email=None,
          outputs_uri=None,
          jobctx=None,
+         mosaic_dir=config.directory.mosaic_dir,
          callback=trivial_callback,
          ):
     """
@@ -158,6 +159,7 @@ def main(lon: valid.longitude,
                   asce_version=asce_version, site_class=site_class)
     warnings = []
     if jobctx is None:
+        1/0  # FIXME
         # in  testing mode create a new job context
         config.directory.mosaic_dir = os.path.join(
             os.path.dirname(CDIR), 'qa_tests_data/mosaic')
@@ -167,8 +169,7 @@ def main(lon: valid.longitude,
     else:
         # in production mode update jobctx.params
         try:
-            jobctx.params.update(get_params_from(
-                inputs, config.directory.mosaic_dir, exclude=['USA']))
+            jobctx.params.update(get_params_from(inputs, mosaic_dir, exclude=['USA']))
         except Exception as exc:
             # This can happen for instance:
             # - if no model covers the given coordinates.

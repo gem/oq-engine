@@ -44,9 +44,6 @@ django.setup()
 try:
     User = get_user_model()
 except RuntimeError:
-    # Django tests are meant to be run with the command
-    # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
-    # ./openquake/server/manage.py test tests.views_test
     raise unittest.SkipTest('Use Django to run such tests')
 
 
