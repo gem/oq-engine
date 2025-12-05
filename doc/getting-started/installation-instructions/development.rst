@@ -147,28 +147,16 @@ convenience you can also add it as an ``alias`` in your ``~/.bashrc``
 Multiple installations
 ----------------------
 
-If any other installation of the Engine exists on the same machine - like
-a system-wide installation made with packages - you should change the
-DbServer port from the default one (1908) to any other unused port.
+If multiple installations are required, it is recommended to use separate
+virtual environments to avoid dependency conflicts caused by differing package
+versions.
+This can be achieved by using install.py and specifying the corresponding venv
+directory to be used.
 
-If the two installations have the same structure of the database and
-the codebase is not that different (which is the normal case) everything will
-work even without changing the DbServer port.
+.. code:: bash
 
-However, in general using a DbServer started from a different installation
-could lead to unexpected behaviours and errors. To change
-the DbServer port the file ``openquake.cfg`` must be
-updated:
+   $ cd oq-engine && python3 install.py devel --venv VENV
 
-::
-
-   [dbserver]          |  [dbserver]
-   ## cut ##           |  ## cut ##
-   port = 1908         >  port = 1985
-   authkey = changeme  |  authkey = changeme
-   ## cut ##           |  ## cut ##
-
-The file should be put in your virtual environment.
 
 Running the tests
 -----------------
