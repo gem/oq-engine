@@ -415,7 +415,7 @@ def what_if_I_upgrade(conn, pkg_name='openquake.server.db.schema.upgrades',
     msg_danger = msg_danger_ % '\n'.join(danger)
     msg = header + (msg_safe if safe else '') + (msg_slow if slow else '') \
         + (msg_danger if danger else '')
-    msg += ('\nClick on the links if you want to know what exactly the '
+    msg += ('\nVisit the links if you want to know what exactly the '
             'scripts are doing.')
     if slow:
         msg += ('\nEven slow script can be fast if your database is small or'
