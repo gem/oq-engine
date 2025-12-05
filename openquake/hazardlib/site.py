@@ -815,7 +815,7 @@ class SiteCollection(object):
             _sitecol, site_model, _discarded = _GeographicObjects(
                 site_model).assoc(self, assoc_dist, 'warn')
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
-            ignore) - {'lon', 'lat', 'depth'}
+            ignore) - {'lon', 'lat', 'depth', 'custom_site_id'}
         for name in ok:
             self._set(name, site_model[name])
 
