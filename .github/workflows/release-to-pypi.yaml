@@ -22,7 +22,7 @@ on:
         default: false
         required: true
   schedule:
-    - cron: "0 9 * * *"
+    - cron: "15 9 * * *"
 
 jobs:
   build:
@@ -54,8 +54,7 @@ jobs:
         BUILD_NUMBER: ${{ github.run_number }}
       run: |
         sed -i "s/version = get_version()/version = get_version() + '.dev${BUILD_NUMBER}'/g" setup.py
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }}
-      if: ${{ github.event_name == 'schedule' && inputs.pypi-test }}
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.pypi-test }} || ${{ github.event_name == 'schedule' && inputs.pypi-test }}
     - name: Install pypa/build
       run: |
         python3 -m pip install build --user
