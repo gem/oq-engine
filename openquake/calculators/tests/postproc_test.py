@@ -235,7 +235,7 @@ class PostProcTestCase(CalculatorTestCase):
         aae(dic41['BSE2E_Sx1'], 0.34593)
         aae(dic41['BSE1N_Sx1'], 0.28645)
         aae(dic41['BSE1E_Sx1'], 0.18822)
-        ae(dic41['custom_site_id'], 'sw34j')
+        ae(dic41['custom_site_id'], 'CRETE')
 
     def test_median_spectrum1(self):
         # test with a single site and many ruptures
