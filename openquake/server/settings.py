@@ -398,7 +398,7 @@ if LOCKDOWN:
     LOGIN_REDIRECT_URL = f'{WEBUI_PATHPREFIX}/engine/'
     LOGOUT_REDIRECT_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'
     LOGIN_EXEMPT_URLS = (
-        f'{WEBUI_PATHPREFIX}/accounts/ajax_login/'
+        f'{WEBUI_PATHPREFIX}/accounts/ajax_login/',
         'reset_password', 'reset/', 'cookies/',
     )
     LOGIN_URL = f'{WEBUI_PATHPREFIX}/accounts/login/'

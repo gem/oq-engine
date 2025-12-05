@@ -24,7 +24,7 @@ import getpass
 import cProfile
 import pandas
 import collections
-from openquake.baselib import config, parallel, performance, sap
+from openquake.baselib import config, performance, sap
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import readinput, logs, datastore, oqvalidation
 from openquake.calculators import views
@@ -93,6 +93,9 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
         sites_df['vs30'] = [vs30] * len(sites_df)
     models = []
     for vs30, dvf in sites_df.groupby('vs30'):
+        # vs30 is a string and can contain multiple values, like '260 365 530'
+        # it is used to set override_vs30 in `get_params_from` and then
+        # sitecol.multiply will expand the sites and set custom_site_id
         for model, df in dvf.groupby('model'):
             if model in ('???', 'USA', 'GLD'):
                 continue
@@ -105,8 +108,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs, asce_version, vs30):
             ids[model] = df.ID.to_numpy()
             sites = ','.join('%s %s' % tuple(lonlat)
                              for lonlat in lonlats[df.index])
-            dic = dict(siteid=model + str(ids[model]), 
-                       sites=sites, vs30=vs30, asce_version=asce_version)
+            dic = dict(sites=sites, vs30=vs30, asce_version=asce_version,
+                       siteid=' '.join(map(str, ids[model])))
             params = get_params_from(dic, mosaic_dir)
             # del params['postproc_func']
             allparams.append(params)

@@ -41,8 +41,21 @@ jobs:
       - name: List Image
         run: |
           docker image ls
-      - name: Run calcs on single docker
+      - name: Test headless mode and run calcs on single docker
         run: |
+          #Test LOCKDOWN
+          echo "Test WEBUI HEADLESS"
+          echo "docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest "
+          docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z 127.0.0.1 8800; do
+           sleep 5 # wait for 5 seconds before check again
+          done
+          sleep 1
+          # Perform migration after setup local_settings
+          curl --fail -L -I -X GET http://127.0.0.1:8800
+          # Run calcs
+          time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
           time docker run openquake/engine:latest "oq engine --run "https://github.com/gem/oq-engine/blob/${{ github.event.inputs.git-ref }}/openquake/server/tests/data/classical.zip?raw=true""
       - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
         env:
