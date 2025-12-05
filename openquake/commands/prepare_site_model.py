@@ -81,7 +81,7 @@ def associate(sitecol, vs30fnames, assoc_distance):
     logging.info('Associating {:_d} hazard sites to {:_d} site parameters'.
                  format(len(sitecol), len(vs30orig)))
     return sitecol.assoc(vs30orig, assoc_distance,
-                         ignore={'z1pt0', 'z2pt5'})
+                         'warn', ignore={'z1pt0', 'z2pt5'})
 
 
 def main(
