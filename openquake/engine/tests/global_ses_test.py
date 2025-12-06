@@ -61,7 +61,8 @@ def check(dstore, fnames):
 
 def setup_module():
     global_ses.MODELS = ['EUR', 'MIE']
-    fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
+    fnames = global_ses.main(MOSAIC_DIR, 'rups.hdf5',
+                             number_of_logic_tree_samples=200)
     dstore = base.run_calc(
         path('job.ini'), hazard_calculation_id='rups.hdf5'
     ).datastore

@@ -696,15 +696,6 @@ a calculation, by spawning a subcalculation to compute the reaggregation.
 Without ``reaggregate_by`` the aggregation by country would be lost,
 since only the result of the finer aggregation would be stored.
 
-Starting from version 3.25 the engine has a command `oq ses` that can
-be used to generate a Stochastic Event Set in HDF4 format, which then
-can be read by the risk calculators. In practice you can run the
-entire South America with two simple commands::
-
- $ oq ses job_SAM.csv SAM.hdf5  # generate the SAM.hdf5 file
- $ oq engine --run job_Argentina.csv job_Bolivia.csv ... --hc SAM.hdf5
-
-
 Caveat: GMFs are split-dependent
 --------------------------------
 

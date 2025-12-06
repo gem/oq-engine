@@ -453,7 +453,8 @@ OVERRIDABLE_PARAMS = (
     'calculation_mode',
     'ground_motion_fields',
     'number_of_logic_tree_samples',
-    'ses_per_logic_tree_path')
+    'ses_per_logic_tree_path',
+    'minimum_magnitude')
 
 
 def read(manifest_toml):
@@ -466,10 +467,13 @@ def read(manifest_toml):
     for k, dic in manifest.items():
         assert k in ('global', 'atexit') or k[0].isupper(), k
         assert isinstance(dic, dict), dic
+        for key in dic:
+            if key.endswith('_file'):
+                dic[key] = os.path.join(manifest_dir, dic[key])
     gl = manifest.pop('global')
     atexit = manifest.pop('atexit')
     inis = []
-    for job, dic in manifest.items():
+    for dic in manifest.values():
         ini = os.path.join(manifest_dir, dic['ini'])
         params = readinput.get_params(ini)
         params['cache'] = 'true'

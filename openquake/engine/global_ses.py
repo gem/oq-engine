@@ -59,102 +59,59 @@ Note 3: ruptures.hdf5 will contain a global site model with all the
         parameters (i.e. xvf will be zero for most models).
 
 """
-
 import os
-import logging
-import numpy
-from openquake.baselib import performance, sap, hdf5
-from openquake.hazardlib import gsim_lt
-from openquake.commonlib import readinput, datastore
-from openquake.calculators import base
+from openquake.baselib import sap
+from openquake.commonlib import datastore
 from openquake.engine import engine
-
 
 MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
 CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 OAT OPA'''.split())
 
-dt = [('model', '<S3'), ('trt', '<S61'), ('gsim', hdf5.vstr), ('weight', float)]
+TOML = '''\
+[global]
+calculation_mode = "event_based"
+ground_motion_fields = false
+number_of_logic_tree_samples = {}
+ses_per_logic_tree_path = {}
+minimum_magnitude = {}
 
+[atexit]
+func = "openquake.engine.postjobs.build_ses"
+out_file = "{}"
+{}
+'''
 
-def read_job_inis(inis, INPUTS):
-    """
-    Read the job.ini file, associate each to the corresponding model in
-    the mosaic and return a list of quartets `model_trt_gsim_weight`.
-    """
-    models = []
-    for ini in inis:
-        for model in MODELS:
-            if model in ini:
-                models.append(model)
-    assert len(inis) == len(models), (inis, models)
-    if 'KOR' in models or 'JPN' in models:
-        if int(INPUTS['ses_per_logic_tree_path']) % 50:
-            raise SystemExit("ses_per_logic_tree_path must be divisible by 50!")
-
-    out = []
-    rows = []
-    for ini, model in zip(inis, models):
-        dic = readinput.get_params(ini)
-        dic.pop('intensity_measure_types_and_levels', None)
-        dic.update(INPUTS)
-        if 'truncation_level' not in dic:  # CAN
-            dic['truncation_level'] = '5'
-        if model in ("KOR", "JPN"):
-            dic['investigation_time'] = '50'
-            dic['ses_per_logic_tree_path'] = str(
-                int(dic['ses_per_logic_tree_path']) // 50)
-        dic['mosaic_model'] = model
-        gslt = gsim_lt.GsimLogicTree(dic['inputs']['gsim_logic_tree'])
-        for trt, gsims in gslt.values.items():
-            for gsim in gsims:
-                q = (model, trt, gsim._toml, gsim.weight['default'])
-                rows.append(q)
-        out.append(dic)
-    return out, rows
-
-
-def main(what, out, *,
+def main(mosaic_dir, out, *,
          number_of_logic_tree_samples:int=2000,
          ses_per_logic_tree_path:int=50, minimum_magnitude:float=5):
     """
     Storing global SES
     """
-    if what.endswith('.ini'):
-        inis = what.split(',')
-    else:
-        inis = []
-        for model in MODELS:
-            ini = os.path.join(what, model, 'in', 'job_vs30.ini')
-            if os.path.exists(ini):
-                inis.append(ini)
-    INPUTS = dict(
-        calculation_mode='event_based',
-        number_of_logic_tree_samples= str(number_of_logic_tree_samples),
-        ses_per_logic_tree_path = str(ses_per_logic_tree_path),
-        investigation_time='1',
-        ground_motion_fields='false')
-    if minimum_magnitude:
-        INPUTS['minimum_magnitude'] = str(minimum_magnitude)
-    job_dics, rows = read_job_inis(inis, INPUTS)
-    with performance.Monitor(measuremem=True) as mon:
-        with hdf5.File(out, 'w') as h5:
-            h5['model_trt_gsim_weight'] = numpy.array(rows, dt)
-        jobs = engine.create_jobs(job_dics, log_level=logging.WARN
-                                  if len(inis) > 1 else logging.INFO)
-        engine.run_jobs(jobs)
-        fnames = [datastore.read(job.calc_id).filename
-                  for job in jobs if job.get_job().status == 'complete']
-        logging.warning(f'Saving {out}')
-        with hdf5.File(out, 'a') as h5:
-            base.import_sites_hdf5(h5, fnames)
-            base.import_ruptures_hdf5(h5, fnames)
-            h5['oqparam'] = jobs[0].get_oqparam()
-    print(mon)
-    return fnames
+    inis = []
+    calcs = []
+    for model in MODELS:
+        ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
+        if os.path.exists(ini):
+            calcs.append(f'\n[{model}]')
+            calcs.append(f'ini = "{model}/in/job_vs30.ini"')
+            if model in ("JPN", "KOR"):
+                s = ses_per_logic_tree_path // 50  # investigation time
+                calcs.append(f'ses_per_logic_tree_path={s}')
+            inis.append(ini)
 
-main.what = 'Comma-separated job.ini files or mosaic directory'
+    ses_toml = os.path.join(mosaic_dir, 'ses.toml')
+    with open(ses_toml, 'w') as f:
+        f.write(TOML.format(number_of_logic_tree_samples,
+                            ses_per_logic_tree_path,
+                            minimum_magnitude,
+                            out,
+                            '\n'.join(calcs)))
+    jobs = engine.run_toml([ses_toml], 'global SES')
+    return [datastore.read(job.calc_id).filename for job in jobs]
+                    
+main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
 main.number_of_logic_tree_samples = 'Number of samples'
 main.ses_per_logic_tree_path = 'Number of SES'
