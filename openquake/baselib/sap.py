@@ -224,3 +224,15 @@ def runline(line, **parserkw):
     """
     pkg, *args = line.split()
     return run(importlib.import_module(pkg), args, **parserkw)
+
+
+def run_func(dic):
+    """
+    Run a dictionary like
+    {'func': 'openquake.calculators.postproc.funcname', 'a': 1, 'b': 2}
+    passing to the function the arguments a and b
+    """
+    dotname = dic.pop('func')
+    modname, funcname = dotname.rsplit('.', 1)
+    func = getattr(importlib.import_module(modname), funcname)
+    return func(**dic)

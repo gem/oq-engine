@@ -35,6 +35,7 @@ from unittest import mock
 from os.path import getsize
 from datetime import datetime, timezone
 import psutil
+import toml
 import h5py
 import numpy
 import requests
@@ -45,7 +46,8 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
-from openquake.baselib import parallel, general, config, slurm, workerpool as w
+from openquake.baselib import (
+    parallel, general, config, slurm, sap, workerpool as w)
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
 from openquake.calculators import base
@@ -445,6 +447,59 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
         _run(jobctxs, job_id, nodes, sbatch,
              concurrent_jobs, notify_to)
     return jobctxs
+
+
+OVERRIDABLE_PARAMS = (
+    'calculation_mode',
+    'ground_motion_fields',
+    'number_of_logic_tree_samples',
+    'ses_per_logic_tree_path')
+
+
+def read(manifest_toml):
+    """
+    Read the manifest file and set 'manifest_dir' and 'inis'
+    """
+    manifest_dir = os.path.dirname(manifest_toml)
+    with open(manifest_toml, encoding='utf8') as f:
+        manifest = toml.load(f)
+    for k, dic in manifest.items():
+        assert k in ('global', 'atexit') or k[0].isupper(), k
+        assert isinstance(dic, dict), dic
+    gl = manifest.pop('global')
+    atexit = manifest.pop('atexit')
+    inis = []
+    for job, dic in manifest.items():
+        ini = os.path.join(manifest_dir, dic['ini'])
+        params = readinput.get_params(ini)
+        for param in OVERRIDABLE_PARAMS:
+            if val := dic.get(param, gl.get(param)):
+                params[param] = str(val)
+        OqParam(**params).validate()
+        inis.append(params)
+    manifest['manifest_dir'] = manifest_dir
+    manifest['atexit'] = atexit
+    manifest['inis'] = inis
+    return manifest
+
+
+def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
+             precalc=False, notify_to=None):
+    """
+    Run sequentially multiple batches of calculations specified by
+    manifest files.
+    """
+    alljobs = []
+    for manifest in manifests:
+        man = read(manifest)
+        jobs = create_jobs(man['inis'], tag=tag)
+        run_jobs(jobs, concurrent_jobs, nodes, sbatch,
+                 precalc, notify_to)
+        if man['atexit']:
+            man['atexit']['jobs'] = jobs
+            sap.run_func(man['atexit'])
+    alljobs.extend(jobs)
+    return alljobs
 
 
 def version_triple(tag):
