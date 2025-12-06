@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Replaced `dbserver.cache` parameter in openquake.cfg with a cache
+    parameter in job.ini
   * If the site parameters are more distant than ASSOC_DIST raise an error
     and not a warning
   * Added parameter `siteid` in job.ini to specify the `custom_site_id`
