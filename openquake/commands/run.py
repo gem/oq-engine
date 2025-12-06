@@ -76,7 +76,8 @@ def main(job_ini,
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info',
-         nodes: int = 1):
+         nodes: int = 1,
+         cache: bool = False):
     """
     Run a calculation
     """
@@ -135,9 +136,9 @@ def main(job_ini,
                            {'calculation_mode': dic['calculation_mode']})
         jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
                            host=host)
-        run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
+        run_jobs(jobs, concurrent_jobs=1, nodes=nodes, cache=cache)
     else:  # toml
-        jobs = run_toml(job_ini, 'tag', nodes=nodes)
+        jobs = run_toml(job_ini, 'tag', nodes=nodes, cache=cache)
         
     return jobs[0].calc_id
 
@@ -153,3 +154,4 @@ main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
 main.nodes=dict(help='number of worker nodes to start')
+main.cache = "Enable the job cache based on the input files checksum"

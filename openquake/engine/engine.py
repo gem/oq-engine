@@ -478,7 +478,6 @@ def read(manifest_toml):
     for dic in manifest.values():
         ini = os.path.join(manifest_dir, dic['ini'])
         params = readinput.get_params(ini)
-        params['cache'] = 'true'
         for param in OVERRIDABLE_PARAMS:
             val = dic.get(param, gl.get(param))
             if val is not None:
@@ -492,7 +491,7 @@ def read(manifest_toml):
 
 
 def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
-             notify_to=None):
+             notify_to=None, cache=True):
     """
     Run sequentially multiple batches of calculations specified by
     manifest files.
@@ -500,6 +499,9 @@ def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
     alljobs = []
     for manifest in manifests:
         man = read(manifest)
+        if cache:
+            for ini in man['inis']:
+                ini['cache'] = 'true'
         jobs = create_jobs(man['inis'], tag=tag)
         run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
         if man['atexit']:
