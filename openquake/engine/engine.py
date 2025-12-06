@@ -480,7 +480,8 @@ def read(manifest_toml):
         params = readinput.get_params(ini)
         params['cache'] = 'true'
         for param in OVERRIDABLE_PARAMS:
-            if val := dic.get(param, gl.get(param)):
+            val = dic.get(param, gl.get(param))
+            if val is not None:
                 params[param] = str(val)
         OqParam(**params).validate()
         inis.append(params)
