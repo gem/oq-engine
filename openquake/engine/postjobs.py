@@ -25,11 +25,6 @@ from openquake.baselib import hdf5, performance
 from openquake.commonlib import datastore
 from openquake.calculators import base
 
-MODELS = sorted('''
-ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
-CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
-OAT OPA'''.split())
-
 
 def build_ses(jobs, out_file):
     """
