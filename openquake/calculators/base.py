@@ -304,9 +304,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
             old_job_id = self.save_params(**kw)
-            assert config.dbserver.cache in ('on', 'off')
-            if (old_job_id and config.dbserver.cache == 'on' and
-                    not self.test_mode):
+            if old_job_id and oq.cache and 'pytest' not in sys.argv[0]:
                 logging.info(f"Already calculated, {old_job_id=}")
                 calc_id = self.datastore.calc_id
                 self.datastore = datastore.read(old_job_id)
