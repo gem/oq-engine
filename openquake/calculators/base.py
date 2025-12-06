@@ -187,7 +187,7 @@ def fix_hc_id(oq):
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
     elif path.endswith('.ini'):
-        oq.hazard_calculation_id = dcache.get(path).calc_id
+        oq.hazard_calculation_id = run_calc(path).datastore.calc_id
     else:
         raise NotImplementedError(f'hc={path}')
 

@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Extended `oq run` to accept .toml files
+  * Extended `oq run` to accept .toml files and to use the job cache
   * Replaced `dbserver.cache` parameter in openquake.cfg with a cache
     parameter in job.ini
   * If the site parameters are more distant than ASSOC_DIST raise an error
