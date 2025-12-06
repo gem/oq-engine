@@ -187,7 +187,8 @@ def fix_hc_id(oq):
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
     elif path.endswith('.ini'):
-        oq.hazard_calculation_id = run_calc(path).datastore.calc_id
+        calc = run_calc(path, cache=oq.cache)
+        oq.hazard_calculation_id = calc.datastore.calc_id
     else:
         raise NotImplementedError(f'hc={path}')
 
@@ -300,7 +301,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if ct != oq.concurrent_tasks:
                 # save the used concurrent_tasks
                 oq.concurrent_tasks = ct
-            if self.precalc is None:
+            if not self.precalc:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
             old_job_id = self.save_params(**kw)

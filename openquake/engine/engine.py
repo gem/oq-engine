@@ -452,20 +452,14 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
 OVERRIDABLE_PARAMS = (
     'calculation_mode',
     'ground_motion_fields',
+    'hazard_calculation_id',
     'number_of_logic_tree_samples',
     'ses_per_logic_tree_path',
     'minimum_magnitude')
 
 
-def read(manifest_toml):
-    """
-    Read the manifest file and set 'manifest_dir', 'atexit' and 'inis'.
-    Also expand relative paths to absolute paths for parameters following
-    the `_file` name convention.
-    """
-    manifest_dir = os.path.dirname(manifest_toml)
-    with open(manifest_toml, encoding='utf8') as f:
-        manifest = toml.load(f)
+def _parse(manifest, jobs_toml):
+    manifest_dir = os.path.dirname(jobs_toml)
     for k, dic in manifest.items():
         assert k in ('global', 'atexit') or k[0].isupper(), k
         assert isinstance(dic, dict), dic
@@ -473,7 +467,7 @@ def read(manifest_toml):
             if key.endswith('_file'):
                 dic[key] = os.path.join(manifest_dir, dic[key])
     gl = manifest.pop('global')
-    atexit = manifest.pop('atexit')
+    atexit = manifest.pop('atexit', {})
     inis = []
     for dic in manifest.values():
         ini = os.path.join(manifest_dir, dic['ini'])
@@ -488,6 +482,29 @@ def read(manifest_toml):
     manifest['atexit'] = atexit
     manifest['inis'] = inis
     return manifest
+        
+    
+def read_many(manifests_toml):
+    """
+    Read the manifest file and returns a list a manifest dictionary.
+    Set 'manifest_dir', 'atexit' and 'inis' on each.
+    Also expand relative paths to absolute paths for parameters following
+    the `_file` name convention.
+    """
+    out = []
+    for manifest_toml in manifests_toml:
+        try:
+            with open(manifest_toml, encoding='utf8') as f:
+                manifest = toml.load(f)
+            if list(manifest)[0] == 'global':
+                out.append(_parse(manifest, manifest_toml))
+            else:
+                for v in manifest.values():
+                    out.append(_parse(v, manifest_toml))
+        except Exception as exc:
+            exc.args = (manifest_toml,) + exc.args
+            raise exc
+    return out
 
 
 def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
@@ -497,8 +514,7 @@ def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
     manifest files.
     """
     alljobs = []
-    for manifest in manifests:
-        man = read(manifest)
+    for man in read_many(manifests):
         if cache:
             for ini in man['inis']:
                 ini['cache'] = 'true'

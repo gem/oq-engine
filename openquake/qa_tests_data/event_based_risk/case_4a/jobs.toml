@@ -1,0 +1,17 @@
+[ghm.global]
+description = "hazard"
+
+[ghm.atexit]
+func = "openquake.engine.postjobs.build_ses"
+out_file = "ses.hdf5"
+
+[ghm.Hazard]
+ini = "job_hazard.ini"
+ground_motion_fields = false
+
+[grm.global]
+description = "risk"
+
+[grm.Risk]
+ini = "job_risk.ini"
+hazard_calculation_id = "ses.hdf5"
