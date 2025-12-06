@@ -472,6 +472,7 @@ def read(manifest_toml):
     for job, dic in manifest.items():
         ini = os.path.join(manifest_dir, dic['ini'])
         params = readinput.get_params(ini)
+        params['cache'] = 'true'
         for param in OVERRIDABLE_PARAMS:
             if val := dic.get(param, gl.get(param)):
                 params[param] = str(val)
