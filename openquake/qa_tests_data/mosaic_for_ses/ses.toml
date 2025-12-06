@@ -1,0 +1,14 @@
+[global]
+calculation_mode = "event_based"
+ground_motion_fields = false
+number_of_logic_tree_samples = 2000
+
+[atexit]
+func = "openquake.engine.postjobs.build_ses"
+out = 'ses.hdf5'
+
+[EUR]
+ini = "EUR/in/job_vs30.ini"
+
+[MIE]
+ini = "MIE/in/job_vs30.ini"
