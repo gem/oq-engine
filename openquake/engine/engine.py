@@ -387,7 +387,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
 
 
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
-             precalc=False, notify_to=None):
+             notify_to=None, precalc=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -492,7 +492,7 @@ def read(manifest_toml):
 
 
 def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
-             precalc=False, notify_to=None):
+             notify_to=None):
     """
     Run sequentially multiple batches of calculations specified by
     manifest files.
@@ -501,8 +501,7 @@ def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
     for manifest in manifests:
         man = read(manifest)
         jobs = create_jobs(man['inis'], tag=tag)
-        run_jobs(jobs, concurrent_jobs, nodes, sbatch,
-                 precalc, notify_to)
+        run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
         if man['atexit']:
             man['atexit']['jobs'] = jobs
             sap.run_func(man['atexit'])

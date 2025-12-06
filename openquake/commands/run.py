@@ -135,9 +135,9 @@ def main(job_ini,
                            {'calculation_mode': dic['calculation_mode']})
         jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
                            host=host)
-        run_jobs(jobs, concurrent_jobs=1, nodes=nodes, precalc=not hc)
+        run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
     else:  # toml
-        jobs = run_toml(job_ini, 'tag', nodes=nodes, precalc=False)
+        jobs = run_toml(job_ini, 'tag', nodes=nodes)
         
     return jobs[0].calc_id
 
