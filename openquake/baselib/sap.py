@@ -228,9 +228,8 @@ def runline(line, **parserkw):
 
 def run_func(dic):
     """
-    Run a dictionary like
-    {'func': 'openquake.calculators.postproc.funcname', 'a': 1, 'b': 2}
-    passing to the function the arguments a and b
+    Run a function with arguments described by a dictionary (i.e.
+    {'func': 'openquake.calculators.postproc.funcname', 'a': 1, 'b': 2})
     """
     dotname = dic.pop('func')
     modname, funcname = dotname.rsplit('.', 1)
