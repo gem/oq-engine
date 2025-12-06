@@ -459,7 +459,9 @@ OVERRIDABLE_PARAMS = (
 
 def read(manifest_toml):
     """
-    Read the manifest file and set 'manifest_dir' and 'inis'
+    Read the manifest file and set 'manifest_dir', 'atexit' and 'inis'.
+    Also expand relative paths to absolute paths for parameters following
+    the `_file` name convention.
     """
     manifest_dir = os.path.dirname(manifest_toml)
     with open(manifest_toml, encoding='utf8') as f:
