@@ -1,3 +1,6 @@
+  [Amirhossein Mohammadi]
+  * Added Mohammadi2023Turkiye ML-based GSIM for Turkey.  
+  
   [Michele Simionato]
   * Extended `oq run` to accept .toml files and to use the job cache
   * Replaced `dbserver.cache` parameter in openquake.cfg with a cache
