@@ -130,13 +130,15 @@ def main(job_ini,
         dics = [readinput.get_params(ini) for ini in job_ini]
         for dic in dics:
             dic.update(params)
+            if cache:
+                dic['cache'] = 'true'
             dic['exports'] = ','.join(exports)
             if 'job_id' in dic:  # in sensitivity analysis
                 logs.dbcmd('update_job', dic['job_id'],
                            {'calculation_mode': dic['calculation_mode']})
         jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
                            host=host)
-        run_jobs(jobs, concurrent_jobs=1, nodes=nodes, cache=cache)
+        run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
     else:  # toml
         jobs = run_toml(job_ini, 'tag', nodes=nodes, cache=cache)
         
