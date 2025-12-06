@@ -140,9 +140,10 @@ avg_losses:
 base_path:
   INTERNAL
 
-cache_distances:
-  Useful in UCERF calculations.
-  Example: *cache_distances = true*.
+cache:
+  If given, retrieve the result of a previous calculation with the same
+  checksum if possible, otherwise run the calculation normally
+  Example: *cache = true*.
   Default: False
 
 calculation_mode:
@@ -1045,7 +1046,7 @@ class OqParam(valid.ParamSet):
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
     siteid = valid.Param(valid.namelist, ())
-    cache_distances = valid.Param(valid.boolean, False)
+    cache = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, list(valid.pmf_map))
