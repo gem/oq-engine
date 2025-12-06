@@ -77,7 +77,7 @@ def main(job_ini,
          exports: valid.export_formats = '',
          loglevel='info',
          nodes: int = 1,
-         cache: bool = False):
+         cache: valid.boolean = False):
     """
     Run a calculation
     """
