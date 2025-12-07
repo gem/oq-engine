@@ -563,7 +563,7 @@ modal_damage_state:
 mosaic_model:
   Used to restrict the ruptures to a given model
   Example: *mosaic_model = ZAF*
-  Default: empty string
+  Default: the spaces
 
 num_epsilon_bins:
   Number of epsilon bins in disaggregation calculations.
@@ -1105,7 +1105,7 @@ class OqParam(valid.ParamSet):
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     max_sites_correl = valid.Param(valid.positiveint, 1200)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
-    mosaic_model = valid.Param(valid.three_letters, '')
+    mosaic_model = valid.Param(valid.three_letters, '   ')
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
     minimum_engine_version = valid.Param(valid.version, None)
