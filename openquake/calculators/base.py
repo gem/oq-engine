@@ -189,6 +189,7 @@ def fix_hc_id(oq):
     elif path.endswith('.ini'):
         calc = run_calc(path, cache=oq.cache)
         oq.hazard_calculation_id = calc.datastore.calc_id
+        return oq.hazard_calculation_id
     else:
         raise NotImplementedError(f'hc={path}')
 
@@ -810,8 +811,8 @@ class HazardCalculator(BaseCalculator):
             return len(self.datastore['weights'])
         try:
             return self.csm.full_lt.get_num_paths()
-        except AttributeError:  # no self.csm
-            return self.datastore['full_lt'].get_num_paths()
+        except AttributeError:  # no self.csm, assume sampling
+            return self.datastore['oqparam'].number_of_logic_tree_samples
 
     def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
@@ -931,9 +932,10 @@ class HazardCalculator(BaseCalculator):
 
     def _read_no_exposure(self, haz_sitecol):
         oq = self.oqparam
-        if oq.hazard_calculation_id:
+        if oq.hazard_calculation_id and (child := readinput.get_site_collection(
+                oq, self.datastore.hdf5)):
+            # associate the child sitecol (if any) to the parent sitecol
             # NB: this is tested in event_based case_27 and case_31
-            child = readinput.get_site_collection(oq, self.datastore.hdf5)
             assoc_dist = (oq.region_grid_spacing * 1.414
                           if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
@@ -1025,7 +1027,8 @@ class HazardCalculator(BaseCalculator):
             if 'assetcol' in parent:
                 check_time_event(oq, parent['assetcol'].occupancy_periods)
             elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
-                raise ValueError('Missing exposure both in hazard and risk!')
+                raise ValueError('Missing exposure both in hazard and risk!'
+                                 f' [hc_id={oq.hazard_calculation_id}]')
             if (oq_hazard.time_event != 'avg' and
                     oq_hazard.time_event != oq.time_event):
                 raise ValueError(
@@ -1816,8 +1819,8 @@ def run_calc(job_ini, **kw):
     with logs.init(job_ini) as log:
         log.params.update(kw)
         oq = log.get_oqparam()
-        if isinstance(oq.hazard_calculation_id, str):
-            fix_hc_id(oq)
+        assert not isinstance(oq.hazard_calculation_id, str), \
+            oq.hazard_calculation_id  # already fixed in engine.run_calc
         calc = calculators(oq, log.calc_id)
         calc.run()
         return calc

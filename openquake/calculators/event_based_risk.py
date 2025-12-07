@@ -403,7 +403,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
         try:
-            ws = self.datastore['weights'][:]
+            ws = base.get_weights(oq, self.datastore)
         except KeyError:  # not needed in from ses
             pass
         else:
@@ -472,7 +472,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     def create_avg_losses(self):
         oq = self.oqparam
         R0 = oq.number_of_logic_tree_samples or len(
-            self.datastore['weights'])
+            base.get_weights(oq, self.datastore))
         R = 1 if oq.collect_rlzs else R0
         S = len(oq.hazard_stats())
         fix_investigation_time(oq, self.datastore)

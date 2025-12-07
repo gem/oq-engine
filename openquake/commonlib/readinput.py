@@ -387,8 +387,8 @@ def get_csv_header(fname, sep=','):
 
 def get_mesh_exp(oqparam, h5=None):
     """
-    Extract the mesh of points to compute from the sites,
-    the sites_csv, the region, the site model, the exposure in this order.
+    Extract the mesh of points from the sites, the sites file, the region,
+    the site model, the exposure in this order.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -677,10 +677,12 @@ def get_site_collection(oqparam, h5=None):
         return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
-        if oqparam.calculation_mode != 'preclassical':
+        if (oqparam.hazard_calculation_id is None and
+                oqparam.calculation_mode != 'preclassical'):
             raise InvalidFile(
                 'You are missing sites.csv or site_model.csv in %s'
                 % oqparam.inputs['job_ini'])
+        # a None sitecol is okay in preclassical
         return None
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
@@ -1081,9 +1083,9 @@ def get_exposure(oqparam, h5=None):
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
-            h6 = [x.encode('ascii') for x in sorted(set(
-                hex6(sm['lon'], sm['lat'])))]
-            exposure = asset.Exposure.read_around(fnames[0], h6, rupfilter)
+            hexes = sorted(set(hex6(sm['lon'], sm['lat'])))
+            hexes = [h.encode('ascii') for h in hexes]
+            exposure = asset.Exposure.read_around(fnames[0], hexes, rupfilter)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
