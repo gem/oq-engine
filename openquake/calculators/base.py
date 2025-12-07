@@ -807,12 +807,14 @@ class HazardCalculator(BaseCalculator):
         """
         if self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk':
             return 1
-        elif 'weights' in self.datastore:
-            return len(self.datastore['weights'])
+        try:
+            return len(get_weights(self.oqparam, self.datastore))
+        except KeyError:  # missing weights and no sampling
+            pass
         try:
             return self.csm.full_lt.get_num_paths()
-        except AttributeError:  # no self.csm, assume sampling
-            return self.datastore['oqparam'].number_of_logic_tree_samples
+        except AttributeError:  # no self.csm
+            return self.datastore['full_lt'].get_num_paths()
 
     def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
