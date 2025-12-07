@@ -808,11 +808,7 @@ class HazardCalculator(BaseCalculator):
         if (self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk') or (
                 'hazard_curves' in self.oqparam.inputs):
             return 1
-        # NB: in risk from SES there is sampling and no 'weights'
-        try:
-            return len(get_weights(self.oqparam, self.datastore))
-        except KeyError:
-            pass
+        return len(get_weights(self.oqparam, self.datastore))
 
     def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
