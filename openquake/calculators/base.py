@@ -803,18 +803,16 @@ class HazardCalculator(BaseCalculator):
     @general.cached_property
     def R(self):
         """
-        :returns: the number of realizations
+        :returns: the number of (collected) realizations
         """
-        if self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk':
+        if (self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk') or (
+                'hazard_curves' in self.oqparam.inputs):
             return 1
+        # NB: in risk from SES there is sampling and no 'weights'
         try:
             return len(get_weights(self.oqparam, self.datastore))
-        except KeyError:  # missing weights and no sampling
+        except KeyError:
             pass
-        try:
-            return self.csm.full_lt.get_num_paths()
-        except AttributeError:  # no self.csm
-            return self.datastore['full_lt'].get_num_paths()
 
     def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
