@@ -1804,8 +1804,7 @@ def jobs_from_inis(inis):
     jids = []
     try:
         for ini in inis:
-            oq = get_oqparam(ini)
-            checksum = get_checksum32(oq)
+            checksum = get_checksum32(get_oqparam(ini))
             jobs = logs.dbcmd('SELECT job_id FROM checksum '
                               'WHERE hazard_checksum=?x', checksum)
             if jobs:
