@@ -464,13 +464,13 @@ OVERRIDABLE_PARAMS = (
 def _parse(manifest, jobs_toml):
     manifest_dir = os.path.dirname(jobs_toml)
     for k, dic in manifest.items():
-        assert k in ('global', 'success') or k[0].isupper(), k
+        assert k in ('global', 'atexit') or k[0].isupper(), k
         assert isinstance(dic, dict), dic
         for key, val in dic.items():
             if isinstance(val, str) and val.endswith(('.hdf5', '.sqlite')):
                 dic[key] = os.path.join(manifest_dir, val)
     gl = manifest.pop('global')
-    success = manifest.pop('success', {})
+    atexit = manifest.pop('atexit', {})
     inis = []
     for dic in manifest.values():
         ini = os.path.join(manifest_dir, dic['ini'])
@@ -482,7 +482,7 @@ def _parse(manifest, jobs_toml):
         OqParam(**params).validate()
         inis.append(params)
     manifest['manifest_dir'] = manifest_dir
-    manifest['success'] = success
+    manifest['atexit'] = atexit
     manifest['inis'] = inis
     return manifest
         
@@ -490,7 +490,7 @@ def _parse(manifest, jobs_toml):
 def read_many(manifests_toml):
     """
     Read the manifest file and returns a list a manifest dictionary.
-    Set 'manifest_dir', 'success' and 'inis' on each.
+    Set 'manifest_dir', 'atexit' and 'inis' on each.
     Also expand relative paths to absolute paths for parameters following
     the `_file` name convention.
     """
@@ -523,9 +523,9 @@ def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
                 ini['cache'] = 'true'
         jobs = create_jobs(man['inis'], tag=tag)
         run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-        if man['success']:
-            man['success']['jobs'] = jobs
-            sap.run_func(man['success'])
+        if man['atexit']:
+            man['atexit']['jobs'] = jobs
+            sap.run_func(man['atexit'])
     alljobs.extend(jobs)
     return alljobs
 

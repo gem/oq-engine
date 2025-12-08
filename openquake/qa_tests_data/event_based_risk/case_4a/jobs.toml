@@ -1,7 +1,7 @@
 [hazard.global]
 description = "hazard"
 
-[hazard.success]
+[hazard.atexit]
 func = "openquake.engine.postjobs.build_ses"
 out_file = "ses.hdf5"
 

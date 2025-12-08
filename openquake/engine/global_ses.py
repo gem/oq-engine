@@ -77,7 +77,7 @@ number_of_logic_tree_samples = {}
 ses_per_logic_tree_path = {}
 minimum_magnitude = {}
 
-[success]
+[atexit]
 func = "openquake.engine.postjobs.build_ses"
 out_file = "{}"
 {}
