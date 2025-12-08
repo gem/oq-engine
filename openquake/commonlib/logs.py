@@ -34,10 +34,10 @@ LEVELS = {'debug': logging.DEBUG,
           'critical': logging.CRITICAL}
 SIMPLE_TYPES = (str, int, float, bool, datetime, list, tuple, dict, type(None))
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-MODELS = []  # to be populated in get_tag
+MODELS = []  # to be populated in get_model
 
 
-def get_tag(job_ini):
+def get_model(job_ini):
     """
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
@@ -223,18 +223,17 @@ class LogContext:
     oqparam = None
 
     def __init__(self, params, log_level='info', log_file=None,
-                 user_name=None, hc_id=None, host=None, tag=''):
+                 user_name=None, hc_id=None, host=None):
         if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
             raise RuntimeError('You forgot to run oq engine --upgrade-db -y')
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
         self.params = params
-        if 'inputs' not in self.params:  # for reaggregate
-            self.tag = tag
-        else:
+        if 'inputs' in self.params:
             inputs = self.params['inputs']
-            self.tag = tag or get_tag(inputs.get('job_ini', '<in-memory>'))
+            self.params['mosaic_model'] = get_model(
+                inputs.get('job_ini', '<in-memory>'))
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         calc_id = int(params.get('job_id', 0))
@@ -273,8 +272,9 @@ class LogContext:
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level, handlers=[])
+        model = self.params.get('mosaic_model', '')
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
-            self.calc_id, self.tag + ' ' if self.tag else '')
+            self.calc_id, model + ' ' if model else '')
         self.handlers = [LogDatabaseHandler(self.calc_id)] \
             if self.usedb else []
         if self.log_file is None:
@@ -311,8 +311,7 @@ class LogContext:
         # ensure pickleability
         return dict(calc_id=self.calc_id, params=self.params, usedb=self.usedb,
                     log_level=self.log_level, log_file=self.log_file,
-                    user_name=self.user_name, oqparam=self.oqparam,
-                    tag=self.tag)
+                    user_name=self.user_name, oqparam=self.oqparam)
 
     def __repr__(self):
         hc_id = self.params.get('hazard_calculation_id')
@@ -321,7 +320,7 @@ class LogContext:
 
 
 def init(job_ini, dummy=None, log_level='info', log_file=None,
-         user_name=None, hc_id=None, host=None, tag=''):
+         user_name=None, hc_id=None, host=None):
     """
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param dummy: ignored parameter, exists for backward compatibility
@@ -330,8 +329,6 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
-    :param tag: tag (for instance the model name) to show before the log
-        message
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -343,5 +340,4 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
         job_ini = dummy
     if not isinstance(job_ini, dict):
         job_ini = readinput.get_params(job_ini)
-    return LogContext(job_ini, log_level, log_file,
-                      user_name, hc_id, host, tag)
+    return LogContext(job_ini, log_level, log_file, user_name, hc_id, host)
