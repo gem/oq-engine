@@ -183,6 +183,8 @@ def fix_hc_id(oq):
     and ses.hdf5 does not exist, generates it from ses.ini
     and replace oq.inputs['rupture_model'] with 'base_path/ses.hdf5'
     """
+    if isinstance(oq.hazard_calculation_id, int):
+        return  # there is nothing to fix
     path = os.path.join(oq.base_path, oq.hazard_calculation_id)
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
@@ -1815,8 +1817,7 @@ def run_calc(job_ini, **kw):
     with logs.init(job_ini) as log:
         log.params.update(kw)
         oq = log.get_oqparam()
-        assert not isinstance(oq.hazard_calculation_id, str), \
-            oq.hazard_calculation_id  # already fixed in engine.run_calc
+        fix_hc_id(oq)  # relative path to absolute path for ses.hdf5 files
         calc = calculators(oq, log.calc_id)
         calc.run()
         return calc

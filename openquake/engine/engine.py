@@ -272,7 +272,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             j1 = j0 + len(job_inis) - 1
             logs.dbcmd('add_tag_to_job', job.calc_id, f'[{j0}-{j1}]{tag}')
         elif tag:
-            logs.dbcmd('add_tag_to_job', job.calc_id, tag)
+           logs.dbcmd('add_tag_to_job', job.calc_id, tag)
     check_directories(jobs[0].calc_id)
 
     return jobs
@@ -461,31 +461,27 @@ OVERRIDABLE_PARAMS = (
     'mosaic_model')
 
 
-def _parse(manifest, jobs_toml):
+def _parse(manifest, gl, jobs_toml):
     manifest_dir = os.path.dirname(jobs_toml)
     for k, dic in manifest.items():
-        assert k in ('global', 'success') or k[0].isupper(), k
+        assert k == 'success' or k[0].isupper(), k
         assert isinstance(dic, dict), dic
         for key, val in dic.items():
-            if isinstance(val, str) and val.endswith(('.hdf5', '.sqlite')):
+            if isinstance(val, str) and val.endswith(
+                    ('.ini', '.hdf5', '.sqlite')):
                 dic[key] = os.path.join(manifest_dir, val)
-    gl = manifest.pop('global')
     success = manifest.pop('success', {})
     inis = []
     for dic in manifest.values():
-        ini = os.path.join(manifest_dir, dic['ini'])
-        params = readinput.get_params(ini)
+        params = readinput.get_params(dic['ini'])
         for param in OVERRIDABLE_PARAMS:
             val = dic.get(param, gl.get(param))
             if val is not None:
                 params[param] = str(val)
         OqParam(**params).validate()
         inis.append(params)
-    manifest['manifest_dir'] = manifest_dir
-    manifest['success'] = success
-    manifest['inis'] = inis
-    return manifest
-        
+    return dict(manifest_dir=manifest_dir, success=success, inis=inis)
+
     
 def read_many(manifests_toml):
     """
@@ -499,11 +495,12 @@ def read_many(manifests_toml):
         try:
             with open(manifest_toml, encoding='utf8') as f:
                 manifest = toml.load(f)
-            if list(manifest)[0] == 'global':
-                out.append(_parse(manifest, manifest_toml))
-            else:
+            gl = manifest.pop('global')
+            if 'global' in gl:  # global.global
                 for v in manifest.values():
-                    out.append(_parse(v, manifest_toml))
+                    out.append(_parse(v, gl, manifest_toml))
+            else:
+                out.append(_parse(manifest, gl, manifest_toml))
         except Exception as exc:
             exc.args = (manifest_toml,) + exc.args
             raise exc
@@ -517,15 +514,15 @@ def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
     manifest files.
     """
     alljobs = []
-    for man in read_many(manifests):
+    for out in read_many(manifests):
         if cache:
-            for ini in man['inis']:
+            for ini in out['inis']:
                 ini['cache'] = 'true'
-        jobs = create_jobs(man['inis'], tag=tag)
+        jobs = create_jobs(out['inis'], tag=tag)
         run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-        if man['success']:
-            man['success']['jobs'] = jobs
-            sap.run_func(man['success'])
+        if out['success']:
+            out['success']['jobs'] = jobs
+            sap.run_func(out['success'])
     alljobs.extend(jobs)
     return alljobs
 

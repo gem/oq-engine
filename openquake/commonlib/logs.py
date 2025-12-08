@@ -230,10 +230,10 @@ class LogContext:
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
         self.params = params
-        if 'inputs' in self.params:
-            inputs = self.params['inputs']
-            self.params['mosaic_model'] = get_model(
-                inputs.get('job_ini', '<in-memory>'))
+        if 'mosaic_model' not in self.params:
+            # try to infer it from the name of the job.ini file
+            ini = self.params.get('inputs', {}).get('job_ini', '<in-memory>')
+            self.params['mosaic_model'] = get_model(ini)
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         calc_id = int(params.get('job_id', 0))
