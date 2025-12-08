@@ -1678,21 +1678,12 @@ def _checksum(fnames, checksum=0):
 
 def get_checksum32(oqparam, h5=None):
     """
-    Build an unsigned 32 bit integer from the hazard input files
+    Build an unsigned 32 bit integer from oqparam and the input files
 
     :param oqparam: an OqParam instance
     """
-    checksum = _checksum(oqparam._input_files)
-    hazard_params = []
-    for key, val in sorted(vars(oqparam).items()):
-        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
-                   'width_of_mfd_bin', 'area_source_discretization',
-                   'random_seed', 'number_of_logic_tree_samples',
-                   'minimum_magnitude', 'source_id', 'sites',
-                   'floating_x_step', 'floating_y_step'):
-            hazard_params.append('%s = %s' % (key, val))
-    data = '\n'.join(hazard_params).encode('utf8')
-    checksum = zlib.adler32(data, checksum)
+    ini = oqparam.to_ini().encode('utf8')
+    checksum = zlib.adler32(ini, _checksum(oqparam._input_files))
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
