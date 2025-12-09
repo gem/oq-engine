@@ -139,7 +139,7 @@ def main(
         msg = logs.dbcmd('what_if_I_upgrade', 'read_scripts')
         if msg.startswith('Your database is already updated'):
             pass
-        elif yes or confirm('Proceed? (y/n) '):
+        elif yes or confirm(f'{msg}\nProceed with the upgrade? (y/n) '):
             logs.dbcmd('upgrade_db')
         if not run:
             sys.exit(0)
