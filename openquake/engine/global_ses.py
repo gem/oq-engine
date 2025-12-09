@@ -108,7 +108,7 @@ def main(mosaic_dir, out, *,
                             minimum_magnitude,
                             out,
                             '\n'.join(calcs)))
-    jobs = engine.run_toml([ses_toml], 'global SES')
+    jobs = engine.run_workflow([ses_toml], 'global SES')
     return [datastore.read(job.calc_id).filename for job in jobs]
                     
 main.mosaic_dir = 'Directory containing the hazard mosaic'

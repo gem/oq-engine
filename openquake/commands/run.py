@@ -29,7 +29,7 @@ from openquake.hazardlib import valid
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base, views
 from openquake.commonlib import dbapi
-from openquake.engine.engine import create_jobs, run_jobs, run_toml
+from openquake.engine.engine import create_jobs, run_jobs, run_workflow
 from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
@@ -140,7 +140,7 @@ def main(job_ini,
                            host=host)
         run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
     else:  # toml
-        jobs = run_toml(job_ini, 'tag', nodes=nodes, cache=cache)
+        jobs = run_workflow(job_ini, 'tag', nodes=nodes, cache=cache)
         
     return jobs[0].calc_id
 

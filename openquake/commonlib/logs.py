@@ -210,7 +210,7 @@ class LogContext:
     oqparam = None
 
     def __init__(self, params, log_level='info', log_file=None,
-                 user_name=None, hc_id=None, host=None):
+                 user_name=None, hc_id=None, host=None, workflow_id=None):
         if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
             raise RuntimeError('You forgot to run oq engine --upgrade-db -y')
         self.log_level = log_level
@@ -226,7 +226,8 @@ class LogContext:
                 'create_job', datadir,
                 self.params['calculation_mode'],
                 self.params.get('description', 'test'),
-                user_name, None if isinstance(hc_id, str) else hc_id, host)
+                user_name, None if isinstance(hc_id, str) else hc_id,
+                host, workflow_id)
             path = os.path.join(datadir, 'calc_%d.hdf5' % self.calc_id)
             if os.path.exists(path):  # sanity check on the calculation ID
                 raise RuntimeError('There is a pre-existing file %s' % path)
@@ -303,7 +304,7 @@ class LogContext:
 
 
 def init(job_ini, dummy=None, log_level='info', log_file=None,
-         user_name=None, hc_id=None, host=None):
+         user_name=None, hc_id=None, host=None, workflow_id=None):
     """
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param dummy: ignored parameter, exists for backward compatibility
@@ -312,6 +313,7 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
+    :param workflow_id: workflow ID (default None)
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -323,4 +325,5 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
         job_ini = dummy
     if not isinstance(job_ini, dict):
         job_ini = readinput.get_params(job_ini)
-    return LogContext(job_ini, log_level, log_file, user_name, hc_id, host)
+    return LogContext(job_ini, log_level, log_file, user_name, hc_id,
+                      host, workflow_id)
