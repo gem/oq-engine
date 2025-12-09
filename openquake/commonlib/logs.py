@@ -34,19 +34,6 @@ LEVELS = {'debug': logging.DEBUG,
           'critical': logging.CRITICAL}
 SIMPLE_TYPES = (str, int, float, bool, datetime, list, tuple, dict, type(None))
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-MODELS = []  # to be populated in get_model
-
-
-def get_model(job_ini):
-    """
-    :returns: the name of the model if job_ini belongs to the mosaic_dir
-    """
-    if not MODELS:  # first time
-        MODELS.extend(readinput.read_mosaic_df(buffer=.1).code)
-    for mod in MODELS:
-        if mod in job_ini:
-            return mod
-    return ''
 
 
 def on_workers(action):
@@ -230,10 +217,6 @@ class LogContext:
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
         self.params = params
-        if 'mosaic_model' not in self.params:
-            # try to infer it from the name of the job.ini file
-            ini = self.params.get('inputs', {}).get('job_ini', '<in-memory>')
-            self.params['mosaic_model'] = get_model(ini)
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         calc_id = int(params.get('job_id', 0))

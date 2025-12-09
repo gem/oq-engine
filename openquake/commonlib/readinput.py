@@ -255,6 +255,17 @@ def check_params(cp, fname):
                 ' in multiple sections')
 
 
+def get_model(job_ini, MODELS=[]):
+    """
+    :returns: the name of the model if job_ini belongs to the mosaic_dir
+    """
+    if not MODELS:  # first time
+        MODELS.extend(read_mosaic_df(buffer=.1).code)
+    for mod in MODELS:
+        if mod in job_ini:
+            return mod
+    return ''
+
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
 def get_params(job_ini, kw={}):
@@ -309,8 +320,13 @@ def get_params(job_ini, kw={}):
         items = dic.items()
     update(params, items, base_path)
 
+    if 'mosaic_model' not in params:
+        # try to infer it from the name of the job.ini file
+        ini = params.get('inputs', {}).get('job_ini', '<in-memory>')
+        params['mosaic_model'] = get_model(ini)
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
+
     update(params, kw.items(), base_path)  # override on demand
     return params
 
