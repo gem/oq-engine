@@ -327,26 +327,6 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def log_completed(jobctxs, sec):
-    """
-    Log information about the generated HDF5 files
-    """
-    tot = 0
-    for jobctx in jobctxs:
-        job_ini = jobctx.params['inputs'].get('job_ini', '<in-memory>')
-        # <in-memory> happens for sensitivity.py in run-demos.sh
-        job = logs.dbcmd('get_job', jobctx.calc_id)
-        path = job.ds_calc_dir + '.hdf5'
-        try:
-            size = getsize(path)
-        except FileNotFoundError:  # file not generated
-            size = 0
-        logging.info(f'#{job.id} {job_ini} [{job.status}] '
-                     f'{general.humansize(size)}')
-        tot += size
-    logging.info(f'Generated {general.humansize(tot)} in {sec:_d} seconds')
-
-
 def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
     t0 = time.time()
     dist = parallel.oq_distribute()
@@ -376,8 +356,6 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
         exc = e
         raise
     finally:
-        if len(jobctxs) > 1:
-            log_completed(jobctxs, int(time.time() - t0))
         notify_job_complete(job_id, notify_to, exc)
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
