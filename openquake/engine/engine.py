@@ -48,6 +48,7 @@ from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, slurm, sap, workerpool as w)
+from openquake.hazardlib import InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logs
 from openquake.calculators import base
@@ -455,73 +456,98 @@ OVERRIDABLE_PARAMS = (
     'mosaic_model')
 
 
-def _parse(manifest, gl, jobs_toml):
-    manifest_dir = os.path.dirname(jobs_toml)
-    for k, dic in manifest.items():
-        assert k == 'success' or k[0].isupper(), k
-        assert isinstance(dic, dict), dic
-        for key, val in dic.items():
-            if isinstance(val, str) and val.endswith(
-                    ('.ini', '.hdf5', '.sqlite')):
-                dic[key] = os.path.join(manifest_dir, val)
-    success = manifest.pop('success', {})
-    inis = []
-    for dic in manifest.values():
-        params = readinput.get_params(dic['ini'])
-        for param in OVERRIDABLE_PARAMS:
-            val = dic.get(param, gl.get(param))
-            if val is not None:
-                params[param] = str(val)
-        OqParam(**params).validate()
-        inis.append(params)
-    return dict(manifest_dir=manifest_dir, success=success, inis=inis)
-
-    
-def read_many(manifests_toml):
+class Workflow:
     """
-    Read the manifest file and returns a list a manifest dictionary.
-    Set 'manifest_dir', 'success' and 'inis' on each.
+    A workflow object must be instantiated by the function
+    read_many.
+
+    It has thre mandatory attributes, `description`, `all_inis`
+    and `successes` plus several optional attributes.
+    """
+    def __init__(self, workflow_toml, dic):
+        self.workflow_dir = os.path.dirname(workflow_toml)
+        self.description = dic['description']
+        self.all_inis = []
+        self.successes = []
+        self.checkout = dic.get('checkout', {})
+
+    def parse(self, ddic):
+        for k, dic in ddic.items():
+            assert k == 'success' or k[0].isupper(), k
+            assert isinstance(dic, dict), dic
+            for key, val in dic.items():
+                if isinstance(val, str) and val.endswith(
+                        ('.ini', '.hdf5', '.sqlite')):
+                    dic[key] = os.path.join(self.workflow_dir, val)
+        self.successes.append(ddic.pop('success', {}))
+        inis = []
+        for dic in ddic.values():
+            params = readinput.get_params(dic['ini'])
+            for param in OVERRIDABLE_PARAMS:
+                val = dic.get(param, getattr(self, param, None))
+                if val is not None:
+                    params[param] = str(val)
+            OqParam(**params).validate()
+            inis.append(params)
+        self.all_inis.append(inis)
+
+
+def read_many(workflows_toml):
+    """
+    Read the workflow file and returns a list a workflow dictionary.
+    Set 'workflow_dir', 'success' and 'inis' on each.
     Also expand relative paths to absolute paths for parameters following
     the `_file` name convention.
     """
     out = []
-    for manifest_toml in manifests_toml:
+    for workflow_toml in workflows_toml:
         try:
-            with open(manifest_toml, encoding='utf8') as f:
-                manifest = toml.load(f)
-            gl = manifest.pop('global')
-            if 'global' in gl:  # global.global
-                for v in manifest.values():
-                    out.append(_parse(v, gl, manifest_toml))
+            with open(workflow_toml, encoding='utf8') as f:
+                wfdict = toml.load(f)
+            if 'nested' in wfdict:
+                wf = Workflow(workflow_toml, wfdict.pop('nested')['workflow'])
+                for ddic in wfdict.values():
+                    wf.parse(ddic)
+            elif 'workflow' in wfdict:
+                wf = Workflow(workflow_toml, wfdict.pop('workflow'))
+                wf.parse(wfdict)
             else:
-                out.append(_parse(manifest, gl, manifest_toml))
+                raise InvalidFile('missing [workflow] or [nested.workflow]')
         except Exception as exc:
-            exc.args = (manifest_toml,) + exc.args
+            exc.args = (workflow_toml,) + exc.args
             raise exc
+        out.append(wf)
     return out
+        
 
-
-def run_workflow(manifests, description, concurrent_jobs=None, nodes=1,
+def run_workflow(workflows_toml, concurrent_jobs=None, nodes=1,
              sbatch=False, notify_to=None, cache=True):
     """
     Run sequentially multiple batches of calculations specified by
-    manifest files.
+    workflow files.
     """
-    workflow_id = logs.dbcmd(
-        'INSERT INTO workflow (description) VALUES (?x)', description
-    ).lastrowid
-    alljobs = []
-    for out in read_many(manifests):
+    wf_ids = []
+    for workflow in read_many(workflows_toml):
+        workflow_id = logs.dbcmd(
+            'INSERT INTO workflow (description) VALUES (?x)',
+            workflow.description
+        ).lastrowid
         if cache:
-            for ini in out['inis']:
-                ini['cache'] = 'true'
-        jobs = create_jobs(out['inis'], workflow_id=workflow_id)
-        run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-        if out['success']:
-            out['success']['jobs'] = jobs
-            sap.run_func(out['success'])
-    alljobs.extend(jobs)
-    return alljobs
+            for inis in workflow.all_inis:
+                for ini in inis:
+                    ini['cache'] = 'true'
+        failed = []
+        for inis, success in zip(workflow.all_inis, workflow.successes):
+            jobs = create_jobs(inis, workflow_id=workflow_id)
+            run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
+            failed.extend(job.calc_id for job in jobs if job.exc)
+            if success:
+                success['jobs'] = jobs
+                sap.run_func(success)
+        logs.dbcmd('UPDATE workflow SET failed=?x WHERE id=?x',
+                   ' '.join(failed), workflow_id)
+        wf_ids.append(workflow_id)
+    return wf_ids
 
 
 def version_triple(tag):

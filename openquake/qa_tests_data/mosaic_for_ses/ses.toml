@@ -1,4 +1,5 @@
-[global]
+[workflow]
+description = "building a SES"
 calculation_mode = "event_based"
 ground_motion_fields = false
 number_of_logic_tree_samples = 200

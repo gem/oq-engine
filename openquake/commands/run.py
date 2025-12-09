@@ -140,10 +140,8 @@ def main(job_ini,
                            host=host)
         run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
     else:  # toml
-        jobs = run_workflow(job_ini, 'tag', nodes=nodes, cache=cache)
-        
-    return jobs[0].calc_id
-
+        wf_ids = run_workflow(job_ini, nodes=nodes, cache=cache)
+        logging.info('Created workflow %s', wf_ids)
 
 main.job_ini = dict(help='calculation configuration file '
                     '(or files, space-separated)', nargs='+')

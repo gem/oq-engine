@@ -1,4 +1,4 @@
-[global.global]
+[nested.workflow]
 description = "hazard+risk"
 
 [hazard.Job]

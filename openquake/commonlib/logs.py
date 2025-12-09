@@ -208,6 +208,7 @@ class LogContext:
     Context manager managing the logging functionality
     """
     oqparam = None
+    exc = None
 
     def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, workflow_id=None):
@@ -277,6 +278,7 @@ class LogContext:
         return self
 
     def __exit__(self, etype, exc, tb):
+        self.exc = exc
         if tb:
             if etype is SystemExit:
                 dbcmd('finish', self.calc_id, 'aborted')
