@@ -5,7 +5,7 @@ number_of_logic_tree_samples = 200
 ses_per_logic_tree_path = 50
 minimum_magnitude = 5
 
-[atexit]
+[success]
 func = "openquake.engine.postjobs.build_ses"
 out_file = "rups.hdf5"
 
