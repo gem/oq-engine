@@ -1,5 +1,20 @@
 import re
 
+REGIONS = """\
+Africa
+Caribbean_Central_America
+Central_Asia
+East_Asia
+Europe
+Middle_East
+North_America
+North_Asia
+Oceania
+South_America
+South_Asia
+Southeast_Asia
+"""
+
 # nearly lexicographic order, but with longest names first, to avoid fake
 # matches in the regular expression below; Guinea_Bissau must go before
 # Guinea, Dominican_Republic before Dominica and Nigeria before Niger
