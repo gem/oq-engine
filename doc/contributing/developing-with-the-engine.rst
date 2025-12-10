@@ -99,7 +99,7 @@ programmatically is via the pair ``create_jobs/run_jobs``:
 
 .. code-block:: python
 
-	>> from openquake.engine import engine
+        >> from openquake.engine import engine
         >> jobs = engine.create_jobs(['job_ini'])  # one-element list
         >> engine.run_jobs(jobs)
 
