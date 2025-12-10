@@ -140,9 +140,10 @@ avg_losses:
 base_path:
   INTERNAL
 
-cache_distances:
-  Useful in UCERF calculations.
-  Example: *cache_distances = true*.
+cache:
+  If given, retrieve the result of a previous calculation with the same
+  checksum if possible, otherwise run the calculation normally
+  Example: *cache = true*.
   Default: False
 
 calculation_mode:
@@ -1045,7 +1046,7 @@ class OqParam(valid.ParamSet):
     cholesky_limit = valid.Param(valid.positiveint, 10_000)
     correlation_cutoff = valid.Param(valid.positivefloat, 1E-12)
     siteid = valid.Param(valid.namelist, ())
-    cache_distances = valid.Param(valid.boolean, False)
+    cache = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
     disagg_outputs = valid.Param(valid.disagg_outputs, list(valid.pmf_map))
@@ -1104,7 +1105,7 @@ class OqParam(valid.ParamSet):
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     max_sites_correl = valid.Param(valid.positiveint, 1200)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
-    mosaic_model = valid.Param(valid.three_letters, '')
+    mosaic_model = valid.Param(valid.NoneOr(valid.three_letters), None)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
     minimum_engine_version = valid.Param(valid.version, None)
@@ -2434,10 +2435,12 @@ def to_ini(key, val):
     Converts key, val into .ini format
     """
     if key == 'inputs':
-        *base, _name = pathlib.Path(val.pop('job_ini')).parts
+        *base, _name = pathlib.Path(val['job_ini']).parts
         fnames = []
-        for v in val.values():
-            if isinstance(v, str):
+        for k, v in val.items():
+            if k == 'job_ini':
+                continue
+            elif isinstance(v, str):
                 fnames.append(v)
             elif isinstance(v, list):
                 fnames.extend(v)
@@ -2457,6 +2460,9 @@ def to_ini(key, val):
     elif key in ('reqv_ignore_sources', 'poes', 'quantiles', 'disagg_outputs',
                  'source_id', 'source_nodes', 'soil_intensities'):
         return f"{key} = {' '.join(map(str, val))}"
+    elif key in ('cache', 'concurrent_tasks'):
+        # parameters not affecting the numbers
+        return ''
     else:
         if val is None:
             val = ''

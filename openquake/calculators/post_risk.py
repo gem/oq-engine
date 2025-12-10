@@ -70,7 +70,7 @@ def save_curve_stats(dstore):
         K = 0
     stats = oq.hazard_stats()
     S = len(stats)
-    weights = dstore['weights'][:]
+    weights = base.get_weights(oq, dstore)
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
@@ -434,7 +434,7 @@ def build_reinsurance(dstore, oq, num_events):
     if oq.investigation_time:
         tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
-            tr /= len(dstore['weights'])
+            tr /= len(base.get_weights(oq, dstore))
     events = dstore['events'][:]
     rlz_id = events['rlz_id']
     try:

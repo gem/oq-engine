@@ -29,7 +29,7 @@ from openquake.hazardlib import valid
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base, views
 from openquake.commonlib import dbapi
-from openquake.engine.engine import create_jobs, run_jobs
+from openquake.engine.engine import create_jobs, run_jobs, run_toml
 from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
@@ -76,7 +76,8 @@ def main(job_ini,
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info',
-         nodes: int = 1):
+         nodes: int = 1,
+         cache: valid.boolean = True):
     """
     Run a calculation
     """
@@ -119,15 +120,28 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    dics = [readinput.get_params(ini) for ini in job_ini]
-    for dic in dics:
-        dic.update(params)
-        dic['exports'] = ','.join(exports)
-        if 'job_id' in dic:  # in sensitivity analysis
-            logs.dbcmd('update_job', dic['job_id'],
-                       {'calculation_mode': dic['calculation_mode']})
-    jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name, host=host)
-    run_jobs(jobs, concurrent_jobs=1, nodes=nodes, precalc=not hc)
+    if all(ini.endswith('.ini') for ini in job_ini):
+        mode = 'ini'
+    elif all(ini.endswith('.toml') for ini in job_ini):
+        mode = 'toml'
+    else:
+        raise ValueError(f'You cannot mix .ini and .toml files: {job_ini}')
+    if mode == 'ini':
+        dics = [readinput.get_params(ini) for ini in job_ini]
+        for dic in dics:
+            dic.update(params)
+            if cache:
+                dic['cache'] = 'true'
+            dic['exports'] = ','.join(exports)
+            if 'job_id' in dic:  # in sensitivity analysis
+                logs.dbcmd('update_job', dic['job_id'],
+                           {'calculation_mode': dic['calculation_mode']})
+        jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
+                           host=host)
+        run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
+    else:  # toml
+        jobs = run_toml(job_ini, 'tag', nodes=nodes, cache=cache)
+        
     return jobs[0].calc_id
 
 
@@ -142,3 +156,4 @@ main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
 main.nodes=dict(help='number of worker nodes to start')
+main.cache = "Enable the job cache based on the input files checksum"
