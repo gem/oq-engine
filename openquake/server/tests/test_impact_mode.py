@@ -59,13 +59,7 @@ def check_email(job_id, expected_error):
     #       so email_dir would contain only the files
     #       created to notify about the jobs created in
     #       the test
-    try:
-        email_content = get_email_content(
-            app_msgs_dir, f'Job {job_id} ')
-    except FileNotFoundError:
-        print(f'Email for job {job_id} not found yet...')
-    else:
-        print(email_content)
+    email_content = get_email_content(app_msgs_dir, f'Job {job_id} ')
     if expected_error:
         assert 'failed' in email_content
     else:

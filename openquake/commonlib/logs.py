@@ -22,6 +22,7 @@ import os
 import re
 import getpass
 import logging
+import traceback
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
@@ -34,19 +35,6 @@ LEVELS = {'debug': logging.DEBUG,
           'critical': logging.CRITICAL}
 SIMPLE_TYPES = (str, int, float, bool, datetime, list, tuple, dict, type(None))
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-MODELS = []  # to be populated in get_model
-
-
-def get_model(job_ini):
-    """
-    :returns: the name of the model if job_ini belongs to the mosaic_dir
-    """
-    if not MODELS:  # first time
-        MODELS.extend(readinput.read_mosaic_df(buffer=.1).code)
-    for mod in MODELS:
-        if mod in job_ini:
-            return mod
-    return ''
 
 
 def on_workers(action):
@@ -230,10 +218,6 @@ class LogContext:
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
         self.params = params
-        if 'mosaic_model' not in self.params:
-            # try to infer it from the name of the job.ini file
-            ini = self.params.get('inputs', {}).get('job_ini', '<in-memory>')
-            self.params['mosaic_model'] = get_model(ini)
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         calc_id = int(params.get('job_id', 0))
@@ -294,12 +278,14 @@ class LogContext:
 
     def __exit__(self, etype, exc, tb):
         if tb:
+            tb_str = '\n'.join(traceback.format_tb(tb))
             if etype is SystemExit:
                 dbcmd('finish', self.calc_id, 'aborted')
             else:
                 # remove StreamHandler to avoid logging twice
                 logging.root.removeHandler(self.handlers[-1])
-                logging.exception(f'{etype.__name__}: {exc}')
+                # store the traceback
+                logging.error(f'{tb_str}\n{etype.__name__}: {exc}')
                 dbcmd('finish', self.calc_id, 'failed')
         else:
             dbcmd('finish', self.calc_id, 'complete')

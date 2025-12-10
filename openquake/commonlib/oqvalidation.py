@@ -2435,10 +2435,12 @@ def to_ini(key, val):
     Converts key, val into .ini format
     """
     if key == 'inputs':
-        *base, _name = pathlib.Path(val.pop('job_ini')).parts
+        *base, _name = pathlib.Path(val['job_ini']).parts
         fnames = []
-        for v in val.values():
-            if isinstance(v, str):
+        for k, v in val.items():
+            if k == 'job_ini':
+                continue
+            elif isinstance(v, str):
                 fnames.append(v)
             elif isinstance(v, list):
                 fnames.extend(v)
@@ -2458,6 +2460,9 @@ def to_ini(key, val):
     elif key in ('reqv_ignore_sources', 'poes', 'quantiles', 'disagg_outputs',
                  'source_id', 'source_nodes', 'soil_intensities'):
         return f"{key} = {' '.join(map(str, val))}"
+    elif key in ('cache', 'concurrent_tasks'):
+        # parameters not affecting the numbers
+        return ''
     else:
         if val is None:
             val = ''

@@ -259,12 +259,15 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             attrs['aelo_version'] = self.aelo_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
+            # when save_params has been already called, don't recompute
             attrs['input_size'] = size = self.oqparam.get_input_size()
             attrs['checksum32'] = check = readinput.get_checksum32(
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
-            return logs.dbcmd('add_checksum', self.datastore.calc_id, check)
+            return (logs.dbcmd('add_checksum', self.datastore.calc_id, check),
+                    check)
+        return None, None
 
     def check_precalc(self, precalc_mode):
         """
@@ -309,16 +312,18 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if not self.precalc:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
-            old_job_id = self.save_params(**kw)
+            calc_id = self.datastore.calc_id
+            old_job_id, checksum = self.save_params(**kw)
             if old_job_id and oq.cache and 'pytest' not in sys.argv[0]:
                 logging.info(f"Already calculated, {old_job_id=}")
-                calc_id = self.datastore.calc_id
                 self.datastore = datastore.read(old_job_id)
                 logs.dbcmd("UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
                            self.datastore.filename[:-5], calc_id)  # strip .hdf5
                 expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
                 self.export(kw.get('exports', ''))
                 return self.exported
+            elif checksum:
+                logs.dbcmd("update_job_checksum", calc_id, checksum)
             try:
                 if pre_execute:
                     self.pre_execute()

@@ -274,12 +274,12 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         with Print.patch():
-            cls.calc_id = sap.runline(f'openquake.commands run {job_ini} -c 0')
+            cls.calc_id = sap.runline(f'openquake.commands run {job_ini}')
         cls.job_ini = job_ini
 
     def test_jobs_from_inis(self):
         dic = jobs_from_inis([self.job_ini])
-        self.assertGreater(dic['success'][0], 0)  # already computed
+        self.assertEqual(len(dic['success']), 1)
         self.assertEqual(dic['error'], '')
 
         dic = jobs_from_inis(['/non/existing/job.ini'])
