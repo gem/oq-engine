@@ -174,6 +174,7 @@ Nigeria,NGA
 Niger,NER
 Niue,NIU
 North_Korea,PRK
+North_Macedonia,MKD
 Northern_Mariana_Islands,MNP
 Norway,NOR
 Oman,OMN
