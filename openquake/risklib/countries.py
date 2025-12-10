@@ -222,6 +222,7 @@ Suriname,SUR
 Sweden,SWE
 Switzerland,CHE
 Syria,SYR
+Taiwan,TWN
 Tajikistan,TJK
 Tanzania,TZA
 Thailand,THA
