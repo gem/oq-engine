@@ -241,7 +241,7 @@ Uganda,UGA
 Ukraine,UKR
 United_Arab_Emirates,ARE
 United_Kingdom,GBR
-United_States_of_America,USA
+United_States,USA
 US_Virgin_Islands,VIR
 Uruguay,URY
 Uzbekistan,UZB
