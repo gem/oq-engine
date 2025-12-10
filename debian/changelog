@@ -1,5 +1,4 @@
   [Michele Simionato]
-  * Added a workflow table in the database
   * Extended `oq run` to accept .toml files and to use the job cache
   * Replaced `dbserver.cache` parameter in openquake.cfg with a cache
     parameter in job.ini
