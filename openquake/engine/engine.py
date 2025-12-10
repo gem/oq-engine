@@ -443,11 +443,10 @@ class Workflow:
     and `successes` plus several optional attributes.
     """
     def __init__(self, workflow_toml, dic):
+        vars(self).update(dic)
         self.workflow_dir = os.path.dirname(workflow_toml)
-        self.description = dic['description']
         self.all_inis = []
         self.successes = []
-        self.checkout = dic.get('checkout', {})
 
     def parse(self, ddic):
         for k, dic in ddic.items():
@@ -483,9 +482,11 @@ def read_many(workflows_toml):
             with open(workflow_toml, encoding='utf8') as f:
                 wfdict = toml.load(f)
             if 'nested' in wfdict:
-                wf = Workflow(workflow_toml, wfdict.pop('nested')['workflow'])
+                nested = wfdict.pop('nested')
+                wf = Workflow(workflow_toml, nested['workflow'])
                 for ddic in wfdict.values():
                     wf.parse(ddic)
+                wf.success = nested.get('success', {})
             elif 'workflow' in wfdict:
                 wf = Workflow(workflow_toml, wfdict.pop('workflow'))
                 wf.parse(wfdict)
@@ -522,6 +523,9 @@ def run_workflow(workflows_toml, concurrent_jobs=None, nodes=1,
             if success:
                 success['jobs'] = jobs
                 sap.run_func(success)
+        if hasattr(workflow, 'success'):
+            workflow.success['jobs'] = jobs
+            sap.run_func(workflow.success)
         logs.dbcmd('UPDATE workflow SET failed=?x WHERE id=?x',
                    ' '.join(failed), workflow_id)
         wf_ids.append(workflow_id)
