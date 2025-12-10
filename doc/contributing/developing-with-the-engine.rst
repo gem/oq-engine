@@ -350,7 +350,7 @@ You can use it as in the example below:
 
 Then the CompositeSourceModel object (``csm`` in this example) has a
 method ``get_sources`` to extract the sources. From the sources one
-can directly sample the sources and emulated an event based
+can directly sample the sources and emulate an event based
 calculation or can iterate on the ruptures by calling the
 ``.iter_ruptures`` method. Be warned that in the case of
 MultiFaultSources you will incur in the ``AttributeError: msparams``
@@ -359,7 +359,7 @@ needed only if you plan to call ``.iter_ruptures()``, otherwise you
 can avoid calling it since it is an expensive operation for large
 models, like the USA one.
 
-It is also possible to work one source model realization at the time
+It is also possible to work on one source model realization at the time,
 by specifying the source model realization index in ``csm.get_source(smr)``.
 You can see the source model
 realizations in a calculation with the command `oq show sm_rlzs <calc_id>`.
