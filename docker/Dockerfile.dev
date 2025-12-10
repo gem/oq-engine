@@ -40,7 +40,7 @@ WORKDIR ${HOME}
 RUN mkdir oqdata
 ADD scripts/oq-start.sh ${HOME}
 #
-EXPOSE 8800:8800
+EXPOSE 8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-start.sh"] 
+CMD ["./oq-start.sh"]
