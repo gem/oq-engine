@@ -1105,7 +1105,7 @@ class OqParam(valid.ParamSet):
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     max_sites_correl = valid.Param(valid.positiveint, 1200)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
-    mosaic_model = valid.Param(valid.three_letters, '')
+    mosaic_model = valid.Param(valid.NoneOr(valid.three_letters), None)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
     minimum_engine_version = valid.Param(valid.version, None)

@@ -183,11 +183,17 @@ def fix_hc_id(oq):
     and ses.hdf5 does not exist, generates it from ses.ini
     and replace oq.inputs['rupture_model'] with 'base_path/ses.hdf5'
     """
+    if oq.hazard_calculation_id is None or isinstance(
+            oq.hazard_calculation_id, int):
+        # there is nothing to fix
+        return oq.hazard_calculation_id
     path = os.path.join(oq.base_path, oq.hazard_calculation_id)
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
     elif path.endswith('.ini'):
-        oq.hazard_calculation_id = run_calc(path).datastore.calc_id
+        calc = run_calc(path, cache=oq.cache)
+        oq.hazard_calculation_id = calc.datastore.calc_id
+        return oq.hazard_calculation_id
     else:
         raise NotImplementedError(f'hc={path}')
 
@@ -300,7 +306,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if ct != oq.concurrent_tasks:
                 # save the used concurrent_tasks
                 oq.concurrent_tasks = ct
-            if self.precalc is None:
+            if not self.precalc:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
             old_job_id = self.save_params(**kw)
@@ -801,16 +807,12 @@ class HazardCalculator(BaseCalculator):
     @general.cached_property
     def R(self):
         """
-        :returns: the number of realizations
+        :returns: the number of (collected) realizations
         """
-        if self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk':
+        if (self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk') or (
+                'hazard_curves' in self.oqparam.inputs):
             return 1
-        elif 'weights' in self.datastore:
-            return len(self.datastore['weights'])
-        try:
-            return self.csm.full_lt.get_num_paths()
-        except AttributeError:  # no self.csm
-            return self.datastore['full_lt'].get_num_paths()
+        return len(get_weights(self.oqparam, self.datastore))
 
     def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
@@ -930,9 +932,10 @@ class HazardCalculator(BaseCalculator):
 
     def _read_no_exposure(self, haz_sitecol):
         oq = self.oqparam
-        if oq.hazard_calculation_id:
+        if oq.hazard_calculation_id and (child := readinput.get_site_collection(
+                oq, self.datastore.hdf5)):
+            # associate the child sitecol (if any) to the parent sitecol
             # NB: this is tested in event_based case_27 and case_31
-            child = readinput.get_site_collection(oq, self.datastore.hdf5)
             assoc_dist = (oq.region_grid_spacing * 1.414
                           if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
@@ -1024,7 +1027,8 @@ class HazardCalculator(BaseCalculator):
             if 'assetcol' in parent:
                 check_time_event(oq, parent['assetcol'].occupancy_periods)
             elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
-                raise ValueError('Missing exposure both in hazard and risk!')
+                raise ValueError('Missing exposure both in hazard and risk!'
+                                 f' [hc_id={oq.hazard_calculation_id}]')
             if (oq_hazard.time_event != 'avg' and
                     oq_hazard.time_event != oq.time_event):
                 raise ValueError(
@@ -1815,8 +1819,7 @@ def run_calc(job_ini, **kw):
     with logs.init(job_ini) as log:
         log.params.update(kw)
         oq = log.get_oqparam()
-        if isinstance(oq.hazard_calculation_id, str):
-            fix_hc_id(oq)
+        fix_hc_id(oq)  # relative path to absolute path for ses.hdf5 files
         calc = calculators(oq, log.calc_id)
         calc.run()
         return calc
