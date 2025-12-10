@@ -1,0 +1,2 @@
+ALTER TABLE job ADD COLUMN workflow_id
+REFERENCES job (id) ON DELETE CASCADE;

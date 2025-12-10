@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Extended `oq run` to accept .toml files and to use the job cache
+  * Replaced `dbserver.cache` parameter in openquake.cfg with a cache
+    parameter in job.ini
+  * If the site parameters are more distant than ASSOC_DIST raise an error
+    and not a warning
+  * Added parameter `siteid` in job.ini to specify the `custom_site_id`
+  * Internal: extended baselib.sap to manage command classes
   * Saved memory in ebrisk, now most calculations can be run with 2 GB
     of RAM per core
 
@@ -27,7 +34,6 @@
     with nontrivial weights in the taxonomy mapping
 
   [Michele Simionato]
-  * Added command `oq ses` to generate a merged stochastic event set
   * Extended the global_ses script to accept job.ini files
   * Implemented `oq engine --run job1.ini .. jobN.ini --hc parent.hdf5`
   * Extended `--hc` to accept paths to datastore files

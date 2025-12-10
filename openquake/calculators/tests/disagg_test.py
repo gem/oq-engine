@@ -241,7 +241,8 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_14(self):
         # check non-invertible hazard curve
         with mock.patch('logging.warning') as warn:
-            self.run_calc(case_14.__file__, 'job.ini', calculation_mode='classical')
+            self.run_calc(case_14.__file__, 'job.ini',
+                          calculation_mode='classical')
         self.assertIn('cannot be inverted reliably around poe=0.000404',
                       warn.call_args[0][0])
 

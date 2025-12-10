@@ -74,6 +74,7 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('len', U16)])
 
 ASSOC_DIST = 8  # acceptable distance to associate the site params to the site
+# NB: event_based/case_27 is sensitive to ASSOC_DIST
 USER = getpass.getuser()
 MB = 1024 ** 2
 
@@ -182,11 +183,17 @@ def fix_hc_id(oq):
     and ses.hdf5 does not exist, generates it from ses.ini
     and replace oq.inputs['rupture_model'] with 'base_path/ses.hdf5'
     """
+    if oq.hazard_calculation_id is None or isinstance(
+            oq.hazard_calculation_id, int):
+        # there is nothing to fix
+        return oq.hazard_calculation_id
     path = os.path.join(oq.base_path, oq.hazard_calculation_id)
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
     elif path.endswith('.ini'):
-        oq.hazard_calculation_id = dcache.get(path).calc_id
+        calc = run_calc(path, cache=oq.cache)
+        oq.hazard_calculation_id = calc.datastore.calc_id
+        return oq.hazard_calculation_id
     else:
         raise NotImplementedError(f'hc={path}')
 
@@ -252,12 +259,15 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             attrs['aelo_version'] = self.aelo_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
+            # when save_params has been already called, don't recompute
             attrs['input_size'] = size = self.oqparam.get_input_size()
             attrs['checksum32'] = check = readinput.get_checksum32(
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {check} '
                          f'(total size {general.humansize(size)})')
-            return logs.dbcmd('add_checksum', self.datastore.calc_id, check)
+            return (logs.dbcmd('add_checksum', self.datastore.calc_id, check),
+                    check)
+        return None, None
 
     def check_precalc(self, precalc_mode):
         """
@@ -299,21 +309,21 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if ct != oq.concurrent_tasks:
                 # save the used concurrent_tasks
                 oq.concurrent_tasks = ct
-            if self.precalc is None:
+            if not self.precalc:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
-            old_job_id = self.save_params(**kw)
-            assert config.dbserver.cache in ('on', 'off')
-            if (old_job_id and config.dbserver.cache == 'on' and
-                    not self.test_mode):
+            calc_id = self.datastore.calc_id
+            old_job_id, checksum = self.save_params(**kw)
+            if old_job_id and oq.cache and 'pytest' not in sys.argv[0]:
                 logging.info(f"Already calculated, {old_job_id=}")
-                calc_id = self.datastore.calc_id
                 self.datastore = datastore.read(old_job_id)
                 logs.dbcmd("UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
                            self.datastore.filename[:-5], calc_id)  # strip .hdf5
                 expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
                 self.export(kw.get('exports', ''))
                 return self.exported
+            elif checksum:
+                logs.dbcmd("update_job_checksum", calc_id, checksum)
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -802,16 +812,12 @@ class HazardCalculator(BaseCalculator):
     @general.cached_property
     def R(self):
         """
-        :returns: the number of realizations
+        :returns: the number of (collected) realizations
         """
-        if self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk':
+        if (self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk') or (
+                'hazard_curves' in self.oqparam.inputs):
             return 1
-        elif 'weights' in self.datastore:
-            return len(self.datastore['weights'])
-        try:
-            return self.csm.full_lt.get_num_paths()
-        except AttributeError:  # no self.csm
-            return self.datastore['full_lt'].get_num_paths()
+        return len(get_weights(self.oqparam, self.datastore))
 
     def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
@@ -931,9 +937,10 @@ class HazardCalculator(BaseCalculator):
 
     def _read_no_exposure(self, haz_sitecol):
         oq = self.oqparam
-        if oq.hazard_calculation_id:
+        if oq.hazard_calculation_id and (child := readinput.get_site_collection(
+                oq, self.datastore.hdf5)):
+            # associate the child sitecol (if any) to the parent sitecol
             # NB: this is tested in event_based case_27 and case_31
-            child = readinput.get_site_collection(oq, self.datastore.hdf5)
             assoc_dist = (oq.region_grid_spacing * 1.414
                           if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
@@ -1025,7 +1032,8 @@ class HazardCalculator(BaseCalculator):
             if 'assetcol' in parent:
                 check_time_event(oq, parent['assetcol'].occupancy_periods)
             elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
-                raise ValueError('Missing exposure both in hazard and risk!')
+                raise ValueError('Missing exposure both in hazard and risk!'
+                                 f' [hc_id={oq.hazard_calculation_id}]')
             if (oq_hazard.time_event != 'avg' and
                     oq_hazard.time_event != oq.time_event):
                 raise ValueError(
@@ -1087,10 +1095,11 @@ class HazardCalculator(BaseCalculator):
                     self.sitecol.set_global_params(oq)
                 else:
                     # use the site model parameters
-                    self.sitecol.assoc(sm, assoc_dist)
+                    mode = 'warn' if oq.region_grid_spacing else 'strict'
+                    self.sitecol.assoc(sm, assoc_dist, mode)
                     if 'station_data' in oq.inputs:
                         # the complete sitecol is required
-                        self.sitecol.complete.assoc(sm, assoc_dist)
+                        self.sitecol.complete.assoc(sm, assoc_dist, mode)
 
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5
@@ -1815,8 +1824,7 @@ def run_calc(job_ini, **kw):
     with logs.init(job_ini) as log:
         log.params.update(kw)
         oq = log.get_oqparam()
-        if isinstance(oq.hazard_calculation_id, str):
-            fix_hc_id(oq)
+        fix_hc_id(oq)  # relative path to absolute path for ses.hdf5 files
         calc = calculators(oq, log.calc_id)
         calc.run()
         return calc

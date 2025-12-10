@@ -92,11 +92,7 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
         ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['mosaic_model'] = models[0]
-    if 'siteid' in inputs:
-        params['description'] = 'AELO for ' + inputs['siteid']
-    else:
-        # in aelo_test.py
-        params['description'] += f' ({lon}, {lat})'
+    params['description'] = 'AELO for ' + inputs['siteid']
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['truncation_level'] = '3.'
@@ -130,6 +126,7 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
             ' "SA(1.0)": logscale(0.005, 3.00, 25)}')
     params['site_class'] = inputs.get(
         'site_class', oqvalidation.OqParam.site_class.default)
+    params['siteid'] = inputs['siteid']
     return params
 
 
