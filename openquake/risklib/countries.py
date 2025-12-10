@@ -56,7 +56,7 @@ Burundi,BDI
 Cambodia,KHM
 Cameroon,CMR
 Canada,CAN
-Cape_Verde,CPV
+Cabo_Verde,CPV
 Cayman_Islands,CYM
 Central_African_Republic,CAF
 Chad,TCD
