@@ -137,7 +137,7 @@ class UpgradeManagerTestCase(unittest.TestCase):
 Your database is at version 0000.
 The following scripts can be applied safely:
 https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades/0001-uniq-ruptures.sql
-Click on the links if you want to know what exactly the scripts are doing.'''
+Visit the links if you want to know what exactly the scripts are doing.'''
         self.check_message('''
 >0000-base_schema.sql<
 >0001-uniq-ruptures.sql<''', expected)
@@ -149,7 +149,7 @@ Please note that the following scripts could be slow:
 https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades/0001-slow-uniq-ruptures.sql
 Please note that the following scripts are potentially dangerous and could destroy your data:
 https://github.com/gem/oq-engine/tree/master/openquake/server/db/schema/upgrades/0002-danger-drop-gmf.sql
-Click on the links if you want to know what exactly the scripts are doing.
+Visit the links if you want to know what exactly the scripts are doing.
 Even slow script can be fast if your database is small or the upgrade affects tables that are empty.
 Even dangerous scripts are fine if they affect empty tables or data you are not interested in.'''
         self.check_message('''
