@@ -13,7 +13,7 @@ Oceania
 South_America
 South_Asia
 Southeast_Asia
-"""
+""".split()
 
 # nearly lexicographic order, but with longest names first, to avoid fake
 # matches in the regular expression below; Guinea_Bissau must go before
