@@ -233,7 +233,7 @@ Tokelau,TKL
 Tonga,TON
 Trinidad_and_Tobago,TTO
 Tunisia,TUN
-Turkey,TUR
+Turkiye,TUR
 Turkmenistan,TKM
 Turks_and_Caicos_Islands,TCA
 Tuvalu,TUV
