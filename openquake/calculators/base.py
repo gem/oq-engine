@@ -41,6 +41,7 @@ from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
+from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
     InvalidFile, geo, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
@@ -80,10 +81,16 @@ MB = 1024 ** 2
 
 
 def get_aelo_changelog():
+    """
+    :returns: a DataFrame with columns (AELO_VERSION, DATE, NOTES)
+    """
     dic = collections.defaultdict(list)
     c = configparser.ConfigParser()
-    changelog_path = os.path.join(
-        config.directory.mosaic_dir, 'aelo_changelog.ini')
+    if 'pytest' in sys.argv[0]:
+        mosaic_dir = mosaic.__path__[0]  # qa_tests_data/mosaic
+    else:
+        mosaic_dir = config.directory.mosaic_dir
+    changelog_path = os.path.join(mosaic_dir, 'aelo_changelog.ini')
     c.read(changelog_path)
     for sec in c.sections():
         dic['AELO_VERSION'].append(sec)
