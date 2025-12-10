@@ -183,8 +183,10 @@ def fix_hc_id(oq):
     and ses.hdf5 does not exist, generates it from ses.ini
     and replace oq.inputs['rupture_model'] with 'base_path/ses.hdf5'
     """
-    if isinstance(oq.hazard_calculation_id, int):
-        return  # there is nothing to fix
+    if oq.hazard_calculation_id is None or isinstance(
+            oq.hazard_calculation_id, int):
+        # there is nothing to fix
+        return oq.hazard_calculation_id
     path = os.path.join(oq.base_path, oq.hazard_calculation_id)
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
