@@ -1162,12 +1162,14 @@ def create_impact_job(request, params):
 
     args = ([params], [jobctx], job_owner_email, outputs_uri_web,
             impact_callback)
-    if 'pytest' in sys.argv[0]:
-        # hack for debugging the tests
-        impact.main_web(*args)
-    else:
-        # spawn the Aristotle main process
-        mp.Process(target=impact.main_web, args=args).start()
+    #if 'pytest' in sys.argv[0]:
+    #    # hack for debugging the tests
+    #    # unfortunately it does not work yet because check_email
+    #    # is meant to work with a subprocess
+    #    impact.main_web(*args)
+    #else:
+    # spawn the Aristotle main process
+    mp.Process(target=impact.main_web, args=args).start()
     return response_data
 
 
