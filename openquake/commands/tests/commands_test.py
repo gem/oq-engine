@@ -279,7 +279,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
     def test_jobs_from_inis(self):
         dic = jobs_from_inis([self.job_ini])
-        self.assertGreater(dic['success'][0], 0)  # already computed
+        self.assertEqual(len(dic['success']), 1)
         self.assertEqual(dic['error'], '')
 
         dic = jobs_from_inis(['/non/existing/job.ini'])

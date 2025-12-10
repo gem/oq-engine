@@ -245,6 +245,9 @@ def update(params, items, base_path):
 
 
 def check_params(cp, fname):
+    """
+    Check if the same parameter is defined in multiple sections of the ini file
+    """
     params_sets = [
         set(cp.options(section)) for section in cp.sections()]
     for pair in itertools.combinations(params_sets, 2):

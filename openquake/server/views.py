@@ -24,6 +24,7 @@ import string
 import pickle
 import logging
 import os
+import sys
 import tempfile
 import subprocess
 import traceback
@@ -1159,12 +1160,14 @@ def create_impact_job(request, params):
             ' will be accessible at the following link: %s'
             % (outputs_uri_api, traceback_uri))
 
-    # spawn the Aristotle main process
-    proc = mp.Process(
-        target=impact.main_web,
-        args=([params], [jobctx], job_owner_email, outputs_uri_web,
-              impact_callback))
-    proc.start()
+    args = ([params], [jobctx], job_owner_email, outputs_uri_web,
+            impact_callback)
+    if 'pytest' in sys.argv[0]:
+        # hack for debugging the tests
+        impact.main_web(*args)
+    else:
+        # spawn the Aristotle main process
+        mp.Process(target=impact.main_web, args=args).start()
     return response_data
 
 
