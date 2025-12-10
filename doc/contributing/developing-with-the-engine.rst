@@ -361,8 +361,7 @@ models, like the USA one.
 
 It is also possible to work one source model realization at the time
 by specifying the source model realization index in ``csm.get_source(smr)``.
-The concept of source model realization is explained in the section
-:ref:`Understanding the SES file` and you can see the source model
+You can see the source model
 realizations in a calculation with the command `oq show sm_rlzs <calc_id>`.
 For instance, the demo ``LogicTreeCase1ClassicalPSHA`` has two source
 model realizations as follows::
@@ -372,6 +371,10 @@ model realizations as follows::
  |---------+---------+------------------------+---------+--------|
  | 0       | b1      | ['source_model_1.xml'] | 4       | 0.5000 |
  | 1       | b2      | ['source_model_2.xml'] | 4       | 0.5000 |
+
+In this table ``ordinal`` is the same as the ``smr`` argument in
+``get_sources``. If ``smr`` is not passed all the sources from all
+source model realizations are returned.
 
 Generating ground motion fields from a rupture
 ----------------------------------------------
