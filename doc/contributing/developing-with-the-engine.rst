@@ -95,13 +95,17 @@ Running calculations programmatically
 -------------------------------------
 
 Starting from engine v3.21 the recommended way to run a calculation
-programmatically is via the pair ``create_jobs/run_jobs``::
+programmatically is via the pair ``create_jobs/run_jobs``:
+
+.. code-block:: python
 
 	>> from openquake.engine import engine
         >> jobs = engine.create_jobs(['job_ini'])  # one-element list
         >> engine.run_jobs(jobs)
 
-Then the results can be read from the datastore by using the extract API::
+Then the results can be read from the datastore by using the extract API:
+
+.. code-block:: python
 
 	>> from openquake.commonlib import datastore
 	>> from openquake.calculators.extract import extract
@@ -332,6 +336,42 @@ curves can be extracted::
 If you want to know exactly how ``get_rmap`` works you are invited to
 look at the source code in ``openquake.hazardlib.contexts``.
 
+Reading the hazard sources programmatically
+----------------------------------------------
+
+The engine provides an utility `get_composite_source_model` just for that.
+You can use it as in the example below:
+
+.. code-block:: python
+
+ >> from openquake.commonlib import readinput
+ >> oqparam = readinput.get_oqparam('job.ini')
+ >> csm = readinput.get_composite_source_model(oq)
+
+Then the CompositeSourceModel object (``csm`` in this example) has a
+method ``get_sources`` to extract the sources. From the sources one
+can directly sample the sources and emulated an event based
+calculation or can iterate on the ruptures by calling the
+``.iter_ruptures`` method. Be warned that in the case of
+MultiFaultSources you will incur in the ``AttributeError: msparams``
+which can be solved by calling ``csm.set_msparams()`` first. This is
+needed only if you plan to call ``.iter_ruptures()``, otherwise you
+can avoid calling it since it is an expensive operation for large
+models, like the USA one.
+
+It is also possible to work one source model realization at the time
+by specifying the source model realization index in ``csm.get_source(smr)``.
+The concept of source model realization is explained in the section
+:ref:`Understanding the SES file` and you can see the source model
+realizations in a calculation with the command `oq show sm_rlzs <calc_id>`.
+For instance, the demo ``LogicTreeCase1ClassicalPSHA`` has two source
+model realizations as follows::
+
+ # oq show sm_rlzs
+ | ordinal | lt_path | value                  | samples | weight |
+ |---------+---------+------------------------+---------+--------|
+ | 0       | b1      | ['source_model_1.xml'] | 4       | 0.5000 |
+ | 1       | b2      | ['source_model_2.xml'] | 4       | 0.5000 |
 
 Generating ground motion fields from a rupture
 ----------------------------------------------
