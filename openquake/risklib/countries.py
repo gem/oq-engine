@@ -84,6 +84,7 @@ El_Salvador,SLV
 Equatorial_Guinea,GNQ
 Eritrea,ERI
 Estonia,EST
+Eswatini,SWZ
 Ethiopia,ETH
 Falkland_Islands_(Malvinas),FLK
 Faroe_Islands,FRO
@@ -218,7 +219,6 @@ Spain,ESP
 Sri_Lanka,LKA
 Sudan,SDN
 Suriname,SUR
-Swaziland,SWZ
 Sweden,SWE
 Switzerland,CHE
 Syria,SYR
