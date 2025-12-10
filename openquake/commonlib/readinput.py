@@ -245,6 +245,9 @@ def update(params, items, base_path):
 
 
 def check_params(cp, fname):
+    """
+    Check if the same parameter is defined in multiple sections of the ini file
+    """
     params_sets = [
         set(cp.options(section)) for section in cp.sections()]
     for pair in itertools.combinations(params_sets, 2):
@@ -254,6 +257,17 @@ def check_params(cp, fname):
                 f'{fname}: parameter(s) {params_intersection} is(are) defined'
                 ' in multiple sections')
 
+
+def get_model(job_ini, MODELS=[]):
+    """
+    :returns: the name of the model if job_ini belongs to the mosaic_dir
+    """
+    if not MODELS:  # first time
+        MODELS.extend(read_mosaic_df(buffer=.1).code)
+    for mod in MODELS:
+        if mod in job_ini:
+            return mod
+    return ''
 
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
@@ -309,8 +323,13 @@ def get_params(job_ini, kw={}):
         items = dic.items()
     update(params, items, base_path)
 
+    if 'mosaic_model' not in params:
+        # try to infer it from the name of the job.ini file
+        ini = params.get('inputs', {}).get('job_ini', '<in-memory>')
+        params['mosaic_model'] = get_model(ini)
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
+
     update(params, kw.items(), base_path)  # override on demand
     return params
 
@@ -387,8 +406,8 @@ def get_csv_header(fname, sep=','):
 
 def get_mesh_exp(oqparam, h5=None):
     """
-    Extract the mesh of points to compute from the sites,
-    the sites_csv, the region, the site model, the exposure in this order.
+    Extract the mesh of points from the sites, the sites file, the region,
+    the site model, the exposure in this order.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -677,10 +696,12 @@ def get_site_collection(oqparam, h5=None):
         return h5['sitecol']
     mesh, exp = get_mesh_exp(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
-        if oqparam.calculation_mode != 'preclassical':
+        if (oqparam.hazard_calculation_id is None and
+                oqparam.calculation_mode != 'preclassical'):
             raise InvalidFile(
                 'You are missing sites.csv or site_model.csv in %s'
                 % oqparam.inputs['job_ini'])
+        # a None sitecol is okay in preclassical
         return None
     elif mesh is None:
         # a None sitecol is okay when computing the ruptures only
@@ -1081,9 +1102,9 @@ def get_exposure(oqparam, h5=None):
     with Monitor('reading exposure', measuremem=True, h5=h5):
         if oqparam.impact:
             sm = get_site_model(oq, h5)  # the site model around the rupture
-            h6 = [x.encode('ascii') for x in sorted(set(
-                hex6(sm['lon'], sm['lat'])))]
-            exposure = asset.Exposure.read_around(fnames[0], h6, rupfilter)
+            hexes = sorted(set(hex6(sm['lon'], sm['lat'])))
+            hexes = [h.encode('ascii') for h in hexes]
+            exposure = asset.Exposure.read_around(fnames[0], hexes, rupfilter)
             with hdf5.File(fnames[0]) as f:
                 if 'crm' in f:
                     loss_types = f['crm'].attrs['loss_types']
@@ -1676,21 +1697,12 @@ def _checksum(fnames, checksum=0):
 
 def get_checksum32(oqparam, h5=None):
     """
-    Build an unsigned 32 bit integer from the hazard input files
+    Build an unsigned 32 bit integer from oqparam and the input files
 
     :param oqparam: an OqParam instance
     """
-    checksum = _checksum(oqparam._input_files)
-    hazard_params = []
-    for key, val in sorted(vars(oqparam).items()):
-        if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
-                   'width_of_mfd_bin', 'area_source_discretization',
-                   'random_seed', 'number_of_logic_tree_samples',
-                   'minimum_magnitude', 'source_id', 'sites',
-                   'floating_x_step', 'floating_y_step'):
-            hazard_params.append('%s = %s' % (key, val))
-    data = '\n'.join(hazard_params).encode('utf8')
-    checksum = zlib.adler32(data, checksum)
+    ini = oqparam.to_ini().encode('utf8')
+    checksum = zlib.adler32(ini, _checksum(oqparam._input_files))
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
@@ -1811,8 +1823,7 @@ def jobs_from_inis(inis):
     jids = []
     try:
         for ini in inis:
-            oq = get_oqparam(ini)
-            checksum = get_checksum32(oq)
+            checksum = get_checksum32(get_oqparam(ini))
             jobs = logs.dbcmd('SELECT job_id FROM checksum '
                               'WHERE hazard_checksum=?x', checksum)
             if jobs:
