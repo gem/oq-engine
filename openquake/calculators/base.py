@@ -102,7 +102,6 @@ def get_aelo_changelog():
         lambda x: (x.replace('\n', '<br>').lstrip('<br>')
                    if isinstance(x, str) else x))
     df.columns = df.columns.str.upper()
-    breakpoint()
     return df
 
 
