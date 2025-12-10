@@ -507,10 +507,10 @@ def run_workflow(workflows_toml, concurrent_jobs=None, nodes=1,
     """
     wf_ids = []
     for workflow in read_many(workflows_toml):
-        workflow_id = logs.dbcmd(
-            'INSERT INTO workflow (description) VALUES (?x)',
-            workflow.description
-        ).lastrowid
+        wf = dict(description=workflow.description, base_path='',
+                  calculation_mode='workflow')
+        [wf] = create_jobs([wf])
+        workflow_id = wf.calc_id
         if cache:
             for inis in workflow.all_inis:
                 for ini in inis:

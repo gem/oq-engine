@@ -279,9 +279,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
     def test_jobs_from_inis(self):
         dic = jobs_from_inis([self.job_ini])
-        # TODO: job_ini is already computed,
-        # so I should not get [0] below :-(
-        self.assertEqual(dic['success'], [0])
+        self.assertEqual(len(dic['success']), 1)
         self.assertEqual(dic['error'], '')
 
         dic = jobs_from_inis(['/non/existing/job.ini'])

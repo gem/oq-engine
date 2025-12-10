@@ -70,7 +70,8 @@ CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 OAT OPA'''.split())
 
 TOML = '''\
-[global]
+[workflow]
+description = 'Computing SES'
 calculation_mode = "event_based"
 ground_motion_fields = false
 number_of_logic_tree_samples = {}
@@ -108,8 +109,8 @@ def main(mosaic_dir, out, *,
                             minimum_magnitude,
                             out,
                             '\n'.join(calcs)))
-    jobs = engine.run_workflow([ses_toml], 'global SES')
-    return [datastore.read(job.calc_id).filename for job in jobs]
+    job_ids = engine.run_workflow([ses_toml])
+    return [datastore.read(jid).filename for jid in job_ids]
                     
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'

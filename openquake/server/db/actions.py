@@ -788,7 +788,7 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    log = db("SELECT * FROM log WHERE job_id=?x AND level='ERROR'",
+    log = db("SELECT message FROM log WHERE job_id=?x AND level='ERROR'",
              job_id)
     if not log:
         return []

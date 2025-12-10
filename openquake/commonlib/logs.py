@@ -22,6 +22,7 @@ import os
 import re
 import getpass
 import logging
+import traceback
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
@@ -280,12 +281,14 @@ class LogContext:
     def __exit__(self, etype, exc, tb):
         self.exc = exc
         if tb:
+            tb_str = '\n'.join(traceback.format_tb(tb))
             if etype is SystemExit:
                 dbcmd('finish', self.calc_id, 'aborted')
             else:
                 # remove StreamHandler to avoid logging twice
                 logging.root.removeHandler(self.handlers[-1])
-                logging.exception(f'{etype.__name__}: {exc}')
+                # store the traceback
+                logging.error(f'{tb_str}\n{etype.__name__}: {exc}')
                 dbcmd('finish', self.calc_id, 'failed')
         else:
             dbcmd('finish', self.calc_id, 'complete')
