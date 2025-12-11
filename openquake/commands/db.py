@@ -56,7 +56,7 @@ def main(cmd, args=()):
         sys.exit('You have no permission to run %s' % cmd)
     res = logs.dbcmd(cmd, *convert(args))
     if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
-        print(text_table(res))
+        print(text_table(res, ext='org'))
     else:
         print(res)
 

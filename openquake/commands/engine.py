@@ -98,7 +98,6 @@ def main(
         exports='',
         log_level='info',
         sample_sources=False,
-        tag='',
         nodes: int = 1):
     """
     Run a calculation using the traditional command line API
@@ -168,7 +167,7 @@ def main(
             if log_file is not None else None
         job_inis = [os.path.expanduser(f) for f in run]
         jobs = create_jobs(job_inis, log_level, log_file, user_name,
-                           hc_id or hazard_calculation_id, tag=tag)
+                           hc_id or hazard_calculation_id)
         for job in jobs:
             job.params.update(pars)
             job.params['exports'] = exports
@@ -198,8 +197,7 @@ def main(
         hc_id = get_job_id(list_outputs, user_name)
         for line in logs.dbcmd('list_outputs', hc_id):
             safeprint(line)
-        if tag:  # hack that we may remove in the future
-            logs.dbcmd('add_tag_to_job', hc_id, tag)
+
     elif show_log is not None:
         hc_id = get_job_id(show_log, user_name)
         for line in logs.dbcmd('get_log', hc_id):
@@ -283,5 +281,4 @@ main.log_level = dict(help='Defaults to "info"',
                       choices=['debug', 'info', 'warn', 'error', 'critical'])
 main.sample_sources = dict(abbrev='--ss',
                            help="Sample fraction in the range 0..1")
-main.tag = 'Tag to attach to the job(s)'
 main.nodes = 'Number of SLURM nodes (if applicable)'

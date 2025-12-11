@@ -88,7 +88,7 @@ def set_status(db, job_id, status):
 
 def create_job(db, datadir, calculation_mode='to be set',
                description='just created', user_name=None,
-               hc_id=None, host=None):
+               hc_id=None, host=None, workflow_id=None):
     """
     Create job for the given user, return it.
 
@@ -106,6 +106,8 @@ def create_job(db, datadir, calculation_mode='to be set',
         ID of the parent job (if any)
     :param host:
         machine where the calculation is running (master)
+    :param workflow_id:
+        ID of the associated workflow, if any
     :returns:
         the job ID
     """
@@ -113,7 +115,8 @@ def create_job(db, datadir, calculation_mode='to be set',
     job = dict(is_running=1, description=description,
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
-               ds_calc_dir=datadir, hazard_calculation_id=hc_id, host=host)
+               ds_calc_dir=datadir, hazard_calculation_id=hc_id,
+               host=host, workflow_id=workflow_id)
     job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
                 ).lastrowid
     db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',

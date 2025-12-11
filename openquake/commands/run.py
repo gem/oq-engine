@@ -16,20 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import logging
 import os.path
 import socket
 import cProfile
-import warnings
 import getpass
-from pandas.errors import SettingWithCopyWarning
 
 from openquake.baselib import performance, general, config
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base, views
 from openquake.commonlib import dbapi
-from openquake.engine.engine import create_jobs, run_jobs, run_toml
+from openquake.engine.engine import create_jobs, run_jobs, run_workflow
 from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
@@ -77,12 +76,10 @@ def main(job_ini,
          exports: valid.export_formats = '',
          loglevel='info',
          nodes: int = 1,
-         cache: valid.boolean = True):
+         workflow_id=None):
     """
-    Run a calculation
+    Run a set of calculations or a workflow
     """
-    # os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    warnings.filterwarnings("error", category=SettingWithCopyWarning)
     user_name = getpass.getuser()
 
     # automatically create the user db if missing
@@ -130,8 +127,6 @@ def main(job_ini,
         dics = [readinput.get_params(ini) for ini in job_ini]
         for dic in dics:
             dic.update(params)
-            if cache:
-                dic['cache'] = 'true'
             dic['exports'] = ','.join(exports)
             if 'job_id' in dic:  # in sensitivity analysis
                 logs.dbcmd('update_job', dic['job_id'],
@@ -139,11 +134,12 @@ def main(job_ini,
         jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
                            host=host)
         run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
+        return jobs[0].calc_id  # used in commands_test
     else:  # toml
-        jobs = run_toml(job_ini, 'tag', nodes=nodes, cache=cache)
-        
-    return jobs[0].calc_id
-
+        if not workflow_id:
+            sys.exit('You must pass a workflow ID or a workflow description')
+        run_workflow(workflow_id, job_ini, nodes=nodes)
+        return workflow_id
 
 main.job_ini = dict(help='calculation configuration file '
                     '(or files, space-separated)', nargs='+')
@@ -156,4 +152,4 @@ main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
 main.nodes=dict(help='number of worker nodes to start')
-main.cache = "Enable the job cache based on the input files checksum"
+main.workflow_id = "ID of a previous workflow or description of a new workflow"
