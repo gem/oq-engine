@@ -21,9 +21,7 @@ import logging
 import os.path
 import socket
 import cProfile
-import warnings
 import getpass
-from pandas.errors import SettingWithCopyWarning
 
 from openquake.baselib import performance, general, config
 from openquake.hazardlib import valid
@@ -136,10 +134,12 @@ def main(job_ini,
         jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
                            host=host)
         run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
+        return jobs[0].calc_id  # used in commands_test
     else:  # toml
         if not workflow_id:
             sys.exit('You must pass a workflow ID or a workflow description')
         run_workflow(workflow_id, job_ini, nodes=nodes)
+        return workflow_id
 
 main.job_ini = dict(help='calculation configuration file '
                     '(or files, space-separated)', nargs='+')
