@@ -44,8 +44,21 @@ jobs:
           docker image ls
           #Test LOCKDOWN
           echo "Test WEBUI HEADLESS"
-          echo "docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:nightly"
-          docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=nightly -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:nightly
+          cat > ./.env << EOF
+          LOCKDOWN=True
+          OQ_ADMIN_LOGIN=example
+          OQ_ADMIN_PASSWORD=example
+          OQ_ADMIN_EMAIL="login@example.com"
+          EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+          EMAIL_HOST=smtp.gmail.com
+          EMAIL_PORT=587
+          EMAIL_USE_TLS=True
+          EMAIL_HOST_USER=admin@reply.com
+          EMAIL_HOST_PASSWORD=polhjuih@
+          EMAIL_SUPPORT=noreply@reply.com
+          EOF
+          echo " docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly "
+          docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z 127.0.0.1 8800; do
            sleep 5 # wait for 5 seconds before check again
@@ -72,8 +85,21 @@ jobs:
           docker image ls
           #Test LOCKDOWN
           echo "Test WEBUI HEADLESS"
-          echo "docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:nightly "
-          docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=nightly -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:nightly
+          cat > ./.env << EOF
+          LOCKDOWN=True
+          OQ_ADMIN_LOGIN=example
+          OQ_ADMIN_PASSWORD=example
+          OQ_ADMIN_EMAIL="login@example.com"
+          EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+          EMAIL_HOST=smtp.gmail.com
+          EMAIL_PORT=587
+          EMAIL_USE_TLS=True
+          EMAIL_HOST_USER=admin@reply.com
+          EMAIL_HOST_PASSWORD=polhjuih@
+          EMAIL_SUPPORT=noreply@reply.com
+          EOF
+          echo " docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly "
+          docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z 127.0.0.1 8800; do
            sleep 5 # wait for 5 seconds before check again
