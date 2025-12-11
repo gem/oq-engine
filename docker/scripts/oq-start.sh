@@ -39,7 +39,8 @@ if [ "$LOCKDOWN" = "True" ]; then
     do
         cp "$f" "${f%.default.tmpl}"
     done
-    python3 -m openquake.server.manage migrate
+	cd ${oq_basedir}/openquake/server
+    python3 manage.py migrate
     if [ -n "$OQ_ADMIN_LOGIN" ]; then
         echo "from django.contrib.auth.models import User; User.objects.create_superuser('${OQ_ADMIN_LOGIN}', '${OQ_ADMIN_EMAIL}', '${OQ_ADMIN_PASSWORD}')" | oq shell 2>&1 >/dev/null
     else
