@@ -70,14 +70,14 @@ CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
 OAT OPA'''.split())
 
 TOML = '''\
-[global]
+[workflow]
 calculation_mode = "event_based"
 ground_motion_fields = false
 number_of_logic_tree_samples = {}
 ses_per_logic_tree_path = {}
 minimum_magnitude = {}
 
-[atexit]
+[success]
 func = "openquake.engine.postjobs.build_ses"
 out_file = "{}"
 {}
@@ -108,9 +108,9 @@ def main(mosaic_dir, out, *,
                             minimum_magnitude,
                             out,
                             '\n'.join(calcs)))
-    jobs = engine.run_toml([ses_toml], 'global SES')
-    return [datastore.read(job.calc_id).filename for job in jobs]
-                    
+
+    return engine.run_workflow('Global SES', [ses_toml])
+
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
 main.number_of_logic_tree_samples = 'Number of samples'

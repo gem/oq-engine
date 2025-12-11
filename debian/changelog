@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an output "Average Losses By Taxonomy"
   * Extended `oq run` to accept .toml files and to use the job cache
   * Replaced `dbserver.cache` parameter in openquake.cfg with a cache
     parameter in job.ini
@@ -15,7 +16,6 @@
   * Improved the default configuration of the TOOLS_ONLY application mode
 
   [Michele Simionato]
-  * Added a `--tag` option to `oq engine --run` to tag jobs
   * Supported site-specific gsim logic trees via `site_labels`
   * Added `source_info` to the global SES file
   * Optimized `_save_events` for large calculations over 100,000 events

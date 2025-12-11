@@ -25,6 +25,7 @@ from unittest import skipIf
 import unittest.mock as mock
 from contextlib import redirect_stdout
 import shutil
+import pathlib
 import zipfile
 import subprocess
 import tempfile
@@ -40,7 +41,7 @@ from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import get_params, jobs_from_inis
-from openquake.engine.engine import create_jobs, run_jobs
+from openquake.engine.engine import create_jobs, run_jobs, run_workflow
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data import mosaic
@@ -52,7 +53,7 @@ from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import (
     case_1 as eb_case_1, case_5, case_16, case_21)
 from openquake.qa_tests_data.event_based_risk import (
-    case_master, case_01 as case_eb)
+    case_master, case_01 as case_eb, case_4a)
 from openquake.qa_tests_data.scenario import case_25
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
@@ -273,17 +274,21 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         with Print.patch():
-            cls.calc_id = sap.runline(f'openquake.commands run {job_ini} -c 0')
+            cls.calc_id = sap.runline(f'openquake.commands run {job_ini}')
         cls.job_ini = job_ini
 
     def test_jobs_from_inis(self):
         dic = jobs_from_inis([self.job_ini])
-        self.assertGreater(dic['success'][0], 0)  # already computed
+        self.assertEqual(len(dic['success']), 1)
         self.assertEqual(dic['error'], '')
 
         dic = jobs_from_inis(['/non/existing/job.ini'])
         self.assertEqual(dic['success'], [])
         self.assertIn('File not found', dic['error'])
+    
+    def test_workflow(self):
+        base = pathlib.Path(case_4a.__file__).parent
+        run_workflow('test_workflow', [base / 'jobs.toml'])
 
     def test_show_calc(self):
         with Print.patch() as p:
@@ -637,7 +642,7 @@ Source Loss Table'''.splitlines())
             with redirect_stdout(io.StringIO()) as out:
                 sap.runline('openquake.commands shakemap2gmfs usp0006dv8 '
                             'site_model_uniform_grid_rock.csv -n 1 -t 0 '
-                            f'--spatialcorr no -c no')
+                            '--spatialcorr no -c no')
             got = out.getvalue()
             assert f'gmv={exp}' in got
 
