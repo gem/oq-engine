@@ -237,6 +237,20 @@ def export_avg_losses(ekey, dstore):
     return writer.getsaved()
 
 
+@export.add(('avg_losses_by', 'csv'))
+def export_avg_losses_by(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for tagname in dstore[ekey[0]]:
+        df = dstore.read_df('avg_losses_by/' + tagname)
+        dest = dstore.build_fname('avg_losses_by_', tagname, 'csv')
+        writer.save(df, dest)
+    return writer.getsaved()
+
+
 @export.add(('src_loss_table', 'csv'))
 def export_src_loss_table(ekey, dstore):
     """

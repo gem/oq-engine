@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added an output "Average Losses By Taxonomy"
   * Extended `oq run` to accept .toml files and to use the job cache
   * Replaced `dbserver.cache` parameter in openquake.cfg with a cache
     parameter in job.ini
