@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import logging
 import os.path
 import socket
@@ -79,10 +80,8 @@ def main(job_ini,
          nodes: int = 1,
          workflow_id=None):
     """
-    Run a calculation
+    Run a set of calculations or a workflow
     """
-    # os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    warnings.filterwarnings("error", category=SettingWithCopyWarning)
     user_name = getpass.getuser()
 
     # automatically create the user db if missing
@@ -138,7 +137,8 @@ def main(job_ini,
                            host=host)
         run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
     else:  # toml
-        assert workflow_id
+        if not workflow_id:
+            sys.exit('You must pass a workflow ID or a workflow description')
         run_workflow(workflow_id, job_ini, nodes=nodes)
 
 main.job_ini = dict(help='calculation configuration file '

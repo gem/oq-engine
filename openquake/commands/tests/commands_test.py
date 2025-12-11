@@ -286,9 +286,9 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertEqual(dic['success'], [])
         self.assertIn('File not found', dic['error'])
     
-    def test_toml(self):
+    def test_workflow(self):
         base = pathlib.Path(case_4a.__file__).parent
-        run_workflow([base / 'jobs.toml'], 'haz+rsk')
+        run_workflow('test_workflow', [base / 'jobs.toml'])
 
     def test_show_calc(self):
         with Print.patch() as p:
