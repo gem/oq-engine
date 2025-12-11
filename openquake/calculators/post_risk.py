@@ -616,7 +616,7 @@ class PostRiskCalculator(base.RiskCalculator):
     def save_avg_losses_by(self, tagnames):
         """
         Aggregate the mean avg_losses by one tagname at the time and create
-        datagroups avg_losses_by/<tag>.
+        datagroups avg_losses_by/<tagname>.
         """
         aggtags = set()
         for aggby in self.oqparam.aggregate_by:
@@ -640,7 +640,7 @@ class PostRiskCalculator(base.RiskCalculator):
         if not ok:  # the hazard is to small
             return
         oq = self.oqparam
-        if oq.avg_losses and oq.collect_rlzs:
+        if 'avg_losses-rlzs' in self.datastore and oq.collect_rlzs:
             # in case of the global risk model create additional datasets
             tagnames = ['taxonomy']
             if 'MACRO_TAXONOMY' in self.assetcol.tagcol.tagnames:
