@@ -531,6 +531,8 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
         ).set_index('name')
         todo = names
         dstore['oqparam'] = OqParam(**wfdic)
+        dstore['workflow_toml'] = numpy.array(
+            [open(w).read() for w in workflows_toml])
         dstore.create_df('workflow', wf_df.reset_index())
     else:
         # continue an existing workflow
@@ -561,6 +563,7 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
                 else:
                     status_dset[idx] = 'complete'
             if failed == 0 and wf.success:
+                wf.success['dstore'] = dstore
                 wf.success['jobs'] = jobs
                 sap.run_func(wf.success)
         dt = (time.time() - t0) / 3600.
