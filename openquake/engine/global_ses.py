@@ -71,7 +71,6 @@ OAT OPA'''.split())
 
 TOML = '''\
 [workflow]
-description = 'Computing SES'
 calculation_mode = "event_based"
 ground_motion_fields = false
 number_of_logic_tree_samples = {}
@@ -109,9 +108,9 @@ def main(mosaic_dir, out, *,
                             minimum_magnitude,
                             out,
                             '\n'.join(calcs)))
-    job_ids = engine.run_workflow([ses_toml])
-    return [datastore.read(jid).filename for jid in job_ids]
-                    
+
+    return engine.run_workflow('Global SES', [ses_toml])
+
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
 main.number_of_logic_tree_samples = 'Number of samples'

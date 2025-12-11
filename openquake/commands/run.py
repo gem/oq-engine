@@ -77,7 +77,7 @@ def main(job_ini,
          exports: valid.export_formats = '',
          loglevel='info',
          nodes: int = 1,
-         cache: valid.boolean = True):
+         workflow_id=None):
     """
     Run a calculation
     """
@@ -130,8 +130,6 @@ def main(job_ini,
         dics = [readinput.get_params(ini) for ini in job_ini]
         for dic in dics:
             dic.update(params)
-            if cache:
-                dic['cache'] = 'true'
             dic['exports'] = ','.join(exports)
             if 'job_id' in dic:  # in sensitivity analysis
                 logs.dbcmd('update_job', dic['job_id'],
@@ -140,8 +138,8 @@ def main(job_ini,
                            host=host)
         run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
     else:  # toml
-        wf_ids = run_workflow(job_ini, nodes=nodes, cache=cache)
-        logging.info('Created workflow %s', wf_ids)
+        assert workflow_id
+        run_workflow(workflow_id, job_ini, nodes=nodes)
 
 main.job_ini = dict(help='calculation configuration file '
                     '(or files, space-separated)', nargs='+')
@@ -154,4 +152,4 @@ main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
 main.nodes=dict(help='number of worker nodes to start')
-main.cache = "Enable the job cache based on the input files checksum"
+main.workflow_id = "ID of a previous workflow or description of a new workflow"

@@ -34,11 +34,12 @@ import functools
 from unittest import mock
 from os.path import getsize
 from datetime import datetime, timezone
+import requests
 import psutil
 import toml
 import h5py
 import numpy
-import requests
+import pandas
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -47,10 +48,10 @@ except ImportError:
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
-    parallel, general, config, slurm, sap, workerpool as w)
+    hdf5, parallel, general, config, slurm, sap, workerpool as w)
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, logs
+from openquake.commonlib import readinput, datastore, logs
 from openquake.calculators import base
 from openquake.calculators.base import expose_outputs
 
@@ -434,31 +435,26 @@ OVERRIDABLE_PARAMS = (
     'mosaic_model')
 
 
-class Workflow:
-    """
-    A workflow object must be instantiated by the function
-    read_many.
-
-    It has thre mandatory attributes, `description`, `all_inis`
-    and `successes` plus several optional attributes.
-    """
-    def __init__(self, workflow_toml, dic):
+class _Workflow:
+    # workflow objects are instantiated by the function `read_many`
+    def __init__(self, workflow_toml, dic, ddic, prefix=''):
         vars(self).update(dic)
         self.workflow_dir = os.path.dirname(workflow_toml)
-        self.all_inis = []
-        self.successes = []
-
-    def parse(self, ddic):
+        inis = []
+        names = []
+        self.success = {}
         for k, dic in ddic.items():
-            assert k == 'success' or k[0].isupper(), k
+            assert len(k) <= 20, k
             assert isinstance(dic, dict), dic
             for key, val in dic.items():
                 if isinstance(val, str) and val.endswith(
                         ('.ini', '.hdf5', '.sqlite')):
                     dic[key] = os.path.join(self.workflow_dir, val)
-        self.successes.append(ddic.pop('success', {}))
-        inis = []
-        for dic in ddic.values():
+        for k, dic in ddic.items():
+            if k == 'success':
+                self.success = ddic['success']
+                continue
+            assert k[0].isupper(), k
             params = readinput.get_params(dic['ini'])
             for param in OVERRIDABLE_PARAMS:
                 val = dic.get(param, getattr(self, param, None))
@@ -466,7 +462,17 @@ class Workflow:
                     params[param] = str(val)
             OqParam(**params).validate()
             inis.append(params)
-        self.all_inis.append(inis)
+            names.append(prefix + k)
+        check_unique(names, workflow_toml)
+        self.inis = numpy.array(inis)
+        self.names = numpy.array(names)
+
+
+def check_unique(names, workflow_toml):
+    uni, cnt = numpy.unique(names, return_counts=1)
+    if (cnt > 1).any():
+        raise ValueError(f'There are duplicate job names in {workflow_toml}: '
+                         f'{uni[cnt > 1]}')
 
 
 def read_many(workflows_toml):
@@ -483,53 +489,83 @@ def read_many(workflows_toml):
                 wfdict = toml.load(f)
             if 'nested' in wfdict:
                 nested = wfdict.pop('nested')
-                wf = Workflow(workflow_toml, nested['workflow'])
-                for ddic in wfdict.values():
-                    wf.parse(ddic)
-                wf.success = nested.get('success', {})
+                for prefix, ddic in wfdict.items():
+                    wf = _Workflow(workflow_toml, nested['workflow'], ddic, prefix)
+                    out.append(wf)
             elif 'workflow' in wfdict:
-                wf = Workflow(workflow_toml, wfdict.pop('workflow'))
-                wf.parse(wfdict)
+                wf = _Workflow(workflow_toml, wfdict.pop('workflow'), wfdict)
+                out.append(wf)
             else:
                 raise InvalidFile('missing [workflow] or [nested.workflow]')
         except Exception as exc:
             exc.args = (workflow_toml,) + exc.args
             raise exc
-        out.append(wf)
     return out
         
 
-def run_workflow(workflows_toml, concurrent_jobs=None, nodes=1,
-             sbatch=False, notify_to=None, cache=True):
+def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
+                 sbatch=False, notify_to=None, cache=True):
     """
     Run sequentially multiple batches of calculations specified by
     workflow files.
     """
-    wf_ids = []
-    for workflow in read_many(workflows_toml):
-        wfdic = dict(description=workflow.description, base_path='',
-                  calculation_mode='workflow')
-        [wf] = create_jobs([wfdic])
-        workflow_id = wf.calc_id
-        if cache:
-            for inis in workflow.all_inis:
-                for ini in inis:
-                    ini['cache'] = 'true'
-        failed = []
-        for inis, success in zip(workflow.all_inis, workflow.successes):
-            jobs = create_jobs(inis, workflow_id=workflow_id)
+    t0 = time.time()
+    workflows = read_many(workflows_toml)
+    names = []
+    for wf in workflows:
+        names.extend(wf.names)
+    n = len(names)
+    check_unique(names, workflows_toml)
+    wfdic = dict(description=workflow,
+                 base_path=os.path.dirname(workflows_toml[0]),
+                 calculation_mode='workflow')
+    try:
+        workflow_id = int(workflow)
+    except ValueError:
+        # create a new workflow
+        [wfctx] = create_jobs([wfdic])
+        workflow_id = wfctx.calc_id
+        dstore = datastore.read(wfctx.calc_id, 'w')
+        wf_df = pandas.DataFrame(
+            dict(name=names, calc_id=[0]*n, status=['created']*n)
+        ).set_index('name')
+        todo = names
+        dstore['oqparam'] = OqParam(**wfdic)
+        dstore.create_df('workflow', wf_df.reset_index())
+    else:
+        # continue an existing workflow
+        dstore = datastore.read(workflow_id)
+        wfctx = logs.init(wfdic)
+        wf_df = dstore.read_df('workflow', 'name')  # (name, job_id, status)
+        todo = wf_df[wf_df.status != 'complete'].index
+
+    name2idx = {name: i for i, name in enumerate(names)}
+    calc_dset = dstore['workflow/calc_id']
+    status_dset = dstore['workflow/status']
+    with wfctx, dstore:
+        for wf in workflows:
+            mask = [name in todo for name in wf.names]
+            if sum(mask) == 0:
+                logging.info(f'Already computed {wf.names}')
+                continue
+            jobs = create_jobs(wf.inis[mask], workflow_id=workflow_id)
             run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-            failed.extend(job.calc_id for job in jobs if job.exc)
-            if success:
-                success['jobs'] = jobs
-                sap.run_func(success)
-        if hasattr(workflow, 'success'):
-            workflow.success['jobs'] = jobs
-            sap.run_func(workflow.success)
-        logs.dbcmd('UPDATE workflow SET failed=?x WHERE id=?x',
-                   ' '.join(failed), workflow_id)
-        wf_ids.append(workflow_id)
-    return wf_ids
+            failed = 0
+            for job, name in zip(jobs, wf.names[mask]):
+                job.name = name
+                idx = name2idx[name]
+                calc_dset[idx] = job.calc_id
+                if job.exc:
+                    status_dset[idx] = 'failed'
+                    failed += 1
+                else:
+                    status_dset[idx] = 'complete'
+            if failed == 0 and wf.success:
+                wf.success['jobs'] = jobs
+                sap.run_func(wf.success)
+        dt = (time.time() - t0) / 3600.
+        logging.info(f'Finished workflow {workflow_id:_d} in {dt:.2} hours')
+    return workflow_id
 
 
 def version_triple(tag):

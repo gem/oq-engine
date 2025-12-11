@@ -906,7 +906,8 @@ ALL_CALCULATORS = ['classical_risk',
                    'classical_bcr',
                    'preclassical',
                    'event_based_damage',
-                   'scenario_damage']
+                   'scenario_damage',
+                   'workflow']
 
 COST_TYPES = [
     'structural', 'nonstructural', 'contents', 'business_interruption']
