@@ -2460,8 +2460,8 @@ def to_ini(key, val):
     elif key in ('reqv_ignore_sources', 'poes', 'quantiles', 'disagg_outputs',
                  'source_id', 'source_nodes', 'soil_intensities'):
         return f"{key} = {' '.join(map(str, val))}"
-    elif key in ('cache', 'concurrent_tasks'):
-        # parameters not affecting the numbers
+    elif key  == 'cache':
+        # parameter not affecting the numbers
         return ''
     else:
         if val is None:
