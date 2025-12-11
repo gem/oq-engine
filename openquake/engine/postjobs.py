@@ -48,12 +48,20 @@ def _export_import(job, output_type, dstore):
     # export the CSV files associated to the output type from the
     # calculation and import them in the workflow datastore
     with datastore.read(job.calc_id) as job_ds:
+        oq = job_ds['oqparam']
+        aggby = set()
+        for agg in oq.aggregate_by:
+            aggby.update(agg)
+        str_fields = ['loss_type', 'taxonomy'] + sorted(aggby)
         job_ds.export_dir = config.directory.custom_tmp or tempfile.gettempdir()
         for fname in export.export((output_type, 'csv'), job_ds):
-            dstore.import_csv(fname, extra={'country': job.name})
-            os.remove(fname)
+            table = os.path.basename(fname).rsplit('_', 1)[0]
+            # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
+            dstore.import_csv(fname, table, str_fields, {'job': job.name})
+            os.remove(fname)  # remove only if the import succeeded
 
 
+# tested in test_workflow
 def import_risk(dstore, jobs, out_types='aggexp_tags aggrisk avg_losses_by aggcurves'.
                 split()):
     """

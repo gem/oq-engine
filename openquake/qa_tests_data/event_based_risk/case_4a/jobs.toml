@@ -14,3 +14,6 @@ out_file = "ses.hdf5"
 [risk.Job]
 ini = "job_risk.ini"
 hazard_calculation_id = "ses.hdf5"
+
+[risk.success]
+func = "openquake.engine.postjobs.import_risk"
