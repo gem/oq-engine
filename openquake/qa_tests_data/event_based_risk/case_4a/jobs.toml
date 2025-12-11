@@ -1,4 +1,4 @@
-[nested.workflow]
+[multi.workflow]
 description = "hazard+risk"
 
 [hazard.Job]

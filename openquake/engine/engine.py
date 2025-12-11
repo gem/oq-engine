@@ -487,16 +487,16 @@ def read_many(workflows_toml):
         try:
             with open(workflow_toml, encoding='utf8') as f:
                 wfdict = toml.load(f)
-            if 'nested' in wfdict:
-                nested = wfdict.pop('nested')
+            if 'multi' in wfdict:
+                multi = wfdict.pop('multi')
                 for prefix, ddic in wfdict.items():
-                    wf = _Workflow(workflow_toml, nested['workflow'], ddic, prefix)
+                    wf = _Workflow(workflow_toml, multi['workflow'], ddic, prefix)
                     out.append(wf)
             elif 'workflow' in wfdict:
                 wf = _Workflow(workflow_toml, wfdict.pop('workflow'), wfdict)
                 out.append(wf)
             else:
-                raise InvalidFile('missing [workflow] or [nested.workflow]')
+                raise InvalidFile('missing [workflow] or [multi.workflow]')
         except Exception as exc:
             exc.args = (workflow_toml,) + exc.args
             raise exc
