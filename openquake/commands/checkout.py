@@ -26,6 +26,8 @@ def main(workflow_toml):
     """
     for workflow in engine.read_many([workflow_toml]):
         for repo, tag in workflow.checkout.items():
-            git(os.path.join(workflow.workflow_dir, repo), ['checkout', tag])
+            repo_dir = os.path.join(workflow.workflow_dir, repo)
+            git(repo_dir, ['clean', '-f'])
+            git(repo_dir, ['reset', '--hard', tag])
 
 main.workflow_toml = "TOML file associated to a workflow"
