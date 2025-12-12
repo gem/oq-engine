@@ -85,9 +85,12 @@ def ghm(mosaic_dir):
     return save(mosaic_dir, 'GHM.toml', '\n'.join(lst))
 
 
-def grm(mosaic_dir):
+def grm(mosaic_dir, number_of_logic_tree_samples: int=2000,
+        ses_per_logic_tree_path: int=50):
     "Build GRM.toml"
     haz = ['[multi.workflow]']
+    haz.append(f'{number_of_logic_tree_samples=}')
+    haz.append(f'{ses_per_logic_tree_path=}')
     add_checkout(haz, MODELS)
     risk = []
     add_checkout(risk, REGIONS + ['Exposure', 'Vulnerability'])
@@ -103,6 +106,9 @@ def grm(mosaic_dir):
                     if country in MODELS:
                         haz.append(f'[{region}.{country}]')
                         haz.append(f'ini = "{region}/Jobs/{fname}"')
+                        if country in ('JPN', 'KOR'):
+                            # here the investigation_time is 50
+                            haz.append('ses_per_logic_tree_path = 1')
                 else:
                     risk.append(f'[.{country2code[country]}]')
                     risk.append(f'ini = "{region}/Jobs/{fname}"')
