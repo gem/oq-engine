@@ -334,6 +334,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             try:
                 if pre_execute:
                     self.pre_execute()
+                if os.environ.get('OQ_CHECK_INPUT'):
+                    # do not execute the calculation
+                    return {}
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
@@ -393,6 +396,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         of output files.
         """
 
+    # TODO: remove this when we will remove the multi_peril calculator
     def gzip_inputs(self):
         """
         Gzipping the inputs and saving them in the datastore
@@ -1730,6 +1734,8 @@ def read_parent_sitecol(oq, dstore):
     """
     :returns: the hazard site collection in the parent calculation
     """
+    if oq.hazard_calculation_id == '<fake>.ini':  # set by oq check_input
+        return readinput.get_site_collection(oq, dstore.hdf5)
     with datastore.read(oq.hazard_calculation_id) as parent:
         if 'sitecol' in parent:
             haz_sitecol = parent['sitecol'].complete

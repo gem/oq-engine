@@ -55,17 +55,6 @@ def get_boundaries_file(mosaic_dir, other_dir):
     raise FileNotFoundError('ModelBoundaries')
 
 
-@functools.lru_cache
-def get_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
-    """
-    :returns: a DataFrame with the mosaic geometries used in AELO
-    """
-    path = get_boundaries_file(mosaic_dir, os.path.dirname(mosaic.__file__))
-    logging.info(f'Reading {path}')
-    df = readinput.read_geometries(path, 'name', buffer)
-    return df
-
-
 def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     """
     :param inputs:
@@ -78,7 +67,7 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
-    mosaic_df = get_mosaic_df(buffer=0)
+    mosaic_df = readinput.read_mosaic_df(buffer=0)
     lonlats = valid.coordinates(inputs['sites'])
     models = geo.utils.geolocate(lonlats, mosaic_df, exclude)
     if len(set(models)) > 1:
