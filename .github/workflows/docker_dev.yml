@@ -42,10 +42,10 @@ jobs:
         run: |
           docker build --build-arg oq_branch=master -t openquake/engine:nightly -f docker/Dockerfile.dev docker
           docker image ls
-          #Test LOCKDOWN
+          # Test authentication
           echo "Test WEBUI HEADLESS"
           cat > ./.env << EOF
-          LOCKDOWN=True
+          OQ_APPLICATION_MODE=RESTRICTED
           OQ_ADMIN_LOGIN=example
           OQ_ADMIN_PASSWORD=example
           OQ_ADMIN_EMAIL="login@example.com"
@@ -84,10 +84,10 @@ jobs:
         run: |
           docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.dev docker
           docker image ls
-          #Test LOCKDOWN
+          # Test authentication
           echo "Test WEBUI HEADLESS"
           cat > ./.env << EOF
-          LOCKDOWN=True
+          OQ_APPLICATION_MODE=RESTRICTED
           OQ_ADMIN_LOGIN=example
           OQ_ADMIN_PASSWORD=example
           OQ_ADMIN_EMAIL="login@example.com"
