@@ -329,7 +329,6 @@ def notify_job_complete(job_id, notify_to, exc=None):
 
 
 def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
-    t0 = time.time()
     dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
@@ -560,11 +559,9 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
             for job, name in zip(jobs, wf.names[mask]):
                 idx = name2idx[name]
                 calc_dset[idx] = job.calc_id
-                if job.exc:
-                    status_dset[idx] = 'failed'
+                status_dset[idx] =  status = job.get_job().status
+                if status == 'failed':
                     failed += 1
-                else:
-                    status_dset[idx] = 'complete'
             if failed == 0 and wf.success:
                 wf.success['dstore'] = dstore
                 wf.success['calcs'] = [j.calc_id for j in jobs]

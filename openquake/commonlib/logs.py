@@ -209,7 +209,6 @@ class LogContext:
     Context manager managing the logging functionality
     """
     oqparam = None
-    exc = None
 
     def __init__(self, params, log_level='info', log_file=None,
                  user_name=None, hc_id=None, host=None, workflow_id=None):
@@ -279,16 +278,15 @@ class LogContext:
         return self
 
     def __exit__(self, etype, exc, tb):
-        self.exc = exc
         if tb:
-            tb_str = '\n'.join(traceback.format_tb(tb))
+            tb_str = ''.join(traceback.format_tb(tb))  # newlines are included
             if etype is SystemExit:
                 dbcmd('finish', self.calc_id, 'aborted')
             else:
                 # remove StreamHandler to avoid logging twice
                 logging.root.removeHandler(self.handlers[-1])
                 # store the traceback
-                logging.error(f'{tb_str}\n{etype.__name__}: {exc}')
+                logging.critical(f'{tb_str}{etype.__name__}: {exc}')
                 dbcmd('finish', self.calc_id, 'failed')
         else:
             dbcmd('finish', self.calc_id, 'complete')
