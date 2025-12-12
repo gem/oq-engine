@@ -439,6 +439,8 @@ class _Workflow:
     # workflow objects are instantiated by the function `read_many`
     def __init__(self, workflow_toml, dic, ddic, prefix=''):
         vars(self).update(dic)
+        if not hasattr(self, 'checkout'):
+            self.checkout = {}
         self.workflow_dir = os.path.dirname(workflow_toml)
         inis = []
         names = []

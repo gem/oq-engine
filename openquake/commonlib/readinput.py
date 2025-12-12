@@ -258,12 +258,11 @@ def check_params(cp, fname):
                 ' in multiple sections')
 
 
-def get_model(job_ini, MODELS=[]):
+def get_model(job_ini):
     """
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
-    if not MODELS:  # first time
-        MODELS.extend(read_mosaic_df(buffer=.1).code)
+    from openquake.qa_tests_data.mosaic.workflow import MODELS  # FIXME: ugly
     for mod in MODELS:
         if mod in job_ini:
             return mod
@@ -1763,7 +1762,7 @@ def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
         if not os.path.exists(mosaic_boundaries_file):
             mosaic_boundaries_file = os.path.join(
                 os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
-    print(f'Reading{mosaic_boundaries_file}')
+    print(f'Reading {mosaic_boundaries_file}')
     return read_geometries(mosaic_boundaries_file, 'name', buffer)
 
 
