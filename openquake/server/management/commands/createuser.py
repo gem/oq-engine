@@ -73,7 +73,8 @@ class Command(BaseCommand):
         if User.objects.filter(username=username).exists():
             logger.error(f'The username "{username}" is already taken!')
             exit(1)
-        logger.info(f'Creating normal user: {username=}, {email=}, {level=}')
+        logger.info(f'Creating user: {username=}, {email=}, {level=}, {is_staff=},'
+                    f' {is_superuser=}')
         user = User.objects.create_user(
             username, password=password, email=email)
         user.is_staff = is_staff
@@ -101,14 +102,14 @@ class Command(BaseCommand):
             if ('django_pam.auth.backends.PAMBackend' in
                     settings.AUTHENTICATION_BACKENDS):
                 subject_template_name = \
-                    'registration/normal_user_creation_email_subject.txt.default.tmpl'
+                    'registration/user_creation_email_subject.txt.default.tmpl'
                 email_template_name = \
-                    'registration/normal_user_creation_email_content.txt.default.tmpl'
+                    'registration/user_creation_email_content.txt.default.tmpl'
             else:
                 subject_template_name = \
-                    'registration/normal_user_creation_email_subject.txt'
+                    'registration/user_creation_email_subject.txt'
                 email_template_name = \
-                    'registration/normal_user_creation_email_content.txt'
+                    'registration/user_creation_email_content.txt'
             form.save(
                 domain_override=(settings.SERVER_NAME
                                  if settings.USE_REVERSE_PROXY else None),

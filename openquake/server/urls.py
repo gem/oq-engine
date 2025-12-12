@@ -140,24 +140,24 @@ if settings.APPLICATION_MODE != 'TOOLS_ONLY':
                 'password_reset_email_content.txt.default.tmpl'
             password_reset_email_subject_fname = \
                 'password_reset_email_subject.txt.default.tmpl'
-            normal_user_creation_email_content_fname = \
-                'normal_user_creation_email_content.txt.default.tmpl'
-            normal_user_creation_email_subject_fname = \
-                'normal_user_creation_email_subject.txt.default.tmpl'
+            user_creation_email_content_fname = \
+                'user_creation_email_content.txt.default.tmpl'
+            user_creation_email_subject_fname = \
+                'user_creation_email_subject.txt.default.tmpl'
         else:
             password_reset_email_content_fname = 'password_reset_email_content.txt'
             password_reset_email_subject_fname = 'password_reset_email_subject.txt'
-            normal_user_creation_email_content_fname = \
-                'normal_user_creation_email_content.txt'
-            normal_user_creation_email_subject_fname = \
-                'normal_user_creation_email_subject.txt'
+            user_creation_email_content_fname = \
+                'user_creation_email_content.txt'
+            user_creation_email_subject_fname = \
+                'user_creation_email_subject.txt'
         # NOTE: checking here (when starting the webui with authentication enabled)
         # also the existance of actualized files used when creating a new user
         for registration_template_fname in (
                 password_reset_email_content_fname,
                 password_reset_email_subject_fname,
-                normal_user_creation_email_content_fname,
-                normal_user_creation_email_subject_fname):
+                user_creation_email_content_fname,
+                user_creation_email_subject_fname):
             registration_template_path = os.path.join(
                 registration_templates_dir, registration_template_fname)
             assert os.path.isfile(registration_template_path), (
