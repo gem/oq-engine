@@ -62,6 +62,7 @@ jobs:
           docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z 127.0.0.1 8800; do
+           echo "Still waiting WEBUI up on port 8800...."
            sleep 5 # wait for 5 seconds before check again
           done
           sleep 1
