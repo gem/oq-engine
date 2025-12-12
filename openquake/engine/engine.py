@@ -521,7 +521,8 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
     check_unique(names, workflows_toml)
     wfdic = dict(description=workflow,
                  base_path=os.path.dirname(workflows_toml[0]),
-                 calculation_mode='workflow')
+                 calculation_mode='workflow',
+                 relevant=False)
     try:
         workflow_id = int(workflow)
     except ValueError:

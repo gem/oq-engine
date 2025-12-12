@@ -60,7 +60,7 @@ def _export_import(name, calc_id, output_type, dstore):
             table = os.path.basename(fname).rsplit('_', 1)[0]
             # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
             logging.info(f'Importing {table} for {name}')
-            dstore.import_csv(fname, table, str_fields, {'job': name})
+            dstore.import_csv(fname, table, str_fields, {'calc': name})
             os.remove(fname)  # remove only if the import succeeded
 
 

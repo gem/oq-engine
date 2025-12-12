@@ -60,6 +60,18 @@ def reset_is_running(db):
        "WHERE is_running=1 OR status='executing'")
 
 
+def keep(db, workflow_id):
+    """
+    Set relevant to true and drop all irrelevant workflows
+    """
+    cursor = db("UPDATE job SET relevant=true "
+                "WHERE calculation_mode='workflow' AND id=?x", workflow_id)
+    if cursor.rowcount:
+        cursor = db("DELETE FROM job WHERE calculation_mode='workflow' "
+                    "AND relevant=0", workflow_id)
+    return cursor.rowcount
+
+
 def set_status(db, job_id, status):
     """
     Set the status 'created', 'executing', 'complete', 'failed', 'aborted'
@@ -111,12 +123,13 @@ def create_job(db, datadir, calculation_mode='to be set',
     :returns:
         the job ID
     """
-    # NB: is_running=1 is needed to make views_test.py happy on Jenkins
+    # NB: is_running=1 is needed to make views_test.py happy
     job = dict(is_running=1, description=description,
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
                ds_calc_dir=datadir, hazard_calculation_id=hc_id,
-               host=host, workflow_id=workflow_id)
+               host=host, workflow_id=workflow_id,
+               relevant=calculation_mode != 'workflow')
     job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
                 ).lastrowid
     db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
