@@ -36,6 +36,7 @@ def save(mosaic_dir, name, toml):
 def add_checkout(lst, models):
     for mod in models:
         lst.append(f'checkout.{mod} = "master"')
+    lst.append('')
 
 
 def get_aelo_sites(site_file):
@@ -78,9 +79,9 @@ def ghm(mosaic_dir):
     add_checkout(lst, MODELS)
     for mod in MODELS:
         lst.append(f'[{mod}]\nini = "{mod}/in/job_vs30.ini"')
-    lst.append('[success]')
-    lst.append('func = "openquake.mbt.build_map"')
-    lst.append('out_file = "global_hazard_map.svg"')
+    lst.append('\n[success]')
+    lst.append('func = "openquake.engine.postjobs.import_outputs"')
+    lst.append('out_types = ["hcurves", "hmaps", "uhs"]')
     return save(mosaic_dir, 'GHM.toml', '\n'.join(lst))
 
 
@@ -107,12 +108,12 @@ def grm(mosaic_dir):
                     risk.append(f'ini = "{region}/Jobs/{fname}"')
                     risk.append(f'hazard_calculation_id = "{region}.hdf5"')
                     num_countries += 1
-        haz.append(f'[{region}.success]')
+        haz.append(f'\n[{region}.success]')
         haz.append('func = "openquake.engine.postjobs.build_ses"')
         haz.append(f'out_file = "{region}.hdf5"')
         haz.append('')
         risk.append('')
-    risk.append('[success]')
+    risk.append('\n[success]')
     risk.append('func = "openquake.engine.postjobs.import_risk"')
     print(f'Found {num_countries=}')
     return save(mosaic_dir, 'GRM.toml', '\n'.join(haz + risk))
