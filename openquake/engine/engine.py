@@ -527,6 +527,7 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
         [wfctx] = create_jobs([wfdic])
         workflow_id = wfctx.calc_id
         dstore = datastore.read(wfctx.calc_id, 'w')
+        dstore['oqparam'] = OqParam(**wfdic)
         wf_df = pandas.DataFrame(
             dict(name=names, calc_id=[0]*n, status=['created']*n)
         ).set_index('name')
@@ -555,7 +556,6 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
             run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
             failed = 0
             for job, name in zip(jobs, wf.names[mask]):
-                job.name = name
                 idx = name2idx[name]
                 calc_dset[idx] = job.calc_id
                 if job.exc:
@@ -565,7 +565,7 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
                     status_dset[idx] = 'complete'
             if failed == 0 and wf.success:
                 wf.success['dstore'] = dstore
-                wf.success['jobs'] = jobs
+                wf.success['calcs'] = [j.calc_id for j in jobs]
                 sap.run_func(wf.success)
         dt = (time.time() - t0) / 3600.
         logging.info(f'Finished workflow {workflow_id:_d} in {dt:.2} hours')
