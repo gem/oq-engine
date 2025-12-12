@@ -21,6 +21,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04]
         python-version: ["3.11", "3.12"]
+        engine-branch: ["master", "engine-3.23", "engine-3.24"]
     steps:
       - name: Set up Python  ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -30,13 +31,13 @@ jobs:
         run: |
           set -x
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-          python install.py user --version=master --venv $HOME/gh-venv
+          python install.py user --version=${{ engine-branch }} --venv $HOME/gh-venv-${{ engine-branch }}
         if: github.event.inputs.git-ref == ''
       - name: Install OQ (Custom Ref)
         run: |
           set -x
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-          python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv
+          python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv_custom
         if: github.event.inputs.git-ref != ''
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
