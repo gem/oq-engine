@@ -1,3 +1,6 @@
+  [Amirhossein Mohammadi]
+  * Added Mohammadi2023Turkiye ML-based GSIM for Turkey.  
+  
   [Michele Simionato]
   * Added command `oq db keep <workflow_id>`
   * Added command `oq checkout workflow.toml`
