@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import subprocess
 from openquake.baselib import sap
 
@@ -24,7 +25,11 @@ def git(repodir, cmd):
     A thin wrapper over git. It has plenty of limitations but it is
     enough for the purpose of fetching and checking out specific tags.
     """
-    subprocess.run(['git'] + cmd, cwd=repodir)
+    cmds = ['git'] + cmd
+    proc = subprocess.run(cmds, cwd=repodir)
+    if proc.returncode:
+        sys.exit('Error in: {}'.format(' '.join(cmds)))
+
 git.repodir = 'git repository'
 git.cmd = dict(help='git subcommand', nargs='+')
 
