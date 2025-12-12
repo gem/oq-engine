@@ -15,7 +15,8 @@ on:
     - cron: "0 4 * * *"
 
 jobs:
-  webUI_and_Calc_${{ matrix.engine-branch}}:
+  webUI_and_Calc:
+    name: OS ${{ matrix.os }} OQ ${{ matrix.engine-branch }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
