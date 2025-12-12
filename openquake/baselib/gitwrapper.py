@@ -24,8 +24,7 @@ def git(repodir, cmd):
     A thin wrapper over git. It has plenty of limitations but it is
     enough for the purpose of fetching and checking out specific tags.
     """
-    print(['git'] + cmd)
-    #subprocess.run(['git'] + cmd, cwd=repodir)
+    subprocess.run(['git'] + cmd, cwd=repodir)
 git.repodir = 'git repository'
 git.cmd = dict(help='git subcommand', nargs='+')
 
