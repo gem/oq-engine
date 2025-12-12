@@ -110,7 +110,7 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int=2000,
                             # here the investigation_time is 50
                             haz.append('ses_per_logic_tree_path = 1')
                 else:
-                    risk.append(f'[.{country2code[country]}]')
+                    risk.append(f'[risk.{country2code[country]}]')
                     risk.append(f'ini = "{region}/Jobs/{fname}"')
                     risk.append(f'hazard_calculation_id = "{region}.hdf5"')
                     num_countries += 1
