@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Create a normal user'
+    help = 'Create a user of any kind'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -29,6 +29,16 @@ class Command(BaseCommand):
             '--password', type=str,
             help=('The password that will be assigned to the user'
                   ' (if not specified, a random password will be generated)'))
+        parser.add_argument(
+            '--staff',
+            action='store_true',
+            help='Set the "is_staff" flag to True'
+        )
+        parser.add_argument(
+            '--superuser',
+            action='store_true',
+            help='Set the "is_superuser" flag to True'
+        )
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
             '--email',
@@ -50,6 +60,8 @@ class Command(BaseCommand):
         level = kwargs['level']
         send_email_notification = kwargs['send_email_notification']
         password = kwargs.get('password')
+        is_staff = kwargs['staff']
+        is_superuser = kwargs['superuser']
         if password is None:
             # secure password, like '4x]>@;4)'
             password = ''.join((
@@ -64,6 +76,8 @@ class Command(BaseCommand):
         logger.info(f'Creating normal user: {username=}, {email=}, {level=}')
         user = User.objects.create_user(
             username, password=password, email=email)
+        user.is_staff = is_staff
+        user.is_superuser = is_superuser
         user.save()
         profile = user.profile
         profile.level = level
