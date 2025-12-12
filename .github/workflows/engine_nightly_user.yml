@@ -12,13 +12,14 @@ on:
         required: false
         default: false
   schedule:
-    - cron: "35 4,14 * * *"
+    - cron: "00 4,15 * * *"
 
 jobs:
   webUI_and_Calc:
     name: OS ${{ matrix.os }} OQ ${{ matrix.engine-branch }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-24.04]
         python-version: ["3.11", "3.12"]
@@ -46,7 +47,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
       - name: Test WebUI and run https calculation
         run: |
-          source $HOME/gh-venv/bin/activate
+          source $HOME/gh-venv-${{ matrix.engine-branch }}/bin/activate
           set -x
           oq engine --upgrade-db
           oq --version
@@ -67,3 +68,28 @@ jobs:
           # Run a calcs using https
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
           curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
+        if: github.event.inputs.git-ref == ''
+      - name: Test WebUI and run https calculation
+        run: |
+          source $HOME/gh-venv_custom/bin/activate
+          set -x
+          oq engine --upgrade-db
+          oq --version
+          # START WEBUI
+          oq webui start 127.0.0.1:8800 -s &
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+            sleep 5 # wait for 1/10 of the second before check again
+          done
+          echo "Test WebUI with curl "
+          sleep 1
+          # Perform migration after setup local_settings
+          curl --fail -L -I -X GET http://127.0.0.1:8800
+          # Run all demos          
+          cd $HOME/gh-venv/
+          curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/master/bin/run-demos.sh
+          bash ./run-demos.sh demos
+          # Run a calcs using https
+          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+          curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
+        if: github.event.inputs.git-ref != ''
