@@ -68,7 +68,7 @@ def keep(db, workflow_id):
                 "WHERE calculation_mode='workflow' AND id=?x", workflow_id)
     if cursor.rowcount:
         cursor = db("DELETE FROM job WHERE calculation_mode='workflow' "
-                    "AND relevant=0", workflow_id)
+                    "AND NOT relevant", workflow_id)
     return cursor.rowcount
 
 
