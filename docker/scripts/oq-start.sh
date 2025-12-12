@@ -32,8 +32,7 @@ do
     sleep 1
 done
 
-if [ "$LOCKDOWN" = "True" ]; then
-    echo "LOCKDOWN = True" > $HOME/local_settings.py
+if [ "$OQ_APPLICATION_MODE" = "RESTRICTED" ]; then
     oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
     for f in $(ls ${oq_basedir}/openquake/server/templates/registration/*.default.tmpl)
     do

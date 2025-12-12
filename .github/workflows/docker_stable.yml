@@ -43,10 +43,10 @@ jobs:
           docker image ls
       - name: Test headless mode and run calcs on single docker
         run: |
-          #Test LOCKDOWN
+          # Test authentication
           echo "Test WEBUI HEADLESS"
-          echo "docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest "
-          docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest
+          echo "docker run --name openquake -p 127.0.0.1:8800:8800 -e OQ_APPLICATION_MODE=RESTRICTED -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest "
+          docker run --name openquake -p 127.0.0.1:8800:8800 -e OQ_APPLICATION_MODE=RESTRICTED -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z 127.0.0.1 8800; do
            sleep 5 # wait for 5 seconds before check again

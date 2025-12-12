@@ -112,7 +112,7 @@ jobs:
          cd /__w/oq-engine/oq-engine/
          cd openquake/server
          cat > local_settings.py << EOF
-         LOCKDOWN = True
+         OQ_APPLICATION_MODE = RESTRICTED
          #
          WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
          EOF
