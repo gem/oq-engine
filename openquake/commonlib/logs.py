@@ -286,7 +286,7 @@ class LogContext:
                 # remove StreamHandler to avoid logging twice
                 logging.root.removeHandler(self.handlers[-1])
                 # store the traceback
-                logging.critical(f'{tb_str}{etype.__name__}: {exc}')
+                logging.error(f'{tb_str}{etype.__name__}: {exc}')
                 dbcmd('finish', self.calc_id, 'failed')
         else:
             dbcmd('finish', self.calc_id, 'complete')
