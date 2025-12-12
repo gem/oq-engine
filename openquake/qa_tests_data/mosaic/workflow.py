@@ -1,6 +1,9 @@
 import os
+import pandas
 from openquake.baselib import sap
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.risklib.countries import REGIONS, country2code
+from openquake.commonlib.readinput import read_mosaic_df
 
 MODELS = sorted('''
 ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
@@ -35,13 +38,36 @@ def add_checkout(lst, models):
         lst.append(f'checkout.{mod} = "master"')
 
 
+def get_aelo_sites(site_file):
+    sites_df = pandas.read_csv(site_file)  # header ID,Latitude,Longitude
+    lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
+    mosaic_df = read_mosaic_df(0.0)
+    sites_df['model'] = geolocate(lonlats, mosaic_df)
+    sites = {}
+    siteid = {}
+    for model, df in sites_df.groupby('model'):
+        sites[model] = ', '.join(
+            f'{lon} {lat}' for lon, lat in zip(df.Longitude, df.Latitude))
+        siteid[model] = ', '.join(map(str, df.ID))
+    return sites, siteid
+
+
 def aelo(mosaic_dir):
     "Build AELO.toml"
+    site_file = os.path.join(mosaic_dir, 'merged_sites.csv')
+    assert os.path.exists(site_file), site_file
+    sites, siteid = get_aelo_sites(site_file)
     lst = ['[workflow]']
     models = [mod for mod in MODELS if mod not in {'USA', 'ALS', 'HAW'}]
     add_checkout(lst, models)
     for mod in models:
+        if mod == 'CND':
+            mod = 'CAN'
+        elif mod in ('OAT', 'OPA'):
+            continue
         lst.append(f'[{mod}]\nini = "{mod}/in/job_vs30.ini"')
+        lst.append(f'siteid = "{siteid[mod]}"')
+        lst.append(f'sites = "{sites[mod]}"')
     return save(mosaic_dir, 'AELO.toml', '\n'.join(lst))
 
 

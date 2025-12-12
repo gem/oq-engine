@@ -19,25 +19,10 @@ import os
 import logging
 from unittest import mock
 
-from openquake.baselib import performance
-from openquake.commonlib import logs
-from openquake.calculators import base
 from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # noqa
 from openquake.risklib.asset import Exposure
 from openquake.engine import engine
-
-def check_input(ini, monitor=performance.Monitor()):
-    with logs.init(ini) as log:
-        cmode = log.params['calculation_mode']
-        if 'risk' in cmode or 'damage' in cmode:
-            log.params['hazard_calculation_id'] = '<fake>.ini'
-        oq = log.get_oqparam()
-        logging.info('Running oq check_input %s', oq.inputs['job_ini'])
-        calc = base.calculators(oq, log.calc_id)
-        with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
-            calc.read_inputs()
-        logging.info('%s is correct', oq.inputs['job_ini'])
 
 
 def main(fnames):
@@ -46,6 +31,8 @@ def main(fnames):
     """
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
+    inis = []
+    tomls = []
     for fname in fnames:
         if fname.endswith('.xml'):
             node = nrml.to_python(fname)
@@ -56,10 +43,13 @@ def main(fnames):
             else:
                 logging.info('Checked %s', fname)
         elif fname.endswith(('.ini', '.zip')):
-            check_input(fname)
+            inis.append(fname)
         elif fname.endswith('.toml'):
-            for workflow in engine.read_many([fname]):
-                for params in workflow.inis:
-                    check_input(params)
+            tomls.append(fname)
+    with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
+        if inis:
+            engine.run_jobs(engine.create_jobs(inis))
+        elif tomls:
+            engine.run_workflow("check_input", tomls)
 
 main.fnames = dict(help='File names to check', nargs='+')

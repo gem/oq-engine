@@ -367,6 +367,12 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
 
+    if os.environ.get('OQ_CHECK_INPUT'):
+        cmode = job_ini['calculation_mode']
+        if 'risk' in cmode or 'damage' in cmode or 'bcr' in cmode:
+            # avoid excessive checks in risk calculations
+            job_ini['hazard_calculation_id'] = '<fake>.ini'
+
     re = os.environ.get('OQ_REDUCE')  # debugging facility
     if is_fraction(re):
         # reduce the imtls to the first imt

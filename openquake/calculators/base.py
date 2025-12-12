@@ -334,6 +334,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             try:
                 if pre_execute:
                     self.pre_execute()
+                if os.environ.get('OQ_CHECK_INPUT'):
+                    # do not execute the calculation
+                    return {}
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
