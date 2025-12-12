@@ -490,7 +490,8 @@ def read_many(workflows_toml):
             if 'multi' in wfdict:
                 multi = wfdict.pop('multi')
                 for prefix, ddic in wfdict.items():
-                    wf = _Workflow(workflow_toml, multi['workflow'], ddic, prefix)
+                    wf = _Workflow(workflow_toml, multi['workflow'],
+                                   ddic, prefix)
                     out.append(wf)
             elif 'workflow' in wfdict:
                 wf = _Workflow(workflow_toml, wfdict.pop('workflow'), wfdict)

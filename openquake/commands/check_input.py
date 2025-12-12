@@ -16,62 +16,50 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import sys
 import logging
 from unittest import mock
-from openquake.risklib.asset import Exposure
-from openquake.commonlib import logs, readinput
+
+from openquake.baselib import performance
+from openquake.commonlib import logs
 from openquake.calculators import base
 from openquake.hazardlib import nrml
 from openquake.risklib import read_nrml  # noqa
+from openquake.risklib.asset import Exposure
+from openquake.engine import engine
+
+def check_input(ini, monitor=performance.Monitor()):
+    with logs.init(ini) as log:
+        cmode = log.params['calculation_mode']
+        if 'risk' in cmode or 'damage' in cmode:
+            log.params['hazard_calculation_id'] = '<fake>.ini'
+        oq = log.get_oqparam()
+        logging.info('Running oq check_input %s', oq.inputs['job_ini'])
+        calc = base.calculators(oq, log.calc_id)
+        with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
+            calc.read_inputs()
+        logging.info('%s is correct', oq.inputs['job_ini'])
 
 
-def main(job_ini_or_zip_or_nrmls):
+def main(fnames):
     """
     Check the validity of job.ini files, job.zip files and .xml files.
-    NB: `oq check_input job_haz.ini job_risk.ini` is special-cased so
-    that the risk files are checked before the hazard files.
     """
     if os.environ.get('OQ_DISTRIBUTE') not in ('no', 'processpool'):
         os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    all_inis = all(f.endswith('.ini') for f in job_ini_or_zip_or_nrmls)
-    if all_inis:  # the typical case is job_haz.ini + job_risk.ini
-        dic = {}
-        for ini in job_ini_or_zip_or_nrmls:
-            for key, val in readinput.get_params(ini).items():
-                if key == 'inputs' and key in dic:
-                    dic[key].update(val)
-                else:  # the last wins
-                    dic[key] = val
-        with logs.init('job', dic) as log:
-            logging.info('Running oq check_input %s',
-                         ' '.join(job_ini_or_zip_or_nrmls))
-            calc = base.calculators(log.get_oqparam(), log.calc_id)
-            base.BaseCalculator.gzip_inputs = lambda self: None  # disable
-            with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
-                calc.read_inputs()
-        return
+    for fname in fnames:
+        if fname.endswith('.xml'):
+            node = nrml.to_python(fname)
+            if node.tag.endswith('exposureModel'):
+                err = Exposure.check(fname)
+                if err:
+                    logging.warning(err)
+            else:
+                logging.info('Checked %s', fname)
+        elif fname.endswith(('.ini', '.zip')):
+            check_input(fname)
+        elif fname.endswith('.toml'):
+            for workflow in engine.read_many([fname]):
+                for params in workflow.inis:
+                    check_input(params)
 
-    for job_ini_or_zip_or_nrml in job_ini_or_zip_or_nrmls:
-        if job_ini_or_zip_or_nrml.endswith('.xml'):
-            try:
-                node = nrml.to_python(job_ini_or_zip_or_nrml)
-                if node.tag.endswith('exposureModel'):
-                    err = Exposure.check(job_ini_or_zip_or_nrml)
-                    if err:
-                        logging.warning(err)
-                else:
-                    logging.info('Checked %s', job_ini_or_zip_or_nrml)
-            except Exception as exc:
-                sys.exit(exc)
-        else:  # .zip
-            with logs.init('job', job_ini_or_zip_or_nrml) as log:
-                path = os.path.abspath(job_ini_or_zip_or_nrml)
-                logging.info('Running oq check_input %s', path)
-                calc = base.calculators(log.get_oqparam(), log.calc_id)
-                base.BaseCalculator.gzip_inputs = lambda self: None  # disable
-                with mock.patch.dict(os.environ, {'OQ_CHECK_INPUT': '1'}):
-                    calc.read_inputs()
-
-
-main.job_ini_or_zip_or_nrmls = dict(help='File names to check', nargs='+')
+main.fnames = dict(help='File names to check', nargs='+')
