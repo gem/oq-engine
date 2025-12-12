@@ -296,19 +296,8 @@ if SUPPRESS_PERMISSION_DENIED_WARNINGS:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-if APPLICATION_MODE not in ('PUBLIC',):
-    if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
-        CONTEXT_PROCESSORS.insert(
-            0, 'django.template.context_processors.request')
-        TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
-    # add installed_apps for cookie-consent
-    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
-                'openquake.server.user_profile', 'cookie_consent',):
-        if app not in INSTALLED_APPS:
-            INSTALLED_APPS += (app,)
-    COOKIE_CONSENT_NAME = "cookie_consent"
-    COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
-    COOKIE_CONSENT_LOG_ENABLED = False
+if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
+    LOCKDOWN = True
 
 if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     if APPLICATION_MODE == 'ARISTOTLE':
@@ -322,9 +311,6 @@ if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
     EMAIL_FILE_PATH = os.path.join(
         config.directory.custom_tmp or tempfile.gettempdir(),
         'app-messages')
-
-if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
-    LOCKDOWN = True
 
 STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
 
@@ -341,6 +327,19 @@ if LOCKDOWN:
     EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
     EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
+
+    if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
+        CONTEXT_PROCESSORS.insert(
+            0, 'django.template.context_processors.request')
+        TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
+    # add installed_apps for cookie-consent
+    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
+                'openquake.server.user_profile', 'cookie_consent',):
+        if app not in INSTALLED_APPS:
+            INSTALLED_APPS += (app,)
+    COOKIE_CONSENT_NAME = "cookie_consent"
+    COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
+    COOKIE_CONSENT_LOG_ENABLED = False
 
     if 'django.contrib.auth.context_processors.auth' not in CONTEXT_PROCESSORS:
         CONTEXT_PROCESSORS.insert(
