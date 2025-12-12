@@ -1753,14 +1753,14 @@ def read_cities(fname, lon_name, lat_name, label_name):
     return data
 
 
-def read_mosaic_df(buffer):
+def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir or
+                   os.path.dirname(mosaic.__file__)):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """
     mosaic_boundaries_file = config.directory.mosaic_boundaries_file
     if not mosaic_boundaries_file:
-        mosaic_boundaries_file = os.path.join(
-            os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+        mosaic_boundaries_file = os.path.join(mosaic_dir, 'mosaic.gpkg')
     return read_geometries(mosaic_boundaries_file, 'name', buffer)
 
 
