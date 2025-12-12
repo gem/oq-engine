@@ -20,14 +20,18 @@ from openquake.baselib.gitwrapper import git
 from openquake.engine import engine
 
 
-def main(workflow_toml):
+def main(workflow_toml, hard=False):
     """
     Check out the repositories listed in the checkout dictionary
     """
     for workflow in engine.read_many([workflow_toml]):
         for repo, tag in workflow.checkout.items():
             repo_dir = os.path.join(workflow.workflow_dir, repo)
-            git(repo_dir, ['clean', '-f'])
-            git(repo_dir, ['reset', '--hard', tag])
+            if hard:
+                git(repo_dir, ['clean', '-f'])
+                git(repo_dir, ['reset', '--hard', tag])
+            else:
+                git(repo_dir, ['checkout', tag])
 
 main.workflow_toml = "TOML file associated to a workflow"
+main.hard = "If given, clean all the files and do a reset --hard"
