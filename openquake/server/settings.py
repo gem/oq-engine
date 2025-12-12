@@ -241,6 +241,14 @@ GOOGLE_ANALYTICS_TOKEN = None
 
 HELP_URL = 'https://docs.openquake.org/oq-engine/latest/manual/'
 
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_PORT = os.environ.get('EMAIL_PORT')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
+
 # OpenQuake Standalone tools (IPT, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
@@ -320,13 +328,6 @@ if LOCKDOWN:
     #       using the createnormaluser Django command.
     USE_HTTPS = True
     SERVER_PORT = 443
-    EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
-    EMAIL_HOST = os.environ.get('EMAIL_HOST')
-    EMAIL_PORT = os.environ.get('EMAIL_PORT')
-    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
-    EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
-    EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
 
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
         CONTEXT_PROCESSORS.insert(
