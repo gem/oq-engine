@@ -47,7 +47,8 @@ def get_aelo_sites(site_file):
     siteid = {}
     for model, df in sites_df.groupby('model'):
         sites[model] = ', '.join(
-            f'{lon} {lat}' for lon, lat in zip(df.Longitude, df.Latitude))
+            f'{lon:.5f} {lat:.5f}'
+            for lon, lat in zip(df.Longitude, df.Latitude))
         siteid[model] = ', '.join(map(str, df.ID))
     return sites, siteid
 
@@ -63,11 +64,11 @@ def aelo(mosaic_dir):
     for mod in models:
         if mod == 'CND':
             mod = 'CAN'
-        elif mod in ('OAT', 'OPA'):
+        elif mod in ('GLD', 'OAT', 'OPA'):
             continue
         lst.append(f'[{mod}]\nini = "{mod}/in/job_vs30.ini"')
-        lst.append(f'siteid = "{siteid[mod]}"')
         lst.append(f'sites = "{sites[mod]}"')
+        lst.append(f'siteid = "{siteid[mod]}"')
     return save(mosaic_dir, 'AELO.toml', '\n'.join(lst))
 
 

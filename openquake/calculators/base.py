@@ -1734,7 +1734,7 @@ def read_parent_sitecol(oq, dstore):
     """
     :returns: the hazard site collection in the parent calculation
     """
-    if oq.hazard_calculation_id == '<fake>.ini':  # in oq check_input
+    if oq.hazard_calculation_id == '<fake>.ini':  # set by oq check_input
         return readinput.get_site_collection(oq, dstore.hdf5)
     with datastore.read(oq.hazard_calculation_id) as parent:
         if 'sitecol' in parent:
