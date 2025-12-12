@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added command `oq db keep <workflow_id>`
+  * Added command `oq checkout workflow.toml`
   * Extended `oq check_input` to accept workflow files
   * Added an output "Average Losses By Taxonomy"
   * Extended `oq run` to accept .toml files and to use the job cache
