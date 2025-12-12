@@ -15,7 +15,7 @@ on:
     - cron: "0 4 * * *"
 
 jobs:
-  webUI_and_Calc:
+  webUI_and_Calc_${{ matrix.engine-branch}}:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -31,7 +31,7 @@ jobs:
         run: |
           set -x
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-          python install.py user --version=${{ engine-branch }} --venv $HOME/gh-venv-${{ engine-branch }}
+          python install.py user --version=${{ matrix.engine-branch }} --venv $HOME/gh-venv-${{ matrix.engine-branch }}
         if: github.event.inputs.git-ref == ''
       - name: Install OQ (Custom Ref)
         run: |
