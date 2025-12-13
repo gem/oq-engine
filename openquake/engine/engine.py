@@ -437,7 +437,7 @@ OVERRIDABLE_PARAMS = (
 class _Workflow:
     # workflow objects are instantiated by the function `read_many`
     def __init__(self, workflow_toml, defaults, ddic, prefix=''):
-        vars(self).update(defaults)
+        self.defaults = defaults
         if not hasattr(self, 'checkout'):
             self.checkout = {}
         self.workflow_dir = os.path.dirname(workflow_toml)
@@ -458,17 +458,29 @@ class _Workflow:
             assert k[0].isupper(), k
             params = readinput.get_params(dic['ini'])
             for param in OVERRIDABLE_PARAMS:
-                val = dic.get(param, getattr(self, param, None))
+                val = dic.get(param, getattr(self.defaults, param, None))
                 if val is not None:
                     params[param] = str(val)
             OqParam(**params).validate()
             inis.append(params)
             names.append(prefix + k)
+
         check_unique(names, workflow_toml)
         self.inis = numpy.array(inis)
         self.names = numpy.array(names)
 
+    def to_toml(self):
+        """
+        :returns: a TOML representation of the Workflow object
+        """
+        dic = {'workflow': self.defaults}
+        for name, ini in zip(self.names, self.inis):
+            dic[name] = ini
+        dic['success'] = self.success
+        return toml.dumps(dic)
 
+
+# called twice, internally and also externally to Workflow objects
 def check_unique(names, workflow_toml):
     uni, cnt = numpy.unique(names, return_counts=1)
     if (cnt > 1).any():
@@ -476,7 +488,7 @@ def check_unique(names, workflow_toml):
                          f'{uni[cnt > 1]}')
 
 
-def read_many(workflows_toml, params):
+def read_many(workflows_toml, params={}):
     """
     Read the workflow file and returns a list a workflow dictionary.
     Set 'workflow_dir', 'success' and 'inis' on each.
@@ -535,11 +547,11 @@ def prepare_workflow(params, workflows_toml):
         todo = names
         dstore['oqparam'] = OqParam(
             description=params.pop('description'), **wfdic)
-        dstore['workflow_toml'] = numpy.array(
-            [open(w).read() for w in workflows_toml])
+        dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
         dstore.create_df('workflow', wf_df.reset_index())
     else:
         # continue an existing workflow
+        wfdic['job_id'] = workflow_id
         dstore = datastore.read(workflow_id)
         wfjob = logs.init(wfdic)
         wf_df = dstore.read_df('workflow', 'name')  # (job_id, status, size_mb)
@@ -587,7 +599,7 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                 sap.run_func(wf.success)
         dt = (time.time() - t0) / 3600.
         sh.setLevel(logging.INFO)
-        logging.info(f'Finished workflow {wfjob.calc_id:_d} in {dt:.2} hours')
+        logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     return wfjob.calc_id
 
 
