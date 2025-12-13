@@ -1,4 +1,4 @@
-name: Nightly Engine tests on User mode
+name: Nightly Engine Demos on User mode
 on:
   workflow_dispatch:
     inputs:
@@ -12,11 +12,11 @@ on:
         required: false
         default: false
   schedule:
-    - cron: "30 3,15 * * *"
+    - cron: "40 3,10 * * *"
 
 jobs:
-  webUI_and_Calc:
-    name: OS ${{ matrix.os }} OQ ${{ matrix.engine-branch }}
+  Run_demos_and_WebUI:
+    name: OQ ${{ matrix.engine-branch }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
