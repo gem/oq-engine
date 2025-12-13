@@ -569,7 +569,6 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
     Run sequentially multiple batches of calculations specified by
     workflow files.
     """
-    t0 = time.time()
     wfjob, dstore, names = prepare_workflow(params, workflows_toml)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
@@ -622,8 +621,8 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                         post_mortem(tb)
                     else:
                         raise
-        dt = (time.time() - t0) / 3600.
-        logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
+    dt = wfjob.dt / 3600.
+    logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     return wfjob.calc_id
 
 

@@ -91,9 +91,8 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int=2000,
     haz = ['[multi.workflow]']
     haz.append(f'{number_of_logic_tree_samples=}')
     haz.append(f'{ses_per_logic_tree_path=}')
-    add_checkout(haz, MODELS)
+    add_checkout(haz, MODELS + REGIONS + ['Exposure', 'Vulnerability'])
     risk = []
-    add_checkout(risk, REGIONS + ['Exposure', 'Vulnerability'])
     num_countries = 0
     for region in REGIONS:
         jobs_dir = os.path.join(mosaic_dir, region, 'Jobs')
