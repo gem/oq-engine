@@ -530,7 +530,8 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
         dstore = datastore.read(wfctx.calc_id, 'w')
         dstore['oqparam'] = OqParam(**wfdic)
         wf_df = pandas.DataFrame(
-            dict(name=names, calc_id=[0]*n, status=['created']*n)
+            dict(name=names, calc_id=[0]*n, status=['created']*n,
+                 size_mb=[0.0]*n)
         ).set_index('name')
         todo = names
         dstore['oqparam'] = OqParam(**wfdic)
@@ -541,13 +542,17 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
         # continue an existing workflow
         dstore = datastore.read(workflow_id)
         wfctx = logs.init(wfdic)
-        wf_df = dstore.read_df('workflow', 'name')  # (name, job_id, status)
+        wf_df = dstore.read_df('workflow', 'name')  # (job_id, status, size_mb)
         todo = wf_df[wf_df.status != 'complete'].index
 
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
+    size_dset = dstore['workflow/size_mb']
     with wfctx, dstore:
+        [sh] = [h for h in logging.root.handlers
+                if isinstance(h, logging.StreamHandler)]
+        sh.setLevel(logging.WARN)  # reduce logging on the console
         for wf in workflows:
             mask = [name in todo for name in wf.names]
             if sum(mask) == 0:
@@ -557,16 +562,19 @@ def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
             run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
             failed = 0
             for job, name in zip(jobs, wf.names[mask]):
+                rec = job.get_job()
                 idx = name2idx[name]
-                calc_dset[idx] = job.calc_id
-                status_dset[idx] =  status = job.get_job().status
-                if status == 'failed':
+                calc_dset[idx] = rec.id
+                status_dset[idx] =  rec.status
+                size_dset[idx] = rec.size_mb
+                if rec.status == 'failed':
                     failed += 1
             if failed == 0 and wf.success:
                 wf.success['dstore'] = dstore
                 wf.success['calcs'] = [j.calc_id for j in jobs]
                 sap.run_func(wf.success)
         dt = (time.time() - t0) / 3600.
+        sh.setLevel(logging.INFO)
         logging.info(f'Finished workflow {workflow_id:_d} in {dt:.2} hours')
     return workflow_id
 
