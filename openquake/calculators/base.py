@@ -1448,9 +1448,6 @@ def import_ruptures_hdf5(h5, fnames):
     """
     Importing the ruptures and the events
     """
-    size = sum(os.path.getsize(f) for f in fnames)
-    logging.warning('Importing %d files, %s',
-                    len(fnames), general.humansize(size))
     rups = []
     h5.create_dataset(
         'events', (0,), rupture.events_dt, maxshape=(None,), chunks=True,

@@ -39,7 +39,9 @@ def build_ses(dstore, calcs, out_file):
         fnames = [ds.filename for ds in dstores]
         logging.warning(f'Saving {out_file}')
         with hdf5.File(out_file, 'w') as h5:
+            logging.info('Importing sites')
             base.import_sites_hdf5(h5, fnames)
+            logging.info('Importing ruptures')
             base.import_ruptures_hdf5(h5, fnames)
             h5['oqparam'] = dstores[0]['oqparam']
     print(mon)
