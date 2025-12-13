@@ -264,11 +264,11 @@ def get_model(job_ini):
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
     from openquake.qa_tests_data.mosaic.workflow import MODELS  # FIXME: ugly
-    from openquake.risklib.countries import COUNTRY_CODE  # country->code
+    from openquake.risklib.countries import country2code
     for mod in MODELS:
         if mod in job_ini:
             return mod
-    for name, cc in COUNTRY_CODE.items():
+    for name, cc in country2code.items():
         if name in job_ini:
             return cc
     return ''
