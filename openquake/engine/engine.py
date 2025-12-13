@@ -31,8 +31,10 @@ import getpass
 import logging
 import platform
 import functools
+from pdb import post_mortem
 from unittest import mock
 from os.path import getsize
+import traceback
 from datetime import datetime, timezone
 import requests
 import psutil
@@ -173,7 +175,7 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(log):
+def run_calc(log, pdb=False):
     """
     Run a calculation.
 
@@ -217,7 +219,7 @@ def run_calc(log):
         calc.from_engine = True
         set_concurrent_tasks_default(calc)
         t0 = time.time()
-        calc.run(shutdown=True)
+        calc.run(pdb=pdb, shutdown=True)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         calc.datastore.close()
@@ -328,7 +330,7 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
+def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to, pdb):
     dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
@@ -351,7 +353,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:
-                run_calc(jobctx)
+                run_calc(jobctx, pdb)
     except Exception as e:
         exc = e
         raise
@@ -362,7 +364,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
 
 
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
-             notify_to=None, precalc=False):
+             notify_to=None, precalc=False, pdb=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -420,7 +422,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
                  concurrent_jobs, notify_to)
     else:
         _run(jobctxs, job_id, nodes, sbatch,
-             concurrent_jobs, notify_to)
+             concurrent_jobs, notify_to, pdb)
     return jobctxs
 
 
@@ -544,61 +546,78 @@ def prepare_workflow(params, workflows_toml):
                  status=['created'] * n,
                  size_mb=[0.0] * n)
         ).set_index('name')
-        todo = names
         dstore['oqparam'] = OqParam(
             description=params.pop('description'), **wfdic)
         dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
         dstore.create_df('workflow', wf_df.reset_index())
+        dstore.create_dset('success', numpy.bool([False] * len(workflows)))
     else:
         # continue an existing workflow
         wfdic['job_id'] = workflow_id
-        dstore = datastore.read(workflow_id)
+        dstore = datastore.read(workflow_id, 'r+')
         wfjob = logs.init(wfdic)
-        wf_df = dstore.read_df('workflow', 'name')  # (job_id, status, size_mb)
-        todo = wf_df[wf_df.status != 'complete'].index
     wfjob.workflows = workflows
-    wfjob.params = params
-    return wfjob, dstore, names, todo
+    return wfjob, dstore, names
 
 
 def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
-                 sbatch=False, notify_to=None, cache=True):
+                 sbatch=False, notify_to=None, pdb=False):
     """
     Run sequentially multiple batches of calculations specified by
     workflow files.
     """
     t0 = time.time()
-    wfjob, dstore, names, todo = prepare_workflow(params, workflows_toml)
+    wfjob, dstore, names = prepare_workflow(params, workflows_toml)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
     size_dset = dstore['workflow/size_mb']
+    success_dset = dstore['success']
     with wfjob, dstore:
         [sh] = [h for h in logging.root.handlers
                 if isinstance(h, logging.StreamHandler)]
-        sh.setLevel(logging.WARN)  # reduce logging on the console
-        for wf in wfjob.workflows:
-            mask = [name in todo for name in wf.names]
-            if sum(mask) == 0:
-                logging.warning(f'Already computed {wf.names}')
-                continue
-            jobs = create_jobs(wf.inis[mask], workflow_id=wfjob.calc_id)
-            run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-            failed = 0
-            for job, name in zip(jobs, wf.names[mask]):
-                rec = job.get_job()
+        for wf_no, wf in enumerate(wfjob.workflows):
+            failed, calcs, new, new_names = 0, [], [], []
+            for name, ini in zip(wf.names, wf.inis):
                 idx = name2idx[name]
-                calc_dset[idx] = rec.id
-                status_dset[idx] =  rec.status
-                size_dset[idx] = rec.size_mb
-                if rec.status == 'failed':
-                    failed += 1
-            if failed == 0 and wf.success:
+                if status_dset[idx] == b'complete':
+                    # already done; notice the conversion numpy.int64 -> int
+                    calcs.append(int(calc_dset[idx]))
+                    logging.info(f'{name} already computed')
+                else:
+                    new.append(ini)
+                    new_names.append(name)
+            if new:
+                jobs = create_jobs(new, workflow_id=wfjob.calc_id)
+                sh.setLevel(logging.WARN)  # reduce logging on the console
+                run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
+                sh.setLevel(logging.INFO)
+                for job, name in zip(jobs, new_names):
+                    rec = job.get_job()
+                    idx = name2idx[name]
+                    calc_dset[idx] = rec.id
+                    status_dset[idx] =  rec.status
+                    size_dset[idx] = rec.size_mb
+                    if rec.status == 'failed':
+                        failed += 1
+                    else:
+                        calcs.append(job.calc_id)
+            if wf.success and success_dset[wf_no]:
+                logging.info(f'{wf.success["func"]} already called')
+            elif wf.success and not failed:
                 wf.success['dstore'] = dstore
-                wf.success['calcs'] = [j.calc_id for j in jobs]
-                sap.run_func(wf.success)
+                wf.success['calcs'] = calcs
+                try:
+                    sap.run_func(wf.success)
+                    success_dset[wf_no] = True
+                except:
+                    if pdb:  # post-mortem debug
+                        tb = sys.exc_info()[2]
+                        traceback.print_tb(tb)
+                        post_mortem(tb)
+                    else:
+                        raise
         dt = (time.time() - t0) / 3600.
-        sh.setLevel(logging.INFO)
         logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     return wfjob.calc_id
 

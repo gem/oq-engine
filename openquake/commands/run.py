@@ -133,7 +133,7 @@ def main(job_ini,
                            {'calculation_mode': dic['calculation_mode']})
         jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
                            host=host)
-        run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
+        run_jobs(jobs, concurrent_jobs=1, nodes=nodes, pdb=pdb)
         return jobs[0].calc_id  # used in commands_test
     else:  # toml
         if not workflow_id:
@@ -142,7 +142,7 @@ def main(job_ini,
            params['workflow_id'] = int(workflow_id)
         except ValueError:
             params['description'] = workflow_id
-        run_workflow(params, job_ini, nodes=nodes)
+        run_workflow(params, job_ini, nodes=nodes, pdb=pdb)
         return workflow_id
 
 main.job_ini = dict(help='calculation configuration file '
