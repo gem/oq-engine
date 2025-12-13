@@ -577,8 +577,8 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
     size_dset = dstore['workflow/size_mb']
     success_dset = dstore['success']
     with wfjob, dstore:
-        [sh] = [h for h in logging.root.handlers
-                if isinstance(h, logging.StreamHandler)]
+        streams = [h for h in logging.root.handlers
+                   if isinstance(h, logging.StreamHandler)]
         for wf_no, wf in enumerate(wfjob.workflows):
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
@@ -592,9 +592,11 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                     new_names.append(name)
             if new:
                 jobs = create_jobs(new, workflow_id=wfjob.calc_id)
-                sh.setLevel(logging.WARN)  # reduce logging on the console
+                for s in streams:
+                    s.setLevel(logging.WARN)  # reduce logging on the console
                 run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-                sh.setLevel(logging.INFO)
+                for s in streams:
+                    s.setLevel(logging.INFO)
                 for job, name in zip(jobs, new_names):
                     rec = job.get_job()
                     idx = name2idx[name]

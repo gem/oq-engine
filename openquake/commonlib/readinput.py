@@ -24,6 +24,7 @@ import io
 import os
 import re
 import ast
+import sys
 import copy
 import zlib
 import shutil
@@ -304,13 +305,15 @@ def get_params(job_ini, kw={}):
         raise IOError('File not found: %s' % job_ini)
 
     base_path = os.path.dirname(job_ini)
-    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     check_params(cp, job_ini)
     dic = {}
     for sect in cp.sections():
         dic.update(cp.items(sect))
+    if 'mosaic_model' not in dic:
+        # try to infer it from the name of the job.ini file
+        params['mosaic_model'] = get_model(job_ini)
 
     # put source_model_logic_tree_file on top of the items so that
     # oq-risk-tests alaska, which has a smmLT.zip file works, since
@@ -320,16 +323,16 @@ def get_params(job_ini, kw={}):
         items = [('source_model_logic_tree_file', fname)] + list(dic.items())
     else:
         items = dic.items()
-    update(params, items, base_path)
-
-    if 'mosaic_model' not in params:
-        # try to infer it from the name of the job.ini file
-        ini = params.get('inputs', {}).get('job_ini', '<in-memory>')
-        params['mosaic_model'] = get_model(ini)
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
+    try:
+        update(params, items, base_path)
+        update(params, kw.items(), base_path)  # override on demand
+    except:
+        print(f'Error in {job_ini}', file=sys.stderr)
+        raise
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
 
-    update(params, kw.items(), base_path)  # override on demand
     return params
 
 

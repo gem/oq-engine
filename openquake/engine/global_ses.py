@@ -71,7 +71,7 @@ def main(mosaic_dir, out, *,
     """
     ses_toml = workflow.ses(mosaic_dir, out, number_of_logic_tree_samples,
                             ses_per_logic_tree_path, minimum_magnitude)
-    return engine.run_workflow('Global SES', [ses_toml])
+    return engine.run_workflow(dict(description='Global SES'), [ses_toml])
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
