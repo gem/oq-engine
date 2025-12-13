@@ -419,7 +419,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
     if concurrent_jobs > 1:
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
             _run(jobctxs, job_id, nodes, sbatch,
-                 concurrent_jobs, notify_to)
+                 concurrent_jobs, notify_to, pdb)
     else:
         _run(jobctxs, job_id, nodes, sbatch,
              concurrent_jobs, notify_to, pdb)
