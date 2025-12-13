@@ -55,7 +55,7 @@ def _export_import(name, calc_id, output_type, dstore):
         aggby = set()
         for agg in oq.aggregate_by:
             aggby.update(agg)
-        str_fields = ['loss_type', 'taxonomy'] + sorted(aggby)
+        str_fields = ['loss_type', 'taxonomy', 'MACRO_TAXONOMY'] + sorted(aggby)
         calc_ds.export_dir = (config.directory.custom_tmp or
                               tempfile.gettempdir())
         for fname in export.export((output_type, 'csv'), calc_ds):
