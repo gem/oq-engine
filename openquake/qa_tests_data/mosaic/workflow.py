@@ -120,7 +120,9 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int=2000,
         haz.append('')
         risk.append('')
     risk.append('\n[success]')
-    risk.append('func = "openquake.engine.postjobs.import_risk"')
+    risk.append('func = "openquake.engine.postjobs.import_outputs"')
+    risk.append('out_types = ["aggexp_tags", "aggrisk", '
+                '"avg_losses_by", "aggcurves"]')
     print(f'Found {num_countries=}')
     return save(mosaic_dir, 'GRM.toml', '\n'.join(haz + risk))
 
