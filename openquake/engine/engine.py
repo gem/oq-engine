@@ -499,6 +499,7 @@ def read_many(workflows_toml, params={}):
     the `_file` name convention.
     """
     out = []
+    prefix = ''
     for workflow_toml in workflows_toml:
         try:
             with open(workflow_toml, encoding='utf8') as f:
@@ -516,7 +517,8 @@ def read_many(workflows_toml, params={}):
             else:
                 raise InvalidFile('missing [workflow] or [multi.workflow]')
         except Exception as exc:
-            exc.args = (workflow_toml,) + exc.args
+            print(f'Error while parsing {workflow_toml} {prefix}',
+                  file=sys.stderr)
             raise exc
     return out
 
