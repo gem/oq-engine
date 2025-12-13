@@ -138,7 +138,11 @@ def main(job_ini,
     else:  # toml
         if not workflow_id:
             sys.exit('You must pass a workflow ID or a workflow description')
-        run_workflow(workflow_id, job_ini, nodes=nodes)
+        try:
+           params['workflow_id'] = int(workflow_id)
+        except ValueError:
+            params['description'] = workflow_id
+        run_workflow(params, job_ini, nodes=nodes)
         return workflow_id
 
 main.job_ini = dict(help='calculation configuration file '
