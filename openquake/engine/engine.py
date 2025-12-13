@@ -428,6 +428,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
 
 OVERRIDABLE_PARAMS = (
     'calculation_mode',
+    'cache',
     'ground_motion_fields',
     'hazard_calculation_id',
     'number_of_logic_tree_samples',
@@ -460,7 +461,7 @@ class _Workflow:
             assert k[0].isupper(), k
             params = readinput.get_params(dic['ini'])
             for param in OVERRIDABLE_PARAMS:
-                val = dic.get(param, getattr(self.defaults, param, None))
+                val = dic.get(param, self.defaults.get(param))
                 if val is not None:
                     params[param] = str(val)
             OqParam(**params).validate()

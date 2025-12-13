@@ -2371,7 +2371,8 @@ class OqParam(valid.ParamSet):
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         dic['inputs'].update(inputs)
-        del dic['base_path'], dic['req_site_params']
+        dic.pop('base_path', None)
+        dic.pop('req_site_params', None)
         dic.pop('close', None)
         dic.pop('mags_by_trt', None)
         dic.pop('sec_imts', None)
@@ -2384,6 +2385,8 @@ class OqParam(valid.ParamSet):
         if 'aggregate_by' in dic:
             dic['aggregate_by'] = '; '.join(
                 ','.join(keys) for keys in dic['aggregate_by'])
+        if 'cache' not in dic:
+            dic['cache'] = 'false'
         ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
         return ini
 
