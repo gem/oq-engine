@@ -292,7 +292,6 @@ def get_params(job_ini, kw={}):
     # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_ini)
     base_path = os.path.dirname(job_ini)
-    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     input_zip = None
     if job_ini.endswith('.zip'):
         input_zip = job_ini
@@ -313,7 +312,7 @@ def get_params(job_ini, kw={}):
         dic.update(cp.items(sect))
     if 'mosaic_model' not in dic:
         # try to infer it from the name of the job.ini file
-        params['mosaic_model'] = get_model(job_ini)
+        dic['mosaic_model'] = get_model(job_ini)
 
     # put source_model_logic_tree_file on top of the items so that
     # oq-risk-tests alaska, which has a smmLT.zip file works, since
