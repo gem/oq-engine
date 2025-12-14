@@ -24,6 +24,7 @@ import time
 import getpass
 import logging
 import traceback
+from pdb import post_mortem
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
@@ -212,7 +213,8 @@ class LogContext:
     oqparam = None
 
     def __init__(self, params, log_level='info', log_file=None,
-                 user_name=None, hc_id=None, host=None, workflow_id=None):
+                 user_name=None, hc_id=None, host=None, workflow_id=None,
+                 pdb=None):
         if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
             raise RuntimeError('You forgot to run oq engine --upgrade-db -y')
         self.log_level = log_level
@@ -221,6 +223,7 @@ class LogContext:
         self.params = params
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
+        self.pdb = pdb
         calc_id = int(params.get('job_id', 0))
         if calc_id == 0:
             datadir = get_datadir()
@@ -291,6 +294,8 @@ class LogContext:
                 # store the traceback
                 logging.error(f'{tb_str}{etype.__name__}: {exc}')
                 dbcmd('finish', self.calc_id, 'failed')
+            if self.pdb:
+                post_mortem(tb)
         else:
             dbcmd('finish', self.calc_id, 'complete')
         for handler in self.handlers:
@@ -310,7 +315,8 @@ class LogContext:
 
 
 def init(job_ini, dummy=None, log_level='info', log_file=None,
-         user_name=None, hc_id=None, host=None, workflow_id=None):
+         user_name=None, hc_id=None, host=None, workflow_id=None,
+         pdb=None):
     """
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param dummy: ignored parameter, exists for backward compatibility
@@ -332,4 +338,4 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     if not isinstance(job_ini, dict):
         job_ini = readinput.get_params(job_ini)
     return LogContext(job_ini, log_level, log_file, user_name, hc_id,
-                      host, workflow_id)
+                      host, workflow_id, pdb)

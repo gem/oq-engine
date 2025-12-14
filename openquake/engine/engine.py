@@ -31,10 +31,8 @@ import getpass
 import logging
 import platform
 import functools
-from pdb import post_mortem
 from unittest import mock
 from os.path import getsize
-import traceback
 from datetime import datetime, timezone
 import requests
 import psutil
@@ -50,7 +48,7 @@ except ImportError:
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
-    hdf5, parallel, general, config, slurm, sap, workerpool as w)
+    parallel, general, config, slurm, sap, workerpool as w)
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, datastore, logs
@@ -250,7 +248,8 @@ def check_directories(calc_id):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=USER, hc_id=None, host=None, workflow_id=None):
+                user_name=USER, hc_id=None, host=None, workflow_id=None,
+                pdb=False):
     """
     Create job records on the database.
 
@@ -270,7 +269,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini)
         job = logs.init(dic, None, log_level, log_file, user_name, hc_id,
-                        host, workflow_id)
+                        host, workflow_id, pdb)
         jobs.append(job)
     check_directories(jobs[0].calc_id)
 
@@ -524,7 +523,7 @@ def read_many(workflows_toml, params={}):
     return out
 
 
-def prepare_workflow(params, workflows_toml):
+def prepare_workflow(params, workflows_toml, pdb):
     """
     Create or retrieve a workflow record and create or update
     the workflow database
@@ -541,7 +540,7 @@ def prepare_workflow(params, workflows_toml):
         workflow_id = params.pop('workflow_id')
     except KeyError:
         # create a new workflow
-        [wfjob] = create_jobs([wfdic])
+        [wfjob] = create_jobs([wfdic], pdb=pdb)
         workflow_id = wfjob.calc_id
         dstore = datastore.read(workflow_id, 'w')
         wf_df = pandas.DataFrame(
@@ -570,7 +569,7 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
     Run sequentially multiple batches of calculations specified by
     workflow files.
     """
-    wfjob, dstore, names = prepare_workflow(params, workflows_toml)
+    wfjob, dstore, names = prepare_workflow(params, workflows_toml, pdb)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
@@ -596,7 +595,7 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                     rec = job.get_job()
                     idx = name2idx[name]
                     calc_dset[idx] = rec.id
-                    status_dset[idx] =  rec.status
+                    status_dset[idx] = rec.status
                     size_dset[idx] = rec.size_mb
                     if rec.status == 'failed':
                         failed += 1
@@ -607,16 +606,8 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
             elif wf.success and not failed:
                 wf.success['dstore'] = dstore
                 wf.success['calcs'] = calcs
-                try:
-                    sap.run_func(wf.success)
-                    success_dset[wf_no] = True
-                except:
-                    if pdb:  # post-mortem debug
-                        tb = sys.exc_info()[2]
-                        traceback.print_tb(tb)
-                        post_mortem(tb)
-                    else:
-                        raise
+                sap.run_func(wf.success)
+                success_dset[wf_no] = True
     dt = wfjob.dt / 3600.
     logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     return wfjob.calc_id

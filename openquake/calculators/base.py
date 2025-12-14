@@ -344,13 +344,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 # EventBasedCalculator,EventBasedRiskCalculator
                 self.post_process()
                 self.export(kw.get('exports', ''))
-            except Exception:
-                if kw.get('pdb'):  # post-mortem debug
-                    tb = sys.exc_info()[2]
-                    traceback.print_tb(tb)
-                    pdb.post_mortem(tb)
-                else:
-                    raise
             finally:
                 if shutdown:
                     parallel.Starmap.shutdown()
