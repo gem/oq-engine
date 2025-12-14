@@ -1111,8 +1111,7 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
     n = 1
     while allargs:
         args = allargs.pop()
-        if names:
-            name = names.pop()
+        name = names.pop() if names else None
         proc = mp_context.Process(target=func, args=args, name=name)
         proc.start()
         procs[proc.sentinel] = proc
