@@ -351,7 +351,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
         elif concurrent_jobs > 1:
             args = [(ctx,) for ctx in jobctxs]
             names = [ctx.params['mosaic_model'] or None for ctx in jobctxs]
-            parallel.multispawn(run_calc, args, concurrent_jobs, names)
+            parallel.multispawn(run_calc, args, concurrent_jobs, names=names)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
