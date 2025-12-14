@@ -25,7 +25,7 @@ import os
 import logging
 import tempfile
 from openquake.baselib import hdf5, config, performance
-from openquake.commonlib import datastore, logs
+from openquake.commonlib import datastore
 from openquake.calculators import base, export
 
 

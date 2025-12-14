@@ -911,7 +911,11 @@ def add_checksum(db, job_id, value):
         The unique job_id with that checksum or None
     """
     try:
-        jid = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',
+        # see if there is a complete old job for that checksum
+        jid = db('SELECT job_id FROM checksum, job '
+                 'WHERE hazard_checksum=?x '
+                 'AND job.id=job_id '
+                 'AND status == "complete"',
                  value, scalar=True)
     except NotFound:
         db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value)

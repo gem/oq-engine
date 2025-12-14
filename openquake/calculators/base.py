@@ -19,13 +19,11 @@ import io
 import os
 import sys
 import abc
-import pdb
 import json
 import time
 import inspect
 import logging
 import operator
-import traceback
 import tempfile
 import getpass
 from datetime import datetime
@@ -268,12 +266,13 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         if 'checksum32' not in attrs:
             # when save_params has been already called, don't recompute
             attrs['input_size'] = size = self.oqparam.get_input_size()
-            attrs['checksum32'] = check = readinput.get_checksum32(
+            attrs['checksum32'] = checksum = readinput.get_checksum32(
                 self.oqparam, self.datastore.hdf5)
-            logging.info(f'Checksum of the inputs: {check} '
+            logging.info(f'Checksum of the inputs: {checksum} '
                          f'(total size {general.humansize(size)})')
-            return (logs.dbcmd('add_checksum', self.datastore.calc_id, check),
-                    check)
+            old_job_id = logs.dbcmd(
+                'add_checksum', self.datastore.calc_id, checksum)
+            return old_job_id, checksum
         return None, None
 
     def check_precalc(self, precalc_mode):
@@ -329,8 +328,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 expose_outputs(self.datastore, owner=USER, calc_id=calc_id)
                 self.export(kw.get('exports', ''))
                 return self.exported
-            elif checksum:
-                logs.dbcmd("update_job_checksum", calc_id, checksum)
             try:
                 if pre_execute:
                     self.pre_execute()
@@ -360,6 +357,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         # removing in preclassical with multiFaultSources
                         # would break --hc which is reading the temp file
                         os.remove(self.datastore.tempname)
+            if checksum:
+                # only if there are no errors the checksum of this job is good
+                logs.dbcmd("update_job_checksum", calc_id, checksum)
         return getattr(self, 'exported', {})
 
     def core_task(*args):

@@ -173,7 +173,7 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(log, pdb=False):
+def run_calc(log):
     """
     Run a calculation.
 
@@ -217,7 +217,7 @@ def run_calc(log, pdb=False):
         calc.from_engine = True
         set_concurrent_tasks_default(calc)
         t0 = time.time()
-        calc.run(pdb=pdb, shutdown=True)
+        calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         calc.datastore.close()
@@ -330,7 +330,7 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to, pdb):
+def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
     dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
@@ -353,7 +353,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to, pdb):
             parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:
-                run_calc(jobctx, pdb)
+                run_calc(jobctx)
     except Exception as e:
         exc = e
         raise
@@ -364,7 +364,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to, pdb):
 
 
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
-             notify_to=None, precalc=False, pdb=False):
+             notify_to=None, precalc=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -419,10 +419,10 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
     if concurrent_jobs > 1:
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
             _run(jobctxs, job_id, nodes, sbatch,
-                 concurrent_jobs, notify_to, pdb)
+                 concurrent_jobs, notify_to)
     else:
         _run(jobctxs, job_id, nodes, sbatch,
-             concurrent_jobs, notify_to, pdb)
+             concurrent_jobs, notify_to)
     return jobctxs
 
 
