@@ -77,7 +77,7 @@ def get_zmq_ports():
     return numpy.arange(int(start), int(stop))
 
 
-def set_concurrent_tasks_default(calc):
+def set_concurrent_tasks_default(calc, factor):
     """
     Look at the number of available workers and update the parameter
     OqParam.concurrent_tasks.default. Abort the calculations if no
@@ -92,10 +92,10 @@ def set_concurrent_tasks_default(calc):
             logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
             sys.exit(1)
 
-        parallel.Starmap.CT = num_workers * 2
-        OqParam.concurrent_tasks.default = num_workers * 2
     else:
         num_workers = parallel.num_cores
+    parallel.Starmap.CT = num_workers * factor
+    OqParam.concurrent_tasks.default = num_workers * factor
     if dist == 'no':
         logging.warning('Disabled distribution')
     else:
@@ -215,7 +215,7 @@ def run_calc(log):
         if obsolete_msg:
             logging.warning(obsolete_msg)
         calc.from_engine = True
-        set_concurrent_tasks_default(calc)
+        set_concurrent_tasks_default(calc, 1 if log.workflow_id else 2)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
@@ -429,6 +429,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
 OVERRIDABLE_PARAMS = (
     'calculation_mode',
     'cache',
+    'concurrent_tasks',
     'ground_motion_fields',
     'hazard_calculation_id',
     'number_of_logic_tree_samples',

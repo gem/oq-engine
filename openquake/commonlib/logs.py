@@ -223,6 +223,7 @@ class LogContext:
         self.params = params
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
+        self.workflow_id = workflow_id
         self.pdb = pdb
         calc_id = int(params.get('job_id', 0))
         if calc_id == 0:
@@ -299,13 +300,6 @@ class LogContext:
         for handler in self.handlers:
             logging.root.removeHandler(handler)
         parallel.Starmap.shutdown()
-
-    def __getstate__(self):
-        # ensure pickleability
-        return dict(calc_id=self.calc_id, params=self.params,
-                    log_level=self.log_level, log_file=self.log_file,
-                    user_name=self.user_name, oqparam=self.oqparam,
-                    pdb=self.pdb)
 
     def __repr__(self):
         hc_id = self.params.get('hazard_calculation_id')
