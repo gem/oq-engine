@@ -204,7 +204,7 @@ def run_calc(log, pdb=False):
             hostname = socket.gethostname()
         except Exception:  # gaierror
             hostname = 'localhost'
-        logging.info('%s@%s running %s [--hc=%s]',
+        logging.info('%s@%s running %s --hc=%s',
                      USER,
                      hostname,
                      calc.oqparam.inputs['job_ini'],

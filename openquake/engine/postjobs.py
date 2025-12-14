@@ -75,7 +75,6 @@ def import_outputs(dstore, calcs, out_types):
     with performance.Monitor(measuremem=True, h5=dstore) as mon:
         for calc_id in calcs:
             name = wf.loc[calc_id]['name']
-            with logs.init({'job_id': calc_id}):
-                for out_type in out_types:
-                    _export_import(name, calc_id, out_type, dstore)
+            for out_type in out_types:
+                _export_import(name, calc_id, out_type, dstore)
     print(mon)
