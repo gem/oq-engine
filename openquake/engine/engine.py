@@ -350,7 +350,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
             args = [(ctx,) for ctx in jobctxs]
-            names = [job.params['mosaic_model'] or None for ctx in jobctxs]
+            names = [ctx.params['mosaic_model'] or None for ctx in jobctxs]
             parallel.multispawn(run_calc, args, concurrent_jobs, names)
         else:
             for jobctx in jobctxs:
