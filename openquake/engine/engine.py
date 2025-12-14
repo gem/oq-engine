@@ -269,7 +269,8 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini)
-        job = logs.init(dic, None, log_level, log_file, user_name, hc_id, host)
+        job = logs.init(dic, None, log_level, log_file, user_name, hc_id,
+                        host, workflow_id)
         jobs.append(job)
     check_directories(jobs[0].calc_id)
 
@@ -576,8 +577,6 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
     size_dset = dstore['workflow/size_mb']
     success_dset = dstore['success']
     with wfjob, dstore:
-        streams = [h for h in logging.root.handlers
-                   if isinstance(h, logging.StreamHandler)]
         for wf_no, wf in enumerate(wfjob.workflows):
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
@@ -590,12 +589,9 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                     new.append(ini)
                     new_names.append(name)
             if new:
-                jobs = create_jobs(new, workflow_id=wfjob.calc_id)
-                for s in streams:
-                    s.setLevel(logging.WARN)  # reduce logging on the console
+                jobs = create_jobs(new, log_level=logging.WARNING,
+                                   workflow_id=wfjob.calc_id)
                 run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-                for s in streams:
-                    s.setLevel(logging.INFO)
                 for job, name in zip(jobs, new_names):
                     rec = job.get_job()
                     idx = name2idx[name]
