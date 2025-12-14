@@ -1129,7 +1129,7 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
             procs[finished].join()
             del procs[finished]
             if logfinish:
-                logging.info('Finished %s %d of %d jobs', name, n, tot)
+                logging.info('Finished job %s [%d of %d]', name, n, tot)
             n += 1
 
 
