@@ -612,7 +612,8 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
     logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     if failed:
         mask = status_dset[:] == b'failed'
-        dic = dict(zip(names[mask], calc_dset[:][mask]))
+        dic = {str(name): int(calc) for name, calc in
+               zip(names[mask], calc_dset[:][mask])}
         logging.warning(f'The following jobs failed: {dic}')
     return wfjob.calc_id
 
