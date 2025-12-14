@@ -1094,10 +1094,13 @@ def logfinish(n, tot):
     return n + 1
 
 
-def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
+def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
+               names=()):
     """
     Spawn processes with the given arguments
     """
+    if names:
+        assert len(names) == len(allargs), (len(names), len(allargs))
     if oq_distribute() == 'no':
         for args in allargs:
             func(*args)
@@ -1108,7 +1111,9 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
     n = 1
     while allargs:
         args = allargs.pop()
-        proc = mp_context.Process(target=func, args=args)
+        if names:
+            name = names.pop()
+        proc = mp_context.Process(target=func, args=args, name=name)
         proc.start()
         procs[proc.sentinel] = proc
         while len(procs) >= nprocs:  # wait for something to finish
