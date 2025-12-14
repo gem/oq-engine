@@ -531,9 +531,7 @@ def prepare_workflow(params, workflows_toml, pdb):
     the workflow database
     """
     workflows = read_many(workflows_toml, params)
-    names = []
-    for wf in workflows:
-        names.extend(wf.names)
+    names = numpy.concatenate([wf.names for wf in workflows])
     n = len(names)
     check_unique(names, workflows_toml)
     wfdic = dict(base_path=os.path.dirname(workflows_toml[0]),
@@ -612,6 +610,10 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                 success_dset[wf_no] = True
     dt = wfjob.dt / 3600.
     logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
+    if failed:
+        mask = status_dset[:] == b'failed'
+        dic = dict(zip(names[mask], calc_dset[:][mask]))
+        logging.warning(f'The following jobs failed: {dic}')
     return wfjob.calc_id
 
 
