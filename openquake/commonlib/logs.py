@@ -236,12 +236,10 @@ class LogContext:
             path = os.path.join(datadir, 'calc_%d.hdf5' % self.calc_id)
             if os.path.exists(path):  # sanity check on the calculation ID
                 raise RuntimeError('There is a pre-existing file %s' % path)
-            self.usedb = True
         else:
             # assume the calc_id was alreay created in the db
             assert calc_id > 0, calc_id
             self.calc_id = calc_id
-            self.usedb = True
 
     def get_oqparam(self, validate=True):
         """
@@ -265,8 +263,7 @@ class LogContext:
         model = self.params.get('mosaic_model', '')
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
             self.calc_id, model + ' ' if model else '')
-        self.handlers = [LogDatabaseHandler(self.calc_id)] \
-            if self.usedb else []
+        self.handlers = [LogDatabaseHandler(self.calc_id)]
         if self.log_file is None:
             # add a StreamHandler if not already there
             if not any(h for h in logging.root.handlers
@@ -284,16 +281,17 @@ class LogContext:
 
     def __exit__(self, etype, exc, tb):
         self.dt = time.time() - self.t0
-        if tb:
+        if etype is SystemExit:
+            dbcmd('finish', self.calc_id, 'aborted')
+        elif tb:
             tb_str = ''.join(traceback.format_tb(tb))  # newlines are included
-            if etype is SystemExit:
-                dbcmd('finish', self.calc_id, 'aborted')
-            else:
-                # remove StreamHandler to avoid logging twice
-                logging.root.removeHandler(self.handlers[-1])
-                # store the traceback
-                logging.error(f'{tb_str}{etype.__name__}: {exc}')
-                dbcmd('finish', self.calc_id, 'failed')
+            # remove non-db handlers to avoid logging twice
+            for h in logging.root.handlers:
+                if not isinstance(h, LogDatabaseHandler):
+                    logging.root.removeHandler(h)
+            # store the traceback
+            logging.error(f'{tb_str}{etype.__name__}: {exc}')
+            dbcmd('finish', self.calc_id, 'failed')
             if self.pdb:
                 post_mortem(tb)
         else:
