@@ -270,9 +270,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.oqparam, self.datastore.hdf5)
             logging.info(f'Checksum of the inputs: {checksum} '
                          f'(total size {general.humansize(size)})')
-            old_job_id = logs.dbcmd(
-                'add_checksum', self.datastore.calc_id, checksum)
-            return old_job_id, checksum
+            old_job = logs.dbcmd('get_job_from_checksum', checksum)
+            return old_job.id if old_job else None, checksum
         return None, None
 
     def check_precalc(self, precalc_mode):
@@ -340,6 +339,9 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 # FIXME: this part can be called multiple times, i.e. by
                 # EventBasedCalculator,EventBasedRiskCalculator
                 self.post_process()
+                if checksum:
+                    # if there are no errors the checksum of this job is good
+                    logs.dbcmd("update_job_checksum", calc_id, checksum)
                 self.export(kw.get('exports', ''))
             finally:
                 if shutdown:
@@ -357,9 +359,6 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         # removing in preclassical with multiFaultSources
                         # would break --hc which is reading the temp file
                         os.remove(self.datastore.tempname)
-            if checksum:
-                # only if there are no errors the checksum of this job is good
-                logs.dbcmd("update_job_checksum", calc_id, checksum)
         return getattr(self, 'exported', {})
 
     def core_task(*args):

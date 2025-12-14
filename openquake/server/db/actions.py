@@ -899,30 +899,6 @@ ORDER BY julianday(stop_time) - julianday(start_time)'''
 
 # checksums
 
-def add_checksum(db, job_id, value):
-    """
-    :param db:
-        a :class:`openquake.commonlib.dbapi.Db` instance
-    :param job_id:
-        job ID
-    :param value:
-        value of the checksum (32 bit integer)
-    :returns:
-        The unique job_id with that checksum or None
-    """
-    try:
-        # see if there is a complete old job for that checksum
-        jid = db('SELECT job_id FROM checksum, job '
-                 'WHERE hazard_checksum=?x '
-                 'AND job.id=job_id '
-                 'AND status == "complete"',
-                 value, scalar=True)
-    except NotFound:
-        db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value)
-    else:
-        return jid
-
-
 def update_job_checksum(db, job_id, checksum):
     """
     :param db:
@@ -932,8 +908,11 @@ def update_job_checksum(db, job_id, checksum):
     :param checksum:
         the checksum (32 bit integer)
     """
-    return db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
-              job_id, checksum).lastrowid
+    updated = db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
+                 job_id, checksum).rowcount
+    if not updated:  # the checksum is new
+        db('INSERT INTO checksum (job_id, hazard_checksum) VALUES (?x, ?x)',
+           job_id, checksum)
 
 
 def get_checksum_from_job(db, job_id):
@@ -960,9 +939,8 @@ def get_job_from_checksum(db, checksum):
         the job associated to the checksum or None
     """
     # there is an UNIQUE constraint both on hazard_checksum and job_id
-    jobs = db('SELECT * FROM job WHERE id = ('
-              'SELECT job_id FROM checksum WHERE hazard_checksum=?x)',
-              checksum)  # 0 or 1 jobs
+    jobs = db('SELECT job.* FROM job, checksum WHERE hazard_checksum=?x '
+              'AND job.id=job_id AND status == "complete"', checksum)
     if not jobs:
         return
     return jobs[0]

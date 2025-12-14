@@ -2388,7 +2388,8 @@ class OqParam(valid.ParamSet):
         if 'cache' not in dic:
             dic['cache'] = 'false'
         ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
-        return ini
+        # newlines can break the checksum, so we remove them
+        return ini.strip().replace('\n\n', '\n')
 
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}
