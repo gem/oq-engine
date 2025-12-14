@@ -304,7 +304,8 @@ class LogContext:
         # ensure pickleability
         return dict(calc_id=self.calc_id, params=self.params,
                     log_level=self.log_level, log_file=self.log_file,
-                    user_name=self.user_name, oqparam=self.oqparam)
+                    user_name=self.user_name, oqparam=self.oqparam,
+                    pdb=self.pdb)
 
     def __repr__(self):
         hc_id = self.params.get('hazard_calculation_id')
