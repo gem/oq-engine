@@ -1097,7 +1097,13 @@ def logfinish(n, tot):
 def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
                names=()):
     """
-    Spawn processes with the given arguments
+    Spawn functions with the given arguments as subprocesses.
+
+    :param func: function to spawn
+    :param allargs: list of arguments
+    :param nprocs: number of processes running at the same time
+    :param logfinish: if True, log a progress message
+    :param names: optionally, give names to the spawned processes
     """
     if names:
         assert len(names) == len(allargs), (len(names), len(allargs))
@@ -1120,7 +1126,7 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
                 procs[finished].join()
                 del procs[finished]
                 if logfinish:
-                    logging.info('Finished %d of %d jobs', n, tot)
+                    logging.info('Finished job %s [%d of %d]', name, n, tot)
                 n += 1
 
     while procs:
