@@ -51,6 +51,4 @@ fi
 if [ -t 1 ]; then
     # TTY mode
     /bin/bash
-else
-    # Headless mode
 fi
