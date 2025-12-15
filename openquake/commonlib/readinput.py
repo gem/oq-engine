@@ -24,6 +24,7 @@ import io
 import os
 import re
 import ast
+import sys
 import copy
 import zlib
 import shutil
@@ -258,16 +259,20 @@ def check_params(cp, fname):
                 ' in multiple sections')
 
 
-def get_model(job_ini, MODELS=[]):
+def get_model(job_ini):
     """
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
-    if not MODELS:  # first time
-        MODELS.extend(read_mosaic_df(buffer=.1).code)
+    from openquake.qa_tests_data.mosaic.workflow import MODELS  # FIXME: ugly
+    from openquake.risklib.countries import country2code
     for mod in MODELS:
         if mod in job_ini:
             return mod
+    for name, cc in country2code.items():
+        if name in job_ini:
+            return cc
     return ''
+
 
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
@@ -292,7 +297,6 @@ def get_params(job_ini, kw={}):
     # directory containing the config files we're parsing
     job_ini = os.path.abspath(job_ini)
     base_path = os.path.dirname(job_ini)
-    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     input_zip = None
     if job_ini.endswith('.zip'):
         input_zip = job_ini
@@ -305,13 +309,15 @@ def get_params(job_ini, kw={}):
         raise IOError('File not found: %s' % job_ini)
 
     base_path = os.path.dirname(job_ini)
-    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     check_params(cp, job_ini)
     dic = {}
     for sect in cp.sections():
         dic.update(cp.items(sect))
+    if 'mosaic_model' not in dic:
+        # try to infer it from the name of the job.ini file
+        dic['mosaic_model'] = get_model(job_ini)
 
     # put source_model_logic_tree_file on top of the items so that
     # oq-risk-tests alaska, which has a smmLT.zip file works, since
@@ -321,16 +327,16 @@ def get_params(job_ini, kw={}):
         items = [('source_model_logic_tree_file', fname)] + list(dic.items())
     else:
         items = dic.items()
-    update(params, items, base_path)
-
-    if 'mosaic_model' not in params:
-        # try to infer it from the name of the job.ini file
-        ini = params.get('inputs', {}).get('job_ini', '<in-memory>')
-        params['mosaic_model'] = get_model(ini)
+    params = dict(base_path=base_path, inputs={'job_ini': job_ini})
+    try:
+        update(params, items, base_path)
+        update(params, kw.items(), base_path)  # override on demand
+    except:
+        print(f'Error in {job_ini}', file=sys.stderr)
+        raise
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
 
-    update(params, kw.items(), base_path)  # override on demand
     return params
 
 
@@ -366,6 +372,12 @@ def get_oqparam(job_ini, pkg=None, kw={}, validate=True):
     if not isinstance(job_ini, dict):
         basedir = os.path.dirname(pkg.__file__) if pkg else ''
         job_ini = get_params(os.path.join(basedir, job_ini), kw)
+
+    if os.environ.get('OQ_CHECK_INPUT'):
+        cmode = job_ini['calculation_mode']
+        if 'risk' in cmode or 'damage' in cmode or 'bcr' in cmode:
+            # avoid excessive checks in risk calculations
+            job_ini['hazard_calculation_id'] = '<fake>.ini'
 
     re = os.environ.get('OQ_REDUCE')  # debugging facility
     if is_fraction(re):
@@ -1747,14 +1759,17 @@ def read_cities(fname, lon_name, lat_name, label_name):
     return data
 
 
-def read_mosaic_df(buffer):
+def read_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
     """
     :returns: a DataFrame of geometries for the mosaic models
     """
     mosaic_boundaries_file = config.directory.mosaic_boundaries_file
     if not mosaic_boundaries_file:
-        mosaic_boundaries_file = os.path.join(
-            os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+        mosaic_boundaries_file = os.path.join(mosaic_dir, 'mosaic.gpkg')
+        if not os.path.exists(mosaic_boundaries_file):
+            mosaic_boundaries_file = os.path.join(
+                os.path.dirname(mosaic.__file__), 'mosaic.gpkg')
+    print(f'Reading {mosaic_boundaries_file}')
     return read_geometries(mosaic_boundaries_file, 'name', buffer)
 
 

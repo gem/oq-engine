@@ -386,6 +386,19 @@ def fix_version(commit, venv):
         f.write("".join(lines))
 
 
+def normalize_version(version):
+    """
+    Convert a user-supplied --version argument into a pip-compatible
+    version specifier.
+    """
+    if version.count('.') == 1:
+        # e.g. "3.23" -> latest patch in that series, expands to >=3.23.0,<3.24
+        return f"~={version}.0"
+    else:
+        # e.g. "3.23.4" -> exact match
+        return f"=={version}"
+
+
 def install(inst, version, from_fork):
     """
     Install the engine in one of the three possible modes
@@ -470,7 +483,7 @@ def install(inst, version, from_fork):
     elif re.match(r"\d+(\.\d+)+", version):  # install an official version
         subprocess.check_call(
             [pycmd, "-m", "pip", "install", "--upgrade",
-             "openquake.engine==" + version]
+             f"openquake.engine{normalize_version(version)}"]
         )
     else:  # install a branch from github (only for user or server)
         commit = latest_commit(version)

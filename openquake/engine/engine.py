@@ -34,11 +34,12 @@ import functools
 from unittest import mock
 from os.path import getsize
 from datetime import datetime, timezone
+import requests
 import psutil
 import toml
 import h5py
 import numpy
-import requests
+import pandas
 try:
     from setproctitle import setproctitle
 except ImportError:
@@ -48,8 +49,9 @@ from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
     parallel, general, config, slurm, sap, workerpool as w)
+from openquake.hazardlib import InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, logs
+from openquake.commonlib import readinput, datastore, logs
 from openquake.calculators import base
 from openquake.calculators.base import expose_outputs
 
@@ -75,7 +77,7 @@ def get_zmq_ports():
     return numpy.arange(int(start), int(stop))
 
 
-def set_concurrent_tasks_default(calc):
+def set_concurrent_tasks_default(calc, factor):
     """
     Look at the number of available workers and update the parameter
     OqParam.concurrent_tasks.default. Abort the calculations if no
@@ -90,10 +92,10 @@ def set_concurrent_tasks_default(calc):
             logs.dbcmd('finish', calc.datastore.calc_id, 'failed')
             sys.exit(1)
 
-        parallel.Starmap.CT = num_workers * 2
-        OqParam.concurrent_tasks.default = num_workers * 2
     else:
         num_workers = parallel.num_cores
+    parallel.Starmap.CT = num_workers * factor
+    OqParam.concurrent_tasks.default = num_workers * factor
     if dist == 'no':
         logging.warning('Disabled distribution')
     else:
@@ -202,7 +204,7 @@ def run_calc(log):
             hostname = socket.gethostname()
         except Exception:  # gaierror
             hostname = 'localhost'
-        logging.info('%s@%s running %s [--hc=%s]',
+        logging.info('%s@%s running %s --hc=%s',
                      USER,
                      hostname,
                      calc.oqparam.inputs['job_ini'],
@@ -213,7 +215,7 @@ def run_calc(log):
         if obsolete_msg:
             logging.warning(obsolete_msg)
         calc.from_engine = True
-        set_concurrent_tasks_default(calc)
+        set_concurrent_tasks_default(calc, 1 if log.workflow_id else 2)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
@@ -246,7 +248,8 @@ def check_directories(calc_id):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=USER, hc_id=None, host=None, tag=''):
+                user_name=USER, hc_id=None, host=None, workflow_id=None,
+                pdb=False):
     """
     Create job records on the database.
 
@@ -265,14 +268,9 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini)
-        job = logs.init(dic, None, log_level, log_file, user_name, hc_id, host)
+        job = logs.init(dic, None, log_level, log_file, user_name, hc_id,
+                        host, workflow_id, pdb)
         jobs.append(job)
-        if len(job_inis) > 1:
-            j0 = jobs[0].calc_id
-            j1 = j0 + len(job_inis) - 1
-            logs.dbcmd('add_tag_to_job', job.calc_id, f'[{j0}-{j1}]{tag}')
-        elif tag:
-           logs.dbcmd('add_tag_to_job', job.calc_id, tag)
     check_directories(jobs[0].calc_id)
 
     return jobs
@@ -332,28 +330,7 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def log_completed(jobctxs, sec):
-    """
-    Log information about the generated HDF5 files
-    """
-    tot = 0
-    for jobctx in jobctxs:
-        job_ini = jobctx.params['inputs'].get('job_ini', '<in-memory>')
-        # <in-memory> happens for sensitivity.py in run-demos.sh
-        job = logs.dbcmd('get_job', jobctx.calc_id)
-        path = job.ds_calc_dir + '.hdf5'
-        try:
-            size = getsize(path)
-        except FileNotFoundError:  # file not generated
-            size = 0
-        logging.info(f'#{job.id} {job_ini} [{job.status}] '
-                     f'{general.humansize(size)}')
-        tot += size
-    logging.info(f'Generated {general.humansize(tot)} in {sec:_d} seconds')
-
-
 def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
-    t0 = time.time()
     dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
@@ -373,7 +350,8 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             print('oq engine --show-log %d to see the progress' % job_id)
         elif concurrent_jobs > 1:
             args = [(ctx,) for ctx in jobctxs]
-            parallel.multispawn(run_calc, args, concurrent_jobs)
+            names = [ctx.params['mosaic_model'] or None for ctx in jobctxs]
+            parallel.multispawn(run_calc, args, concurrent_jobs, names=names)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
@@ -381,8 +359,6 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
         exc = e
         raise
     finally:
-        if len(jobctxs) > 1:
-            log_completed(jobctxs, int(time.time() - t0))
         notify_job_complete(job_id, notify_to, exc)
         if dist == 'zmq' or (dist == 'slurm' and not sbatch):
             stop_workers(job_id)
@@ -453,6 +429,8 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
 
 OVERRIDABLE_PARAMS = (
     'calculation_mode',
+    'cache',
+    'concurrent_tasks',
     'ground_motion_fields',
     'hazard_calculation_id',
     'number_of_logic_tree_samples',
@@ -461,70 +439,201 @@ OVERRIDABLE_PARAMS = (
     'mosaic_model')
 
 
-def _parse(manifest, gl, jobs_toml):
-    manifest_dir = os.path.dirname(jobs_toml)
-    for k, dic in manifest.items():
-        assert k == 'success' or k[0].isupper(), k
-        assert isinstance(dic, dict), dic
-        for key, val in dic.items():
-            if isinstance(val, str) and val.endswith(
-                    ('.ini', '.hdf5', '.sqlite')):
-                dic[key] = os.path.join(manifest_dir, val)
-    success = manifest.pop('success', {})
-    inis = []
-    for dic in manifest.values():
-        params = readinput.get_params(dic['ini'])
-        for param in OVERRIDABLE_PARAMS:
-            val = dic.get(param, gl.get(param))
-            if val is not None:
-                params[param] = str(val)
-        OqParam(**params).validate()
-        inis.append(params)
-    return dict(manifest_dir=manifest_dir, success=success, inis=inis)
+class _Workflow:
+    # workflow objects are instantiated by the function `read_many`
+    def __init__(self, workflow_toml, defaults, ddic, prefix=''):
+        self.workflow_toml = workflow_toml
+        self.defaults = defaults
+        if not hasattr(self, 'checkout'):
+            self.checkout = {}
+        self.workflow_dir = os.path.dirname(workflow_toml)
+        inis = []
+        names = []
+        self.success = {}
+        for k, dic in ddic.items():
+            assert len(k) <= 20, k
+            assert isinstance(dic, dict), dic
+            for key, val in dic.items():
+                if isinstance(val, str) and val.endswith(
+                        ('.ini', '.hdf5', '.sqlite')):
+                    dic[key] = os.path.join(self.workflow_dir, val)
+        for k, dic in ddic.items():
+            if k == 'success':
+                self.success = ddic['success']
+                continue
+            assert k[0].isupper(), k
+            params = readinput.get_params(dic['ini'])
+            for param in OVERRIDABLE_PARAMS:
+                val = dic.get(param, self.defaults.get(param))
+                if val is not None:
+                    params[param] = str(val)
+            OqParam(**params).validate()
+            inis.append(params)
+            names.append(prefix + k)
 
-    
-def read_many(manifests_toml):
+        check_unique(names, workflow_toml)
+        self.inis = numpy.array(inis)
+        self.names = numpy.array(names)
+
+    def validate(self):
+        """
+        Convert the .inis dictionaries into validated oqparam instances
+        """
+        oqs = []
+        for ini in self.inis:
+            oq = OqParam(**ini)
+            oq.validate()
+            oqs.append(oq)
+        for oq in oqs[1:]:
+            if oq.eff_time != oqs[0].eff_time:
+                raise NameError(f'Expected eff_time = {oqs[0].eff_time}, '
+                                f'got {oq.eff_time}')
+        return oqs
+
+    def to_toml(self):
+        """
+        :returns: a TOML representation of the Workflow object
+        """
+        dic = {'workflow': self.defaults}
+        for name, ini in zip(self.names, self.inis):
+            dic[name] = ini
+        dic['success'] = self.success
+        return toml.dumps(dic)
+
+
+# called twice, internally and also externally to Workflow objects
+def check_unique(names, workflow_toml):
+    uni, cnt = numpy.unique(names, return_counts=1)
+    if (cnt > 1).any():
+        raise ValueError(f'There are duplicates in {workflow_toml}: '
+                         f'{uni[cnt > 1]}')
+
+
+def read_many(workflows_toml, params={}):
     """
-    Read the manifest file and returns a list a manifest dictionary.
-    Set 'manifest_dir', 'success' and 'inis' on each.
+    Read the workflow file and returns a list a workflow dictionary.
+    Set 'workflow_dir', 'success' and 'inis' on each.
     Also expand relative paths to absolute paths for parameters following
     the `_file` name convention.
     """
     out = []
-    for manifest_toml in manifests_toml:
+    prefix = ''
+    for workflow_toml in workflows_toml:
         try:
-            with open(manifest_toml, encoding='utf8') as f:
-                manifest = toml.load(f)
-            gl = manifest.pop('global')
-            if 'global' in gl:  # global.global
-                for v in manifest.values():
-                    out.append(_parse(v, gl, manifest_toml))
+            with open(workflow_toml, encoding='utf8') as f:
+                wfdict = toml.load(f)
+            if 'multi' in wfdict:
+                multi = wfdict.pop('multi')
+                for prefix, ddic in wfdict.items():
+                    wf = _Workflow(workflow_toml, multi['workflow'] | params,
+                                   ddic, prefix)
+                    wf.validate()
+                    out.append(wf)
+            elif 'workflow' in wfdict:
+                wf = _Workflow(workflow_toml, wfdict.pop('workflow') | params,
+                               wfdict)
+                wf.validate()
+                out.append(wf)
             else:
-                out.append(_parse(manifest, gl, manifest_toml))
+                raise InvalidFile('missing [workflow] or [multi.workflow]')
         except Exception as exc:
-            exc.args = (manifest_toml,) + exc.args
+            print(f'Error while parsing {workflow_toml} {prefix}',
+                  file=sys.stderr)
             raise exc
     return out
 
 
-def run_toml(manifests, tag, concurrent_jobs=None, nodes=1, sbatch=False,
-             notify_to=None, cache=True):
+def prepare_workflow(params, workflows_toml, pdb):
+    """
+    Create or retrieve a workflow record and create or update
+    the workflow database
+    """
+    workflows = read_many(workflows_toml, params)
+    names = numpy.concatenate([wf.names for wf in workflows])
+    n = len(names)
+    check_unique(names, workflows_toml)
+    wfdic = dict(base_path=os.path.dirname(workflows_toml[0]),
+                 calculation_mode='workflow')
+    try:
+        workflow_id = params.pop('workflow_id')
+    except KeyError:
+        # create a new workflow
+        [wfjob] = create_jobs([wfdic], pdb=pdb)
+        workflow_id = wfjob.calc_id
+        dstore = datastore.read(workflow_id, 'w')
+        wf_df = pandas.DataFrame(
+            dict(name=names,
+                 calc_id=[0] * n,
+                 status=['created'] * n,
+                 size_mb=[0.0] * n)
+        ).set_index('name')
+        dstore['oqparam'] = OqParam(
+            description=params.pop('description'), **wfdic)
+        dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
+        dstore.create_df('workflow', wf_df.reset_index())
+        dstore.create_dset('success', numpy.bool([False] * len(workflows)))
+    else:
+        # continue an existing workflow
+        wfdic['job_id'] = workflow_id
+        dstore = datastore.read(workflow_id, 'r+')
+        wfjob = logs.init(wfdic)
+    wfjob.workflows = workflows
+    return wfjob, dstore, names
+
+
+def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
+                 sbatch=False, notify_to=None, pdb=False):
     """
     Run sequentially multiple batches of calculations specified by
-    manifest files.
+    workflow files.
     """
-    alljobs = []
-    for out in read_many(manifests):
-        if cache:
-            for ini in out['inis']:
-                ini['cache'] = 'true'
-        jobs = create_jobs(out['inis'], tag=tag)
-        run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-        if out['success']:
-            out['success']['jobs'] = jobs
-            sap.run_func(out['success'])
-    alljobs.extend(jobs)
-    return alljobs
+    wfjob, dstore, names = prepare_workflow(params, workflows_toml, pdb)
+    name2idx = {name: i for i, name in enumerate(names)}
+    calc_dset = dstore['workflow/calc_id']
+    status_dset = dstore['workflow/status']
+    size_dset = dstore['workflow/size_mb']
+    success_dset = dstore['success']
+    with wfjob, dstore:
+        for wf_no, wf in enumerate(wfjob.workflows):
+            failed, calcs, new, new_names = 0, [], [], []
+            for name, ini in zip(wf.names, wf.inis):
+                idx = name2idx[name]
+                if status_dset[idx] == b'complete':
+                    # already done; notice the conversion numpy.int64 -> int
+                    calcs.append(int(calc_dset[idx]))
+                    logging.info(f'{name} already computed')
+                else:
+                    new.append(ini)
+                    new_names.append(name)
+            if new:
+                jobs = create_jobs(new, log_level=logging.WARNING,
+                                   workflow_id=wfjob.calc_id)
+                run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
+                for job, name in zip(jobs, new_names):
+                    rec = job.get_job()
+                    idx = name2idx[name]
+                    calc_dset[idx] = rec.id
+                    status_dset[idx] = rec.status
+                    size_dset[idx] = rec.size_mb
+                    if rec.status == 'failed':
+                        failed += 1
+                    else:
+                        calcs.append(job.calc_id)
+            if wf.success and success_dset[wf_no]:
+                logging.info(f'{wf.success["func"]} already called')
+            elif wf.success and not failed:
+                wf.success['dstore'] = dstore
+                wf.success['calcs'] = calcs
+                sap.run_func(wf.success)
+                success_dset[wf_no] = True
+    dt = wfjob.dt / 3600.
+    logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
+    if failed:
+        mask = status_dset[:] == b'failed'
+        dic = {str(name): int(calc) for name, calc in
+               zip(names[mask], calc_dset[:][mask])}
+        logging.warning(f'The following jobs failed: {dic}')
+    return wfjob.calc_id
 
 
 def version_triple(tag):

@@ -1401,9 +1401,9 @@ def aelo_run(request):
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, asce_version, site_class, job_owner_email,
-        outputs_uri_web,
-        jobctx, aelo_callback)).start()
+        lon, lat, vs30, siteid, asce_version, site_class, jobctx,
+        job_owner_email, outputs_uri_web, config.directory.mosaic_dir,
+        aelo_callback)).start()
     return JsonResponse(response_data, status=200)
 
 

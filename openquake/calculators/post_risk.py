@@ -29,6 +29,7 @@ from openquake.risklib import asset, scientific, reinsurance
 from openquake.commonlib import datastore, logs
 from openquake.calculators import base, views
 from openquake.calculators.base import expose_outputs
+from openquake.calculators.extract import extract
 
 U8 = numpy.uint8
 F32 = numpy.float32
@@ -612,6 +613,20 @@ class PostRiskCalculator(base.RiskCalculator):
             build_reinsurance(self.datastore, oq, self.num_events)
         return 1
 
+    def save_avg_losses_by(self, tagnames):
+        """
+        Aggregate the mean avg_losses by one tagname at the time and create
+        datagroups avg_losses_by/<tagname>.
+        """
+        aggtags = set()
+        for aggby in self.oqparam.aggregate_by:
+            aggtags.update(aggby)
+        for tag in tagnames:
+            if tag in aggtags:  # aggrisk already contains this aggregation
+                continue
+            name = f'avg_losses_by/{tag}'
+            self.datastore.create_df(name, extract(self.datastore, name))
+
     def post_execute(self, ok):
         """
         Sanity checks and save agg_curves-stats
@@ -625,6 +640,14 @@ class PostRiskCalculator(base.RiskCalculator):
         if not ok:  # the hazard is to small
             return
         oq = self.oqparam
+        if 'avg_losses-rlzs' in self.datastore and oq.collect_rlzs:
+            # in case of the global risk model create additional datasets
+            tagnames = ['taxonomy']
+            if 'MACRO_TAXONOMY' in self.assetcol.tagcol.tagnames:
+                tagnames.append('MACRO_TAXONOMY')
+            logging.info('Saving avg_losses_by %s', tagnames)
+            self.save_avg_losses_by(tagnames)
+
         if 'risk' in oq.calculation_mode:
             self.datastore['oqparam'] = oq
             for ln in self.oqparam.loss_types:

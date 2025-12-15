@@ -48,6 +48,7 @@ DISPLAY_NAME = {
     'aggrisk': 'Aggregate Risk',
     'aggrisk-stats': 'Aggregate Risk Statistics',
     'agg_risk': 'Total Risk',
+    'avg_losses_by': 'Average Losses By Taxonomy',
     'aggcurves': 'Aggregate Risk Curves',
     'aggcurves-stats': 'Aggregate Risk Curves Statistics',
     'avg_gmf': 'Average Ground Motion Field',

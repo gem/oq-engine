@@ -59,29 +59,9 @@ Note 3: ruptures.hdf5 will contain a global site model with all the
         parameters (i.e. xvf will be zero for most models).
 
 """
-import os
 from openquake.baselib import sap
-from openquake.commonlib import datastore
+from openquake.qa_tests_data.mosaic import workflow
 from openquake.engine import engine
-
-MODELS = sorted('''
-ALS AUS CEA EUR HAW KOR NEA PHL ARB IDN MEX NWA PNG SAM TWN
-CND CHN IND MIE NZL SEA USA ZAF CCA JPN NAF PAC SSA WAF GLD
-OAT OPA'''.split())
-
-TOML = '''\
-[global]
-calculation_mode = "event_based"
-ground_motion_fields = false
-number_of_logic_tree_samples = {}
-ses_per_logic_tree_path = {}
-minimum_magnitude = {}
-
-[success]
-func = "openquake.engine.postjobs.build_ses"
-out_file = "{}"
-{}
-'''
 
 def main(mosaic_dir, out, *,
          number_of_logic_tree_samples:int=2000,
@@ -89,28 +69,10 @@ def main(mosaic_dir, out, *,
     """
     Storing global SES
     """
-    inis = []
-    calcs = []
-    for model in MODELS:
-        ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
-        if os.path.exists(ini):
-            calcs.append(f'\n[{model}]')
-            calcs.append(f'ini = "{model}/in/job_vs30.ini"')
-            if model in ("JPN", "KOR"):
-                s = ses_per_logic_tree_path // 50  # investigation time
-                calcs.append(f'ses_per_logic_tree_path={s}')
-            inis.append(ini)
+    ses_toml = workflow.ses(mosaic_dir, out, number_of_logic_tree_samples,
+                            ses_per_logic_tree_path, minimum_magnitude)
+    return engine.run_workflow(dict(description='Global SES'), [ses_toml])
 
-    ses_toml = os.path.join(mosaic_dir, 'ses.toml')
-    with open(ses_toml, 'w') as f:
-        f.write(TOML.format(number_of_logic_tree_samples,
-                            ses_per_logic_tree_path,
-                            minimum_magnitude,
-                            out,
-                            '\n'.join(calcs)))
-    jobs = engine.run_toml([ses_toml], 'global SES')
-    return [datastore.read(job.calc_id).filename for job in jobs]
-                    
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
 main.number_of_logic_tree_samples = 'Number of samples'

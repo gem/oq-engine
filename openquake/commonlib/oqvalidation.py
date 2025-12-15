@@ -906,7 +906,8 @@ ALL_CALCULATORS = ['classical_risk',
                    'classical_bcr',
                    'preclassical',
                    'event_based_damage',
-                   'scenario_damage']
+                   'scenario_damage',
+                   'workflow']
 
 COST_TYPES = [
     'structural', 'nonstructural', 'contents', 'business_interruption']
@@ -1619,6 +1620,14 @@ class OqParam(valid.ParamSet):
             raise ValueError('Missing investigation_time in the .ini file')
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
+
+    @property
+    def eff_time(self):
+        """
+        The effective time, non zero only for sampling
+        """
+        return (self.investigation_time * self.ses_per_logic_tree_path *
+                self.number_of_logic_tree_samples)
 
     def risk_event_rates(self, num_events, num_haz_rlzs):
         """
@@ -2370,7 +2379,8 @@ class OqParam(valid.ParamSet):
         """
         dic = {k: v for k, v in vars(self).items() if not k.startswith('_')}
         dic['inputs'].update(inputs)
-        del dic['base_path'], dic['req_site_params']
+        dic.pop('base_path', None)
+        dic.pop('req_site_params', None)
         dic.pop('close', None)
         dic.pop('mags_by_trt', None)
         dic.pop('sec_imts', None)
@@ -2383,8 +2393,11 @@ class OqParam(valid.ParamSet):
         if 'aggregate_by' in dic:
             dic['aggregate_by'] = '; '.join(
                 ','.join(keys) for keys in dic['aggregate_by'])
+        if 'cache' not in dic:
+            dic['cache'] = 'false'
         ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
-        return ini
+        # newlines can break the checksum, so we remove them
+        return ini.strip().replace('\n\n', '\n')
 
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}
@@ -2460,8 +2473,8 @@ def to_ini(key, val):
     elif key in ('reqv_ignore_sources', 'poes', 'quantiles', 'disagg_outputs',
                  'source_id', 'source_nodes', 'soil_intensities'):
         return f"{key} = {' '.join(map(str, val))}"
-    elif key in ('cache', 'concurrent_tasks'):
-        # parameters not affecting the numbers
+    elif key  == 'cache':
+        # parameter not affecting the numbers
         return ''
     else:
         if val is None:

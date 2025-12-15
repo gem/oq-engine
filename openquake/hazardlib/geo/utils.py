@@ -268,8 +268,6 @@ class _GeographicObjects(object):
         objs, distances = self.get_closest(mesh.lons, mesh.lats)
         for obj, distance, assets, lon, lat in zip(
                 objs, distances, assets_by_site, mesh.lons, mesh.lats):
-            if round(lon, 3) == 132.473 and round(lat, 3) == 35.143:
-                breakpoint()
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)

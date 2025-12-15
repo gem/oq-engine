@@ -41,7 +41,7 @@ from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
 from openquake.commonlib.readinput import get_params, jobs_from_inis
-from openquake.engine.engine import create_jobs, run_jobs, run_toml
+from openquake.engine.engine import create_jobs, run_jobs, run_workflow
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data import mosaic
@@ -286,9 +286,9 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertEqual(dic['success'], [])
         self.assertIn('File not found', dic['error'])
     
-    def test_toml(self):
+    def test_workflow(self):
         base = pathlib.Path(case_4a.__file__).parent
-        run_toml([base / 'jobs.toml'], 'haz+rsk')
+        run_workflow(dict(description='test_workflow'), [base / 'jobs.toml'])
 
     def test_show_calc(self):
         with Print.patch() as p:

@@ -55,17 +55,6 @@ def get_boundaries_file(mosaic_dir, other_dir):
     raise FileNotFoundError('ModelBoundaries')
 
 
-@functools.lru_cache
-def get_mosaic_df(buffer, mosaic_dir=config.directory.mosaic_dir):
-    """
-    :returns: a DataFrame with the mosaic geometries used in AELO
-    """
-    path = get_boundaries_file(mosaic_dir, os.path.dirname(mosaic.__file__))
-    logging.info(f'Reading {path}')
-    df = readinput.read_geometries(path, 'name', buffer)
-    return df
-
-
 def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     """
     :param inputs:
@@ -78,7 +67,7 @@ def get_params_from(inputs, mosaic_dir, exclude=(), ini=None):
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
-    mosaic_df = get_mosaic_df(buffer=0)
+    mosaic_df = readinput.read_mosaic_df(buffer=0)
     lonlats = valid.coordinates(inputs['sites'])
     models = geo.utils.geolocate(lonlats, mosaic_df, exclude)
     if len(set(models)) > 1:
@@ -143,39 +132,31 @@ def main(lon: valid.longitude,
          siteid: str,
          asce_version: str,
          site_class: str,
+         jobctx,
          job_owner_email=None,
          outputs_uri=None,
-         jobctx=None,
+         mosaic_dir=config.directory.mosaic_dir,
          callback=trivial_callback,
          ):
     """
-    This script is meant to be called from the WebUI in production mode,
-    and from the command-line in testing mode.
+    This script is meant to be called from the WebUI
     """
     oqvalidation.OqParam.asce_version.validator(asce_version)
     oqvalidation.OqParam.site_class.validator(site_class)
     inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid,
                   asce_version=asce_version, site_class=site_class)
     warnings = []
-    if jobctx is None:
-        # in  testing mode create a new job context
-        config.directory.mosaic_dir = os.path.join(
-            os.path.dirname(CDIR), 'qa_tests_data/mosaic')
-        dic = dict(calculation_mode='custom', description='AELO')
-        [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
-                                      None, getpass.getuser(), None)
-    else:
-        # in production mode update jobctx.params
-        try:
-            jobctx.params.update(get_params_from(
-                inputs, config.directory.mosaic_dir, exclude=['USA']))
-        except Exception as exc:
-            # This can happen for instance:
-            # - if no model covers the given coordinates.
-            # - if no ini file was found
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                     exc=exc, warnings=warnings)
-            raise exc
+
+    try:
+        jobctx.params.update(
+            get_params_from(inputs, mosaic_dir, exclude=['USA']))
+    except Exception as exc:
+        # This can happen for instance:
+        # - if no model covers the given coordinates.
+        # - if no ini file was found
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                 exc=exc, warnings=warnings)
+        raise exc
 
     if jobctx.params['mosaic_model'] in PRELIMINARY_MODELS:
         warnings.append(PRELIMINARY_MODEL_WARNING_MSG)

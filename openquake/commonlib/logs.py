@@ -20,9 +20,11 @@ Set up some system-wide loggers
 """
 import os
 import re
+import time
 import getpass
 import logging
 import traceback
+from pdb import post_mortem
 from datetime import datetime, timezone
 from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi
@@ -211,7 +213,8 @@ class LogContext:
     oqparam = None
 
     def __init__(self, params, log_level='info', log_file=None,
-                 user_name=None, hc_id=None, host=None):
+                 user_name=None, hc_id=None, host=None, workflow_id=None,
+                 pdb=None):
         if not dbcmd("SELECT name FROM sqlite_master WHERE name='job'"):
             raise RuntimeError('You forgot to run oq engine --upgrade-db -y')
         self.log_level = log_level
@@ -220,6 +223,8 @@ class LogContext:
         self.params = params
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
+        self.workflow_id = workflow_id
+        self.pdb = pdb
         calc_id = int(params.get('job_id', 0))
         if calc_id == 0:
             datadir = get_datadir()
@@ -227,16 +232,15 @@ class LogContext:
                 'create_job', datadir,
                 self.params['calculation_mode'],
                 self.params.get('description', 'test'),
-                user_name, None if isinstance(hc_id, str) else hc_id, host)
+                user_name, None if isinstance(hc_id, str) else hc_id,
+                host, workflow_id)
             path = os.path.join(datadir, 'calc_%d.hdf5' % self.calc_id)
             if os.path.exists(path):  # sanity check on the calculation ID
                 raise RuntimeError('There is a pre-existing file %s' % path)
-            self.usedb = True
         else:
             # assume the calc_id was alreay created in the db
             assert calc_id > 0, calc_id
             self.calc_id = calc_id
-            self.usedb = True
 
     def get_oqparam(self, validate=True):
         """
@@ -253,14 +257,14 @@ class LogContext:
         return dbcmd("get_job", self.calc_id)
 
     def __enter__(self):
+        self.t0 = time.time()
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level, handlers=[])
         model = self.params.get('mosaic_model', '')
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
             self.calc_id, model + ' ' if model else '')
-        self.handlers = [LogDatabaseHandler(self.calc_id)] \
-            if self.usedb else []
+        self.handlers = [LogDatabaseHandler(self.calc_id)]
         if self.log_file is None:
             # add a StreamHandler if not already there
             if not any(h for h in logging.root.handlers
@@ -277,27 +281,25 @@ class LogContext:
         return self
 
     def __exit__(self, etype, exc, tb):
-        if tb:
-            tb_str = '\n'.join(traceback.format_tb(tb))
-            if etype is SystemExit:
-                dbcmd('finish', self.calc_id, 'aborted')
-            else:
-                # remove StreamHandler to avoid logging twice
-                logging.root.removeHandler(self.handlers[-1])
-                # store the traceback
-                logging.error(f'{tb_str}\n{etype.__name__}: {exc}')
-                dbcmd('finish', self.calc_id, 'failed')
+        self.dt = time.time() - self.t0
+        if etype is SystemExit:
+            dbcmd('finish', self.calc_id, 'aborted')
+        elif tb:
+            tb_str = ''.join(traceback.format_tb(tb))  # newlines are included
+            # remove non-db handlers to avoid logging twice
+            for h in logging.root.handlers:
+                if not isinstance(h, LogDatabaseHandler):
+                    logging.root.removeHandler(h)
+            # store the traceback
+            logging.error(f'{tb_str}{etype.__name__}: {exc}')
+            dbcmd('finish', self.calc_id, 'failed')
+            if self.pdb:
+                post_mortem(tb)
         else:
             dbcmd('finish', self.calc_id, 'complete')
         for handler in self.handlers:
             logging.root.removeHandler(handler)
         parallel.Starmap.shutdown()
-
-    def __getstate__(self):
-        # ensure pickleability
-        return dict(calc_id=self.calc_id, params=self.params, usedb=self.usedb,
-                    log_level=self.log_level, log_file=self.log_file,
-                    user_name=self.user_name, oqparam=self.oqparam)
 
     def __repr__(self):
         hc_id = self.params.get('hazard_calculation_id')
@@ -306,7 +308,8 @@ class LogContext:
 
 
 def init(job_ini, dummy=None, log_level='info', log_file=None,
-         user_name=None, hc_id=None, host=None):
+         user_name=None, hc_id=None, host=None, workflow_id=None,
+         pdb=None):
     """
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param dummy: ignored parameter, exists for backward compatibility
@@ -315,6 +318,7 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
+    :param workflow_id: workflow ID (default None)
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -326,4 +330,5 @@ def init(job_ini, dummy=None, log_level='info', log_file=None,
         job_ini = dummy
     if not isinstance(job_ini, dict):
         job_ini = readinput.get_params(job_ini)
-    return LogContext(job_ini, log_level, log_file, user_name, hc_id, host)
+    return LogContext(job_ini, log_level, log_file, user_name, hc_id,
+                      host, workflow_id, pdb)

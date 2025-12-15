@@ -60,6 +60,18 @@ def reset_is_running(db):
        "WHERE is_running=1 OR status='executing'")
 
 
+def keep(db, workflow_id):
+    """
+    Set relevant to true and drop all irrelevant workflows
+    """
+    cursor = db("UPDATE job SET relevant=true "
+                "WHERE calculation_mode='workflow' AND id=?x", workflow_id)
+    if cursor.rowcount:
+        cursor = db("DELETE FROM job WHERE calculation_mode='workflow' "
+                    "AND NOT relevant", workflow_id)
+    return cursor.rowcount
+
+
 def set_status(db, job_id, status):
     """
     Set the status 'created', 'executing', 'complete', 'failed', 'aborted'
@@ -88,7 +100,7 @@ def set_status(db, job_id, status):
 
 def create_job(db, datadir, calculation_mode='to be set',
                description='just created', user_name=None,
-               hc_id=None, host=None):
+               hc_id=None, host=None, workflow_id=None):
     """
     Create job for the given user, return it.
 
@@ -106,16 +118,21 @@ def create_job(db, datadir, calculation_mode='to be set',
         ID of the parent job (if any)
     :param host:
         machine where the calculation is running (master)
+    :param workflow_id:
+        ID of the associated workflow, if any
     :returns:
         the job ID
     """
-    # NB: is_running=1 is needed to make views_test.py happy on Jenkins
+    # NB: is_running=1 is needed to make views_test.py happy
     job = dict(is_running=1, description=description,
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
-               ds_calc_dir=datadir, hazard_calculation_id=hc_id, host=host)
+               ds_calc_dir=datadir, hazard_calculation_id=hc_id,
+               host=host, relevant=calculation_mode != 'workflow')
     job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
                 ).lastrowid
+    if workflow_id:
+        db('UPDATE job SET workflow_id=?x WHERE id=?x', workflow_id, job_id)
     db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
        os.path.join(datadir, 'calc_%s' % job_id), job_id)
     return job_id
@@ -882,26 +899,6 @@ ORDER BY julianday(stop_time) - julianday(start_time)'''
 
 # checksums
 
-def add_checksum(db, job_id, value):
-    """
-    :param db:
-        a :class:`openquake.commonlib.dbapi.Db` instance
-    :param job_id:
-        job ID
-    :param value:
-        value of the checksum (32 bit integer)
-    :returns:
-        The unique job_id with that checksum or None
-    """
-    try:
-        jid = db('SELECT job_id FROM checksum WHERE hazard_checksum=?x',
-                 value, scalar=True)
-    except NotFound:
-        db('INSERT INTO checksum VALUES (?x, ?x)', job_id, value)
-    else:
-        return jid
-
-
 def update_job_checksum(db, job_id, checksum):
     """
     :param db:
@@ -911,8 +908,11 @@ def update_job_checksum(db, job_id, checksum):
     :param checksum:
         the checksum (32 bit integer)
     """
-    return db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
-              job_id, checksum).lastrowid
+    updated = db('UPDATE checksum SET job_id=?x WHERE hazard_checksum=?x',
+                 job_id, checksum).rowcount
+    if not updated:  # the checksum is new
+        db('INSERT INTO checksum (job_id, hazard_checksum) VALUES (?x, ?x)',
+           job_id, checksum)
 
 
 def get_checksum_from_job(db, job_id):
@@ -939,9 +939,8 @@ def get_job_from_checksum(db, checksum):
         the job associated to the checksum or None
     """
     # there is an UNIQUE constraint both on hazard_checksum and job_id
-    jobs = db('SELECT * FROM job WHERE id = ('
-              'SELECT job_id FROM checksum WHERE hazard_checksum=?x)',
-              checksum)  # 0 or 1 jobs
+    jobs = db('SELECT job.* FROM job, checksum WHERE hazard_checksum=?x '
+              'AND job.id=job_id AND status == "complete"', checksum)
     if not jobs:
         return
     return jobs[0]
