@@ -442,6 +442,7 @@ OVERRIDABLE_PARAMS = (
 class _Workflow:
     # workflow objects are instantiated by the function `read_many`
     def __init__(self, workflow_toml, defaults, ddic, prefix=''):
+        self.workflow_toml = workflow_toml
         self.defaults = defaults
         if not hasattr(self, 'checkout'):
             self.checkout = {}
@@ -474,6 +475,21 @@ class _Workflow:
         self.inis = numpy.array(inis)
         self.names = numpy.array(names)
 
+    def validate(self):
+        """
+        Convert the .inis dictionaries into validated oqparam instances
+        """
+        oqs = []
+        for ini in self.inis:
+            oq = OqParam(**ini)
+            oq.validate()
+            oqs.append(oq)
+        for oq in oqs[1:]:
+            if oq.eff_time != oqs[0].eff_time:
+                raise NameError(f'Expected eff_time = {oqs[0].eff_time}, '
+                                f'got {oq.eff_time}')
+        return oqs
+
     def to_toml(self):
         """
         :returns: a TOML representation of the Workflow object
@@ -489,7 +505,7 @@ class _Workflow:
 def check_unique(names, workflow_toml):
     uni, cnt = numpy.unique(names, return_counts=1)
     if (cnt > 1).any():
-        raise ValueError(f'There are duplicate job names in {workflow_toml}: '
+        raise ValueError(f'There are duplicates in {workflow_toml}: '
                          f'{uni[cnt > 1]}')
 
 
@@ -511,10 +527,12 @@ def read_many(workflows_toml, params={}):
                 for prefix, ddic in wfdict.items():
                     wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                    ddic, prefix)
+                    wf.validate()
                     out.append(wf)
             elif 'workflow' in wfdict:
                 wf = _Workflow(workflow_toml, wfdict.pop('workflow') | params,
                                wfdict)
+                wf.validate()
                 out.append(wf)
             else:
                 raise InvalidFile('missing [workflow] or [multi.workflow]')
