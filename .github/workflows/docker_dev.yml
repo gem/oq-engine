@@ -85,10 +85,7 @@ jobs:
         run: |
           docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.dev docker
           docker image ls
-          echo " push image engine with tag nightly on docker hub "
-          docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-          docker push openquake/engine:$DOCKER_TAG
-          # Test authentication
+          # Test authentication on WebUI headless
           echo "Test WEBUI HEADLESS"
           cat > ./.env << EOF
           OQ_APPLICATION_MODE=RESTRICTED
@@ -104,17 +101,20 @@ jobs:
           EMAIL_SUPPORT=noreply@reply.com
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
-          echo " docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:$DOCKER_TAG "
-          docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:$DOCKER_TAG "oq webui start 0.0.0.0:8800 -s &"
+          echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:$DOCKER_TAG "
+          docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:$DOCKER_TAG
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z 127.0.0.1 8800; do
            echo "Still waiting WEBUI up on port 8800...."
            sleep 5 # wait for 5 seconds before check again
           done
           sleep 1
-          # Perform migration after setup local_settings
           curl --fail -L -I -X GET http://127.0.0.1:8800
-          time docker run openquake/engine:$DOCKER_TAG "(oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true")"
-          echo " push image engine with tag nightly on ocker hub "
+          echo "test run of calc on running container and retrieve with WebUI"
+          time docker exec -it openquake oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
+          echo "test run of a calcs on new created container"
+          time docker run openquake/engine:$DOCKER_TAG oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          echo " push image engine with tag :$DOCKER_TAG on docker hub "
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
           docker push openquake/engine:$DOCKER_TAG
