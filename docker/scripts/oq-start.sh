@@ -50,10 +50,7 @@ if [ "$OQ_APPLICATION_MODE" = "RESTRICTED" ]; then
 fi
 if [ -t 1 ]; then
     # TTY mode
-    exec oq webui start 0.0.0.0:8800 -s &>> $HOME/oqdata/webui.log &
     /bin/bash
 else
     # Headless mode
-	echo "WebUI started in background"
-    exec oq webui start 0.0.0.0:8800 
 fi

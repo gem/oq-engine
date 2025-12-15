@@ -59,7 +59,7 @@ jobs:
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
           echo " docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly "
-          docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly
+          docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly 
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z 127.0.0.1 8800; do
            echo "Still waiting WEBUI up on port 8800...."
@@ -105,7 +105,7 @@ jobs:
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
           echo " docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:$DOCKER_TAG "
-          docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:$DOCKER_TAG
+          docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:$DOCKER_TAG "oq webui start 0.0.0.0:8800 -s"
           echo "Waiting WEBUI up on port 8800...."
           while ! nc -z 127.0.0.1 8800; do
            echo "Still waiting WEBUI up on port 8800...."
