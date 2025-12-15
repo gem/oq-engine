@@ -54,7 +54,6 @@ if [ -t 1 ]; then
     /bin/bash
 else
     # Headless mode
-    exec oq --version
-    exec oq webui start 0.0.0.0:8800 -s &
 	echo "WebUI started in background"
+    exec oq webui start 0.0.0.0:8800 
 fi
