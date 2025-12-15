@@ -46,9 +46,9 @@ jobs:
           echo "Test WEBUI HEADLESS"
           cat > ./.env << EOF
           OQ_APPLICATION_MODE=RESTRICTED
-          OQ_ADMIN_LOGIN=example
-          OQ_ADMIN_PASSWORD=example
-          OQ_ADMIN_EMAIL="login@example.com"
+          OQ_ADMIN_LOGIN=admin_scheduled
+          OQ_ADMIN_PASSWORD=crond_schedule
+          OQ_ADMIN_EMAIL="login@scheduler.io"
           EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
           EMAIL_HOST=smtp.gmail.com
           EMAIL_PORT=587
@@ -58,19 +58,22 @@ jobs:
           EMAIL_SUPPORT=noreply@reply.com
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
-          echo " docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly "
-          docker run --name openquake --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly 
+          echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly "
+          docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:nightly
           echo "Waiting WEBUI up on port 8800...."
-          while ! nc -z 127.0.0.1 8800; do
-           echo "Still waiting WEBUI up on port 8800...."
+          while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
+           echo "Still waiting WEBUI account login up on port 8800...."
            sleep 5 # wait for 5 seconds before check again
           done
           sleep 1
-          # Perform migration after setup local_settings
-          curl --fail -L -I -X GET http://127.0.0.1:8800
+          #
+          curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login
           #Run calcs
-          time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
-          time docker run openquake/engine:nightly "oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true""
+          echo "test run of calc on running container "
+          time docker exec -it openquake oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini
+          time docker exec -it openquake oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          echo "test run of a calcs on new created container"
+          time docker run openquake/engine:$DOCKER_TAG oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
           echo " push image engine with tag nightly on docker hub "
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
           docker push openquake/engine:nightly
@@ -89,9 +92,9 @@ jobs:
           echo "Test WEBUI HEADLESS"
           cat > ./.env << EOF
           OQ_APPLICATION_MODE=RESTRICTED
-          OQ_ADMIN_LOGIN=example
-          OQ_ADMIN_PASSWORD=example
-          OQ_ADMIN_EMAIL="login@example.com"
+          OQ_ADMIN_LOGIN=manual_run_admin
+          OQ_ADMIN_PASSWORD=manual_admin
+          OQ_ADMIN_EMAIL="login@manual.io"
           EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
           EMAIL_HOST=smtp.gmail.com
           EMAIL_PORT=587
@@ -104,15 +107,15 @@ jobs:
           echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:$DOCKER_TAG "
           docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:$DOCKER_TAG
           echo "Waiting WEBUI up on port 8800...."
-          while ! nc -z 127.0.0.1 8800; do
-           echo "Still waiting WEBUI up on port 8800...."
+          while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
+           echo "Still waiting WEBUI account login up on port 8800...."
            sleep 5 # wait for 5 seconds before check again
           done
           sleep 1
-          curl --fail -L -I -X GET http://127.0.0.1:8800
-          echo "test run of calc on running container and retrieve with WebUI"
+          curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login
+          echo "test run of calc on running container "
+          time docker exec -it openquake oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini
           time docker exec -it openquake oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
-          curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
           echo "test run of a calcs on new created container"
           time docker run openquake/engine:$DOCKER_TAG oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
           echo " push image engine with tag :$DOCKER_TAG on docker hub "
