@@ -53,12 +53,12 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, exports,
     dic = readinput.get_params(job_ini, params)
     # set the logs first of all
     log = logs.init(dic, log_level=getattr(logging, loglevel.upper()),
-                    user_name=user_name, host=host)
+                    user_name=user_name, host=host, pdb=pdb)
     logs.dbcmd('update_job', log.calc_id,
                {'status': 'executing', 'pid': os.getpid()})
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
-        calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
+        calc.run(concurrent_tasks=concurrent_tasks, exports=exports)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
@@ -133,7 +133,7 @@ def main(job_ini,
                            {'calculation_mode': dic['calculation_mode']})
         jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
                            host=host)
-        run_jobs(jobs, concurrent_jobs=1, nodes=nodes, pdb=pdb)
+        run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
         return jobs[0].calc_id  # used in commands_test
     else:  # toml
         if not workflow_id:

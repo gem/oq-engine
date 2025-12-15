@@ -1621,6 +1621,14 @@ class OqParam(valid.ParamSet):
         return (self.risk_investigation_time or self.investigation_time) / (
             self.investigation_time * self.ses_per_logic_tree_path)
 
+    @property
+    def eff_time(self):
+        """
+        The effective time, non zero only for sampling
+        """
+        return (self.investigation_time * self.ses_per_logic_tree_path *
+                self.number_of_logic_tree_samples)
+
     def risk_event_rates(self, num_events, num_haz_rlzs):
         """
         :param num_events: the number of events per risk realization
@@ -2388,7 +2396,8 @@ class OqParam(valid.ParamSet):
         if 'cache' not in dic:
             dic['cache'] = 'false'
         ini = '[general]\n' + '\n'.join(to_ini(k, v) for k, v in dic.items())
-        return ini
+        # newlines can break the checksum, so we remove them
+        return ini.strip().replace('\n\n', '\n')
 
     def __toh5__(self):
         return hdf5.dumps(vars(self)), {}

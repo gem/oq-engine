@@ -25,7 +25,7 @@ import os
 import logging
 import tempfile
 from openquake.baselib import hdf5, config, performance
-from openquake.commonlib import datastore, logs
+from openquake.commonlib import datastore
 from openquake.calculators import base, export
 
 
@@ -61,7 +61,7 @@ def _export_import(name, calc_id, output_type, dstore):
         for fname in export.export((output_type, 'csv'), calc_ds):
             table = os.path.basename(fname).rsplit('_', 1)[0]
             # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
-            logging.info(f'Importing {table} for {name}')
+            logging.info(f'Importing {table} for {name} [{calc_id}]')
             dstore.import_csv(fname, table, str_fields, {'calc': name})
             os.remove(fname)  # remove only if the import succeeded
 
@@ -75,7 +75,6 @@ def import_outputs(dstore, calcs, out_types):
     with performance.Monitor(measuremem=True, h5=dstore) as mon:
         for calc_id in calcs:
             name = wf.loc[calc_id]['name']
-            with logs.init({'job_id': calc_id}):
-                for out_type in out_types:
-                    _export_import(name, calc_id, out_type, dstore)
+            for out_type in out_types:
+                _export_import(name, calc_id, out_type, dstore)
     print(mon)

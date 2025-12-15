@@ -1241,10 +1241,10 @@ class Exposure(object):
             rename[f] = 'occupants_' + f
         for fname in self.datafiles:
             t0 = time.time()
-            df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
+            df = hdf5.read_csv(fname, conv, rename, errors=errors, dframe=True)
             asset = os.environ.get('OQ_DEBUG_ASSET')
             if asset:
-                df = df[df.index == asset]
+                df = df[df.id == asset]
                 if len(df) == 0:
                     continue
             add_dupl_fields(df, oqfields)
@@ -1255,7 +1255,7 @@ class Exposure(object):
                 df = general.random_filter(df, sa)
             logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
                 len(df), time.time() - t0, fname))
-            yield fname, df
+            yield fname, df.set_index('id')
 
     def associate(self, haz_sitecol, haz_distance, region=None):
         """

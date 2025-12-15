@@ -858,7 +858,10 @@ def export_job_zip(ekey, dstore):
         oq.inputs.pop('mmi', None)
         gsim_lt = None  # from shakemap
     else:
-        gsim_lt = dstore['full_lt'].gsim_lt
+        model = dstore['ruptures'][0]['model'].decode('ascii')
+        # FIXME: extracts the gsim_lt of the first model only
+        [(model, lt)] = base.get_model_lts(dstore, model)
+        gsim_lt = lt.gsim_lt
         gmf_fname = ''
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])
