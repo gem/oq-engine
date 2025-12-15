@@ -88,7 +88,7 @@ jobs:
           # Perform migration after setup local_settings
           curl --fail -L -I -X GET http://127.0.0.1:8800
           # Run all demos          
-          cd $HOME/gh-venv/
+          cd $HOME/gh-venv_custom/
           curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/master/bin/run-demos.sh
           oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
           qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
