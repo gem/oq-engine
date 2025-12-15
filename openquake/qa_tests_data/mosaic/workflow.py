@@ -91,9 +91,8 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int=2000,
     haz = ['[multi.workflow]']
     haz.append(f'{number_of_logic_tree_samples=}')
     haz.append(f'{ses_per_logic_tree_path=}')
-    add_checkout(haz, MODELS)
+    add_checkout(haz, MODELS + REGIONS + ['Exposure', 'Vulnerability'])
     risk = []
-    add_checkout(risk, REGIONS + ['Exposure', 'Vulnerability'])
     num_countries = 0
     for region in REGIONS:
         jobs_dir = os.path.join(mosaic_dir, region, 'Jobs')
@@ -120,7 +119,9 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int=2000,
         haz.append('')
         risk.append('')
     risk.append('\n[success]')
-    risk.append('func = "openquake.engine.postjobs.import_risk"')
+    risk.append('func = "openquake.engine.postjobs.import_outputs"')
+    risk.append('out_types = ["aggexp_tags", "aggrisk", '
+                '"avg_losses_by", "aggcurves"]')
     print(f'Found {num_countries=}')
     return save(mosaic_dir, 'GRM.toml', '\n'.join(haz + risk))
 

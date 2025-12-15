@@ -39,7 +39,9 @@ def build_ses(dstore, calcs, out_file):
         fnames = [ds.filename for ds in dstores]
         logging.warning(f'Saving {out_file}')
         with hdf5.File(out_file, 'w') as h5:
+            logging.info('Importing sites')
             base.import_sites_hdf5(h5, fnames)
+            logging.info('Importing ruptures')
             base.import_ruptures_hdf5(h5, fnames)
             h5['oqparam'] = dstores[0]['oqparam']
     print(mon)
@@ -53,7 +55,7 @@ def _export_import(name, calc_id, output_type, dstore):
         aggby = set()
         for agg in oq.aggregate_by:
             aggby.update(agg)
-        str_fields = ['loss_type', 'taxonomy'] + sorted(aggby)
+        str_fields = ['loss_type', 'taxonomy', 'MACRO_TAXONOMY'] + sorted(aggby)
         calc_ds.export_dir = (config.directory.custom_tmp or
                               tempfile.gettempdir())
         for fname in export.export((output_type, 'csv'), calc_ds):

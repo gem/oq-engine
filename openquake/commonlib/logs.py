@@ -20,6 +20,7 @@ Set up some system-wide loggers
 """
 import os
 import re
+import time
 import getpass
 import logging
 import traceback
@@ -254,6 +255,7 @@ class LogContext:
         return dbcmd("get_job", self.calc_id)
 
     def __enter__(self):
+        self.t0 = time.time()
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level, handlers=[])
@@ -278,6 +280,7 @@ class LogContext:
         return self
 
     def __exit__(self, etype, exc, tb):
+        self.dt = time.time() - self.t0
         if tb:
             tb_str = ''.join(traceback.format_tb(tb))  # newlines are included
             if etype is SystemExit:

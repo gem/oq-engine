@@ -128,10 +128,11 @@ def create_job(db, datadir, calculation_mode='to be set',
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
                ds_calc_dir=datadir, hazard_calculation_id=hc_id,
-               host=host, workflow_id=workflow_id,
-               relevant=calculation_mode != 'workflow')
+               host=host, relevant=calculation_mode != 'workflow')
     job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
                 ).lastrowid
+    if workflow_id:
+        db('UPDATE job SET workflow_id=?x WHERE id=?x', workflow_id, job_id)
     db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
        os.path.join(datadir, 'calc_%s' % job_id), job_id)
     return job_id

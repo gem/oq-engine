@@ -31,8 +31,10 @@ import getpass
 import logging
 import platform
 import functools
+from pdb import post_mortem
 from unittest import mock
 from os.path import getsize
+import traceback
 from datetime import datetime, timezone
 import requests
 import psutil
@@ -173,7 +175,7 @@ def poll_queue(job_id, poll_time):
                 break
 
 
-def run_calc(log):
+def run_calc(log, pdb=False):
     """
     Run a calculation.
 
@@ -217,7 +219,7 @@ def run_calc(log):
         calc.from_engine = True
         set_concurrent_tasks_default(calc)
         t0 = time.time()
-        calc.run(shutdown=True)
+        calc.run(pdb=pdb, shutdown=True)
         logging.info('Exposing the outputs to the database')
         expose_outputs(calc.datastore)
         calc.datastore.close()
@@ -267,7 +269,8 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             # NB: `get_params` must NOT log, since the logging is not
             # configured yet, otherwise the log will disappear :-(
             dic = readinput.get_params(job_ini)
-        job = logs.init(dic, None, log_level, log_file, user_name, hc_id, host)
+        job = logs.init(dic, None, log_level, log_file, user_name, hc_id,
+                        host, workflow_id)
         jobs.append(job)
     check_directories(jobs[0].calc_id)
 
@@ -328,7 +331,7 @@ def notify_job_complete(job_id, notify_to, exc=None):
         logging.error(f'notify_job_complete: {notify_to=} not valid')
 
 
-def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
+def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to, pdb):
     dist = parallel.oq_distribute()
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
@@ -351,7 +354,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
             parallel.multispawn(run_calc, args, concurrent_jobs)
         else:
             for jobctx in jobctxs:
-                run_calc(jobctx)
+                run_calc(jobctx, pdb)
     except Exception as e:
         exc = e
         raise
@@ -362,7 +365,7 @@ def _run(jobctxs, job_id, nodes, sbatch, concurrent_jobs, notify_to):
 
 
 def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
-             notify_to=None, precalc=False):
+             notify_to=None, precalc=False, pdb=False):
     """
     Run jobs using the specified config file and other options.
 
@@ -417,15 +420,16 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
     if concurrent_jobs > 1:
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'zmq'}):
             _run(jobctxs, job_id, nodes, sbatch,
-                 concurrent_jobs, notify_to)
+                 concurrent_jobs, notify_to, pdb)
     else:
         _run(jobctxs, job_id, nodes, sbatch,
-             concurrent_jobs, notify_to)
+             concurrent_jobs, notify_to, pdb)
     return jobctxs
 
 
 OVERRIDABLE_PARAMS = (
     'calculation_mode',
+    'cache',
     'ground_motion_fields',
     'hazard_calculation_id',
     'number_of_logic_tree_samples',
@@ -436,8 +440,8 @@ OVERRIDABLE_PARAMS = (
 
 class _Workflow:
     # workflow objects are instantiated by the function `read_many`
-    def __init__(self, workflow_toml, dic, ddic, prefix=''):
-        vars(self).update(dic)
+    def __init__(self, workflow_toml, defaults, ddic, prefix=''):
+        self.defaults = defaults
         if not hasattr(self, 'checkout'):
             self.checkout = {}
         self.workflow_dir = os.path.dirname(workflow_toml)
@@ -458,17 +462,29 @@ class _Workflow:
             assert k[0].isupper(), k
             params = readinput.get_params(dic['ini'])
             for param in OVERRIDABLE_PARAMS:
-                val = dic.get(param, getattr(self, param, None))
+                val = dic.get(param, self.defaults.get(param))
                 if val is not None:
                     params[param] = str(val)
             OqParam(**params).validate()
             inis.append(params)
             names.append(prefix + k)
+
         check_unique(names, workflow_toml)
         self.inis = numpy.array(inis)
         self.names = numpy.array(names)
 
+    def to_toml(self):
+        """
+        :returns: a TOML representation of the Workflow object
+        """
+        dic = {'workflow': self.defaults}
+        for name, ini in zip(self.names, self.inis):
+            dic[name] = ini
+        dic['success'] = self.success
+        return toml.dumps(dic)
 
+
+# called twice, internally and also externally to Workflow objects
 def check_unique(names, workflow_toml):
     uni, cnt = numpy.unique(names, return_counts=1)
     if (cnt > 1).any():
@@ -476,7 +492,7 @@ def check_unique(names, workflow_toml):
                          f'{uni[cnt > 1]}')
 
 
-def read_many(workflows_toml):
+def read_many(workflows_toml, params={}):
     """
     Read the workflow file and returns a list a workflow dictionary.
     Set 'workflow_dir', 'success' and 'inis' on each.
@@ -484,6 +500,7 @@ def read_many(workflows_toml):
     the `_file` name convention.
     """
     out = []
+    prefix = ''
     for workflow_toml in workflows_toml:
         try:
             with open(workflow_toml, encoding='utf8') as f:
@@ -491,84 +508,118 @@ def read_many(workflows_toml):
             if 'multi' in wfdict:
                 multi = wfdict.pop('multi')
                 for prefix, ddic in wfdict.items():
-                    wf = _Workflow(workflow_toml, multi['workflow'],
+                    wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                    ddic, prefix)
                     out.append(wf)
             elif 'workflow' in wfdict:
-                wf = _Workflow(workflow_toml, wfdict.pop('workflow'), wfdict)
+                wf = _Workflow(workflow_toml, wfdict.pop('workflow') | params,
+                               wfdict)
                 out.append(wf)
             else:
                 raise InvalidFile('missing [workflow] or [multi.workflow]')
         except Exception as exc:
-            exc.args = (workflow_toml,) + exc.args
+            print(f'Error while parsing {workflow_toml} {prefix}',
+                  file=sys.stderr)
             raise exc
     return out
-        
 
-def run_workflow(workflow, workflows_toml, concurrent_jobs=None, nodes=1,
-                 sbatch=False, notify_to=None, cache=True):
+
+def prepare_workflow(params, workflows_toml):
     """
-    Run sequentially multiple batches of calculations specified by
-    workflow files.
+    Create or retrieve a workflow record and create or update
+    the workflow database
     """
-    t0 = time.time()
-    workflows = read_many(workflows_toml)
+    workflows = read_many(workflows_toml, params)
     names = []
     for wf in workflows:
         names.extend(wf.names)
     n = len(names)
     check_unique(names, workflows_toml)
-    wfdic = dict(description=workflow,
-                 base_path=os.path.dirname(workflows_toml[0]),
+    wfdic = dict(base_path=os.path.dirname(workflows_toml[0]),
                  calculation_mode='workflow')
     try:
-        workflow_id = int(workflow)
-    except ValueError:
+        workflow_id = params.pop('workflow_id')
+    except KeyError:
         # create a new workflow
-        [wfctx] = create_jobs([wfdic])
-        workflow_id = wfctx.calc_id
-        dstore = datastore.read(wfctx.calc_id, 'w')
-        dstore['oqparam'] = OqParam(**wfdic)
+        [wfjob] = create_jobs([wfdic])
+        workflow_id = wfjob.calc_id
+        dstore = datastore.read(workflow_id, 'w')
         wf_df = pandas.DataFrame(
-            dict(name=names, calc_id=[0]*n, status=['created']*n)
+            dict(name=names,
+                 calc_id=[0] * n,
+                 status=['created'] * n,
+                 size_mb=[0.0] * n)
         ).set_index('name')
-        todo = names
-        dstore['oqparam'] = OqParam(**wfdic)
-        dstore['workflow_toml'] = numpy.array(
-            [open(w).read() for w in workflows_toml])
+        dstore['oqparam'] = OqParam(
+            description=params.pop('description'), **wfdic)
+        dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
         dstore.create_df('workflow', wf_df.reset_index())
+        dstore.create_dset('success', numpy.bool([False] * len(workflows)))
     else:
         # continue an existing workflow
-        dstore = datastore.read(workflow_id)
-        wfctx = logs.init(wfdic)
-        wf_df = dstore.read_df('workflow', 'name')  # (name, job_id, status)
-        todo = wf_df[wf_df.status != 'complete'].index
+        wfdic['job_id'] = workflow_id
+        dstore = datastore.read(workflow_id, 'r+')
+        wfjob = logs.init(wfdic)
+    wfjob.workflows = workflows
+    return wfjob, dstore, names
 
+
+def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
+                 sbatch=False, notify_to=None, pdb=False):
+    """
+    Run sequentially multiple batches of calculations specified by
+    workflow files.
+    """
+    wfjob, dstore, names = prepare_workflow(params, workflows_toml)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
-    with wfctx, dstore:
-        for wf in workflows:
-            mask = [name in todo for name in wf.names]
-            if sum(mask) == 0:
-                logging.info(f'Already computed {wf.names}')
-                continue
-            jobs = create_jobs(wf.inis[mask], workflow_id=workflow_id)
-            run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
-            failed = 0
-            for job, name in zip(jobs, wf.names[mask]):
+    size_dset = dstore['workflow/size_mb']
+    success_dset = dstore['success']
+    with wfjob, dstore:
+        for wf_no, wf in enumerate(wfjob.workflows):
+            failed, calcs, new, new_names = 0, [], [], []
+            for name, ini in zip(wf.names, wf.inis):
                 idx = name2idx[name]
-                calc_dset[idx] = job.calc_id
-                status_dset[idx] =  status = job.get_job().status
-                if status == 'failed':
-                    failed += 1
-            if failed == 0 and wf.success:
+                if status_dset[idx] == b'complete':
+                    # already done; notice the conversion numpy.int64 -> int
+                    calcs.append(int(calc_dset[idx]))
+                    logging.info(f'{name} already computed')
+                else:
+                    new.append(ini)
+                    new_names.append(name)
+            if new:
+                jobs = create_jobs(new, log_level=logging.WARNING,
+                                   workflow_id=wfjob.calc_id)
+                run_jobs(jobs, concurrent_jobs, nodes, sbatch, notify_to)
+                for job, name in zip(jobs, new_names):
+                    rec = job.get_job()
+                    idx = name2idx[name]
+                    calc_dset[idx] = rec.id
+                    status_dset[idx] =  rec.status
+                    size_dset[idx] = rec.size_mb
+                    if rec.status == 'failed':
+                        failed += 1
+                    else:
+                        calcs.append(job.calc_id)
+            if wf.success and success_dset[wf_no]:
+                logging.info(f'{wf.success["func"]} already called')
+            elif wf.success and not failed:
                 wf.success['dstore'] = dstore
-                wf.success['calcs'] = [j.calc_id for j in jobs]
-                sap.run_func(wf.success)
-        dt = (time.time() - t0) / 3600.
-        logging.info(f'Finished workflow {workflow_id:_d} in {dt:.2} hours')
-    return workflow_id
+                wf.success['calcs'] = calcs
+                try:
+                    sap.run_func(wf.success)
+                    success_dset[wf_no] = True
+                except:
+                    if pdb:  # post-mortem debug
+                        tb = sys.exc_info()[2]
+                        traceback.print_tb(tb)
+                        post_mortem(tb)
+                    else:
+                        raise
+    dt = wfjob.dt / 3600.
+    logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
+    return wfjob.calc_id
 
 
 def version_triple(tag):
