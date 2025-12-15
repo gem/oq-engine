@@ -60,9 +60,9 @@ def check(dstore, calcs):
 
 
 def setup_module():
-    global_ses.MODELS = ['EUR', 'MIE']
-    worflow_id = global_ses.main(MOSAIC_DIR, 'rups.hdf5',
-                                 number_of_logic_tree_samples=200)
+    worflow_id = global_ses.main(
+        MOSAIC_DIR, 'rups.hdf5', 'EUR,MIE',
+        number_of_logic_tree_samples=200)
     wdf = read(worflow_id).read_df('workflow')
     dstore = base.run_calc(
         path('job.ini'), hazard_calculation_id='rups.hdf5'

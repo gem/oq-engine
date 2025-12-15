@@ -126,12 +126,14 @@ def grm(mosaic_dir, number_of_logic_tree_samples: int=2000,
     return save(mosaic_dir, 'GRM.toml', '\n'.join(haz + risk))
 
 
-def ses(mosaic_dir, out='global_ses.hdf5',
+def ses(mosaic_dir, out='global_ses.hdf5', models=['ALL'],
         number_of_logic_tree_samples:int=2000,
         ses_per_logic_tree_path:int=50, minimum_magnitude:float=5):
     "Build SES.toml"
     lst = []
-    for model in MODELS:
+    if models == ['ALL']:
+        models = MODELS
+    for model in models:
         ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
         if os.path.exists(ini):
             lst.append(f'\n[{model}]')
