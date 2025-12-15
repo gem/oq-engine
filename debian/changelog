@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Including .onnx and .onnx.gz files in MANIFEST.in
   * Added command `oq db keep <workflow_id>`
   * Added command `oq checkout workflow.toml`
   * Extended `oq check_input` to accept workflow files
