@@ -48,3 +48,12 @@ if [ "$OQ_APPLICATION_MODE" = "RESTRICTED" ]; then
         python3 manage.py createuser admin admin@example.com --level 2 --password admin --no-email --staff --superuser
     fi
 fi
+
+if [ -t 1 ]; then
+    # TTY mode
+    exec oq webui start 0.0.0.0:8800 -s &>> $HOME/oqdata/webui.log &
+    /bin/bash
+else
+    # Headless mode
+    exec "$@"
+fi
