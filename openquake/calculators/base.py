@@ -1761,7 +1761,7 @@ def create_risk_by_event(calc):
                          L=len(oq.loss_types), limit_states=dmgs)
 
 
-def get_model_lts(h5):
+def get_model_lts(h5, mosaic_model=''):
     """
     :returns: (model, full_lt) pairs
     """
@@ -1772,7 +1772,10 @@ def get_model_lts(h5):
     else:
         # full_lt is a h5py group
         for model in full_lt:
-            out.append((model, h5[f'full_lt/{model}']))
+            if mosaic_model and mosaic_model != model:
+                pass
+            else:
+                out.append((model, h5[f'full_lt/{model}']))
     return out
 
 
