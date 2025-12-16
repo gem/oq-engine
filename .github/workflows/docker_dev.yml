@@ -48,8 +48,8 @@ jobs:
           OQ_APPLICATION_MODE=RESTRICTED
           OQ_ADMIN_LOGIN=admin_scheduled
           OQ_ADMIN_PASSWORD=crond_schedule
-          OQ_ADMIN_EMAIL="login@scheduler.io"
-          EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+          OQ_ADMIN_EMAIL=login@scheduler.io
+          EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
           EMAIL_HOST=smtp.gmail.com
           EMAIL_PORT=587
           EMAIL_USE_TLS=True
@@ -95,8 +95,8 @@ jobs:
           OQ_APPLICATION_MODE=RESTRICTED
           OQ_ADMIN_LOGIN=manual_run_admin
           OQ_ADMIN_PASSWORD=manual_admin
-          OQ_ADMIN_EMAIL="login@manual.io"
-          EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+          OQ_ADMIN_EMAIL=login@manual.io
+          EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
           EMAIL_HOST=smtp.gmail.com
           EMAIL_PORT=587
           EMAIL_USE_TLS=True
