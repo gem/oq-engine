@@ -26,7 +26,7 @@ import logging
 import tempfile
 from openquake.baselib import hdf5, config, performance
 from openquake.commonlib import datastore
-from openquake.calculators import base, export
+from openquake.calculators import base, export, views
 
 
 def build_ses(dstore, calcs, out_file):
@@ -78,3 +78,21 @@ def import_outputs(dstore, calcs, out_types):
             for out_type in out_types:
                 _export_import(name, calc_id, out_type, dstore)
     print(mon)
+
+
+def post_aelo(dstore, calcs):
+    """
+    Executed by the AELO tests; save 'asce/XXX.org' files
+    """
+    assert os.path.exists('asce'), 'You are not in the mosaic directory!'
+    asce = {}
+    for calc in calcs:
+        dstore = datastore.read(calc)
+        model = dstore['oqparam'].mosaic_model
+        asce[model + '07'] = views.view('asce:07', dstore)
+        asce[model + '41'] = views.view('asce:41', dstore)
+    for name, table in asce.items():
+        fname = os.path.abspath(f'asce/{name}.org')
+        with open(fname, 'w') as f:
+            print(views.text_table(table[1:], table[0], ext='org'), file=f)
+        print(f'Stored {fname}')

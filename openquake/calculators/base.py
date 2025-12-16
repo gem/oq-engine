@@ -1097,8 +1097,12 @@ class HazardCalculator(BaseCalculator):
                         oq.reference_vs30_value):
                     self.sitecol.set_global_params(oq)
                 else:
-                    # use the site model parameters
-                    mode = 'warn' if oq.region_grid_spacing else 'strict'
+                    # associate the site model parameters
+                    # NB: in AELO mode (i.e. with siteid) associate even
+                    # far away parameters since normally they are not used
+                    # (only the vs30 counts)
+                    mode = ('warn' if oq.region_grid_spacing
+                            or oq.siteid else 'strict')
                     self.sitecol.assoc(sm, assoc_dist, mode)
                     if 'station_data' in oq.inputs:
                         # the complete sitecol is required
