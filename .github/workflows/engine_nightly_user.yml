@@ -39,13 +39,13 @@ jobs:
         run: |
           set -x
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-          python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv_custom
+          python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}
         if: github.event.inputs.git-ref != ''
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 30
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-      - name: Test WebUI and run https calculation
+      - name: (Scheduled) Test WebUI and run https calculation
         run: |
           source $HOME/gh-venv-${{ matrix.engine-branch }}/bin/activate
           set -x
@@ -71,9 +71,9 @@ jobs:
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
           curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
         if: github.event.inputs.git-ref == ''
-      - name: Test WebUI and run https calculation
+      - name: (Manual) Test WebUI and run https calculation
         run: |
-          source $HOME/gh-venv_custom/bin/activate
+          source $HOME/gh-venv_custom-${{ matrix.engine-branch }}/bin/activate
           set -x
           oq engine --upgrade-db
           oq --version
@@ -88,7 +88,7 @@ jobs:
           # Perform migration after setup local_settings
           curl --fail -L -I -X GET http://127.0.0.1:8800
           # Run all demos          
-          cd $HOME/gh-venv_custom/
+          cd $HOME/gh-venv_custom-${{ matrix.engine-branch }}/
           curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/${{ github.event.inputs.git-ref }}/bin/run-demos.sh
           oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
           qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
