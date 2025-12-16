@@ -54,7 +54,6 @@ if [ -t 1 ]; then
     exec oq webui start 0.0.0.0:8800 -s &>> $HOME/oqdata/webui.log &
     /bin/bash
 else
-    # Headless mode
-    exec oq webui start 0.0.0.0:8800 -s &
+    # Headless mode or Run command
     exec "$@"
 fi
