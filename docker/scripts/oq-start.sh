@@ -55,5 +55,6 @@ if [ -t 1 ]; then
     /bin/bash
 else
     # Headless mode
-    exec "$@"
+    # exec "$@"
+    exec oq webui start 0.0.0.0:8800 -s
 fi
