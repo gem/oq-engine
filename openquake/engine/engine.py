@@ -435,6 +435,8 @@ OVERRIDABLE_PARAMS = (
     'ses_per_logic_tree_path',
     'minimum_magnitude',
     'mosaic_model',
+    'return_periods',
+    'ses_seed',
     'sites',
     'siteid')
 
