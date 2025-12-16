@@ -41,22 +41,53 @@ jobs:
       - name: List Image
         run: |
           docker image ls
-      - name: Test headless mode and run calcs on single docker
+      - name: Test Auth mode and run calcs on single docker
         run: |
-          # Test authentication
+          # Test authentication on WebUI headless
           echo "Test WEBUI HEADLESS"
-          echo "docker run --name openquake -p 127.0.0.1:8800:8800 -e OQ_APPLICATION_MODE=RESTRICTED -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest "
-          docker run --name openquake -p 127.0.0.1:8800:8800 -e OQ_APPLICATION_MODE=RESTRICTED -e OQ_ADMIN_LOGIN=github -e OQ_ADMIN_PASSWORD=latest -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:latest
+          cat > ./.env << EOF
+          OQ_APPLICATION_MODE=RESTRICTED
+          OQ_ADMIN_LOGIN=user
+          OQ_ADMIN_PASSWORD=login
+          OQ_ADMIN_EMAIL=user@login.input
+          EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+          EMAIL_HOST=smtp.gmail.com
+          EMAIL_PORT=587
+          EMAIL_USE_TLS=True
+          EMAIL_HOST_USER=admin@reply.com
+          EMAIL_HOST_PASSWORD=polhjuih@
+          EMAIL_SUPPORT=noreply@reply.com
+          DJANGO_SETTINGS_MODULE=openquake.server.settings
+          EOF
+          echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:latest "
+          docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:latest
           echo "Waiting WEBUI up on port 8800...."
-          while ! nc -z 127.0.0.1 8800; do
+          while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
+           echo "Still waiting WEBUI account login up on port 8800...."
            sleep 5 # wait for 5 seconds before check again
           done
           sleep 1
-          # Perform migration after setup local_settings
-          curl --fail -L -I -X GET http://127.0.0.1:8800
+          echo -n "TEST DJANGO LOGIN "
+          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
+          YOUR_USER='user'
+          YOUR_PASS='login'
+          COOKIES=cookies.txt
+          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+          echo -n "Django Auth: get csrftoken ..."
+          $CURL_BIN $LOGIN_URL > /dev/null
+          DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
+          echo " perform login ..."
+          $CURL_BIN \
+              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+              -X POST $LOGIN_URL > /dev/null
+          docker logs -t -n 5 openquake
           # Run calcs
-          time docker run openquake/engine:nightly "oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini"
-          time docker run openquake/engine:latest "oq engine --run "https://github.com/gem/oq-engine/blob/${{ github.event.inputs.git-ref }}/openquake/server/tests/data/classical.zip?raw=true""
+          echo "test run of calc on running container "
+          time docker exec -t openquake oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini
+          sleep 3
+          time docker exec -t openquake oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          echo "test run of a calcs on new created container"
+          time docker run openquake/engine:latest oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
       - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
         env:
           DOCKER_USERNAME: ${{ secrets.docker_username }}
