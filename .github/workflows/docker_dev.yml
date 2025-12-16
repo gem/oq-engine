@@ -72,7 +72,21 @@ jobs:
            sleep 5 # wait for 5 seconds before check again
           done
           sleep 1
-          curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login
+
+          echo -n "TEST DJANGO LOGIN "
+          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
+          YOUR_USER='user'
+          YOUR_PASS='login'
+          COOKIES=cookies.txt
+          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+          echo -n "Django Auth: get csrftoken ..."
+          $CURL_BIN $LOGIN_URL > /dev/null
+          DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
+          echo " perform login ..."
+          $CURL_BIN \
+              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+              -X POST $LOGIN_URL > /dev/null
+
           echo "test run of calc on running container "
           time docker exec -t openquake oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini
           sleep 3
