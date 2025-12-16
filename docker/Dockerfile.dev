@@ -42,4 +42,4 @@ ADD scripts/oq-start.sh ${HOME}
 EXPOSE 8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["./oq-start.sh"]
-CMD ["oq", "webui", "start", "0.0.0.0:8800", "-s"]
+# CMD ["oq", "webui", "start", "0.0.0.0:8800", "-s"]
