@@ -80,6 +80,8 @@ def ghm(mosaic_dir):
     for mod in MODELS:
         if mod == 'CND':
             mod = 'CAN'  # to support unzipped_mosaic_run
+        elif mod in 'GLD OAT OPA':
+            continue
         lst.append(f'[{mod}]\nini = "{mod}/in/job_vs30.ini"')
     lst.append('\n[success]')
     lst.append('func = "openquake.engine.postjobs.import_outputs"')
