@@ -434,7 +434,9 @@ OVERRIDABLE_PARAMS = (
     'number_of_logic_tree_samples',
     'ses_per_logic_tree_path',
     'minimum_magnitude',
-    'mosaic_model')
+    'mosaic_model',
+    'sites',
+    'siteid')
 
 
 class _Workflow:
