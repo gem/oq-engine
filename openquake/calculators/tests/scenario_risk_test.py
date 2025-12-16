@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+from unittest import mock
 import numpy
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
@@ -268,7 +270,9 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
     def test_case_13(self):
         # testing Youd gsim, with primary IMT LSD
-        out = self.run_calc(case_13.__file__,  'job.ini', exports='csv')
+        # also testing OQ_SAMPLE_ASSETS
+        with mock.patch.dict(os.environ, {'OQ_SAMPLE_ASSETS': '.5'}):
+            out = self.run_calc(case_13.__file__,  'job.ini', exports='csv')
         for fname in out[('aggrisk', 'csv')]:
             self.assertEqualFiles(
                 'expected/%s' % strip_calc_id(fname), fname)

@@ -204,11 +204,9 @@ def run_calc(log):
             hostname = socket.gethostname()
         except Exception:  # gaierror
             hostname = 'localhost'
-        logging.info('%s@%s running %s --hc=%s',
-                     USER,
-                     hostname,
-                     calc.oqparam.inputs['job_ini'],
-                     calc.oqparam.hazard_calculation_id)
+        logging.warning('%s@%s running %s --hc=%s',
+                        USER, hostname, calc.oqparam.inputs['job_ini'],
+                        calc.oqparam.hazard_calculation_id)
         obsolete_msg = check_obsolete_version(oqparam.calculation_mode)
         # NB: the warning should not be logged for users with
         # an updated LTS version
@@ -436,7 +434,11 @@ OVERRIDABLE_PARAMS = (
     'number_of_logic_tree_samples',
     'ses_per_logic_tree_path',
     'minimum_magnitude',
-    'mosaic_model')
+    'mosaic_model',
+    'return_periods',
+    'ses_seed',
+    'sites',
+    'siteid')
 
 
 class _Workflow:
@@ -484,10 +486,11 @@ class _Workflow:
             oq = OqParam(**ini)
             oq.validate()
             oqs.append(oq)
-        for oq in oqs[1:]:
-            if oq.eff_time != oqs[0].eff_time:
-                raise NameError(f'Expected eff_time = {oqs[0].eff_time}, '
-                                f'got {oq.eff_time}')
+        if 'risk' in oq.calculation_mode or 'damage' in oq.calculation_mode:
+            for oq in oqs[1:]:
+                if oq.eff_time != oqs[0].eff_time:
+                    raise NameError(f'Expected eff_time = {oqs[0].eff_time}, '
+                                    f'got {oq.eff_time}')
         return oqs
 
     def to_toml(self):

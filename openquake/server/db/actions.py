@@ -308,7 +308,7 @@ def finish(db, job_id, status):
     :param job_id:
         ID of the current job
     :param status:
-        a string such as 'successful' or 'failed'
+        a string such as 'complete' or 'failed'
     """
     db('UPDATE job SET ?D WHERE id=?x',
        dict(is_running=False, status=status, stop_time=datetime.now(UTC)),

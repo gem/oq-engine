@@ -1252,6 +1252,7 @@ class Exposure(object):
             df['lat'] = numpy.round(df.lat, 5)
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
+                # tested in scenario_risk/case_13
                 df = general.random_filter(df, sa)
             logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
                 len(df), time.time() - t0, fname))

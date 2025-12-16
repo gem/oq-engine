@@ -206,6 +206,18 @@ class LogDatabaseHandler(logging.Handler):
               record.getMessage())
 
 
+def get_country(job_ini):
+    """
+    If the path to job_ini contains a recognized country, returns the
+    country code, else the empty string
+    """
+    from openquake.risklib.countries import country2code
+    for name, cc in country2code.items():
+        if name in job_ini:
+            return cc
+    return ''
+
+
 class LogContext:
     """
     Context manager managing the logging functionality
@@ -261,9 +273,10 @@ class LogContext:
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level, handlers=[])
-        model = self.params.get('mosaic_model', '')
+        tag = (self.params.get('mosaic_model') or
+               get_country(self.params.get('job_ini', '')))
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
-            self.calc_id, model + ' ' if model else '')
+            self.calc_id, tag + ' ' if tag else '')
         self.handlers = [LogDatabaseHandler(self.calc_id)]
         if self.log_file is None:
             # add a StreamHandler if not already there
