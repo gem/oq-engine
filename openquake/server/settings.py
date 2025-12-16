@@ -307,11 +307,17 @@ APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True
 
-if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
+if TEST and LOCKDOWN:
+    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
     if APPLICATION_MODE == 'ARISTOTLE':
-        from openquake.server.tests.settings.local_settings_impact import *  # noqa
+        EMAIL_HOST_USER = 'impactnoreply@openquake.org'
+        EMAIL_SUPPORT = 'impactsupport@openquake.org'
     elif APPLICATION_MODE == 'AELO':
-        from openquake.server.tests.settings.local_settings_aelo import *  # noqa
+        EMAIL_HOST_USER = 'aelonoreply@openquake.org'
+        EMAIL_SUPPORT = 'aelosupport@openquake.org'
+    else:
+        EMAIL_HOST_USER = 'noreply@openquake.org'
+        EMAIL_SUPPORT = 'support@openquake.org'
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
     #        We should redefine it to a different directory for each test,
     #        in order to avoid concurrency issues in case tests run in
