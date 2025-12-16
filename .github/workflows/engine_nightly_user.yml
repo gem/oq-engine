@@ -24,6 +24,7 @@ jobs:
         os: [ubuntu-24.04]
         python-version: ["3.11", "3.12"]
         engine-branch: ["master", "engine-3.23", "engine-3.24", "3.23"]
+    if: github.event.inputs.git-ref == ''
     steps:
       - name: Set up Python  ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -34,7 +35,6 @@ jobs:
           set -x
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
           python install.py user --version=${{ matrix.engine-branch }} --venv $HOME/gh-venv-${{ matrix.engine-branch }}
-        if: github.event.inputs.git-ref == ''
       - name: (Scheduled) Test WebUI and run https calculation
         run: |
           source $HOME/gh-venv-${{ matrix.engine-branch }}/bin/activate
@@ -60,7 +60,6 @@ jobs:
           # Run a calcs using https
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
           curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
-        if: github.event.inputs.git-ref == ''
   Manual_demos_and_WebUI:
     name: OQ ${{ github.event.inputs.git-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
@@ -69,13 +68,13 @@ jobs:
       matrix:
         os: [ubuntu-24.04]
         python-version: ["3.11", "3.12"]
+    if: github.event.inputs.git-ref != ''
     steps:
       - name: Install OQ (Custom Ref)
         run: |
           set -x
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
           python install.py user --version=${{ github.event.inputs.git-ref }} --venv $HOME/gh-venv_custom-${{ github.event.inputs.git-ref }}
-        if: github.event.inputs.git-ref != ''
       - name: Setup debugging session
         uses: mxschmitt/action-tmate@v3
         timeout-minutes: 30
@@ -105,4 +104,3 @@ jobs:
           # Run a calcs using https
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
           curl -v --fail -G http://127.0.0.1:8800/engine/1/outputs
-        if: github.event.inputs.git-ref != ''
