@@ -435,6 +435,10 @@ agg_id
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=4E-4)
 
+        # check export_job_zip does not fail, i.e.
+        # tagname='id' is treated correctly
+        export(('job', 'zip'), self.calc.datastore)
+
     def test_case_master(self):
         # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825
         # it looks like the cholesky decomposition is OS-dependent, so
