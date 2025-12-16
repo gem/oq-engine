@@ -23,12 +23,11 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import IA, CAV, RSD575, RSD595
 
 
-class wang2025(GMPE):
+class WangEtAl2025(GMPE):
     """
     Implements the GMM for Turkey developed by Mao-Xin Wang et al.,
     published as "Ground-motion models for Arias intensity, cumulative absolute 
-    velocity, and duration parameters in Türkiye" (2025, Soil Dynam Earthq Eng,
-    Volume 15, pages 1881 - 1898).
+    velocity, and duration parameters in Türkiye" (2025, Soil Dynam Earthq Eng).
     
     Wang, M. X., Leung, A. Y. F., Zhu, C., Güryuva, B.,
     Sandıkkaya, M. A., Ji, K. (2025). 
@@ -50,13 +49,13 @@ class wang2025(GMPE):
         const.StdDev.INTRA_EVENT,
     }
 
-    #: Required site parameters are Vs30, Vs30 type (measured or inferred),
+    #: Required site parameter is Vs30
     REQUIRES_SITES_PARAMETERS = {"vs30"}
 
-    #: Required rupture parameters are
+    #: Required rupture parameters are magnitude, rake, ztor
     REQUIRES_RUPTURE_PARAMETERS = {"mag", "rake", "ztor"}
 
-    #: Required distance measures are
+    #: Required distance measure is Joyner-Boore distance
     REQUIRES_DISTANCES = {"rjb"}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
@@ -106,7 +105,6 @@ class wang2025(GMPE):
             # Final Mean Prediction, see equation (7)
             mean[m] = f_mag + f_dis + f_mech + f_depth + f_as + f_site + f_anelas
             
-            
             # Compute Standard Deviations
             M_tau1 = 6
             M_tau2 = 6.5
@@ -135,4 +133,3 @@ class wang2025(GMPE):
         rsd595    -0.3917    0.2813    0.1272    1.8806    0.8438    -0.0721    3.252    0.1817    0.0753    -0.0437    0    -0.1698    0.0021    4.5    7.6    5.1    5.9    1200    370    0.195    0.17    0.35    0.308
     """,
     )
-  
