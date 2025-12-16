@@ -53,7 +53,12 @@ jobs:
           curl --fail -L -I -X GET http://127.0.0.1:8800
           # Run all demos
           cd $HOME/gh-venv-${{ matrix.engine-branch }}/
-          curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/${{ matrix.engine-branch }}/bin/run-demos.sh
+          if [[ "${{ matrix.engine-branch }}" == "3.23" ]]; then
+              RUN_DEMOS_BRANCH=engine-3.23
+          else
+              RUN_DEMOS_BRANCH=${{ matrix.engine-branch }}
+          fi
+          curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/$RUN_DEMOS_BRANCH/bin/run-demos.sh
           oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
           qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
           bash ./run-demos.sh demos ${qa_tests_data_dir}
