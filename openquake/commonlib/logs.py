@@ -274,7 +274,7 @@ class LogContext:
             level = LEVELS.get(self.log_level, self.log_level)
             logging.basicConfig(level=level, handlers=[])
         tag = (self.params.get('mosaic_model') or
-               get_country(self.params['job_ini']))
+               get_country(self.params.get('job_ini', '')))
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
             self.calc_id, tag + ' ' if tag else '')
         self.handlers = [LogDatabaseHandler(self.calc_id)]
