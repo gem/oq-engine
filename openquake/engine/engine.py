@@ -484,10 +484,11 @@ class _Workflow:
             oq = OqParam(**ini)
             oq.validate()
             oqs.append(oq)
-        for oq in oqs[1:]:
-            if oq.eff_time != oqs[0].eff_time:
-                raise NameError(f'Expected eff_time = {oqs[0].eff_time}, '
-                                f'got {oq.eff_time}')
+        if 'risk' in oq.calculation_mode or 'damage' in oq.calculation_mode:
+            for oq in oqs[1:]:
+                if oq.eff_time != oqs[0].eff_time:
+                    raise NameError(f'Expected eff_time = {oqs[0].eff_time}, '
+                                    f'got {oq.eff_time}')
         return oqs
 
     def to_toml(self):
