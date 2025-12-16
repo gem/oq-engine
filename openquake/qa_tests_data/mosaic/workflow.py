@@ -84,6 +84,10 @@ def ghm(mosaic_dir, legacy=False):
             elif mod in 'GLD OAT OPA':
                 continue
         lst.append(f'[{mod}]\nini = "{mod}/in/job_vs30.ini"')
+        if legacy and mod == 'ARB':
+            # speedup slow sources
+            lst.append('area_source_discretization = 50')
+
     lst.append('\n[success]')
     lst.append('func = "openquake.engine.postjobs.import_outputs"')
     lst.append('out_types = ["hcurves", "hmaps", "uhs"]')
