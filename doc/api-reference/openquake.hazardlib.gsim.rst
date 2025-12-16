@@ -1405,6 +1405,14 @@ vanhoutte_2018
     :undoc-members:
     :show-inheritance:
 
+wang_2025_turkey
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.wang_2025_turkey
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 weatherill_2024
 -------------------------------------------
 
