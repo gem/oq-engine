@@ -86,6 +86,7 @@ jobs:
           $CURL_BIN \
               -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
               -X POST $LOGIN_URL > /dev/null
+          docker logs -t -n 5 openquake
 
           echo "test run of calc on running container "
           time docker exec -t openquake oq engine --run /usr/src/oq-engine/demos/risk/ScenarioDamage/job_hazard.ini /usr/src/oq-engine/demos/risk/ScenarioDamage/job_risk.ini
