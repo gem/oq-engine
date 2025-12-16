@@ -380,7 +380,12 @@ def get_allargs(oq, sitecol, assetcol, station_data_sites, dstore):
     oq.mags_by_trt = AccumDict(accum=set())
     for (model, trt_smr), rups in acc.items():
         model = model.decode('ascii')
-        trt = trts[model][trt_smr // TWO24]
+        if model in trts:
+            # the ruptures were stored via import_ruptures
+            trt = trts[model][trt_smr // TWO24]
+        else:
+            # regular case, full_lt is simple and associated to '???'
+            trt = trts['???'][trt_smr // TWO24]
         mags = [magstr(mag) for mag in numpy.unique(
             numpy.round(rups['mag'], 2))]
         oq.mags_by_trt[trt].update(mags)
