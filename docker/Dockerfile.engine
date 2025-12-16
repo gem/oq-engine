@@ -30,8 +30,8 @@ FROM python:3.12.6-slim AS build-image
 COPY --from=compile-image /opt/openquake/ /opt/openquake/
 ENV LANG=en_US.UTF-8
 ENV LOCKDOWN=False
-RUN useradd -m -u 1000 -s /bin/bash openquake
-RUN chown -R openquake:openquake /opt/openquake
+RUN useradd -m -u 1000 -s /bin/bash openquake && \
+    chown -R openquake:openquake /opt/openquake
 USER openquake
 ENV HOME=/home/openquake
 WORKDIR ${HOME}
@@ -41,5 +41,5 @@ ADD scripts/oq-start.sh ${HOME}
 RUN mkdir oqdata
 EXPOSE 8800
 STOPSIGNAL SIGINT
-ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-start.sh"]
+ENTRYPOINT ["./oq-start.sh"]
+CMD ["oq", "webui", "start", "0.0.0.0:8800", "-s"]
