@@ -1449,8 +1449,8 @@ class OqParam(valid.ParamSet):
         # checks for event_based
         if 'event_based' in self.calculation_mode:
             if self.ps_grid_spacing:
-                logging.warning('ps_grid_spacing is ignored in event_based '
-                                'calculations')
+                logging.info('ps_grid_spacing is ignored in event_based '
+                             'calculations')
 
             if self.ses_per_logic_tree_path >= TWO32:
                 self.raise_invalid('ses_per_logic_tree_path too big: %d' %
