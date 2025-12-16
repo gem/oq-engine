@@ -78,6 +78,8 @@ def ghm(mosaic_dir):
     lst = ['[workflow]']
     add_checkout(lst, MODELS)
     for mod in MODELS:
+        if mod == 'CND':
+            mod = 'CAN'  # to support unzipped_mosaic_run
         lst.append(f'[{mod}]\nini = "{mod}/in/job_vs30.ini"')
     lst.append('\n[success]')
     lst.append('func = "openquake.engine.postjobs.import_outputs"')
