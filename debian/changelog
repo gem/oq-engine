@@ -1,4 +1,10 @@
-  [Michele Simionato]
+  [Maoxin Wang]
+  * Added a new gsim file wang_2025_turkey.py to implement the Turkey-specific
+    ground motion models for Arias Intensity (IA), Cumulative Absolute Velocity (CAV),
+    5-75% Significant Duration (RSD575), and 5-95% Significant Duration (RSD595)
+    developed by Wang et al. (2025)
+
+[Michele Simionato]
   * Included .onnx and .onnx.gz files in MANIFEST.in
   * Added command `oq db keep <workflow_id>`
   * Added command `oq checkout workflow.toml`
