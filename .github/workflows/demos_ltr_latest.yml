@@ -68,7 +68,7 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           zip -q -r /tmp/demos.zip demos/
-          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
+          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/ openquake/qa_tests_data/
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
