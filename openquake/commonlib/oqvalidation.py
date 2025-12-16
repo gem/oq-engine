@@ -1626,7 +1626,8 @@ class OqParam(valid.ParamSet):
         """
         The effective time, non zero only for sampling
         """
-        return (self.investigation_time * self.ses_per_logic_tree_path *
+        itime = self.risk_investigation_time or self.investigation_time
+        return (itime * self.ses_per_logic_tree_path *
                 self.number_of_logic_tree_samples)
 
     def risk_event_rates(self, num_events, num_haz_rlzs):
