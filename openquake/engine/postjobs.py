@@ -111,3 +111,4 @@ main.postjob = dict(help="name of the postjob operation",
                     choices=['build_ses', 'import_outputs', 'post_aelo'])
 main.workflow_id = "ID of the workflow calculation"
 main.calc_id = "ID of the job to apply the postjob operation"
+main.arg = dict(help="Extra arguments (literals)", nargs='*')
