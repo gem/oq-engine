@@ -2,7 +2,7 @@
 
 # Universal installer
 
-Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed (currently Python 3.11 and 3.12 are supported by the engine). If not, you should install a suitable version of Python according to your platform preferred mechanism.
+Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed (currently Python 3.10, 3.11 and 3.12 are supported by the engine). If not, you should install a suitable version of Python according to your platform preferred mechanism.
 
 The script allows the user to select between different kinds of installation:
 
@@ -15,7 +15,7 @@ The script allows the user to select between different kinds of installation:
 
 >_**Note 1.** On some Linux distributions (e.g. Ubuntu) you may need to install the package `python3-venv` before running the installer_
 > <br />
->_**Note 2.** New Macs with the Apple silicon CPU are supported only if you're on macOS 14.x or MacOS 15.x and for python3.11 and python3.12
+>_**Note 2.** New Macs with the Apple silicon CPU are supported only if you're on macOS 14.x or MacOS 15.x and we recommend python3.11 
 ><br />_ Apple ships its own version of Python with OS X. However, we strongly recommend installing the Python  version from the official Python website (python.org)
 > <br />
 >_**Note 3.** For `user` and `devel` installation methods, the virtual environment `openquake` will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts._<br />_Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html_
