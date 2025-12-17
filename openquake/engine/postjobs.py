@@ -99,7 +99,7 @@ def post_aelo(dstore, calcs):
         print(f'Stored {fname}')
 
 
-def main(postjob: str, workflow_id: int, calc_id: int, *arg: str):
+def main(postjob: str, workflow_id: int, calc_id: int, arg: str):
     """
     Useful for debugging errors in postjobs
     """
