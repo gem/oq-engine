@@ -2,8 +2,7 @@
 
 # Universal installer
 
-Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed
-(currently Python 3.9, 3.10 and 3.11 are supported by the engine). If not, you should install a suitable version of Python according to your platform preferred mechanism.
+Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed (currently Python 3.10, 3.11 and 3.12 are supported by the engine). If not, you should install a suitable version of Python according to your platform preferred mechanism.
 
 The script allows the user to select between different kinds of installation:
 
@@ -16,7 +15,7 @@ The script allows the user to select between different kinds of installation:
 
 >_**Note 1.** On some Linux distributions (e.g. Ubuntu) you may need to install the package `python3-venv` before running the installer_
 > <br />
->_**Note 2.** New Macs with the M1 or M2 CPU are supported only if you're on macOS 13.x or MacOS 14.x and for python3.11
+>_**Note 2.** New Macs with the Apple silicon CPU are supported only if you're on macOS 14.x or MacOS 15.x and we recommend python3.11 
 ><br />_ Apple ships its own version of Python with OS X. However, we strongly recommend installing the Python  version from the official Python website (python.org)
 > <br />
 >_**Note 3.** For `user` and `devel` installation methods, the virtual environment `openquake` will be created in the home directory. Make sure you have no folder called `openquake`in your home directory that can cause conflicts._<br />_Users with no knowledge of virtual environments are referred to this page of the Python tutorial: https://docs.python.org/3/tutorial/venv.html_
@@ -25,7 +24,7 @@ The script allows the user to select between different kinds of installation:
 > <br />
 >_**Note 5.** Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own._
 > <br />
->_**Note 6.** On Windows, the Microsoft App Store may suggest a Python version which is not supported by the engine yet, so you have to be careful and install a supported Python version. You can do so from the App Store or from the Python official download page._
+>_**Note 6.** On Windows, the Microsoft App Store may suggest a Python version which is not supported by the engine, so you have to be careful and install a supported Python version. You can do  from the Python official download page._
 > <br />
 >_**Note 7.** Windows users can use a traditional .exe installer which can be downloaded from https://downloads.openquake.org/pkgs/windows/oq-engine/ and includes Python 3.11 and all dependencies. However users needing to develop with the engine are better off with the universal installation script, even on Windows._
 
@@ -47,22 +46,22 @@ You just need to download the installation script as:
 
 **on Windows:**
 ```
-C:\>curl.exe -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
-C:\>python.exe install.py user
+C:\>curl.exe -L -O https://github.com/gem/oq-engine/raw/master/install.py
+C:\>py.exe install.py user
 ```
 
 **on macOS:**
 
-Before running the universal installer  Python 3.11 need to be installed, please see instructions for the {doc}`macos`
+Before running the universal installer Python 3.11 need to be installed, please see instructions for the {doc}`macos`
 
 ```
-$ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ python3.11 install.py user
 ```
 
 **on Linux:**
 ```
-$ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ python3.11 install.py user
 ```
 
@@ -119,7 +118,7 @@ If you don’t have `git` installed already, you can install it from https://git
 ```
 C:\> git clone https://github.com/gem/oq-engine.git
 C:\> cd oq-engine
-C:\> python.exe install.py devel
+C:\> py.exe install.py devel
 ```
 If using PowerShell you may have to give the command
 ```
@@ -180,7 +179,7 @@ automatically installed and started: `openquake-dbserver` and
 `openquake-webui`.
 
 ```
-$ curl -L -O https://github.com/gem/oq-engine/raw/engine-3.23/install.py
+$ curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
 $ sudo -H python3.11 install.py server
 ```
 
@@ -221,7 +220,7 @@ A set of [Docker containers](docker.md) is available for installing the engine i
 By default, in `user` and `server` mode the script will install the latest stable release of the engine.
 If for some reason you want to use an older (or different) version you can specify the version number or the branch name with the ``--version`` option, e.g.:
 ```
-$ python3 install.py user --version=3.16
+$ python3 install.py user --version=3.23
 ```
 or
 ```
@@ -236,8 +235,8 @@ To uninstall the engine, use the --remove flag:
 Depending on the type of installation, please choose one of the following commands:
 ```
 C:\>cd %USERPROFILE%
-C:\>python install.py devel --remove
-C:\>python install.py user --remove
+C:\>py.exe install.py devel --remove
+C:\>py.exe install.py user --remove
 ```
 
 **on macOS and Linux:**
