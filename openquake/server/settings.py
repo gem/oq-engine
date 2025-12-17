@@ -44,7 +44,8 @@ except ImportError:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 WEBUI_USER = 'openquake'
 
-TEST = 'test' in sys.argv or any('pytest' in arg for arg in sys.argv)
+TEST = ('test' in sys.argv or any('pytest' in arg for arg in sys.argv)
+        or os.environ.get('GITHUB_ACTIONS'))
 
 INSTALLED_APPS = ('openquake.server.db',)
 
