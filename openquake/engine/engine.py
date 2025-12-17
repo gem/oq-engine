@@ -426,6 +426,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
 
 
 OVERRIDABLE_PARAMS = (
+    'area_source_discretization',
     'calculation_mode',
     'cache',
     'concurrent_tasks',
@@ -445,10 +446,13 @@ class _Workflow:
     # workflow objects are instantiated by the function `read_many`
     def __init__(self, workflow_toml, defaults, ddic, prefix=''):
         self.workflow_toml = workflow_toml
-        self.defaults = defaults
-        if not hasattr(self, 'checkout'):
-            self.checkout = {}
         self.workflow_dir = os.path.dirname(workflow_toml)
+        self.defaults = defaults
+        self.checkout = self.defaults.pop('checkout', {})
+        for value in self.checkout:
+            repodir = os.path.join(self.workflow_dir, value)
+            if not os.path.exists(repodir):
+                raise FileNotFoundError(repodir)
         inis = []
         names = []
         self.success = {}
@@ -464,13 +468,7 @@ class _Workflow:
                 self.success = ddic['success']
                 continue
             assert k[0].isupper(), k
-            params = readinput.get_params(dic['ini'])
-            for param in OVERRIDABLE_PARAMS:
-                val = dic.get(param, self.defaults.get(param))
-                if val is not None:
-                    params[param] = str(val)
-            OqParam(**params).validate()
-            inis.append(params)
+            inis.append(dic)
             names.append(prefix + k)
 
         check_unique(names, workflow_toml)
@@ -482,9 +480,16 @@ class _Workflow:
         Convert the .inis dictionaries into validated oqparam instances
         """
         oqs = []
-        for ini in self.inis:
-            oq = OqParam(**ini)
+        for i, dic in enumerate(self.inis):
+            params = readinput.get_params(dic.pop('ini'))
+            params.update(dic)
+            for param in OVERRIDABLE_PARAMS:
+                val = params.get(param, self.defaults.get(param))
+                if val is not None:
+                    params[param] = str(val)
+            oq = OqParam(**params)
             oq.validate()
+            self.inis[i] = params
             oqs.append(oq)
         if 'risk' in oq.calculation_mode or 'damage' in oq.calculation_mode:
             for oq in oqs[1:]:
@@ -512,7 +517,7 @@ def check_unique(names, workflow_toml):
                          f'{uni[cnt > 1]}')
 
 
-def read_many(workflows_toml, params={}):
+def read_many(workflows_toml, params={}, validate=True):
     """
     Read the workflow file and returns a list a workflow dictionary.
     Set 'workflow_dir', 'success' and 'inis' on each.
@@ -530,12 +535,14 @@ def read_many(workflows_toml, params={}):
                 for prefix, ddic in wfdict.items():
                     wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                    ddic, prefix)
-                    wf.validate()
+                    if validate:
+                        wf.validate()
                     out.append(wf)
             elif 'workflow' in wfdict:
                 wf = _Workflow(workflow_toml, wfdict.pop('workflow') | params,
                                wfdict)
-                wf.validate()
+                if validate:
+                    wf.validate()
                 out.append(wf)
             else:
                 raise InvalidFile('missing [workflow] or [multi.workflow]')
