@@ -25,7 +25,6 @@ import os
 import ast
 import logging
 import tempfile
-import numpy
 from openquake.baselib import hdf5, config, performance
 from openquake.hazardlib import return_periods
 from openquake.commonlib import datastore
@@ -63,9 +62,8 @@ def _export_import(name, calc_id, output_type, dstore):
                               tempfile.gettempdir())
         if output_type == 'hmaps':
             rps = return_periods(oq.investigation_time, oq.poes)
-            poes_str = [str(round(poe, 6)).rstrip('0') for poe in oq.poes]
-            renamedict = {f'{imt}-{poe}': f'{imt}-{rp}y'
-                          for poe, rp in zip(poes_str, rps)
+            renamedict = {f'{imt}-{poe:g}': f'{imt}-{rp}y'
+                          for poe, rp in zip(oq.poes, rps)
                           for imt in oq.imtls}
             # NB: there is no need to import the uhs
         else:

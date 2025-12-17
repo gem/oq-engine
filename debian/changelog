@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: extended `oq purge`
   * Included .onnx and .onnx.gz files in MANIFEST.in
   * Added command `oq db keep <workflow_id>`
   * Added command `oq checkout workflow.toml`
