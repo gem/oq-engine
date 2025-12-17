@@ -67,9 +67,6 @@ class ServerConfig(AppConfig):
         if (settings.LOCKDOWN and 'django_pam.auth.backends.PAMBackend'
                 not in settings.AUTHENTICATION_BACKENDS):
             # check essential constants are defined
-            print('*****************************************')
-            print(f'{settings.EMAIL_BACKEND=}')
-            print('*****************************************')
             if settings.EMAIL_BACKEND is None:
                 raise NameError('If authentication is enabled (without PAM) an'
                                 ' email backend must be defined')

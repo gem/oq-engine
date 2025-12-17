@@ -305,7 +305,7 @@ if SUPPRESS_PERMISSION_DENIED_WARNINGS:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-if APPLICATION_MODE != 'PUBLIC':
+if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
     LOCKDOWN = True
 
 STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
