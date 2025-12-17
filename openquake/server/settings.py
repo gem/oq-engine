@@ -310,6 +310,20 @@ if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
 
 STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
 
+if APPLICATION_MODE not in ('PUBLIC',):
+    if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
+        CONTEXT_PROCESSORS.insert(
+            0, 'django.template.context_processors.request')
+        TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
+    # add installed_apps for cookie-consent
+    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
+                'openquake.server.user_profile', 'cookie_consent',):
+        if app not in INSTALLED_APPS:
+            INSTALLED_APPS += (app,)
+    COOKIE_CONSENT_NAME = "cookie_consent"
+    COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
+    COOKIE_CONSENT_LOG_ENABLED = False
+
 if LOCKDOWN:
     if TEST:
         # NOTE: keep the setting if already specified (e.g. in local_settings.py)
@@ -338,19 +352,6 @@ if LOCKDOWN:
     #       using the createnormaluser Django command.
     USE_HTTPS = True
     SERVER_PORT = 443
-
-    if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
-        CONTEXT_PROCESSORS.insert(
-            0, 'django.template.context_processors.request')
-        TEMPLATES[0]['OPTIONS']['context_processors'] = CONTEXT_PROCESSORS
-    # add installed_apps for cookie-consent
-    for app in ('django.contrib.auth', 'django.contrib.contenttypes',
-                'openquake.server.user_profile', 'cookie_consent',):
-        if app not in INSTALLED_APPS:
-            INSTALLED_APPS += (app,)
-    COOKIE_CONSENT_NAME = "cookie_consent"
-    COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
-    COOKIE_CONSENT_LOG_ENABLED = False
 
     if 'django.contrib.auth.context_processors.auth' not in CONTEXT_PROCESSORS:
         CONTEXT_PROCESSORS.insert(
