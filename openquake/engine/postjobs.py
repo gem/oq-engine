@@ -96,3 +96,9 @@ def post_aelo(dstore, calcs):
         with open(fname, 'w') as f:
             print(views.text_table(table[1:], table[0], ext='org'), file=f)
         print(f'Stored {fname}')
+
+
+def main(workflow_id: int):
+    with datastore.read(workflow_id) as dstore:
+        calcs = dstore['workflow/calc_id'][:]
+        import_outputs(dstore, calcs, ['hcurves', 'hmaps', 'uhs'])
