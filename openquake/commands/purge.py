@@ -70,38 +70,44 @@ def purge(status, days, force):
     """
     Remove calculations of the given status older than days
     """
-    rows = logs.dbcmd(
-        f'SELECT id, ds_calc_dir || ".hdf5" FROM job '
-        f'WHERE status IN (?X)'
-        f"AND start_time < datetime('now', '-{days}')", status)
+    query = 'SELECT id, ds_calc_dir || ".hdf5" FROM job '
+    query += f"WHERE start_time < datetime('now', '-{days} days')"
+    if status:
+        query += f'AND status IN {status}'
     todelete = []
     totsize = 0
-    for calc_id, fname in rows:
+    calc_ids = []
+    for calc_id, fname in logs.dbcmd(query):
         if os.path.exists(fname) and os.access(fname, os.W_OK):
+            calc_ids.append(calc_id)
             todelete.append(fname)
             totsize += os.path.getsize(fname)
             tname = fname.replace('.hdf5', '_tmp.hdf5')
             if os.path.exists(tname) and os.access(tname, os.W_OK):
                 todelete.append(tname)
                 totsize += os.path.getsize(tname)
-    size = humansize(totsize)
-    for fname in todelete:
+    for fname in set(todelete):  # avoid possible duplicates due to the cache
         print(fname)
         if force:
             os.remove(fname)
-    print('Processed %d HDF5 files, %s' % (len(todelete), size))
+    size = humansize(totsize)
+    print('Found %d HDF5 files, %s' % (len(todelete), size))
+    if force:
+        logs.dbcmd('DELETE FROM job WHERE id in (?X)', calc_ids)
+    elif todelete:
+        print('Use --force to really delete the calculations and jobs')
 
 
-def main(what, force=False):
+def main(what:str, force:bool=False, *, days:int=30):
     """
     Remove calculations from the file system.
     If you want to remove everything,  use oq reset.
     """
     if what == 'failed':
-        purge(['failed'], '1 days', force)
+        purge(('failed',), '1 days', force)
         return
-    elif what == 'old':
-        purge('complete failed deleted'.split(), '30 days', force)
+    elif what == 'all':
+        purge((), days, force)
         return
     calc_id = int(what)
     if calc_id < 0:
@@ -113,5 +119,6 @@ def main(what, force=False):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-main.what = 'a calculation ID or the string "failed" or "old"'
+main.what = 'a calculation ID or the string "failed" or "all"'
+main.days = 'purge calculations older than days, if given'
 main.force = 'ignore dependent calculations'
