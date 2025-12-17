@@ -99,6 +99,9 @@ def post_aelo(dstore, calcs):
 
 
 def main(workflow_id: int):
-    with datastore.read(workflow_id) as dstore:
+    """
+    Useful for debugging errors in postjobs
+    """
+    with datastore.read(workflow_id, 'r+') as dstore:
         calcs = [int(x) for x in dstore['workflow/calc_id'][:]]
         import_outputs(dstore, calcs, ['hcurves', 'hmaps', 'uhs'])
