@@ -21,9 +21,9 @@ import shutil
 import getpass
 from openquake.baselib import config
 from openquake.baselib.general import humansize
-from openquake.commonlib import logs, datastore
+from openquake.commonlib import logs
 
-datadir = datastore.get_datadir()
+datadir = logs.get_datadir()
 
 
 def purge_one(calc_id, user, force):
@@ -70,11 +70,10 @@ def purge_orphans(force):
     """
     Purge orphan files not referenced in the database
     """
-    ddir = logs.get_datadir()
     dbfiles = {rec[0] for rec in logs.dbcmd(
         'SELECT ds_calc_dir || ".hdf5" FROM job')}
-    hdf5files = {os.path.join(ddir, f)
-                 for f in os.listdir(ddir)
+    hdf5files = {os.path.join(datadir, f)
+                 for f in os.listdir(datadir)
                  if f.endswith('.hdf5')}
     n = 0
     size = 0
@@ -91,7 +90,7 @@ def purge_orphans(force):
 
 # NB: by looking at the database start_time we are not removing calculations
 # used in the cache, however orphan files may linger in the filesystem
-def purge(status, days, force):
+def purge_db(status, days, force):
     """
     Remove calculations of the given `status` older than `days`, unless they
     belong to a workflow.
@@ -118,10 +117,11 @@ def purge(status, days, force):
         if force:
             os.remove(fname)
     size = humansize(totsize)
-    print('Found %d HDF5 files, %s' % (len(todelete), size))
     if force:
+        print('Removed %d HDF5 files, %s' % (len(todelete), size))
         logs.dbcmd('DELETE FROM job WHERE id in (?X)', calc_ids)
     elif todelete:
+        print('Found %d HDF5 files, %s' % (len(todelete), size))
         print('Use --force to really delete the calculations and jobs')
 
 
@@ -131,13 +131,13 @@ def main(what:str, force:bool=False, *, days:int=30):
     If you want to remove everything,  use oq reset.
     """
     if what == 'failed':
-        purge(('failed',), '1 days', force)
+        purge_db(('failed',), '1 days', force)
         return
     elif what == 'orphan':
         purge_orphans(force)
         return
-    elif what == 'all':
-        purge((), days, force)
+    elif what == 'db':
+        purge_db((), days, force)
         return
     calc_id = int(what)
     if calc_id < 0:
@@ -149,6 +149,6 @@ def main(what:str, force:bool=False, *, days:int=30):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-main.what = 'a calculation ID or the string "failed", "orphan" or "all"'
+main.what = 'a calculation ID or the string "failed", "orphan" or "db"'
 main.days = 'purge calculations older than days, if given'
 main.force = 'ignore dependent calculations'
