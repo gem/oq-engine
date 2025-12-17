@@ -12,36 +12,36 @@ Prerequisites
 -------------
 
 Knowledge of `Python <https://www.python.org/>`__ (and its `virtual
-environments <https://docs.python.org/3.12/tutorial/venv.html>`__),
+environments <https://docs.python.org/3.11/tutorial/venv.html>`__),
 `git <https://git-scm.com/>`__ and `software
 development <https://xkcd.com/844/>`__ are required.
 
 Some software prerequisites are needed to build the development
 environment. First of your you need a Python version supported by the
-engine. At the moment we recommend Python 3.12.
+engine. At the moment we recommend Python 3.11.
 
 **NB: Python 3.13 and later versions are not supported yet, so please do NOT install such
 versions**
 
-**NB: Python version below 3.11 are not supported , so please do NOT
+**NB: Python version below 3.10 are not supported , so please do NOT
 install such versions**
 
 Linux
 -----
 
 Please check the documentation of your distribution to install one of
-the supported version of Python. At the moment we recommend Python version 3.12
-but Python 3.11 can also be used.
+the supported version of Python. At the moment we recommend Python version 3.11
+but Python 3.10 and Python 3.12 can also be used.
 
 macOS
 -----
-Python version 3.12 is recommended but Python 3.11 can also be used.
+Python version 3.11 is recommended but Python 3.10 and Python 3.12 can also be used.
 Please see instructions for the :doc:`Installing the OpenQuake Engine on MacOS <macos>`
 
 Windows
 -------
 
-Python version 3.12 is recommended but Python 3.11 can also be used.
+Python version 3.12 is recommended but Python 3.10 and Python 3.12 can also be used.
 Please install Python version using the official Python installer, using the instructions below.
 Do NOT install using Microsoft Store.
 
@@ -53,13 +53,13 @@ Do NOT install using Microsoft Store.
 
    https://www.python.org/downloads/windows/
 
-2. Under **Stable Releases**, click **Download Python 3.12.x**.
+2. Under **Stable Releases**, click **Download Python 3.11.x**.
 
 -------------------------
 2. Run the Installer
 -------------------------
 
-Locate the downloaded file (e.g., ``python-3.12.x-amd64.exe``) and double-click it.
+Locate the downloaded file (e.g., ``python-3.11.x-amd64.exe``) and double-click it.
 
 -----------------------------------------
 3. Enable PATH and Start Installation
@@ -67,7 +67,7 @@ Locate the downloaded file (e.g., ``python-3.12.x-amd64.exe``) and double-click 
 
 When the installer window appears:
 
-* Check **Add Python 3.12 to PATH**
+* Check **Add Python 3.11 to PATH**
 * Click **Install Now**
 
 
@@ -115,7 +115,7 @@ Before using again the OpenQuake software the environment must be
 reloaded running ``source openquake/bin/activate``\ (assuming that it
 has been installed under ‘openquake’). For more information about
 *virtualenv*, see
-https://docs.python.org/3.12/library/venv.html.
+https://docs.python.org/3.11/library/venv.html.
 
 To load the virtual environment automatically at every login, add the
 following line at the bottom of your ``~/.bashrc`` (Linux) or
@@ -162,7 +162,7 @@ Running the tests
 -----------------
 
 To run the OpenQuake Engine tests see the
-`testing <https://github.com/gem/oq-engine/blob/master/doc/contributing/testing.md>`__
+`testing <https://github.com/gem/oq-engine/blob/engine-3.23/doc/contributing/testing.md>`__
 page.
 
 Sync the source code with remote
