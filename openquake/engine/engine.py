@@ -446,8 +446,7 @@ class _Workflow:
     def __init__(self, workflow_toml, defaults, ddic, prefix=''):
         self.workflow_toml = workflow_toml
         self.defaults = defaults
-        if not hasattr(self, 'checkout'):
-            self.checkout = {}
+        self.checkout = self.defaults.pop('checkout', {})
         self.workflow_dir = os.path.dirname(workflow_toml)
         inis = []
         names = []
