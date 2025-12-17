@@ -80,8 +80,7 @@ class Allen2022(GMPE):
     "Allen, T. I. (2022). A farfield groundmotion model for the North Australian 
     Craton from platemargin earthquakes, Bull. Seismol. Soc. Am., doi: 10.1785/0120210191.
     """
-
-    #: Supported tectonic region type is subduction interface.
+    #: Supported tectonic region type is subduction intraslab.
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
     #: Supported intensity measure types are spectral acceleration,
@@ -90,14 +89,11 @@ class Allen2022(GMPE):
 
     #: Supported intensity measure component is geometric mean
     #: of two horizontal components.
-    #DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL # no GEOMETRIC_MEAN option
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.MEDIAN_HORIZONTAL
 
     #: Supported standard deviation types is total, see equations 9-10 page 1051.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {                                                                              
           const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
-    
-    #DEFINED_FOR_REFERENCE_VELOCITY = 760
 
     #: Required site parameters is Vs30
     REQUIRES_SITES_PARAMETERS = {'vs30'}
