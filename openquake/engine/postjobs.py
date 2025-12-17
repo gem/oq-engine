@@ -67,6 +67,7 @@ def _export_import(name, calc_id, output_type, dstore):
             renamedict = {f'{imt}-{poe}': f'{imt}-{rp}y'
                           for poe, rp in zip(poes_str, rps)
                           for imt in oq.imtls}
+            # NB: there is no need to import the uhs
         else:
             renamedict = {}
         for fname in export.export((output_type, 'csv'), calc_ds):

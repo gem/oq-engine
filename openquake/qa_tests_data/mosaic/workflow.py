@@ -90,7 +90,7 @@ def ghm(mosaic_dir, legacy=False):
 
     lst.append('\n[success]')
     lst.append('func = "openquake.engine.postjobs.import_outputs"')
-    lst.append('out_types = ["hcurves", "hmaps", "uhs"]')
+    lst.append('out_types = ["hcurves", "hmaps"]')
     return save(mosaic_dir, 'GHM.toml', '\n'.join(lst))
 
 
