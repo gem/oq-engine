@@ -62,10 +62,10 @@ def _export_import(name, calc_id, output_type, dstore):
         calc_ds.export_dir = (config.directory.custom_tmp or
                               tempfile.gettempdir())
         if output_type == 'hmaps':
-            poes = numpy.round(oq.poes, 6)
-            rps = return_periods(oq.investigation_time, poes)
+            rps = return_periods(oq.investigation_time, oq.poes)
+            poes_str = [str(round(poe, 6)).rstrip('0') for poe in oq.poes]
             renamedict = {f'{imt}-{poe}': f'{imt}-{rp}y'
-                          for poe, rp in zip(poes, rps)
+                          for poe, rp in zip(poes_str, rps)
                           for imt in oq.imtls}
         else:
             renamedict = {}
