@@ -14,17 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.wang_2025_turkey import wang2025
+from openquake.hazardlib.gsim.wang_2025_turkey import WangEtAl2025
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
-class Wang2025TestCase(BaseGSIMTestCase):
-    GSIM_CLASS = wang2025
+class WangEtAl2025TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = WangEtAl2025
 
     
     def test_mean(self):
         """
-        Median Ground Motion
+        Median Prediction
         """
         self.check('Wang2025/Wang2025_MEAN.csv',
                    max_discrep_percentage=0.1) 
