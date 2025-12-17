@@ -31,8 +31,8 @@ def main(workflow_toml, hard=False):
             if repo_dir in found:
                 continue
             found.add(repo_dir)
-            git(repo_dir, ['fetch'])
             if hard:
+                git(repo_dir, ['fetch'])
                 git(repo_dir, ['clean', '-f'])
                 git(repo_dir, ['reset', '--hard', tag])
             else:
