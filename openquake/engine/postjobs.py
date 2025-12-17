@@ -62,8 +62,10 @@ def _export_import(name, calc_id, output_type, dstore):
                               tempfile.gettempdir())
         if output_type == 'hmaps':
             rps = return_periods(oq.investigation_time, oq.poes)
+            renamedict = {f'{imt}-{poe}': f'{imt}-{rp}y'
+                          for poe, rp in zip(oq.poes, rps)
+                          for imt in oq.imtls}
             breakpoint()
-            renamedict = {}
         else:
             renamedict = {}
         for fname in export.export((output_type, 'csv'), calc_ds):
