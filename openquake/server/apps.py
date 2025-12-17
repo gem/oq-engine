@@ -68,7 +68,7 @@ class ServerConfig(AppConfig):
                 not in settings.AUTHENTICATION_BACKENDS):
             # check essential constants are defined
             print('*****************************************')
-            print(f'{EMAIL_BACKEND=}')
+            print(f'{settings.EMAIL_BACKEND=}')
             print('*****************************************')
             if settings.EMAIL_BACKEND is None:
                 raise NameError('If authentication is enabled (without PAM) an'
