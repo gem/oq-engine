@@ -83,8 +83,11 @@ def purge_orphans(force):
             if force:
                 os.remove(orphan)
             n += 1
-    print(f'Found {n:_d} orphan files [{humansize(size)}]')
-    if not force:
+
+    if force:
+        print(f'Removed {n:_d} orphan files [{humansize(size)}]')
+    else:
+        print(f'Found {n:_d} orphan files [{humansize(size)}]')
         print('Use --force to really delete the files')
 
 
