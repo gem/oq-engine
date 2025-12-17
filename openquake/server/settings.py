@@ -304,31 +304,34 @@ if SUPPRESS_PERMISSION_DENIED_WARNINGS:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
-if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
+if APPLICATION_MODE != 'PUBLIC':
     LOCKDOWN = True
-
-if TEST and LOCKDOWN:
-    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-    if APPLICATION_MODE == 'ARISTOTLE':
-        EMAIL_HOST_USER = 'impactnoreply@openquake.org'
-        EMAIL_SUPPORT = 'impactsupport@openquake.org'
-    elif APPLICATION_MODE == 'AELO':
-        EMAIL_HOST_USER = 'aelonoreply@openquake.org'
-        EMAIL_SUPPORT = 'aelosupport@openquake.org'
-    else:
-        EMAIL_HOST_USER = 'noreply@openquake.org'
-        EMAIL_SUPPORT = 'support@openquake.org'
-    # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
-    #        We should redefine it to a different directory for each test,
-    #        in order to avoid concurrency issues in case tests run in
-    #        parallel
-    EMAIL_FILE_PATH = os.path.join(
-        config.directory.custom_tmp or tempfile.gettempdir(),
-        'app-messages')
 
 STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
 
 if LOCKDOWN:
+    if TEST:
+        # NOTE: keep the setting if already specified (e.g. in local_settings.py)
+        EMAIL_BACKEND = (
+            EMAIL_BACKEND or 'django.core.mail.backends.filebased.EmailBackend')
+        # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
+        #        We should redefine it to a different directory for each test,
+        #        in order to avoid concurrency issues in case tests run in
+        #        parallel
+        EMAIL_FILE_PATH = os.path.join(
+            config.directory.custom_tmp or tempfile.gettempdir(),
+            'app-messages')
+    else:
+        EMAIL_BACKEND = EMAIL_BACKEND or 'django.core.mail.backends.smtp.EmailBackend'
+    if APPLICATION_MODE == 'ARISTOTLE':
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'impactsupport@openquake.org'
+    elif APPLICATION_MODE == 'AELO':
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'aelonoreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'aelosupport@openquake.org'
+    else:
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'noreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'support@openquake.org'
 
     # NOTE: the following variables are needed to send pasword reset emails
     #       using the createnormaluser Django command.
