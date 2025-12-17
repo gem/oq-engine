@@ -445,9 +445,13 @@ class _Workflow:
     # workflow objects are instantiated by the function `read_many`
     def __init__(self, workflow_toml, defaults, ddic, prefix=''):
         self.workflow_toml = workflow_toml
+        self.workflow_dir = os.path.dirname(workflow_toml)
         self.defaults = defaults
         self.checkout = self.defaults.pop('checkout', {})
-        self.workflow_dir = os.path.dirname(workflow_toml)
+        for value in self.checkout.values():
+            repodir = os.path.join(self.workflow_dir, value)
+            if not os.path.exists(repodir):
+                raise FileNotFoundError(repodir)
         inis = []
         names = []
         self.success = {}
