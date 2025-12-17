@@ -448,7 +448,7 @@ class _Workflow:
         self.workflow_dir = os.path.dirname(workflow_toml)
         self.defaults = defaults
         self.checkout = self.defaults.pop('checkout', {})
-        for value in self.checkout.values():
+        for value in self.checkout:
             repodir = os.path.join(self.workflow_dir, value)
             if not os.path.exists(repodir):
                 raise FileNotFoundError(repodir)
