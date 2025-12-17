@@ -24,9 +24,13 @@ def main(workflow_toml, hard=False):
     """
     Check out the repositories listed in the checkout dictionary
     """
+    found = set()
     for workflow in engine.read_many([workflow_toml], validate=False):
         for repo, tag in workflow.checkout.items():
             repo_dir = os.path.join(workflow.workflow_dir, repo)
+            if repo_dir in found:
+                continue
+            found.add(repo_dir)
             git(repo_dir, ['fetch'])
             if hard:
                 git(repo_dir, ['clean', '-f'])

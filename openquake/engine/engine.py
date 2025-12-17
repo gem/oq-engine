@@ -449,6 +449,7 @@ class _Workflow:
         self.workflow_dir = os.path.dirname(workflow_toml)
         self.defaults = defaults
         self.checkout = self.defaults.pop('checkout', {})
+        self.may_fail = self.defaults.pop('may_fail', [])
         for value in self.checkout:
             repodir = os.path.join(self.workflow_dir, value)
             if not os.path.exists(repodir):
@@ -626,7 +627,8 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                     status_dset[idx] = rec.status
                     size_dset[idx] = rec.size_mb
                     if rec.status == 'failed':
-                        failed += 1
+                        if name not in wf.may_fail:
+                            failed += 1
                     else:
                         calcs.append(job.calc_id)
             if wf.success and success_dset[wf_no]:
