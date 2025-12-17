@@ -426,6 +426,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
 
 
 OVERRIDABLE_PARAMS = (
+    'area_source_discretization',
     'calculation_mode',
     'cache',
     'concurrent_tasks',
