@@ -65,7 +65,6 @@ def _export_import(name, calc_id, output_type, dstore):
             renamedict = {f'{imt}-{poe}': f'{imt}-{rp}y'
                           for poe, rp in zip(oq.poes, rps)
                           for imt in oq.imtls}
-            breakpoint()
         else:
             renamedict = {}
         for fname in export.export((output_type, 'csv'), calc_ds):
