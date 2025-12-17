@@ -22,6 +22,7 @@ calculations.
 """
 
 import os
+import ast
 import logging
 import tempfile
 from openquake.baselib import hdf5, config, performance
@@ -98,10 +99,15 @@ def post_aelo(dstore, calcs):
         print(f'Stored {fname}')
 
 
-def main(workflow_id: int):
+def main(postjob: str, workflow_id: int, calc_id: int, *arg: str):
     """
     Useful for debugging errors in postjobs
     """
+    postjob = globals()[postjob]
     with datastore.read(workflow_id, 'r+') as dstore:
-        calcs = [int(x) for x in dstore['workflow/calc_id'][:]]
-        import_outputs(dstore, calcs, ['hcurves', 'hmaps', 'uhs'])
+        args = [ast.literal_eval(a) for a in arg]
+        postjob(dstore, [calc_id], *args)
+main.postjob = dict(help="name of the postjob operation",
+                    choices=['build_ses', 'import_outputs', 'post_aelo'])
+main.workflow_id = "ID of the workflow calculation"
+main.calc_id = "ID of the job to apply the postjob operation"
