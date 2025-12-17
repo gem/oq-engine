@@ -66,7 +66,7 @@ def purge_all(user=None):
                     print(f'Removed {fullpath}')
 
 
-def purge_orphans(force):
+def purge_orphan(force):
     """
     Purge orphan files not referenced in the database
     """
@@ -137,7 +137,7 @@ def main(what:str, force:bool=False, *, days:int=30):
         purge_db(('failed',), '1 days', force)
         return
     elif what == 'orphan':
-        purge_orphans(force)
+        purge_orphan(force)
         return
     elif what == 'db':
         purge_db((), days, force)
