@@ -66,12 +66,39 @@ def purge_all(user=None):
                     print(f'Removed {fullpath}')
 
 
+def purge_orphans(force):
+    """
+    Purge orphan files not referenced in the database
+    """
+    ddir = logs.get_datadir()
+    dbfiles = {rec[0] for rec in logs.dbcmd(
+        'SELECT ds_calc_dir || ".hdf5" FROM job')}
+    hdf5files = {os.path.join(ddir, f)
+                 for f in os.listdir(ddir)
+                 if f.endswith('.hdf5')}
+    n = 0
+    size = 0
+    for orphan in hdf5files - dbfiles:
+        if os.access(orphan, os.W_OK):
+            size += os.path.getsize(orphan)
+            if force:
+                os.remove(orphan)
+            n += 1
+    print(f'Found {n:_d} orphan files [{humansize(size)}]')
+    if not force:
+        print('Use --force to really delete the files')
+
+
+# NB: by looking at the database start_time we are not removing calculations
+# used in the cache, however orphan files may linger in the filesystem
 def purge(status, days, force):
     """
-    Remove calculations of the given status older than days
+    Remove calculations of the given `status` older than `days`, unless they
+    belong to a workflow.
     """
     query = 'SELECT id, ds_calc_dir || ".hdf5" FROM job '
-    query += f"WHERE start_time < datetime('now', '-{days} days')"
+    query += "WHERE workflow_id is NULL "
+    query += f"AND start_time < datetime('now', '-{days} days')"
     if status:
         query += f'AND status IN {status}'
     todelete = []
@@ -106,6 +133,9 @@ def main(what:str, force:bool=False, *, days:int=30):
     if what == 'failed':
         purge(('failed',), '1 days', force)
         return
+    elif what == 'orphan':
+        purge_orphans(force)
+        return
     elif what == 'all':
         purge((), days, force)
         return
@@ -119,6 +149,6 @@ def main(what:str, force:bool=False, *, days:int=30):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-main.what = 'a calculation ID or the string "failed" or "all"'
+main.what = 'a calculation ID or the string "failed", "orphan" or "all"'
 main.days = 'purge calculations older than days, if given'
 main.force = 'ignore dependent calculations'
