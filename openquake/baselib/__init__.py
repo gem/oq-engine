@@ -19,6 +19,11 @@
 import os
 import sys
 import configparser
+
+# use utf8 as default encodings on all platforms (i.e. Windows)
+# TODO: to remove in Python 3.15 when this will become the default
+os.environ['PYTHONUTF8'] = '1'
+
 # disable OpenBLAS threads before the first numpy import
 # see https://github.com/numpy/numpy/issues/11826
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
