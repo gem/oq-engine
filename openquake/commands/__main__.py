@@ -43,8 +43,6 @@ for key in DISPLAY_NAME:
 # set logging and warnings
 def oq():
     logging.basicConfig(level=logging.INFO, handlers=[])
-    warnings.simplefilter(  # make sure we do not make efficiency errors
-        "error", category=sparse.SparseEfficiencyWarning)
     sap.run(commands, prog='oq')
 
 
