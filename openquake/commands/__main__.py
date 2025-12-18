@@ -19,9 +19,7 @@
 
 import sys
 import logging
-import warnings
 import operator
-from scipy import sparse
 
 from openquake.baselib import sap, general
 from openquake.calculators import export
