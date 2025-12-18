@@ -705,7 +705,7 @@ hazard_uhs-std.csv
 
         cmakers = contexts.read_cmakers(self.calc.datastore)
         ae(list(cmakers[0].gsims.values()), [[1, 3, 5], [2], [0, 4]])
-        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8]])
+        ae(list(cmakers[1].gsims.values()), [[7, 9], [6, 8], []])
         # there are two slices 0:3 and 3:5 with length 3 and 2 respectively
 
     def test_case_73(self):
