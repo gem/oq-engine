@@ -59,8 +59,10 @@ jobs:
           EMAIL_SUPPORT=noreply@reply.com
           DJANGO_SETTINGS_MODULE=openquake.server.settings
           EOF
-          echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:latest "
-          docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:latest
+          for tag in $(echo ${{ github.event.inputs.tags }} | tr , '\n'); do echo "-t openquake/engine:$tag " | tr -d '\n'; done
+          release_tag=$(echo ${{ github.event.inputs.tags }} | cut -f 1 -d ,)
+          echo "docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag} "
+          docker run --name openquake -d --env-file=./.env -p 127.0.0.1:8800:8800 openquake/engine:${release_tag}
           echo "Waiting WEBUI up on port 8800...."
           while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
            echo "Still waiting WEBUI account login up on port 8800...."
@@ -87,7 +89,7 @@ jobs:
           sleep 3
           time docker exec -t openquake oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
           echo "test run of a calcs on new created container"
-          time docker run openquake/engine:latest oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          time docker run openquake/engine:${release_tag} oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
       - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
         run: |
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
