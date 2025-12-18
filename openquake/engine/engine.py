@@ -47,6 +47,7 @@ except ImportError:
         "Do nothing"
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
+from openquake.baselib.gitwrapper import git
 from openquake.baselib import (
     parallel, general, config, slurm, sap, workerpool as w)
 from openquake.hazardlib import InvalidFile
@@ -480,6 +481,9 @@ class _Workflow:
         """
         Convert the .inis dictionaries into validated oqparam instances
         """
+        for repo, tag in self.checkout.items():
+            repo_dir = os.path.join(self.workflow_dir, repo)
+            git(repo_dir, ['checkout', tag])
         oqs = []
         for i, dic in enumerate(self.inis):
             params = readinput.get_params(dic.pop('ini'))
@@ -542,12 +546,14 @@ def read_many(workflows_toml, params={}, validate=True):
                 for prefix, ddic in wfdict.items():
                     wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                    ddic, prefix)
+                    wf.checkout = multi['workflow'].pop('checkout', {})
                     if validate:
                         wf.validate()
                     out.append(wf)
             elif 'workflow' in wfdict:
-                wf = _Workflow(workflow_toml, wfdict.pop('workflow') | params,
-                               wfdict)
+                defaults = wfdict.pop('workflow') | params
+                wf = _Workflow(workflow_toml, defaults, wfdict)
+                wf.checkout = defaults.pop('checkout', {})
                 if validate:
                     wf.validate()
                 out.append(wf)
