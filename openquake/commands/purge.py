@@ -70,6 +70,10 @@ def purge_orphan(force):
     """
     Purge orphan files not referenced in the database
     """
+    # first purge non-relevant workflows, thus leaving orphan calculations
+    logs.dbcmd("DELETE FROM job WHERE calculation_mode='workflow'"
+               " AND not relevant")
+    logs.dbcmd("VACUUM")
     dbfiles = {rec[0] for rec in logs.dbcmd(
         'SELECT ds_calc_dir || ".hdf5" FROM job')}
     hdf5files = {os.path.join(datadir, f)
@@ -130,16 +134,16 @@ def purge_db(status, days, force):
 
 def main(what:str, force:bool=False, *, days:int=30):
     """
-    Remove calculations from the file system.
+    Remove calculations from the database and the file system.
     If you want to remove everything,  use oq reset.
     """
     if what == 'failed':
-        purge_db(('failed',), '1 days', force)
+        purge_db(('failed',), '0 days', force)
         return
     elif what == 'orphan':
         purge_orphan(force)
         return
-    elif what == 'db':
+    elif what == 'old':
         purge_db((), days, force)
         return
     calc_id = int(what)
@@ -152,6 +156,6 @@ def main(what:str, force:bool=False, *, days:int=30):
     purge_one(calc_id, getpass.getuser(), force)
 
 
-main.what = 'a calculation ID or the string "failed", "orphan" or "db"'
+main.what = 'a calculation ID or the string "failed", "old" or "orphan"'
 main.days = 'purge calculations older than days, if given'
-main.force = 'ignore dependent calculations'
+main.force = 'really remove, otherwise just print a message'

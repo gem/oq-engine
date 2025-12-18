@@ -370,13 +370,13 @@ def read_input(hparams, **extra):
     return Input(hparams, extra)
 
 
-def return_periods(itime, poes):
+def retperiods(itime, poes):
     """
     Convert PoEs into integer return periods:
 
-    >>> return_periods(50, [.1, .02])
+    >>> retperiods(50, [.1, .02])
     [475, 2475]
-    >>> return_periods(1, [.002105, .000404])
+    >>> retperiods(1, [.002105, .000404])
     [475, 2475]
     """
     years = numpy.round(- itime / numpy.log(1. - numpy.array(poes)), 0)

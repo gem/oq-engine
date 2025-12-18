@@ -492,6 +492,12 @@ class _Workflow:
             oq.validate()
             self.inis[i] = params
             oqs.append(oq)
+        if 'classical' in oq.calculation_mode:
+            for oq in oqs[1:]:
+                if oq.retperiods != oqs[0].retperiods:
+                    raise NameError(
+                        f'Expected return_periods = {oqs[0].retperiods}, '
+                        f'got {oq.retperiods}')
         if 'risk' in oq.calculation_mode or 'damage' in oq.calculation_mode:
             for oq in oqs[1:]:
                 if oq.eff_time != oqs[0].eff_time:
@@ -536,12 +542,14 @@ def read_many(workflows_toml, params={}, validate=True):
                 for prefix, ddic in wfdict.items():
                     wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                    ddic, prefix)
+                    wf.checkout = multi['workflow'].pop('checkout', {})
                     if validate:
                         wf.validate()
                     out.append(wf)
             elif 'workflow' in wfdict:
-                wf = _Workflow(workflow_toml, wfdict.pop('workflow') | params,
-                               wfdict)
+                defaults = wfdict.pop('workflow') | params
+                wf = _Workflow(workflow_toml, defaults, wfdict)
+                wf.checkout = defaults.pop('checkout', {})
                 if validate:
                     wf.validate()
                 out.append(wf)
