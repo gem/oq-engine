@@ -16,28 +16,34 @@ on:
 
 jobs:
   Scheduled_demos_and_WebUI:
-    name: OQ ${{ matrix.engine-branch }} Python ${{ matrix.python-version }}
+    name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    env:
+      OQ_LTS_PYPI_VERSION: "3.23"  # Current LTS version published on PyPI
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04]
         python-version: ["3.11", "3.12"]
-        engine-branch: ["master", "engine-3.23", "engine-3.24", "3.23"]
+        # engine-ref values:
+        # - Git branches: master, engine-X.Y
+        # - current LTS released on PyPI
+        engine-ref: ["master", "engine-3.23", "engine-3.24", "${OQ_LTS_PYPI_VERSION}"]
     if: github.event.inputs.git-ref == ''
     steps:
       - name: Set up Python  ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install OQ (${{ matrix.engine-branch }})
+      - name: Install OQ (${{ matrix.engine-ref }})
         run: |
           set -x
           curl -L -O https://github.com/gem/oq-engine/raw/master/install.py
-          python install.py user --version=${{ matrix.engine-branch }} --venv $HOME/gh-venv-${{ matrix.engine-branch }}
+          # Resolve engine-ref to an installable version
+          python install.py user --version=${{ matrix.engine-ref }} --venv $HOME/gh-venv-${{ matrix.engine-ref }}
       - name: (Scheduled) Test WebUI and run https calculation
         run: |
-          source $HOME/gh-venv-${{ matrix.engine-branch }}/bin/activate
+          source $HOME/gh-venv-${{ matrix.engine-ref }}/bin/activate
           set -x
           oq engine --upgrade-db
           oq --version
@@ -49,15 +55,18 @@ jobs:
           done
           echo "Test WebUI with curl "
           sleep 1
-          # Perform migration after setup local_settings
           curl --fail -L -I -X GET http://127.0.0.1:8800
+
           # Run all demos
-          cd $HOME/gh-venv-${{ matrix.engine-branch }}/
-          if [[ "${{ matrix.engine-branch }}" == "3.23" ]]; then
-              RUN_DEMOS_BRANCH=engine-3.23
+          # Resolve demos branch:
+          # PyPI LTS installs do not correspond to a Git ref;
+          # demos are taken from the matching engine-* branch.
+          if [[ "${{ matrix.engine-ref }}" == "${OQ_LTS_PYPI_VERSION}" ]]; then
+              RUN_DEMOS_BRANCH="engine-${OQ_LTS_PYPI_VERSION}"
           else
-              RUN_DEMOS_BRANCH=${{ matrix.engine-branch }}
+              RUN_DEMOS_BRANCH="${{ matrix.engine-ref }}"
           fi
+          cd $HOME/gh-venv-${{ matrix.engine-ref }}/
           curl -L -O https://raw.githubusercontent.com/gem/oq-engine/refs/heads/$RUN_DEMOS_BRANCH/bin/run-demos.sh
           oq_basedir=$(python -c "from openquake import baselib; print(baselib.__path__[0].rsplit('/', 2)[0])")
           qa_tests_data_dir=$oq_basedir/openquake/qa_tests_data
