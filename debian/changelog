@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * For scenario_risk calculations expose the `aggrisk-stats` output even if
+    there is a single gsim; the stats are associated to the simulations
   * Use PYTHONUTF8 mode, i.e. assume the default encoding to be
     UTF8 also on Windows
   * Internal: extended `oq purge`
