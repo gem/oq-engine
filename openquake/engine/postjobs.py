@@ -26,7 +26,7 @@ import ast
 import logging
 import tempfile
 from openquake.baselib import hdf5, config, performance
-from openquake.hazardlib import return_periods
+from openquake.hazardlib import retperiods
 from openquake.commonlib import datastore
 from openquake.calculators import base, export, views
 
@@ -61,7 +61,7 @@ def _export_import(name, calc_id, output_type, dstore):
         calc_ds.export_dir = (config.directory.custom_tmp or
                               tempfile.gettempdir())
         if output_type == 'hmaps':
-            rps = return_periods(oq.investigation_time, oq.poes)
+            rps = retperiods(oq.investigation_time, oq.poes)
             renamedict = {f'{imt}-{poe:g}': f'{imt}-{rp}y'
                           for poe, rp in zip(oq.poes, rps)
                           for imt in oq.imtls}
@@ -72,7 +72,8 @@ def _export_import(name, calc_id, output_type, dstore):
             table = os.path.basename(fname).rsplit('_', 1)[0]
             # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
             logging.info(f'Importing {table} for {name} [{calc_id}]')
-            dstore.import_csv(fname, table, str_fields, renamedict, {'calc': name})
+            dstore.import_csv(fname, table, str_fields, renamedict,
+                              {'calc': name})
             os.remove(fname)  # remove only if the import succeeded
 
 
