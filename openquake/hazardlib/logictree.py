@@ -1036,9 +1036,6 @@ def _ddic(trtis, smrs, gsims_by_trt, get_rlzs):
             rbg = acc[trt_smr]
             for rlz in rlzs_sm:
                 rbg[rlz.gsim_rlz.value[trti]].append(rlz.ordinal)
-            # trick to keep into account DummyGMPEs with zero weight
-            if any(isinstance(gsim, DummyGMPE) for gsim in gsims):
-                acc[trt_smr][DummyGMPE(ordinal=trt_smr)] = []
             acc[trt_smr] = {gsim: U32(rbg[gsim]) for gsim in sorted(rbg)}
     return acc
 
@@ -1348,11 +1345,12 @@ class FullLogicTree(object):
         """
         rlzs_by_gsim_dic = self.get_rlzs_by_gsim_dic()
         if isinstance(trt_smr, (numpy.ndarray, list, tuple)):  # classical
-            dic = AccumDict(accum=[])
+            trt = self.trts[trt_smr[0] // TWO24]
+            dic = {gsim: [] for gsim in self.gsim_lt.values[trt]}
             for t in trt_smr:
                 for gsim, rlzs in rlzs_by_gsim_dic[t].items():
                     dic[gsim].append(rlzs)
-            return {k: numpy.concatenate(ls, dtype=U32)
+            return {k: numpy.concatenate(ls, dtype=U32) if ls else []
                     for k, ls in dic.items()}
         # event based
         return rlzs_by_gsim_dic[trt_smr]
