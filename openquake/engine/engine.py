@@ -494,10 +494,10 @@ class _Workflow:
             oqs.append(oq)
         if 'classical' in oq.calculation_mode:
             for oq in oqs[1:]:
-                if oq.return_periods != oqs[0].return_periods:
+                if oq.years != oqs[0].years:
                     raise NameError(
-                        f'Expected return_periods = {oqs[0].return_periods}, '
-                        f'got {oq.return_periods}')
+                        f'Expected return_periods = {oqs[0].years}, '
+                        f'got {oq.years}')
         if 'risk' in oq.calculation_mode or 'damage' in oq.calculation_mode:
             for oq in oqs[1:]:
                 if oq.eff_time != oqs[0].eff_time:
