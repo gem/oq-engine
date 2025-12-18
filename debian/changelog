@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Use PYTHONUTF8 mode, i.e. assume the default encoding to be
+    UTF8 also on Windows
   * Internal: extended `oq purge`
   * Included .onnx and .onnx.gz files in MANIFEST.in
   * Added command `oq db keep <workflow_id>`
