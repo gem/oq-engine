@@ -20,7 +20,11 @@ jobs:
   docker:
     name: Build image and push after successfull calculation
     runs-on: ubuntu-latest
-
+    env:
+      DOCKER_USERNAME: ${{ secrets.docker_username }}
+      DOCKER_PASSWORD: ${{ secrets.docker_password }}
+      DOCKER_TAG: ${{ github.event.inputs.version }}
+      REPO_REF: ${{ github.event.inputs.git-ref }}
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action
       - name: Clone Repository (Latest)
@@ -32,11 +36,6 @@ jobs:
         with:
           ref: ${{ github.event.inputs.git-ref }}
       - name: Build image engine
-        env:
-          DOCKER_USERNAME: ${{ secrets.docker_username }}
-          DOCKER_PASSWORD: ${{ secrets.docker_password }}
-          DOCKER_TAG: ${{ github.event.inputs.version }}
-          REPO_REF: ${{ github.event.inputs.git-ref }}
         id: docker_engine_manual
         run: |
           if [ ${{ github.event.inputs.version }} != '' ]; then
@@ -101,11 +100,6 @@ jobs:
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
           docker push openquake/engine:$DOCKER_TAG
       - name: push Openquake engine image on dockerhub
-        env:
-          DOCKER_USERNAME: ${{ secrets.docker_username }}
-          DOCKER_PASSWORD: ${{ secrets.docker_password }}
-          DOCKER_TAG: ${{ github.event.inputs.version }}
-          REPO_REF: ${{ github.event.inputs.git-ref }}
         run: |
           if [ ${{ github.event.inputs.version }} != '' ]; then
             echo "Is manual run"

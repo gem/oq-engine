@@ -16,7 +16,11 @@ jobs:
   docker:
     name: Build image and push after successfull calculation
     runs-on: ubuntu-latest
-
+    env:
+      DOCKER_USERNAME: ${{ secrets.docker_username }}
+      DOCKER_PASSWORD: ${{ secrets.docker_password }}
+      REPO_REF: ${{ github.event.inputs.git-ref }}
+      DOCKER_TAG: ${{ github.event.inputs.version }}
     steps:
   # This Checkout is necessary when using a context in docker/build-push-action
       - name: Clone Repository (Latest)
@@ -32,10 +36,6 @@ jobs:
         run: echo "##[set-output name=tags;]" | tr -d '\n'; for tag in $(echo ${{ github.event.inputs.tags }} | tr , '\n'); do echo "-t openquake/engine:$tag " | tr -d '\n'; done
         id: extract_tags
       - name: Build image engine with tag ${{ github.event.inputs.version }}
-        env:
-          DOCKER_USERNAME: ${{ secrets.docker_username }}
-          DOCKER_PASSWORD: ${{ secrets.docker_password }}
-          REPO_REF: ${{ github.event.inputs.git-ref }}
         id: docker_engine
         run: docker build --build-arg oq_branch=$REPO_REF  ${{ steps.extract_tags.outputs.tags }} -f docker/Dockerfile.engine docker
       - name: List Image
@@ -89,10 +89,6 @@ jobs:
           echo "test run of a calcs on new created container"
           time docker run openquake/engine:latest oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
       - name: push image engine with tags ${{ github.event.inputs.tags }} on dockerhub
-        env:
-          DOCKER_USERNAME: ${{ secrets.docker_username }}
-          DOCKER_PASSWORD: ${{ secrets.docker_password }}
-          DOCKER_TAG: ${{ github.event.inputs.version }}
         run: |
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
           docker push openquake/engine --all-tags
