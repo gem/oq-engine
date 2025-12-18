@@ -1921,6 +1921,12 @@ class ContextMakerSequence(collections.abc.Sequence):
         """
         return sum(len(cm.gsims) for cm in self.cmakers)
 
+    def get_gids(self):
+        """
+        :returns: list of gid arrays, one for each underlying cmaker
+        """
+        return [cm.gid for cm in self.cmakers]
+
     def __getitem__(self, idx):
         return self.cmakers[idx]
 
