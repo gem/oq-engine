@@ -1865,7 +1865,11 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if len(rlzs) > 1 and not oq.collect_rlzs:
+    if oq.calculation_mode == 'scenario_risk' and 'aggrisk' in dstore:
+        # the quantiles are computed across simulations, as in the
+        # ScenarioRisk demo which contains a single GSIM/realization
+        dskeys.add('aggrisk-stats')
+    elif len(rlzs) > 1 and not oq.collect_rlzs:
         if 'aggrisk' in dstore:
             dskeys.add('aggrisk-stats')
         if 'aggcurves' in dstore:
