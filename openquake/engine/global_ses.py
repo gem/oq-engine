@@ -63,18 +63,20 @@ from openquake.baselib import sap
 from openquake.qa_tests_data.mosaic import workflow
 from openquake.engine import engine
 
-def main(mosaic_dir, out, *,
+def main(mosaic_dir, out, models='ALL', *,
          number_of_logic_tree_samples:int=2000,
          ses_per_logic_tree_path:int=50, minimum_magnitude:float=5):
     """
     Storing global SES
     """
-    ses_toml = workflow.ses(mosaic_dir, out, number_of_logic_tree_samples,
+    ses_toml = workflow.ses(mosaic_dir, out, models.split(','),
+                            number_of_logic_tree_samples,
                             ses_per_logic_tree_path, minimum_magnitude)
     return engine.run_workflow(dict(description='Global SES'), [ses_toml])
 
 main.mosaic_dir = 'Directory containing the hazard mosaic'
 main.out = 'Output file'
+main.models = 'Models to consider (comma-separated)'
 main.number_of_logic_tree_samples = 'Number of samples'
 main.ses_per_logic_tree_path = 'Number of SES'
 main.minimum_magnitude = 'Discard ruptures below this magnitude'

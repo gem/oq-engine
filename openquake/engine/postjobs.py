@@ -22,11 +22,13 @@ calculations.
 """
 
 import os
+import ast
 import logging
 import tempfile
 from openquake.baselib import hdf5, config, performance
+from openquake.hazardlib import retperiods
 from openquake.commonlib import datastore
-from openquake.calculators import base, export
+from openquake.calculators import base, export, views
 
 
 def build_ses(dstore, calcs, out_file):
@@ -58,11 +60,20 @@ def _export_import(name, calc_id, output_type, dstore):
         str_fields = ['loss_type', 'taxonomy', 'MACRO_TAXONOMY'] + sorted(aggby)
         calc_ds.export_dir = (config.directory.custom_tmp or
                               tempfile.gettempdir())
+        if output_type == 'hmaps':
+            rps = retperiods(oq.investigation_time, oq.poes)
+            renamedict = {f'{imt}-{poe:g}': f'{imt}-{rp}y'
+                          for poe, rp in zip(oq.poes, rps)
+                          for imt in oq.imtls}
+            # NB: there is no need to import the uhs
+        else:
+            renamedict = {}
         for fname in export.export((output_type, 'csv'), calc_ds):
             table = os.path.basename(fname).rsplit('_', 1)[0]
             # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
             logging.info(f'Importing {table} for {name} [{calc_id}]')
-            dstore.import_csv(fname, table, str_fields, {'calc': name})
+            dstore.import_csv(fname, table, str_fields, renamedict,
+                              {'calc': name})
             os.remove(fname)  # remove only if the import succeeded
 
 
@@ -78,3 +89,36 @@ def import_outputs(dstore, calcs, out_types):
             for out_type in out_types:
                 _export_import(name, calc_id, out_type, dstore)
     print(mon)
+
+
+def post_aelo(dstore, calcs):
+    """
+    Executed by the AELO tests; save 'asce/XXX.org' files
+    """
+    assert os.path.exists('asce'), 'You are not in the mosaic directory!'
+    asce = {}
+    for calc in calcs:
+        dstore = datastore.read(calc)
+        model = dstore['oqparam'].mosaic_model
+        asce[model + '07'] = views.view('asce:07', dstore)
+        asce[model + '41'] = views.view('asce:41', dstore)
+    for name, table in asce.items():
+        fname = os.path.abspath(f'asce/{name}.org')
+        with open(fname, 'w') as f:
+            print(views.text_table(table[1:], table[0], ext='org'), file=f)
+        print(f'Stored {fname}')
+
+
+def main(postjob: str, workflow_id: int, calc_id: int, arg: str):
+    """
+    Useful for debugging errors in postjobs
+    """
+    postjob = globals()[postjob]
+    with datastore.read(workflow_id, 'r+') as dstore:
+        args = [ast.literal_eval(a) for a in arg]
+        postjob(dstore, [calc_id], *args)
+main.postjob = dict(help="name of the postjob operation",
+                    choices=['build_ses', 'import_outputs', 'post_aelo'])
+main.workflow_id = "ID of the workflow calculation"
+main.calc_id = "ID of the job to apply the postjob operation"
+main.arg = dict(help="Extra arguments (literals)", nargs='*')

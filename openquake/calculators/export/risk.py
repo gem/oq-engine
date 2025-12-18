@@ -790,7 +790,13 @@ def export_assetcol_csv(ekey, dstore):
         tags = []
         for asset_idx in range(len(assetcol)):
             tag_id = assetcol[tagname][asset_idx]
-            tags.append(assetcol.tagcol.get_tag(tagname, tag_id).split('=')[1])
+            if tagname == 'id':  # special case, tag_id is already a string
+                # test in event_based_risk:case_master
+                tags.append(tag_id)
+            else:
+                # tag_id is an index to be converted into "tagname=tag"
+                tag = assetcol.tagcol.get_tag(tagname, tag_id).split('=')[1]
+                tags.append(tag)
         df[tagname] = tags
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
     df['id'] = df['id'].apply(lambda x: x.decode('utf8'))

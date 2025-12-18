@@ -204,11 +204,9 @@ def run_calc(log):
             hostname = socket.gethostname()
         except Exception:  # gaierror
             hostname = 'localhost'
-        logging.info('%s@%s running %s --hc=%s',
-                     USER,
-                     hostname,
-                     calc.oqparam.inputs['job_ini'],
-                     calc.oqparam.hazard_calculation_id)
+        logging.warning('%s@%s running %s --hc=%s',
+                        USER, hostname, calc.oqparam.inputs['job_ini'],
+                        calc.oqparam.hazard_calculation_id)
         obsolete_msg = check_obsolete_version(oqparam.calculation_mode)
         # NB: the warning should not be logged for users with
         # an updated LTS version
@@ -428,6 +426,7 @@ def run_jobs(jobctxs, concurrent_jobs=None, nodes=1, sbatch=False,
 
 
 OVERRIDABLE_PARAMS = (
+    'area_source_discretization',
     'calculation_mode',
     'cache',
     'concurrent_tasks',
@@ -436,17 +435,25 @@ OVERRIDABLE_PARAMS = (
     'number_of_logic_tree_samples',
     'ses_per_logic_tree_path',
     'minimum_magnitude',
-    'mosaic_model')
+    'mosaic_model',
+    'return_periods',
+    'ses_seed',
+    'sites',
+    'siteid')
 
 
 class _Workflow:
     # workflow objects are instantiated by the function `read_many`
     def __init__(self, workflow_toml, defaults, ddic, prefix=''):
         self.workflow_toml = workflow_toml
-        self.defaults = defaults
-        if not hasattr(self, 'checkout'):
-            self.checkout = {}
         self.workflow_dir = os.path.dirname(workflow_toml)
+        self.defaults = defaults
+        self.checkout = self.defaults.pop('checkout', {})
+        self.may_fail = self.defaults.pop('may_fail', [])
+        for value in self.checkout:
+            repodir = os.path.join(self.workflow_dir, value)
+            if not os.path.exists(repodir):
+                raise FileNotFoundError(repodir)
         inis = []
         names = []
         self.success = {}
@@ -462,13 +469,7 @@ class _Workflow:
                 self.success = ddic['success']
                 continue
             assert k[0].isupper(), k
-            params = readinput.get_params(dic['ini'])
-            for param in OVERRIDABLE_PARAMS:
-                val = dic.get(param, self.defaults.get(param))
-                if val is not None:
-                    params[param] = str(val)
-            OqParam(**params).validate()
-            inis.append(params)
+            inis.append(dic)
             names.append(prefix + k)
 
         check_unique(names, workflow_toml)
@@ -480,14 +481,28 @@ class _Workflow:
         Convert the .inis dictionaries into validated oqparam instances
         """
         oqs = []
-        for ini in self.inis:
-            oq = OqParam(**ini)
+        for i, dic in enumerate(self.inis):
+            params = readinput.get_params(dic.pop('ini'))
+            params.update(dic)
+            for param in OVERRIDABLE_PARAMS:
+                val = params.get(param, self.defaults.get(param))
+                if val is not None:
+                    params[param] = str(val)
+            oq = OqParam(**params)
             oq.validate()
+            self.inis[i] = params
             oqs.append(oq)
-        for oq in oqs[1:]:
-            if oq.eff_time != oqs[0].eff_time:
-                raise NameError(f'Expected eff_time = {oqs[0].eff_time}, '
-                                f'got {oq.eff_time}')
+        if 'classical' in oq.calculation_mode:
+            for oq in oqs[1:]:
+                if oq.retperiods != oqs[0].retperiods:
+                    raise NameError(
+                        f'Expected return_periods = {oqs[0].retperiods}, '
+                        f'got {oq.retperiods}')
+        if 'risk' in oq.calculation_mode or 'damage' in oq.calculation_mode:
+            for oq in oqs[1:]:
+                if oq.eff_time != oqs[0].eff_time:
+                    raise NameError(f'Expected eff_time = {oqs[0].eff_time}, '
+                                    f'got {oq.eff_time}')
         return oqs
 
     def to_toml(self):
@@ -509,7 +524,7 @@ def check_unique(names, workflow_toml):
                          f'{uni[cnt > 1]}')
 
 
-def read_many(workflows_toml, params={}):
+def read_many(workflows_toml, params={}, validate=True):
     """
     Read the workflow file and returns a list a workflow dictionary.
     Set 'workflow_dir', 'success' and 'inis' on each.
@@ -527,12 +542,16 @@ def read_many(workflows_toml, params={}):
                 for prefix, ddic in wfdict.items():
                     wf = _Workflow(workflow_toml, multi['workflow'] | params,
                                    ddic, prefix)
-                    wf.validate()
+                    wf.checkout = multi['workflow'].pop('checkout', {})
+                    if validate:
+                        wf.validate()
                     out.append(wf)
             elif 'workflow' in wfdict:
-                wf = _Workflow(workflow_toml, wfdict.pop('workflow') | params,
-                               wfdict)
-                wf.validate()
+                defaults = wfdict.pop('workflow') | params
+                wf = _Workflow(workflow_toml, defaults, wfdict)
+                wf.checkout = defaults.pop('checkout', {})
+                if validate:
+                    wf.validate()
                 out.append(wf)
             else:
                 raise InvalidFile('missing [workflow] or [multi.workflow]')
@@ -616,7 +635,8 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                     status_dset[idx] = rec.status
                     size_dset[idx] = rec.size_mb
                     if rec.status == 'failed':
-                        failed += 1
+                        if name not in wf.may_fail:
+                            failed += 1
                     else:
                         calcs.append(job.calc_id)
             if wf.success and success_dset[wf_no]:

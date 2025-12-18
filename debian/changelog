@@ -4,7 +4,12 @@
     5-75% Significant Duration (RSD575), and 5-95% Significant Duration (RSD595)
     developed by Wang et al. (2025)
 
-[Michele Simionato]
+  [Michele Simionato]
+  * For scenario_risk calculations expose the `aggrisk-stats` output even if
+    there is a single gsim; the stats are associated to the simulations
+  * Use PYTHONUTF8 mode, i.e. assume the default encoding to be
+    UTF8 also on Windows
+  * Internal: extended `oq purge`
   * Included .onnx and .onnx.gz files in MANIFEST.in
   * Added command `oq db keep <workflow_id>`
   * Added command `oq checkout workflow.toml`
@@ -46,7 +51,8 @@
   [Michele Simionato]
   * Extended the global_ses script to accept job.ini files
   * Implemented `oq engine --run job1.ini .. jobN.ini --hc parent.hdf5`
-  * Extended `--hc` to accept paths to datastore files
+  * Extended `--hc` to accept paths to datastore files and removed the
+    experimental feature `rupture_model_file = rups.hdf5`
   * Using the filtered site collection, thus changing numbers in OQImpact
   * Implemented rupture prefiltering for scenario and event based calculators
 

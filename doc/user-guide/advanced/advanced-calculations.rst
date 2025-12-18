@@ -742,11 +742,15 @@ calculations there is no way out.
 Understanding the SES file
 --------------------------------------
 
-The command `oq ses` is able to take multiple hazard models and build
-a single file containing ruptures coming from all the model without
-double counting. There is clearly a risk of double counting if the
-same source is included in two different mosaic models and therefore
-the engine generates the same ruptures twice. However the ``oq ses``
+The command
+
+``$ oq shell openquake.engine.global_ses <mosaic_dir> ses.hdf5``
+
+is able to take multiple hazard models and build a single file
+containing ruptures coming from all the models without double
+counting. There is clearly a risk of double counting if the same
+source is included in two different mosaic models and therefore the
+engine generates the same ruptures twice. However the
 command is smart enough to discard duplicated ruptures.
 
 The generated ``ses.hdf5`` file contains all the ruptures from all

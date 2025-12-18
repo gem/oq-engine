@@ -36,7 +36,7 @@ from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import (
     DictArray, AccumDict, cached_property, engine_version)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
-from openquake.hazardlib import shakemap
+from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
@@ -1189,6 +1189,8 @@ class OqParam(valid.ParamSet):
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
     with_betw_ratio = valid.Param(valid.positivefloat, None)
 
+    retperiods = property(retperiods)
+
     @property
     def no_pointsource_distance(self):
         """
@@ -1449,8 +1451,8 @@ class OqParam(valid.ParamSet):
         # checks for event_based
         if 'event_based' in self.calculation_mode:
             if self.ps_grid_spacing:
-                logging.warning('ps_grid_spacing is ignored in event_based '
-                                'calculations')
+                logging.info('ps_grid_spacing is ignored in event_based '
+                             'calculations')
 
             if self.ses_per_logic_tree_path >= TWO32:
                 self.raise_invalid('ses_per_logic_tree_path too big: %d' %
@@ -1626,7 +1628,8 @@ class OqParam(valid.ParamSet):
         """
         The effective time, non zero only for sampling
         """
-        return (self.investigation_time * self.ses_per_logic_tree_path *
+        itime = self.risk_investigation_time or self.investigation_time
+        return (itime * self.ses_per_logic_tree_path *
                 self.number_of_logic_tree_samples)
 
     def risk_event_rates(self, num_events, num_haz_rlzs):
