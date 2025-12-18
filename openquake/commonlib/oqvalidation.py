@@ -36,7 +36,7 @@ from openquake.baselib.parallel import Starmap
 from openquake.baselib.general import (
     DictArray, AccumDict, cached_property, engine_version)
 from openquake.hazardlib.imt import from_string, sort_by_imt, sec_imts
-from openquake.hazardlib import shakemap, return_periods as years
+from openquake.hazardlib import shakemap, retperiods
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
 from openquake.sep.classes import SecondaryPeril
@@ -1189,7 +1189,7 @@ class OqParam(valid.ParamSet):
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
     with_betw_ratio = valid.Param(valid.positivefloat, None)
 
-    years = property(years)
+    retperiods = property(retperiods)
 
     @property
     def no_pointsource_distance(self):
