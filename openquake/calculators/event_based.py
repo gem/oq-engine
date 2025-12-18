@@ -766,7 +766,12 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.calculation_mode.startswith('scenario'):
                 # rescale n_occ by ngmfs and nrlzs
                 aw['n_occ'] *= ngmfs * gsim_lt.get_num_paths()
+        elif oq.inputs['rupture_model'].endswith('.hdf5'):
+            raise InvalidFile(f"{oq.inputs['job_ini']}: obsolete syntax for "
+                              "rupture_model_file, use hazard_calculation_id "
+                              "instead")
         else:
+            # should never arrive here
             raise InvalidFile("Something wrong in %s" % oq.inputs['job_ini'])
         rup_array = aw.array
         hdf5.extend(self.datastore['rupgeoms'], aw.geom)
