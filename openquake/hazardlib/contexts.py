@@ -2094,6 +2094,13 @@ def read_full_lt_by_label(dstore, full_lt=None):
                 raise InvalidFile(
                     f'{oq.inputs["gsim_logic_tree"]}: expected {exp} gsims '
                     f'got {got} for {trt=}')
+
+    # sanity check: the gids must be consistent
+    unique_trt_smrs, _ = get_unique_inverse(dstore['trt_smrs'][:])
+    default_gids = dic['Default'].get_gids(unique_trt_smrs)
+    for label in list(dic)[1:]:
+        gids = dic[label].get_gids(unique_trt_smrs)
+        numpy.testing.assert_equal(gids, default_gids)
     return dic
 
 
