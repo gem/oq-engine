@@ -1110,44 +1110,44 @@ class FullLogicTree(object):
             return weights[:, -1]
         return self.gsim_lt.wget(weights, imt)
 
-    def gfull(self, all_trt_smrs):
+    def gfull(self, unique_trt_smrs):
         """
         :returns: the total Gt = Σ_i G_i
         """
         Gt = 0
-        for trt_smrs in all_trt_smrs:
+        for trt_smrs in unique_trt_smrs:
             trt = self.trts[trt_smrs[0] // TWO24]
             Gt += len(self.gsim_lt.values[trt])
         return Gt
 
-    def get_gids(self, all_trt_smrs):
+    def get_gids(self, unique_trt_smrs):
         """
         :returns: list of of arrays of gids, one for each source group
         """
         gids = []
         g = 0
-        for trt_smrs in all_trt_smrs:
+        for trt_smrs in unique_trt_smrs:
             rbg = self.get_rlzs_by_gsim(trt_smrs)
             gids.append(numpy.arange(g, g + len(rbg)))
             g += len(rbg)
         return gids
 
-    def get_trt_rlzs(self, all_trt_smrs):
+    def get_trt_rlzs(self, unique_trt_smrs):
         """
         :returns: a list with Gt arrays of dtype uint32
         """
         data = []
-        for trt_smrs in all_trt_smrs:
+        for trt_smrs in unique_trt_smrs:
             for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
                 data.append(U32(rlzs) + TWO24 * (trt_smrs[0] // TWO24))
         return data
 
-    def g_weights(self, all_trt_smrs):
+    def g_weights(self, unique_trt_smrs):
         """
         :returns: an array of weights of shape (Gt, 1) or (Gt, M+1)
         """
         data = []
-        for trt_smrs in all_trt_smrs:
+        for trt_smrs in unique_trt_smrs:
             for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
                 data.append(self.weights[rlzs].sum(axis=0))
         return numpy.array(data)

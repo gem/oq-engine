@@ -214,7 +214,6 @@ def quantile_curve(quantile, curves, weights=None):
     return result
 
 
-# NB: this will be obsolete in numpy 2+
 def weighted_quantiles(qs, values, weights):
     """
     Compute weighted quantiles

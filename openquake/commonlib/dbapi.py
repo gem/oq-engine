@@ -328,46 +328,48 @@ class Db(object):
             self.conn.commit()
 
     def __call__(self, m_templ, *m_args, **kw):
-        cursor = self.conn.cursor()
-        templ, args = match(m_templ, *m_args)
-        if kw.get('debug'):
-            print(templ)
-            print('args = %s' % repr(args))
-        try:
-            if args:
-                cursor.execute(templ, args)
-            else:
-                cursor.execute(templ)
-        except Exception as exc:
-            raise exc.__class__('%s: %s %s' % (exc, templ, args))
-        if templ.lstrip().lower().startswith(('select', 'pragma')):
-            with warnings.catch_warnings():
-                # hide "the default timestamp converter is deprecated as of Python 3.12"
-                warnings.filterwarnings('ignore', category=DeprecationWarning)
-                rows = cursor.fetchall()
-            if kw.get('scalar'):  # scalar query
-                if not rows:
-                    raise NotFound
-                elif len(rows) > 1:
-                    raise TooManyRows('%s, expected 1' % len(rows))
-                elif len(rows[0]) > 1:
-                    raise TooManyColumns('%s, expected 1' % len(rows[0]))
-                return rows[0][0]
-            elif kw.get('one'):  # query returning a single row
-                if not rows:
-                    raise NotFound(args)
-                elif len(rows) > 1:
-                    raise TooManyRows('%s, expected 1' % len(rows))
-            elif cursor.description is None:
-                return cursor
+        with warnings.catch_warnings():
+            # the default datetime adapter is deprecated as of Python 3.12
+            # the default timestamp converter is deprecated as of Python 3.12
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-            colnames = [r[0] for r in cursor.description]
-            if kw.get('one'):
-                return Row(colnames, rows[0])
+            cursor = self.conn.cursor()
+            templ, args = match(m_templ, *m_args)
+            if kw.get('debug'):
+                print(templ)
+                print('args = %s' % repr(args))
+            try:
+                if args:
+                    cursor.execute(templ, args)
+                else:
+                    cursor.execute(templ)
+            except Exception as exc:
+                raise exc.__class__('%s: %s %s' % (exc, templ, args))
+            if templ.lstrip().lower().startswith(('select', 'pragma')):
+                rows = cursor.fetchall()
+                if kw.get('scalar'):  # scalar query
+                    if not rows:
+                        raise NotFound
+                    elif len(rows) > 1:
+                        raise TooManyRows('%s, expected 1' % len(rows))
+                    elif len(rows[0]) > 1:
+                        raise TooManyColumns('%s, expected 1' % len(rows[0]))
+                    return rows[0][0]
+                elif kw.get('one'):  # query returning a single row
+                    if not rows:
+                        raise NotFound(args)
+                    elif len(rows) > 1:
+                        raise TooManyRows('%s, expected 1' % len(rows))
+                elif cursor.description is None:
+                    return cursor
+
+                colnames = [r[0] for r in cursor.description]
+                if kw.get('one'):
+                    return Row(colnames, rows[0])
+                else:
+                    return Table(colnames, rows)
             else:
-                return Table(colnames, rows)
-        else:
-            return cursor
+                return cursor
 
     def insert(self, table, columns, rows):
         """
