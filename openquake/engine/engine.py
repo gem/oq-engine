@@ -584,7 +584,6 @@ def prepare_workflow(params, workflows_toml, pdb):
     Create or retrieve a workflow record and create or update
     the workflow database
     """
-    descr = params.pop('description')
     workflows = read_many(workflows_toml, params)
     names = numpy.concatenate([wf.names for wf in workflows])
     n = len(names)
@@ -595,6 +594,7 @@ def prepare_workflow(params, workflows_toml, pdb):
         workflow_id = params.pop('workflow_id')
     except KeyError:
         # create a new workflow
+        descr = params.pop('description')
         [wfjob] = create_jobs([wfdic], pdb=pdb)
         workflow_id = wfjob.calc_id
         dstore = datastore.read(workflow_id, 'w')
@@ -612,6 +612,7 @@ def prepare_workflow(params, workflows_toml, pdb):
         wfdic['job_id'] = workflow_id
         dstore = datastore.read(workflow_id, 'r+')
         wfjob = logs.init(wfdic)
+        descr = wfjob.get_job().description
     wfjob.workflows = workflows
     return wfjob, dstore, names, descr
 
