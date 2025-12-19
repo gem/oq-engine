@@ -1,5 +1,4 @@
 [multi.workflow]
-description = "hazard+risk"
 
 [hazard.Job]
 ini = "job_hazard.ini"

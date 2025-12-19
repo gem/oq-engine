@@ -498,9 +498,8 @@ class _Workflow:
         oqs = []
         for i, dic in enumerate(self.inis):
             params = readinput.get_params(dic.pop('ini'))
-            params.update(dic)
             for param in OVERRIDABLE_PARAMS:
-                val = self.defaults.get(param, params.get(param))
+                val = dic.get(param, self.defaults.get(param))
                 if val is not None:
                     params[param] = str(val)
             oq = OqParam(**params)
@@ -529,6 +528,9 @@ class _Workflow:
             dic[name] = ini
         dic['success'] = self.success
         return toml.dumps(dic)
+
+    def __repr__(self):
+        return '<Workflow %s>' % self.workflow_toml
 
 
 # called twice, internally and also externally to Workflow objects
@@ -629,8 +631,9 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
     with wfjob, dstore:
         for wf_no, wf in enumerate(wfjob.workflows):
             if wf_no == 0:  # at first step
-                kw = {k: str(v) for k, v in wf.defaults.items()}
-                dstore['oqparam'] = OqParam(description=descr, **kw)
+                kw = wf.inis[0].copy()
+                kw.update(calculation_mode='workflow', description=descr)
+                dstore['oqparam'] = OqParam(**kw)
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
                 idx = name2idx[name]
