@@ -138,7 +138,7 @@ def main(what:str, force:bool=False, *, days:int=30):
     If you want to remove everything,  use oq reset.
     """
     if what == 'failed':
-        purge_db(('failed',), '0 days', force)
+        purge_db(('failed', 'aborted'), '0 days', force)
         return
     elif what == 'orphan':
         purge_orphan(force)

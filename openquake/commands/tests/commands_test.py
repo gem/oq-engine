@@ -888,4 +888,5 @@ class RunSiteTestCase(unittest.TestCase):
 
 def teardown_module():
     parallel.Starmap.shutdown()
+    sap.runline('openquake.commands purge failed')
     del os.environ['OQ_DATABASE']
