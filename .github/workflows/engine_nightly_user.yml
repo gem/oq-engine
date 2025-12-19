@@ -19,7 +19,8 @@ jobs:
     name: OQ ${{ matrix.engine-ref }} Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     env:
-      OQ_LTS_PYPI_VERSION: "3.23"  # Current LTS version published on PyPI
+      # Current LTS version on PyPI (TODO: keep the LTS version updated)
+      OQ_LTS_PYPI_VERSION: 3.23
     strategy:
       fail-fast: false
       matrix:
@@ -27,8 +28,10 @@ jobs:
         python-version: ["3.11", "3.12"]
         # engine-ref values:
         # - Git branches: master, engine-X.Y
-        # - current LTS released on PyPI
-        engine-ref: ["master", "engine-3.23", "engine-3.24", "${OQ_LTS_PYPI_VERSION}"]
+        # - current LTS released on PyPI (TODO: keep the LTS version updated)
+        # NOTE: We can not use OQ_LTS_PYPI_VERSION here because env is managed 
+        # after the maxtrix
+        engine-ref: ["master", "engine-3.23", "engine-3.24", "3.23"]
     if: github.event.inputs.git-ref == ''
     steps:
       - name: Set up Python  ${{ matrix.python-version }}
