@@ -500,7 +500,7 @@ class _Workflow:
             params = readinput.get_params(dic.pop('ini'))
             params.update(dic)
             for param in OVERRIDABLE_PARAMS:
-                val = params.get(param, self.defaults.get(param))
+                val = self.defaults.get(param, params.get(param))
                 if val is not None:
                     params[param] = str(val)
             oq = OqParam(**params)
@@ -582,6 +582,7 @@ def prepare_workflow(params, workflows_toml, pdb):
     Create or retrieve a workflow record and create or update
     the workflow database
     """
+    descr = params.pop('description')
     workflows = read_many(workflows_toml, params)
     names = numpy.concatenate([wf.names for wf in workflows])
     n = len(names)
@@ -601,8 +602,6 @@ def prepare_workflow(params, workflows_toml, pdb):
                  status=['created'] * n,
                  size_mb=[0.0] * n)
         ).set_index('name')
-        dstore['oqparam'] = OqParam(
-            description=params.pop('description'), **wfdic)
         dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
         dstore.create_df('workflow', wf_df.reset_index())
         dstore.create_dset('success', hdf5.vstr, len(workflows))
@@ -612,7 +611,7 @@ def prepare_workflow(params, workflows_toml, pdb):
         dstore = datastore.read(workflow_id, 'r+')
         wfjob = logs.init(wfdic)
     wfjob.workflows = workflows
-    return wfjob, dstore, names
+    return wfjob, dstore, names, descr
 
 
 def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
@@ -621,7 +620,7 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
     Run sequentially multiple batches of calculations specified by
     workflow files.
     """
-    wfjob, dstore, names = prepare_workflow(params, workflows_toml, pdb)
+    wfjob, dstore, names, descr = prepare_workflow(params, workflows_toml, pdb)
     name2idx = {name: i for i, name in enumerate(names)}
     calc_dset = dstore['workflow/calc_id']
     status_dset = dstore['workflow/status']
@@ -629,6 +628,9 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
     success_dset = dstore['success']
     with wfjob, dstore:
         for wf_no, wf in enumerate(wfjob.workflows):
+            if wf_no == 0:  # at first step
+                kw = {k: str(v) for k, v in wf.defaults.items()}
+                dstore['oqparam'] = OqParam(description=descr, **kw)
             failed, calcs, new, new_names = 0, [], [], []
             for name, ini in zip(wf.names, wf.inis):
                 idx = name2idx[name]

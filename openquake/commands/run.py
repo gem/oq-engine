@@ -132,7 +132,7 @@ def main(job_ini,
                 logs.dbcmd('update_job', dic['job_id'],
                            {'calculation_mode': dic['calculation_mode']})
         jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
-                           host=host)
+                           host=host, pdb=pdb)
         run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
         return jobs[0].calc_id  # used in commands_test
     else:  # toml

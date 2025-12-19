@@ -1633,7 +1633,7 @@ class OqParam(valid.ParamSet):
         """
         The effective time, non zero only for sampling
         """
-        itime = self.risk_investigation_time or self.investigation_time
+        itime = self.investigation_time or self.risk_investigation_time
         return (itime * self.ses_per_logic_tree_path *
                 self.number_of_logic_tree_samples)
 
@@ -2234,10 +2234,10 @@ class OqParam(valid.ParamSet):
         """
         sampling_method must be early_weights with collect_rlzs=true
         """
-        if self.collect_rlzs is None:
-            self.collect_rlzs = self.number_of_logic_tree_samples > 1
         if self.job_type == 'hazard':
             return True
+        if self.collect_rlzs is None:
+            self.collect_rlzs = self.number_of_logic_tree_samples > 1
 
         # there are more checks for risk calculations
         if self.collect_rlzs and self.individual_rlzs:

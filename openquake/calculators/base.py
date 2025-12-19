@@ -782,6 +782,10 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'The parent calculation was using investigation_time=%s'
                 ' != %s' % (oqp.investigation_time, oq.investigation_time))
+        if oqp.investigation_time and oqp.eff_time != oq.eff_time:
+            raise ValueError(
+                'The parent calculation was using eff_time=%s'
+                ' != %s' % (oqp.eff_time, oq.eff_time))
         hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
         if hstats != rstats:
             raise ValueError(
