@@ -1189,7 +1189,12 @@ class OqParam(valid.ParamSet):
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
     with_betw_ratio = valid.Param(valid.positivefloat, None)
 
-    retperiods = property(retperiods)
+    @property
+    def retperiods(self):
+        """
+        :returns: a list of integer return periods converted from the poes
+        """
+        return retperiods(self.investigation_time, self.poes)
 
     @property
     def no_pointsource_distance(self):

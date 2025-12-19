@@ -173,16 +173,43 @@ class ClassicalTestCase(CalculatorTestCase):
         pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
         pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
         pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
-        aac(hcurve0, pga0, rtol=2e-5)
-        aac(hcurve1, pga1, rtol=2e-5)
-        aac(hcurve2, pga2, rtol=2e-5)
+        aac(hcurve0, pga0, rtol=3e-6)
+        aac(hcurve1, pga1, rtol=3e-6)
+        aac(hcurve2, pga2, rtol=3e-6)
 
     def test_case_06_sampling(self):
         # testing oversampling
         self.run_calc(case_06.__file__, 'job.ini',
-                      number_of_logic_tree_samples='10')
+                      number_of_logic_tree_samples='5')
         [fname] = export(('uhs/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/uhs_sampling.csv', fname)
+
+        oq = self.calc.oqparam
+        flt0, flt1, flt2 = contexts.read_full_lt_by_label(
+            self.calc.datastore).values()
+        ae(flt0.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~AA', 'A~BA', 'A~AA'])
+        ae(flt1.rlzs['branch_path'], ['A~BA', 'A~BA', 'A~BA', 'A~BA', 'A~BA'])
+        ae(flt2.rlzs['branch_path'], ['A~CA', 'A~CA', 'A~AA', 'A~CA', 'A~AA'])
+
+        sitecol = self.calc.sitecol
+        sites0 = sitecol.filter(sitecol.ilabel == 0)
+        sites1 = sitecol.filter(sitecol.ilabel == 1)
+        sites2 = sitecol.filter(sitecol.ilabel == 2)
+        src_groups = self.calc.csm.src_groups
+
+        # check the mean hazard curves manually
+        hcurve0 = calc.mean_rates.calc_mcurves(
+            src_groups, sites0, flt0, oq)[0, 0]
+        hcurve1 = calc.mean_rates.calc_mcurves(
+            src_groups, sites1, flt1, oq)[0, 0]
+        hcurve2 = calc.mean_rates.calc_mcurves(
+            src_groups, sites2, flt2, oq)[0, 0]
+        pga0 = self.calc.datastore['hcurves-stats'][0, 0, 0]
+        pga1 = self.calc.datastore['hcurves-stats'][1, 0, 0]
+        pga2 = self.calc.datastore['hcurves-stats'][2, 0, 0]
+        aac(hcurve0, pga0, rtol=3e-6)
+        aac(hcurve1, pga1, rtol=3e-6)
+        aac(hcurve2, pga2, rtol=3e-6)
 
     def test_case_07(self):
         # make sure the Dummy GMPE works in event based too
