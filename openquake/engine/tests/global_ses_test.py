@@ -62,10 +62,11 @@ def check(dstore, calcs):
 def setup_module():
     worflow_id = global_ses.main(
         MOSAIC_DIR, 'rups.hdf5', 'EUR,MIE',
-        number_of_logic_tree_samples=200)
+        number_of_logic_tree_samples='200')
     wdf = read(worflow_id).read_df('workflow')
     dstore = base.run_calc(
-        path('job.ini'), hazard_calculation_id='rups.hdf5'
+        path('job.ini'), hazard_calculation_id='rups.hdf5',
+
     ).datastore
     check(dstore, list(wdf.calc_id))
     ae(dstore['source_info/EUR']['source_id'],
