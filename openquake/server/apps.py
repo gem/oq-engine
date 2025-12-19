@@ -36,7 +36,7 @@ class ServerConfig(AppConfig):
         #     registry is fully populated.
         #     Although you can’t import models at the module-level where
         #     AppConfig classes are defined, you can import them in ready()
-        if settings.TEST or os.environ.get('GITHUB_ACTIONS'):
+        if settings.TEST:
             config.directory['mosaic_dir'] = f'{oqdir}/qa_tests_data/mosaic'
 
         import openquake.server.signals  # NOQA
@@ -64,35 +64,30 @@ class ServerConfig(AppConfig):
                     ' It is required in order to convert the UTC time to'
                     ' the local time of the event. You can install it'
                     ' running: pip install timezonefinder==6.5.2')
-        if settings.LOCKDOWN and settings.APPLICATION_MODE in (
-                'AELO', 'ARISTOTLE'):
+        if (settings.LOCKDOWN and 'django_pam.auth.backends.PAMBackend'
+                not in settings.AUTHENTICATION_BACKENDS):
             # check essential constants are defined
-            try:
-                settings.EMAIL_BACKEND  # noqa
-            except NameError:
-                raise NameError(
-                    f'If APPLICATION_MODE is {settings.APPLICATION_MODE} an'
-                    f' email backend must be defined')
-            if settings.EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':  # noqa
-                try:
-                    settings.EMAIL_HOST           # noqa
-                    settings.EMAIL_PORT           # noqa
-                    settings.EMAIL_USE_TLS        # noqa
-                    settings.EMAIL_HOST_USER      # noqa
-                    settings.EMAIL_HOST_PASSWORD  # noqa
-                except NameError:
-                    raise NameError(
-                        f'If APPLICATION_MODE is {settings.APPLICATION_MODE}'
-                        f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
-                        f' must all be defined')
+            if settings.EMAIL_BACKEND is None:
+                raise NameError('If authentication is enabled (without PAM) an'
+                                ' email backend must be defined')
+            if settings.EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
+                required_email_settings = ('EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USE_TLS',
+                                           'EMAIL_HOST_USER', 'EMAIL_HOST_PASSWORD')
+                for email_setting in required_email_settings:
+                    if getattr(settings, email_setting) is None:
+                        raise NameError(
+                            f'If authentication is enabled (without PAM)'
+                            f' all the following settings must be specified:'
+                            f' {required_email_settings}')
+        if settings.APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
             if not config.directory.mosaic_dir:
                 raise NameError(
                     f'If APPLICATION_MODE is {settings.APPLICATION_MODE}, '
                     f'mosaic_dir must be specified in openquake.cfg')
-        if settings.LOCKDOWN and settings.APPLICATION_MODE == 'AELO':
-            # NOTE: this might be needed also for ARISTOTLE
-            aelo_changelog_path = os.path.join(
-                config.directory.mosaic_dir, 'aelo_changelog.ini')
-            if not os.path.isfile(aelo_changelog_path):
-                raise FileNotFoundError(
-                    f'{aelo_changelog_path} was not found!')
+            if settings.APPLICATION_MODE == 'AELO':
+                # NOTE: this might be needed also for ARISTOTLE
+                aelo_changelog_path = os.path.join(
+                    config.directory.mosaic_dir, 'aelo_changelog.ini')
+                if not os.path.isfile(aelo_changelog_path):
+                    raise FileNotFoundError(
+                        f'{aelo_changelog_path} was not found!')

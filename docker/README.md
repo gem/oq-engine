@@ -1,5 +1,5 @@
 
-#  OpenQuake Docker images <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" width="150px"> 
+#  OpenQuake Docker images <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" width="150px">
 
 
 ## End user documentation
@@ -39,22 +39,22 @@ $ docker run -u 0 -t -i  openquake/engine:nightly /bin/bash
 ```
 
 ### Environment Variables
-The Openquake image uses several environment variables 
+The Openquake image uses several environment variables
 
 LOCKDOWN
 
-This environment variable is required and set to True to enable the webui authentication. 
+This environment variable is required and set to True to enable the webui authentication.
 The default value is False, and it can also be undefined if the webui authentication is not necessary
 
 ```bash
 $ docker run -e LOCKDOWN=True openquake/engine:nightly "oq webui start 0.0.0.0:8800 -s"
 ```
-If you don don set any other environment variables the default values for admin login, password and email are: 'admin', 'admin', 'admin@example.com'
+If you don't set any other environment variables the default values for admin login, password and email are: 'admin', 'admin', 'admin@example.com'
 
 
 OQ_ADMIN_LOGIN
 
-This variable defines the superuser admin login in the webui 
+This variable defines the superuser admin login in the webui
 
 OQ_ADMIN_PASSWORD
 
@@ -66,13 +66,52 @@ This environment variable sets the superuser admin email for webui
 
 WEBUI_PATHPREFIX
 
-This variable ovverides the default prefix path (/engine) for the webui 
+This variable overrides the default prefix path (/engine) for the webui
+
+EMAIL_BACKEND
+This variable specifies the backend used by Django to send emails (e.g. 'django.core.mail.backends.smtp.EmailBackend')
+
+EMAIL_HOST
+This variable specifies the host to use for sending email (e.g. 'smtp.gmail.com')
+
+EMAIL_PORT
+Port to use for the SMTP server defined in EMAIL_HOST
+
+EMAIL_USE_TLS
+Whether to use a TLS (secure) connection when talking to the SMTP server. This is used for explicit TLS connections, generally on port 587
+
+EMAIL_HOST_USER
+Username to use for the SMTP server defined in EMAIL_HOST
+
+EMAIL_HOST_PASSWORD
+Password to use for the SMTP server defined in EMAIL_HOST. This setting is used in conjunction with EMAIL_HOST_USER when authenticating to the SMTP server. If either of these settings is empty, Django won’t attempt authentication
+
+EMAIL_SUPPORT
+Email address to be used when replying to a Django email notification
+
+To define all the environment variables, you can use a .env file in the following format:
 
 ```bash
-$ docker run --name openquake -p 127.0.0.1:8800:8800 -e LOCKDOWN=True -e OQ_ADMIN_LOGIN=example -e OQ_ADMIN_PASSWORD=example -e OQ_ADMIN_EMAIL=login@example.com openquake/engine:nightly "oq webui start 0.0.0.0:8800 -s"
+LOCKDOWN=True
+OQ_ADMIN_LOGIN=example
+OQ_ADMIN_PASSWORD=example
+OQ_ADMIN_EMAIL=login@example.com
+EMAIL_BACKEND=
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_USE_TLS=
+EMAIL_HOST_USER=
+EMAIL_HOST_PASSWORD=
+EMAIL_SUPPORT=
 ```
 
-This example runs a container named openquake using the openquake/engine:nightly image and set the value for the environment variables. 
+To run the docker:
+
+```bash
+$ docker run --name openquake -p 127.0.0.1:8800:8800 --env-file PATH/.env openquake/engine:nightly "oq webui start 0.0.0.0:8800 -s"
+```
+
+This example runs a container named openquake using the openquake/engine:nightly image and set the value for the environment variables.
 
 This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host machine, so the webui is reachable from host machine using the url: http://127.0.0.1:8800/engine
 
@@ -80,6 +119,6 @@ This binds port 8800 of the container to TCP port 8800 on 127.0.0.1 of the host 
 $ docker run --name openquake -p 127.0.0.1:8080:8800 -e LOCKDOWN=True -e WEBUI_PATHPREFIX='/path' openquake/engine:nightly "oq webui start 0.0.0.0:8800 -s"
 ```
 
-This example runs a container named openquake using the openquake/engine:nightly image and set the value for the environment variables. 
+This example runs a container named openquake using the openquake/engine:nightly image and set the value for the environment variables.
 
 This binds port 8800 of the container to TCP port 8080 on 127.0.0.1 of the host machine, so the webui is reachable from host machine using the url: http://127.0.0.1:8080/path

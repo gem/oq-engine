@@ -44,7 +44,8 @@ except ImportError:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 WEBUI_USER = 'openquake'
 
-TEST = 'test' in sys.argv or any('pytest' in arg for arg in sys.argv)
+TEST = ('test' in sys.argv or any('pytest' in arg for arg in sys.argv)
+        or os.environ.get('GITHUB_ACTIONS'))
 
 INSTALLED_APPS = ('openquake.server.db',)
 
@@ -241,6 +242,14 @@ GOOGLE_ANALYTICS_TOKEN = None
 
 HELP_URL = 'https://docs.openquake.org/oq-engine/latest/manual/'
 
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND')
+EMAIL_HOST = os.environ.get('EMAIL_HOST')
+EMAIL_PORT = os.environ.get('EMAIL_PORT')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS')
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+EMAIL_SUPPORT = os.environ.get('EMAIL_SUPPORT')
+
 # OpenQuake Standalone tools (IPT, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
@@ -296,6 +305,11 @@ if SUPPRESS_PERMISSION_DENIED_WARNINGS:
 # both the default setting and the one specified in the local settings
 APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
 
+if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
+    LOCKDOWN = True
+
+STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
+
 if APPLICATION_MODE not in ('PUBLIC',):
     if 'django.template.context_processors.request' not in CONTEXT_PROCESSORS:
         CONTEXT_PROCESSORS.insert(
@@ -310,25 +324,29 @@ if APPLICATION_MODE not in ('PUBLIC',):
     COOKIE_CONSENT_MAX_AGE = 31536000  # 1 year in seconds
     COOKIE_CONSENT_LOG_ENABLED = False
 
-if TEST and APPLICATION_MODE in ('AELO', 'ARISTOTLE'):
-    if APPLICATION_MODE == 'ARISTOTLE':
-        from openquake.server.tests.settings.local_settings_impact import *  # noqa
-    elif APPLICATION_MODE == 'AELO':
-        from openquake.server.tests.settings.local_settings_aelo import *  # noqa
-    # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
-    #        We should redefine it to a different directory for each test,
-    #        in order to avoid concurrency issues in case tests run in
-    #        parallel
-    EMAIL_FILE_PATH = os.path.join(
-        config.directory.custom_tmp or tempfile.gettempdir(),
-        'app-messages')
-
-if APPLICATION_MODE in ('RESTRICTED', 'AELO', 'ARISTOTLE'):
-    LOCKDOWN = True
-
-STATIC_URL = f'{WEBUI_PATHPREFIX}/static/'
-
 if LOCKDOWN:
+    if TEST:
+        # NOTE: keep the setting if already specified (e.g. in local_settings.py)
+        EMAIL_BACKEND = (
+            EMAIL_BACKEND or 'django.core.mail.backends.filebased.EmailBackend')
+        # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
+        #        We should redefine it to a different directory for each test,
+        #        in order to avoid concurrency issues in case tests run in
+        #        parallel
+        EMAIL_FILE_PATH = os.path.join(
+            config.directory.custom_tmp or tempfile.gettempdir(),
+            'app-messages')
+    else:
+        EMAIL_BACKEND = EMAIL_BACKEND or 'django.core.mail.backends.smtp.EmailBackend'
+    if APPLICATION_MODE == 'ARISTOTLE':
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'impactnoreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'impactsupport@openquake.org'
+    elif APPLICATION_MODE == 'AELO':
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'aelonoreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'aelosupport@openquake.org'
+    else:
+        EMAIL_HOST_USER = EMAIL_HOST_USER or 'noreply@openquake.org'
+        EMAIL_SUPPORT = EMAIL_SUPPORT or 'support@openquake.org'
 
     # NOTE: the following variables are needed to send pasword reset emails
     #       using the createnormaluser Django command.
