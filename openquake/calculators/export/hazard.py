@@ -28,11 +28,11 @@ import pandas
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import hdf5, writers
 from openquake.baselib.python3compat import decode
+from openquake.commonlib import calc, util
 from openquake.calculators import base
 from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
-from openquake.commonlib import calc, util
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -106,7 +106,7 @@ def add_imt(fname, imt):
     return os.path.join(os.path.dirname(fname), newname)
 
 
-def hazard_curve_name(dstore, ekey, kind):
+def hazard_name(dstore, ekey, kind):
     """
     :param calc_id: the calculation ID
     :param ekey: the export key
@@ -144,7 +144,7 @@ def export_aelo_csv(key, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
     lon, lat = sitecol.lons[0], sitecol.lats[0]
-    fname = hazard_curve_name(dstore, (key, 'csv'), 'mean')
+    fname = hazard_name(dstore, (key, 'csv'), 'mean')
     comment = dstore.metadata
     comment.update(lon=lon, lat=lat, kind='mean',
                    investigation_time=oq.investigation_time)
@@ -241,7 +241,7 @@ def export_hcurves_csv(ekey, dstore):
     comment = dstore.metadata
     hmap_dt = oq.hmap_dt()
     for kind in oq.get_kinds(kind, R):  # usually kind == 'mean'
-        fname = hazard_curve_name(dstore, (key, fmt), kind)
+        fname = hazard_name(dstore, (key, fmt), kind)
         comment.update(kind=kind, investigation_time=oq.investigation_time)
         if (key in ('hmaps', 'uhs') and oq.uniform_hazard_spectra or
                 oq.hazard_maps):
@@ -266,6 +266,32 @@ def export_hcurves_csv(ekey, dstore):
                 imtls = oq.imtls
             fnames.extend(export_hcurves_by_imt_csv(
                 ekey, kind, dstore, fname, sitecol, imtls, comment))
+    return sorted(fnames)
+
+
+@export.add(('hmaps-stats', 'csv'))
+def export_hmaps_stats_csv(ekey, dstore):
+    """
+    Exports the hazard maps into one .csv file per return period and statistic
+
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    key, fmt = ekey
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    sitemesh = get_sites(sitecol)
+    fnames = []
+    comment = dstore.metadata
+    aw = hdf5.ArrayWrapper.from_(dstore[key])
+    hmap = numpy.zeros(len(sitecol), oq.imt_dt())
+    for s, stat in enumerate(aw.stat):
+        for p, retperiod in enumerate(oq.retperiods):
+            fname = hazard_name(dstore, ('hmaps', fmt), f'{stat}-{retperiod}y')
+            for m, imt in enumerate(oq.imtls):
+                hmap[imt][:] = aw[:, s, m, p]
+            fnames.extend(
+                export_hmaps_csv(ekey, fname, sitemesh, hmap, comment))
     return sorted(fnames)
 
 
