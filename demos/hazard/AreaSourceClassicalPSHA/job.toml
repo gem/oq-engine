@@ -1,6 +1,6 @@
 [workflow]
 [Job]
 ini = "job.ini"
-[success]
+[[success]]
 func = "openquake.engine.postjobs.import_outputs"
 out_types = ["hcurves", "hmaps-stats"]
