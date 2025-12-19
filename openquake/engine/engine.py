@@ -48,7 +48,7 @@ except ImportError:
 from urllib.request import urlopen, Request
 from openquake.baselib.python3compat import decode
 from openquake.baselib import (
-    parallel, general, config, slurm, sap, workerpool as w)
+    hdf5, parallel, general, config, slurm, sap, workerpool as w)
 from openquake.hazardlib import InvalidFile
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, datastore, logs
@@ -456,19 +456,26 @@ class _Workflow:
                 raise FileNotFoundError(repodir)
         inis = []
         names = []
-        self.success = {}
+        self.success = []
         for k, dic in ddic.items():
             assert len(k) <= 20, k
+            if k == 'success':
+                if isinstance(dic, dict):
+                    self.success = [dic]
+                elif isinstance(dic, list):
+                    self.success = dic
+                else:
+                    raise ValueError('"success": %s', dic)
+                for s in self.success:
+                    s['func']  # each success dictionary must contain a func
+                continue
+
+            assert k[0].isupper(), k
             assert isinstance(dic, dict), dic
             for key, val in dic.items():
                 if isinstance(val, str) and val.endswith(
                         ('.ini', '.hdf5', '.sqlite')):
                     dic[key] = os.path.join(self.workflow_dir, val)
-        for k, dic in ddic.items():
-            if k == 'success':
-                self.success = ddic['success']
-                continue
-            assert k[0].isupper(), k
             inis.append(dic)
             names.append(prefix + k)
 
@@ -590,7 +597,7 @@ def prepare_workflow(params, workflows_toml, pdb):
             description=params.pop('description'), **wfdic)
         dstore['workflows'] = numpy.array([w.to_toml() for w in workflows])
         dstore.create_df('workflow', wf_df.reset_index())
-        dstore.create_dset('success', numpy.bool([False] * len(workflows)))
+        dstore.create_dset('success', hdf5.vstr, len(workflows))
     else:
         # continue an existing workflow
         wfdic['job_id'] = workflow_id
@@ -639,13 +646,16 @@ def run_workflow(params, workflows_toml, concurrent_jobs=None, nodes=1,
                             failed += 1
                     else:
                         calcs.append(job.calc_id)
-            if wf.success and success_dset[wf_no]:
-                logging.info(f'{wf.success["func"]} already called')
-            elif wf.success and not failed:
-                wf.success['dstore'] = dstore
-                wf.success['calcs'] = calcs
-                sap.run_func(wf.success)
-                success_dset[wf_no] = True
+            called = success_dset[wf_no].decode('ascii')
+            for success in wf.success:
+                succfunc = success['func']
+                if succfunc in called:
+                    logging.info(f'{succfunc} already called')
+                elif not failed:
+                    success['dstore'] = dstore
+                    success['calcs'] = calcs
+                    sap.run_func(success)
+                    success_dset[wf_no] = called + succfunc + ' '
     dt = wfjob.dt / 3600.
     logging.info(f'Finished workflow {dstore.filename} in {dt:.2} hours')
     if failed:
