@@ -28,11 +28,12 @@ import pandas
 from openquake.baselib.general import DictArray, AccumDict
 from openquake.baselib import hdf5, writers
 from openquake.baselib.python3compat import decode
+from openquake.hazardlib import retperiods
+from openquake.commonlib import calc, util
 from openquake.calculators import base
 from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract, get_sites, get_info
 from openquake.calculators.export import export
-from openquake.commonlib import calc, util
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -266,6 +267,33 @@ def export_hcurves_csv(ekey, dstore):
                 imtls = oq.imtls
             fnames.extend(export_hcurves_by_imt_csv(
                 ekey, kind, dstore, fname, sitecol, imtls, comment))
+    return sorted(fnames)
+
+
+@export.add(('hmaps-stats', 'csv'))
+def export_hmaps_stats_csv(ekey, dstore):
+    """
+    Exports the hazard maps into one .csv file per return period and statistic
+
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    key, fmt = ekey
+    oq = dstore['oqparam']
+    sitecol = dstore['sitecol']
+    sitemesh = get_sites(sitecol)
+    fnames = []
+    comment = dstore.metadata
+    aw = hdf5.ArrayWrapper.from_(dstore[key])
+    hmap = numpy.zeros(len(sitecol), oq.imt_dt())
+    for s, stat in enumerate(aw.stat):
+        for p, retperiod in enumerate(oq.retperiods):
+            fname = hazard_curve_name(dstore, ('hmaps', fmt),
+                                      f'{stat}-{retperiod}y')
+            for m, imt in enumerate(oq.imtls):
+                hmap[imt][:] = aw[:, s, m, p]
+            fnames.extend(
+                export_hmaps_csv(ekey, fname, sitemesh, hmap, comment))
     return sorted(fnames)
 
 

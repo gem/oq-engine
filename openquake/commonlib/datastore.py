@@ -370,7 +370,8 @@ class DataStore(collections.abc.MutableMapping):
             fname = prefix + ('-%s' % postfix if postfix else '') + '.' + fmt
         return self.export_path(fname, export_dir)
 
-    def import_csv(self, fname, table=None, str_fields=(), renamedict={}, extra=None):
+    def import_csv(self, fname, table=None, str_fields=(), renamedict={},
+                   extra=None):
         """
         Import a csv file in a table with the same name, possibly adding
         extra columns with constant values.

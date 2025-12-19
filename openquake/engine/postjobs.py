@@ -60,20 +60,11 @@ def _export_import(name, calc_id, output_type, dstore):
         str_fields = ['loss_type', 'taxonomy', 'MACRO_TAXONOMY'] + sorted(aggby)
         calc_ds.export_dir = (config.directory.custom_tmp or
                               tempfile.gettempdir())
-        if output_type == 'hmaps':
-            rps = retperiods(oq.investigation_time, oq.poes)
-            renamedict = {f'{imt}-{poe:g}': f'{imt}-{rp}y'
-                          for poe, rp in zip(oq.poes, rps)
-                          for imt in oq.imtls}
-            # NB: there is no need to import the uhs
-        else:
-            renamedict = {}
         for fname in export.export((output_type, 'csv'), calc_ds):
             table = os.path.basename(fname).rsplit('_', 1)[0]
             # i.e. /tmp/aggexp_tags-NAME_1_27436.csv => aggexp_tags-NAME_1
             logging.info(f'Importing {table} for {name} [{calc_id}]')
-            dstore.import_csv(fname, table, str_fields, renamedict,
-                              {'calc': name})
+            dstore.import_csv(fname, table, str_fields, extra={'calc': name})
             os.remove(fname)  # remove only if the import succeeded
 
 

@@ -58,6 +58,9 @@ MPLBACKEND=Agg oq plot 'task_info?kind=classical' 9
 MPLBACKEND=Agg oq plot_assets -1
 MPLBACKEND=Agg oq plot memory? -1
 
+# run workflow
+oq run $1/hazard/AreaSourceClassicalPSHA/job.toml -w "area demo"
+
 # run multi_risk test
 oq engine --run $2/multi_risk/case_1/job_2.ini
 
