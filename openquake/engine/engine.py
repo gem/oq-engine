@@ -468,20 +468,28 @@ class _Workflow:
                     raise ValueError('"success": %s', dic)
                 for s in self.success:
                     s['func']  # each success dictionary must contain a func
+                self.fix_paths(self.success)
                 continue
 
             assert k[0].isupper(), k
             assert isinstance(dic, dict), dic
-            for key, val in dic.items():
-                if isinstance(val, str) and val.endswith(
-                        ('.ini', '.hdf5', '.sqlite')):
-                    dic[key] = os.path.join(self.workflow_dir, val)
+            self.fix_paths([dic])
             inis.append(dic)
             names.append(prefix + k)
 
         check_unique(names, workflow_toml)
         self.inis = numpy.array(inis)
         self.names = numpy.array(names)
+
+    def fix_paths(self, dicts):
+        """
+        Expand relative path names to absolute path names
+        """
+        for dic in dicts:
+            for key, val in dic.items():
+                if isinstance(val, str) and val.endswith(
+                        ('.ini', '.hdf5', '.sqlite')):
+                    dic[key] = os.path.join(self.workflow_dir, val)
 
     def validate(self):
         """

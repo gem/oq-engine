@@ -26,7 +26,6 @@ import ast
 import logging
 import tempfile
 from openquake.baselib import hdf5, config, performance
-from openquake.hazardlib import retperiods
 from openquake.commonlib import datastore
 from openquake.calculators import base, export, views
 
