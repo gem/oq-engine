@@ -1181,6 +1181,23 @@ sadigh_1997
     :undoc-members:
     :show-inheritance:
 
+scala_2025
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.scala_2025
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+scala_2025_Md
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.scala_2025_Md
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 sera_amplification_models
 -------------------------------------------
 
