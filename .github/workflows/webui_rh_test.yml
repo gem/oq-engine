@@ -138,12 +138,12 @@ jobs:
          COOKIES=cookies.txt
          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
          echo -n "Django Auth: get csrftoken ..."
-         $CURL_BIN $LOGIN_URL > /dev/null
+         $CURL_BIN $LOGIN_URL -o /dev/null
          DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
          echo " perform login ..."
          status_code=$($CURL_BIN -w "%{http_code}"\
              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-             -X POST $LOGIN_URL) > /dev/null
+             -X POST $LOGIN_URL -o /dev/null)
          if [ "$status_code" != "302" ]; then
            echo "Unable to login"
            exit 1
@@ -164,7 +164,7 @@ jobs:
          sleep 5
          status_code=$($CURL_BIN -w "%{http_code}"\
              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-             -v --fail -G http://127.0.0.1:8800/engine/1/outputs) > /dev/null
+             -v --fail -G http://127.0.0.1:8800/engine/1/outputs -o /dev/null)
          if [ "$status_code" != "200" ]; then
            echo "Unable to visualize outputs"
            exit 1
