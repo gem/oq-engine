@@ -46,11 +46,8 @@ jobs:
             REPO_REF=master
           fi
           docker build --build-arg oq_branch=$REPO_REF -t openquake/engine:$DOCKER_TAG -f docker/Dockerfile.dev docker
-      - name: List Image
-        run: |
+          echo "List Image"
           docker image ls
-      - name: Test Auth mode and run calcs on single docker
-        run: |
           # Test authentication on WebUI headless
           echo "Test WEBUI HEADLESS"
           cat > ./.env << EOF
