@@ -116,7 +116,7 @@ jobs:
          cd /__w/oq-engine/oq-engine/openquake/engine/
          runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py migrate'
          # START WEBUI
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s'
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
          echo "Waiting WEBUI up on port 8800...."
          while ! nc -z localhost 8800; do
            sleep 5 # wait for 1/10 of the second before check again
