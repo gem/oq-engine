@@ -121,6 +121,7 @@ jobs:
          # Perform migration after setup local_settings
          cd /__w/oq-engine/oq-engine/openquake/engine/
          runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py migrate'
+         runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/server/; /opt/openquake/venv/bin/python3 manage.py createuser openquake testuser1@test.com --level 1 --password level_1_password --no-email'
          # START WEBUI
          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
          echo "Waiting WEBUI up on port 8800...."
@@ -131,8 +132,8 @@ jobs:
          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/eb_risk_demo.zip'
          echo -n "TEST DJANGO LOGIN "
          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
-         YOUR_USER='username'
-         YOUR_PASS='password'
+         YOUR_USER='openquake'
+         YOUR_PASS='level_1_password'
          COOKIES=cookies.txt
          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
          echo -n "Django Auth: get csrftoken ..."
@@ -156,8 +157,16 @@ jobs:
          # Run a calc using https
          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/risk_test.zip'
          sleep 5
-         $CURL_BIN -v --fail -G http://127.0.0.1:8800/engine/1/outputs
+         $CURL_BIN \
+             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+             -v --fail -G http://127.0.0.1:8800/engine/1/outputs
          echo -n "Test Standalone Tools pages"
-         curl --fail -I -L -X GET http://127.0.0.1:8800/
-         curl --fail -I -L -X GET http://127.0.0.1:8800/taxonomy
-         curl --fail -I -L -X GET http://127.0.0.1:8800/ipt
+         $CURL_BIN \
+             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+             -v --fail -I -L -X GET http://127.0.0.1:8800/
+         $CURL_BIN \
+             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+             -v --fail -I -L -X GET http://127.0.0.1:8800/taxonomy
+         $CURL_BIN \
+             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+             -v --fail -I -L -X GET http://127.0.0.1:8800/ipt
