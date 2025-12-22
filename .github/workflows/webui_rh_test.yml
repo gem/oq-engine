@@ -123,12 +123,6 @@ jobs:
          done
          echo "Test WebUI with curl before to test django"
          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/eb_risk_demo.zip'
-         curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
-         curl --fail -I -L -X GET http://127.0.0.1:8800/engine/1/outputs
-         echo -n "Test Standalone Tools pages"
-         curl --fail -I -L -X GET http://127.0.0.1:8800/
-         curl --fail -I -L -X GET http://127.0.0.1:8800/taxonomy
-         curl --fail -I -L -X GET http://127.0.0.1:8800/ipt
          echo -n "TEST DJANGO LOGIN "
          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
          YOUR_USER='username'
@@ -147,14 +141,17 @@ jobs:
          echo "--------------------"
          cat /var/log/oq-engine/webui-access.log
          if [ -s /var/log/oq-engine/webui-access.log ]; then
-         # The file is not-empty.
-         cat /var/log/oq-engine/webui-access.log
+           # The file is not-empty.
+           cat /var/log/oq-engine/webui-access.log
          else
-         ## The file is empty.
-         echo "Something not work as expected"
-         exit 1
+           echo "/var/log/oq-engine/webui-access.log is empty. Something did not work as expected"
+           exit 1
          fi
-         # Run a calcs using https
+         # Run a calc using https
          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/risk_test.zip'
          sleep 5
          $CURL_BIN -v --fail -G http://127.0.0.1:8800/engine/1/outputs
+         echo -n "Test Standalone Tools pages"
+         curl --fail -I -L -X GET http://127.0.0.1:8800/
+         curl --fail -I -L -X GET http://127.0.0.1:8800/taxonomy
+         curl --fail -I -L -X GET http://127.0.0.1:8800/ipt
