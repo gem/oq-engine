@@ -93,9 +93,6 @@ jobs:
           time docker exec -t openquake oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
           echo "test run of a calcs on new created container"
           time docker run openquake/engine:$DOCKER_TAG oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
-          echo " push image engine with tag :$DOCKER_TAG on docker hub "
-          docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-          docker push openquake/engine:$DOCKER_TAG
       - name: push Openquake engine image on dockerhub
         run: |
           if [ ${{ github.event.inputs.version }} != '' ]; then
@@ -106,4 +103,5 @@ jobs:
             REPO_REF=master
           fi
           docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-          docker push openquake/engine --all-tags
+          echo " push image engine with tag :$DOCKER_TAG on docker hub "
+          docker push openquake/engine:$DOCKER_TAG
