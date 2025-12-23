@@ -189,12 +189,12 @@ jobs:
            echo "Unable to access the homepage"
            exit 1
          fi
-         status_code=$(curl -s -w "%{http_code}" http://127.0.0.1:8800/taxonomy)
+         status_code=$(curl -s -w "%{http_code}" http://127.0.0.1:8800/taxonomy/)
          if [ $status_code != "200" ]; then
            echo "Unable access the taxonomy standalone app"
            exit 1
          fi
-         status_code=$(curl -s -w "%{http_code}" http://127.0.0.1:8800/ipt)
+         status_code=$(curl -s -w "%{http_code}" http://127.0.0.1:8800/ipt/)
          if [ $status_code != "200" ]; then
            echo "Unable to access the ipt standalone app"
            exit 1
