@@ -730,7 +730,7 @@ def export_event_based_mfd(ekey, dstore):
 # .txt outputs, so we use .rst here
 @export.add(('fullreport', 'rst'))
 def export_fullreport(ekey, dstore):
-    with open(dstore.export_path('report.rst'), 'w') as f:
+    with open(dstore.export_path('report.rst'), 'w', encoding="utf8") as f:
         f.write(view('fullreport', dstore))
     return [f.name]
 

@@ -123,8 +123,34 @@ AELO_FORM_PLACEHOLDERS = {
 }
 
 HIDDEN_OUTPUTS = ['exposure', 'job']
-EXTRACTABLE_RESOURCES = ['aggrisk_tags', 'mmi_tags', 'losses_by_site',
-                         'losses_by_asset', 'losses_by_location']
+EXTRACTABLE_RESOURCES = [
+    'agg_curves',
+    'agg_damages',
+    'agg_losses',
+    'agg_risk',
+    'aggrisk_tags',
+    'asset_risk',
+    'asset_tags',
+    'composite_risk_model',
+    'damages-rlzs',
+    'damages-stats',
+    'disagg_layer',
+    'events',
+    'exposure_metadata',
+    'gmf_data',
+    'hcurves',
+    'hmaps',
+    'losses_by_asset',
+    'losses_by_location',
+    'losses_by_site',
+    'mmi_tags',
+    'oqparam',
+    'realizations',
+    'risk_by_event',
+    'rupture_info',
+    'sitecol',
+    'uhs',
+]
 # NOTE: the 'exposure' output internally corresponds to the 'assetcol' in the
 #       datastore, and the can_view_exposure permission gives access both to the
 #       'exposure' output and to the 'assetcol' item in the datastore
@@ -1583,7 +1609,7 @@ def calc_datastore(request, job_id):
         of the requested artifact, if present, else throws a 404
     """
     user_level = get_user_level(request)
-    if user_level < 2:
+    if user_level < 2 and not settings.ALLOW_DATASTORE_DOWNLOAD:
         return HttpResponseForbidden()
     job = logs.dbcmd('get_job', int(job_id))
     if job is None or not os.path.exists(job.ds_calc_dir + '.hdf5'):
@@ -2026,7 +2052,10 @@ def can_extract(request, resource):
     except AttributeError:
         # without authentication
         return True
-    if (resource in EXTRACTABLE_RESOURCES
+    if (any(resource == allowed
+            or resource.startswith(allowed + "/")
+            or resource.startswith(allowed + ".")
+            for allowed in EXTRACTABLE_RESOURCES)
             or user.level >= 2
             or user.has_perm(f'auth.can_view_{resource}')):
         return True

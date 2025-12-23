@@ -1,4 +1,9 @@
-python3-oq-engine (3.24.0-1~xenial01) xenial; urgency=low
+python3-oq-engine (3.24.1-1~xenial01) xenial; urgency=low
+
+  [Paul Henshaw, Paolo Tormene]
+  * Force use of utf8 encoding when writing non-binary files.
+  * Update AreaSource demo to use UTF8 chars that are obviously not ASCII.
+  * Use utf-8-sig when reading so as to handle BOM
 
   [Michele Simionato]
   * Removed the BASE33489 hack and made the first branch of the source
@@ -324,7 +329,7 @@ python3-oq-engine (3.24.0-1~xenial01) xenial; urgency=low
   * Fixed modified_gsim (valid.py) to work with more complex
     GMMs (e.g. NGAEast GMPE Tables) + added a unit test
 
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 18 Nov 2025 09:06:09 +0000
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 21 Nov 2025 16:17:05 +0000
 
 python3-oq-engine (3.23.0-1~xenial01) xenial; urgency=low
 

@@ -5,6 +5,11 @@ if [ ! -d "$1" ]; then
     exit 1
 fi
 
+if [ ! -d "$2" ]; then
+    echo "Please specify the location of the qa_tests_data folder. Aborting." >&2
+    exit 1
+fi
+
 oq info venv
 oq info cfg
 
@@ -54,10 +59,10 @@ MPLBACKEND=Agg oq plot_assets -1
 MPLBACKEND=Agg oq plot memory? -1
 
 # run multi_risk test
-oq engine --run $1/../openquake/qa_tests_data/multi_risk/case_1/job_2.ini
+oq engine --run $2/multi_risk/case_1/job_2.ini
 
 echo "Testing ShakeMap calculator"
-oq run $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/pre-job.ini $1/../openquake/qa_tests_data/scenario_risk/case_shakemap/job.ini
+oq engine --run $2/scenario_risk/case_shakemap/pre-job.ini $2/scenario_risk/case_shakemap/job.ini
 
 # run ebrisk
 oq engine --run $1/risk/EventBasedRisk/job_eb.ini -e csv,hdf5
@@ -75,10 +80,7 @@ oq engine --list-outputs -1
 oq shell $1/risk/ScenarioRisk/sensitivity.py
 
 echo "Testing mean_rates"
-OQ_DISTRIBUTE=no python -m openquake.hazardlib.calc.mean_rates openquake/qa_tests_data/mosaic/KOR/in/job_vs30.ini
-
-echo "Testing csm2rup"
-OQ_DISTRIBUTE=processpool utils/csm2rup $1/risk/ClassicalRisk/job_hazard.ini
+OQ_DISTRIBUTE=no python -m openquake.hazardlib.calc.mean_rates $2/mosaic/KOR/in/job_vs30.ini
 
 echo "Testing oq info usgs_rupture"
 oq info usgs_rupture:us70006sj8

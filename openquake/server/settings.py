@@ -144,6 +144,8 @@ LOCKDOWN = False
 # Forbid users to see other users outputs by default
 ACL_ON = True
 
+ALLOW_DATASTORE_DOWNLOAD = True
+
 # Add additional paths (as regular expressions) that don't require
 # authentication.
 AUTH_EXEMPT_URLS = ()
