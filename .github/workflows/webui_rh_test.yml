@@ -160,7 +160,7 @@ jobs:
            exit 1
          fi
          echo " Run a calc using https"
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/risk_test.zip'
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/M4_Exercise.zip'
          sleep 5
          status_code=$($CURL_BIN -w "%{http_code}"\
              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
@@ -185,20 +185,20 @@ jobs:
            sleep 5 # wait for 5 seconds before check again
          done
          echo -n "Test Standalone Tools pages (without authentication)"
-         status_code=$($CURL_BIN -w "%{http_code}"\
+         status_code=$(curl -w "%{http_code}"\
              -v --fail -I -L -X GET http://127.0.0.1:8800/)
          if [ $status_code != "301" ]; then
            # Supposed to redirect to http://127.0.0.1:8800/engine/
            echo "Unable to access the homepage"
            exit 1
          fi
-         status_code=$($CURL_BIN -w "%{http_code}"\
+         status_code=$(curl -w "%{http_code}"\
              -v --fail -I -L -X GET http://127.0.0.1:8800/taxonomy)
          if [ $status_code != "200" ]; then
            echo "Unable access the taxonomy standalone app"
            exit 1
          fi
-         status_code=$($CURL_BIN -w "%{http_code}"\
+         status_code=$(curl -w "%{http_code}"\
              -v --fail -I -L -X GET http://127.0.0.1:8800/ipt)
          if [ $status_code != "200" ]; then
            echo "Unable to access the ipt standalone app"
