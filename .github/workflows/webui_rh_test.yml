@@ -92,7 +92,7 @@ jobs:
         for file in openquake/server/templates/registration/*.default.tmpl; do
             cp -- "$file" "${file%.default.tmpl}"
         done
-    - name: Test WebUI and run https calculation
+    - name: WebUI and calculation with Auth
       run: |
          set -x
          set -o pipefail
@@ -171,6 +171,11 @@ jobs:
            exit 1
          fi
 
+    - name: WebUI on PUBLIC
+      run: |
+         set -x
+         set -o pipefail
+         source /opt/openquake/venv/bin/activate
          echo "Restart WebUI without authentication"
          runuser -l openquake -c 'pkill oq-webui'
          sleep 5
