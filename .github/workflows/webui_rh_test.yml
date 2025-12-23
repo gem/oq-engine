@@ -126,12 +126,11 @@ jobs:
          # START WEBUI
          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
          echo "Waiting WEBUI up on port 8800...."
+         echo "Test WebUI with curl before to test django"
          while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:8800/accounts/login/)" != "200" ]]; do
            echo "Still waiting WEBUI account login up on port 8800...."
            sleep 5 # wait for 5 seconds before check again
          done
-         echo "Test WebUI with curl before to test django"
-         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/eb_risk_demo.zip'
          echo -n "TEST DJANGO LOGIN "
          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
          YOUR_USER='openquake'
@@ -160,7 +159,7 @@ jobs:
            echo "/var/log/oq-engine/webui-access.log is empty. Something did not work as expected"
            exit 1
          fi
-         # Run a calc using https
+         echo " Run a calc using https"
          runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/risk_test.zip'
          sleep 5
          status_code=$($CURL_BIN -w "%{http_code}"\
@@ -205,3 +204,5 @@ jobs:
            echo "Unable to access the ipt standalone app"
            exit 1
          fi
+         echo " Run a calc using https"
+         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/eb_risk_demo.zip'
