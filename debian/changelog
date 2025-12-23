@@ -2,6 +2,33 @@
   * Added Mohammadi2023Turkiye ML-based GSIM for Turkey.  
   
   [Michele Simionato]
+  * Added a consistency check on the effective time when starting from SES
+  * Added a new exporter hmaps-stats producing one file per return period
+
+  [Maoxin Wang]
+  * Added a new gsim file wang_2025_turkey.py to implement the Turkey-specific
+    ground motion models for Arias Intensity (IA), Cumulative Absolute Velocity
+    (CAV), 5-75% Significant Duration (RSD575), and 5-95% Significant Duration
+    (RSD595) developed by Wang et al. (2025)
+
+  [Michele Simionato]
+  * For scenario_risk calculations expose the `aggrisk-stats` output even if
+    there is a single gsim; the stats are associated to the simulations
+  * Use PYTHONUTF8 mode, i.e. assume the default encoding to be
+    UTF8 also on Windows
+  * Internal: extended `oq purge`
+  * Included .onnx and .onnx.gz files in MANIFEST.in
+  * Added command `oq db keep <workflow_id>`
+  * Added command `oq checkout workflow.toml`
+  * Extended `oq check_input` to accept workflow files
+  * Added an output "Average Losses By Taxonomy"
+  * Extended `oq run` to accept .toml files and to use the job cache
+  * Replaced `dbserver.cache` parameter in openquake.cfg with a cache
+    parameter in job.ini
+  * If the site parameters are more distant than ASSOC_DIST raise an error
+    and not a warning
+  * Added parameter `siteid` in job.ini to specify the `custom_site_id`
+  * Internal: extended baselib.sap to manage command classes
   * Saved memory in ebrisk, now most calculations can be run with 2 GB
     of RAM per core
 
@@ -11,7 +38,6 @@
   * Improved the default configuration of the TOOLS_ONLY application mode
 
   [Michele Simionato]
-  * Added a `--tag` option to `oq engine --run` to tag jobs
   * Supported site-specific gsim logic trees via `site_labels`
   * Added `source_info` to the global SES file
   * Optimized `_save_events` for large calculations over 100,000 events
@@ -30,10 +56,10 @@
     with nontrivial weights in the taxonomy mapping
 
   [Michele Simionato]
-  * Added command `oq ses` to generate a merged stochastic event set
   * Extended the global_ses script to accept job.ini files
   * Implemented `oq engine --run job1.ini .. jobN.ini --hc parent.hdf5`
-  * Extended `--hc` to accept paths to datastore files
+  * Extended `--hc` to accept paths to datastore files and removed the
+    experimental feature `rupture_model_file = rups.hdf5`
   * Using the filtered site collection, thus changing numbers in OQImpact
   * Implemented rupture prefiltering for scenario and event based calculators
 

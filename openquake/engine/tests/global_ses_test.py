@@ -40,10 +40,10 @@ def count_rups(dstore, model):
     return (arr['model'] == model.encode('ascii')).sum()
 
 
-def check(dstore, fnames):
+def check(dstore, calcs):
     with hdf5.File(RUP_HDF5) as ds, \
-         read(fnames[0]) as ds_EUR, \
-         read(fnames[1]) as ds_MIE:
+         read(calcs[0]) as ds_EUR, \
+         read(calcs[1]) as ds_MIE:
 
         # count the ruptures outside the models
         mie_unknown = count_rups(ds_MIE, '???')
@@ -60,12 +60,15 @@ def check(dstore, fnames):
 
 
 def setup_module():
-    global_ses.MODELS = ['EUR', 'MIE']
-    fnames = global_ses.main(MOSAIC_DIR, RUP_HDF5)
+    worflow_id = global_ses.main(
+        MOSAIC_DIR, 'rups.hdf5', 'EUR,MIE',
+        number_of_logic_tree_samples='200')
+    wdf = read(worflow_id).read_df('workflow')
     dstore = base.run_calc(
-        path('job.ini'), hazard_calculation_id='rups.hdf5'
+        path('job.ini'), hazard_calculation_id='rups.hdf5',
+
     ).datastore
-    check(dstore, fnames)
+    check(dstore, list(wdf.calc_id))
     ae(dstore['source_info/EUR']['source_id'],
        [b'IF-CFS-0', b'IF-CFS-1', b'IF-CFS-2', b'IF-CFS-3'])
     ae(dstore['source_info/MIE']['source_id'],

@@ -16,20 +16,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import logging
 import os.path
 import socket
 import cProfile
-import warnings
 import getpass
-from pandas.errors import SettingWithCopyWarning
 
 from openquake.baselib import performance, general, config
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, readinput
 from openquake.calculators import base, views
 from openquake.commonlib import dbapi
-from openquake.engine.engine import create_jobs, run_jobs
+from openquake.engine.engine import create_jobs, run_jobs, run_workflow
 from openquake.server import db
 
 calc_path = None  # set only when the flag --slowest is given
@@ -54,12 +53,12 @@ def _run(job_ini, concurrent_tasks, pdb, loglevel, exports,
     dic = readinput.get_params(job_ini, params)
     # set the logs first of all
     log = logs.init(dic, log_level=getattr(logging, loglevel.upper()),
-                    user_name=user_name, host=host)
+                    user_name=user_name, host=host, pdb=pdb)
     logs.dbcmd('update_job', log.calc_id,
                {'status': 'executing', 'pid': os.getpid()})
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
-        calc.run(concurrent_tasks=concurrent_tasks, pdb=pdb, exports=exports)
+        calc.run(concurrent_tasks=concurrent_tasks, exports=exports)
 
     logging.info('Total time spent: %s s', monitor.duration)
     logging.info('Memory allocated: %s', general.humansize(monitor.mem))
@@ -76,12 +75,11 @@ def main(job_ini,
          concurrent_tasks: int = None,
          exports: valid.export_formats = '',
          loglevel='info',
-         nodes: int = 1):
+         nodes: int = 1,
+         workflow_id=None):
     """
-    Run a calculation
+    Run a set of calculations or a workflow
     """
-    # os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    warnings.filterwarnings("error", category=SettingWithCopyWarning)
     user_name = getpass.getuser()
 
     # automatically create the user db if missing
@@ -119,17 +117,33 @@ def main(job_ini,
         print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                                ext='org'))
         return
-    dics = [readinput.get_params(ini) for ini in job_ini]
-    for dic in dics:
-        dic.update(params)
-        dic['exports'] = ','.join(exports)
-        if 'job_id' in dic:  # in sensitivity analysis
-            logs.dbcmd('update_job', dic['job_id'],
-                       {'calculation_mode': dic['calculation_mode']})
-    jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name, host=host)
-    run_jobs(jobs, concurrent_jobs=1, nodes=nodes, precalc=not hc)
-    return jobs[0].calc_id
-
+    if all(ini.endswith('.ini') for ini in job_ini):
+        mode = 'ini'
+    elif all(ini.endswith('.toml') for ini in job_ini):
+        mode = 'toml'
+    else:
+        raise ValueError(f'You cannot mix .ini and .toml files: {job_ini}')
+    if mode == 'ini':
+        dics = [readinput.get_params(ini) for ini in job_ini]
+        for dic in dics:
+            dic.update(params)
+            dic['exports'] = ','.join(exports)
+            if 'job_id' in dic:  # in sensitivity analysis
+                logs.dbcmd('update_job', dic['job_id'],
+                           {'calculation_mode': dic['calculation_mode']})
+        jobs = create_jobs(dics, loglevel, hc_id=hc, user_name=user_name,
+                           host=host, pdb=pdb)
+        run_jobs(jobs, concurrent_jobs=1, nodes=nodes)
+        return jobs[0].calc_id  # used in commands_test
+    else:  # toml
+        if not workflow_id:
+            sys.exit('You must pass a workflow ID or a workflow description')
+        try:
+           params['workflow_id'] = int(workflow_id)
+        except ValueError:
+            params['description'] = workflow_id
+        run_workflow(params, job_ini, nodes=nodes, pdb=pdb)
+        return workflow_id
 
 main.job_ini = dict(help='calculation configuration file '
                     '(or files, space-separated)', nargs='+')
@@ -142,3 +156,4 @@ main.exports = dict(help='export formats as a comma-separated string')
 main.loglevel = dict(help='logging level',
                      choices='debug info warn error critical'.split())
 main.nodes=dict(help='number of worker nodes to start')
+main.workflow_id = "ID of a previous workflow or description of a new workflow"

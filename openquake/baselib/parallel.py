@@ -1094,10 +1094,19 @@ def logfinish(n, tot):
     return n + 1
 
 
-def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
+def multispawn(func, allargs, nprocs=num_cores, logfinish=True,
+               names=()):
     """
-    Spawn processes with the given arguments
+    Spawn functions with the given arguments as subprocesses.
+
+    :param func: function to spawn
+    :param allargs: list of arguments
+    :param nprocs: number of processes running at the same time
+    :param logfinish: if True, log a progress message
+    :param names: optionally, give names to the spawned processes
     """
+    if names:
+        assert len(names) == len(allargs), (len(names), len(allargs))
     if oq_distribute() == 'no':
         for args in allargs:
             func(*args)
@@ -1108,7 +1117,8 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
     n = 1
     while allargs:
         args = allargs.pop()
-        proc = mp_context.Process(target=func, args=args)
+        name = names.pop() if names else None
+        proc = mp_context.Process(target=func, args=args, name=name)
         proc.start()
         procs[proc.sentinel] = proc
         while len(procs) >= nprocs:  # wait for something to finish
@@ -1116,15 +1126,16 @@ def multispawn(func, allargs, nprocs=num_cores, logfinish=True):
                 procs[finished].join()
                 del procs[finished]
                 if logfinish:
-                    logging.info('Finished %d of %d jobs', n, tot)
+                    logging.info('Finished job %s [%d of %d]', name, n, tot)
                 n += 1
 
     while procs:
         for finished in wait(procs):
+            name = procs[finished].name or ''
             procs[finished].join()
             del procs[finished]
             if logfinish:
-                logging.info('Finished %d of %d jobs', n, tot)
+                logging.info('Finished job %s [%d of %d]', name, n, tot)
             n += 1
 
 

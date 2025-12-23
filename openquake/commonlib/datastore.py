@@ -370,8 +370,32 @@ class DataStore(collections.abc.MutableMapping):
             fname = prefix + ('-%s' % postfix if postfix else '') + '.' + fmt
         return self.export_path(fname, export_dir)
 
+    def import_csv(self, fname, table=None, str_fields=(), renamedict={},
+                   extra=None):
+        """
+        Import a csv file in a table with the same name, possibly adding
+        extra columns with constant values.
+        """
+        assert fname.endswith('.csv'), fname
+        name = table or os.path.basename(fname[:-4])
+        typedic = {None: numpy.float32}
+        for field in str_fields:
+            typedic[field] = hdf5.vstr
+        df = hdf5.read_csv(fname, typedic, renamedict, dframe=True)
+        if extra:
+            for col, val in extra.items():
+                df[col] = val
+        if name not in self:
+            self.create_df(name, df, 'gzip')
+        else:
+            for col in df.columns:
+                dset = self[f'{name}/{col}']
+                hdf5.extend(dset, df[col].to_numpy())
+
     def flush(self):
-        """Flush the underlying hdf5 file"""
+        """
+        Flush the underlying hdf5 file
+        """
         if self.parent != ():
             self.parent.flush()
         if self.hdf5:  # is open

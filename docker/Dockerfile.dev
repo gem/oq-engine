@@ -31,7 +31,6 @@ RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch
 #
 USER openquake
 ENV HOME=/home/openquake
-ENV LOCKDOWN=False
 #
 #ENV OQ_CONFIG_FILE /opt/openquake/openquake.cfg
 #ADD openquake.cfg /opt/openquake/openquake.cfg
@@ -40,7 +39,7 @@ WORKDIR ${HOME}
 RUN mkdir oqdata
 ADD scripts/oq-start.sh ${HOME}
 #
-EXPOSE 8800:8800
+EXPOSE 8800
 STOPSIGNAL SIGINT
-ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-start.sh"] 
+ENTRYPOINT ["./oq-start.sh"]
+CMD ["oq", "webui", "start", "0.0.0.0:8800", "-s"]

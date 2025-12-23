@@ -696,15 +696,6 @@ a calculation, by spawning a subcalculation to compute the reaggregation.
 Without ``reaggregate_by`` the aggregation by country would be lost,
 since only the result of the finer aggregation would be stored.
 
-Starting from version 3.25 the engine has a command `oq ses` that can
-be used to generate a Stochastic Event Set in HDF4 format, which then
-can be read by the risk calculators. In practice you can run the
-entire South America with two simple commands::
-
- $ oq ses job_SAM.csv SAM.hdf5  # generate the SAM.hdf5 file
- $ oq engine --run job_Argentina.csv job_Bolivia.csv ... --hc SAM.hdf5
-
-
 Caveat: GMFs are split-dependent
 --------------------------------
 
@@ -751,11 +742,15 @@ calculations there is no way out.
 Understanding the SES file
 --------------------------------------
 
-The command `oq ses` is able to take multiple hazard models and build
-a single file containing ruptures coming from all the model without
-double counting. There is clearly a risk of double counting if the
-same source is included in two different mosaic models and therefore
-the engine generates the same ruptures twice. However the ``oq ses``
+The command
+
+``$ oq shell openquake.engine.global_ses <mosaic_dir> ses.hdf5``
+
+is able to take multiple hazard models and build a single file
+containing ruptures coming from all the models without double
+counting. There is clearly a risk of double counting if the same
+source is included in two different mosaic models and therefore the
+engine generates the same ruptures twice. However the
 command is smart enough to discard duplicated ruptures.
 
 The generated ``ses.hdf5`` file contains all the ruptures from all

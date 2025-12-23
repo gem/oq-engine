@@ -237,6 +237,20 @@ def export_avg_losses(ekey, dstore):
     return writer.getsaved()
 
 
+@export.add(('avg_losses_by', 'csv'))
+def export_avg_losses_by(ekey, dstore):
+    """
+    :param ekey: export key, i.e. a pair (datastore key, fmt)
+    :param dstore: datastore object
+    """
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    for tagname in dstore[ekey[0]]:
+        df = dstore.read_df('avg_losses_by/' + tagname)
+        dest = dstore.build_fname('avg_losses_by_', tagname, 'csv')
+        writer.save(df, dest)
+    return writer.getsaved()
+
+
 @export.add(('src_loss_table', 'csv'))
 def export_src_loss_table(ekey, dstore):
     """
@@ -776,7 +790,13 @@ def export_assetcol_csv(ekey, dstore):
         tags = []
         for asset_idx in range(len(assetcol)):
             tag_id = assetcol[tagname][asset_idx]
-            tags.append(assetcol.tagcol.get_tag(tagname, tag_id).split('=')[1])
+            if tagname == 'id':  # special case, tag_id is already a string
+                # test in event_based_risk:case_master
+                tags.append(tag_id)
+            else:
+                # tag_id is an index to be converted into "tagname=tag"
+                tag = assetcol.tagcol.get_tag(tagname, tag_id).split('=')[1]
+                tags.append(tag)
         df[tagname] = tags
     df.drop(columns=['ordinal', 'site_id'], inplace=True)
     df['id'] = df['id'].apply(lambda x: x.decode('utf8'))
@@ -844,7 +864,10 @@ def export_job_zip(ekey, dstore):
         oq.inputs.pop('mmi', None)
         gsim_lt = None  # from shakemap
     else:
-        gsim_lt = dstore['full_lt'].gsim_lt
+        model = dstore['ruptures'][0]['model'].decode('ascii')
+        # FIXME: extracts the gsim_lt of the first model only
+        [(model, lt)] = base.get_model_lts(dstore, model)
+        gsim_lt = lt.gsim_lt
         gmf_fname = ''
     oq.base_path = os.path.abspath('.')
     job_ini = dstore.export_path('%s.ini' % ekey[0])

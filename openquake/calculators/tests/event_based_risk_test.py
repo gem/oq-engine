@@ -256,6 +256,11 @@ agg_id
         tot = self.calc.datastore['avg_losses-rlzs/structural'][:, 0].sum()
         aac(avg, tot, rtol=1E-6)
 
+        # avg_losses_by
+        [fname] = export(('avg_losses_by', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
+                              delta=1E-5)
+
         # aggrisk
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk_sampling.csv', fname,
@@ -429,6 +434,10 @@ agg_id
         [_, fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
                               fname, delta=4E-4)
+
+        # check export_job_zip does not fail, i.e.
+        # tagname='id' is treated correctly
+        export(('job', 'zip'), self.calc.datastore)
 
     def test_case_master(self):
         # needs a large tolerance: https://github.com/gem/oq-engine/issues/5825

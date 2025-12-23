@@ -390,10 +390,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
             resp_text_dict = json.loads(resp.content.decode('utf8'))
             self.assertFalse(resp_text_dict['success'])
 
-    def test_ipt_is_accessible(self):
-        resp = self.c.post('/ipt/')
-        self.assertEqual(resp.status_code, 200)
-
 
 @override_settings(ROOT_URLCONF='openquake.server.tests.test_urls')
 class CallbackTest(LiveServerTestCase):

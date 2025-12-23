@@ -19,13 +19,11 @@ import io
 import os
 import sys
 import abc
-import pdb
 import json
 import time
 import inspect
 import logging
 import operator
-import traceback
 import tempfile
 import getpass
 from datetime import datetime
@@ -41,6 +39,7 @@ from openquake.commands.plot_assets import main as plot_assets
 from openquake.baselib import general, hdf5, config
 from openquake.baselib import parallel
 from openquake.baselib.performance import Monitor
+from openquake.qa_tests_data import mosaic
 from openquake.hazardlib import (
     InvalidFile, geo, site, stats, logictree, source_reader)
 from openquake.hazardlib.gsim_lt import GsimLogicTree
@@ -74,15 +73,22 @@ stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('len', U16)])
 
 ASSOC_DIST = 8  # acceptable distance to associate the site params to the site
+# NB: event_based/case_27 is sensitive to ASSOC_DIST
 USER = getpass.getuser()
 MB = 1024 ** 2
 
 
 def get_aelo_changelog():
+    """
+    :returns: a DataFrame with columns (AELO_VERSION, DATE, NOTES)
+    """
     dic = collections.defaultdict(list)
     c = configparser.ConfigParser()
-    changelog_path = os.path.join(
-        config.directory.mosaic_dir, 'aelo_changelog.ini')
+    if 'pytest' in sys.argv[0]:
+        mosaic_dir = mosaic.__path__[0]  # qa_tests_data/mosaic
+    else:
+        mosaic_dir = config.directory.mosaic_dir
+    changelog_path = os.path.join(mosaic_dir, 'aelo_changelog.ini')
     c.read(changelog_path)
     for sec in c.sections():
         dic['AELO_VERSION'].append(sec)
@@ -182,11 +188,17 @@ def fix_hc_id(oq):
     and ses.hdf5 does not exist, generates it from ses.ini
     and replace oq.inputs['rupture_model'] with 'base_path/ses.hdf5'
     """
+    if oq.hazard_calculation_id is None or isinstance(
+            oq.hazard_calculation_id, int):
+        # there is nothing to fix
+        return oq.hazard_calculation_id
     path = os.path.join(oq.base_path, oq.hazard_calculation_id)
     if path.endswith('.hdf5'):
         oq.hazard_calculation_id = path
     elif path.endswith('.ini'):
-        oq.hazard_calculation_id = dcache.get(path).calc_id
+        calc = run_calc(path, cache=oq.cache)
+        oq.hazard_calculation_id = calc.datastore.calc_id
+        return oq.hazard_calculation_id
     else:
         raise NotImplementedError(f'hc={path}')
 
@@ -252,12 +264,15 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             attrs['aelo_version'] = self.aelo_version
         attrs['date'] = datetime.now().isoformat()[:19]
         if 'checksum32' not in attrs:
+            # when save_params has been already called, don't recompute
             attrs['input_size'] = size = self.oqparam.get_input_size()
-            attrs['checksum32'] = check = readinput.get_checksum32(
+            attrs['checksum32'] = checksum = readinput.get_checksum32(
                 self.oqparam, self.datastore.hdf5)
-            logging.info(f'Checksum of the inputs: {check} '
+            logging.info(f'Checksum of the inputs: {checksum} '
                          f'(total size {general.humansize(size)})')
-            return logs.dbcmd('add_checksum', self.datastore.calc_id, check)
+            old_job = logs.dbcmd('get_job_from_checksum', checksum)
+            return old_job.id if old_job else None, checksum
+        return None, None
 
     def check_precalc(self, precalc_mode):
         """
@@ -299,15 +314,13 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             if ct != oq.concurrent_tasks:
                 # save the used concurrent_tasks
                 oq.concurrent_tasks = ct
-            if self.precalc is None:
+            if not self.precalc:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
-            old_job_id = self.save_params(**kw)
-            assert config.dbserver.cache in ('on', 'off')
-            if (old_job_id and config.dbserver.cache == 'on' and
-                    not self.test_mode):
+            calc_id = self.datastore.calc_id
+            old_job_id, checksum = self.save_params(**kw)
+            if old_job_id and oq.cache and 'pytest' not in sys.argv[0]:
                 logging.info(f"Already calculated, {old_job_id=}")
-                calc_id = self.datastore.calc_id
                 self.datastore = datastore.read(old_job_id)
                 logs.dbcmd("UPDATE job SET ds_calc_dir = ?x WHERE id=?x",
                            self.datastore.filename[:-5], calc_id)  # strip .hdf5
@@ -317,20 +330,19 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             try:
                 if pre_execute:
                     self.pre_execute()
+                if os.environ.get('OQ_CHECK_INPUT'):
+                    # do not execute the calculation
+                    return {}
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
                 # FIXME: this part can be called multiple times, i.e. by
                 # EventBasedCalculator,EventBasedRiskCalculator
                 self.post_process()
+                if checksum:
+                    # if there are no errors the checksum of this job is good
+                    logs.dbcmd("update_job_checksum", calc_id, checksum)
                 self.export(kw.get('exports', ''))
-            except Exception:
-                if kw.get('pdb'):  # post-mortem debug
-                    tb = sys.exc_info()[2]
-                    traceback.print_tb(tb)
-                    pdb.post_mortem(tb)
-                else:
-                    raise
             finally:
                 if shutdown:
                     parallel.Starmap.shutdown()
@@ -376,6 +388,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         of output files.
         """
 
+    # TODO: remove this when we will remove the multi_peril calculator
     def gzip_inputs(self):
         """
         Gzipping the inputs and saving them in the datastore
@@ -769,6 +782,10 @@ class HazardCalculator(BaseCalculator):
             raise ValueError(
                 'The parent calculation was using investigation_time=%s'
                 ' != %s' % (oqp.investigation_time, oq.investigation_time))
+        if oqp.investigation_time and oqp.eff_time != oq.eff_time:
+            raise ValueError(
+                'The parent calculation was using eff_time=%s'
+                ' != %s' % (oqp.eff_time, oq.eff_time))
         hstats, rstats = list(oqp.hazard_stats()), list(oq.hazard_stats())
         if hstats != rstats:
             raise ValueError(
@@ -802,16 +819,12 @@ class HazardCalculator(BaseCalculator):
     @general.cached_property
     def R(self):
         """
-        :returns: the number of realizations
+        :returns: the number of (collected) realizations
         """
-        if self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk':
+        if (self.oqparam.collect_rlzs and self.oqparam.job_type == 'risk') or (
+                'hazard_curves' in self.oqparam.inputs):
             return 1
-        elif 'weights' in self.datastore:
-            return len(self.datastore['weights'])
-        try:
-            return self.csm.full_lt.get_num_paths()
-        except AttributeError:  # no self.csm
-            return self.datastore['full_lt'].get_num_paths()
+        return len(get_weights(self.oqparam, self.datastore))
 
     def read_exposure(self, haz_sitecol):  # after load_risk_model
         """
@@ -931,9 +944,10 @@ class HazardCalculator(BaseCalculator):
 
     def _read_no_exposure(self, haz_sitecol):
         oq = self.oqparam
-        if oq.hazard_calculation_id:
+        if oq.hazard_calculation_id and (child := readinput.get_site_collection(
+                oq, self.datastore.hdf5)):
+            # associate the child sitecol (if any) to the parent sitecol
             # NB: this is tested in event_based case_27 and case_31
-            child = readinput.get_site_collection(oq, self.datastore.hdf5)
             assoc_dist = (oq.region_grid_spacing * 1.414
                           if oq.region_grid_spacing else ASSOC_DIST)
             # keep the sites of the parent close to the sites of the child
@@ -1025,7 +1039,8 @@ class HazardCalculator(BaseCalculator):
             if 'assetcol' in parent:
                 check_time_event(oq, parent['assetcol'].occupancy_periods)
             elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
-                raise ValueError('Missing exposure both in hazard and risk!')
+                raise ValueError('Missing exposure both in hazard and risk!'
+                                 f' [hc_id={oq.hazard_calculation_id}]')
             if (oq_hazard.time_event != 'avg' and
                     oq_hazard.time_event != oq.time_event):
                 raise ValueError(
@@ -1086,11 +1101,16 @@ class HazardCalculator(BaseCalculator):
                         oq.reference_vs30_value):
                     self.sitecol.set_global_params(oq)
                 else:
-                    # use the site model parameters
-                    self.sitecol.assoc(sm, assoc_dist)
+                    # associate the site model parameters
+                    # NB: in AELO mode (i.e. with siteid) associate even
+                    # far away parameters since normally they are not used
+                    # (only the vs30 counts)
+                    mode = ('warn' if oq.region_grid_spacing
+                            or oq.siteid else 'strict')
+                    self.sitecol.assoc(sm, assoc_dist, mode)
                     if 'station_data' in oq.inputs:
                         # the complete sitecol is required
-                        self.sitecol.complete.assoc(sm, assoc_dist)
+                        self.sitecol.complete.assoc(sm, assoc_dist, mode)
 
             if oq.override_vs30:
                 # override vs30, z1pt0 and z2pt5
@@ -1428,9 +1448,6 @@ def import_ruptures_hdf5(h5, fnames):
     """
     Importing the ruptures and the events
     """
-    size = sum(os.path.getsize(f) for f in fnames)
-    logging.warning('Importing %d files, %s',
-                    len(fnames), general.humansize(size))
     rups = []
     h5.create_dataset(
         'events', (0,), rupture.events_dt, maxshape=(None,), chunks=True,
@@ -1714,6 +1731,8 @@ def read_parent_sitecol(oq, dstore):
     """
     :returns: the hazard site collection in the parent calculation
     """
+    if oq.hazard_calculation_id == '<fake>.ini':  # set by oq check_input
+        return readinput.get_site_collection(oq, dstore.hdf5)
     with datastore.read(oq.hazard_calculation_id) as parent:
         if 'sitecol' in parent:
             haz_sitecol = parent['sitecol'].complete
@@ -1750,7 +1769,7 @@ def create_risk_by_event(calc):
                          L=len(oq.loss_types), limit_states=dmgs)
 
 
-def get_model_lts(h5):
+def get_model_lts(h5, mosaic_model=''):
     """
     :returns: (model, full_lt) pairs
     """
@@ -1761,7 +1780,10 @@ def get_model_lts(h5):
     else:
         # full_lt is a h5py group
         for model in full_lt:
-            out.append((model, h5[f'full_lt/{model}']))
+            if mosaic_model and mosaic_model != model:
+                pass
+            else:
+                out.append((model, h5[f'full_lt/{model}']))
     return out
 
 
@@ -1815,8 +1837,7 @@ def run_calc(job_ini, **kw):
     with logs.init(job_ini) as log:
         log.params.update(kw)
         oq = log.get_oqparam()
-        if isinstance(oq.hazard_calculation_id, str):
-            fix_hc_id(oq)
+        fix_hc_id(oq)  # relative path to absolute path for ses.hdf5 files
         calc = calculators(oq, log.calc_id)
         calc.run()
         return calc
@@ -1848,7 +1869,11 @@ def expose_outputs(dstore, owner=USER, status='complete', calc_id=None):
             dskeys.add('uhs')  # export them
         if oq.hazard_maps:
             dskeys.add('hmaps')  # export them
-    if len(rlzs) > 1 and not oq.collect_rlzs:
+    if oq.calculation_mode == 'scenario_risk' and 'aggrisk' in dstore:
+        # the quantiles are computed across simulations, as in the
+        # ScenarioRisk demo which contains a single GSIM/realization
+        dskeys.add('aggrisk-stats')
+    elif len(rlzs) > 1 and not oq.collect_rlzs:
         if 'aggrisk' in dstore:
             dskeys.add('aggrisk-stats')
         if 'aggcurves' in dstore:
