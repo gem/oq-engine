@@ -163,7 +163,7 @@ jobs:
          sleep 5
          status_code=$($CURL_BIN -w "%{http_code}"\
              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-             -v --fail -G http://127.0.0.1:8800/engine/1/outputs -o /dev/null)
+             -G http://127.0.0.1:8800/engine/1/outputs -o /dev/null)
          if [ $status_code != "200" ]; then
            echo "Unable to visualize outputs"
            exit 1
