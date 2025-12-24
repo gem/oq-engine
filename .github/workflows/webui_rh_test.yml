@@ -183,10 +183,12 @@ jobs:
            sleep 5 # wait for 5 seconds before check again
          done
          echo -n "Test Standalone Tools pages (without authentication)"
-         status_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8800/)
-         if [ $status_code != "301" ]; then
-           # Supposed to redirect to http://127.0.0.1:8800/engine/
-           echo "Unable to access the homepage"
+         read status_code redirect_url <<<"$(
+           curl -s -o /dev/null -w "%{http_code} %{redirect_url}" http://127.0.0.1:8800/
+         )"
+         if [ "$status_code" != "301" ] || [ "$redirect_url" != "http://127.0.0.1:8800/engine/" ]; then
+           echo "Unexpected redirect: status=$status_code redirect=$redirect_url"
+           echo "Should redirect to http://127.0.0.1:8800/engine/"
            exit 1
          fi
          status_code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8800/taxonomy/)
