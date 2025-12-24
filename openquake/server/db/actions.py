@@ -669,10 +669,25 @@ def share_job(db, job_id, share):
                        f' from "{initial_status}" to "{new_status}"'}
 
 
+def _get_or_create_tag_id(db, tag_name):
+    rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
+    if rows:
+        return rows[0].id
+
+    db("INSERT INTO tag (name) VALUES (?x)", tag_name)
+    rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
+    return rows[0].id
+
+
 def add_tag_to_job(db, job_id, tag_name):
     try:
-        db("INSERT INTO job_tag (job_id, tag, is_preferred) VALUES (?x, ?x, 0)",
-           job_id, tag_name)
+        tag_id = _get_or_create_tag_id(db, tag_name)
+
+        db("""
+INSERT INTO job_tag (job_id, tag_id, is_preferred)
+VALUES (?x, ?x, 0)
+        """, job_id, tag_id)
+
     except Exception as exc:
         return {'error': str(exc)}
     else:
@@ -681,8 +696,17 @@ def add_tag_to_job(db, job_id, tag_name):
 
 def remove_tag_from_job(db, job_id, tag_name):
     try:
-        db("DELETE FROM job_tag WHERE job_id = ?x AND tag = ?x",
-           job_id, tag_name)
+        rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
+        if not rows:
+            return {'success': f'Tag {tag_name} was not associated with job {job_id}'}
+
+        tag_id = rows[0].id
+
+        db("""
+DELETE FROM job_tag
+WHERE job_id = ?x AND tag_id = ?x
+        """, job_id, tag_id)
+
     except Exception as exc:
         return {'error': str(exc)}
     else:
@@ -691,18 +715,25 @@ def remove_tag_from_job(db, job_id, tag_name):
 
 def set_preferred_job_for_tag(db, job_id, tag_name):
     try:
+        tag_id = _get_or_create_tag_id(db, tag_name)
+
         db("BEGIN")
+
         db("""
-UPDATE job_tag SET is_preferred = 0
-WHERE tag = ?x AND is_preferred = 1
-           """, tag_name)
+UPDATE job_tag
+SET is_preferred = 0
+WHERE tag_id = ?x AND is_preferred = 1
+        """, tag_id)
+
         db("""
-INSERT INTO job_tag (job_id, tag, is_preferred)
+INSERT INTO job_tag (job_id, tag_id, is_preferred)
 VALUES (?x, ?x, 1)
-ON CONFLICT(job_id, tag) DO UPDATE
+ON CONFLICT(job_id, tag_id) DO UPDATE
 SET is_preferred = 1
-           """, job_id, tag_name)
+        """, job_id, tag_id)
+
         db("COMMIT")
+
     except Exception as exc:
         return {'error': str(exc)}
     else:
@@ -711,10 +742,18 @@ SET is_preferred = 1
 
 def unset_preferred_job_for_tag(db, tag_name):
     try:
+        rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
+        if not rows:
+            return {'success': f'Tag {tag_name} has no preferred job now'}
+
+        tag_id = rows[0].id
+
         db("""
-UPDATE job_tag SET is_preferred = 0
-WHERE tag = ?x AND is_preferred = 1
-           """, tag_name)
+UPDATE job_tag
+SET is_preferred = 0
+WHERE tag_id = ?x AND is_preferred = 1
+        """, tag_id)
+
     except Exception as exc:
         return {'error': str(exc)}
     else:
@@ -727,8 +766,10 @@ def get_preferred_job_for_tag(db, tag_name):
 SELECT j.*
 FROM job AS j
 JOIN job_tag jt ON j.id = jt.job_id
-WHERE jt.tag = ?x AND jt.is_preferred = 1
+JOIN tag t ON t.id = jt.tag_id
+WHERE t.name = ?x AND jt.is_preferred = 1
         """, tag_name)
+
     except Exception as exc:
         return {'error': str(exc)}
     else:
@@ -741,8 +782,8 @@ WHERE jt.tag = ?x AND jt.is_preferred = 1
 
 
 def list_tags(db):
-    rows = db("SELECT DISTINCT tag FROM job_tag ORDER BY tag")
-    tags = [row.tag for row in rows]
+    rows = db("SELECT name FROM tag ORDER BY name")
+    tags = [row.name for row in rows]
     return {'success': 'ok', 'tags': tags}
 
 

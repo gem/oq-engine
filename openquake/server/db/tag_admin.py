@@ -24,20 +24,20 @@ from openquake.server.db.tag_site import tag_admin_site
 def get_models():
     """
     Lazy model getter that only resolves models once Django apps are ready.
-    Returns (Job, JobTag).
+    Returns (Job, Tag, JobTag).
     """
     try:
         Job = apps.get_model("db", "Job")
+        Tag = apps.get_model("db", "Tag")
         JobTag = apps.get_model("db", "JobTag")
-        return Job, JobTag
+        return Job, Tag, JobTag
     except (LookupError, Exception):
-        return None, None
+        return None, None, None
 
 
-Job, JobTag = get_models()
+Job, Tag, JobTag = get_models()
 
-
-if Job and JobTag:
+if Job and JobTag and Tag:
 
     @admin.register(Job, site=tag_admin_site)
     class JobAdmin(admin.ModelAdmin):
@@ -50,10 +50,10 @@ if Job and JobTag:
 
         def has_view_permission(self, request, obj=None):
             user = request.user
-            if user.is_active and user.is_authenticated and (
-                    user.is_superuser or user.level >= 2):
-                return True
-            return False
+            return (
+                user.is_active and user.is_authenticated and
+                (user.is_superuser or user.level >= 2)
+            )
 
         def has_add_permission(self, request):
             return False
@@ -64,19 +64,25 @@ if Job and JobTag:
         def has_delete_permission(self, request, obj=None):
             return False
 
+    @admin.register(Tag, site=tag_admin_site)
+    class TagAdmin(admin.ModelAdmin):
+        list_display = ("name",)
+        search_fields = ("name",)
+        ordering = ("name",)
+
     @admin.register(JobTag, site=tag_admin_site)
     class JobTagAdmin(admin.ModelAdmin):
-        list_display = ('job_display', 'tag', 'is_preferred')
-        list_filter = ('is_preferred',)
-        search_fields = ('tag',)
-        autocomplete_fields = ["job"]
+        list_display = ("job_display", "tag", "is_preferred")
+        list_filter = ("is_preferred", "tag")
+        search_fields = ("tag__name",)
+        autocomplete_fields = ("job", "tag")
 
         def job_display(self, obj):
             return str(obj.job)
         job_display.short_description = "Job"
 
         def job_description(self, obj):
-            return obj.job_description
+            return obj.job.description if obj.job_id else "(unknown)"
         job_description.admin_order_field = "job_id"
         job_description.short_description = "Job Description"
 
@@ -85,20 +91,22 @@ if Job and JobTag:
             Extend the default search to include both job descriptions and job IDs.
             """
             queryset, use_distinct = super().get_search_results(
-                request, queryset, search_term)
+                request, queryset, search_term
+            )
 
             if search_term:
                 from django.db.models import Q
 
-                # If the term is numeric, try matching job ID directly
                 job_filter = Q(description__icontains=search_term)
                 if search_term.isdigit():
                     job_filter |= Q(id=int(search_term))
 
-                # Find matching Job IDs
-                Job = self.model._meta.get_field("job").remote_field.model
-                job_ids = list(Job.objects.filter(job_filter).values_list(
-                    "id", flat=True))
+                JobModel = self.model._meta.get_field("job").remote_field.model
+                job_ids = list(
+                    JobModel.objects
+                    .filter(job_filter)
+                    .values_list("id", flat=True)
+                )
 
                 if job_ids:
                     queryset |= self.model.objects.filter(job_id__in=job_ids)

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from django.db import models, connection
+from django.db import models
 
 
 class Job(models.Model):
@@ -33,39 +33,53 @@ class Job(models.Model):
         return f"{self.id} – {self.description[:80]}"  # show first 80 chars
 
 
+class Tag(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=255, unique=True)
+
+    class Meta:
+        managed = False
+        db_table = "tag"
+        verbose_name = "Tag"
+        verbose_name_plural = "Tags"
+
+    def __str__(self):
+        return self.name
+
+
 class JobTag(models.Model):
     job = models.ForeignKey(
         Job,
         on_delete=models.CASCADE,
         db_column="job_id",
     )
-    tag = models.CharField(max_length=255)
+    tag = models.ForeignKey(
+        Tag,
+        on_delete=models.CASCADE,
+        db_column="tag_id",
+    )
     is_preferred = models.BooleanField(default=False)
 
     class Meta:
+        managed = False
         db_table = 'job_tag'
-        managed = False  # the schema is not managed by Django
+
+        # composite primary key at DB level; Django cannot model it directly
         unique_together = ("job", "tag")
+
         indexes = [
             models.Index(
-                fields=['tag'],
-                name='uq_preferred_per_tag',
+                fields=["tag"],
+                name="uq_preferred_per_tag",
                 condition=models.Q(is_preferred=True),
             )
         ]
+
         verbose_name = "Job Tag"
         verbose_name_plural = "Job Tags"
 
     def __str__(self):
-        return (f"{self.tag} (job_id={self.job_id},"
-                f" {'preferred' if self.is_preferred else 'not preferred'})")
-
-    @property
-    def job_description(self):
-        """Return the job description (queried directly from the job table)."""
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT description FROM job WHERE id = %s", [self.job_id]
-            )
-            row = cursor.fetchone()
-        return row[0] if row else "(unknown)"
+        return (
+            f"{self.tag.name} (job_id={self.job_id}, "
+            f"{'preferred' if self.is_preferred else 'not preferred'})"
+        )
