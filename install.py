@@ -280,6 +280,7 @@ def install_standalone(venv):
         "oq-platform-standalone",
         "oq-platform-ipt",
         "oq-platform-taxonomy",
+        "django-gem-taxonomy",
     ]:
         try:
             print("Applications " + app + " are not installed yet \n")
