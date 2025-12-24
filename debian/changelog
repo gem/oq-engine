@@ -1,3 +1,7 @@
+  [Antonio Scala]
+  * Added Scala et al (2025) GMM
+  * Added Scala et al (2025) GMM for duration magnitude
+
   [Michele Simionato]
   * Added a consistency check on the effective time when starting from SES
   * Added a new exporter hmaps-stats producing one file per return period
