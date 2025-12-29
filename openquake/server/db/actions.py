@@ -787,6 +787,37 @@ WHERE t.name = ?x AND jt.is_preferred = 1
             return {'error': f'Unexpected multiple preferred jobs for tag {tag_name}'}
 
 
+def create_tag(db, name):
+    try:
+        rows = db("SELECT id FROM tag WHERE name = ?x", name)
+        if rows:
+            return {'success': f'Tag {name} already exists'}
+        db("INSERT INTO tag (name) VALUES (?x)", name)
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {name} was created'}
+
+
+def delete_tag(db, name):
+    try:
+        rows = db("SELECT id FROM tag WHERE name = ?x", name)
+        if not rows:
+            return {'success': f'Tag {name} does not exist'}
+
+        tag_id = rows[0].id
+
+        db("""
+DELETE from tag
+WHERE name = ?x
+        """, tag_id)
+
+    except Exception as exc:
+        return {'error': str(exc)}
+    else:
+        return {'success': f'Tag {name} was deleted'}
+
+
 def list_tags(db):
     rows = db("SELECT name FROM tag ORDER BY name")
     tags = [row.name for row in rows]

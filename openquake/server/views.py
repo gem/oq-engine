@@ -693,6 +693,26 @@ def check_db_response(resp):
         return JsonResponse({'error': f'Unexpected response: {resp}'}, status=500)
 
 
+def create_tag(user_level, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('create_tag', tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
+def delete_tag(user_level, tag_name):
+    if user_level < 2:
+        return HttpResponseForbidden()
+    try:
+        resp = logs.dbcmd('delete_tag', tag_name)
+    except dbapi.NotFound:
+        return HttpResponseNotFound()
+    return check_db_response(resp)
+
+
 def add_tag_to_job(user_level, calc_id, tag_name):
     if user_level < 2:
         return HttpResponseForbidden()
@@ -2305,6 +2325,28 @@ def on_same_fs(request):
         pass
 
     return JsonResponse({'success': False}, status=200)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_create_tag(request, tag_name):
+    """
+    Create a tag named `tag_name`
+    """
+    user_level = get_user_level(request)
+    return create_tag(user_level, tag_name)
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def calc_delete_tag(request, tag_name):
+    """
+    Delete a tag named `tag_name`
+    """
+    user_level = get_user_level(request)
+    return delete_tag(user_level, tag_name)
 
 
 @csrf_exempt

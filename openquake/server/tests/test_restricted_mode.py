@@ -257,6 +257,24 @@ class RestrictedModeTestCase(django.test.TestCase):
         for job in jobs:
             self.remove_calc(job.calc_id)
 
+        # delete the tags
+        for tag in [first_tag, second_tag]:
+            ret = self.get(f'delete_tag/{tag}')
+            self.assertEqual(ret.status_code, 200)
+            self.assertIn('success', ret.json())
+            self.assertIn(f'Tag {tag} was deleted', ret.json()['success'])
+
+        # create and delete a tag
+        tag_name = random_string(10)
+        ret = self.get(f'create_tag/{tag_name}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn('success', ret.json())
+        self.assertIn(f'Tag {tag_name} was created', ret.json()['success'])
+        ret = self.get(f'delete_tag/{tag_name}')
+        self.assertEqual(ret.status_code, 200)
+        self.assertIn('success', ret.json())
+        self.assertIn(f'Tag {tag_name} was deleted', ret.json()['success'])
+
     def test_calc_list(self):
         """
         Create jobs with different parameters and test that /v1/calc/list
