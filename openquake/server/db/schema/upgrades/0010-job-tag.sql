@@ -7,13 +7,25 @@
 --   - job_tag(job_id, tag_id, is_preferred)
 -- Apply only once.
 
--- 1. Create new tables unconditionally
-CREATE TABLE IF NOT EXISTS tag (
-    id INTEGER PRIMARY KEY,
+-- 1. Remove old constraint/index if present
+DROP INDEX IF EXISTS uq_preferred_per_tag;
+
+-- 2. Rename old table (do NOT drop yet)
+ALTER TABLE job_tag RENAME TO job_tag_old;
+
+-- 3. Create normalized tag table
+CREATE TABLE tag (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE CHECK (LENGTH(name) > 0)
 );
 
-CREATE TABLE IF NOT EXISTS job_tag_new (
+-- 4. Populate tag table
+INSERT INTO tag (name)
+SELECT DISTINCT tag
+FROM job_tag_old;
+
+-- 5. Create new join table
+CREATE TABLE job_tag (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id INTEGER NOT NULL,
     tag_id INTEGER NOT NULL,
@@ -24,35 +36,20 @@ CREATE TABLE IF NOT EXISTS job_tag_new (
     FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
 );
 
--- 2. Migrate data *only if old table exists*
-INSERT INTO tag (name)
-SELECT DISTINCT tag
-FROM job_tag
-WHERE EXISTS (
-    SELECT 1 FROM sqlite_master
-    WHERE type='table' AND name='job_tag'
-);
-
-INSERT INTO job_tag_new (job_id, tag_id, is_preferred)
+-- 6. Migrate associations and preferred flag
+INSERT INTO job_tag (job_id, tag_id, is_preferred)
 SELECT
-    jt.job_id,
+    jto.job_id,
     t.id,
-    jt.is_preferred
-FROM job_tag jt
-JOIN tag t ON t.name = jt.tag
-WHERE EXISTS (
-    SELECT 1 FROM sqlite_master
-    WHERE type='table' AND name='job_tag'
-);
+    jto.is_preferred
+FROM job_tag_old AS jto
+JOIN tag AS t
+  ON t.name = jto.tag;
 
--- 3. Drop old table if it existed
-DROP TABLE IF EXISTS job_tag;
-
--- 4. Rename new table
-ALTER TABLE job_tag_new RENAME TO job_tag;
-
--- 5. Recreate index
-DROP INDEX IF EXISTS uq_preferred_per_tag;
+-- 7. Enforce "only one preferred job per tag"
 CREATE UNIQUE INDEX uq_preferred_per_tag
 ON job_tag(tag_id)
 WHERE is_preferred = 1;
+
+-- 8. Drop legacy table
+DROP TABLE job_tag_old;
