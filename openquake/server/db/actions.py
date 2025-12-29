@@ -582,8 +582,8 @@ def get_calcs(db, request_get_dict, allowed_users, user_acl_on=False, id=None):
     tags_query = """
 GROUP_CONCAT(
     CASE
-        WHEN t.is_preferred = 1 THEN t.tag || '★'
-        ELSE t.tag
+        WHEN jt.is_preferred = 1 THEN tg.name || '★'
+        ELSE tg.name
     END,
     ', '
 ) AS tags
@@ -598,7 +598,12 @@ GROUP_CONCAT(
             " AND j.id IN (SELECT job_id FROM job_tag WHERE is_preferred = 1)")
     if filter_by_tag and filter_by_tag != '0':
         where_clause += (
-            " AND j.id IN (SELECT job_id FROM job_tag WHERE tag = ?x)")
+            " AND j.id IN ("
+            "SELECT jt.job_id "
+            "FROM job_tag jt "
+            "JOIN tag tg ON tg.id = jt.tag_id "
+            "WHERE tg.name = ?x"
+            ")")
         query_params.append(filter_by_tag)
 
     # NOTE: GROUP BY j.id returns one row per job (identified by j.id), even if that
@@ -607,7 +612,8 @@ GROUP_CONCAT(
     query = f"""
 SELECT j.*, {tags_query}
 FROM job AS j
-LEFT JOIN job_tag AS t ON j.id = t.job_id
+LEFT JOIN job_tag AS jt ON j.id = jt.job_id
+LEFT JOIN tag AS tg ON tg.id = jt.tag_id
 WHERE {where_clause}
 GROUP BY j.id
 ORDER BY {order_by} {order_dir}
