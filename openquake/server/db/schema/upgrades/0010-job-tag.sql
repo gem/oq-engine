@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS job_tag_new (
     tag_id INTEGER NOT NULL,
     is_preferred INTEGER NOT NULL DEFAULT 0
         CHECK (is_preferred IN (0, 1)),
-    UNIQUE (job_id, tag_id),
+    PRIMARY KEY (job_id, tag_id),
     FOREIGN KEY (job_id) REFERENCES job(id) ON DELETE CASCADE,
     FOREIGN KEY (tag_id) REFERENCES tag(id) ON DELETE CASCADE
 );
