@@ -177,7 +177,7 @@ class RestrictedModeTestCase(django.test.TestCase):
         self.assertEqual(ret.status_code, 404)
         ret = logs.dbcmd('add_tag_to_job', jobs[0].calc_id, tag_name)
         self.assertIn('error', ret)
-        self.assertIn("CHECK constraint failed: LENGTH(tag) > 0", ret['error'])
+        self.assertIn("CHECK constraint failed: LENGTH(name) > 0", ret['error'])
 
         # generate random tag names, 10 characters long
         first_tag = random_string(10)
