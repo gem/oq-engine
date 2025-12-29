@@ -23,8 +23,7 @@ Module exports: :class:`MacedoEtAl2019SInter`,
 import numpy as np
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import IA, PGA, SA
-from openquake.hazardlib.gsim.base import GMPE, registry
-from openquake.hazardlib.contexts import get_mean_stds
+from openquake.hazardlib.gsim.base import GMPE
 
 
 # The Macedo et al. (2019) GMM is period-independent, so all constants
@@ -84,14 +83,14 @@ CONSTANTS = {
 def get_mean_conditional_arias_intensity(
     C: dict,
     ctx: np.recarray,
-    mean_gms: np.recarray
+    base_preds: dict
 ) -> np.ndarray:
     """
     Returns the Arias Intensity (Equation 2)
     """
     return (C["c1"] + C["c2"] * np.log(ctx.vs30) +
-            C["c3"] * ctx.mag + C["c4"] * mean_gms["PGA"] +
-            C["c5"] * mean_gms["SA(1.0)"])
+            C["c3"] * ctx.mag + C["c4"] * base_preds["PGA"]['mean'] +
+            C["c5"] * base_preds["SA(1.0)"]['mean'])
 
 
 def get_stddev_component(
@@ -112,43 +111,53 @@ def get_stddev_component(
         (2.0 * (rho * sig_pga * sig_sa1) * C["c4"] * C["c5"]))
 
 
-def get_standard_deviations(
+def get_sig(
     C: dict,
     kind: str,
     rho_pga_sa1: float,
-    sigma_gms: np.recarray,
-    tau_gms: np.recarray,
-    phi_gms: np.recarray):
+    base_preds: dict
+    ):
     """
     Returns sigma, tau and phi arrays for Arias Intensity
     """
     sigma_ia_cond = 0.36 if kind == "sinter" else 0.33
+
     # Gets the total standard deviation
-    sigma = get_stddev_component(C, sigma_ia_cond, sigma_gms["PGA"],
-                                 sigma_gms["SA(1.0)"], rho_pga_sa1)
-    if np.any(tau_gms["PGA"] >= 0.0) or np.any(tau_gms["SA(1.0)"] > 0.0):
-        # If provided by the conditioning ground motion, get the
-        # between-event standard deviation
+    sigma = get_stddev_component(C,
+                                 sigma_ia_cond,
+                                 base_preds["PGA"]['sig'],
+                                 base_preds["SA(1.0)"]['sig'],
+                                 rho_pga_sa1)
+    
+    # If provided by the conditioning ground motion, get the between-event standard deviation
+    if np.any(base_preds["PGA"]["tau"] >= 0.0) or np.any(base_preds["SA(1.0)"]["tau"] > 0.0):
         tau = get_stddev_component(
             C,
             np.sqrt(C["tau"]**2 + C["tau_region"]**2),
-            tau_gms["PGA"],
-            tau_gms["SA(1.0)"],
+            base_preds["PGA"]["tau"],
+            base_preds["SA(1.0)"]["tau"],
             rho_pga_sa1)
     else:
         tau = 0.0
-    if np.any(phi_gms["PGA"] >= 0.0) or np.any(phi_gms["SA(1.0)"] > 0.0):
-        # If provided by the conditioning ground motion, get the
-        # within-event standard deviation
+    
+    # If provided by the conditioning ground motion, get the within-event standard deviation
+    if np.any(base_preds["PGA"]["phi"] >= 0.0) or np.any(base_preds["SA(1.0)"]["phi"] > 0.0):
         phi = get_stddev_component(
-            C, C["phi"], phi_gms["PGA"], phi_gms["SA(1.0)"], rho_pga_sa1)
+            C,
+            C["phi"],
+            base_preds["PGA"]["phi"],
+            base_preds["SA(1.0)"]["phi"],
+            rho_pga_sa1
+            )
     else:
         phi = 0.0
+
     return sigma, tau, phi
 
 
 class MacedoEtAl2019SInter(GMPE):
-    """Implementation of a conditional GMPE of Macedo, Abrahamson & Bray (2019)
+    """
+    Implementation of a conditional GMPE of Macedo, Abrahamson & Bray (2019)
     for Arias Intensity, applied to subduction interface earthquakes. This
     requires characterisation of the PGA and SA(1.0), in addition to magnitude
     and vs30, for defining Arias intensity, and propagates uncertainty
@@ -160,7 +169,6 @@ class MacedoEtAl2019SInter(GMPE):
     Macedo J, Abrahamson N, Bray JD (2019) "Arias Intensity Conditional
     Scaling Ground-Motion Models for Subduction Zones", Bulletin of the
     Seismological Society of America, 109(4): 1343 - 1357
-
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA, PGA, SA}
@@ -171,20 +179,22 @@ class MacedoEtAl2019SInter(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
     REQUIRES_SITES_PARAMETERS = {"vs30", "backarc"}
-    REQUIRES_RUPTURE_PARAMETERS = {"mag", }
+    REQUIRES_RUPTURE_PARAMETERS = {"mag"}
     REQUIRES_DISTANCES = {'rrup'}
 
     # Subduction interface
     kind = "sinter"
 
     # Conditional upon PGA and Sa (1.0 s)
-    REQUIRES_IMTS = {PGA(), SA(1.0)}
+    REQUIRES_IMTS = [PGA(), SA(1.0)] # NOTE: This is ESSENTIAL for a conditional GMPE's
+                                     # implementation in OQ given we use ModifiableGMPE
+                                     # to manage them (we need this info as a class att
+                                     # to be available in the mgmpe imt-checks)
 
     # GMPE not verified against an independent implementation
     non_verified = True
 
-    def __init__(self, region: str="Global", rho_pga_sa1: float=0.52,
-                 **gmpe_dict):
+    def __init__(self, region: str="Global", rho_pga_sa1: float=0.52):
         """
         Args:
             region: Region of application. Must be either "Global" (default)
@@ -195,61 +205,37 @@ class MacedoEtAl2019SInter(GMPE):
                          of Baker & Jayaram (2008). The coefficient could be
                          configured by the user if they wish to adopt an
                          alternative cross-correlation model
-            gmpe_dict: dictionary specifying the underlying GMPE
+
+        NOTE: the underlying GSIM is specified within ModifiableGMPE (as the GMPE
+        upon which the predictions are conditioned), and therefore this base GMPE
+        does not have to be specified within the instantation of this GMPE.
         """
-        # check that the region is one of those supported
+        # Check that the region is one of those supported
         assert region in ("Global", "Japan", "Taiwan", "South America",
                           "New Zealand"),\
             "Region %s not recognised for Macedo et al (2019) GMPE" % region
         self.region = region
         self.rho_pga_sa1 = rho_pga_sa1
 
-        # instantiate the underlying gmpe
-        [(gmpe_name, kw)] = gmpe_dict.pop('gmpe').items()
-        self.gmpe = registry[gmpe_name](**kw)
-        for attr in ("REQUIRES_SITES_PARAMETERS", "REQUIRES_RUPTURE_PARAMETERS", "REQUIRES_DISTANCES"): 
-            setattr(self, attr, 
-                    set(getattr(self, attr, ())) | set(getattr(self.gmpe, attr, ())))
+    def compute(self, ctx: np.recarray, base_preds: dict):
+        """
+        Compute method for conditional GMPE applied within ModifiableGMPE.
 
-    def compute(self, ctx: np.recarray, imts: list,
-                mean: np.ndarray, sig: np.ndarray,
-                tau: np.ndarray, phi: np.ndarray):
+        :param base_preds: Dictionary where each key is a string of an IMT
+                           and each value is a sub-dictionary. Each subdict
+                           has keys of "mean", "sigma", "tau" and "phi", with
+                           the values representing those computed using the
+                           underlying GMM (i.e. the values the conditional GMPE's
+                           values will be conditioned upon). This dictionary is
+                           built within the ModifiableGMPE code.
+        """
+        C = CONSTANTS[self.kind][self.region]
 
-        non_ia = [(i, imt) for i, imt in enumerate(imts)
-                  if str(imt) != "IA"]
+        mean_ia = get_mean_conditional_arias_intensity(C, ctx, base_preds)
 
-        if non_ia:
-            non_ia_imts = [imt for _, imt in non_ia]
-
-            base_mean, base_sig, base_tau, base_phi = get_mean_stds(
-                self.gmpe, ctx, non_ia_imts
-            )
-
-            for j, (i, _) in enumerate(non_ia):
-                mean[i] = base_mean[j]
-                sig[i]  = base_sig[j]
-                tau[i]  = base_tau[j]
-                phi[i]  = base_phi[j]
-
-        for i, imt in enumerate(imts):
-            if str(imt) != "IA":
-                continue
-
-            me, si, ta, ph = get_mean_stds(
-                self.gmpe, ctx, self.REQUIRES_IMTS, return_dicts=True
-            )
-
-            C = CONSTANTS[self.kind][self.region]
-
-            ia_mean = get_mean_conditional_arias_intensity(C, ctx, me)
-            sigma_ia, tau_ia, phi_ia = get_standard_deviations(
-                C, self.kind, self.rho_pga_sa1, si, ta, ph
-            )
-
-            mean[i] = ia_mean
-            sig[i]  = sigma_ia
-            tau[i]  = tau_ia
-            phi[i]  = phi_ia
+        sigma_ia, tau_ia, phi_ia = get_sig(C, self.kind, self.rho_pga_sa1, base_preds)
+        
+        return mean_ia, sigma_ia, tau_ia, phi_ia
 
 
 class MacedoEtAl2019SSlab(MacedoEtAl2019SInter):
