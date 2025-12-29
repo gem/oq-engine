@@ -72,8 +72,8 @@ if Job and JobTag and Tag:
 
     @admin.register(JobTag, site=tag_admin_site)
     class JobTagAdmin(admin.ModelAdmin):
-        list_display = ("job_display", "tag", "is_preferred")
-        list_filter = ("is_preferred", "tag")
+        list_display = ("job_display", "job_description", "tag", "is_preferred")
+        list_filter = ("is_preferred", "tag__name")
         search_fields = ("tag__name",)
         autocomplete_fields = ("job", "tag")
 
@@ -110,16 +110,16 @@ if Job and JobTag and Tag:
 
                 if job_ids:
                     queryset |= self.model.objects.filter(job_id__in=job_ids)
+                    use_distinct = True
 
             return queryset, use_distinct
 
         def has_module_permission(self, request):
             user = request.user
-            user = request.user
-            if user.is_active and user.is_authenticated and (
-                    user.is_superuser or user.level >= 2):
-                return True
-            return False
+            return (
+                user.is_active and user.is_authenticated and
+                (user.is_superuser or user.level >= 2)
+            )
 
         def has_view_permission(self, request, obj=None):
             return self.has_module_permission(request)

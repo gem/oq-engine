@@ -48,15 +48,18 @@ class Tag(models.Model):
 
 
 class JobTag(models.Model):
+    id = models.AutoField(primary_key=True)
     job = models.ForeignKey(
         Job,
         on_delete=models.CASCADE,
         db_column="job_id",
+        related_name="job_tags",
     )
     tag = models.ForeignKey(
         Tag,
         on_delete=models.CASCADE,
         db_column="tag_id",
+        related_name="job_tags",
     )
     is_preferred = models.BooleanField(default=False)
 
@@ -69,7 +72,7 @@ class JobTag(models.Model):
 
         indexes = [
             models.Index(
-                fields=["tag"],
+                fields=["tag_id"],
                 name="uq_preferred_per_tag",
                 condition=models.Q(is_preferred=True),
             )

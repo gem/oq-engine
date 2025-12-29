@@ -26,6 +26,7 @@ FROM job_tag_old;
 
 -- 5. Create new join table
 CREATE TABLE job_tag (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id INTEGER NOT NULL,
     tag_id INTEGER NOT NULL,
     is_preferred INTEGER NOT NULL DEFAULT 0
