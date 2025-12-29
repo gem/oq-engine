@@ -74,7 +74,7 @@ if Job and JobTag and Tag:
 
     @admin.register(JobTag, site=tag_admin_site)
     class JobTagAdmin(admin.ModelAdmin):
-        list_display = ("job_display", "job_description", "tag", "is_preferred")
+        list_display = ("job_display", "tag", "is_preferred")
         list_filter = ("is_preferred", "tag__name")
         search_fields = ("tag__name",)
         autocomplete_fields = ("job", "tag")
@@ -83,10 +83,9 @@ if Job and JobTag and Tag:
             return str(obj.job)
         job_display.short_description = "Job"
 
-        def job_description(self, obj):
-            return obj.job.description if obj.job_id else "(unknown)"
-        job_description.admin_order_field = "job_id"
-        job_description.short_description = "Job Description"
+        def tag_display(self, obj):
+            return str(obj.obg)
+        tag_display.short_description = "Tag"
 
         def get_search_results(self, request, queryset, search_term):
             """
@@ -97,8 +96,6 @@ if Job and JobTag and Tag:
             )
 
             if search_term:
-                from django.db.models import Q
-
                 job_filter = Q(description__icontains=search_term)
                 if search_term.isdigit():
                     job_filter |= Q(id=int(search_term))
