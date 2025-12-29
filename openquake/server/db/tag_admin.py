@@ -16,8 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.db import IntegrityError, transaction
 from django.apps import apps
+from django.db.models import Q
 from openquake.server.db.tag_site import tag_admin_site
 
 
@@ -132,3 +134,35 @@ if Job and JobTag and Tag:
 
         def has_delete_permission(self, request, obj=None):
             return self.has_module_permission(request)
+
+        def save_model(self, request, obj, form, change):
+            """
+            Ensure that uniqueness constraints are respected and show friendly messages
+            """
+            try:
+                with transaction.atomic():
+                    # If marking as preferred, unset any other
+                    # preferred job for this tag
+                    if obj.is_preferred:
+                        JobTag.objects.filter(
+                            tag=obj.tag,
+                            is_preferred=True
+                        ).exclude(pk=obj.pk).update(is_preferred=False)
+                    super().save_model(request, obj, form, change)
+            except IntegrityError as exc:
+                self.message_user(
+                    request,
+                    f"Cannot save JobTag: {exc}",
+                    level=messages.ERROR
+                )
+
+        def delete_model(self, request, obj):
+            try:
+                with transaction.atomic():
+                    super().delete_model(request, obj)
+            except IntegrityError as exc:
+                self.message_user(
+                    request,
+                    f"Cannot delete JobTag: {exc}",
+                    level=messages.ERROR
+                )
