@@ -28,6 +28,7 @@ class Job(models.Model):
     class Meta:
         managed = False  # the schema is not managed by Django
         db_table = 'job'
+        ordering = ['-id']  # descending by id
 
     def __str__(self):
         return f"{self.id} – {self.description[:80]}"  # show first 80 chars
@@ -42,6 +43,7 @@ class Tag(models.Model):
         db_table = "tag"
         verbose_name = "Tag"
         verbose_name_plural = "Tags"
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -66,10 +68,8 @@ class JobTag(models.Model):
     class Meta:
         managed = False
         db_table = 'job_tag'
-
-        # composite primary key at DB level; Django cannot model it directly
         unique_together = ("job", "tag")
-
+        ordering = ['job_id', 'tag_id']
         indexes = [
             models.Index(
                 fields=["tag_id"],
