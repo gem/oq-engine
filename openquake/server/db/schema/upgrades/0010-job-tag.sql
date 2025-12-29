@@ -15,7 +15,7 @@ ALTER TABLE job_tag RENAME TO job_tag_old;
 
 -- 3. Create normalized tag table
 CREATE TABLE tag (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE CHECK (LENGTH(name) > 0)
 );
 
