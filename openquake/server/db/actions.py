@@ -678,11 +678,8 @@ def _get_or_create_tag_id(db, tag_name):
     rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
     if rows:
         return rows[0].id
-    try:
-        db("INSERT INTO tag (name) VALUES (?x)", tag_name)
-    except Exception:
-        # Another transaction likely inserted it
-        pass
+
+    db("INSERT INTO tag (name) VALUES (?x)", tag_name)
     rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
     return rows[0].id
 
