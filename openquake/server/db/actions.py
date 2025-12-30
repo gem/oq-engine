@@ -684,15 +684,25 @@ def _get_or_create_tag_id(db, tag_name):
     return rows[0].id
 
 
+def _get_tag_id(db, tag_name):
+    """
+    Resolve an existing tag name to tag_id.
+    Raises KeyError if the tag does not exist.
+    """
+    rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
+    if not rows:
+        raise KeyError(f"Tag '{tag_name}' does not exist")
+    return rows[0].id
+
+
 def add_tag_to_job(db, job_id, tag_name):
     try:
         tag_id = _get_or_create_tag_id(db, tag_name)
-
-        db("""
-INSERT INTO job_tag (job_id, tag_id, is_preferred)
-VALUES (?x, ?x, 0)
-        """, job_id, tag_id)
-
+        db(
+            """
+            INSERT INTO job_tag (job_id, tag_id, is_preferred)
+            VALUES (?x, ?x, 0)
+            """, job_id, tag_id)
     except Exception as exc:
         return {'error': str(exc)}
     else:
@@ -701,17 +711,14 @@ VALUES (?x, ?x, 0)
 
 def remove_tag_from_job(db, job_id, tag_name):
     try:
-        rows = db("SELECT id FROM tag WHERE name = ?x", tag_name)
-        if not rows:
-            return {'success': f'Tag {tag_name} was not associated with job {job_id}'}
-
-        tag_id = rows[0].id
-
+        tag_id = _get_tag_id(db, tag_name)
+    except KeyError:
+        return {'success': f'Tag {tag_name} was not associated with job {job_id}'}
+    try:
         db("""
 DELETE FROM job_tag
 WHERE job_id = ?x AND tag_id = ?x
         """, job_id, tag_id)
-
     except Exception as exc:
         return {'error': str(exc)}
     else:
