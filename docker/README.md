@@ -47,7 +47,7 @@ This environment variable is required and set to RESTRICTED to enable the webui 
 The default value is False, and it can also be undefined if the webui authentication is not necessary
 
 ```bash
-$ docker run -e OQ_APPLICATION_MODE=RESTRICTED openquake/engine:nightly "oq webui start 0.0.0.0:8800 -s"
+$ docker run -e OQ_APPLICATION_MODE=RESTRICTED openquake/engine:nightly
 ```
 If you don't set any other environment variables the default values for admin login, password and email are: 'admin', 'admin', 'admin@example.com'
 
