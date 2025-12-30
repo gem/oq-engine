@@ -815,7 +815,7 @@ def delete_tag(db, name):
 
         db("""
 DELETE from tag
-WHERE name = ?x
+WHERE id = ?x
         """, tag_id)
 
     except Exception as exc:
